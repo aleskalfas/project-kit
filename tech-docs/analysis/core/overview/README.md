@@ -39,6 +39,10 @@ Develop the methodology in its own source repository, and extend it with capabil
 - [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
 - [UC-020 — Turn recurring work into my project's own skill or agent definition](../use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md)
 
+**Its journeys:**
+
+- [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
+
 ### 020-set-up
 
 Set up a project once, so its people and AI agents work with the same backbone configuration, capabilities, rules and limits.
@@ -78,6 +82,10 @@ Set up a project once, so its people and AI agents work with the same backbone c
 - [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/020-set-up/UC-031-keep-per-machine-choices.md) ([not built yet](#not-built-yet): step 2, variant 1g, variant 3a)
 - [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md) ([not built yet](#not-built-yet): variant 1d)
 - [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/020-set-up/UC-033-find-why-prompted.md) ([not built yet](#not-built-yet): step 2)
+
+**Its journeys:**
+
+- [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
 
 ### 030-change
 
@@ -123,6 +131,13 @@ Record a project's decisions and rules, and check, answer and land each change t
 - [UC-041 — Keep each core record true for any project that adopts it](../use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md)
 - [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
 
+**Its journeys:**
+
+- [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
+- [JRN-003 — Deliver a change](../use-case-model/journeys/JRN-003-deliver-change.md)
+- [JRN-008 — Release a breaking backbone change with its migration](../use-case-model/journeys/JRN-008-release-breaking-backbone-change.md)
+- [JRN-009 — Release a breaking change of my component with its migration](../use-case-model/journeys/JRN-009-release-breaking-component-change.md)
+
 ### 040-release
 
 Release the backbone and each component on its own version, so projects can move to it and pin it.
@@ -143,6 +158,11 @@ Release the backbone and each component on its own version, so projects can move
 
 - [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md) ([not built yet](#not-built-yet): variant 1a, variant 1c)
 - [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md) ([not built yet](#not-built-yet): step 10, variant 3h)
+
+**Its journeys:**
+
+- [JRN-008 — Release a breaking backbone change with its migration](../use-case-model/journeys/JRN-008-release-breaking-backbone-change.md)
+- [JRN-009 — Release a breaking change of my component with its migration](../use-case-model/journeys/JRN-009-release-breaking-component-change.md)
 
 ### 050-adopt
 
@@ -181,6 +201,13 @@ Put the system on a machine and into another project, run each project at the ve
 - [UC-052 — Run each project at the version it pins](../use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md) ([not built yet](#not-built-yet): step 2, variant 1d, step 10)
 - [UC-053 — Re-pin an inherited rule set once I have reviewed its new major](../use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md)
 - [UC-054 — Upgrade one capability on its own](../use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md) ([not built yet](#not-built-yet): step 2)
+
+**Its journeys:**
+
+- [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
+- [JRN-002 — Upgrade the system](../use-case-model/journeys/JRN-002-upgrade-system.md)
+- [JRN-006 — Start working on a project on a new machine](../use-case-model/journeys/JRN-006-start-on-new-machine.md)
+- [JRN-007 — Upgrade one capability, and re-pin its rule set](../use-case-model/journeys/JRN-007-upgrade-one-capability.md)
 
 ## Reference
 
