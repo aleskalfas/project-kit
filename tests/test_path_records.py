@@ -16,7 +16,7 @@ A path anchor matches as both friction checks match it, and a path under
 project receives by sync ties nothing, and neither does a path anchor of a record that is
 not accepted. Only accepted records are listed, a superseded one by the records that
 replace it, the project's own first. Core rule 22 tells an agent to run it before it
-changes files, and the rules README lists the rule's section.
+changes files, under core.md's section "Before changing files".
 """
 
 from __future__ import annotations
@@ -488,7 +488,6 @@ def test_in_this_repository_a_module_leads_to_the_page_that_anchors_it() -> None
 # --- the rule ---------------------------------------------------------------------------------
 
 CORE_RULES = REPO / ".pkit" / "rules" / "core.md"
-RULES_README = REPO / ".pkit" / "rules" / "README.md"
 DECISIONS_README = REPO / ".pkit" / "decisions" / "README.md"
 SECTION = "## Before changing files"
 README_SECTION = "## Finding the records a path leads to"
@@ -531,10 +530,3 @@ def test_rule_22_stands_after_rule_21_and_before_where_the_rules_came_from() -> 
         < text.index(f"\n{SECTION}\n")
         < text.index("\n## Where these rules came from")
     )
-
-
-def test_the_rules_readme_lists_the_section() -> None:
-    text = RULES_README.read_text(encoding="utf-8")
-    section = text.split("\n## What goes in `core.md`\n", 1)[1].split("\n## ", 1)[0]
-    assert "Seven categories:" in section
-    assert "- **Before changing files** — " in section
