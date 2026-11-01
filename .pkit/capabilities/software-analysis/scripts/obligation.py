@@ -36,8 +36,9 @@ Usage:
 
 Exit codes:
   0  written, or nothing to write
-  1  the analysis could not be read, an id names no requirement, or a requirement's texts
-     or file could not be read or written; the others are written all the same
+  1  the analysis could not be read, an id names no requirement, a requirement's texts or
+     file could not be read or written, or its value names a version or a hash this
+     release does not read; the others are written all the same
 """
 
 from __future__ import annotations
