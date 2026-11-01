@@ -1,0 +1,2 @@
+# A draft's exports stay on the machine that made them until delivered (planning note, point 13).
+# `visual.py export` adds each draft file here; versions.yaml is committed.

@@ -1,0 +1,25 @@
+schema_version: 1
+name: ibm
+version: 0.1.0
+kind: brand
+status: experimental
+about: >-
+  IBM's values: Carbon's palette in its White and Gray 100 themes, IBM Plex, square corners, the
+  2x slide grid; and IBM's layouts for the deck and the figure. Never shipped (COR-014): the
+  maintainer's own brand, in this prototype only.
+entry_points:
+  deck: {supplies: foundations/deck, layouts: layouts/deck.yaml}
+  figure: {supplies: foundations/figure, layouts: layouts/figure.yaml}
+tokens:
+  base: [tokens/palette.tokens.json, tokens/base.tokens.json]
+  themes:
+    carbon: {light: tokens/carbon.light.tokens.json, dark: tokens/carbon.dark.tokens.json}
+  default: carbon
+font_profiles:
+  standard: {renderers: [svg, html, pdf], tokens: tokens/profile.standard.tokens.json}
+  mural: {renderers: [mural], tokens: tokens/profile.mural.tokens.json}
+pictures:
+  icon.attention: pictures/attention.png   # Carbon pictogram "lock" (Apache-2.0), from the Friday talk
+fonts:
+  licence: fonts/LICENSE-IBM-Plex.txt      # SIL Open Font License 1.1; files unchanged
+requires: {visual-communication: "0.1"}

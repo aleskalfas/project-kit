@@ -1,0 +1,38 @@
+schema_version: 1
+name: network
+kind: pattern
+status: experimental
+about: >-
+  What is connected to what: items in two or three columns, each column centred on the tallest,
+  and ties between any two items found by their ids, at any depth.
+fields:
+  type: object
+  properties:
+    left: {type: array, items: {type: object}}
+    middle: {type: array, items: {type: object}}
+    right: {type: array, items: {type: object}}
+    ties:
+      type: array
+      items:
+        type: object
+        required: [from, to]
+        additionalProperties: false
+        properties:
+          from: {type: string}
+          to: {oneOf: [{type: string}, {type: array, items: {type: string}}]}
+          concept: {type: string}
+          state: {type: string}
+options:
+  columns: [two, three]
+  tips: [end, none]
+draws: {item: starter/card, connector: starter/connector}
+values:
+  gap: =@space.13 * 0.8
+  col_w: {by: columns, two: =(width - gap) / 2, three: =(width - 2 * gap) / 3}
+  tall: "=max(left.height, middle.height, right.height)"
+parts:
+  left: {repeat: left, draw: item, width: =col_w, y: =(tall - left.height) / 2, stack: {gap: =@space.07}}
+  middle: {when: columns=three, repeat: middle, draw: item, x: =col_w + gap, width: =col_w, y: =(tall - middle.height) / 2, stack: {gap: =@space.07}}
+  right: {repeat: right, draw: item, x: =width - col_w, width: =col_w, y: =(tall - right.height) / 2, stack: {gap: =@space.07}}
+  ties: {ties: ties, draw: connector, tips: "{tips}", spread: [=@space.06, =@space.05], gap: =@space.03}
+preferred: {height: =tall}

@@ -1,0 +1,138 @@
+{
+  "$description": "teal-calm, light: white, deep teal ink and accent.",
+  "color": {
+    "$type": "color",
+    "background": {"$value": "#ffffff"},
+    "surface": {"$value": "#eef5f5"},
+    "surface-strong": {"$value": "#d9edec"},
+    "border-subtle": {"$value": "#d1e3e2"},
+    "border-strong": {"$value": "#7a9a99"},
+    "text-primary": {"$value": "#0e2a2d"},
+    "text-secondary": {"$value": "#45605f"},
+    "text-helper": {"$value": "#52696a"},
+    "accent": {"$value": "#005d5d"},
+    "neutral": {
+      "line": {"$value": "#45605f"},
+      "fill": {"$value": "#eef5f5"},
+      "ink": {"$value": "#45605f"},
+      "solid": {"$value": "#45605f"},
+      "on": {"$value": "#ffffff"}
+    },
+    "category-1": {
+      "line": {"$value": "#005d5d"},
+      "fill": {"$value": "#e3f4f3"},
+      "ink": {"$value": "#005d5d"},
+      "solid": {"$value": "#005d5d"},
+      "on": {"$value": "#ffffff"}
+    },
+    "category-2": {
+      "line": {"$value": "#2e4a9e"},
+      "fill": {"$value": "#e8ecf8"},
+      "ink": {"$value": "#2e4a9e"},
+      "solid": {"$value": "#2e4a9e"},
+      "on": {"$value": "#ffffff"}
+    },
+    "category-3": {
+      "line": {"$value": "#c98a00"},
+      "fill": {"$value": "#fff4d9"},
+      "ink": {"$value": "#7a5300"},
+      "solid": {"$value": "#e0a100"},
+      "on": {"$value": "#0e2a2d"}
+    },
+    "category-4": {
+      "line": {"$value": "#2e7d4f"},
+      "fill": {"$value": "#e4f4ea"},
+      "ink": {"$value": "#2e7d4f"},
+      "solid": {"$value": "#2e7d4f"},
+      "on": {"$value": "#ffffff"}
+    },
+    "category-5": {
+      "line": {"$value": "#b0306a"},
+      "fill": {"$value": "#fce8f1"},
+      "ink": {"$value": "#b0306a"},
+      "solid": {"$value": "#b0306a"},
+      "on": {"$value": "#ffffff"}
+    },
+    "level-1": {
+      "line": {"$value": "#00393a"},
+      "fill": {"$value": "#e3f4f3"},
+      "ink": {"$value": "#00393a"},
+      "solid": {"$value": "#00393a"},
+      "on": {"$value": "#ffffff"}
+    },
+    "level-2": {
+      "line": {"$value": "#005d5d"},
+      "fill": {"$value": "#e3f4f3"},
+      "ink": {"$value": "#005d5d"},
+      "solid": {"$value": "#005d5d"},
+      "on": {"$value": "#ffffff"}
+    },
+    "level-3": {
+      "line": {"$value": "#3bb5b0"},
+      "fill": {"$value": "#e3f4f3"},
+      "ink": {"$value": "#005d5d"},
+      "solid": {"$value": "#3bb5b0"},
+      "on": {"$value": "#0e2a2d"}
+    },
+    "level-4": {
+      "line": {"$value": "#9ededb"},
+      "fill": {"$value": "#e3f4f3"},
+      "ink": {"$value": "#005d5d"},
+      "solid": {"$value": "#9ededb"},
+      "on": {"$value": "#0e2a2d"}
+    },
+    "level-5": {
+      "line": {"$value": "#d9f2f1"},
+      "fill": {"$value": "#e3f4f3"},
+      "ink": {"$value": "#005d5d"},
+      "solid": {"$value": "#d9f2f1"},
+      "on": {"$value": "#0e2a2d"}
+    },
+    "link": {
+      "line": {"$value": "#005d5d"},
+      "fill": {"$value": "#e3f4f3"},
+      "ink": {"$value": "#005d5d"},
+      "solid": {"$value": "#005d5d"},
+      "on": {"$value": "#ffffff"}
+    },
+    "info": {
+      "line": {"$value": "#005d5d"},
+      "fill": {"$value": "#d9fbfb"},
+      "ink": {"$value": "#005d5d"},
+      "solid": {"$value": "#005d5d"},
+      "on": {"$value": "#ffffff"}
+    },
+    "attention": {
+      "line": {"$value": "#c98a00"},
+      "fill": {"$value": "#fff4d9"},
+      "ink": {"$value": "#7a5300"},
+      "solid": {"$value": "#e0a100"},
+      "on": {"$value": "#0e2a2d"}
+    },
+    "error": {
+      "line": {"$value": "#b3261e"},
+      "fill": {"$value": "#fce8e6"},
+      "ink": {"$value": "#b3261e"},
+      "solid": {"$value": "#b3261e"},
+      "on": {"$value": "#ffffff"}
+    },
+    "success": {
+      "line": {"$value": "#2e7d4f"},
+      "fill": {"$value": "#e4f4ea"},
+      "ink": {"$value": "#2e7d4f"},
+      "solid": {"$value": "#2e7d4f"},
+      "on": {"$value": "#ffffff"}
+    },
+    "code": {
+      "bg": {"$value": "#f2f7f7"},
+      "border": {"$value": "#d1e3e2"},
+      "text": {"$value": "#0e2a2d"},
+      "prompt": {"$value": "#52696a"},
+      "command": {"$value": "#1e7a3c"},
+      "args": {"$value": "#0e2a2d"},
+      "output": {"$value": "#2f4a4b"},
+      "comment": {"$value": "#52696a"},
+      "branch": {"$value": "#9db3b2"}
+    }
+  }
+}

@@ -1,0 +1,28 @@
+schema_version: 1
+name: card
+kind: block
+status: experimental
+about: A box with a head, an inline code tag and a text; plain or tinted in its colour, with a bar or a dot.
+fields:
+  type: object
+  properties:
+    head: {type: string, x-pkit-prose: true}
+    tag: {type: string}
+    text: {type: string, x-pkit-prose: true}
+options:
+  fill: [plain, tint]
+  bar: [none, left, top]
+  marker: [none, dot]
+states: {marked: null, dropped: neutral}
+colour: neutral
+parts:
+  box: {box: {fill: {by: fill, plain: surface, tint: tone.fill}, stroke: {by: fill, plain: none, tint: tone.line}, radius: =@radius.box,
+              stroke-width: {by: state, marked: =@stroke.strong, else: =@stroke.thin}, dash: {by: state, dropped: "yes", else: "no"}},
+        width: =width, height: =height}
+  bar_left: {when: bar=left, box: {fill: tone.line}, width: =@stroke.bar, height: =height}
+  bar_top: {when: bar=top, box: {fill: tone.line}, width: =width, height: =@stroke.bar}
+  dot: {when: marker=dot, ellipse: {fill: tone.line}, x: =bar_left.right + @pad.box, y: =head.lines.1.middle - 12, width: 24, height: 24}
+  head: {when: head, text: "{head}", style: key, x: "=dot.right + min(dot.width, @space.03)", y: =bar_top.bottom + @pad.box - 6, width: =width - head.x - @pad.box}
+  tag: {when: tag, use: starter/code, kind: inline, text: "{tag}", x: =head.x, y: "=head.bottom + min(head.height, @space.03)"}
+  text: {when: text, text: "{text}", style: body, x: =dot.x, y: "=tag.bottom + min(tag.height + head.height, @space.03)", width: =width - text.x - @pad.box}
+preferred: {height: =text.bottom + @pad.box - 6}

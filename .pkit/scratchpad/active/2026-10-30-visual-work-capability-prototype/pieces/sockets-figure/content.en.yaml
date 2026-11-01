@@ -1,0 +1,27 @@
+schema_version: 1
+# The connect slide's picture alone, for a document page: the same content as the slide's
+# network (pieces/friday-slice), drawn by the figure layout. Its height follows its content.
+figure:
+  id: sockets
+  layout: figure
+  visual:
+    use: starter/network
+    item: {use: starter/card, fill: tint}
+    left:
+    - {id: living-docs, concept: capability, head: living-docs, tag: "pkit::documentation", text: docs for each reader}
+    - {id: software-analysis, concept: capability, head: software-analysis, tag: "pkit::analysis", text: what the software must do}
+    right:
+    - use: starter/groups
+      groups:
+      - id: project-management
+        concept: capability
+        head: project-management
+        tag: plays pkit::work-tracking
+        items:
+        - {id: doc-check, code: doc-check, text: the docs a change must update}
+        - {id: fixers, code: fixers, text: which agent fixes each document}
+        - {id: use-cases, code: use-cases, text: the use cases to plan from}
+    ties:
+    - {from: living-docs, to: [doc-check, fixers], concept: core}
+    - {from: software-analysis, to: [fixers, use-cases], concept: core}
+  caption: A capability never names another, only a role. One that needs something opens a slot, and any other can fill it.

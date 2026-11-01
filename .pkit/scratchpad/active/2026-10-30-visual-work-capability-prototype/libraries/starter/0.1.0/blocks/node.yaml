@@ -1,0 +1,26 @@
+schema_version: 1
+name: node
+kind: block
+status: experimental
+about: A node of a diagram, outlined or solid in its colour, with an inline code id, a head and a text.
+fields:
+  type: object
+  properties:
+    code: {type: string}
+    head: {type: string, x-pkit-prose: true}
+    text: {type: string, x-pkit-prose: true}
+options:
+  emphasis: [outline, solid]
+  align: [start, center]
+states: {marked: null, dropped: neutral, broken: error}
+colour: neutral
+parts:
+  box: {box: {fill: {by: emphasis, outline: background, solid: tone.solid}, stroke: {by: emphasis, outline: tone.line, solid: none}, radius: =@radius.box,
+              stroke-width: {by: state, marked: =@stroke.strong, else: =@stroke.thin}, dash: {by: state, dropped: "yes", broken: "yes", else: "no"}},
+        width: =width, height: =height}
+  code: {when: code, use: starter/code, kind: inline, text: "{code}", x: {by: align, start: =@pad.box * 0.6, center: =(width - code.width) / 2}, y: =@pad.box * 0.6}
+  head: {when: head, text: "{head}", style: key, align: "{align}", colour: {by: emphasis, outline: text-primary, solid: tone.on},
+         x: =@pad.box * 0.6, y: "=code.bottom + min(code.height, @space.02)", width: =width - 1.2 * @pad.box}
+  text: {when: text, text: "{text}", style: body, align: "{align}", colour: {by: emphasis, outline: text-primary, solid: tone.on},
+         x: =@pad.box * 0.6, y: "=head.bottom + min(head.height, @space.03)", width: =width - 1.2 * @pad.box}
+preferred: {height: =text.bottom + @pad.box * 0.6}

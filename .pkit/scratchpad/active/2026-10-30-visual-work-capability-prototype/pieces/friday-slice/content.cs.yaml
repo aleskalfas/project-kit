@@ -1,0 +1,144 @@
+schema_version: 1
+# Obsah v češtině, překlad z content.en.yaml (zdrojový jazyk). Text ze slajdů páteční přednášky
+# (2026-10-29-friday-talk.slides.cs.yaml). Stejná struktura a stejná id jako anglický soubor.
+deck:
+  title: Vývoj s AI podle rozhodnutí vašeho projektu
+  author: Aleš Kalfas
+  slides:
+
+  - id: permissions
+    layout: slide
+    title: Odkud se berou oprávnění
+    lead: Z pravidel, která projekt zapíše jako data. AI nástroj je uplatní při každém volání, i když na ně agent zapomene.
+    limit: Zákaz zastaví jen ty podoby příkazu, které pkit pozná. Příkaz schovaný za jiným může proklouznout.
+    footer: "V project-kitu: agent project-manager nesmí nic měnit přímým příkazem gh. Používá příkazy pkitu, které issue nejdřív ověří."
+
+  - id: fits
+    layout: slide
+    title: Jak je pkit poskládaný
+    lead: Skládá se z pěti vrstev, od vašich rozhodnutí až po váš kód. Každá vrstva provádí to, co určují vrstvy nad ní.
+    visual:
+      use: starter/layers
+      relations: beside
+      connector: {use: starter/connector, concept: core}
+      levels:
+      - {id: decisions, concept: decision, head: Rozhodnutí, text: Co jste schválili a proč.}
+      - {id: rules, concept: rule, head: Pracovní pravidla · schémata · procesy, text: Co přesně má dělat každá session i nástroj.}
+      - {id: skills, concept: skill, head: Skilly · agenti · oprávnění, text: "Jak agenti jednají, v jaké roli a s jakými právy."}
+      - {id: commands, concept: command, head: Příkazy a kontroly pkitu, text: "Provádějí, co jste rozhodli, a kontrolují každou změnu."}
+      - {id: work, concept: work, head: Váš kód a dokumenty, text: "Samotná práce, navázaná na to, na čem závisí."}
+      source: {id: ideas, concept: core, head: Kde vznikají nápady, text: "V rozhovoru. A když nápad potřebuje víc času, v poznámce ve scratchpadu."}
+      flows:
+      - {id: carried-out, direction: down, head: Provádění, text: "Každá vrstva provádí rozhodnutí nad sebou. Důvody zůstávají na jednom místě. Agent si je tam přečte dřív, než cokoli změní."}
+      - {id: checked, direction: up, head: Kontrola, text: "Když vrstva nesedí s rozhodnutím, nejdřív se prověří vrstva. Rozhodnutí se tak nikdy nepřizpůsobí kódu. Změnit ho můžete jen vy."}
+    footer: "Tento týden: pkit zapsal toto pořadí jako své vlastní rozhodnutí, COR-065"
+
+  - id: install
+    layout: slide
+    title: Instalace pkitu
+    lead: Nástroj nainstalujete jednou, pak pkit přidáte do každého projektu jedním příkazem. Upgrade mění jen soubory pkitu.
+    visual:
+      use: starter/panels
+      panels:
+      - use: starter/panels
+        panels:
+        - use: starter/code
+          kind: session
+          size: l
+          text: |-
+            # jednou, na vašem počítači
+            $ uv tool install \
+                git+ssh://git@github.com/aleskalfas/project-kit.git@latest
+            $ pkit --version
+
+            # v každém projektu
+            $ cd your-project
+            $ pkit init
+        under:
+          use: starter/aside
+          head: Nechcete mít pkit v repozitáři?
+          command: $ pkit visibility private
+          text: pkit zůstane jen ve vašem klonu a git ho díky souboru exclude ignoruje. Nic z něj se necommitne, a agent ho přesto používá celý.
+      - use: starter/code
+        kind: file
+        size: m
+        lines:
+        - [["$ ", prompt], ["tree", command], [" -a -L 2 your-project", args]]
+        - [["your-project/", plain]]
+        - [["├── ", branch], [".pkit/", plain], ["                        # metodika", comment]]
+        - [["│   ├── ", branch], ["adapters/", core], ["                 # napojení na váš AI nástroj", comment]]
+        - [["│   ├── ", branch], ["agents/ ", plain], ["core/", core], [" ", plain], ["project/", you]]
+        - [["│   ├── ", branch], ["cli/", core], ["                      # dokumentace příkazů", comment]]
+        - [["│   ├── ", branch], ["decisions/ ", plain], ["core/", core], [" ", plain], ["project/", you]]
+        - [["│   ├── ", branch], ["lifecycle/", core], ["                # instalace, sync, upgrade", comment]]
+        - [["│   ├── ", branch], ["migrations/", core], ["               # převedou projekt na nové verze", comment]]
+        - [["│   ├── ", branch], ["permissions/ ", plain], ["project/", you], ["     # co agenti smějí", comment]]
+        - [["│   ├── ", branch], ["process/", core], ["                  # procesy se stavy, jako data", comment]]
+        - [["│   ├── ", branch], ["rules/ ", plain], ["core.md", core], [" ", plain], ["project.md", you], [" # sem píšete vy", comment]]
+        - [["│   ├── ", branch], ["schemas/", core], ["                  # co čtou nástroje", comment]]
+        - [["│   ├── ", branch], ["scratchpad/", you], ["               # vaše nedotažené nápady", comment]]
+        - [["│   ├── ", branch], ["skills/ ", plain], ["core/", core], [" ", plain], ["project/", you]]
+        - [["│   ├── ", branch], ["manifest.yaml", core], ["             # co je nainstalováno a v jaké verzi", comment]]
+        - [["│   └── ", branch], [".gitignore", core], ["                # běhové soubory pkitu", comment]]
+        - [["├── ", branch], [".claude/", plain], ["                      # vaše nastavení Claude Code", comment]]
+        - [["│   ├── ", branch], ["agents/  skills/", plain], ["          # ", comment], ["pkitu", core], [" vedle ", comment], ["vašich", you]]
+        - [["│   └── ", branch], ["settings.json", plain], ["             # ", comment], ["vaše", you], [", ", comment], ["pkit", core], [" přidá svoje", comment]]
+        - [["├── ", branch], [".agent-workspace/", plain], ["             # pracovní složka agentů, mimo git", comment]]
+        - [["├── ", branch], ["CLAUDE.md", you], ["                     # načte pravidla do každé session", comment]]
+        - [["└── ", branch], ["src/", you], ["                          # váš kód, pkit na něj nesahá", comment]]
+        - [["# ", comment], ["fialové", core], [": pkitu, každý upgrade je nahradí · ", comment], ["modré", you], [": vaše", comment]]
+    footer: pkit status ukáže, co pkit v projektu nastavil. Volitelné části, kterým pkit říká capabilities, přijdou později.
+
+  - id: connect
+    layout: slide
+    title: Jak capabilities spolupracují
+    lead: Capability nikdy nejmenuje jinou capability, jen roli. Když něco potřebuje, otevře slot. Vyplní ho kterákoli jiná.
+    visual:
+      use: starter/panels
+      widths: wide-narrow
+      panels:
+      - use: starter/network
+        item: {use: starter/card, fill: tint}
+        left:
+        - {id: living-docs, concept: capability, head: living-docs, tag: "pkit::documentation", text: dokumenty na míru čtenáři}
+        - {id: software-analysis, concept: capability, head: software-analysis, tag: "pkit::analysis", text: co musí software umět}
+        right:
+        - use: starter/groups
+          groups:
+          - id: project-management
+            concept: capability
+            head: project-management
+            tag: plays pkit::work-tracking
+            items:
+            - {id: doc-check, code: doc-check, text: "dokumenty, které změna musí upravit"}
+            - {id: fixers, code: fixers, text: který agent opraví který dokument}
+            - {id: use-cases, code: use-cases, text: případy užití k plánování}
+        ties:
+        - {from: living-docs, to: [doc-check, fixers], concept: core}
+        - {from: software-analysis, to: [fixers, use-cases], concept: core}
+      - heading: Co vypíše pkit status v project-kitu
+        use: starter/code
+        kind: session
+        size: s
+        lines:
+        - [["$ ", prompt], ["pkit", command], [" status", args]]
+        - [["  Connections", output]]
+        - [["    roles   3 named: 3 active, 0 in conflict", output]]
+        - [["      pkit::analysis      → ", core], ["software-analysis", capability]]
+        - [["      pkit::documentation → ", core], ["living-docs", capability]]
+        - [["      pkit::work-tracking → ", core], ["project-management", capability]]
+        - [["    points  6 defined: 2 unfilled", output]]
+        - [["    pkit::work-tracking:fixers", core]]
+        - [["      data v1 · project-management — filled", output]]
+        - [["      bound  ", output], ["software-analysis", capability], [" (contributes)", output]]
+        - [["      bound  ", output], ["living-docs", capability], [" (contributes)", output]]
+      under:
+        use: starter/list
+        head: Proč pkit propojuje capabilities takhle
+        item: {use: starter/card, bar: top, concept: core}
+        items:
+        - {id: swap, text: "Capability vyměníte za jinou ve stejné roli. Zbytek zůstane, jak je."}
+        - {id: only-what-you-need, text: "Instalujete jen to, co potřebujete. Prázdný slot ničemu nevadí."}
+        - {id: wiring, text: pkit status zapojení ukáže a pkit validate ho zkontroluje.}
+    limit: Každou roli zatím hraje jen jedna capability. Výměna je tedy navržená, ale ještě nevyzkoušená.
+    footer: "V project-kitu: 3 role, každou hraje jedna capability. Ze 6 slotů jsou 4 vyplněné."

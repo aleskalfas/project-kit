@@ -1,0 +1,10 @@
+{
+  "font": {
+    "$type": "fontFamily",
+    "sans": {"$value": "Source Sans Pro", "$extensions": {"pkit.visual": {"files": {"400": "fonts/SourceSansPro-Regular.otf", "600": "fonts/SourceSansPro-Semibold.otf"}}}},
+    "sans-strong": {"$value": "{font.sans}"},
+    "mono": {"$value": "Source Code Pro", "$extensions": {"pkit.visual": {"files": {"400": "fonts/SourceCodePro-Regular.ttf"}}}},
+    "code-inline": {"$value": "{font.mono}"}
+  },
+  "$description": "Fonts for SVG, HTML and PDF: Source Sans Pro and Source Code Pro, measured from the committed files."
+}

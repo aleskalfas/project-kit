@@ -1,0 +1,10 @@
+schema_version: 1
+name: starter
+version: 0.1.0
+kind: component library
+status: experimental
+about: >-
+  The capability's opinionated components, built by the job a visual does: patterns that
+  arrange items, and blocks that draw them. Every component here is experimental.
+builds_on: [foundations]
+requires: {visual-communication: "0.1"}

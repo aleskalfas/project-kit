@@ -1,0 +1,11 @@
+schema_version: 1
+name: text
+kind: block
+status: experimental
+about: A text in one of the brand's styles.
+fields: {type: object, properties: {text: {type: string, x-pkit-prose: true}}}
+options:
+  style: [body, key, lead, caption]
+parts:
+  text: {text: "{text}", style: "{style}", width: =width}
+preferred: {height: =text.bottom}

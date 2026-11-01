@@ -1,0 +1,18 @@
+schema_version: 1
+name: figure
+kind: top
+status: experimental
+about: A figure for a document page, one page in itself, its height from its content.
+pages: self
+layouts:
+  figure: {slots: [visual, caption]}
+labels: {}
+fields:
+  type: object
+  additionalProperties: false
+  required: [id, layout, visual]
+  properties:
+    id: {type: string, pattern: "^[a-z0-9][a-z0-9-]*$"}
+    layout: {const: figure}
+    visual: {type: object, required: [use]}
+    caption: {type: string, x-pkit-prose: true}

@@ -1,0 +1,10 @@
+{
+  "font": {
+    "$type": "fontFamily",
+    "sans": {"$value": "proxima-nova", "$extensions": {"pkit.visual": {"measure": "estimate"}}},
+    "sans-strong": {"$value": "{font.sans}"},
+    "mono": {"$value": "Source Code Pro", "$extensions": {"pkit.visual": {"files": {"400": "fonts/SourceCodePro-Regular.ttf"}, "render": "image"}}},
+    "code-inline": {"$value": "{font.sans}"}
+  },
+  "$description": "Fonts for Mural: proxima-nova by estimate; a code block drawn as an image in Source Code Pro; inline code in proxima-nova, a declared loss."
+}

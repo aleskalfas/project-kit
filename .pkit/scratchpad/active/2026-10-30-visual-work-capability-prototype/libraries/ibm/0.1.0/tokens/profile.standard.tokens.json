@@ -1,0 +1,10 @@
+{
+  "font": {
+    "$type": "fontFamily",
+    "sans": {"$value": "IBM Plex Sans", "$extensions": {"pkit.visual": {"files": {"400": "fonts/IBMPlexSans-Regular.otf"}}}},
+    "sans-strong": {"$value": "{font.sans}"},
+    "mono": {"$value": "IBM Plex Mono", "$extensions": {"pkit.visual": {"files": {"400": "fonts/IBMPlexMono-Regular.otf"}}}},
+    "code-inline": {"$value": "{font.mono}"}
+  },
+  "$description": "Fonts for SVG, HTML and PDF: IBM Plex, measured from the committed files."
+}

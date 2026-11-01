@@ -1,0 +1,3 @@
+# Previews are drawn on demand and never committed (planning note, point 13).
+*
+!.gitignore

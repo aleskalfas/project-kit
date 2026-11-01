@@ -1,0 +1,9 @@
+schema_version: 1
+supplies: foundations/figure
+page: {width: =@figure.width, height: =caption.bottom + @figure.pad}
+layouts:
+  figure:
+    parts:
+      background: {box: {fill: background}, width: =page.width, height: =page.height}
+      visual: {slot: visual, x: =@figure.pad, y: =@figure.pad, width: =page.width - 2 * @figure.pad}
+      caption: {slot: caption, style: body, colour: text-secondary, x: =@figure.pad, y: "=visual.bottom + min(caption.height, @space.05)", width: =visual.width}

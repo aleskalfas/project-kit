@@ -1,0 +1,37 @@
+schema_version: 1
+name: groups
+kind: pattern
+status: experimental
+about: Which items belong together, each group a container (or a heading with a bar) holding its items.
+fields:
+  type: object
+  required: [groups]
+  properties:
+    groups:
+      type: array
+      items:
+        type: object
+        required: [head, items]
+        properties:
+          id: {type: string}
+          head: {type: string, x-pkit-prose: true}
+          tag: {type: string}
+          concept: {type: string}
+          items: {type: array, items: {type: object}}
+        additionalProperties: false
+options:
+  frame: [container, bar]
+draws: {item: starter/node}
+define:
+  group:
+    fields: {type: object, properties: {head: {type: string}, tag: {type: string}, items: {type: array}}}
+    parts:
+      box: {when: frame=container, box: {fill: tone.fill, stroke: tone.line, stroke-width: =@stroke.strong, radius: =@radius.box}, width: =width, height: =height}
+      bar: {when: frame=bar, box: {fill: tone.line}, width: =width, height: =@stroke.bar}
+      head: {text: "{head}", style: tile, x: =@pad.box, y: =bar.bottom + @pad.box * 0.75, width: =width - 2 * @pad.box}
+      tag: {when: tag, use: starter/code, kind: inline, text: "{tag}", x: =head.x, y: =head.bottom + @space.03}
+      members: {repeat: items, draw: item, x: =head.x, y: =tag.bottom + @space.05, width: =head.width, stack: {gap: =@space.03}}
+    preferred: {height: =members.bottom + @pad.box}
+parts:
+  groups: {repeat: groups, draw: group, width: =width, stack: {gap: =@space.06}}
+preferred: {height: =groups.bottom}

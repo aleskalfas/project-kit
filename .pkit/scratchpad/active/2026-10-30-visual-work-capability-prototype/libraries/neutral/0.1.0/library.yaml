@@ -1,0 +1,25 @@
+schema_version: 1
+name: neutral
+version: 0.1.0
+kind: brand
+status: experimental
+about: >-
+  An unbranded look so the capability renders out of the box: two themes, teal-calm and
+  warm-paper, each light and dark; Source Sans Pro and Source Code Pro; rounded corners and a
+  little more room.
+entry_points:
+  deck: {supplies: foundations/deck, layouts: layouts/deck.yaml}
+  figure: {supplies: foundations/figure, layouts: layouts/figure.yaml}
+tokens:
+  base: [tokens/base.tokens.json]
+  themes:
+    teal-calm: {light: tokens/teal-calm.light.tokens.json, dark: tokens/teal-calm.dark.tokens.json}
+    warm-paper: {light: tokens/warm-paper.light.tokens.json, dark: tokens/warm-paper.dark.tokens.json}
+  default: teal-calm
+font_profiles:
+  standard: {renderers: [svg, html, pdf], tokens: tokens/profile.standard.tokens.json}
+  mural: {renderers: [mural], tokens: tokens/profile.mural.tokens.json}
+pictures: {}
+fonts:
+  licence: [fonts/LICENSE-Source-Sans-Pro.txt, fonts/LICENSE-Source-Code-Pro.txt]   # SIL OFL 1.1; files unchanged
+requires: {visual-communication: "0.1"}

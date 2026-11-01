@@ -1,0 +1,145 @@
+schema_version: 1
+# The piece's content in English, its source language. Text from the Friday talk's slides
+# (2026-10-29-friday-talk.slides.yaml). Every item that a page reaches has an id; the Czech
+# file has the same structure and the same ids.
+deck:
+  title: Building with AI, the way your project decided
+  author: Aleš Kalfas
+  slides:
+
+  - id: permissions
+    layout: slide
+    title: Where permissions come from
+    lead: From rules your project writes down as data. Your AI tool applies them to every call, so they hold when an agent forgets them.
+    limit: A deny stops the forms of a command pkit can tell. A command hidden behind another can slip past.
+    footer: "In project-kit: the project-manager agent is refused raw gh changes, and uses pkit's commands, which validate the issue first."
+
+  - id: fits
+    layout: slide
+    title: How pkit fits together
+    lead: "In five layers, from your decisions down to your code: each carries out the ones above it."
+    visual:
+      use: starter/layers
+      relations: beside
+      connector: {use: starter/connector, concept: core}
+      levels:
+      - {id: decisions, concept: decision, head: Decisions, text: "Choices you accepted, and why."}
+      - {id: rules, concept: rule, head: Working rules · schemas · processes, text: "Exactly what to do, for every session and tool."}
+      - {id: skills, concept: skill, head: Skills · agents · permissions, text: "How agents act, in which role, with what rights."}
+      - {id: commands, concept: command, head: pkit's commands and checks, text: "Carry out what is decided, and check every change."}
+      - {id: work, concept: work, head: Your code and documents, text: "The work itself, tied to what it depends on."}
+      source: {id: ideas, concept: core, head: Where ideas start, text: "In conversation, and in a scratchpad note when one needs longer."}
+      flows:
+      - {id: carried-out, direction: down, head: Carried out, text: "Each layer carries out the decisions above it. The reasons stay in one place, where an agent reads them before it changes anything."}
+      - {id: checked, direction: up, head: Checked, text: "If a layer and a decision disagree, the layer is checked first, so decisions never drift to match the code. Only you change a decision."}
+    footer: "This week: pkit wrote this order down as a decision of its own, COR-065"
+
+  - id: install
+    layout: slide
+    title: Install pkit
+    lead: Install the tool once, then add pkit to each project with one command. Upgrades replace pkit's files, never yours.
+    visual:
+      use: starter/panels
+      panels:
+      - use: starter/panels
+        panels:
+        - use: starter/code
+          kind: session
+          size: l
+          text: |-
+            # once, on your machine
+            $ uv tool install \
+                git+ssh://git@github.com/aleskalfas/project-kit.git@latest
+            $ pkit --version
+
+            # in each project
+            $ cd your-project
+            $ pkit init
+        under:
+          use: starter/aside
+          head: Don't want pkit in your repository?
+          command: $ pkit visibility private
+          text: pkit stays only in your clone, hidden by git's exclude file. Nothing of it is committed, and your agent still uses all of it.
+      - use: starter/code
+        kind: file
+        size: m
+        lines:
+        - [["$ ", prompt], ["tree", command], [" -a -L 2 your-project", args]]
+        - [["your-project/", plain]]
+        - [["├── ", branch], [".pkit/", plain], ["                        # the methodology", comment]]
+        - [["│   ├── ", branch], ["adapters/", core], ["                 # the bridge to your AI tool", comment]]
+        - [["│   ├── ", branch], ["agents/ ", plain], ["core/", core], [" ", plain], ["project/", you]]
+        - [["│   ├── ", branch], ["cli/", core], ["                      # the command's reference", comment]]
+        - [["│   ├── ", branch], ["decisions/ ", plain], ["core/", core], [" ", plain], ["project/", you]]
+        - [["│   ├── ", branch], ["lifecycle/", core], ["                # install, sync, upgrade", comment]]
+        - [["│   ├── ", branch], ["migrations/", core], ["               # move your project to new versions", comment]]
+        - [["│   ├── ", branch], ["permissions/ ", plain], ["project/", you], ["     # what agents may do", comment]]
+        - [["│   ├── ", branch], ["process/", core], ["                  # staged processes, as data", comment]]
+        - [["│   ├── ", branch], ["rules/ ", plain], ["core.md", core], [" ", plain], ["project.md", you], [" # yours to add", comment]]
+        - [["│   ├── ", branch], ["schemas/", core], ["                  # what the tools read", comment]]
+        - [["│   ├── ", branch], ["scratchpad/", you], ["               # your unfinished ideas", comment]]
+        - [["│   ├── ", branch], ["skills/ ", plain], ["core/", core], [" ", plain], ["project/", you]]
+        - [["│   ├── ", branch], ["manifest.yaml", core], ["             # what is installed, which version", comment]]
+        - [["│   └── ", branch], [".gitignore", core], ["                # pkit's runtime files", comment]]
+        - [["├── ", branch], [".claude/", plain], ["                      # your Claude Code setup", comment]]
+        - [["│   ├── ", branch], ["agents/  skills/", plain], ["          # ", comment], ["pkit's", core], [" beside ", comment], ["yours", you]]
+        - [["│   └── ", branch], ["settings.json", plain], ["             # ", comment], ["yours", you], [", ", comment], ["pkit's", core], [" merged in", comment]]
+        - [["├── ", branch], [".agent-workspace/", plain], ["             # agents' scratch, not committed", comment]]
+        - [["├── ", branch], ["CLAUDE.md", you], ["                     # loads the rules each session", comment]]
+        - [["└── ", branch], ["src/", you], ["                          # your code, untouched", comment]]
+        - [["# ", comment], ["purple", core], [": pkit's, replaced by each upgrade · ", comment], ["blue", you], [": yours", comment]]
+    footer: pkit status shows what pkit set up in a project. Optional parts, called capabilities, come later.
+
+  - id: connect
+    layout: slide
+    title: How capabilities work together
+    lead: A capability never names another, only a role. One that needs something opens a slot, and any other can fill it.
+    visual:
+      use: starter/panels
+      widths: wide-narrow
+      panels:
+      - use: starter/network
+        item: {use: starter/card, fill: tint}
+        left:
+        - {id: living-docs, concept: capability, head: living-docs, tag: "pkit::documentation", text: docs for each reader}
+        - {id: software-analysis, concept: capability, head: software-analysis, tag: "pkit::analysis", text: what the software must do}
+        right:
+        - use: starter/groups
+          groups:
+          - id: project-management
+            concept: capability
+            head: project-management
+            tag: plays pkit::work-tracking
+            items:
+            - {id: doc-check, code: doc-check, text: the docs a change must update}
+            - {id: fixers, code: fixers, text: which agent fixes each document}
+            - {id: use-cases, code: use-cases, text: the use cases to plan from}
+        ties:
+        - {from: living-docs, to: [doc-check, fixers], concept: core}
+        - {from: software-analysis, to: [fixers, use-cases], concept: core}
+      - heading: What pkit status shows, in project-kit
+        use: starter/code
+        kind: session
+        size: s
+        lines:
+        - [["$ ", prompt], ["pkit", command], [" status", args]]
+        - [["  Connections", output]]
+        - [["    roles   3 named: 3 active, 0 in conflict", output]]
+        - [["      pkit::analysis      → ", core], ["software-analysis", capability]]
+        - [["      pkit::documentation → ", core], ["living-docs", capability]]
+        - [["      pkit::work-tracking → ", core], ["project-management", capability]]
+        - [["    points  6 defined: 2 unfilled", output]]
+        - [["    pkit::work-tracking:fixers", core]]
+        - [["      data v1 · project-management — filled", output]]
+        - [["      bound  ", output], ["software-analysis", capability], [" (contributes)", output]]
+        - [["      bound  ", output], ["living-docs", capability], [" (contributes)", output]]
+      under:
+        use: starter/list
+        head: Why pkit connects capabilities this way
+        item: {use: starter/card, bar: top, concept: core}
+        items:
+        - {id: swap, text: Swap a capability for one in the same role. The rest stays as it is.}
+        - {id: only-what-you-need, text: Install only what you need. An empty slot does no harm.}
+        - {id: wiring, text: "pkit status draws the wiring, and pkit validate checks it."}
+    limit: Each role has one capability so far, so swapping one for another is designed, not yet shown.
+    footer: "In project-kit: 3 roles, each played by one capability, and 6 slots, 4 of them filled."

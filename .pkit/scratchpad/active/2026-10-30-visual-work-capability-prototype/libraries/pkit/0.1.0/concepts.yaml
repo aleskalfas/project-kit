@@ -1,0 +1,15 @@
+schema_version: 1
+# Each concept maps to a colour family the foundations name (roles.yaml); a brand gives the
+# family its values. A concept says what a thing is; the component decides how it looks.
+concepts:
+  core:       {colour: category-1, icon: icons/code.png, about: pkit's own files and commands, replaced by each upgrade}
+  you:        {colour: category-2, icon: icons/people.png, about: you and what is yours}
+  capability: {colour: category-3, about: an optional part of pkit a project installs}
+  agent:      {colour: category-4, icon: icons/agents.png, about: an agent and what it does}
+  check:      {colour: category-5, icon: icons/checks.png, about: a check pkit runs}
+  # the five layers of how pkit fits together, from the top: a ramp from dark to light
+  decision:   {colour: level-1, about: choices you accepted, and why}
+  rule:       {colour: level-2, about: working rules, schemas and processes}
+  skill:      {colour: level-3, about: skills, agents and permissions}
+  command:    {colour: level-4, about: pkit's commands and checks}
+  work:       {colour: level-5, about: your code and documents}

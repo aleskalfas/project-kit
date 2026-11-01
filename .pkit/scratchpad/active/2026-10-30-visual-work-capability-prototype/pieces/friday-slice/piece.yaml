@@ -1,0 +1,21 @@
+schema_version: 1
+# A slice of the Friday talk, drawn from content only: four pages in two languages.
+name: friday-slice
+top: foundations/deck
+brand: ibm/deck                 # the brand's entry point the piece is drawn in
+notations: [pkit]
+languages: [en, cs]
+source: en                      # the others are its translations
+audience: developers who have not used pkit
+medium: projected
+state: draft                    # draft | delivered | living | adapted
+outputs: [pdf]
+lock:                           # the library versions this piece was made with
+  foundations: 0.1.0
+  starter: 0.1.0
+  pkit: 0.1.0
+  ibm: 0.1.0
+  neutral: 0.1.0
+previews:                       # the brands and modes `render` draws, beside the piece's own
+  ibm/deck: [carbon/light, carbon/dark]
+  neutral/deck: [teal-calm/light, teal-calm/dark, warm-paper/light, warm-paper/dark]
