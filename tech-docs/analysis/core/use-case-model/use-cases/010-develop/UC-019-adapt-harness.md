@@ -5,11 +5,20 @@ status: active
 actor: ACT-component-author
 other-actors:
   - ACT-ai-agent
+  - ACT-operator
 after:
   - [UC-014]
 requirements:
   - REQ-008
   - REQ-009
+  - REQ-012
+shortfalls:
+  - at: 12
+    issue: "#1765"
+    record: ADR-034#1
+  - at: 13
+    issue: "#1765"
+    record: ADR-034#1
 pkit:
   friction:
     anchors:
@@ -31,11 +40,14 @@ pkit:
         - COR-013
         - COR-028#3
         - COR-047
+        - ADR-034#1
       artefact:
         - ACT-component-author
         - ACT-ai-agent
+        - ACT-operator
         - REQ-008
         - REQ-009
+        - REQ-012
 ---
 
 # UC-019 — Adapt the system to another harness
@@ -45,6 +57,7 @@ pkit:
 **Other actors:**
 
 - **AI agent** (`ACT-ai-agent`): runs the [stamp](../../../glossary.md#term-stamp--stamp) of step 1 for the author through the `adapter-author` [skill](../../../glossary.md#term-skill--skill), which pairs with it ([COR-005](../../../../../../.pkit/decisions/core/COR-005-bundle-pattern.md)). In the new [harness](../../../glossary.md#term-harness--harness), its sessions find the skills and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) the [adapter](../../../glossary.md#term-adapter--adapter) deploys.
+- **Operator** (`ACT-operator`): is asked before a command of this use case writes in another repository than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:**
 
@@ -60,13 +73,23 @@ pkit:
 **Main path:**
 
 1. The author runs `pkit new adapter <name>`, or has an AI agent run it through the `adapter-author` [skill](../../../glossary.md#term-skill--skill).
-2. The [system](../../../glossary.md#term-system--system) checks the name. It must be kebab-case and not `backbone`. No [capability](../../../glossary.md#term-capability--capability) may hold it, and no [adapter](../../../glossary.md#term-adapter--adapter) may have it already.
+12. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
+
+> [!WARNING]
+> **Not built yet:** `pkit new adapter` runs no such check, and writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
+2. The system checks the name. It must be kebab-case and not `backbone`. No [capability](../../../glossary.md#term-capability--capability) may hold it, and no [adapter](../../../glossary.md#term-adapter--adapter) may have it already.
 3. The system writes the adapter's folder, `.pkit/adapters/<name>/`, with `package.yaml`, a `README.md` and `migrations/`. The [package metadata](../../../glossary.md#term-package-metadata--package-metadata) gives `version: 0.1.0`, and a [range](../../../glossary.md#term-range--range) on the [backbone](../../../glossary.md#term-backbone--backbone) from the [version](../../../glossary.md#term-version--version) the [source repository](../../../glossary.md#term-source-repository--source-repository) records.
 4. The system records the adapter in the [manifest](../../../glossary.md#term-manifest--manifest) as `kit-shipped`, and prints `Stamped: .pkit/adapters/<name>/`.
 5. The author writes the scripts that the system runs, each found by its name and each optional: `merge-settings.sh`, `merge-claude-md.sh`, `deploy-skills.sh` and `deploy-agents.sh`. A fifth, `undeploy-capability.sh`, takes back what the adapter deployed for one capability ([COR-005](../../../../../../.pkit/decisions/core/COR-005-bundle-pattern.md) and [COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
 6. The author writes the adapter's `permission-enforcement.yaml`. For each kind of permission, such as `command-deny` or `network-egress`, it says where the [harness](../../../glossary.md#term-harness--harness) enforces it. It also says whether the harness does so `native`, at `runtime` or `none` ([COR-028 point 3](../../../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
 7. The author writes the adapter's support declaration, `harness-support.yaml`. It answers each need that `.pkit/schemas/harness-requirements.yaml` lists, such as `delegated-result-complete` ([COR-047 point 2](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)). Each need's entry gives a grade, its `harness_versions` and its evidence. The adapter's README states the same entries in prose.
 8. The author runs `pkit sync` in the source repository.
+13. At its entry, before it reads anything, [sync](../../../glossary.md#term-sync--sync) checks the repository as step 12 does (REQ-012).
+
+> [!WARNING]
+> **Not built yet:** `pkit sync` runs no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 9. The system runs the scripts of every adapter in the order of the adapters' names ([UC-014](UC-014-develop-methodology.md)). So the new adapter's scripts deploy the skills and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) where the new harness reads them.
 10. The author runs `pkit validate`. Its `packages` member checks the adapter's package metadata: its name, its version and its range. Its `schemas` member checks the support declaration against its schema.
 11. The author runs `pkit harness report --adapter <name>`. The system reads only the declaration, never the harness ([COR-047](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md) points 3 to 5). So it reports a need `unsatisfied` where its entry grades it `not-achievable` for every version, and it reports the need `indeterminate` otherwise. It exits with status `1` while any need is not `satisfied`.

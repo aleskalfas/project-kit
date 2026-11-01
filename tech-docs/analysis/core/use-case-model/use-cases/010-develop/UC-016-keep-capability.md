@@ -3,13 +3,26 @@ id: UC-016
 title: Keep a capability I wrote in my own repository
 status: active
 actor: ACT-component-author
-other-actors: []
+other-actors:
+  - ACT-operator
 after:
   - [UC-015, UC-023]
   - [UC-014, UC-019, UC-049]
 requirements:
   - REQ-002
   - REQ-009
+  - REQ-010
+  - REQ-012
+shortfalls:
+  - at: 12
+    issue: "#1765"
+    record: ADR-034#1
+  - at: 13
+    issue: "#1765"
+    record: ADR-034#1
+  - at: 14
+    issue: "#1765"
+    record: ADR-034#1
 pkit:
   friction:
     anchors:
@@ -22,17 +35,23 @@ pkit:
         - COR-031
         - COR-030
         - ADR-059
+        - ADR-034#1
       artefact:
         - ACT-component-author
+        - ACT-operator
         - REQ-002
         - REQ-009
+        - REQ-010
+        - REQ-012
 ---
 
 # UC-016 — Keep a capability I wrote in my own repository
 
 **Goal:** Keep a capability I wrote in my own repository, where sync never overwrites it and uninstall never deletes it.
 
-**Other actors:** None.
+**Other actors:**
+
+- **Operator** (`ACT-operator`): is asked before a command of this use case writes in another repository than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:**
 
@@ -46,7 +65,12 @@ pkit:
 **Main path:**
 
 1. The author runs `pkit capabilities register <name>`.
-2. The [system](../../../glossary.md#term-system--system) finds the [capability](../../../glossary.md#term-capability--capability) authored in the [project](../../../glossary.md#term-project--project), at `.pkit/capabilities/<name>/`.
+12. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
+
+> [!WARNING]
+> **Not built yet:** `pkit capabilities register` runs no such check, and writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
+2. The system finds the [capability](../../../glossary.md#term-capability--capability) authored in the [project](../../../glossary.md#term-project--project), at `.pkit/capabilities/<name>/`.
 3. The system checks the capability against its own tree: its [package metadata](../../../glossary.md#term-package-metadata--package-metadata), its README and its own schemas ([COR-031 point D1](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md#d1--the-lifecycle-excludes-incubated-capabilities-from-source-reconciliation-but-not-from-self-consistency-checks)).
 4. The system checks the capability's [range](../../../glossary.md#term-range--range) on the [backbone](../../../glossary.md#term-backbone--backbone) the project records, and the capabilities it depends on ([COR-030](../../../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)).
 5. The system checks that none of the capability's [skills](../../../glossary.md#term-skill--skill) or [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) collides with one the project already holds.
@@ -54,7 +78,17 @@ pkit:
 7. The system prints `Registered incubated capability '<name>' v<version> (in-repo) at .pkit/capabilities/<name>/`.
 8. The system runs each [adapter](../../../glossary.md#term-adapter--adapter)'s scripts, which deploy the capability's skills and agent definitions, and sets up each command the capability registers. Then it asks each question the capability's [data points](../../../glossary.md#term-data-point--data-point) declare.
 9. Later, the author runs `pkit sync` in the project, where the system is installed. For the capability, the system prints `incubated   '<name>' — in-repo capability; skipping source-reconciliation.`, and copies nothing over it. It deploys the capability's skills and agent definitions again (COR-031 point D1).
+13. At its entry, before it reads anything, the [sync](../../../glossary.md#term-sync--sync) of step 9 checks the repository as step 12 does (REQ-012). The sync of 9a checks the repository too.
+
+> [!WARNING]
+> **Not built yet:** `pkit sync` runs no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 10. Later still, the author runs `pkit capabilities uninstall <name>`. The system takes the capability out of the manifest, and drops its deployed skills and agent definitions ([COR-031 point D4](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md#d4--every-lifecycle-verb-honours-origin-removal-never-destroys-adopter-owned-source)).
+14. At its entry, before it writes anything, the `pkit capabilities uninstall` of step 10 checks the repository as step 12 does (REQ-012).
+
+> [!WARNING]
+> **Not built yet:** `pkit capabilities uninstall` runs no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 11. The system keeps the subtree on disk. It prints `Unregistered incubated capability '<name>' in place; your authored files are kept at .pkit/capabilities/<name>/` and `(pass --purge to delete the authored subtree as well.)`.
 
 **Variants:**
@@ -67,6 +101,7 @@ pkit:
 - **4a.** The [backbone](../../../glossary.md#term-backbone--backbone) the project records lies outside the capability's range, or a capability it depends on is missing or outside its range. The system refuses, naming the range it needs and what to [install](../../../glossary.md#term-install--install) or upgrade, and writes nothing ([COR-030](../../../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)). The path rejoins at step 1.
 - **5a.** A [skill](../../../glossary.md#term-skill--skill) or an [agent definition](../../../glossary.md#term-agent-definition--agent-definition) of the capability collides with one the project holds. The system lists each collision, refuses with `rename the colliding artifact(s) in your capability tree, then retry.`, and writes nothing. The path rejoins at step 1.
 - **9a.** The project is the methodology's source repository. Sync there copies nothing at all, and prints no line for the capability ([UC-014](UC-014-develop-methodology.md)). It deploys the capability's skills and agent definitions again, and the path goes on at step 10.
+- **9b.** The running CLI is at another [version](../../../glossary.md#term-version--version) than the project records, or a [version transition](../../../glossary.md#term-version-transition--version-transition) is incomplete. Sync stops before it writes, names the remedy, and writes nothing ([REQ-010](../../../requirements/functional/REQ-010-stop-under-another-version.md)). The use case ends.
 - **10a.** The author passes `--purge`. The system asks first, since the subtree is `the only copy of this incubated capability's work`, and deletes it only on a yes.
 - **10b.** The project is the methodology's source repository. The system refuses `--purge`, since the subtree is the capability's source, and names `git rm -r .pkit/capabilities/<name>` to remove it ([ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)).
 
