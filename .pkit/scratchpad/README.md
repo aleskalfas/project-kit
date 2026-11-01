@@ -204,10 +204,10 @@ Each command has its full entry in the CLI reference, which each name below link
 | [`pkit scratchpad drop <slug>`](../cli/README.md#scratchpad-drop-slug) | Moves the note from `active/` or `reported/` to `dropped/`, and adds `retired`. |
 | [`pkit scratchpad reported <slug> <ref>...`](../cli/README.md#scratchpad-reported-slug-ref) | Records a send made outside the tooling. Moves the note from `active/` to `reported/` and adds the reported fields, or adds new issues to a reported note. |
 | [`pkit scratchpad list`](../cli/README.md#scratchpad-list) | Lists the notes by folder, each reported note with its issues' live states. Marks an edited reported note, and names the retiring command once all of a reported note's issues are closed. Writes nothing. |
-| [`pkit report feedback … --scratchpad <slug>`](../cli/README.md#report-bug--report-feedback--report-change-request), and the `bug` and `change-request` verbs alike | Attaches the whole note, front matter included, to a public issue. Moves the note to `reported/` on a successful post only. |
+| [`pkit report feedback … --scratchpad <slug>`](../cli/README.md#report-bug--report-feedback--report-change-request), and the `bug` and `change-request` verbs alike | Attaches the whole note, front matter included, to a public issue. On a successful post only, moves the note to `reported/`, or records the new issue on a note already there. |
 
 - **No skill pairs `done`, `drop` or `reported`,** since each is mechanical (COR-006).
-- **A report run by an agent** goes through the `report-author` skill. Run with `--yes`, the verb only stages the report. A person posts it at a terminal with `pkit report submit <id>`, and only that post moves the note to `reported/`.
+- **A report run by an agent** goes through the `report-author` skill. Run with `--yes`, the verb only stages the report. A person posts it at a terminal with `pkit report submit <id>`, and only that post records the send on the note.
 - **`<slug>`** of `done`, `drop` and `reported`, and of `--scratchpad`, is a slug or a whole file name. A slug finds every note whose file name ends in `-<slug>.md` ("File name" above). Give the whole file name where a short slug could find another note.
 - **The refusals** write nothing:
   - `new scratchpad`:
