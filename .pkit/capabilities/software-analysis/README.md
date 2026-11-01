@@ -12,7 +12,7 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
         - .pkit/capabilities/software-analysis/review-contributions.yaml
         - .pkit/capabilities/software-analysis/package.yaml
-      record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", "software-analysis:DEC-005", COR-004, COR-017, COR-023, COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, "COR-054#1", "COR-054#2", "COR-054#3", "COR-054#4", "COR-054#5", "COR-055#1", "COR-055#2", "COR-056#2", COR-057, COR-060, "COR-062#1", "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
+      record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", "software-analysis:DEC-005", "software-analysis:DEC-007", COR-004, COR-017, COR-023, COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, "COR-054#1", "COR-054#2", "COR-054#3", "COR-054#4", "COR-054#5", "COR-055#1", "COR-055#2", "COR-056#2", COR-057, COR-060, "COR-062#1", "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, RS-SAN-012, RS-SAN-013, RS-SAN-014, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare", ".pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift", ".pkit/decisions/README.md#looking-a-citation-up", ".pkit/lifecycle/README.md#install-pre-flight-checks", ".pkit/lifecycle/README.md#discovery-what-a-capability-would-connect-to", ".pkit/lifecycle/README.md#the-methodologys-literals", ".pkit/lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping"]
 ---
 
@@ -411,6 +411,8 @@ It has a use case's `id`, `title`, `status`, `actor` and `requirements`, and its
 - **`relies-on`** lists each use case outside the journey that a step relies on, of any actor, and none of its steps.
 - **`requirements`** lists only the requirements that bind the journey's whole path (DEC-002 point 7). A requirement that binds one of its steps is that step's use case's to list. Listed by the journey too, one change would flag both for one obligation. No check can tell the two apart, so whoever writes the journey decides.
 - **Its anchors.** `steps` and `relies-on` are the source of its use-case anchors. The stamp writes their use cases into the artefact anchors, beside the journey's actor. The check requires the use-case anchors to match the two, and the actor anchor to be there. Its requirement anchors match `requirements` exactly, as a use case's do. Add the code at the seams as path anchors.
+
+**When use cases make a path.** A journey tells each path, where one actor takes several of its own use cases in turn toward one goal (DEC-005 point 2). A hand-over a use case states, in a precondition, its trigger or a step, is a sign of a path, never proof. How to judge a path at its edges is [software-analysis:DEC-007-path-edges]'s, and the `analysis-author` skill's `journey.md` walks it.
 
 **Actor** (`schemas/actor.schema.json`, `templates/actor.md`) — a named role that uses the system, not a persona. It is a file of its own, `use-case-model/actors/ACT-<slug>.md`. Its needs sit in its front matter, a few lines above the description its body gives, so a tool reads them as data and never from the body (DEC-001 point 1):
 
@@ -1239,7 +1241,7 @@ In an analysis that builds on another, an actor of that analysis follows your ow
   - the order of a domain model's views (DEC-004 point 6)
   - one name for one concept (DEC-001 points 1 and 2)
   - a step the system does not carry out yet, which an accepted record decides (DEC-001 points 1 and 5)
-  - the functional area each use case lies in, and the journey that tells each path (DEC-005 points 1, 2 and 5)
+  - the functional area each use case lies in, and the journey that tells each path (DEC-005 points 1, 2 and 5, and DEC-007)
 
 | Rule | Status | Statement |
 |---|---|---|
@@ -1275,7 +1277,7 @@ In an analysis that builds on another, an actor of that analysis follows your ow
   - An analysis names another only where its component depends on that one's, and an optional one only as an option. Across analyses, an artefact anchors the records behind what it takes, never another analysis's artefacts (`RS-SAN-010`, `RS-SAN-005`).
   - A domain-model view names a concept that another view of its analysis explains only where that view's number is lower. A change that adds a section to a view owns the break where a view numbered at or below it already names that concept (`RS-SAN-011`).
   - A step or a variant the system has never carried out stands only where an accepted record decides it, with its `Not built yet` box. The box says what its step states and the system lacks, and its record decides that behaviour. A box below a step that is built breaks the rule too (`RS-SAN-013`).
-  - Each use case lies in a functional area whose goal it is a step toward, and no two areas serve one function. An area is cut by what its use cases do, never by their number, their actor, a concept or the code. Where one actor reaches a goal only through several of its own use cases in turn, a journey tells that path. A chain in `after` between one actor's use cases is a sign of a path, never proof (`RS-SAN-014`).
+  - Each use case lies in a functional area whose goal it is a step toward, and no two areas serve one function. An area is cut by what its use cases do, never by their number, their actor, a concept or the code. Where one actor's use cases make a path, a journey tells it, as "When use cases make a path", above, says (`RS-SAN-014`).
 - **What judges them.** A reviewer judges each where it binds, such as the rule-set reviewer (COR-057), and leaves `RS-SAN-009`'s declared part to its check. While the rules are proposed, they bind nothing, and nothing judges them.
   - **What they leave out.** The stamp and the check refuse some things whatever any rule's status, such as a use case's actor the analysis does not hold. The *How* of `RS-SAN-003`, `RS-SAN-005`, `RS-SAN-012` and `RS-SAN-013` names what each leaves to them.
   - **Why in their own words.** A check declared under `checks` enforces its part only where its rule binds (COR-051 point 2). These checks run whatever any rule's status, so the rules leave those parts out in their own words instead.
@@ -1751,7 +1753,7 @@ Shipped: the decision; the method rule set `SAN`, its format rule and its append
 
 ## Citing this capability's decisions
 
-`[software-analysis:DEC-001-software-analysis-discipline]`, `[software-analysis:DEC-002-analysis-requirements]`, `[software-analysis:DEC-003-analysis-diagrams]`, `[software-analysis:DEC-004-domain-model-views]` and `[software-analysis:DEC-005-finding-functionality]`.
+`[software-analysis:DEC-001-software-analysis-discipline]`, `[software-analysis:DEC-002-analysis-requirements]`, `[software-analysis:DEC-003-analysis-diagrams]`, `[software-analysis:DEC-004-domain-model-views]`, `[software-analysis:DEC-005-finding-functionality]` and `[software-analysis:DEC-007-path-edges]`.
 
 ## Dependencies
 
