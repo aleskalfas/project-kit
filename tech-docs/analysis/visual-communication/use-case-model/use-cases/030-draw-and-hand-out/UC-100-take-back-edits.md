@@ -35,26 +35,30 @@ pkit:
 **Main path:**
 
 1. The developer asks the system to take back the edits made since the piece was last drawn there.
-2. The system finds each edit, and traces it to the field of the content, or the library, that the edited object came from.
-3. The system writes each edit that has exactly one field to go to into that field, such as a title into its slide's title.
-4. The system lists each edit that has no such field, and writes nothing for it. Examples are a colour picked by hand, and a box moved where the layout sets its position.
+2. The system finds each edit, and traces it to where the edited object came from. That is a field of the content, a local component of the piece, or a library.
+3. The system writes each edit that has exactly one field of the content or of a local component to go to into that field. An example is a title, written into its slide's title.
+4. The system lists each other edit, and writes nothing for it. Examples are a colour picked by hand, a box moved where the layout sets its position, and an edit to what a library draws.
 5. The developer reads what the system wrote as a diff, and commits it or reverts it.
-6. For each listed edit, the developer makes it an option of the piece, alters the brand or a library, or drops it.
+6. For each listed edit, the developer picks another option of the library component, alters the brand or a library, or drops the edit.
 
 **Variants:**
 
 - **2a.** A field was edited both where the piece is drawn and in the content since the last drawing. The system writes neither edit, and lists the conflict.
-- **3a.** The edit belongs to a library the project took from another repository. The system writes nothing into that library. It lists the edit with the repository the library comes from, or offers to make it a local component of the piece.
 
-**Postconditions:** The content holds each edit that had exactly one field to go to, and the developer knows each other edit.
+**Postconditions:** The content and the piece's local components hold each edit that had exactly one field to go to. The developer knows each other edit.
 
 **Minimal guarantees:**
 
-- The system never writes an edit that has no field of its own, or one that conflicts with an edit in the content.
+- The system never writes an edit into a library. It never writes an edit that has no field of its own, or one that conflicts with an edit in the content.
+
+## Open for the design
+
+What the developer needs here that no accepted record decides yet:
+
+- **Edits to a delivered piece.** Whether the system refuses to take them back, or first copies the piece as an adapted one. The architect's review in the planning note asks for one of the two.
 
 ## Sources
 
 - **The goal:** use case 5 of the planning note `2026-10-30-visual-work-capability`, which the maintainer asked for on 30 October, in its point 3.
-- **The steps and the guarantee:** the decisions the note records in its points 3 and 4i.
-- **Left open:** what the system does with an edit to a delivered piece. The note's architect's review asks that it refuse, or first copy the piece as an adapted one, and nothing decides it yet.
+- **The steps and the guarantees:** the decisions the note records in its points 3, 4h and 4i. Point 4h says the system writes only to the content and to the piece's own local components.
 - **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.

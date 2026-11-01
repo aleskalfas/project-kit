@@ -7,7 +7,7 @@ other-actors:
   - core:ACT-ai-agent
 requirements: []
 after:
-  - [UC-093, UC-094]
+  - [UC-093, UC-094, UC-095, UC-104]
 pkit:
   friction:
     anchors:
@@ -24,7 +24,7 @@ pkit:
 
 - **AI agent** (`core:ACT-ai-agent`): does the work for the developer, and may run any step the developer runs.
 
-**Preconditions:** **From [UC-093](UC-093-build-presentation.md), or [UC-094](UC-094-put-figure-in-page.md):** The piece the visual is for exists.
+**Preconditions:** **From [UC-093](UC-093-build-presentation.md), [UC-094](UC-094-put-figure-in-page.md), [UC-095](UC-095-draw-views-of-system.md), or [UC-104](../020-build-libraries/UC-104-add-kind-of-piece.md):** The piece the visual is for exists.
 
 **Assumptions:**
 
@@ -35,18 +35,18 @@ pkit:
 **Main path:**
 
 1. The developer makes a local component inside the piece. It says, as data, which parts the visual has, and how they repeat, line up and take their sizes from the content.
-2. The developer gives each part its colour, font and size only by a name the brand gives a value to, never as a fixed value. So another brand still reaches every part.
+2. The developer takes each part's colour, font and text size from a name the brand gives a value to, never from a fixed value. So another brand still reaches every part.
 3. The developer uses the local component in the piece's content, filled as a library component is.
 4. The system checks the local component, and draws the piece with it.
 
 **Variants:**
 
-- **1a.** The visual needs what data cannot say, such as items set around a circle. The developer writes a helper script, which runs while the piece is prepared, never while it is drawn. The script writes the local component as data, and the path goes on at step 3.
-- **4a.** The local component holds a fixed colour, or a text from outside the content. The system refuses it and names each spot. The developer mends it, and the path rejoins at step 4.
+- **1a.** The visual needs what data cannot say, such as items set around a circle. The developer writes a helper script, which runs while the piece is prepared, never while it is drawn. The script writes the local component as data, with every text taken from the content. The path goes on at step 3.
+- **4a.** The local component holds a fixed colour, or a helper script wrote a text that is not in the content. The system refuses it and names each spot. The developer mends it, and the path rejoins at step 4.
 - **4b.** An input of a helper script was edited since the script wrote the local component. The system says the local component is out of date, and the developer runs the script again.
-- **4c.** The same visual is needed in other pieces. The developer moves it into a library they own, its fixed texts turned into content fields and its one-time choices into options. Each piece then moves to it after the developer sees the piece before and after ([UC-103](../030-build-libraries/UC-103-improve-library-component.md)).
+- **4c.** The same visual is needed in other pieces. The developer moves it into a library the project owns. Its fixed texts become content fields, and its one-time choices become options. Each piece then moves to it after the developer sees the piece before and after ([UC-103](../020-build-libraries/UC-103-improve-library-component.md)).
 
-**Postconditions:** The piece draws the new visual from data, in the piece's brand and in each of its languages.
+**Postconditions:** The system draws the new visual in the piece from data, in the piece's brand and in each of its languages.
 
 **Minimal guarantees:**
 

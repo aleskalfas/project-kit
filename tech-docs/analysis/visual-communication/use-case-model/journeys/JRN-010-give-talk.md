@@ -32,13 +32,13 @@ pkit:
 **Steps:**
 
 1. [UC-093](../use-cases/010-make/UC-093-build-presentation.md) — Build a presentation from library components
-2. [UC-101](../use-cases/020-draw-and-hand-out/UC-101-give-second-language.md) — Give a piece in a second language
+2. [UC-101](../use-cases/030-draw-and-hand-out/UC-101-give-second-language.md) — Give a piece in a second language
    - **Needs from step 1 (UC-093):** the presentation, its content written in the source language. A source page edited after it was translated is flagged in each translation (UC-101, variant 6b).
-3. [UC-099](../use-cases/020-draw-and-hand-out/UC-099-draw-through-renderer.md) — Draw a piece through another renderer
-   - **Needs from step 2 (UC-101):** the presentation in both languages. A text that fits in one language may not fit in the other in the renderer's fonts, and the system says so (UC-099, variant 2d).
-4. [UC-100](../use-cases/020-draw-and-hand-out/UC-100-take-back-edits.md) — Take back what people changed where a piece is drawn
+3. [UC-099](../use-cases/030-draw-and-hand-out/UC-099-draw-through-renderer.md) — Draw a piece through another renderer
+   - **Needs from step 2 (UC-101):** the presentation in both languages. A text that fits in one language may not fit in the other in the board's fonts, and the system says so (UC-099, step 3).
+4. [UC-100](../use-cases/030-draw-and-hand-out/UC-100-take-back-edits.md) — Take back what people changed where a piece is drawn
    - **Needs from step 3 (UC-099):** the presentation drawn on a board people can edit. Where a field was edited both on the board and in the content since then, the system writes neither edit (UC-100, variant 2a).
-5. [UC-102](../use-cases/020-draw-and-hand-out/UC-102-hand-out-pdf.md) — Hand out a piece as a PDF for each language
+5. [UC-102](../use-cases/030-draw-and-hand-out/UC-102-hand-out-pdf.md) — Hand out a piece as a PDF for each language
    - **Needs from step 4 (UC-100):** the content, with the edits made on the board taken back. An edit left on the board is missing from the PDF, which the system writes from the content, never from the board (UC-102, variant 2a).
 
 **Variants:**

@@ -40,14 +40,14 @@ pkit:
 2. The developer writes the figure's content, and chooses the library component that does its job.
 3. The system draws the figure in each mode of the brand's colour scheme, such as light and dark.
 4. The developer shows the figure in the page, from a copy that always holds the figure's current drawing.
-5. The page shows the figure in the mode its reader's site uses, and follows the reader's switch to another mode.
+5. The system shows the figure in the mode the reader's site uses, and follows the reader's switch to another mode.
 6. The developer lands the page and the figure in one change.
 
 **Variants:**
 
 - **2a.** The figure was first drawn for a slide. The developer takes its content out of the presentation unaltered, as a piece of its own.
 - **6a.** The figure's content was edited, and the figure was not drawn again. The system's check fails on the figure until it is drawn again.
-- **6b.** A library the figure uses has a new version. The system proposes to move the figure to it, as a change of its own, with the figure before and after. The figure moves only once that change lands.
+- **6b.** The developer takes in a new version of a library the figure uses. The system proposes to move the figure to it, as a change of its own, with the figure before and after. The figure moves only once that change lands.
 
 **Postconditions:** The page shows the figure, drawn from its current content, in the mode its reader uses.
 

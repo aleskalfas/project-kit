@@ -7,7 +7,7 @@ other-actors:
   - core:ACT-ai-agent
 requirements: []
 after:
-  - [UC-093, UC-094]
+  - [UC-093, UC-094, UC-095, UC-096, UC-104]
 pkit:
   friction:
     anchors:
@@ -25,12 +25,11 @@ pkit:
 
 - **AI agent** (`core:ACT-ai-agent`): does the work for the developer, and may run any step the developer runs.
 
-**Preconditions:** **From [UC-093](../010-make/UC-093-build-presentation.md), or [UC-094](../010-make/UC-094-put-figure-in-page.md):** Pieces use the library component.
+**Preconditions:** **From [UC-093](../010-make/UC-093-build-presentation.md), [UC-094](../010-make/UC-094-put-figure-in-page.md), [UC-095](../010-make/UC-095-draw-views-of-system.md), [UC-096](../010-make/UC-096-add-visual-as-data.md), or [UC-104](UC-104-add-kind-of-piece.md):** Pieces use the library component, from a library the project owns.
 
 **Assumptions:**
 
 - The project has visual-communication installed ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
-- The developer can edit the library: it is the project's own, or kept in a repository the developer can edit.
 - The project lands each change as it chose to land changes: through a pull request, or directly when one person works alone ([COR-009](../../../../../../.pkit/decisions/core/COR-009-pr-workflow.md)).
 
 **Trigger:** The developer sees how a library component could work better, such as a card whose heading wraps badly.
@@ -39,27 +38,30 @@ pkit:
 
 1. The developer improves the library component in its library.
 2. The developer gives the library a new version.
-3. The project takes in the new version, beside the version its pieces use now.
+3. The system keeps the new version beside the version the pieces use now.
 4. For each piece that uses the library component, the system draws the piece with both versions, and shows the developer the piece before and after.
 5. The developer moves each piece that the new version improves to it, and leaves each other piece where it is.
 6. The developer removes each version that no piece uses any more.
 
 **Variants:**
 
-- **2a.** The improvement breaks a stable library component, such as by removing a field, and the new version is no new major version. The system refuses the version and names each break.
-- **2b.** The library component is experimental. It may be altered in any version, and each piece that uses it is told so when it is drawn.
-- **3a.** The developer asks which libraries have newer versions. The system lists them, and writes nothing.
-- **4a.** A piece is a draft. It takes the newest version at its next drawing, with no before and after.
-- **4b.** A piece is living, such as a figure in a page. The system proposes the move as a change of its own, with the piece before and after ([UC-094](../010-make/UC-094-put-figure-in-page.md), variant 6b).
-- **4c.** A piece is delivered. The system leaves it at the versions it was delivered with.
-- **4d.** A piece is adapted. It moves only when the developer moves it, as in step 5.
+- **2a.** The improvement breaks a stable library component, such as by removing a field, and the new version keeps the major number. The system refuses the version and names each break.
+- **2b.** The library component is experimental, so any version of its library may alter it. The system says so when it draws a piece that uses the component.
+- **4a.** A piece is living, such as a figure in a page. The system proposes the move as a change of its own, with the piece before and after ([UC-094](../010-make/UC-094-put-figure-in-page.md), variant 6b).
+- **4b.** A piece is delivered. The system leaves it at the versions it was delivered with, and draws no before and after.
 
-**Postconditions:** Each piece the developer moved uses the improved library component, and every other piece looks as it did.
+**Postconditions:** Each piece the developer moved uses the improved library component. Every other piece still uses the versions it used before.
 
 **Minimal guarantees:**
 
 - A delivered piece never moves to a new version of a library.
 - A stable library component breaks only in a new major version of its library.
+
+## Open for the design
+
+What the developer needs here that no accepted record decides yet:
+
+- **A library another project shares.** Its owner improves it there. This project asks which of its libraries have newer versions, and takes in a new one as from step 3. No use case yet tells how a project takes in a library by its link.
 
 ## Sources
 

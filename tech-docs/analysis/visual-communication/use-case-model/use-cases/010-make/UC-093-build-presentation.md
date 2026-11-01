@@ -27,7 +27,6 @@ pkit:
 **Assumptions:**
 
 - The project has visual-communication installed ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
-- The capability ships a starter library of library components, and a neutral brand. So a presentation can be drawn before the project has a library of its own ("Sources", below).
 
 **Trigger:** The developer has a talk to give, such as a talk that shows the project to its users.
 
@@ -38,12 +37,12 @@ pkit:
 3. For each slide's picture, the developer chooses a library component that does its job, such as one that shows layers or one that shows steps. The developer fills it with the slide's own content.
 4. The system draws the presentation in the brand, with the library components the content names.
 5. The system says which texts do not fit where they go, and which library components are still experimental.
-6. The developer has the drawn presentation read as its audience would read it, and mends the content where the reading asks.
+6. The developer reads the drawn presentation as its audience would, and mends the content where the reading asks.
 
 **Variants:**
 
 - **1a.** The presentation is about several subjects, such as two projects. The developer names the notation of each. Where two notations name one concept differently, the system says so, and the developer settles the name for this piece.
-- **1b.** The developer starts from a delivered presentation, to give it to a new audience. The system copies it as an adapted piece. The copy keeps the delivered look until the developer moves it to newer versions of its libraries ([UC-103](../030-build-libraries/UC-103-improve-library-component.md)). The path goes on at step 2.
+- **1b.** The developer starts from a delivered presentation, to give it to a new audience. The system copies it as an adapted piece. The copy keeps the versions of the libraries the delivered piece used, until the developer moves it to newer ones ([UC-103](../020-build-libraries/UC-103-improve-library-component.md)). The path goes on at step 2.
 - **3a.** No library component fits a slide's picture. The developer makes a local component for it, inside this piece ([UC-096](UC-096-add-visual-as-data.md)). The path goes on at step 4.
 - **4a.** The content does not fit what a library component declares, such as a field the library component does not have. The system names each fault and draws nothing. The developer mends the content, and the path rejoins at step 4.
 - **5a.** A text does not fit. The developer shortens it, or chooses another option the library component declares, and the path rejoins at step 4.
@@ -55,8 +54,14 @@ pkit:
 
 - An experimental library component is drawn with a note, and never refused.
 
+## Open for the design
+
+What the developer needs here that no accepted record decides yet:
+
+- **What a new project starts from.** The planning note decides that the capability gives each project a starter library and a neutral brand. So a presentation can be drawn before the project has a library of its own.
+
 ## Sources
 
-- **The goal:** use case 1 of the planning note `2026-10-30-visual-work-capability`, which the maintainer asked for on 30 October. Variant 1a takes in the note's use case 12, "Work about several subjects, under any brand", proposed on 31 October.
-- **The steps and the guarantee:** the decisions the note records in its points 4b, 4c, 4d, 4f, 4g, 8 and 9, and in its naming pass.
+- **The goal:** use case 1 of the planning note `2026-10-30-visual-work-capability`, which the maintainer asked for on 30 October. Variant 1a takes in the note's use case 12, "Work about several subjects, under any brand", proposed on 31 October, with its point 13.
+- **The steps and the guarantee:** the decisions the note records in its points 4b, 4c, 4d, 4f, 4g, 8, 9 and 18a, and in its naming pass. What a new project starts from is its point 18b.
 - **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.

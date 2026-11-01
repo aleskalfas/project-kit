@@ -7,7 +7,7 @@ other-actors:
   - core:ACT-ai-agent
 requirements: []
 after:
-  - [UC-093, UC-094]
+  - [UC-093, UC-094, UC-095, UC-104]
 pkit:
   friction:
     anchors:
@@ -18,13 +18,13 @@ pkit:
 
 # UC-102 — Hand out a piece as a PDF for each language
 
-**Goal:** Hand out a piece as a PDF, one for each language, with a page for each slide in order.
+**Goal:** Hand out a piece as a PDF, one for each language, with the piece's pages in order, such as its slides.
 
 **Other actors:**
 
 - **AI agent** (`core:ACT-ai-agent`): does the work for the developer, and may run any step the developer runs.
 
-**Preconditions:** **From [UC-093](../010-make/UC-093-build-presentation.md), or [UC-094](../010-make/UC-094-put-figure-in-page.md):** The piece exists.
+**Preconditions:** **From [UC-093](../010-make/UC-093-build-presentation.md), [UC-094](../010-make/UC-094-put-figure-in-page.md), [UC-095](../010-make/UC-095-draw-views-of-system.md), or [UC-104](../020-build-libraries/UC-104-add-kind-of-piece.md):** The piece exists.
 
 **Assumptions:**
 
@@ -35,7 +35,7 @@ pkit:
 **Main path:**
 
 1. The developer asks for the piece as a PDF.
-2. The system writes one PDF for each language of the piece, with a page for each slide, in order.
+2. The system writes one PDF for each language of the piece. It holds a page for each page of the piece, such as each slide, in order.
 3. The system gives this export a new number, one number for all its languages. It records the export's date, the piece's state then, and the versions of the libraries it used.
 4. The developer hands out the PDF of each language.
 
@@ -44,7 +44,7 @@ pkit:
 - **2a.** The piece is also drawn on a board. The system still writes the PDF from the piece itself, never from the board.
 - **2b.** A program the system writes PDFs with is not on the machine. The system names it and writes nothing, and the use case ends.
 - **2c.** The developer asks for a PDF that screen readers follow. The system writes it with headings, a reading order and a text for each picture.
-- **4a.** The talk is given, and the developer marks the piece delivered. This export is kept with the piece as its final form. From then on, no new version of a library alters the piece's look.
+- **4a.** The piece has done its job, such as a talk that was given, and the developer marks it delivered. This export is kept with the piece as its final form. From then on, no new version of a library alters the piece's look.
 
 **Postconditions:** The developer holds a PDF for each language, all under one export number, and knows what each export holds.
 

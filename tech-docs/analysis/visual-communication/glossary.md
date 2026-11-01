@@ -3,10 +3,14 @@ builds-on:
   - analysis: core
     version: 2.0.0
     terms:
+      - {id: TERM-adapter, name: adapter}
       - {id: TERM-capability, name: capability}
       - {id: TERM-change, name: change}
+      - {id: TERM-component, name: component}
+      - {id: TERM-documentation-root, name: documentation root}
       - {id: TERM-install, name: install}
       - {id: TERM-project, name: project}
+      - {id: TERM-pull-request, name: pull request}
       - {id: TERM-system, name: system}
     actors:
       - id: ACT-developer
@@ -14,14 +18,14 @@ builds-on:
         needs:
           - Build a presentation from library components that exist, filled with my own content, so nothing made once is made again.
           - Put a figure in a documentation page that follows the page's light or dark mode, and stays current as the page changes.
-          - Draw several views of one system from one model, so each fact is written once and a look changed once changes every view.
+          - Draw several views of one system from one model, so each fact is written once and every view shows it the same way.
           - Add a new kind of visual to a piece as data, without code, where no library component fits.
           - Put a picture that a program makes, such as a 3D render, in any piece, in the colours of its brand.
           - Give a piece another brand or another mode, and see its look change while its content stays the same.
           - Draw a piece through another renderer, such as a web page instead of a board, and learn what that renderer could not draw.
           - Take what people changed where my piece is drawn, such as on a board, back into its content when I ask.
           - Give a piece in a second language, from content of the same structure, and learn which pages to translate again when the source changes.
-          - Hand out a piece as a PDF, one for each language, with a page for each slide in order.
+          - Hand out a piece as a PDF, one for each language, with the piece's pages in order, such as its slides.
           - Improve a library component so the pieces that use it can benefit, without an improvement for one piece breaking another.
           - Add a kind of piece that the capability does not ship, such as a poster, without changing the capability.
           - Make a brand for a look, with its values in each mode of the axes it needs, such as a colour scheme or a device.
@@ -105,22 +109,26 @@ TERM-renderer:
 The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
 
 - **From core at 2.0.0:** the areas up to `030-change`.
+  - **Term:** [adapter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-adapter--adapter)
   - **Term:** [capability](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-capability--capability)
   - **Term:** [change](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-change--change)
+  - **Term:** [component](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-component--component)
+  - **Term:** [documentation root](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-documentation-root--documentation-root)
   - **Term:** [install](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-install--install)
   - **Term:** [project](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-project--project)
+  - **Term:** [pull request](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-pull-request--pull-request)
   - **Term:** [system](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-system--system)
   - **Actor:** [Developer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-developer.md)
     - Build a presentation from library components that exist, filled with my own content, so nothing made once is made again.
     - Put a figure in a documentation page that follows the page's light or dark mode, and stays current as the page changes.
-    - Draw several views of one system from one model, so each fact is written once and a look changed once changes every view.
+    - Draw several views of one system from one model, so each fact is written once and every view shows it the same way.
     - Add a new kind of visual to a piece as data, without code, where no library component fits.
     - Put a picture that a program makes, such as a 3D render, in any piece, in the colours of its brand.
     - Give a piece another brand or another mode, and see its look change while its content stays the same.
     - Draw a piece through another renderer, such as a web page instead of a board, and learn what that renderer could not draw.
     - Take what people changed where my piece is drawn, such as on a board, back into its content when I ask.
     - Give a piece in a second language, from content of the same structure, and learn which pages to translate again when the source changes.
-    - Hand out a piece as a PDF, one for each language, with a page for each slide in order.
+    - Hand out a piece as a PDF, one for each language, with the piece's pages in order, such as its slides.
     - Improve a library component so the pieces that use it can benefit, without an improvement for one piece breaking another.
     - Add a kind of piece that the capability does not ship, such as a poster, without changing the capability.
     - Make a brand for a look, with its values in each mode of the axes it needs, such as a colour scheme or a device.

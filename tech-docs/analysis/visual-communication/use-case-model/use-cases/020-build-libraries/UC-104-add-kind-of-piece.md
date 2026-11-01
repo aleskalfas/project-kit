@@ -41,7 +41,7 @@ pkit:
 
 **Variants:**
 
-- **4a.** The brand lacks a layout the new kind names, or draws it with other slots. The system names what is missing and draws nothing. The developer adds it, and the path rejoins at step 4.
+- **4a.** The brand lacks a layout the new kind names, or draws it with other slots. The system names what is missing. The developer adds it, and the path rejoins at step 4.
 
 **Postconditions:** Pieces of the new kind are made and drawn like any other, and the capability's own files are as they were.
 

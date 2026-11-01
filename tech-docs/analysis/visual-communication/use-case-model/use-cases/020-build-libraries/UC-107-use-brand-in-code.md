@@ -7,7 +7,7 @@ other-actors:
   - core:ACT-ai-agent
 requirements: []
 after:
-  - [UC-105, environment]
+  - [UC-105, UC-106]
 pkit:
   friction:
     anchors:
@@ -24,7 +24,7 @@ pkit:
 
 - **AI agent** (`core:ACT-ai-agent`): does the work for the developer, and may run any step the developer runs.
 
-**Preconditions:** **From [UC-105](UC-105-make-brand.md), or Environment:** The brand is in the project.
+**Preconditions:** **From [UC-105](UC-105-make-brand.md), or [UC-106](UC-106-build-brand-on-brand.md):** The brand is in the project.
 
 **Assumptions:**
 
@@ -46,6 +46,13 @@ pkit:
 **Postconditions:** The code holds the brand's values in each mode, named by the same rule for every target.
 
 **Minimal guarantees:** None.
+
+## Open for the design
+
+What the developer needs here that no accepted record decides yet:
+
+- **The naming rule.** The one rule that names each value in code.
+- **Where the written code goes.** Whether it is committed, and whether it is numbered as an export is.
 
 ## Sources
 

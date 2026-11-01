@@ -7,7 +7,7 @@ other-actors:
   - core:ACT-ai-agent
 requirements: []
 after:
-  - [UC-093, UC-094]
+  - [UC-093, UC-094, UC-095, UC-104]
 pkit:
   friction:
     anchors:
@@ -24,7 +24,7 @@ pkit:
 
 - **AI agent** (`core:ACT-ai-agent`): does the work for the developer, and may run any step the developer runs.
 
-**Preconditions:** **From [UC-093](UC-093-build-presentation.md), or [UC-094](UC-094-put-figure-in-page.md):** The piece the picture goes in exists.
+**Preconditions:** **From [UC-093](UC-093-build-presentation.md), [UC-094](UC-094-put-figure-in-page.md), [UC-095](UC-095-draw-views-of-system.md), or [UC-104](../020-build-libraries/UC-104-add-kind-of-piece.md):** The piece the picture goes in exists.
 
 **Assumptions:**
 
@@ -34,8 +34,8 @@ pkit:
 
 **Main path:**
 
-1. The developer describes what the program draws, such as its models, its camera and its lights. Each colour is named by the value the brand gives it, never written as a fixed value.
-2. The developer has the program run while the piece is prepared. The system gives the program the brand's values, and the program makes the picture.
+1. The developer describes what the program draws, such as the shapes of a game board. Each colour is taken from a name the brand gives a value to, never from a fixed value.
+2. The developer runs the program while the piece is prepared. The system gives the program the brand's values, and the program makes the picture.
 3. The program marks the spots where labels go, and the developer writes each label in the piece's content.
 4. The system puts the picture in the piece, with each label at its spot, measured and translated like any text of the piece.
 5. The developer commits the picture with the piece.
@@ -51,6 +51,12 @@ pkit:
 **Minimal guarantees:**
 
 - The system never runs the program while it draws a piece. It only puts in the picture made before.
+
+## Open for the design
+
+What the developer needs here that no accepted record decides yet:
+
+- **The size of each picture.** How large the program makes each picture, and how a mode that alters sizes, such as a device, changes it.
 
 ## Sources
 

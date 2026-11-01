@@ -7,8 +7,8 @@ other-actors:
   - core:ACT-ai-agent
 requirements: []
 after:
-  - [UC-093, UC-094]
-  - [UC-105, environment]
+  - [UC-093, UC-094, UC-095, UC-104]
+  - [UC-105, UC-106]
 pkit:
   friction:
     anchors:
@@ -27,8 +27,8 @@ pkit:
 
 **Preconditions:**
 
-- **From [UC-093](../010-make/UC-093-build-presentation.md), or [UC-094](../010-make/UC-094-put-figure-in-page.md):** The piece exists, drawn in one brand.
-- **From [UC-105](../030-build-libraries/UC-105-make-brand.md), or Environment:** The other brand is in the project.
+- **From [UC-093](../010-make/UC-093-build-presentation.md), [UC-094](../010-make/UC-094-put-figure-in-page.md), [UC-095](../010-make/UC-095-draw-views-of-system.md), or [UC-104](../020-build-libraries/UC-104-add-kind-of-piece.md):** The piece exists, drawn in one brand.
+- **From [UC-105](../020-build-libraries/UC-105-make-brand.md), or [UC-106](../020-build-libraries/UC-106-build-brand-on-brand.md):** The other brand is in the project.
 
 **Assumptions:**
 
@@ -46,8 +46,9 @@ pkit:
 **Variants:**
 
 - **1a.** The developer names another mode of the same brand, on one of its axes, such as dark on the colour scheme. The system draws the piece with that mode's values, and the use case ends.
-- **1b.** The mode lies on an axis whose modes alter sizes, such as a device. The system lays the piece out again for that mode, so each text still fits, and the use case ends.
-- **3a.** The new brand lacks what the piece uses. The developer chooses another layout or library component the new brand has, or keeps the earlier brand, and the use case ends.
+- **1b.** The mode lies on an axis whose modes alter sizes, such as a device. The system lays the piece out again for that mode, and says which texts do not fit. The use case ends.
+- **3a.** The piece holds a picture made outside the system, such as a photo. It does not follow the brand, so the system names it.
+- **3b.** The new brand lacks what the piece uses. The developer chooses another layout or library component the new brand has, or keeps the earlier brand, and the use case ends.
 
 **Postconditions:** The piece is drawn in the new brand or mode, from the same content.
 
@@ -55,8 +56,15 @@ pkit:
 
 - Giving a piece another brand or mode alters none of its content.
 
+## Open for the design
+
+What the developer needs here that no accepted record decides yet:
+
+- **Which modes a piece is drawn in.** Whether the system draws, shows and hands out a piece in every combination of the modes of its brand's axes, or only in some.
+- **Themes inside one brand.** Whether the looks a brand offers side by side, such as a calm theme and a warm one, are modes on one more axis.
+
 ## Sources
 
 - **The goal:** use case 3 of the planning note `2026-10-30-visual-work-capability`, drawn on 30 October from its point 2. It takes in the brand half of the note's use case 12, and the piece's side of its point 27, on modes on several axes.
-- **The steps and the guarantee:** the decisions the note records in its points 1, 2, 4g and 27.
+- **The steps and the guarantee:** the decisions the note records in its points 1, 2, 4g, 21 and 27.
 - **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.

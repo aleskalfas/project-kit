@@ -51,6 +51,13 @@ pkit:
 
 - A brand built on another never replaces that brand's layouts or library components.
 
+## Open for the design
+
+What the developer needs here that no accepted record decides yet:
+
+- **Longer chains.** Whether a brand may build on a brand that itself builds on another, or on two brands at once.
+- **What a brand built on another adds.** Whether it may add layouts, axes or parts of its own.
+
 ## Sources
 
 - **The goal:** point 26 of the planning note `2026-10-30-visual-work-capability`, from the online game platform the maintainer described on 1 November. The platform is an example only, and nothing of a game is built.

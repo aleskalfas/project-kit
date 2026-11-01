@@ -1,6 +1,6 @@
 # Overview of the analysis of visual-communication
 
-<!-- pkit:overview reads=5 fingerprint=sha256:78d3dfc196dfb5cfb9ea0d55a27b689db6afb52026f555a1f39a5c1ec8ce19ec -->
+<!-- pkit:overview reads=5 fingerprint=sha256:42e05b3625ced1c3e14d79a6dff54bbbfb975f31bda9fdf80cee37966510bc21 -->
 
 No record states what visual-communication is for yet. Write one with `pkit new decision`, and name it as `purpose` in the entry of visual-communication under `analyses` in `.pkit/capabilities/software-analysis/project/config.yaml`.
 
@@ -24,37 +24,37 @@ Make each piece, such as a deck or a figure in a documentation page, from librar
 - [UC-096 — Add a new kind of visual to a piece as data](../use-case-model/use-cases/010-make/UC-096-add-visual-as-data.md)
 - [UC-097 — Put a picture that a program makes in a piece](../use-case-model/use-cases/010-make/UC-097-put-produced-picture.md)
 
-### 020-draw-and-hand-out
+### 020-build-libraries
+
+Build the libraries pieces are made from, and carry their look into code, so all share one look and take each improvement only on purpose.
+
+**Builds on:** [010-make](#010-make).
+
+**Its requirements:** none.
+
+**Its use cases:**
+
+- [UC-103 — Improve a library component without breaking a piece](../use-case-model/use-cases/020-build-libraries/UC-103-improve-library-component.md)
+- [UC-104 — Add a kind of piece the capability does not ship](../use-case-model/use-cases/020-build-libraries/UC-104-add-kind-of-piece.md)
+- [UC-105 — Make a brand with modes on the axes it needs](../use-case-model/use-cases/020-build-libraries/UC-105-make-brand.md)
+- [UC-106 — Build a brand on another brand](../use-case-model/use-cases/020-build-libraries/UC-106-build-brand-on-brand.md)
+- [UC-107 — Use a brand's values in code](../use-case-model/use-cases/020-build-libraries/UC-107-use-brand-in-code.md)
+
+### 030-draw-and-hand-out
 
 Draw a piece in each brand, mode, language and renderer it needs, hand it out as files, and take back what people change where it is drawn.
 
-**Builds on:** [010-make](#010-make).
+**Builds on:** [010-make](#010-make) and [020-build-libraries](#020-build-libraries).
 
 **Its requirements:** none.
 
 **Its use cases:**
 
-- [UC-098 — Give a piece another brand or another mode](../use-case-model/use-cases/020-draw-and-hand-out/UC-098-switch-brand-or-mode.md)
-- [UC-099 — Draw a piece through another renderer](../use-case-model/use-cases/020-draw-and-hand-out/UC-099-draw-through-renderer.md)
-- [UC-100 — Take back what people changed where a piece is drawn](../use-case-model/use-cases/020-draw-and-hand-out/UC-100-take-back-edits.md)
-- [UC-101 — Give a piece in a second language](../use-case-model/use-cases/020-draw-and-hand-out/UC-101-give-second-language.md)
-- [UC-102 — Hand out a piece as a PDF for each language](../use-case-model/use-cases/020-draw-and-hand-out/UC-102-hand-out-pdf.md)
-
-### 030-build-libraries
-
-Build the libraries pieces are made from, so pieces share one look and take each improvement only on purpose.
-
-**Builds on:** [010-make](#010-make).
-
-**Its requirements:** none.
-
-**Its use cases:**
-
-- [UC-103 — Improve a library component without breaking a piece](../use-case-model/use-cases/030-build-libraries/UC-103-improve-library-component.md)
-- [UC-104 — Add a kind of piece the capability does not ship](../use-case-model/use-cases/030-build-libraries/UC-104-add-kind-of-piece.md)
-- [UC-105 — Make a brand with modes on the axes it needs](../use-case-model/use-cases/030-build-libraries/UC-105-make-brand.md)
-- [UC-106 — Build a brand on another brand](../use-case-model/use-cases/030-build-libraries/UC-106-build-brand-on-brand.md)
-- [UC-107 — Use a brand's values in code](../use-case-model/use-cases/030-build-libraries/UC-107-use-brand-in-code.md)
+- [UC-098 — Give a piece another brand or another mode](../use-case-model/use-cases/030-draw-and-hand-out/UC-098-switch-brand-or-mode.md)
+- [UC-099 — Draw a piece through another renderer](../use-case-model/use-cases/030-draw-and-hand-out/UC-099-draw-through-renderer.md)
+- [UC-100 — Take back what people changed where a piece is drawn](../use-case-model/use-cases/030-draw-and-hand-out/UC-100-take-back-edits.md)
+- [UC-101 — Give a piece in a second language](../use-case-model/use-cases/030-draw-and-hand-out/UC-101-give-second-language.md)
+- [UC-102 — Hand out a piece as a PDF for each language](../use-case-model/use-cases/030-draw-and-hand-out/UC-102-hand-out-pdf.md)
 
 ### 040-draw-for-capabilities
 
@@ -73,9 +73,9 @@ Draw what another capability shows in the look of the project's libraries, with 
 | Actor | Who they are | Areas they act in |
 | --- | --- | --- |
 | core:ACT-adopter — Adopter | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [040-draw-for-capabilities](#040-draw-for-capabilities) |
-| core:ACT-ai-agent — AI agent | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [010-make](#010-make), [020-draw-and-hand-out](#020-draw-and-hand-out), [030-build-libraries](#030-build-libraries) |
-| core:ACT-developer — Developer | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [010-make](#010-make), [020-draw-and-hand-out](#020-draw-and-hand-out), [030-build-libraries](#030-build-libraries), [040-draw-for-capabilities](#040-draw-for-capabilities) |
-| core:ACT-operator — Operator | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [020-draw-and-hand-out](#020-draw-and-hand-out) |
+| core:ACT-ai-agent — AI agent | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [010-make](#010-make), [020-build-libraries](#020-build-libraries), [030-draw-and-hand-out](#030-draw-and-hand-out) |
+| core:ACT-developer — Developer | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [010-make](#010-make), [020-build-libraries](#020-build-libraries), [030-draw-and-hand-out](#030-draw-and-hand-out), [040-draw-for-capabilities](#040-draw-for-capabilities) |
+| core:ACT-operator — Operator | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [030-draw-and-hand-out](#030-draw-and-hand-out) |
 
 ### Concepts
 
