@@ -1,7 +1,7 @@
 ---
 id: DEC-005
 title: A small closed engine computes the scene, and three kinds of plugin meet it at a versioned seam
-status: proposed
+status: accepted
 date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
