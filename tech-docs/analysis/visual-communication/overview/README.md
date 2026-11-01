@@ -1,6 +1,6 @@
 # Overview of the analysis of visual-communication
 
-<!-- pkit:overview reads=5 fingerprint=sha256:2ef84d51c3a709e5f354b7bdd9e23242b03669a6db998f84c778258d002af76e -->
+<!-- pkit:overview reads=5 fingerprint=sha256:848085767312c4d199756f233f13af27e2cba4fcd5b4229f72aa2750d0bd3086 -->
 
 No record states what visual-communication is for yet. Write one with `pkit new decision`, and name it as `purpose` in the entry of visual-communication under `analyses` in `.pkit/capabilities/software-analysis/project/config.yaml`.
 
@@ -102,6 +102,21 @@ flowchart LR
   step_2 --> step_3
   step_3 --> step_4
   step_4 --> step_5
+```
+
+#### [JRN-011 — Move a local component into a library](../use-case-model/journeys/JRN-011-move-component-into-library.md)
+
+```mermaid
+flowchart LR
+  accTitle: JRN-011 — Move a local component into a library
+  accDescr: The flow of JRN-011: core:ACT-developer takes 3 steps in order, UC-096, UC-110, UC-093.
+  core_ACT_developer["core:ACT-developer"]
+  step_1(["1. UC-096 — Add a new kind of visual to a piece as data"])
+  step_2(["2. UC-110 — Add a library component and mark it stable"])
+  step_3(["3. UC-093 — Build a presentation from library components"])
+  core_ACT_developer --> step_1
+  step_1 --> step_2
+  step_2 --> step_3
 ```
 
 ### Diagrams
