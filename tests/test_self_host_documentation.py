@@ -208,13 +208,23 @@ def test_the_status_report_shows_roots_places_and_the_records_inside_the_interna
 # --- criterion 2: exactly the adopter-facing `.pkit/` READMEs ----------------
 
 
+def _is_shipped_readme(inside_pkit: PurePosixPath) -> bool:
+    # A `project/` tier is the project's own content, not a shipped README.
+    if "project" in inside_pkit.parts:
+        return False
+    # A scratchpad note's companion is a working draft that moves with its
+    # note (COR-012), not a page; the area's own README stays checked.
+    if inside_pkit.parts[0] == "scratchpad":
+        return inside_pkit == PurePosixPath("scratchpad/README.md")
+    return True
+
+
 def test_every_pkit_readme_is_a_place_or_named_as_not_one() -> None:
     declared = {p for p in _project_places() if p.startswith(".pkit/")}
     on_disk = {
         path.relative_to(REPO).as_posix()
         for path in (REPO / ".pkit").rglob("README.md")
-        # A `project/` tier is the project's own content, not a shipped README.
-        if "project" not in PurePosixPath(path.relative_to(REPO / ".pkit").as_posix()).parts
+        if _is_shipped_readme(PurePosixPath(path.relative_to(REPO / ".pkit").as_posix()))
     }
     unclassified = sorted(on_disk - declared - NOT_PLACES.keys())
     assert unclassified == [], (
