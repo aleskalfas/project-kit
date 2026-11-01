@@ -37,7 +37,7 @@ The operational rules are the instructions an agent session loads at its start, 
 <!-- pkit:contents -->
 - [Layout](#layout)
 - [How the layers stand](#how-the-layers-stand)
-- [Where the rules are kept](#where-the-rules-are-kept)
+- [Core's loaded set](#cores-loaded-set)
 - [A capability's rules](#a-capabilitys-rules)
 - [The capabilities' rules index](#the-capabilities-rules-index)
 - [Each rules file's budget](#each-rules-files-budget)
@@ -81,7 +81,8 @@ Every layer's rules bind at once: core's, each installed capability's and the pr
 - **A clash between two capabilities:** the session stops the step and reports the clash, rather than choose between them (COR-070 point 4).
 - **Wanting less:** a project proposes the change where the rule is kept, or uninstalls the capability.
 
-## Where the rules are kept
+<a id="where-the-rules-are-kept"></a>
+## Core's loaded set
 
 Core's rules are a *loaded rule set* (COR-068). Its accepted rules bind on the work of every session that loads the file generated from it. Each rule has what a rule of any set has: a permanent id, a status, an origin, and a successor when it retires.
 
@@ -97,7 +98,7 @@ A capability may ship operational rules of its own, as one loaded rule set in it
 - **Consent:** installing the capability is the project's consent to its rules, as it is to the project rule set its install declares. No rule is accepted again in the project.
 - **What a step says:** install, sync and upgrade name, for each loaded set they deliver, core's among them, the rules they newly bind, change or retire. That is information, not a gate ([the lifecycle reference, "What a step newly binds"](../lifecycle/README.md#what-a-step-newly-binds)).
 - **Its loaded file** is `.pkit/capabilities/<name>/rules.md`. `pkit rule-sets generate` writes it from the set where the capability is authored, and validation checks it there as it checks `core.md`.
-- **Its preface** names the capability and says how its rules stand, since a session reads the file, not the records. Validation fails a capability's loaded set whose preface does not name the capability, where the set is authored. The preface includes these sentences, its names filled in:
+- **Its preface** names the capability and says how its rules stand, since a session loads the file, not the records. Validation fails a capability's loaded set whose preface does not name the capability, where the set is authored. The preface includes these sentences, its names filled in:
 
   ```markdown
   *These are the `<capability>` capability's operational rules, kept as its loaded rule set `<SET>` (COR-070). They bind on the work of every session in a project where `<capability>` is installed. They add to core's rules and never loosen them, and where one cannot be kept with a rule of core's, core's binds. A project's rules add to these and never loosen them. Where one of these rules cannot be kept with a rule of another capability's, stop the step and report the clash, rather than choose between them. Where a project's rule cannot be kept with one of these, this one binds.*
@@ -110,7 +111,7 @@ A capability may ship operational rules of its own, as one loaded rule set in it
 
 The index, `capabilities.md` beside this file, is how a session reaches each installed capability's loaded file. The backbone renders it whole for the project, from the capabilities the manifest registers and the form the adapter declares. `pkit rule-sets loaded` lists the same answer.
 
-- **What it holds:** a marker line, an HTML comment the harness drops. Then one entry per registered capability that ships a loaded set, in the order of the capabilities' names. It holds no rules of its own, and nothing else.
+- **What it holds:** a marker line, an HTML comment the harness drops. Then it holds one entry per registered capability that ships a loaded set, in the order of the capabilities' names. It holds no rules of its own, and nothing else.
 - **When it is rendered:** at first install, sync and upgrade, and at each capability's install, register, upgrade and uninstall. It is committed with `.pkit/`, so every checkout that holds `core.md` holds it too.
 - **Nobody edits it.** A hand edit is overwritten at the next render, and `pkit validate` fails it until then. A file at its path that is not the index stops sync and upgrade before they write. What counts as the index there is the lifecycle reference's ([its "The capabilities' rules index"](../lifecycle/README.md#the-capabilities-rules-index)).
 - **Reached by one line,** `@.pkit/rules/capabilities.md`, which `CLAUDE.md` keeps after core's include. The adapter's merge inserts it wherever it is absent. The line never needs removing, since uninstalling a capability changes the index alone.
@@ -130,8 +131,7 @@ Each rules file may have a budget, the most words it may hold ([COR-069](../deci
 - **A raise is listed.** `pkit rule-sets altered` lists each budget a change raises, so whoever reviews the change sees it (the CLI reference, `rule-sets altered`).
 - **Lowering one** is any change's to make. A budget is a ceiling, not a target, so a change that trims a file may lower its budget, keeping what room it chooses.
 
-<a id="what-goes-in-coremd"></a>
-<a id="what-does-not-go-in-coremd"></a>
+<a id="what-goes-in-coremd"></a><a id="what-does-not-go-in-coremd"></a>
 ## Which file a rule goes in
 
 A rule goes in the file of the layer where it must bind. A session loads each rules file whole, so a rule holds what it requires, not why.
@@ -139,13 +139,13 @@ A rule goes in the file of the layer where it must bind. A session loads each ru
 - **Core's set,** `OPS`: a rule that must bind on a session's work in every project, in words that fit any project (COR-014). A rule tied to one project's own tooling goes in that project's file.
 - **A capability's loaded set:** a rule that binds only where the capability is installed. It goes neither in core's set, whose rules bind in every project, nor in the capability's documentation, which no session loads (COR-070 point 5).
 - **`project.md`:** the project's own rules.
-- **An ordinary rule set:** a rule a project chooses to bind on its own files, not on a session's work (COR-068 point 1, [the decisions README, "Rule sets"](../decisions/README.md#rule-sets--a-separate-family-with-the-same-guarantees)). Core rule 24 has every session follow the rules such sets bind on what its change owns, as `pkit rule-sets altered` lists them.
+- **An ordinary rule set:** a rule a project chooses to bind on its own files, not on a session's work (COR-068 point 1 and [the decisions README, "Rule sets"](../decisions/README.md#rule-sets--a-separate-family-with-the-same-guarantees)). Core rule 24 has every session follow the rules such sets bind on what its change owns, as `pkit rule-sets altered` lists them.
 
 How a rule reads:
 
 - **What it holds:** what it requires, in as few sentences as it needs, and a pointer to the record, area README or issue that holds its reason. A rule of a loaded set that cites none of them leaves its reason to its origin in the set.
 - **No first-level heading.** A rules file is included into `CLAUDE.md`, which owns the heading, so the file's sections start at the second level (core rule 13). `core.md` opens with an italic preface.
-- **No import token.** Outside code, a rules file holds no token that starts with the harness's import form, such as a bare `@name`. A session could read it as an import. Validation refuses one in a loaded set's statements and prose, and does not read a plain `project.md` for one.
+- **No include token.** A loaded set's statements and prose hold no token, outside code, that starts with the harness's include form, such as a bare `@name`. Validation refuses one, since a session could load it as an include. A plain `project.md` is not read for one, though the harness may load one there as an include too.
 
 <a id="converting-your-projectmd-into-a-loaded-set"></a>
 ## Converting `project.md` into a loaded set
@@ -153,8 +153,8 @@ How a rule reads:
 The project may convert its plain `project.md` into a loaded set of its own, when it chooses. Until then the file is loaded as it stands. Nothing checks its numbers, its origins or a citation such as "project rule 4" (COR-068 point 7). The steps:
 
 1. Write the set as a rule-set file in `rule-sets/` under the internal documentation root, `docs/rule-sets/` by default. Give it a name of its own and `loaded: true`, and copy the rules into it, one section per rule, `### RS-<SET>-NNN — Title`. Keep each rule's number. The folder, its default and the form of a rule's heading are the schemas reference's ([Rule-set files](../schemas/README.md#rule-set-files)).
-2. If the configuration sets `rule-sets.plain-file-budget`, move its value into the set as `budget`, beside `loaded: true`, and remove the key. `pkit validate` warns of a key left behind.
-3. Give each rule its origin: the record that decides it, or the decider's words (COR-051 point 5). Only the project knows who decided each rule and why, so no command or migration converts the file.
+2. If the configuration sets `rule-sets.plain-file-budget`, move its value into the set as `budget`, beside `loaded: true`, and remove the key. The budget then sits beside the rules that need its room, and `pkit validate` warns of a key left behind.
+3. Give each rule its origin: the record that decides it, or the decider's words (COR-051 point 5). Only the project knows who decided each rule and why, so no command or migration converts the file. Take the decider's words from the person who decided the rule, and never write them yourself.
 4. Give a rule the status `accepted` only once a person accepts it, in the change that converts the file ([COR-066](../decisions/core/COR-066-accepted-before-landing.md) point 1). A rule with no status is proposed, and binds nothing.
 5. Run `pkit rule-sets generate`. It writes `project.md` over the plain file, from the set's accepted rules alone, and prints its count against the set's budget. A rule still proposed is left out of it.
 6. Run `pkit validate`. From then on it fails on a `project.md` out of step with the set. It also reads each citation of the project's rules by "project rule N".
