@@ -58,7 +58,7 @@ Operational rules are the instructions an agent session loads at its start, thro
 
 ## Why they exist
 
-An agent keeps nothing between sessions but what the repository holds. Without rules files that sessions load, that update without touching yours and that come and go with a discipline, these things go wrong:
+An agent keeps nothing between sessions but what the repository holds. Without rules files that sessions load and that change apart from yours, these things go wrong:
 
 - **Each session starts without your conventions.** A convention you gave an agent yesterday, such as running the tests before each commit, is not in today's session. So today's agent commits untested.
 - **An update of rules shared across projects overwrites your own.** You add a rule to the shared file, and the next update replaces the file with its newer version. So you stop taking updates, or add your rules again after each one.
