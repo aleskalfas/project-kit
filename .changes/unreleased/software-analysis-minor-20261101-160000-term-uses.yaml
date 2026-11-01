@@ -1,0 +1,15 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit analysis uses <TERM-id>` prints what to search an analysis for when a
+  term is renamed, merged or withdrawn, with `--json` (#1795). From front
+  matter alone, it gives the term's names and the names it replaces, lists
+  apart a name another term holds, and names each analysis whose glossary's
+  head lists the term. A withdrawn term gives its names alike. Where the
+  settings list several analyses, `--analysis` names the one read. It reads no
+  body, so the search is the reader's (DEC-001 points 1 and 12).
+  **The skill.** The `analysis-author` skill's term step runs it after a
+  rename, a merge, a withdrawal or a changed definition, then searches the
+  artefacts in force for each name and mends each use.
