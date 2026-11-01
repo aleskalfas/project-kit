@@ -207,7 +207,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `new decision <namespace> <slug> [--yes]` | scaffold a new decision record stub (frontmatter + four sections + a first point heading + next number in namespace). For `adr` with `adr-records` unset, derives the folder from the internal documentation root and records it in the overlay first; over a folder already holding documents that takes consent — a terminal is asked, `--yes` consents, a non-interactive run refuses (COR-049 point 5; see "Authoring commands"). Refuses `core`, or a capability, whose files the project receives as synced copies, naming `project` and `adr` instead | yes | no — refuses if a record with that slug already exists |
 | `new agent <namespace> <name> [--with-storyboard]` | stamp an agent stub in `core`, `project` or a capability's `agents/` folder (per COR-013 + COR-015; see "Authoring commands"). Refuses `core`, or a capability, whose files the project receives as synced copies, naming `project` instead | yes | no — refuses a name already taken in core, project or any capability |
 | `new storyboard agent <name> [--namespace <ns>] [--scenario <slug>]` | stamp a storyboard beside an agent, wherever it lives (per COR-016; see "Authoring commands"). Refuses an agent whose files the project receives as synced copies | yes | no — refuses if the storyboard already exists |
-| `new scratchpad <slug>` | stamp a new active-state scratchpad note (per COR-012) | yes | no — refuses if the slug is already in use across any state |
+| `new scratchpad <slug>` | stamp a new active-state scratchpad note (per COR-012) | yes | no — refuses a slug that ends the filename of exactly one note in a state folder (see `new scratchpad`) |
 | `scratchpad done <slug> [--produced <ref>...]` | move a note from `active/` (or `reported/`, removing that lazy directory when it empties) to `done/`, append `retired`/`produced` to frontmatter | yes | no — refuses if no active or reported note matches |
 | `scratchpad drop <slug>` | move a note from `active/` (or `reported/`) to `dropped/`, append `retired` to frontmatter | yes | no — refuses if no active or reported note matches |
 | `scratchpad reported <slug> <ref>...` | manually stamp an active note as sent through the report channel: move to lazily-created `reported/`, append `reported`/`reported_to`/`reported_hash` frontmatter (per COR-043; the automatic stamp happens on a successful `report` post — this gesture covers URL-first posts and retroactive marking). Refs are `owner/repo#N` or GitHub issue URLs (normalised) | yes | yes — appends refs to an already-reported note; duplicate refs are a no-op |
@@ -1233,7 +1233,7 @@ Refuses if the storyboard already exists or no agent of that name is found. It a
 
 Stamps a new active-state scratchpad note at `.pkit/scratchpad/active/<YYYY-MM-DD>-<slug>.md` per the convention in COR-012 and the spec in `.pkit/scratchpad/README.md`. The command is the deterministic part of starting a note: pick today's date, validate the slug, seed the frontmatter, write an H1 derived from the slug.
 
-- **`<slug>`** is a kebab-case shorthand of the question the note explores (e.g. `agent-architecture`, `versioning-policy`). Slugs are unique across the entire scratchpad area — the command refuses if any state folder already contains a note with this slug.
+- **`<slug>`** is a kebab-case shorthand of the question the note explores (e.g. `agent-architecture`, `versioning-policy`). The command refuses the slug where a state folder holds exactly one note whose filename ends in `-<slug>.md`, so a short slug can be refused for a longer one. Where each folder holds none, or two or more, it stamps the note, unless `active/` holds today's file for the slug already.
 
 The stamped file includes:
 
@@ -1246,13 +1246,13 @@ Supports `--dry-run`.
 
 ## Scratchpad commands
 
-Scratchpad notes (per COR-012) move between three state folders — `active/`, `done/`, `dropped/` — plus the optional `reported/` side-state of active (per COR-043: lazily created when the first note enters it, removed when it empties). The retire-direction commands wrap the `git mv` + frontmatter update; the convention's full spec lives in `.pkit/scratchpad/README.md`.
+Scratchpad notes (per COR-012) move between three state folders — `active/`, `done/`, `dropped/` — plus the optional `reported/` side-state of active (per COR-043: lazily created when the first note enters it, removed when it empties). The commands below that move a note write its file in the new folder, delete the old one and update its frontmatter, and stage nothing in git; the convention's full spec lives in `.pkit/scratchpad/README.md`.
 
 ### `scratchpad done <slug> [--produced <ref>...]`
 
 Moves a note from `active/` — or from `reported/`, retirement proceeds from the side-state by the same gesture — to `done/` and appends `retired` (today) and `produced` (the list of `--produced` refs) to its frontmatter. Use when the note's content has been incorporated into other artifacts (records, docs, skills, agents). A reported note's `produced` refs naturally include the upstream issue(s) it became.
 
-- **`<slug>`** matches either the slug portion of the filename or the full filename. Use the full filename to disambiguate when multiple notes share a slug (rare; the `new scratchpad` command refuses duplicates within the area).
+- **`<slug>`** is a slug or the full filename. A slug matches each note whose filename ends in `-<slug>.md`, so a short slug can match a note with a longer one. Use the full filename to disambiguate.
 - **`--produced <ref>`** is repeatable. Each value is a record ID (`COR-013`), file path (`.pkit/agents/README.md`), or URL. May be omitted; the `produced:` field is then not added (the author can edit it later by hand).
 
 Supports `--dry-run`. Refuses if no active or reported note matches the slug, or if the destination filename already exists in `done/`. When the move empties `reported/`, the directory is removed (it is lazy — COR-043).
@@ -1269,7 +1269,7 @@ Supports `--dry-run`. Refuses if no active or reported note matches the slug, or
 
 The **manual stamp gesture** (per COR-043): mark a note as sent through the report channel when the post happened outside the tooling — the URL path (the browser filed it; the compose flow ends by printing this exact command as the required follow-up, #664) or retroactive marking of a note hand-carried upstream before the mechanism existed. The automatic equivalent runs on a successful `pkit report` API post (direct or via `report submit`).
 
-Moves the note from `active/` to the lazily-created `reported/` and appends to its frontmatter: `reported` (today), `reported_to` (the refs), and `reported_hash` (SHA-256 of the full file as it was at stamp time — the drift-detection anchor). On a note already in `reported/`, appends the refs not yet recorded and re-anchors the hash (a new send); duplicate refs are an idempotent no-op.
+Moves the note from `active/` to the lazily-created `reported/` and appends to its frontmatter: `reported` (today), `reported_to` (the refs), and `reported_hash` (SHA-256 of the full file as it was at stamp time, without the reported fields — the drift-detection anchor). On a note already in `reported/`, appends the refs not yet recorded and re-anchors the hash (a new send); duplicate refs are an idempotent no-op.
 
 - **`<ref>`** is `owner/repo#N` or a full GitHub issue URL (normalised to `owner/repo#N`). Repeatable — one note may become several issues.
 

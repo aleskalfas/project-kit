@@ -1,11 +1,13 @@
 ---
 rule-set: REWORK
-version: 3.1.0
+version: 3.2.0
 inherits: [living-docs:LDOC@1, WRITE@2]
 scope:
   paths:
     - .pkit/permissions/README.md
     - docs/permissions/README.md
+    - .pkit/scratchpad/README.md
+    - docs/scratchpad/README.md
     - .pkit/capabilities/living-docs/README.md
     - .pkit/capabilities/living-docs/pages.md
     - .pkit/capabilities/living-docs/spaces.md

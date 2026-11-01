@@ -1,6 +1,6 @@
 ---
 variant: specialized
-reader: user
+reader: act-ai-agent
 kind: reference
 pkit:
   friction:
@@ -10,61 +10,90 @@ pkit:
       record: [COR-004, COR-005, COR-006, COR-007, COR-012, COR-043]
       artefact:
         - .pkit/cli/README.md#new-scratchpad-slug
+        - .pkit/cli/README.md#scratchpad-commands
         - .pkit/cli/README.md#scratchpad-done-slug---produced-ref
         - .pkit/cli/README.md#scratchpad-drop-slug
         - .pkit/cli/README.md#scratchpad-reported-slug-ref
         - .pkit/cli/README.md#scratchpad-list
         - .pkit/cli/README.md#report-bug--report-feedback--report-change-request
+        - .pkit/cli/README.md#report-submit-id
+        - .pkit/lifecycle/README.md#seed-paths
 ---
 
 # Scratchpad notes
 
-Exploratory working drafts for architectural questions that are too large to crystallise into a record on first pass. A scratchpad note is the carrier for the design-mapping work that precedes a decision: listing forces, drawing relations between artifacts, abandoning lines of thought, picking promising ones, and progressively narrowing toward what eventually becomes a COR, PRJ, doc, skill, or agent.
+<a id="authoring-workflow"></a><a id="why-scratchpad-and-not-draft-or-notes"></a>
 
-The principles — that scratchpad notes are a fifth content shape (orthogonal to COR-006's four), that the folder is the state, that the area is of the specialized variant — are recorded in [`.pkit/decisions/core/COR-012-scratchpad-notes.md`](../decisions/core/COR-012-scratchpad-notes.md). This README is the spec.
+A scratchpad note is a working draft that explores a question too large for a decision record yet ([COR-012](../decisions/core/COR-012-scratchpad-notes.md)). It binds nothing, and it retires once other documents hold what it found, or once its line of thought fails. Why notes exist, and how people start, send upstream and retire one, is in [the scratchpad guide](https://github.com/aleskalfas/project-kit/blob/latest/docs/scratchpad/README.md).
+
+## Contents
+
+<!-- pkit:contents -->
+- [Layout](#layout)
+- [States](#states)
+- [File name](#file-name)
+- [Body](#body)
+- [Front matter](#front-matter)
+- [Commands](#commands)
+<!-- /pkit:contents -->
 
 ## Layout
 
+The area holds this README and a folder for each state of a note:
+
 ```
 .pkit/scratchpad/
-├── README.md                 # this file (kit-owned, propagated by sync)
-├── active/                   # notes currently being filled or referenced
-│   └── <YYYY-MM-DD>-<slug>.md
-├── done/                     # notes whose content was incorporated into other artifacts
-│   └── <YYYY-MM-DD>-<slug>.md
-└── dropped/                  # notes whose line of thought did not pan out
-    └── <YYYY-MM-DD>-<slug>.md
+├── README.md         # this page, which sync updates
+├── active/           # open notes
+├── reported/         # open notes sent upstream as a report, while one lies here
+├── done/             # notes whose content other documents hold
+├── dropped/          # notes whose line of thought failed
+└── .report-drafts/   # reports staged for `pkit report submit`, never a note
 ```
 
-The notes themselves are project-owned and never touched by sync; only this README (and any future kit-shipped templates) is in the propagation manifest. The same convention applies in adopting projects: their scratchpad notes live in their own `.pkit/scratchpad/{active,done,dropped}/` tree (plus the lazily-created `reported/` when the report side-state is in use, per COR-043).
+Each note is the file `<state>/<YYYY-MM-DD>-<slug>.md` ("File name" below).
 
-## Lifecycle
+- <a id="adopter-relevance"></a>**The notes are the project's.** Sync updates this README, and never reads or writes a note (COR-012).
+- **Only `.md` files are notes.** A command moves a note's own file and nothing beside it, and `pkit scratchpad list` lists `.md` files only.
+- **`active/`, `done/` and `dropped/`** are seed paths. The first install and each transition of the backbone create each one that is missing, with an empty `.gitkeep` ([the lifecycle README, "Seed paths"](../lifecycle/README.md#seed-paths)).
+- **`reported/` is lazy.** It is created when the first note enters it, and removed when a retirement empties it (COR-043 point 2).
+- **`.report-drafts/`** holds each report that `pkit report feedback --yes`, or the `bug` or `change-request` verb, stages until `pkit report submit` posts it. The folder keeps itself out of git ([the CLI reference, "report submit"](../cli/README.md#report-submit-id)).
 
-A note moves through three states. The folder it lives in *is* its state — there is no `status:` field in frontmatter.
+<a id="lifecycle"></a>
+
+## States
+
+The folder a note lies in is its state, and no field of its front matter holds one (COR-012). `reported` refines `active`, and is no fourth stage (COR-043 point 1).
 
 | State (folder) | Meaning |
 |---|---|
-| **`active/`** | The note is being filled or actively referenced. The question it explores is still open. |
-| **`done/`** | The note's content has been incorporated into other artifacts (records, docs, skills, agents). The question is resolved; the note is kept as the archaeology of how the resolution was reached. |
-| **`dropped/`** | The line of thought did not pan out. The note is kept as a record of what was explored and why it was abandoned, so future authors do not re-tread the path silently. |
-| **`reported/`** *(optional side-state of active, per [COR-043](../decisions/core/COR-043-scratchpad-reported-state.md))* | The note was **sent through the built-in report channel** as (part of) a report. Still live in lifecycle terms — retirement proceeds `reported/ → done/` (or `dropped/`) by the same gestures. The directory is **lazy**: created when the first note enters it, removed when it empties; a project that never reports shows no trace of it. |
+| **`active/`** | The question is open, and the note is being filled or referenced. |
+| **`reported/`** | The note is still open, and was sent upstream as a report. Only a send enters this state: a successful post, or `pkit scratchpad reported` for a send made outside the tooling (COR-043 point 3). |
+| **`done/`** | Other documents, such as records, guides, skills or agents, hold the note's content. The note is kept. |
+| **`dropped/`** | The line of thought failed. The note is kept, ending with why it stopped. |
 
-A state transition is a `git mv` from one folder to another, performed (or wrapped) by the CLI commands below. Transitions are intentionally simple — no validation, no machinery beyond moving the file and updating frontmatter.
+- **A move between states** is a move of the file, which a command makes ("Commands" below). The command writes the file in its new folder and deletes the old one, and stages nothing in git ([the CLI reference, "Scratchpad commands"](../cli/README.md#scratchpad-commands)). Once both paths are staged, git shows the move as a rename where the note changed little.
+- **A reported note is frozen by convention.** Do not edit it, since the issue holds the text as sent. Put further thinking in a new note that links the reported note (COR-043 point 4).
+- **An edit to a reported note is detected, never prevented.** `pkit scratchpad list` marks a reported note `[modified since reported]` when it differs from the hash recorded at the send. Composing a report warns of such a note too ([the CLI reference, "report"](../cli/README.md#report-bug--report-feedback--report-change-request)).
+- **Its issues' states are read live.** `pkit scratchpad list` reads each through `gh` at each run, and stores none. A state it cannot read shows as `state unknown` (COR-043 point 5).
+- **Retiring a note is a person's decision.** Once every issue of a reported note is closed, the listing prints the `pkit scratchpad done` command that retires it, and never runs it (COR-043 point 5).
 
-Conventions specific to `reported/` (COR-043): a reported note is **frozen by convention** — its as-sent text is preserved verbatim in the issue it became; follow-up thinking goes in a *new* note cross-referencing it. Tooling **detects** divergence (the stamped hash vs current content) and surfaces it in listings and before subsequent sends — a warning, never a gate. Listings resolve the reported refs' upstream state **live** (pull-only, never stored; offline degrades to "state unknown") and prompt retirement when all refs close — retirement itself stays a human gesture.
+<a id="filename"></a>
 
-## Filename
+## File name
 
-`<YYYY-MM-DD>-<slug>.md`, where:
+A note's file is `<YYYY-MM-DD>-<slug>.md` (COR-012):
 
-- **`<YYYY-MM-DD>`** is the note's start date — the day it first entered `active/`. The date is fixed at creation and does not change when the note transitions between states. It exists in the filename so a filesystem-chronological listing (`ls`, `find`, IDE file tree) matches the order of exploration.
-- **`<slug>`** is kebab-case shorthand of the topic, 2–4 words — short enough to keep listings self-documenting, long enough to identify the note without opening it.
+- **`<YYYY-MM-DD>`** is the day the note was stamped. It never changes when the note moves.
+- **`<slug>`** names the question in two to four words of kebab-case: lower-case letters and digits, joined by single hyphens.
+- **A slug finds every note whose file name ends in `-<slug>.md`,** so `layer` finds `2026-06-03-cache-layer.md` ([the CLI reference, `scratchpad done`](../cli/README.md#scratchpad-done-slug---produced-ref)).
+- **`pkit new scratchpad` refuses a slug** where a state folder holds exactly one note whose file name ends in it. Where each folder holds none or two or more, the note is stamped, unless today's file for the slug exists ([the CLI reference, `new scratchpad`](../cli/README.md#new-scratchpad-slug)).
 
-Examples: `2026-05-12-agent-architecture.md`, `2026-04-08-inventory.md`.
+Examples: `2026-05-12-agent-architecture.md`, `2026-06-03-cache-layer.md`.
 
 ## Body
 
-A scratchpad note's body opens with a level-1 heading carrying the note's title:
+The body opens with a level-1 heading, the note's title. The title is in the body, never a field of the front matter (COR-012):
 
 ```markdown
 # Agent architecture — meta-agents vs role-shaped specialists
@@ -72,15 +101,19 @@ A scratchpad note's body opens with a level-1 heading carrying the note's title:
 …body content…
 ```
 
-The H1 is the canonical readable title — markdown preview, the host platform's UI, and `head` all surface it without parsing frontmatter. The frontmatter does **not** carry a `title:` field; the H1 is authoritative.
+- **The stamp's title** is the slug, with its hyphens turned into spaces and its first letter capital, such as `# Cache layer`. Edit it to the question.
+- **The rest of the body** takes any shape.
+- **A dropped note** ends with a paragraph or a section that says why its line of thought stopped, written before the drop.
 
-Beyond the H1, the body's shape is up to the author. Scratchpad notes are exploratory, not structured records.
+<a id="frontmatter"></a>
 
-## Frontmatter
+## Front matter
 
-Frontmatter exists for machine-readable lifecycle and authorship metadata. The set of fields depends on the current state.
+The front matter holds who writes in a note and when it moved, and its fields depend on the note's state (COR-012).
 
 ### `active/`
+
+The stamp writes two fields:
 
 ```yaml
 ---
@@ -90,10 +123,17 @@ started: 2026-05-12
 ---
 ```
 
-- **`authors:`** — list of contributors as git-style `Name <email>` entries. At creation, just the creator; further contributors append.
-- **`started:`** — the note's start date. Mirrors the filename date for machine-readable consumption (same duplication as a decision record's `id:` appearing in both filename and frontmatter).
+- **`authors`:** each person who writes in the note, as `Name <email>`. Add each later writer. The stamp writes one author from git's configuration:
+  - `Name <email>`, from `user.name` and `user.email`
+  - the name alone, where git has no e-mail
+  - `<unknown>`, where git has no name
+- **`started`:** the day the note was stamped, the date its file name holds.
 
-### `reported/` (side-state of active, COR-043)
+<a id="reported-side-state-of-active-cor-043"></a>
+
+### `reported/`
+
+Recording a send adds these fields to the note's own (COR-043 point 3):
 
 ```yaml
 ---
@@ -103,18 +143,20 @@ started: 2026-05-12
 reported: 2026-08-10
 reported_to:
   - owner/repo#631
-reported_hash: sha256:<hex of the full file content at send time>
+reported_hash: sha256:<hex>
 ---
 ```
 
-- **`reported:`** — the date the note was sent through the report channel.
-- **`reported_to:`** — list of upstream issue refs (`owner/repo#N`); one note may become several issues.
-- **`reported_hash:`** — SHA-256 of the **full local file** at send time; the drift-detection anchor.
-- Optional **`project:`** / **`workstream:`** — the report's context pair (see the CLI specification's report section), stamped when available.
-
-Stamped by the report surface on a **successful post only** (draft/URL paths stamp nothing), or manually via the stamp gesture (`pkit scratchpad reported <slug> <ref>`) for URL-first posts and retroactive marking.
+- **`reported`:** the day the note was first sent.
+- **`reported_to`:** each issue the note became, as `owner/repo#N`. A GitHub issue's web address given in its place is written in that form. One note may become several issues.
+- **`reported_hash`:** `sha256:` and the SHA-256 of the note as sent, without the fields that recording a send writes ([the CLI reference, `scratchpad reported`](../cli/README.md#scratchpad-reported-slug-ref)). The listing compares it with the note as it is now.
+- **`project` and `workstream`:** the report's context, where the report named it. Only a report's post writes them.
+- **Who writes these fields:** the successful post of a report composed with `--scratchpad <slug>`, or `pkit scratchpad reported <slug> <ref>...`. A report staged or filed in a browser writes nothing until one of the two runs.
+- **A later send** of a reported note adds each new issue to `reported_to`, and records the hash again. So the listing no longer marks an edit made before that send. Where every issue given is recorded already, nothing changes.
 
 ### `done/`
+
+Retiring a note as done adds `retired`, and `produced` where any value is given:
 
 ```yaml
 ---
@@ -123,15 +165,19 @@ authors:
 started: 2026-05-12
 retired: 2026-05-15
 produced:
-  - COR-013
-  - .pkit/agents/README.md
+  - PRJ-012
+  - docs/cache.md
 ---
 ```
 
-- **`retired:`** — the date the note left `active/`. Added by the `pkit scratchpad done` command at transition time.
-- **`produced:`** — list of artifacts (record IDs, file paths, or URLs) the note's content fed into. Added by the `pkit scratchpad done --produced <ref>...` flags, and editable by hand for later additions.
+- **`retired`:** the day the note was retired.
+- **`produced`:** each document the note's content went into: a record's id, a file's path or a web address. A reported note names its issues among them (COR-043 point 1).
+- **What `pkit scratchpad done` writes:** its `--produced` values, in place of any `produced` the note holds. Given none, it leaves `produced` as it is, or absent. Add a later value by hand.
+- **A reported note retired** keeps its reported fields.
 
 ### `dropped/`
+
+Dropping a note adds `retired` alone:
 
 ```yaml
 ---
@@ -142,46 +188,42 @@ retired: 2026-05-15
 ---
 ```
 
-- **`retired:`** — the date the note was dropped. Added by the `pkit scratchpad drop` command.
-- No `produced:` field — the line of thought did not produce anything.
+- **`retired`:** the day the note was dropped.
+- **No `produced`.**
 
-The note's body, when dropped, should explain *why* the line of thought was abandoned — typically as a closing paragraph or section appended before the move. Future readers benefit from knowing what was tried and why it failed.
+<a id="cli-commands"></a>
 
-## CLI commands
+## Commands
 
-The kit's authoring and management surface (per COR-004 and COR-005) includes:
+Each command has its full entry in the CLI reference, which each name below links. `pkit new scratchpad`, `pkit scratchpad done`, `drop` and `reported` take `--dry-run`, which prints what the command would do and writes nothing.
 
-| Command | Effect |
+| Command | What it does |
 |---|---|
-| `pkit new scratchpad <slug>` | Stamp a new note at `active/<YYYY-MM-DD>-<slug>.md` with today's date. Frontmatter is seeded with `authors:` (from git config) and `started:`; body is seeded with a `# <slug>` placeholder H1. Paired with the `scratchpad-author` skill per COR-005's skill / command pairing. |
-| `pkit scratchpad done <slug> [--produced <ref>...]` | Move the file from `active/<slug>.md` (or `reported/<slug>.md`) to `done/<same-filename>.md`. Append `retired:` (today's date) and `produced:` (from `--produced` arguments) to frontmatter. The `<slug>` argument may match the slug portion of the filename or the full filename. Removes `reported/` when the move empties it. |
-| `pkit scratchpad drop <slug>` | Move the file from `active/<slug>.md` (or `reported/<slug>.md`) to `dropped/<same-filename>.md`. Append `retired:` (today's date) to frontmatter. |
-| `pkit scratchpad reported <slug> <ref>...` | The manual stamp gesture (COR-043): move the file from `active/` to the lazily-created `reported/`, appending `reported:`/`reported_to:`/`reported_hash:`. Refs are `owner/repo#N` or GitHub issue URLs (normalised). On an already-reported note, appends new refs (idempotent for duplicates) and re-anchors the hash. The automatic stamp happens on a successful `pkit report … --file` post. |
-| `pkit scratchpad list` | List notes by state. Reported notes resolve their refs' upstream state live (pull-only; offline degrades to `state unknown`), flag `modified since reported` drift against the stamped hash, and print a retire prompt when all refs are closed — never auto-retiring. |
+| [`pkit new scratchpad <slug>`](../cli/README.md#new-scratchpad-slug) | Stamps `active/<today>-<slug>.md` with `authors`, `started` and a title drawn from the slug. Run it through the `scratchpad-author` skill, which it is paired with (COR-005). |
+| [`pkit scratchpad done <slug> [--produced <ref>...]`](../cli/README.md#scratchpad-done-slug---produced-ref) | Moves the note from `active/` or `reported/` to `done/`, and adds `retired` and any `produced`. |
+| [`pkit scratchpad drop <slug>`](../cli/README.md#scratchpad-drop-slug) | Moves the note from `active/` or `reported/` to `dropped/`, and adds `retired`. |
+| [`pkit scratchpad reported <slug> <ref>...`](../cli/README.md#scratchpad-reported-slug-ref) | Records a send made outside the tooling. Moves the note from `active/` to `reported/` and adds the reported fields, or adds new issues to a reported note. |
+| [`pkit scratchpad list`](../cli/README.md#scratchpad-list) | Lists the notes by folder, each reported note with its issues' live states. Marks an edited reported note, and names the retiring command once all of a reported note's issues are closed. Writes nothing. |
+| [`pkit report feedback … --scratchpad <slug>`](../cli/README.md#report-bug--report-feedback--report-change-request), and the `bug` and `change-request` verbs alike | Attaches the whole note, front matter included, to a public issue. On a successful post only, moves the note to `reported/`, or records the new issue on a note already there. |
 
-State-transition commands (`done`, `drop`, `reported`) are mechanical — they wrap `git mv` plus frontmatter updates. Per COR-006's discriminator they need no paired skill.
-
-Deferred (per COR-007 — extract after recurrence is visible):
-
-- **`pkit scratchpad reopen <slug>`** — move from `done/` or `dropped/` back to `active/`. Hand-`git mv` works while this is rare.
-
-## Authoring workflow
-
-To start a new scratchpad note, invoke the `scratchpad-author` skill (or call `pkit new scratchpad <slug>` directly if you are sure you have the slug, the topic boundary, and the disciplines in mind). The skill carries:
-
-- Slug-choice judgement — picking a name that survives later reading without being so long it clutters listings.
-- Topic boundary — what belongs in this one note vs what should be split into a separate one.
-- The opening prompt — what kinds of content scratchpad notes typically open with (forces, questions, options, candidate decisions).
-
-To retire a note:
-
-- If the note's content has been incorporated into other artifacts: `pkit scratchpad done <slug> --produced <ref>...`. The `--produced` references can be records, file paths, or URLs.
-- If the line of thought is being abandoned: append a closing paragraph to the note explaining why, then `pkit scratchpad drop <slug>`.
-
-## Why scratchpad and not "draft" or "notes"
-
-A *draft* implies a future final form of the same artifact (a draft record will become a record). A scratchpad note is not a draft of anything in particular — it might produce a record, several docs, or nothing at all. *Notes* is too generic and collides with everything else humans call notes. *Scratchpad* matches the actual mode: a surface to scribble on while thinking, that gets cleared or framed when thinking concludes.
-
-## Adopter relevance
-
-Any project doing methodology-level work hits the same exploratory-draft need. Adopters get this README and the CLI commands; their notes live in their own `.pkit/scratchpad/{active,done,dropped}/` tree, project-owned, never touched by sync. Project-kit self-hosts and follows the same convention for its own kit-maintainer notes.
+- **No skill pairs `done`, `drop` or `reported`,** since each is mechanical (COR-006).
+- **A report run by an agent** goes through the `report-author` skill. Run with `--yes`, the verb only stages the report. A person posts it at a terminal with `pkit report submit <id>`, and only that post records the send on the note.
+- **`<slug>`** of `done`, `drop` and `reported`, and of `--scratchpad`, is a slug or a whole file name. A slug finds every note whose file name ends in `-<slug>.md` ("File name" above). Give the whole file name where a short slug could find another note.
+- **The refusals** write nothing:
+  - `new scratchpad`:
+    - a slug that is not kebab-case
+    - a slug that ends the file name of exactly one note in a state folder ("File name" above)
+    - a slug whose file of today's date lies in `active/` already
+    - a project with no `active/`
+  - `done` and `drop`:
+    - no `active/`
+    - a slug that finds no note in `active/` or `reported/`, or that finds two in one folder
+    - a note with no front matter, or with front matter that is no mapping
+    - a file of the same name in the target folder already
+  - `reported`:
+    - a ref that is neither `owner/repo#N` nor a GitHub issue's web address
+    - a note that lies in neither `active/` nor `reported/`
+    - a slug that finds two notes in one folder
+    - a note with no front matter
+    - a file of the same name in `reported/` already
+- **Not built yet:** a command that reopens a note (COR-007). Move its file from `done/` or `dropped/` back to `active/` by hand, with `git mv`. Then remove each front-matter field `active/` does not hold, and a dropped note's closing paragraph on why it stopped.
