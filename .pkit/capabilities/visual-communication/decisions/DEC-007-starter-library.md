@@ -1,7 +1,7 @@
 ---
 id: DEC-007
 title: The starter library covers the jobs a visual does, and leaves its values to the brand
-status: proposed
+status: accepted
 date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
