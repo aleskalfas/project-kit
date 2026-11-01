@@ -40,6 +40,7 @@ places:
   .pkit/capabilities/project-management/README.md: user
   .pkit/capabilities/software-analysis/README.md: user
   .pkit/capabilities/software-engineering/README.md: user
+  .pkit/capabilities/visual-communication/README.md: user
   .pkit/cli/README.md: user
   .pkit/decisions/README.md: user
   .pkit/lifecycle/README.md: user
