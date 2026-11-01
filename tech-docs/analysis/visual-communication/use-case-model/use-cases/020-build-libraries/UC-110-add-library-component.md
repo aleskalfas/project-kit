@@ -76,7 +76,7 @@ What the developer needs here that no accepted record decides yet:
 - **The actor:** the same decision says "a project's own library's owner is that project". The developer of that project acts for it here.
 - **The steps and the guarantee:**
   - **Steps 1 to 3:** the bar a library component of the starter library meets ([DEC-007 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-007-starter-library.md#3-each-component-enters-as-experimental)). A project's own library may follow that bar, which binds only the starter library ([DEC-007](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-007-starter-library.md), Implications). The bar asks for:
-    - the component's job, and the form it follows with that form's source
+    - the library component's job, and the form it follows with that form's source
     - its fields and options
     - a drawing of each option's value
     - a review
