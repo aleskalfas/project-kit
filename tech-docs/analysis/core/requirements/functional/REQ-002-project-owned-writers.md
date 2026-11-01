@@ -5,6 +5,7 @@ status: active
 statement: The system writes project-owned content only through a writer that a decision record names.
 measure: Sync leaves each file of project-owned content as it was, save the entries merge delivery adds or restores. Every other write to project-owned content comes from a writer that a decision record names.
 applies-to: Every command of the backbone and of the components that writes into a project.
+obligation: v1:sha256:f2906ce2f7e7aff6532fdc3d80926d953d6733be54857b3350404d58c5d304c4
 actors:
   - ACT-adopter
 refines: []

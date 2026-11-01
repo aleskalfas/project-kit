@@ -23,3 +23,7 @@ components:
   - kind: capability
     name: doc-examples
     manifest: .pkit/capabilities/doc-examples/project/manifest.yaml
+  - kind: capability
+    name: visual-communication
+    manifest: .pkit/capabilities/visual-communication/project/manifest.yaml
+    origin: incubated-in-repo

@@ -5,6 +5,7 @@ status: active
 statement: A command that changes or removes content that already exists, beyond what the person named, offers a preview of those edits through `--dry-run`.
 measure: Each such command accepts `--dry-run`. Run with it, the command names each edit it would make. Every file of the project then holds the bytes and the mode it held before, those under `.git` included.
 applies-to: Every command of the backbone and of the components, judged by the widest effect it can have. Sync, merge delivery, install, uninstall and a version transition are such commands. A command that only creates new files, or only writes the one value or entry named, is outside it.
+obligation: v1:sha256:ee69aa5004a4dec4fc02bcba8daf67a1305829cdd87fb874d03a31568d905a2f
 actors:
   - ACT-adopter
 refines: []

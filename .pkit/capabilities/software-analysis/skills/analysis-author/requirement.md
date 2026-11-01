@@ -61,6 +61,8 @@ It takes the next free number across the three kinds, on the default branch and 
 
 Each field and part you fill holds its hint, which says what goes there and gives an example. Fill each as its hint says, and delete the hint. That covers the statement, the measure and where it holds, in the front matter, and each part of the body. Your answers from step 2 go in the parts on what verifies it and on why it is needed, or who imposes it. Write each concept by its term (the shared framing's "Use the glossary's terms").
 
+Then run `pkit analysis obligation <REQ-id>`. It writes `obligation`, the fingerprint of the statement, the measure and where it holds, which the stamp wrote from their hints. Never write the field by hand (DEC-006 point 6).
+
 Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first, and `pkit analysis check-numbers` before merging.
 
 ## Later
@@ -70,7 +72,7 @@ Then run the checks in the shared framing's "After stamping", `pkit analysis val
   - **Say why it still stands:** `pkit friction revisit <REQ-id> --target <kind>:<value> --outcome unchanged --reason "<why>"`.
   - **Leave it out of date** until an open follow-up revisits it: `--outcome deferred`, its reason naming the follow-up.
 
-  `pkit friction check` lists each target still owed (COR-050 point 16). A change to a body part asks for no revisit.
+  `pkit friction check` lists each target still owed (COR-050 point 16). A change to a body part asks for no revisit. Run `pkit analysis obligation <REQ-id>` after the change, and commit the fingerprint it writes with it: `pkit analysis validate` fails a requirement whose fingerprint no longer matches its texts.
 - **Changing its kind.** Move the file to the other kind's folder, and keep its id.
   - Rewrite it to that kind's structure. A constraint says who imposes it where the other two kinds say why they are needed, so that part changes.
   - The heading shows the new kind.

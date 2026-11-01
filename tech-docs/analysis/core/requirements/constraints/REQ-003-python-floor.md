@@ -5,6 +5,7 @@ status: active
 statement: The backbone's CLI, `pkit`, runs on Python 3.11 or later.
 measure: The CLI's Python package declares `requires-python = ">=3.11"`, and its code uses nothing of the language or its standard library newer than Python 3.11.
 applies-to: The backbone's CLI, the package under `src/project_kit/`, on every machine that runs it.
+obligation: v1:sha256:a6253dfff9611a7679a94c41e2f7cb29ed9aa4194a269812abb8844e0183c817
 actors: []
 refines: []
 pkit:

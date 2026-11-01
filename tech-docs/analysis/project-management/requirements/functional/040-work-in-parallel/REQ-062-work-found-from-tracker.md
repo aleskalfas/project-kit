@@ -5,6 +5,7 @@ status: active
 statement: "The issues an instance owns, and each issue's branch, are found from GitHub and the instance's number, with nothing an ended session kept."
 measure: "After every earlier session died, a new session in the instance lists the issues the instance owns, and finds each one's branch."
 applies-to: "Every instance that has set a number, whichever way the project writes the owner of an issue."
+obligation: v1:sha256:65fb724b26812b20d77086c98eff744389a283c1de11fbcae6071ded0e2656a9
 actors:
   - ACT-worker-agent
   - ACT-lead-agent

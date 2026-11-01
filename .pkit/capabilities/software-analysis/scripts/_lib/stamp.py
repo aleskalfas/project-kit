@@ -137,6 +137,7 @@ from _lib import (
     links,
     markdown,
     numbering,
+    obligation,
     project_structure,
     render,
     schemas,
@@ -804,9 +805,9 @@ def _new_id(kind: str, slug: str, held: set[str], base: str) -> str:
 def _document(root: Path, kind: str, new_id: str, request: Request, analysis: Analysis) -> str:
     """A use case's, a journey's, an actor's or a requirement's file: its front matter
     from its template, with its id and its title — an actor's name — and each field a
-    writer fills holding its hint, and its body rendered from its kind's structure,
-    headed by the id and the title, a requirement's kind between them
-    (`render.title_heading`)."""
+    writer fills holding its hint, a requirement's `obligation` the fingerprint of its
+    texts as written, and its body rendered from its kind's structure, headed by the id
+    and the title, a requirement's kind between them (`render.title_heading`)."""
     front, _body = _template(kind)
     structured = declared(kind, root, analysis)
     data = dict(markdown.load(front))
@@ -818,6 +819,7 @@ def _document(root: Path, kind: str, new_id: str, request: Request, analysis: An
         anchored: list[str] = []
     elif kind in REQUIREMENTS:
         data["title"] = _title(request)
+        data = _with_obligation(data)
         data[ACTORS] = list(dict.fromkeys(request.actors))
         data[REFINES] = list(dict.fromkeys(request.refines))
         anchored = _own([*request.actors, *request.refines])
@@ -843,6 +845,22 @@ def _document(root: Path, kind: str, new_id: str, request: Request, analysis: An
     named = [views.heading(analysis, term) for term in request.explains]
     body = render.body(structured, heading, written, repeats=named)
     return f"---\n{dump(data)}---\n\n{body}"
+
+
+def _with_obligation(data: dict[str, Any]) -> dict[str, Any]:
+    """A requirement's front matter with its `obligation`, the fingerprint of its texts as
+    the stamp writes them, right after them (DEC-006 point 6). A text still holding its
+    hint reads as empty, since a hint is a comment, so the value stops matching once a
+    writer writes the text, and the check names the command that writes it anew."""
+    try:
+        read = obligation.texts(data, list, None)
+        value = obligation.value(read, obligation.LINK_FORMS)
+    except obligation.NoText as exc:
+        raise Refused(f"the requirement's fingerprint could not be written: {exc}") from exc
+    items = list(data.items())
+    texts = [i for i, (key, _text) in enumerate(items) if key in obligation.TEXTS]
+    at = (texts[-1] if texts else len(items) - 1) + 1
+    return dict([*items[:at], (obligation.FIELD, value), *items[at:]])
 
 
 def _defined(text: str, location: str, request: Request, analysis: Analysis) -> str:

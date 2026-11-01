@@ -5,6 +5,7 @@ status: active
 statement: A command whose one operation is validation or read-only introspection, such as a check or a listing, changes no file of the project.
 measure: After such a command, each file that git tracks in the project holds the bytes and the mode it held before. So does each file of project-owned content.
 applies-to: Every command of the backbone and of the components whose one operation is validation or read-only introspection, the change check among them.
+obligation: v1:sha256:50f48122ed9c929e3acfc9e8fb9c7d95f6cc1fbb6ffd7b9bd1efa1be694a51cd
 actors: []
 refines: []
 pkit:

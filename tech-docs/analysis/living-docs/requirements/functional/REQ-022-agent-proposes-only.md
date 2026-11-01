@@ -5,6 +5,7 @@ status: active
 statement: The living-docs agent changes no tracked file and runs no friction writer, so each change it drafts waits for a person to apply it.
 measure: Every file the agent writes lies in the agent workspace, or in the workspace a fixer run's brief names. Its one other write is a reader-review posted as a pull-request comment, where the person asks for one and names the pull request.
 applies-to: "The living-docs agent in each of its intents: a fix, a reader-review, an onboarding plan, and a run a command starts with nobody watching."
+obligation: v1:sha256:7573cfbec248d9e1b6f960c27c9229f034a758150abcfbfbebf55c990f070dd0
 actors:
   - core:ACT-developer
   - core:ACT-adopter

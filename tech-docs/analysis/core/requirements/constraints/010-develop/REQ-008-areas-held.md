@@ -5,6 +5,7 @@ status: active
 statement: The only area or adapter a change adds to a release is `rule-sets`, and no change removes one or takes `ownership.py` from the `lifecycle` area.
 measure: "A release ships the twelve areas and the one adapter, `claude-code`, that #1572 left, and the `rule-sets` area. The `lifecycle` area still holds `ownership.py`."
 applies-to: "Every change in the methodology's source repository, and so every release made from it. It holds until #1600, which builds the full check of a clash of area names, is done."
+obligation: v1:sha256:cf551a7afeb8b7c1a3ece8ee055c5bdfacc6b0598d7518750b741a6ff56177b9
 actors:
   - ACT-adopter
 refines: []

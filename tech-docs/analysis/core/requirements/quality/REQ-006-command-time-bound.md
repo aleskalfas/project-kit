@@ -5,6 +5,7 @@ status: active
 statement: The backbone never waits past a fixed time bound on a command it runs for an anchor, a data point, validation or a process.
 measure: Thirty seconds after such a command starts, the backbone kills it and reads it as giving no result. A command started inside another such run has at most the time that run has left.
 applies-to: "Every command the backbone runs to resolve an anchor, fill a data point or join validation, and every command a process's definition declares. An agent run, `pkit agents run`, is outside it: its bound is the limit its caller sets, and thirty seconds more."
+obligation: v1:sha256:22bc944976bfdeec057ff9728a2fcd8ec877ec1285e80d94b21ca0adf28f1710
 actors:
   - ACT-ci-pipeline
 refines: []

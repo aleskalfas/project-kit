@@ -9,6 +9,10 @@
       "type": "string",
       "minLength": 1
     },
+    "obligation": {
+      "description": "A requirement's fingerprint of its texts, as its command writes it (software-analysis DEC-006 point 6). Its shape is the check's to judge, which names the command, so any text passes here.",
+      "type": "string"
+    },
     "slug": {
       "description": "A word: a lowercase letter, then lowercase letters, digits and hyphens — the word a stamp takes and the slug part of an actor's or a term's id.",
       "type": "string",
