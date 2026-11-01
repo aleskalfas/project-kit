@@ -1,0 +1,65 @@
+answers:
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-072-revise-before-change.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261101T152616Z-c96602dc.yaml
+    revalidated:
+      at: 2026-11-01T16:26:42Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now has a tool read each text from its part by the part's permanent id, and leaves the boxes, the `shortfalls` entries and the revalidation record's structure that steps 4 and 9 rest on as they were, while COR-050 point 3 adds only a delegate a person may name for answers no change owes, and the developer here still decides each answer as core:UC-002 describes. Judged with this change, in which REQ-052 and REQ-053 only gained `obligation` and kept their statement, measure and scope, the use case holds against all three.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-073-revalidate-after-change.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261030T114612Z-ece11007.yaml
+      - 20261101T145814Z-cbb4f94d.yaml
+      - 20261101T152616Z-c96602dc.yaml
+    revalidated:
+      at: 2026-11-01T16:26:51Z
+      outcome: unchanged
+      unchanged-because: The package now registers both `pkit analysis uses`, which main added, and `pkit analysis obligation`, whose check the help of `pkit analysis validate` names, and REQ-050 and REQ-052 only gained `obligation` with their texts as before. The propose, new revalidation and link commands, the resolver agent and the fixers contribution this use case rests on are as they were, so revalidating after a change goes as it says.
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T114612Z-ece11007.yaml
+      - 20261031T011427Z-45248979.yaml
+      - 20261101T134626Z-e7f1b78f.yaml
+      - 20261101T145814Z-cbb4f94d.yaml
+      - 20261101T150931Z-cb546c1b.yaml
+      - 20261101T152616Z-c96602dc.yaml
+    revalidated:
+      at: 2026-11-01T16:26:56Z
+      outcome: updated

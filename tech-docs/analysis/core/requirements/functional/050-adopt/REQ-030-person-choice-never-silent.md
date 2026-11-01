@@ -5,6 +5,7 @@ status: active
 statement: "A choice in a version transition that needs a person is never taken silently: with nobody to answer, nothing the choice decides is written."
 measure: A transition of the backbone asks about a new name collision only at a terminal, and elsewhere refuses before its first write. `pkit capabilities upgrade` asks only under `--interactive`, and otherwise refuses before its first write. A dependency gate's warning refuses unless the call passes `--force`. With nobody to answer, a data point's question records nothing, and the command prints the line that runs the question later.
 applies-to: "Each choice in a version transition that COR-059 point 4 leaves to a person. Those are a new name collision, a dependency gate's override and a data point's question. Merge delivery's tier that prompts is left out, since none is built (ADR-065 point 4). The requirement holds for `pkit upgrade`, `pkit pin` to a newer release and `pkit capabilities upgrade`."
+obligation: v1:sha256:0e55c783af79a88c8c5c641f6a2f610bcb8a2957de1bdd7bcab4ef4c10ec3591
 actors:
   - ACT-adopter
 refines: []

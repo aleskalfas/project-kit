@@ -5,6 +5,7 @@ status: active
 statement: A suggestion of a capability to install reads only local catalogues and manifests already fetched, never the network.
 measure: With every network connection made to fail, the system gives the same suggestions, and installs nothing, so the manifest holds what it held before.
 applies-to: "Every suggestion the system gives of a capability to install, for a data point nothing fills, a role nobody provides or an upstream not installed. The status report gives them today."
+obligation: v1:sha256:36e9cdfe4cea3ea4d7e74795b092feb3b0a3cc3bf31530715e9d41d340b4dd1e
 actors:
   - ACT-adopter
 refines: []
