@@ -1,5 +1,5 @@
 ---
-id: JRN-011
+id: JRN-015
 title: Write a page and have it read as its reader would read it
 status: active
 actor: core:ACT-developer
@@ -24,7 +24,7 @@ pkit:
         - UC-046
 ---
 
-# JRN-011 — Write a page and have it read as its reader would read it
+# JRN-015 — Write a page and have it read as its reader would read it
 
 **Goal:** Write a page for the reader it names, and know before I publish it that it serves that reader.
 

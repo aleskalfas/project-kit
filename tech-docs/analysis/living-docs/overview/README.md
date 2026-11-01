@@ -1,6 +1,6 @@
 # Overview of the analysis of living-docs
 
-<!-- pkit:overview reads=5 fingerprint=sha256:abc8149b210e9fc0a1296eedde783200d52896e72654e9951682b21747235640 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:31285c622e083f8a0a5b2684b5e54a046a5e634029bb26f8c6bf4a1fb7b01ce7 -->
 
 [Living documentation keeps each documentation space true for its readers](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md).
 
@@ -26,7 +26,7 @@ Set up the documentation spaces a project's readers need, and bring the document
 
 **Its journeys:**
 
-- [JRN-010 — Adopt living-docs on a project that has documentation](../use-case-model/journeys/JRN-010-adopt-on-documented-project.md)
+- [JRN-014 — Adopt living-docs on a project that has documentation](../use-case-model/journeys/JRN-014-adopt-on-documented-project.md)
 
 ### 020-write
 
@@ -48,7 +48,7 @@ Write each page so it serves the reader it names, each of its statements grounde
 
 **Its journeys:**
 
-- [JRN-011 — Write a page and have it read as its reader would read it](../use-case-model/journeys/JRN-011-publish-page-for-reader.md)
+- [JRN-015 — Write a page and have it read as its reader would read it](../use-case-model/journeys/JRN-015-publish-page-for-reader.md)
 
 ### 030-keep-current
 
@@ -96,12 +96,12 @@ Each view of the domain model explains a group of related concepts:
 
 ### Journeys
 
-#### [JRN-010 — Adopt living-docs on a project that has documentation](../use-case-model/journeys/JRN-010-adopt-on-documented-project.md)
+#### [JRN-014 — Adopt living-docs on a project that has documentation](../use-case-model/journeys/JRN-014-adopt-on-documented-project.md)
 
 ```mermaid
 flowchart LR
-  accTitle: JRN-010 — Adopt living-docs on a project that has documentation
-  accDescr: The flow of JRN-010: core:ACT-adopter takes 2 steps in order, UC-043, UC-047.
+  accTitle: JRN-014 — Adopt living-docs on a project that has documentation
+  accDescr: The flow of JRN-014: core:ACT-adopter takes 2 steps in order, UC-043, UC-047.
   core_ACT_adopter["core:ACT-adopter"]
   step_1(["1. UC-043 — Set up a documentation space for one audience"])
   step_2(["2. UC-047 — Bring my existing documents into documentation spaces"])
@@ -109,12 +109,12 @@ flowchart LR
   step_1 --> step_2
 ```
 
-#### [JRN-011 — Write a page and have it read as its reader would read it](../use-case-model/journeys/JRN-011-publish-page-for-reader.md)
+#### [JRN-015 — Write a page and have it read as its reader would read it](../use-case-model/journeys/JRN-015-publish-page-for-reader.md)
 
 ```mermaid
 flowchart LR
-  accTitle: JRN-011 — Write a page and have it read as its reader would read it
-  accDescr: The flow of JRN-011: core:ACT-developer takes 2 steps in order, UC-044, UC-046.
+  accTitle: JRN-015 — Write a page and have it read as its reader would read it
+  accDescr: The flow of JRN-015: core:ACT-developer takes 2 steps in order, UC-044, UC-046.
   core_ACT_developer["core:ACT-developer"]
   step_1(["1. UC-044 — Write a page for the reader it names"])
   step_2(["2. UC-046 — Have a page read as its declared reader would read it"])

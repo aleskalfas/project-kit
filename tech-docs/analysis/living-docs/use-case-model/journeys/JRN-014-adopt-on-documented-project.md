@@ -1,5 +1,5 @@
 ---
-id: JRN-010
+id: JRN-014
 title: Adopt living-docs on a project that has documentation
 status: active
 actor: core:ACT-adopter
@@ -23,7 +23,7 @@ pkit:
         - UC-047
 ---
 
-# JRN-010 — Adopt living-docs on a project that has documentation
+# JRN-014 — Adopt living-docs on a project that has documentation
 
 **Goal:** Adopt living-docs on my project that has documentation already, so each existing document is a page of a documentation space whose rules bind on it.
 
