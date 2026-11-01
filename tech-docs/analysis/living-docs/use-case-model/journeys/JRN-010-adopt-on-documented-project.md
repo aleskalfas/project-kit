@@ -31,7 +31,12 @@ pkit:
 
 1. [UC-043](../use-cases/010-set-up/UC-043-set-up-space.md) — Set up a documentation space for one audience
 2. [UC-047](../use-cases/010-set-up/UC-047-onboard-documents.md) — Bring my existing documents into documentation spaces
-   - **Needs from step 1 (UC-043):** each [documentation space](../../glossary.md#term-documentation-space--documentation-space)'s [space definition](../../glossary.md#term-space-definition--space-definition), named in the [capability](../../../core/glossary.md#term-capability--capability)'s configuration, whose scope selects the pages in the space's places. [Validation](../../../core/glossary.md#term-validation--validation) reports, without failing, a space with no definition, a definition whose scope is missing, and the pages a scope leaves out (UC-043 variant 15b). The [onboarding plan](../../glossary.md#term-onboarding-plan--onboarding-plan) puts each [unclassified document](../../glossary.md#term-unclassified-document--unclassified-document) into a space. A space's rules bind only where its definition selects, so a space with no definition leaves the pages it gains outside them.
+   - **Needs from step 1 (UC-043):** each [documentation space](../../glossary.md#term-documentation-space--documentation-space)'s [space definition](../../glossary.md#term-space-definition--space-definition), named in the [capability](../../../core/glossary.md#term-capability--capability)'s configuration, whose scope selects the pages in the space's places. [Validation](../../../core/glossary.md#term-validation--validation) reports three things without failing (UC-043 variant 15b):
+     - a space with no definition
+     - a definition whose scope is missing
+     - the pages a scope leaves out
+
+     The [onboarding plan](../../glossary.md#term-onboarding-plan--onboarding-plan) puts each [unclassified document](../../glossary.md#term-unclassified-document--unclassified-document) into a space. A space's rules bind only where its definition selects, so a space with no definition leaves the pages it gains outside them.
 
 **Variants:**
 
