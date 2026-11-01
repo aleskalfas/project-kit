@@ -113,7 +113,7 @@ dropped/
 
 What the output proves, claim by claim:
 
-- **Folder as state.** `pkit scratchpad list` groups the notes by folder. The open questions lie in `active/`, and in `reported/` once sent upstream ([the reference, "States"](../../.pkit/scratchpad/README.md#states)).
+- **Folder as state.** `pkit scratchpad list` groups the notes by folder ([the CLI reference, `scratchpad list`](../../.pkit/cli/README.md#scratchpad-list)). The open questions lie in `active/`, and in `reported/` once sent upstream ([the reference, "States"](../../.pkit/scratchpad/README.md#states)).
 - **Dropped, and kept.** `retry-policy` lies in `dropped/`. Before you drop a note, you end it with why its line of thought stopped ([the reference, "Body"](../../.pkit/scratchpad/README.md#body)).
 - **Retired with what it produced.** `done` moved `cache-layer` to `done/`. It added `retired`, today's date, and `produced`, the two values given, to the note's front matter.
 - **Tracked upstream.** `pkit scratchpad reported` recorded the issue, and the listing marks the note `[modified since reported]` after the edit. Here the listing cannot read the issue, so it shows its state as unknown. Where `gh` can read it, the listing shows it open or closed, with its title.
@@ -158,10 +158,10 @@ stateDiagram-v2
 ```
 
 - **Open:** `pkit new scratchpad` stamps a note into `active/`. A note sent upstream as a report moves to `reported/`, and is still open there ([the reference, "States"](../../.pkit/scratchpad/README.md#states)).
-- **Settled:** `pkit scratchpad done` moves a note to `done/` once other documents hold what it found. `pkit scratchpad drop` moves it to `dropped/` when its line of thought fails. Either retires a note from `active/` or from `reported/`.
+- **Retired:** `pkit scratchpad done` moves a note to `done/` once other documents hold what it found. `pkit scratchpad drop` moves it to `dropped/` when its line of thought fails. Either retires a note from `active/` or from `reported/`.
 - **The front matter** records who writes in the note, and the day the note started. Once the note retires, the front matter records the day it retired, and what it produced. A reported note also records the issue it became, and a hash of what was sent ([the reference, "Front matter"](../../.pkit/scratchpad/README.md#front-matter)).
 - **What the commands leave to you:** each moves the file on disk, and stages nothing in git ([the CLI reference, "Scratchpad commands"](../../.pkit/cli/README.md#scratchpad-commands)). Commit the move. Where the note changed little, git shows it as a rename ([the reference, "States"](../../.pkit/scratchpad/README.md#states)).
-- **Who owns the notes:** your project. Installing project-kit creates the folders, and a sync updates only the area's README. It never reads or writes a note ([the reference, "Layout"](../../.pkit/scratchpad/README.md#layout)).
+- **Who owns the notes:** your project. Installing project-kit creates the folders, and a sync updates only the area's README. A sync never reads or writes a note ([the reference, "Layout"](../../.pkit/scratchpad/README.md#layout)).
 - **A note binds nothing.** No work rests on it. What it found binds once a decision record states it, and a person accepts that record ([the decisions README, "The acceptance gate"](../../.pkit/decisions/README.md#the-acceptance-gate)).
 
 ## Start a note
@@ -188,7 +188,7 @@ started: <any>
 
 ## Work the question through
 
-Write in the note's body whatever the question needs, since no section is required. The skill opens a note with these parts:
+Write in the note's body whatever the question needs, since no section is required ([the reference, "Body"](../../.pkit/scratchpad/README.md#body)). The skill opens a note with these parts:
 
 - the question
 - what pulls the answer each way
