@@ -1,0 +1,14 @@
+component: software-engineering
+kind: patch
+custom:
+  category: Changed
+body: >
+  The README of software-engineering becomes a reference for the AI agent that
+  uses the capability (#2436). It holds the install, the conventions corpus,
+  the producer and the answers it writes, a foundation's conventions, the
+  code-review panel and the capability's rules, and links its guide for
+  people. Why the capability exists, and how people turn it on and do its
+  tasks, moves to the guide. Every section that moved keeps its old address on
+  the README. The reference names the full-suite rule, RS-SWE-001, rather than
+  restate it, and says that `docs-reviewer` blocks on missing documentation
+  only where a documentation obligation covers it.
