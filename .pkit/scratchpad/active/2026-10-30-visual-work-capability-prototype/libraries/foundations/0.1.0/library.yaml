@@ -1,0 +1,10 @@
+schema_version: 1
+name: foundations
+version: 0.1.0
+kind: component library
+status: experimental
+about: >-
+  The interface only: the role names every brand gives a value to (roles.yaml), and the top
+  components deck and figure with their layouts and slots. No opinion beyond what lets a piece
+  switch brands.
+requires: {visual-communication: "0.1"}

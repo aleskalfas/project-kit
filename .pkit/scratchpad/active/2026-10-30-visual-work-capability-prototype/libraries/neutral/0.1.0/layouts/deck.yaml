@@ -1,0 +1,38 @@
+schema_version: 1
+supplies: foundations/deck
+page: {width: =@page.width, height: =@page.height}
+define:
+  notice:
+    fields: {type: object, properties: {text: {type: string}}}
+    colour: info
+    parts:
+      box: {box: {fill: tone.fill, stroke: tone.line, stroke-width: =@stroke.thin, radius: =@radius.box}, width: =width, height: =height}
+      text: {text: "{text}", style: key, x: =@space.05, y: =@space.04, width: =width - 2 * text.x}
+    preferred: {height: =text.bottom + @space.04}
+layouts:
+  slide:
+    parts:
+      background: {box: {fill: background}, width: =page.width, height: =page.height}
+      rule: {box: {fill: accent, radius: =@stroke.bar / 2}, x: =@grid.margin, y: =@grid.margin - @space.06, width: =@space.09, height: =@stroke.bar}
+      title: {slot: title, style: title, x: =@grid.margin, y: =@grid.margin - 8, width: =@grid.content}
+      lead: {slot: lead, style: lead, colour: text-secondary, x: =@grid.margin, y: =title.bottom + @space.04, width: =@grid.lead}
+      visual: {slot: visual, x: =@grid.margin, y: =@region.content-y, width: =@grid.content}
+      limit: {slot: limit, use: notice, text: "{labels.limit} {limit}", x: =@grid.margin, y: "=@region.footer-y - @space.03 - limit.height", width: =@grid.content}
+      footer: {slot: footer, style: caption, colour: text-secondary, x: =@grid.margin, y: =@region.footer-y, width: =@grid.lead}
+      number: {text: "{page.number}", style: caption, colour: accent, align: end,
+               x: =@grid.margin + @grid.content - @grid.number, y: =@region.footer-y, width: =@grid.number}
+    bounds: {visual: =limit.y - @space.05, limit: =@region.footer-y - @space.03}
+  section:
+    parts:
+      background: {box: {fill: surface}, width: =page.width, height: =page.height}
+      number: {slot: number, style: lead, colour: accent, x: =@grid.margin, y: =page.height * 0.34, width: =@grid.content}
+      title: {slot: title, style: title, x: =@grid.margin, y: =number.bottom + @space.04, width: =@grid.content}
+      summary: {slot: summary, style: lead, colour: text-secondary, x: =@grid.margin, y: =title.bottom + @space.05, width: =@grid.lead}
+  cover:
+    parts:
+      background: {box: {fill: surface}, width: =page.width, height: =page.height}
+      title: {slot: title, style: title, x: =@grid.margin, y: =page.height * 0.32, width: =@grid.content}
+      rule: {box: {fill: accent, radius: =@stroke.bar / 2}, x: =@grid.margin, y: =title.bottom + @space.05, width: =@space.10, height: =@stroke.bar}
+      subtitle: {slot: subtitle, style: lead, colour: text-secondary, x: =@grid.margin, y: =rule.bottom + @space.05, width: =@grid.lead}
+      author: {slot: author, style: key, x: =@grid.margin, y: =@region.footer-y - @space.09, width: =@grid.lead}
+      link: {slot: link, style: caption, colour: text-secondary, x: =@grid.margin, y: =@region.footer-y, width: =@grid.lead}

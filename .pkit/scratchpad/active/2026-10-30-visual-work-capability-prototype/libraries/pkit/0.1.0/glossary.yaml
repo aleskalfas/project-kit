@@ -1,0 +1,22 @@
+schema_version: 1
+# The words of pkit's subject, per language (planning note, point 13). `never:` words are
+# reported in prose fields (x-pkit-prose) by `visual.py check`, with no judgment.
+terms:
+  capability:
+    meaning: an optional part of pkit that a project installs
+    en: {use: capability, never: [add-on, plugin]}
+    cs: {use: capability, note: stays English; plural capabilities; feminine, does not decline}
+  decision record:
+    meaning: a file that records one decision and why it was made
+    cs: {use: záznam o rozhodnutí}
+  core:
+    meaning: what pkit itself ships, replaced by each upgrade
+    cs: {use: jádro pkitu}
+  merge:
+    meaning: taking a change into the main branch
+    en: {use: merge, never: [land]}
+    cs: {use: merge}
+  you:
+    meaning: the person reading or using pkit
+    en: {use: you, never: [the user]}
+    cs: {use: vy, note: formal, lower case}

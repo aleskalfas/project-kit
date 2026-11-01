@@ -1,0 +1,38 @@
+schema_version: 1
+supplies: foundations/deck
+page: {width: =@page.width, height: =@page.height}
+define:
+  notice:
+    fields: {type: object, properties: {text: {type: string}}}
+    colour: info
+    parts:
+      box: {box: {fill: tone.fill, radius: =@radius.box}, width: =width, height: =height}
+      bar: {box: {fill: tone.line}, width: 6, height: =height}
+      text: {text: "{text}", style: key, x: =@space.05 + 8, y: =@space.05 - 4, width: =width - 2 * text.x}
+    preferred: {height: =text.bottom + @space.05 - 4}
+layouts:
+  slide:
+    parts:
+      background: {box: {fill: background}, width: =page.width, height: =page.height}
+      title: {slot: title, style: title, x: =@grid.margin, y: =@grid.margin - 12, width: =@grid.content}
+      lead: {slot: lead, style: lead, colour: text-secondary, x: =@grid.margin, y: =@grid.margin + @region.title-h + @space.05, width: =@grid.lead}
+      visual: {slot: visual, x: =@grid.margin, y: =@region.content-y, width: =@grid.content}
+      limit: {slot: limit, use: notice, text: "{labels.limit} {limit}", x: =@grid.margin, y: "=@region.footer-y - @space.03 - limit.height", width: =@grid.content}
+      footer: {slot: footer, style: caption, colour: text-secondary, x: =@grid.margin, y: =@region.footer-y, width: =@grid.lead}
+      number: {text: "{page.number} / {page.count}", style: caption, colour: text-secondary, align: end,
+               x: =@grid.margin + @grid.content - @grid.number, y: =@region.footer-y, width: =@grid.number}
+    bounds: {visual: =limit.y - @space.05, limit: =@region.footer-y - @space.03}
+  section:
+    parts:
+      background: {box: {fill: background}, width: =page.width, height: =page.height}
+      number: {slot: number, style: lead, colour: text-secondary, x: =@grid.margin, y: =page.height * 0.36, width: =@grid.content}
+      title: {slot: title, style: title, x: =@grid.margin, y: =number.bottom + @space.04, width: =@grid.content}
+      summary: {slot: summary, style: lead, colour: text-secondary, x: =@grid.margin, y: =title.bottom + @space.05, width: =@grid.lead}
+  cover:
+    parts:
+      background: {box: {fill: background}, width: =page.width, height: =page.height}
+      bar: {box: {fill: accent}, x: =@grid.margin, y: =page.height * 0.3, width: =@space.10, height: =@stroke.bar}
+      title: {slot: title, style: title, x: =@grid.margin, y: =bar.bottom + @space.06, width: =@grid.content}
+      subtitle: {slot: subtitle, style: lead, colour: text-secondary, x: =@grid.margin, y: =title.bottom + @space.05, width: =@grid.lead}
+      author: {slot: author, style: key, x: =@grid.margin, y: =@region.footer-y - @space.09, width: =@grid.lead}
+      link: {slot: link, style: caption, colour: text-secondary, x: =@grid.margin, y: =@region.footer-y, width: =@grid.lead}

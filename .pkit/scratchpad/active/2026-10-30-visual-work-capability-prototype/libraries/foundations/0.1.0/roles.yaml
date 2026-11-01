@@ -1,0 +1,36 @@
+schema_version: 1
+# The roles every brand gives a value to, in each of its themes and modes (colours) and font
+# profiles (fonts). A component paints with roles, never with raw values.
+colour:
+  # colours in families: a family's members are what a component paints with it
+  families: [neutral, category-1, category-2, category-3, category-4, category-5,
+             level-1, level-2, level-3, level-4, level-5, link, info, attention, error, success]
+  members:
+    line: a border, a bar, an arrow, a dot
+    fill: a tinted background, behind text-primary
+    ink: text in the family's colour, readable on background, surface and code.bg
+    solid: a strong fill, behind the family's on colour
+    "on": text on the solid fill
+  singles: [background, surface, surface-strong, border-subtle, border-strong,
+            text-primary, text-secondary, text-helper, accent]
+  code: [bg, border, text, prompt, command, args, output, comment, branch]
+dimension:
+  space: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13"]
+  stroke: [thin, strong, connector, bar]
+  radius: [box, chip]
+  pad: [box, chip, chip-y]
+typography: [title, lead, heading, tile, key, body, caption, code-l, code-m, code-s, code-inline]
+fontFamily: [sans, sans-strong, mono, code-inline]
+picture:
+  optional: [icon.attention]
+# Text and background pairs each mode keeps at contrast 4.5 or more (WCAG). The check also
+# measures every text the scene draws on what lies under it.
+contrast:
+  - [text-primary, background]
+  - [text-secondary, background]
+  - [text-helper, background]
+  - [text-primary, surface]
+  - [text-secondary, surface]
+  - [code.text, code.bg]
+  - [code.comment, code.bg]
+  - [code.command, code.bg]

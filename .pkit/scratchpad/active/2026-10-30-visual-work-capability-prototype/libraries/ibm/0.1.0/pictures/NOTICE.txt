@@ -1,0 +1,3 @@
+attention.png is a pictogram from IBM's Carbon Design System (https://github.com/carbon-design-system/carbon),
+licensed under the Apache License, Version 2.0. It is the Friday talk's step-lock-important.png byte for byte
+(2026-10-29-friday-talk-icons/), as that talk recoloured and rendered it; drawn here tinted by a role.

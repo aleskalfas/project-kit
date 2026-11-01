@@ -1,0 +1,11 @@
+schema_version: 1
+name: tag
+kind: block
+status: experimental
+about: A short label in its colour.
+fields: {type: object, properties: {text: {type: string, x-pkit-prose: true}}}
+colour: neutral
+parts:
+  box: {box: {fill: tone.fill, stroke: tone.line, stroke-width: =@stroke.thin, radius: =@radius.chip}, width: =width, height: =height}
+  text: {text: "{text}", wrap: "no", style: caption, colour: tone.ink, x: =@pad.chip, y: =@pad.chip-y}
+preferred: {width: =text.right + @pad.chip, height: =text.bottom + @pad.chip-y}

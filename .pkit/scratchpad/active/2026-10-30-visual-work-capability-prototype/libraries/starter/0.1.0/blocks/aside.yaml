@@ -1,0 +1,20 @@
+schema_version: 1
+name: aside
+kind: block
+status: experimental
+about: Something to know beside the main point, in the attention colour, with an optional command.
+fields:
+  type: object
+  properties:
+    head: {type: string, x-pkit-prose: true}
+    command: {type: string}
+    text: {type: string, x-pkit-prose: true}
+colour: attention
+parts:
+  box: {box: {fill: tone.fill, radius: =@radius.box}, width: =width, height: =height}
+  bar: {box: {fill: tone.line}, width: =@stroke.bar * 1.5, height: =height}
+  icon: {image: {picture: icon.attention, tint: text-primary}, x: =bar.right + @space.05, y: =@space.05 - 4, width: 72, height: 72}
+  head: {when: head, text: "{head}", style: key, x: "=icon.right + min(icon.width, @space.04)", y: =@space.05 + 4, width: =width - head.x - @space.06}
+  command: {when: command, use: starter/code, kind: session, size: l, text: "{command}", x: =head.x, y: =head.bottom + @space.05, width: =head.width}
+  text: {when: text, text: "{text}", style: body, x: =head.x, y: "=command.bottom + min(command.height, @space.05)", width: =head.width}
+preferred: {height: =text.bottom + @space.05}

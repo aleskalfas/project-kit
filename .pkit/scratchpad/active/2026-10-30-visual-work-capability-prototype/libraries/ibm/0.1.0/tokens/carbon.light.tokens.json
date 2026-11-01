@@ -1,0 +1,138 @@
+{
+  "$description": "IBM, Carbon White: each foundations colour role, aliased into the palette.",
+  "color": {
+    "$type": "color",
+    "background": {"$value": "{palette.white}"},
+    "surface": {"$value": "{palette.gray.10}"},
+    "surface-strong": {"$value": "{palette.gray.20}"},
+    "border-subtle": {"$value": "{palette.gray.20}"},
+    "border-strong": {"$value": "{palette.gray.50}"},
+    "text-primary": {"$value": "{palette.gray.100}"},
+    "text-secondary": {"$value": "{palette.gray.70}"},
+    "text-helper": {"$value": "{palette.gray.60}"},
+    "accent": {"$value": "{palette.blue.60}"},
+    "neutral": {
+      "line": {"$value": "{palette.gray.70}"},
+      "fill": {"$value": "{palette.gray.10}"},
+      "ink": {"$value": "{palette.gray.70}"},
+      "solid": {"$value": "{palette.gray.70}"},
+      "on": {"$value": "{palette.white}"}
+    },
+    "category-1": {
+      "line": {"$value": "{palette.purple.70}"},
+      "fill": {"$value": "{palette.purple.10}"},
+      "ink": {"$value": "{palette.purple.70}"},
+      "solid": {"$value": "{palette.purple.70}"},
+      "on": {"$value": "{palette.white}"}
+    },
+    "category-2": {
+      "line": {"$value": "{palette.blue.70}"},
+      "fill": {"$value": "{palette.blue.10}"},
+      "ink": {"$value": "{palette.blue.70}"},
+      "solid": {"$value": "{palette.blue.70}"},
+      "on": {"$value": "{palette.white}"}
+    },
+    "category-3": {
+      "line": {"$value": "{palette.yellow.30}"},
+      "fill": {"$value": "{palette.yellow.10}"},
+      "ink": {"$value": "{palette.yellow.60}"},
+      "solid": {"$value": "{palette.yellow.30}"},
+      "on": {"$value": "{palette.gray.100}"}
+    },
+    "category-4": {
+      "line": {"$value": "{palette.teal.70}"},
+      "fill": {"$value": "{palette.teal.10}"},
+      "ink": {"$value": "{palette.teal.70}"},
+      "solid": {"$value": "{palette.teal.70}"},
+      "on": {"$value": "{palette.white}"}
+    },
+    "category-5": {
+      "line": {"$value": "{palette.magenta.70}"},
+      "fill": {"$value": "{palette.magenta.10}"},
+      "ink": {"$value": "{palette.magenta.70}"},
+      "solid": {"$value": "{palette.magenta.70}"},
+      "on": {"$value": "{palette.white}"}
+    },
+    "level-1": {
+      "line": {"$value": "{palette.purple.80}"},
+      "fill": {"$value": "{palette.purple.10}"},
+      "ink": {"$value": "{palette.purple.80}"},
+      "solid": {"$value": "{palette.purple.80}"},
+      "on": {"$value": "{palette.white}"}
+    },
+    "level-2": {
+      "line": {"$value": "{palette.purple.70}"},
+      "fill": {"$value": "{palette.purple.10}"},
+      "ink": {"$value": "{palette.purple.70}"},
+      "solid": {"$value": "{palette.purple.70}"},
+      "on": {"$value": "{palette.white}"}
+    },
+    "level-3": {
+      "line": {"$value": "{palette.purple.40}"},
+      "fill": {"$value": "{palette.purple.10}"},
+      "ink": {"$value": "{palette.purple.70}"},
+      "solid": {"$value": "{palette.purple.40}"},
+      "on": {"$value": "{palette.gray.100}"}
+    },
+    "level-4": {
+      "line": {"$value": "{palette.purple.30}"},
+      "fill": {"$value": "{palette.purple.10}"},
+      "ink": {"$value": "{palette.purple.70}"},
+      "solid": {"$value": "{palette.purple.30}"},
+      "on": {"$value": "{palette.gray.100}"}
+    },
+    "level-5": {
+      "line": {"$value": "{palette.purple.20}"},
+      "fill": {"$value": "{palette.purple.10}"},
+      "ink": {"$value": "{palette.purple.70}"},
+      "solid": {"$value": "{palette.purple.20}"},
+      "on": {"$value": "{palette.gray.100}"}
+    },
+    "link": {
+      "line": {"$value": "{palette.purple.70}"},
+      "fill": {"$value": "{palette.purple.10}"},
+      "ink": {"$value": "{palette.purple.70}"},
+      "solid": {"$value": "{palette.purple.70}"},
+      "on": {"$value": "{palette.white}"}
+    },
+    "info": {
+      "line": {"$value": "{palette.blue.70}"},
+      "fill": {"$value": "{palette.blue.10}"},
+      "ink": {"$value": "{palette.blue.70}"},
+      "solid": {"$value": "{palette.blue.70}"},
+      "on": {"$value": "{palette.white}"}
+    },
+    "attention": {
+      "line": {"$value": "{palette.yellow.30}"},
+      "fill": {"$value": "{palette.yellow.10}"},
+      "ink": {"$value": "{palette.yellow.60}"},
+      "solid": {"$value": "{palette.yellow.30}"},
+      "on": {"$value": "{palette.gray.100}"}
+    },
+    "error": {
+      "line": {"$value": "{palette.red.60}"},
+      "fill": {"$value": "{palette.red.10}"},
+      "ink": {"$value": "{palette.red.60}"},
+      "solid": {"$value": "{palette.red.60}"},
+      "on": {"$value": "{palette.white}"}
+    },
+    "success": {
+      "line": {"$value": "{palette.green.60}"},
+      "fill": {"$value": "{palette.green.10}"},
+      "ink": {"$value": "{palette.green.60}"},
+      "solid": {"$value": "{palette.green.60}"},
+      "on": {"$value": "{palette.white}"}
+    },
+    "code": {
+      "bg": {"$value": "{palette.gray.10}"},
+      "border": {"$value": "{palette.gray.20}"},
+      "text": {"$value": "{palette.gray.100}"},
+      "prompt": {"$value": "{palette.gray.60}"},
+      "command": {"$value": "{palette.green.60}"},
+      "args": {"$value": "{palette.gray.100}"},
+      "output": {"$value": "{palette.gray.80}"},
+      "comment": {"$value": "{palette.gray.60}"},
+      "branch": {"$value": "{palette.gray.40}"}
+    }
+  }
+}

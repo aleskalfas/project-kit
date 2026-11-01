@@ -1,0 +1,21 @@
+schema_version: 1
+# The connect slide's picture alone, as a figure for a document page, from content only.
+name: sockets-figure
+top: foundations/figure
+brand: ibm/figure
+notations: [pkit]
+languages: [en, cs]
+source: en
+audience: readers of pkit's documentation
+medium: document
+state: draft
+outputs: [svg]
+lock:
+  foundations: 0.1.0
+  starter: 0.1.0
+  pkit: 0.1.0
+  ibm: 0.1.0
+  neutral: 0.1.0
+previews:
+  ibm/figure: [carbon/light, carbon/dark]
+  neutral/figure: [teal-calm/light, teal-calm/dark]

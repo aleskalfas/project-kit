@@ -1,0 +1,10 @@
+{
+  "font": {
+    "$type": "fontFamily",
+    "sans": {"$value": "proxima-nova", "$extensions": {"pkit.visual": {"measure": "estimate"}}},
+    "sans-strong": {"$value": "{font.sans}"},
+    "mono": {"$value": "IBM Plex Mono", "$extensions": {"pkit.visual": {"files": {"400": "fonts/IBMPlexMono-Regular.otf"}, "render": "image"}}},
+    "code-inline": {"$value": "{font.sans}"}
+  },
+  "$description": "Fonts for Mural, which accepts 12 fonts, none of them IBM Plex or monospace: proxima-nova by estimate; a code block drawn as an image in IBM Plex Mono; inline code in proxima-nova, a declared loss."
+}

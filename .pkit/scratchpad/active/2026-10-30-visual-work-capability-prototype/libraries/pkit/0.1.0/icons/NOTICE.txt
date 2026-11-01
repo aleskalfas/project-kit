@@ -1,0 +1,5 @@
+The icons in this folder are pictograms from IBM's Carbon Design System (@carbon/pictograms 12.85.0,
+https://github.com/carbon-design-system/carbon), licensed under the Apache License, Version 2.0
+(https://www.apache.org/licenses/LICENSE-2.0). They are the Friday talk's files, byte for byte
+(2026-10-29-friday-talk-icons/), which recoloured them to its roles and rendered them to PNG:
+code -> code.png, review-checklist -> checks.png, robot -> agents.png, person--01 -> people.png.

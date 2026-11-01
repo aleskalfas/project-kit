@@ -1,0 +1,26 @@
+schema_version: 1
+# Obrázek ze slajdu connect samotný, pro stránku dokumentace. Překlad z content.en.yaml.
+figure:
+  id: sockets
+  layout: figure
+  visual:
+    use: starter/network
+    item: {use: starter/card, fill: tint}
+    left:
+    - {id: living-docs, concept: capability, head: living-docs, tag: "pkit::documentation", text: dokumenty na míru čtenáři}
+    - {id: software-analysis, concept: capability, head: software-analysis, tag: "pkit::analysis", text: co musí software umět}
+    right:
+    - use: starter/groups
+      groups:
+      - id: project-management
+        concept: capability
+        head: project-management
+        tag: plays pkit::work-tracking
+        items:
+        - {id: doc-check, code: doc-check, text: "dokumenty, které změna musí upravit"}
+        - {id: fixers, code: fixers, text: který agent opraví který dokument}
+        - {id: use-cases, code: use-cases, text: případy užití k plánování}
+    ties:
+    - {from: living-docs, to: [doc-check, fixers], concept: core}
+    - {from: software-analysis, to: [fixers, use-cases], concept: core}
+  caption: Capability nikdy nejmenuje jinou capability, jen roli. Když něco potřebuje, otevře slot. Vyplní ho kterákoli jiná.

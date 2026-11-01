@@ -1,0 +1,47 @@
+---
+authors:
+  - Aleš Kalfas <kalfas.ales@gmail.com>
+started: 2026-10-29
+retired: 2026-10-29
+produced:
+  - project-management:DEC-061
+  - ADR-072
+---
+
+# Pools of workers: the design as decided (28 October)
+
+Written on 28 October in a branch folder (`talk-notes/`) as the design the maintainer decided; it produced project-management DEC-061 and ADR-072 (PR #2257).
+
+Decided by the maintainer point by point, after a critic review and an architect review (the architect endorsed it with the conditions folded in below). This is the contract for the records and the build of #2256 (PR #2257).
+
+## The needs
+
+1. Workers take only what a person put into their pool.
+2. Several planners at once, each on its own line of work.
+3. No change to the committed topology when a line of work finishes or a new one starts.
+4. Control of capacity: more workers on what matters most, one on housekeeping.
+
+## The design
+
+1. **Pools in the topology.** An optional top-level key `pools: [alpha, bravo]` (neutral names, never renamed, like seats), added under `schema_version: 1` as a pure addition (no migration). A seat that builds (a worker or a lead) names the pools it serves (`pools: [alpha]`); `pools: []` takes nothing. Planners are not bound to pools. `pools` is its own key, never part of `scope`: a pool reserves work, a scope narrows and reserves nothing (DEC-059 point 7). Moving capacity between pools is an edit of a seat's `pools`, through a pull request.
+2. **A milestone joins a pool by a line in its GitHub description,** `Pool: alpha`, beside `Close trigger:` and `Rollforward target:` (DEC-016). Read wherever it stands, as a whole line, never required first (the close-trigger parser reads only the first non-blank line). One parser, in `_lib/milestone.py` beside `parse_close_trigger`; the grammar declared in `schemas/time-containers.yaml`. Two `Pool:` lines, or one naming a pool the topology does not declare, put the milestone in no pool, with a warning.
+3. **A Task's milestone is its native Milestone field only,** not the body's `Milestone:` line (a parent link, DEC-005), as DEC-016 has an issue in at most one milestone. So a Task is in at most one pool.
+4. **A pool's topic is its open milestones.** Finishing a line is closing its milestone; a new line is a new milestone marked with the pool.
+5. **What a builder seat takes (`next-task`):** read the topology from the default branch; read the repository's open milestones once and map each `Pool:` line to its pool; read the open issues once (as today); keep the Tasks that are ready as today (Backlog, dependencies closed, no other owner) and whose native milestone is one of the seat's pools' milestones and that fall in the seat's scope (workstreams, types); rank as today; start the first. `next-task` reads the milestones and passes the seat's set of milestone numbers into the pure `task_pool` reckoning (None where no pools are declared); the topology module reads no GitHub beyond the state-issue seam (ADR-071). The pools filter a seat's own Tasks too.
+6. **Consent: putting work into a pool is the person's act.** Marking a milestone with a pool (`create-milestone --pool`, and a new verb-subject command that sets or clears a milestone's pool) asks through `consent.authorise` (a person at a terminal, or `--yes` on the person's word), and writes an audit line into the milestone's description (a milestone has no comments). So does every write that puts a Task into a milestone in a pool, or moves it between pools: `create-issue --milestone`, `edit-issue --milestone`, `promote-issue --milestone`, and the milestone an `assign-milestone` hook sets. A move inside one pool, and the rollforward a person-authorised close makes, need nothing new. A planner filing what the person approved in the plan's gate has the person's word.
+7. **Rollforward stays in the pool.** Closing a milestone rolls its open Tasks to the next-numbered open milestone of its category in the same pool (refining DEC-016's default); the person is asked where there is none or more than one. A forced close that leaves Tasks in Backlog in no pool is reported.
+8. **Defaults and failures.** No pools declared: today's behaviour (one shared pool, Backlog the gate). Pools declared: a builder seat naming no pool takes nothing; an unreadable milestone listing takes nothing (exit 3), never falling back to the whole Backlog; `next-task` says "pool alpha has no open milestone" rather than a bare "nothing ready".
+9. **The guard against code that does not understand the topology.** `topology.parse` marks a topology it cannot read in full: an unknown key at the top level or in a seat, an unknown value of a fixed-choice field (`role`, `release_mode`), an unknown `schema_version`. Every command that would use authority the topology grants refuses on it (taking work, taking a seat, a release by force; exit 2); listings such as `seats` warn; work already in flight (renewal, `review-work`, `done-work`) goes on. It fails closed for the topology because ignoring a key could widen what an agent may take (unlike COR-048's warn-only rule for the backbone configuration). It protects only clones that run it, so pools enter a project's topology only once every held seat's clone runs code that has it.
+10. **Checks and reports.** `check-topology` refuses a seat that names an undeclared pool, and a seat's `pools` where the top level declares none. `seats` and `take-seat` show each pool's open milestones (number and title) and warn of: a pool no seat builds for, a pool with no open milestone, a builder seat naming no pool, a milestone whose `Pool:` names an undeclared pool, Backlog Tasks left in no pool by a forced close.
+11. **The per-seat milestone scope that #2257 built is removed:** a scope names workstreams and types only.
+12. `settings.release_mode: tolerant` stays.
+
+## Records
+
+- **A new project-management record, "Pools of workers"** (stamped with `pkit new decision project-management <slug>`), partially superseding DEC-059, with a "What this overturns, and what stands" section. It overturns DEC-059's "one pool that every seat shares" (title, headline, point 7), the rationale "Why one shared pool" (including "no routing to keep up"), and the rejected alternative of a scope that reserves its work. It places the new state (DEC-058 point 1): a milestone's pool is an attribute of a work container, written by the person's scheduling act; neither configuration nor a state issue. It says the gate sits outside reviewed configuration on purpose (need 3) and is a guard against mistakes, not a security boundary (as DEC-058 point 5). Pools require milestones, so a flat project keeps the shared pool (COR-014).
+- **DEC-059** gets a "Partially superseded by …" top line and stays accepted; the overturned passages stay as they stood. Refined in place with pointers: point 1 (pools in the topology; the guard, as a standing rule for every topology change), point 7 (the expected owner: the seat that alone may take a Task, by its pools, then its scope). Check whether point 4 needs a word for several planners.
+- **DEC-016:** the `Pool:` line; rollforward within the pool.
+- **DEC-006:** where pools are declared, a Task scheduled with an audited reason and no milestone reaches no worker; putting a Task into a pooled milestone is the person's act.
+- **DEC-025:** open question 7 answered, per pool.
+- **Unchanged:** DEC-045, DEC-004.
+- **After acceptance:** the architect authors an ADR on the pool lookup's boundaries, the guard's placement and the failure behaviour, and rewords ADR-041's "the shared pool".

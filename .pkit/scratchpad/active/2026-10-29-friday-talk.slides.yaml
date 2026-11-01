@@ -1,0 +1,1508 @@
+# The Friday talk's slides as data. One entry per slide, in the talk's order
+# (see 2026-10-29-friday-talk.md, "The talk's order" and "The slides' structure").
+# A generator (2026-10-29-friday-talk.gen.py) turns these entries into instances
+# of the board's library templates in 2026-10-29-friday-talk.board.yaml.
+# Fields: title, message (the slide's lead), problem, does (2-4), show (the
+# week's evidence, the slide's small bottom line), visual (drawn from library
+# components), limit, minutes, notes (spoken, not on the slide).
+#
+# Vocabulary, one word per thing: you (never "the person" or "the user"); merge
+# (never "land"); depends on (never "rests on" or "anchored"); capability, pkit's
+# own term, never "add-on" (defined on the install slide); the project-manager agent;
+# builder (defined on the project-management slide); "rules" always qualified.
+
+talk:
+  project: project-kit (pkit)
+  link: github.com/aleskalfas/project-kit
+  title: Building with AI, the way your project decided
+  author: Aleš Kalfas
+  date: 30 October 2026
+  version: pkit 1.149
+  length_minutes: 30
+parts:
+- id: P0
+  title: pkit at a glance
+  summary: Why pkit exists, how to install it, and how its parts fit together.
+- id: P1
+  title: From idea to rule
+  summary: Where ideas start, your decisions, what every session is told, and rules a program applies.
+- id: P2
+  title: How the agent works
+  summary: Procedures, roles, and what each agent may do.
+- id: P3
+  title: Staying consistent
+  summary: What pkit checks, and documents that stay true.
+- id: P4
+  title: What you install
+  summary: 'Capabilities: optional parts for your kind of work, and how they connect.'
+- id: P5
+  title: Questions
+  summary: ''
+  section: false
+slides:
+- id: opening
+  part: P0
+  title: Why pkit?
+  message: Your AI agent works fast, and forgets everything your project decided.
+  problem: ''
+  does: []
+  show: 'The question: how do you make it work your project''s way, without a heavy framework?'
+  visual:
+    kind: pairs
+    style: tinted
+    icons: true
+    pairs:
+    - left:
+        role: neutral
+        icon: row-chat
+        head: Choices stay in chats and in people's heads
+        text: so the agent cannot know them, and decides again
+      right:
+        role: code
+        icon: row-write
+        head: Capture each decision, with why
+        text: you accept it, and every session can read it · Part 2
+    - left:
+        role: neutral
+        icon: row-question
+        head: Conventions stay unwritten
+        text: so the agent falls back on its own habits
+      right:
+        role: code
+        icon: row-conventions
+        head: Write your conventions down
+        text: every session loads them, and agents follow them · Parts 2, 5
+    - left:
+        role: neutral
+        icon: row-doc
+        head: Docs aren't tied to the code
+        text: so a code change leaves them false, and nobody notices
+      right:
+        role: code
+        icon: row-link
+        head: Tie each doc to what it depends on
+        text: each change rechecks the docs it affects · Part 4
+    - left:
+        role: neutral
+        icon: row-unguarded
+        head: What the agent may do is never said
+        text: so the tool guesses, action by action
+      right:
+        role: code
+        icon: row-shield
+        head: Write down what it may do
+        text: decided once by your project, the same in every session · Part 3
+  limit: ''
+  minutes: 1.5
+  notes: 'pkit is installed into a repository, so an AI agent works the way the project decided. project-kit is built with
+    pkit itself: every example shown is from this week.'
+- id: fits
+  part: P0
+  title: How pkit fits together
+  message: 'In five layers, from your decisions down to your code: each carries out the ones above it.'
+  problem: ''
+  does: []
+  show: 'This week: pkit wrote this order down as a decision of its own, COR-065'
+  visual:
+    kind: pyramid
+    center: 1280
+    top_w: 720
+    step: 280
+    levels:
+    - head: Decisions
+      text: Choices you accepted, and why.
+      fill: '#491D8BFF'
+      ink: '@text_on_color'
+    - head: Working rules · schemas · processes
+      text: Exactly what to do, for every session and tool.
+      fill: '#6929C4FF'
+      ink: '@text_on_color'
+    - head: Skills · agents · permissions
+      text: How agents act, in which role, with what rights.
+      fill: '#BE95FFFF'
+      ink: '@text_primary'
+    - head: pkit's commands and checks
+      text: Carry out what is decided, and check every change.
+      fill: '#D4BBFFFF'
+      ink: '@text_primary'
+    - head: Your code and documents
+      text: The work itself, tied to what it depends on.
+      fill: '#E8DAFFFF'
+      ink: '@text_primary'
+    side:
+    - head: Where ideas start
+      text: In conversation, and in a scratchpad note when one needs longer.
+      role: code
+      arrow: right
+      at: 0
+      h: 300
+      w: 600
+    - head: Carried out
+      text: Each layer carries out the decisions above it. The reasons stay in one place, where an agent reads them 
+        before it changes anything.
+      arrow: down
+      at: 0
+      h: 440
+    - head: Checked
+      text: If a layer and a decision disagree, the layer is checked first, so decisions never drift to match the code. 
+        Only you change a decision.
+      arrow: up
+      at: 492
+      h: 440
+  limit: ''
+  minutes: 1.5
+  notes: 'A conversation ends. What it decides goes into a decision, what it leaves open into a scratchpad note. Where no
+    decision exists yet, what was built stands, until a change makes that choice; then the decision comes first. A layer that
+    disagrees with a decision falls short and is fixed, or a new decision is written and you accept it. Most layers are written
+    by hand, so they can lag; what is tied to a decision is flagged when the decision changes. After the install, the slides
+    take the layers from the top.'
+- id: install
+  part: P0
+  title: Install pkit
+  message: Install the tool once, then add pkit to each project with one command. Upgrades replace pkit's files, never 
+    yours.
+  problem: ''
+  does: []
+  show: pkit status shows what pkit set up in a project. Optional parts, called capabilities, come later.
+  visual:
+    kind: install
+    terminal: "# once, on your machine\n$ uv tool install \\\n    git+ssh://git@github.com/aleskalfas/project-kit.git@latest\n\
+      $ pkit --version\n\n# in each project\n$ cd your-project\n$ pkit init"
+    highlight:
+      icon: step-lock-important
+      head: Don't want pkit in your repository?
+      command: $ pkit visibility private
+      body: 'pkit stays only in your clone, hidden by git''s exclude file. Nothing of it is committed, and your agent still
+        uses all of it.'
+    listing:
+    - - - '$ '
+        - prompt
+      - - tree
+        - command
+      - - ' -a -L 2 your-project'
+        - args
+    - - - your-project/
+        - plain
+    - - - '├── '
+        - branch
+      - - .pkit/
+        - plain
+      - - '                        # the methodology'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - adapters/
+        - pkit
+      - - '                 # the bridge to your AI tool'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - 'agents/ '
+        - plain
+      - - core/
+        - pkit
+      - - ' '
+        - plain
+      - - project/
+        - yours
+    - - - '│   ├── '
+        - branch
+      - - cli/
+        - pkit
+      - - '                      # the command''s reference'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - 'decisions/ '
+        - plain
+      - - core/
+        - pkit
+      - - ' '
+        - plain
+      - - project/
+        - yours
+    - - - '│   ├── '
+        - branch
+      - - lifecycle/
+        - pkit
+      - - '                # install, sync, upgrade'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - migrations/
+        - pkit
+      - - '               # move your project to new versions'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - 'permissions/ '
+        - plain
+      - - project/
+        - yours
+      - - '     # what agents may do'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - process/
+        - pkit
+      - - '                  # staged processes, as data'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - 'rules/ '
+        - plain
+      - - core.md
+        - pkit
+      - - ' '
+        - plain
+      - - project.md
+        - yours
+      - - ' # yours to add'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - schemas/
+        - pkit
+      - - '                  # what the tools read'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - scratchpad/
+        - yours
+      - - '               # your unfinished ideas'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - 'skills/ '
+        - plain
+      - - core/
+        - pkit
+      - - ' '
+        - plain
+      - - project/
+        - yours
+    - - - '│   ├── '
+        - branch
+      - - manifest.yaml
+        - pkit
+      - - '             # what is installed, which version'
+        - comment
+    - - - '│   └── '
+        - branch
+      - - .gitignore
+        - pkit
+      - - '                # pkit''s runtime files'
+        - comment
+    - - - '├── '
+        - branch
+      - - .claude/
+        - plain
+      - - '                      # your Claude Code setup'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - 'agents/  skills/'
+        - plain
+      - - '          # '
+        - comment
+      - - pkit's
+        - pkit
+      - - ' beside '
+        - comment
+      - - yours
+        - yours
+    - - - '│   └── '
+        - branch
+      - - settings.json
+        - plain
+      - - '             # '
+        - comment
+      - - yours
+        - yours
+      - - ', '
+        - comment
+      - - pkit's
+        - pkit
+      - - ' merged in'
+        - comment
+    - - - '├── '
+        - branch
+      - - .agent-workspace/
+        - plain
+      - - '             # agents'' scratch, not committed'
+        - comment
+    - - - '├── '
+        - branch
+      - - CLAUDE.md
+        - yours
+      - - '                     # loads the rules each session'
+        - comment
+    - - - '└── '
+        - branch
+      - - src/
+        - yours
+      - - '                          # your code, untouched'
+        - comment
+    - - - '# '
+        - comment
+      - - purple
+        - pkit
+      - - ': pkit''s, replaced by each upgrade · '
+        - comment
+      - - blue
+        - yours
+      - - ': yours'
+        - comment
+    font_size: 26
+  limit: ''
+  minutes: 1.5
+  notes: 'pkit init writes pkit''s files into .pkit/, merges your AI tool''s settings without overwriting them, and installs
+    the skills and agents where Claude Code reads them. Today that is Claude Code. A sync refreshes only pkit''s own entries;
+    your agents, skills and settings stay. In a newcomer''s trial run, the setup committed 689 files for a 4-file project.
+    What sits in the agent''s context: one rules file, and one line per skill and agent.'
+- id: ideas
+  part: P1
+  title: Where ideas start
+  message: In conversation. A scratchpad note keeps what you agreed past the session, until it becomes records, issues 
+    or docs.
+  problem: ''
+  does: []
+  show: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
+  visual:
+    kind: ideas
+    font_size: 26
+    conversation:
+      icon: row-chat
+      head: A conversation
+      text: You and the agent shape an idea, until the session ends or its context is full.
+      text_h: 150
+    note:
+      icon: row-doc
+      head: A scratchpad note
+      text: Keeps what you agreed. It waits without a deadline, and the next session reads it.
+      terminal: |-
+        .pkit/scratchpad/active/
+          2026-06-01-cli-design-conventions.md
+        # how should a pkit command be designed?
+        # open since June, no deadline
+    becomes_head: When it is done, it becomes
+    becomes:
+    - head: Decision records
+      text: COR-041 and ADR-040, from a note of 3 July
+    - head: Issues
+      text: '14 issues: one big feature, planned'
+    - head: Docs
+      text: 10 use cases and 2 journeys, from one note
+    dropped:
+      text: Or dropped, kept with the reason it was dropped.
+  limit: 'Nothing writes the note for you: what stays only in the conversation is lost with it.'
+  minutes: 1
+  notes: 'Everyone here has hit the context limit. A scratchpad note is where what you agreed survives it: the next session
+    reads the note. A note can wait: the one shown, on how a pkit command should be designed, has been open since June, as
+    have 13 others of the 33 active, and that is fine. The folder is the note''s state (COR-012): pkit new scratchpad <slug>
+    starts one in .pkit/scratchpad/active/, pkit scratchpad done <slug> --produced <ref> moves it to done/ and lists what
+    it became, pkit scratchpad drop moves it to dropped/. It is a file in the repository, not a chat or a tool''s memory,
+    so colleagues and every agent read the same note, and a done note stays as the story of how a decision was reached. The
+    28 done notes also produced a schema, a pull request and a milestone. COR-041 and ADR-040 come back under the release
+    guide.'
+- id: decisions
+  part: P1
+  title: Decision records
+  message: A decision record keeps one choice and why it was made. Where it lives says what it is about, and who may 
+    change it.
+  problem: ''
+  does: []
+  show: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old one'
+  visual:
+    kind: kinds
+    groups:
+    - head: How work is done
+      path: .pkit/decisions/
+      kinds:
+      - tag: COR
+        tone: pkit
+        head: pkit's principles
+        text: How the method works, the same in every project.
+        path: core/COR-065-records-and-projection.md
+        why: 'Kept apart from yours: each upgrade replaces them, so you never edit them.'
+      - tag: PRJ
+        tone: yours
+        head: Your way of working
+        text: How your team works, in the choices pkit leaves to you.
+        path: project/PRJ-002-version-bump-policy.md
+        why: 'Yours alone: no upgrade ever writes here.'
+    - head: What you build, at a path you choose
+      path: docs/architecture/decisions/
+      kinds:
+      - tag: ADR
+        tone: architecture
+        head: Your architecture
+        text: How your system is built, its structure, technologies and boundaries.
+        path: ADR-001-project-root-resolution.md
+        why: 'Kept with your system''s docs, where its architect keeps them.'
+  limit: 'Writing and reviewing a record takes time: worth it only for choices that later work builds on.'
+  minutes: 1.5
+  notes: 'Two questions give the three places: what the record is about, how work is done or what you build, and who may change
+    it, pkit or you. pkit never decides your architecture, so there is no fourth. pkit''s principles change by a new record
+    you can read, never by a quiet edit: 39 in June, 67 now, and this week COR-065 replaced a sentence of COR-006. In project-kit
+    itself, 11 PRJ and 74 ADR. Capabilities bring decision records of their own, shown in Part 5.'
+- id: found
+  part: P1
+  title: Decided once, found later
+  message: You accept a decision before work builds on it. Later, an agent finds the decision before changing the files 
+    it covers.
+  problem: ''
+  does: []
+  show: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted and merged with its code.'
+  visual:
+    kind: story
+    stages:
+    - role: agents
+      head: The agent drafts it
+      text: It writes the record, and ties the release guide to it.
+      terminal: |-
+        $ cat .pkit/decisions/project/PRJ-002-….md
+        id: PRJ-002
+        title: Version-bump policy
+        status: proposed    # until you accept it
+        ## Context          # why it came up
+        ## Decision         # what is decided
+        ## Rationale        # why, what was rejected
+        ## Implications     # what follows
+
+        # .pkit/release/README.md, its front matter:
+          friction:
+            anchors:
+        +     record: [PRJ-002]
+    - role: people
+      head: You accept it
+      text: You see it before it merges, while it is cheapest to change.
+      terminal: |-
+        # the pull request, before it merges:
+          .pkit/decisions/project/PRJ-002-….md
+        - status: proposed
+        + status: accepted
+
+          .pkit/release/README.md
+            anchors:
+        +     record: [PRJ-002]
+    - role: agents
+      head: A later session finds it
+      text: It starts with none of your reasons, so it looks up the records first.
+      terminal: |-
+        $ pkit refs records-for .pkit/release/README.md
+        6 records tied directly:
+          PRJ-002  Version-bump policy …
+          PRJ-004  Distribution via direct git URL …
+          ADR-040  Fetch externally-sourced content …
+          COR-010  Lifecycle of installed resources
+          …
+        # the agent reads these before changing it
+    font_size: 24
+  limit: Only records tied to a file are found, directly or through a document that depends on it.
+  minutes: 1
+  notes: 'One record, PRJ-002, through its life: drafted as proposed, accepted in the pull request by one line, and found
+    by a later session behind the release guide, beside records of the other two kinds. Accepting is yours: a check can refuse
+    to merge a record still proposed, and whoever authorises a merge sees every record it accepts. The agent ties the release
+    guide to the record as it drafts it, since the guide carries the record out: a change to PRJ-002 then asks whether the
+    guide still holds, the docs slide shows how, and the lookup reads the same tie backwards. In project-kit the tie was written
+    when the guide became such a document. Before changing a file, the agent runs this lookup, one of the working rules every
+    session is told. A choice made in a chat is gone the next session; a record is found.'
+- id: sessions
+  part: P1
+  title: What every session is told
+  message: A few short rules on how to work, pkit's and yours. Records are too many to load, so each rule names the one 
+    behind it.
+  problem: ''
+  does: []
+  show: 'This week: each rule got a permanent id and a status. The file every session loads is now generated from the rules.'
+  visual:
+    kind: rules
+    center: 868
+    top_w: 1000
+    step: 240
+    level_h: 200
+    levels:
+    - head: The decision (COR-065)
+      text: An agent reads the records only when it changes something, not in every session.
+      fill: '#491D8BFF'
+      ink: '@text_on_color'
+    - head: The rule every session gets (rule 22)
+      text: Before you change files, read the records behind them.
+      fill: '#6929C4FF'
+      ink: '@text_on_color'
+    - head: What the agent does
+      text: Before it changes a file, it runs pkit refs records-for and reads what it lists.
+      fill: '#BE95FFFF'
+      ink: '@text_primary'
+    font_size: 28
+    terminal:
+    - - - '# loaded at the start of every session'
+        - comment
+    - - - .pkit/rules/core.md
+        - pkit
+      - - '      # pkit''s, in every project'
+        - comment
+    - - - .pkit/rules/project.md
+        - yours
+      - - '   # yours, never touched by pkit'
+        - comment
+    - []
+    - - - '# looked up when needed'
+        - comment
+    - - - '$ '
+        - prompt
+      - - pkit
+        - command
+      - - ' refs records-for <files>'
+        - args
+      - - '  # the records behind'
+        - comment
+    - - - '                                 # what it changes'
+        - comment
+    - - - '$ '
+        - prompt
+      - - pkit
+        - command
+      - - ' rule-sets reach <paths>'
+        - args
+      - - '   # rules about what'
+        - comment
+    - - - '                                 # it writes'
+        - comment
+  limit: 'A rule is advice: an agent can still break it.'
+  minutes: 1.5
+  notes: 'Records are many, and read when something changes. A few rules on how to act are loaded into every session instead,
+    and each points to the decision it carries out. Rule 22 is why an agent looks up a file''s records before changing it;
+    it carries out COR-065 point 7, the record behind the pyramid. Each rule has a permanent id, a status and an origin, the
+    record it carries out or the dated words of whoever decided it, and a changed record asks its rules to recheck (COR-068,
+    ADR-075, on main since 29 October). Your project.md is yours; sync never touches it. Rules about particular files, such
+    as Python code rules, are not loaded: they are rule sets scoped to those files, looked up with pkit rule-sets reach and
+    checked by a reviewer at merge (#2273 and #2274, in review). Also in review: a size budget pkit validate checks (#2262),
+    and a rule on when a decision record starts (#2258). Next: each installed capability brings its own rules, loaded while
+    it is installed (#2269, shown with the capabilities), and the rules trimmed to a sentence or two each (#2261). Today:
+    22 rules, about 2,800 words, in every session.'
+- id: schemaslook
+  part: P1
+  title: What schemas and processes look like
+  message: 'A schema is two files: the rule as data, and the shape that data must have. A process is a schema of stages
+    and moves.'
+  problem: ''
+  does: []
+  show: 'In a fresh install: 8 schemas of pkit''s own, and the shape every process must have. pkit validate checks them all.'
+  visual:
+    kind: files
+    font_size: 22
+    groups:
+    - head: 'A schema: two files'
+      tag: In core pkit
+      tone: core
+      panels:
+      - head: The rule, as data
+        terminal:
+        - [['# .pkit/schemas/privilege-catalog.yaml', comment]]
+        - [['vcs-history-rewrite:', output]]
+        - [['  description: ', output], ['Rewriting published git history (force-push).', args]]
+        - [['  guardrail: ', output], ['true', args]]
+        - [['  recognize:', output]]
+        - [['    bash:', output]]
+        - [['      - cmd: ', output], [git, args]]
+        - [['        subcommand: ', output], ['[push]', args]]
+        - [['        flag_any: ', output], ['["--force", "-f", …]', args]]
+      - head: The shape it must have
+        terminal:
+        - [['# .pkit/schemas/privilege-catalog.schema.json', comment]]
+        - [['"entry": {', output]]
+        - [['  "type": ', output], ['"object",', args]]
+        - [['  "additionalProperties": ', output], ['false,', args]]
+        - [['  "required": ', output], ['["description", "recognize"],', args]]
+        - [['  "properties": {', output]]
+        - [['    "description": {', output]]
+        - [['      "type": ', output], ['"string",', args]]
+        - [['      "minLength": ', output], ['1,', args]]
+    - head: 'A process: one kind of schema'
+      tag: 'A capability''s example: not in core pkit'
+      tone: example
+      panels:
+      - head: The issue workflow
+        terminal:
+        - [['# .pkit/capabilities/project-management/', comment]]
+        - [['#   schemas/workflow.yaml', comment]]
+        - [['process:', output]]
+        - [['  id: ', output], [issue-lifecycle, args]]
+        - [['  states:  ', output], ['# todo … done, five', comment]]
+        - [['  transitions:', output]]
+        - [['    - from: ', output], [review, args]]
+        - [['      to: ', output], [done, args]]
+        - [['      authorisation: ', output], [user, yours]]
+    below:
+      head: What core pkit brings, so no capability and no project builds it again
+      terminals:
+      - - [['# for schemas', comment]]
+        - [['$ ', prompt], [pkit, command], [' new schema <capability> <name>', args], ['   # a rule and its shape, as a pair', comment]]
+        - [['$ ', prompt], [pkit, command], [' validate', args], ['                         # every file against its shape', comment]]
+        - [['$ ', prompt], [pkit, command], [' data validate <file>', args], ['             # your own data files too', comment]]
+      - - [['# for processes', comment]]
+        - [['$ ', prompt], [pkit, command], [' process new <capability>:<id>', args], ['    # a process, its gates stubbed', comment]]
+        - [['$ ', prompt], [pkit, command], [' process status', args], ['                   # where it is, and why', comment]]
+        - [['$ ', prompt], [pkit, command], [' process move', args], ['                     # the move, refused if not allowed', comment]]
+  limit: pkit validate checks that a file has its shape, not that the rule in it is right.
+  minutes: 1
+  notes: 'Before the example, the files themselves. A schema is a pair of files. One holds the rule as data, here the privilege
+    that covers force-push: what it is, that it is a guardrail, and how a command is recognised as one. The other, the
+    .schema.json file beside it, says what such data must contain: an entry needs a description and a recognize block,
+    and nothing else may appear. pkit''s commands, skills and agents read the first file; pkit validate checks it against
+    the second (COR-018). This very rule is why force-push is refused for every agent, on the permissions slide later.
+    pkit''s own schemas live in .pkit/schemas/, 8 of them, mostly the permission model. Each capability keeps its own in its
+    schemas/ folder. A process is one kind of schema: a file of states and moves, with a gate on each move (COR-033). The
+    one shown is not part of core pkit: it is the issue workflow of the project-management capability, the only process in use
+    today. Core pkit ships what every process needs: the shape every process file must have (.pkit/schemas/_defs/process.schema.json),
+    the engine, and the commands. That is the point of the bottom row: pkit brings the commands for schemas and processes,
+    so a capability or a project never builds its own validator or its own state machine. Why the rule is data: it lives in
+    one place, apart from the code that applies it, so changing it is a data edit, not a code change (COR-018); and a new
+    process is a new file, not new machinery (COR-033). pkit process new adds a process to a capability, with a stub for
+    each gate that fails until the process-author agent writes it (COR-044). Your own data files can name the schema they
+    follow, and pkit data validate checks them (COR-023).'
+- id: schemas
+  part: P1
+  title: How a capability uses a process
+  message: project-management brings the issue workflow. pkit's engine checks every move, so the capability wrote no engine of
+    its own.
+  problem: ''
+  does: []
+  show: 'In project-kit today: Feature #2270 cannot close while 7 of its boxes are unticked.'
+  visual:
+    kind: board
+    font_size: 22
+    states: [Todo, Backlog, In Progress, Review, Done]
+    moves:
+    - {who: you, text: you schedule it}
+    - {who: agent, text: the agent starts}
+    - {who: agent, text: the agent opens a pull request}
+    - {who: you, text: you merge it}
+    card:
+      at: 2
+      to: 4
+      head: 'Feature #2270'
+      text: closes when every box in it is ticked
+      refused: Refused
+      reason: 7 boxes unticked
+    panels:
+    - head: The move, in the capability's workflow.yaml
+      terminal:
+      - [['# workflow.yaml, from project-management', comment]]
+      - [['- from: ', output], [in-progress, args]]
+      - [['  to: ', output], [done, args]]
+      - [['  authorisation: ', output], [user, yours]]
+      - [['  gate:', output]]
+      - [['    kind: ', output], [deterministic, args]]
+      - [['    predicate:', output]]
+      - [['      run: ', output], [gate-checkboxes-ticked, pkit]]
+      caption: Its shape comes from core pkit, the same for every process.
+    - head: What the agent asks pkit
+      terminal:
+      - [['$ ', prompt], [pkit, command], [' process status \', args]]
+      - [['    project-management:issue-lifecycle', args]]
+      - [['    --subject 2270', args]]
+      - [['Where: ', output], ['in-progress — Branch open, work in flight.', args]]
+      - [['Legal moves (live precheck):', output]]
+      - [['  ✗ done  [close-issue]', del]]
+      - [['      7 unticked checkbox(es) remain', del]]
+    - head: Why it helps
+      items:
+      - The agent asks where work stands, instead of guessing.
+      - A move needs its check or your yes, never just the agent's word.
+      - The capability records each move through pkit's engine, and built none of its own.
+  limit: 'pkit brings the engine, not a process: the one in use today comes with the project-management capability.'
+  minutes: 1
+  notes: 'Say it plainly: this is how a capability uses a process; core pkit has no issue workflow. Everyone knows a task board:
+    Todo, In Progress, Done. A board only shows where work is. This process also says who may make each move, and what must
+    hold first. On the board, a Feature skips Review: it closes when every box in it is ticked, and you say yes. Feature
+    #2270 has 7 boxes unticked, so pkit refuses Done; read live on 30 October with pkit process status, a core command.
+    The engine answers where an issue is, whether it may move, and why not, the same way every time. A gate passes on a
+    check, or on a record made by someone other than the agent it gates, never on the agent''s own word (COR-033 point 4).
+    The capability wrote the rule and its gates, and nothing else: its close command records each move with pkit process move,
+    and lets a parent follow its children with pkit process cascade. Another schema of the same capability, titles.yaml, holds
+    each issue type''s title format, and pkit pm create-issue refuses a title in the wrong form before it files the issue.
+    A log of each move is optional and off unless you turn it on (COR-033 point 7).'
+- id: skillsfrom
+  part: P2
+  title: Where skills come from
+  message: Each kind of file pkit's decisions define gets a skill for the choices, and a command for the exact part.
+  problem: ''
+  does: []
+  show: 'In project-kit: pkit ships 11 skills, each with its command.'
+  visual:
+    kind: map
+    chip_font: 32
+    columns:
+    - head: The decision
+      text: defines a kind of file
+      fill: '#491D8BFF'
+      ink: '@text_on_color'
+    - head: The skill
+      text: writes one as decided
+      fill: '#BE95FFFF'
+      cell: name
+    - head: The command
+      text: creates the file
+      fill: '#D4BBFFFF'
+      cell: chip
+    - head: What you get
+      text: a new file, ready to fill in
+      fill: '#E8DAFFFF'
+    rows:
+    - [{head: COR-012, text: Scratchpad notes}, scratchpad-author, pkit new scratchpad, A dated note in active/]
+    - [{head: COR-006, text: Decision records}, decision-author, pkit new decision, 'The next number, proposed until you accept
+        it']
+    - [{head: COR-013, text: Agents}, agent-author, pkit new agent, An agent file in pkit's shape]
+    head_h: 136
+    row_h: 112
+    why:
+      head: Why pkit splits the work this way
+      items:
+      - The reason lives in one place. The skill points to it and never copies it.
+      - A command cannot pick a name or write the body. Without a skill, agents skipped the writing rules.
+      - An agent can miscount. A record written by hand once got a wrong number.
+      - Every file of a kind has the same shape, whoever writes it.
+  limit: pkit's skills cover only pkit's own files. For work that keeps coming back in your project, you write your own.
+  minutes: 1
+  notes: 'Skills in pkit are not written at random. pkit''s decisions define kinds of file: scratchpad notes, decision records,
+    agents, migrations and more. Each kind has a skill and a command. 11 such pairs ship with pkit. Why the split: a decision
+    holds the reason, in one place, and a skill points to it instead of copying it (COR-006). A command cannot make the choices:
+    which kind, a good name, the body, and your review. When no skill existed, agents skipped the writing rules (COR-005).
+    A skill alone is not enough either: an agent can miscount, and a record written by hand once got a wrong number (COR-005,
+    PR #16). So numbers, layout and names go in a command. Work that comes back two or three times gets a tool, so it costs
+    less and comes out the same each time (COR-007). A skill names the decisions it follows in its first lines, and pkit validate
+    checks those names. Your own skills go in .pkit/skills/project/, beside pkit''s, and a sync never changes them.'
+- id: skills
+  part: P2
+  title: One skill, step by step
+  message: The agent follows the steps in order. At step 6 it runs the command, so the number and the layout are always 
+    right.
+  problem: ''
+  does: []
+  show: 'Every session holds only each skill''s short description. The steps load when the task comes up.'
+  visual:
+    kind: checklist
+    head: 'The skill decision-author: a new decision record'
+    steps:
+    - Check that its decisions are accepted
+    - Pick the kind of record
+    - Read the writing rules
+    - Read the record's shape
+    - Pick a short name
+    - Create the file
+    - Write the body
+    - Check it against the rules
+    - Show you the draft
+    - Commit, after you approve
+    mark: 6
+    mark_note: its command
+    terminal_head: 'Its command: pkit new decision'
+    font_size: 28
+    terminal: |-
+      $ pkit new decision project test-coverage-floor
+      Stamped: .pkit/decisions/project/PRJ-012-test-coverage-floor.md
+      # in the file:
+      id: PRJ-012          # the next number, never guessed
+      status: proposed     # until you accept it
+      ## Context
+      ## Decision
+      ## Rationale
+      ## Implications
+  limit: 'Nothing checks that an agent used the skill: the command creates the file either way.'
+  minutes: 1.5
+  notes: 'A skill is a written procedure for one kind of task: write a decision record, file an issue, write a migration.
+    The agent follows its steps, and its command does the steps that must be exact: the next number, the file''s layout. The
+    command also refuses a name already taken. Every session holds only each skill''s short description, so 14 skills cost
+    a few hundred words. The steps load when the task comes up. Why agents must use the skill: a record filed by hand once
+    got a wrong number (PR #16), and core rule 3 came from it. A skill also names the decision records it follows, and stops
+    if one is not accepted. Its first step checks that the decisions it names in its first lines are accepted: COR-006, COR-008
+    and COR-025. If one is not, the skill stops.'
+- id: agentsfrom
+  part: P2
+  title: Where agents come from
+  message: 'When the same kind of check keeps coming back, a decision names a role for it: one job, and only the tools it
+    needs.'
+  problem: ''
+  does: []
+  show: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions it follows.'
+  visual:
+    kind: map
+    head_h: 136
+    row_h: 112
+    columns:
+    - head: The decision
+      text: names a role
+      fill: '#491D8BFF'
+      ink: '@text_on_color'
+    - head: The agent
+      text: does one job
+      fill: '#BE95FFFF'
+      cell: name
+    - head: Its limit
+      text: only the tools it needs
+      fill: '#D4BBFFFF'
+    - head: What it catches
+      text: so you do not have to
+      fill: '#E8DAFFFF'
+    rows:
+    - [{head: COR-024, text: A second opinion}, critic, Reads only, 'A draft''s gaps, before you read it']
+    - [{head: COR-024, text: A keeper of the whole system}, architect, Edits only architecture docs, A change that 
+        breaks the whole]
+    - [{head: COR-057, text: One reviewer for the rules}, rule-set-reviewer, Never edits what it checks, 'A broken rule, with
+        its line']
+    why:
+      head: Why pkit has agents
+      items:
+      - A decision makes each check one role's job. By default, nobody watches the whole system.
+      - The agent that writes agrees with itself. A second agent does not.
+      - A reviewer that cannot edit stays independent.
+      - Caught here, a mistake costs an agent's time, not yours.
+  limit: The AI tool enforces an agent's tools. Which files it may change is a rule it follows, not a lock.
+  minutes: 1
+  notes: 'Agents in pkit are not written at random either. When the same kind of check keeps coming back, it becomes a role
+    (COR-007). A decision names the role, its job and its limits. COR-024 names the critic and the architect. COR-057 names
+    the rule-set-reviewer. COR-044 names the process-author, which writes code only where you allow it. Two more reviewers
+    are older than any record of their own, and COR-024 gives them their place. Why: the agent that writes a draft shows it
+    while it is half done, so cheap mistakes reach your review. The agent you talk to does not watch the whole system, and
+    by default nobody does. An agent''s time is cheap, and yours is not. A reviewer that only reads cannot fix its own findings,
+    so it stays independent (COR-024). Each file has one owning agent (COR-013). The AI tool enforces the tools in an agent''s
+    file. The files an agent owns are a rule it follows. Your own agents go in .pkit/agents/project/, made with the agent-author
+    skill and pkit new agent.'
+- id: agents
+  part: P2
+  title: 'One piece of work, and who sees it'
+  message: 'Each role sees the work at its own moment: the critic before you, the reviewers on the change.'
+  problem: ''
+  does: []
+  show: 'pkit''s own agents advise and never block. Capabilities bring agents that can block a merge.'
+  visual:
+    kind: roles
+    stops:
+    - name: The agent you talk to
+      job: Writes the draft.
+      limit: the tools you allow
+    - name: Critic
+      job: Opposes the draft before you see it.
+      limit: reads only
+    - name: Architect
+      job: When the draft touches the whole system, checks that it fits.
+      limit: edits only architecture docs
+    - name: You
+      job: Decide.
+      tone: yours
+    - name: Three reviewers
+      job: 'Check the change: its writing, its conventions, its rules.'
+      limit: never edit what they check
+  limit: Every review round costs several agent runs.
+  minutes: 1.5
+  notes: 'The work moves from left to right. The agent you talk to writes a draft, with the tools your permissions allow.
+    The critic opposes it before you see it. The architect checks it when it touches the whole system. You decide. Three reviewers
+    check the change. methodology-reviewer checks how records and skills are written. convention-compliance-reviewer checks
+    commits, branches and who owns which file. rule-set-reviewer checks the rules on the files the change touches. Only you
+    accept a decision or let a change merge (COR-064 point 6).'
+- id: agentswired
+  part: P2
+  title: What every agent comes with
+  message: Each agent arrives tied to its decisions and pointed at your folders. pkit fills in your paths and checks 
+    every tie.
+  problem: ''
+  does: []
+  show: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked 17 skills and agents.'
+  visual:
+    kind: wired
+    font_size: 26
+    note_w: 1000
+    signs: ['+', '→']
+    panels:
+    - head: pkit's agent
+      terminal:
+      - [['# .pkit/agents/core/architect.md', comment]]
+      - [['gates: ', output], ['[COR-024, COR-025, COR-014]', pkit]]
+      - [['owns:', output]]
+      - [['  - ', output], ['<architecture-docs>', pkit]]
+      - [['  - ', output], ['<adr-records>', pkit]]
+    - head: Your paths
+      terminal:
+      - [['# .pkit/agents/project/overlay.yaml', comment]]
+      - [['architecture-docs:', output]]
+      - [['  - ', output], [README.md, yours]]
+      - [['adr-records:', output]]
+      - [['  - ', output], [docs/architecture/decisions/, yours]]
+    - head: The agent your AI tool gets
+      terminal:
+      - [['# .claude/agents/architect.md', comment]]
+      - [['gates: ', output], ['[COR-024, COR-025, COR-014]', pkit]]
+      - [['owns:', output]]
+      - [['  - ', output], [README.md, yours]]
+      - [['  - ', output], [docs/architecture/decisions/, yours]]
+    ties:
+    - head: Its decisions
+      text: Its first lines name the decisions it follows and the documents it reads.
+    - head: Checked
+      text: pkit validate checks every name, and that no two agents own the same file.
+    - head: Kept current
+      text: Each upgrade deploys it again, with your paths.
+    note:
+      icon: step-question-important
+      head: Do you have to wire it?
+      command: '$ pkit sync   # after you change overlay.yaml'
+      body: No. A fresh install fills in default paths, and all six agents are ready at once.
+  limit: You never edit pkit's agents. For a different role, you write your own in .pkit/agents/project/.
+  minutes: 1
+  notes: 'Nothing here is wired by hand. On install and on every sync, pkit copies its agents into your AI tool''s folder,
+    .claude/agents/, beside your own. Each agent names the decisions it follows and the documents it reads in its first lines.
+    The architect follows COR-024, COR-025 and COR-014, and reads COR-006, COR-007 and COR-013. Where an agent needs a path
+    of your project, its file holds a placeholder, such as adr-records. The deploy fills it in from your overlay.yaml, which
+    a sync never changes. A fresh install writes default paths into that file, so all six agents work at once. An agent whose
+    required path you remove is left out, and pkit agents says why. pkit agents adopt creates a missing folder and records
+    it. pkit validate checks that each agent names every decision and document it cites, and that no two agents own the same
+    file. Agents also work through pkit''s own skills and commands. process-author changes a process only through the process
+    skill. rule-set-reviewer reads the rules through pkit rule-sets altered. Each upgrade replaces pkit''s agent files and
+    deploys them again with your paths. You can also set an agent''s model and effort in overlay.yaml.'
+- id: permissions
+  part: P2
+  title: Where permissions come from
+  message: From rules your project writes down as data. Your AI tool applies them to every call, so they hold when an 
+    agent forgets them.
+  problem: ''
+  does: []
+  show: 'In project-kit: the project-manager agent is refused raw gh changes, and uses pkit''s commands, which validate the
+    issue first.'
+  visual:
+    kind: map
+    head_h: 136
+    row_h: 112
+    columns:
+    - head: The rule
+      text: decided by COR-028
+      fill: '#491D8BFF'
+      ink: '@text_on_color'
+    - head: Written as data
+      text: in files you can read
+      fill: '#BE95FFFF'
+    - head: Your AI tool gets
+      text: and applies itself
+      fill: '#D4BBFFFF'
+    - head: What a call meets
+      text: every time
+      fill: '#E8DAFFFF'
+    rows:
+    - [{head: Guardrails, text: for you and every agent}, 'rm -r, sudo and force-push, denied to all', A deny in its 
+        settings, 'Refused, in every mode']
+    - [{head: An agent's own tools, text: in the agent's file}, 'critic: Read, Glob, Grep, WebFetch', That agent's list 
+        of tools, 'No command run, no file written']
+    - [{head: One agent's rule, text: from project-management}, 'project-manager: no raw gh changes', 'The hook, before each
+        call', 'Refused, so it uses pkit''s commands']
+    why:
+      head: Why pkit writes permissions down
+      items:
+      - A rule an agent reads is advice. A rule your AI tool applies is not.
+      - Written down, every rule can be read and reviewed, like any change.
+      - Its own settings bind every agent alike. The hook decides per agent.
+      - pkit's commands hold gates that raw commands skip. The agent cannot go around them.
+  limit: A deny stops the forms of a command pkit can tell. A command hidden behind another can slip past.
+  minutes: 1
+  notes: 'COR-028 decides that what may run is data: grants of privileges to agents, in files. A catalog names the privileges,
+    three profiles ship ready (read-only, non-destructive and autonomous), and your project adds its own grants. pkit writes
+    them into your AI tool''s settings, and an optional hook checks each call before it runs. An agent is limited in three
+    places. The guardrails bind everyone, you included. Its own file lists its tools, and your AI tool enforces that list
+    for that agent alone. A rule for one agent needs the hook. pkit''s six agents have no rule of their own: their tools are
+    their limit. The one rule for a single agent ships with the project-management capability. Its project-manager agent is refused
+    the raw gh commands that change issues and pull requests. It must use pkit''s commands, which validate the issue, hold
+    the close gate and the approval gate, and so cannot be skipped by habit. The capability brings that rule with it, with nothing
+    to set up. A deny is a speed bump, not a security boundary: a wrapper such as bash -c or uv run can slip past it, so the
+    real gates live inside pkit''s commands.'
+- id: permday1
+  part: P2
+  title: Permissions on day one
+  message: A fresh install refuses destructive commands and allows routine ones, so the prompts you still see are worth 
+    reading.
+  problem: ''
+  does: []
+  show: 'In a fresh install, before you write any rule: 14 forms of 4 dangerous commands refused, 37 routine ones allowed.'
+  visual:
+    kind: wired
+    font_size: 26
+    note_w: 1000
+    panels:
+    - head: Your AI tool's settings, after install
+      terminal:
+      - [['# .claude/settings.json', comment]]
+      - [['"deny": [', output]]
+      - [['  "Bash(rm -rf:*)", "Bash(sudo:*)",', del]]
+      - [['  "Bash(git push --force:*)",', del]]
+      - [['  "Bash(git reset --hard:*)", …', del]]
+      - [['"allow": [', output]]
+      - [['  "Bash(git:*)", "Bash(gh:*)", "Bash(pkit:*)",', add]]
+      - [['  "Read", "Edit", "Skill(decision-author)", …', add]]
+    - head: What pkit says about it
+      terminal:
+      - [['$ ', prompt], [pkit, command], [' permissions explain', args]]
+      - [['all  (every agent and the operator)', output]]
+      - [['  deny  destructive-fs        guardrail', del]]
+      - [['  deny  privilege-escalation  guardrail', del]]
+      - [['  deny  vcs-history-rewrite   guardrail', del]]
+    ties:
+    - head: Refused for all
+      text: Recursive delete, sudo and force-push, for you and every agent, in every mode.
+    - head: Routine, unasked
+      text: Reading, git, gh, pkit and pkit's skills run without a prompt.
+    - head: Kept current
+      text: Each upgrade merges pkit's rules in again, and keeps yours.
+    note:
+      icon: step-question-important
+      head: Agents working with nobody watching?
+      command: $ pkit permissions setup autonomy
+      body: It adds a profile, the hook and the OS sandbox, except on macOS, and checks the result.
+  limit: 'Without the hook, a rule for one agent is not applied: the settings bind every agent alike.'
+  minutes: 1
+  notes: 'Everything here was read from a fresh install. pkit''s settings for your AI tool arrive merged into .claude/settings.json,
+    beside your own entries. They refuse 14 forms of recursive delete, sudo, force-push and git reset --hard, and allow 37
+    routine commands and tools, pkit''s skills among them. pkit permissions explain shows the three guardrails, which no grant
+    can allow around. Rules for one agent need the hook. pkit permissions setup autonomy activates a profile, registers the
+    hook, sets up the OS sandbox except on macOS, and runs probes until the result holds. Without the model, you either allow
+    a command for every agent, or answer dozens of prompts a session, approved unread, until a prompt no longer stops a dangerous
+    command.'
+- id: checks
+  part: P3
+  title: What pkit checks, and why
+  message: The whole project, and each change before it merges. An agent acts on what files say, and never doubts them.
+  problem: ''
+  does: []
+  show: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each capability brings its own: 16 in project-kit.'
+  visual:
+    kind: wired
+    font_size: 26
+    note_w: 1000
+    panels:
+    - head: The whole project
+      terminal:
+      - [['$ ', prompt], [pkit, command], [' validate', args]]
+      - [['  manifests · schemas · configuration', output]]
+      - [['  packages · connections · versions', output]]
+      - [['  decisions · friction · rule-sets', output]]
+      - [['  refs · process · data', output]]
+      - [['  12 validator(s) ran; 0 error(s)', output]]
+      - [['  All checks passed.', add]]
+    - head: Each change, before it merges
+      terminal:
+      - [['$ ', prompt], [pkit, command], [' friction check', args]]
+      - [['  # a document tied to what changed,', comment]]
+      - [['  # with no answer', comment]]
+      - [['$ ', prompt], [pkit, command], [' decisions check-diff', args]]
+      - [['  # a record or a point numbered', comment]]
+      - [['  # twice, or renumbered', comment]]
+    ties:
+    - head: People forget
+      text: A change updates one file. What depends on it is somewhere else.
+    - head: Reviews miss it
+      text: A review reads the change in front of it, not the file it left stale.
+    - head: Agents trust files
+      text: An agent acts on what a file says. A check finds what it never questions.
+    note:
+      icon: step-question-important
+      head: On every push?
+      command: $ pkit validate && pkit friction check
+      body: pkit adds no git hook or CI. Put both in yours, as project-kit does.
+  limit: 'A check finds what is broken or unanswered. Whether a document is still right, a reviewer judges.'
+  minutes: 1
+  notes: 'Two kinds of check. pkit validate checks the project as it stands: each part of pkit registers its own check, and
+    each installed capability adds its own, 12 in a fresh install and 16 in project-kit. Among them: every data file against
+    its schema, every record''s shape, every skill and agent naming what it cites. The change checks judge a diff against
+    its base. The friction check asks each document tied to a changed file for an answer: updated, still true with why,
+    or fixed later (COR-050). The decision check refuses a record or a point that takes an id twice or loses one (COR-058).
+    The reasons are COR-050''s: people forget to update what depends on what they changed, and a review looks at the change
+    in front of it, while the stale description is usually somewhere else. Read from a fresh install on 30 October: pkit
+    adds no git hook and no CI, and the change check stays dormant until the project says where its documents live. Every
+    session gets a rule that tells agents to run the change check and answer it before they commit (core rule 20).'
+- id: checked
+  part: P3
+  title: One tie, checked
+  message: Rename a file, and the documents tied to it are named before the change merges.
+  problem: ''
+  does: []
+  show: 'In project-kit: this check runs in the pre-push hook and on every pull request, wired by the project.'
+  visual:
+    kind: ties
+    center:
+    - head: The release guide
+      path: .pkit/release/README.md
+    - head: Use case UC-008
+      path: UC-008-release-backbone.md
+      height: 144
+    left_head: The code they describe
+    right_head: The guide's records
+    left:
+    - label: release.py
+    - label: changesets.py
+    - label: versioning.py
+    - label: .changie.yaml
+    - label: release-pr.yml
+    - label: release-tag.yml
+    - label: latest_tag.py
+      broken: true
+      to: [0, 1]
+      note: renamed to last_tag.py
+    right:
+    - label: COR-010  Lifecycle
+      tone: pkit
+    - label: COR-030  Dependencies
+      tone: pkit
+    - label: COR-041  External sources
+      tone: pkit
+    - label: PRJ-002  Versioning
+      tone: yours
+    - label: PRJ-004  Distribution
+      tone: yours
+    - label: ADR-040  Fetch at the pin
+      tone: architecture
+    terminal:
+    - - - '$ '
+        - prompt
+      - - git
+        - command
+      - - ' mv scripts/latest_tag.py scripts/last_tag.py'
+        - args
+    - - - '$ '
+        - prompt
+      - - pkit
+        - command
+      - - ' friction check'
+        - args
+    - - - FINDINGS
+        - output
+    - - - '  .pkit/release/README.md'
+        - args
+    - - - '    '
+        - output
+      - - dead-anchor
+        - del
+      - - '  path scripts/latest_tag.py'
+        - args
+    - - - '      matches no file; the diff removed or'
+        - output
+    - - - '      moved its target'
+        - output
+    - - - '  tech-docs/analysis/…/UC-008-release-backbone.md'
+        - args
+    - - - '    '
+        - output
+      - - dead-anchor
+        - del
+      - - '  path scripts/latest_tag.py'
+        - args
+    - - - 'Result: '
+        - output
+      - - failed
+        - del
+      - - '   (2 dead anchors)'
+        - output
+    - - - '# the change fails until both ties follow the file'
+        - comment
+    font_size: 24
+  limit: It checks that every tie leads somewhere, not that the document is still right.
+  minutes: 1
+  notes: 'The release guide, with the ties its front matter declares: the seven files it describes and the six records it
+    carries out. Someone renames scripts/latest_tag.py in a refactor. Two documents still name the old file: the guide, and
+    a use case nobody renaming a script would think of. Without the check nothing warns: pkit refs records-for scripts/last_tag.py
+    finds no records, so the next agent to change the file reads none of the guide''s six, nor the use case''s seven. The
+    change check fails the rename and names both documents; the fix is to move the ties with the file. Checked on 29 October
+    in a throwaway copy of the repository. A tie that is already dead on main is reported by the whole-repository check, pkit
+    friction check --all.'
+- id: docs
+  part: P3
+  title: Docs that know when they're wrong
+  message: 'When something a document depends on changes, the change must answer for it: updated, still true, or fixed
+    later.'
+  problem: ''
+  does: []
+  show: 'In project-kit today: 21 answers wait as "fixed later". pkit friction debt lists each, with its reason.'
+  visual:
+    kind: answers
+    font_size: 22
+    left_w: 1200
+    left:
+      head: The check names the document
+      terminal:
+      - [['# the change moves changesets to .changesets/', comment]]
+      - [['$ ', prompt], [pkit, command], [' friction check', args]]
+      - [['  .pkit/release/README.md', args]]
+      - [['    ', output], [friction, del], ['  path .changie.yaml  changed in this diff', output]]
+      - [['              and carries no answer', output]]
+      - [['Result: ', output], [failed, del]]
+      - []
+      - [['# after the answer', comment]]
+      - [['$ ', prompt], [pkit, command], [' friction check', args]]
+      - [['    ', output], [answered, add], ['  path .changie.yaml  changed in this diff;', output]]
+      - [['              answered: updated', output]]
+      - [['Result: ', output], [passed, add]]
+    right:
+      head: The change answers for it, in one of three ways
+      answers:
+      - {tone: updated, tag: Updated, text: The change fixed the document too.}
+      - {tone: unchanged, tag: Still true, text: Nothing in it became wrong. The answer says why.}
+      - {tone: deferred, tag: Fixed later, text: The answer names the issue that will fix it.}
+      terminal:
+      - [['# .pkit/project/friction/answers/20261030T024530Z-ba8d160a.yaml', comment]]
+      - [['answers:', output]]
+      - [['  - artefact: ', output], [.pkit/release/README.md, args]]
+      - [['    revalidated:', output]]
+      - [['      outcome: ', output], [updated, add]]
+    why:
+      head: Why pkit asks for an answer
+      items:
+      - Not every change makes a document wrong. The answer says which.
+      - A reviewer checks each answer, so "still true" needs a real reason.
+      - A gap left open stays counted, with the issue that closes it.
+  limit: Only documents you list, with what they depend on, are covered. The rest go stale as before.
+  minutes: 2
+  notes: 'When a change touches something a document depends on, the change check names the document and asks for an answer
+    (COR-050). Here a change moves the changesets folder in .changie.yaml, a file the release guide depends on. The check
+    fails until the change answers for the guide. There are three answers. Updated: the change fixed the document too,
+    here the guide''s mentions of the folder. Still true: nothing in the document became wrong, and the answer says why
+    in one sentence. Fixed later: the answer names the issue that will fix it, and the gap stays in pkit friction debt until
+    then. pkit friction revalidate or pkit friction defer writes the answer into an answer file of the change, kept in the
+    project, not only in a pull request''s text (COR-050, COR-062). A reviewer other than whoever wrote the answer checks
+    it, and blocks the merge when it does not hold (COR-050 point 3). Every session gets the rule that tells agents to write
+    these answers with their change, without asking you (core rule 20). In a fresh install the check sleeps until you list
+    your documents under friction.places in .pkit/project/config.yaml and name in each one''s front matter what it depends
+    on. The docs and analysis capabilities do both for their own documents. Tried on 30 October in a throwaway copy of project-kit.
+    In project-kit today, 21 answers wait as fixed later; all but one name the issue that fixes them.'
+- id: addons
+  part: P4
+  title: Why some parts of pkit are capabilities
+  message: Core pkit holds what every project needs. The rest comes as capabilities, optional parts you choose.
+  problem: ''
+  does: []
+  show: 'pkit 1.149 ships 4 capabilities, and 3 more are on their way to 2.0. In a fresh install, one took a single command and
+    8 seconds.'
+  visual:
+    kind: slice
+    font_size: 22
+    core_head: 'Core pkit: in every project'
+    addon_head: 'A capability: one folder you install'
+    rows:
+    - {layer: Decisions, fill: '#491D8BFF', ink: '@text_on_color', head: Decision records, chip: decisions/}
+    - {layer: Rules · schemas · processes, fill: '#6929C4FF', ink: '@text_on_color', head: Schemas and processes, chip: schemas/}
+    - {layer: Skills · agents · permissions, fill: '#BE95FFFF', head: 'Skills, agents, rules', chip: 'skills/ agents/ permissions/'}
+    - {layer: Commands and checks, fill: '#D4BBFFFF', head: Commands and checks, chip: 'scripts/ package.yaml'}
+    terminal_head: One command wires it, read from a fresh install
+    terminal:
+    - [['$ ', prompt], [pkit, command], [' capabilities install project-management', args]]
+    - [['  Installed capability ', output], ['''project-management''', addon], [' v0.54.0', output]]
+    - [['  merged   .claude/settings.json', output], ['      # allows its skill', comment]]
+    - [['  created  .claude/skills/pm/SKILL.md', output], ['     # and 6 procedures', comment]]
+    - [['  created  .claude/agents/pm-reviewer.md', output]]
+    - [['  created  .claude/agents/project-manager.md', output]]
+    - [['$ ', prompt], [pkit, command], [' permissions explain', args]]
+    - [['agent:project-manager', output]]
+    - [['  deny  issue-tracker-write', del]]
+    - [['  (contributed by capability: project-management)', comment]]
+    - [['$ ', prompt], [pkit, command], [' validate', args]]
+    - [['  13 validator(s) ran; 0 error(s)', output], ['     # 12 before', comment]]
+    - [['  All checks passed.', add]]
+    why:
+      head: Why pkit has capabilities
+      items:
+      - Core holds only what every project needs. The rest would be weight.
+      - A capability gets each upgrade, as core does. A copy would not.
+      - 'One folder: its path says who owns a file.'
+      - Made only for a need that kept coming back in real work.
+  limit: Some capabilities need another first. software-engineering will not install without project-management.
+  minutes: 1.5
+  notes: 'Everything before this point is core pkit, in every install. Some ways of working fit only some projects, such as
+    tracking issues on GitHub, or reviewing code. pkit packs each one as a capability, an optional part you install (COR-017). A capability
+    brings the same layers as core, for its own way of working: its own decision records, schemas and processes, skills,
+    agents and permission rules, commands and checks. All of it sits in one folder, .pkit/capabilities/ and its name. pkit
+    makes one only when three things hold. Some projects need it, but not all (COR-014). It can come and go as one folder.
+    The same need came back in real work (COR-007). The same test moves agents: pkit''s first core agents included a product
+    manager, which a project with no capabilities has no use for, so it moved into project-management (COR-026). Installing one
+    copies its folder and registers it. It deploys its skills and agents into .claude/, adds its permission rules to pkit''s
+    model, and adds its checks to pkit validate. Read from a fresh install: project-management took about 8 seconds, with
+    nothing set up first. A capability may need another, with a version it accepts: software-engineering refuses to install
+    until project-management is there (COR-030). Uninstall removes the folder, and refuses while your own files still cite
+    it. You can write a capability of your own, with the capability-author skill and pkit new capability; three of project-kit''s
+    capabilities are written that way, in its own repository (COR-031). The release you install today, 1.149, has 4 capabilities:
+    project-management, software-engineering, evidence and demo-recording. living-docs, software-analysis and doc-examples
+    are on the main branch, for 2.0.'
+- id: pm
+  part: P4
+  title: What project-management adds
+  message: 'One agent that files the work, plans it and starts builders in parallel. You decide: you approve the plan, and
+    each merge.'
+  problem: ''
+  does: []
+  show: 'In project-kit on 29 October: 22 pull requests merged, up to 7 open at once, each with its reviewers'' verdicts.'
+  visual:
+    kind: fanout
+    left:
+    - {role: people, head: You, text: Say what you want. Approve the plan once.}
+    - {role: addon, head: project-manager, text: 'Files the issues, plans the Tasks, and starts a builder for each.'}
+    middle:
+    - {icon: agents, head: 'Builder: Task A'}
+    - {icon: agents, head: 'Builder: Task B'}
+    - {icon: agents, head: 'Builder: Task C'}
+    right:
+    - {role: addon, head: Reviewers, text: Each checks the change. All must approve.}
+    - {role: people, head: You, text: Say yes. Then the agent merges.}
+    caption: 'Why you hold both ends: only you commit the team to a plan or a merge. The agent does the work in between.'
+    cards:
+    - {tone: addon, head: Its skill and agents, text: 'The pm skill, the project-manager agent, and pm-reviewer for each pull request.'}
+    - {tone: addon, head: 88 commands, text: 'pkit pm … files, moves and merges, and checks each step first.'}
+    - {tone: addon, head: Its issue workflow, text: Every move is checked by pkit's engine.}
+    - {tone: yours, head: What you do, text: 'Give it a GitHub repository, then run pkit pm bootstrap once.'}
+  limit: 'GitHub only, and large: 63 decision records and 88 commands. You meet it through the agent, not the manual.'
+  minutes: 1.5
+  notes: 'project-management is a rulebook for running the work on GitHub: issues, pull requests and merges. Its rules for
+    the work are data, and its commands carry them out, so the agent follows them instead of remembering them (DEC-020,
+    DEC-057). You talk to one agent, the project manager. It turns what you want into a plan of Features and Tasks, and
+    you approve the plan once. It starts a builder for each Task, several at once, each on its own branch. A builder is
+    an agent that builds one Task. Tasks that change the same files wait for each other. Reviewers check each pull request,
+    and all must approve. Then you say yes, and it merges: pkit pm land-work merges nothing without your yes. The agent does
+    the work in between, and you hold both ends: only a person commits the team, to a plan, a schedule or a merge (DEC-057).
+    Its issue workflow, shown earlier, runs on pkit''s process engine. Its permission rule refuses the project-manager agent
+    raw gh changes, so it goes through these commands. It has 63 decision records of its own, kept in its folder and cited
+    like project-management:DEC-032. What you do: give it a GitHub repository, and run pkit pm bootstrap once, which creates
+    its labels; until then its pre-check fails, and its commands refuse. It can also run agents in several clones of one
+    repository, through seats and pools; that runs in project-kit, and is still being shaped. Next: each builder starts
+    fresh, in a sandboxed clone of its own (DEC-063, being built). Read from project-kit: of the 22 pull requests merged
+    on 29 October, up to 7 were open at the same time, and each carried its reviewers'' verdicts.'
+- id: se
+  part: P4
+  title: What software-engineering adds
+  message: A builder that follows your conventions, and three reviewers of its code, on every merge that changes code.
+  problem: ''
+  does: []
+  show: 'In project-kit on 29 October: of 22 merges, the 21 that changed code each had the code, security and docs reviewers.'
+  visual:
+    kind: wired
+    font_size: 22
+    card_h: 330
+    signs: ['+', '→']
+    panels:
+    - head: Its agents, after install
+      terminal:
+      - [['$ ', prompt], [pkit, command], [' capabilities install software-engineering', args]]
+      - [['  created  .claude/agents/', output], [software-engineer, addon], ['.md', output]]
+      - [['  created  .claude/agents/', output], [code-reviewer, addon], ['.md', output]]
+      - [['  created  .claude/agents/', output], [security-reviewer, addon], ['.md', output]]
+      - [['  created  .claude/agents/', output], [docs-reviewer, addon], ['.md', output]]
+      - [['# software-engineer: builds, by your conventions', comment]]
+      - [['# code-reviewer: is the code correct?', comment]]
+      - [['# security-reviewer: secrets, injection', comment]]
+      - [['# docs-reviewer: do the docs still hold?', comment]]
+    - head: Its list for the merge
+      terminal:
+      - [['# review-contributions.yaml', comment]]
+      - [['- floor: ', output], [touches-code, args]]
+      - [['  reviewer: ', output], [code-reviewer, addon]]
+      - [['- floor: ', output], [touches-code, args]]
+      - [['  reviewer: ', output], [security-reviewer, addon]]
+      - [['- floor: ', output], [touches-code, args]]
+      - [['  reviewer: ', output], [docs-reviewer, addon]]
+      - [['- match: ', output], ['{type: "*"}', args]]
+      - [['  reviewer: ', output], [docs-reviewer, addon]]
+    - head: 'The merge, pull request #2279'
+      terminal:
+      - [['# first round', comment]]
+      - [['pm-reviewer        ', output], [APPROVED, add]]
+      - [['docs-reviewer      ', output], [APPROVED, add]]
+      - [['code-reviewer      ', output], [CHANGES_REQUESTED, del]]
+      - [['  [block] The new Status writer', del]]
+      - [['  can''t find an org-owned board …', del]]
+      - [['security-reviewer  ', output], [APPROVED, add]]
+      - [['rule-set-reviewer  ', output], [APPROVED, add]]
+      - [['# fixed, all five approved, merged', comment]]
+    ties:
+    - {head: Your conventions, text: 'You write them once. The builder reads them first. They stay yours without the capability.'}
+    - {head: Code is reviewed, text: 'Before this capability, nothing in pkit reviewed code. A change with two security holes merged.'}
+    - {head: Blocks mean something, text: 'Each reviewer blocks only on a failure it can show. The rest is advice.'}
+    - {head: What you do, tone: yours, text: 'Write your conventions down, and name their file in overlay.yaml.'}
+  limit: With no conventions written down, the builder and its reviewers fall back on general good practice.
+  minutes: 1.5
+  notes: 'software-engineering has two aims: code that agents write follows your conventions in every session, and code
+    is reviewed before it merges (DEC-003). Its builder, software-engineer, has no coding opinions of its own. It reads your
+    conventions first, from the file you name in overlay.yaml, and follows them; with none written, it says so and works
+    by general good practice (DEC-001). Your conventions stay yours: removing the capability never removes them. Its three reviewers
+    check correctness, security, and the docs, with the answers a change wrote for them. Each blocks only on a failure it
+    can show in the change. Everything else is advice, so a block is never only taste, and nobody learns to skip it (DEC-002).
+    The reviewers came from a real failure: in an adopting project, a pull request with a token on a command line and a
+    shell injection passed the merge, because nothing reviewed code (#715). How they join the merge: the capability ships one
+    file, review-contributions.yaml. project-management reads that file from every installed capability, and requires each
+    reviewer it names (project-management DEC-032). It never names software-engineering. Installing the capability is the switch:
+    there is no setting to turn the reviewers on. The code and security reviewers run only when a change touches code; on
+    29 October, the one merge that changed only records had no code review. software-engineering does name project-management,
+    as a capability it needs, so it installs only after it. Pull request #2279: the code reviewer blocked a status writer that
+    could not find a board an organisation owns. It was fixed, all five reviewers approved, and it merged 43 minutes after
+    the block. project-kit has written no conventions for its own code yet, so its code reviewer said it reviewed as a careful
+    generalist.'
+- id: connect
+  part: P4
+  title: How capabilities work together
+  message: A capability never names another, only a role. One that needs something opens a slot, and any other can fill
+    it.
+  problem: ''
+  does: []
+  show: 'In project-kit: 3 roles, each played by one capability, and 6 slots, 4 of them filled.'
+  visual:
+    kind: sockets
+    font_size: 22
+    provider:
+      name: project-management
+      role: pkit::work-tracking
+      slots:
+      - {id: doc-check, text: the docs a change must update}
+      - {id: fixers, text: which agent fixes each document}
+      - {id: use-cases, text: the use cases to plan from}
+    contributors:
+    - {name: living-docs, role: 'pkit::documentation', text: docs for each reader, to: [doc-check, fixers]}
+    - {name: software-analysis, role: 'pkit::analysis', text: what the software must do, to: [fixers, use-cases]}
+    terminal_head: What pkit status shows, in project-kit
+    terminal:
+    - [['$ ', prompt], [pkit, command], [' status', args]]
+    - [['  Connections', output]]
+    - [['    roles   3 named: 3 active, 0 in conflict', output]]
+    - [['      pkit::analysis      → ', pkit], [software-analysis, addon]]
+    - [['      pkit::documentation → ', pkit], [living-docs, addon]]
+    - [['      pkit::work-tracking → ', pkit], [project-management, addon]]
+    - [['    points  6 defined: 2 unfilled', output]]
+    - [['    pkit::work-tracking:fixers', pkit]]
+    - [['      data v1 · project-management — filled', output]]
+    - [['      bound  ', output], [software-analysis, addon], [' (contributes)', output]]
+    - [['      bound  ', output], [living-docs, addon], [' (contributes)', output]]
+    why:
+      head: Why pkit connects capabilities this way
+      items:
+      - Swap a capability for one in the same role. The rest stays as it is.
+      - Install only what you need. An empty slot does no harm.
+      - pkit status draws the wiring, and pkit validate checks it.
+  limit: Each role has one capability so far, so swapping one for another is designed, not yet shown.
+  minutes: 1
+  notes: 'When one capability needs something from another, it never names the other. It opens a slot, called a connection point,
+    under a role such as pkit::work-tracking. The capability that plays the role defines its slots, and any installed capability
+    can fill them (COR-053). project-management plays work-tracking. One of its slots asks which agent fixes each kind of
+    document: living-docs answers for its pages, software-analysis for use cases, requirements and the rest of the analysis.
+    project-management reads this slot to know which agent to start for each stale document, and knows neither capability exists.
+    A slot is optional unless it says, with a reason, that it must be filled, so a capability still works alone. In a fresh
+    install with project-management alone, the fixers slot stays empty, pkit validate passes, and pkit status names living-docs
+    and software-analysis as capabilities that could fill it. Two capabilities that claim one role are an error until you choose one,
+    with pkit connections providers. Why roles: naming the capability is the one thing that stops you from replacing it. The
+    reviewers'' file of software-engineering is an older slot of project-management''s own, from before roles; it keeps
+    the same rule, since the side that needs reviewers never names who supplies them. Next, project-management gets a builder
+    slot, and software-engineering fills it with its software-engineer (DEC-063, being built). The fixers themselves do
+    not yet run unattended on Claude Code: their runner waits for a check of the tool first.'
+- id: questions
+  part: P5
+  title: Questions?
+  message: Everything shown is in project-kit's own repository, built with pkit itself.
+  problem: ''
+  does: []
+  show: github.com/aleskalfas/project-kit
+  visual:
+    kind: none
+  limit: ''
+  minutes: 1
+  notes: ''

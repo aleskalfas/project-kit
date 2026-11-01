@@ -1,0 +1,30 @@
+schema_version: 1
+name: code
+kind: block
+status: experimental
+about: >-
+  Code in the brand's monospace font: a session (commands and their output, coloured as a shell
+  shows them), a file (lines of runs, each run coloured by its syntax or by the concept it names),
+  or one inline id.
+fields:
+  type: object
+  properties:
+    text: {type: string}
+    lines: {type: array, items: {type: array, items: {type: array, items: {type: string}, minItems: 1, maxItems: 2}}}
+options:
+  kind: [session, file, inline]
+  size: [m, l, s]
+colour: neutral
+parts:
+  box: {box: {fill: code.bg, stroke: code.border, stroke-width: =@stroke.thin, radius: {by: kind, inline: =@radius.chip, else: =@radius.box}},
+        width: =width, height: =height}
+  shell: {when: [text, "kind=session|file"], text: "{text}", highlight: {by: kind, session: shell, file: none}, wrap: "no",
+          style: {by: size, l: code-l, m: code-m, s: code-s}, colour: code.text, x: =@space.06 - 8, y: =@space.05 + 4,
+          run-colours: &syntax {prompt: code.prompt, command: code.command, args: code.args, output: code.output,
+                                comment: code.comment, branch: code.branch, plain: code.text}, decorative: [branch]}
+  listing: {when: [lines, "kind=session|file"], runs: "{lines}", style: {by: size, l: code-l, m: code-m, s: code-s}, colour: code.text,
+            x: =@space.06 - 8, y: =@space.05 + 4, run-colours: *syntax, decorative: [branch]}
+  chip: {when: kind=inline, text: "{text}", wrap: "no", style: code-inline, colour: code.text, x: =@pad.chip, y: =@pad.chip-y}
+preferred:
+  width: {by: kind, inline: =chip.right + @pad.chip, else: "=max(shell.right, listing.right) + @space.06 - 8"}
+  height: {by: kind, inline: =chip.bottom + @pad.chip-y, else: "=max(shell.bottom, listing.bottom) + @space.05 + 4"}

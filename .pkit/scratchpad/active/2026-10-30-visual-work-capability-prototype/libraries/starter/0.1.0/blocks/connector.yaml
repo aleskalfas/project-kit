@@ -1,0 +1,13 @@
+schema_version: 1
+name: connector
+kind: block
+status: experimental
+about: A line from one point to another, with a tip at either end; its parent gives the two points.
+fields: {type: object, properties: {}}
+options:
+  tips: [end, start, both, none]
+states: {broken: error, dropped: neutral}
+colour: link
+parts:
+  line: {line: {from: [=from.x, =from.y], to: [=to.x, =to.y], stroke: tone.line, stroke-width: =@stroke.connector, tips: "{tips}",
+                dash: {by: state, broken: "yes", dropped: "yes", else: "no"}}}

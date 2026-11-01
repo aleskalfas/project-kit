@@ -1,0 +1,45 @@
+schema_version: 1
+name: layers
+kind: pattern
+status: experimental
+about: >-
+  What rests on what: levels stacked from the top, stepped into a pyramid or straight, coloured
+  dark to light; beside them, optionally, what feeds the top and what flows along the levels.
+fields:
+  type: object
+  required: [levels]
+  properties:
+    levels: {type: array, minItems: 1, items: {type: object}}
+    source: {type: object}
+    flows: {type: array, items: {type: object}}
+options:
+  shape: [stepped, straight]
+  relations: [none, beside]
+draws:
+  item: {use: starter/node, emphasis: solid, align: center}
+  relation: {use: starter/card, marker: dot, fill: tint}
+  connector: starter/connector
+values:
+  side: {by: relations, none: 0, beside: =width * 0.28}
+  stack_w: "=width - side - min(side, @space.05)"
+  # what feeds the top sits left of it; the levels centre where the top clears it, and the bottom
+  # is as wide as fits from there, so no level reaches under the source
+  reach: "=source.width + min(source.width, @space.12)"
+  top: {by: shape, stepped: =stack_w * 0.33, straight: =stack_w - reach}
+  cx: "=max(reach + top / 2, stack_w / 2)"
+  bottom: =2 * (stack_w - cx)
+  step: "=(bottom - top) / max(levels.count - 1, 1)"
+define:
+  flow:
+    fields: {type: object, properties: {direction: {enum: [down, up]}}}
+    parts:
+      arrow: {use: connector, tips: {by: direction, down: end, up: start}, from: [=@space.06, =@space.03], to: [=@space.06, =height - @space.03]}
+      card: {use: relation, with: fields, x: =@space.06 * 2 + @space.03, width: =width - card.x, height: =height}
+    preferred: {height: =card.preferred.height}
+parts:
+  levels: {repeat: levels, draw: item, ramp: level, x: =cx - bottom / 2, width: =bottom,
+           stack: {gap: =@space.03, align: center, equal: height, item-width: =top + index * step}}
+  source: {when: [source, relations=beside], use: relation, with: "{source}", y: =levels.y, width: =stack_w * 0.27}
+  source_arrow: {when: [source, relations=beside], use: connector, from: [=source.right + @space.03, =levels.first.middle], to: [=levels.first.x - @space.03, =levels.first.middle]}
+  flows: {when: relations=beside, repeat: flows, draw: flow, x: =width - side, width: =side, stack: {gap: =@space.06, fill: =levels.height}}
+preferred: {height: "=max(levels.bottom, flows.bottom, source.bottom)"}

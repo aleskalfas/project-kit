@@ -1,0 +1,30 @@
+schema_version: 1
+name: panels
+kind: pattern
+status: experimental
+about: >-
+  What goes beside the picture, and under it: a row of panels, each an optional heading over any
+  component, and an optional row under them across the whole width.
+fields:
+  type: object
+  required: [panels]
+  properties:
+    panels: {type: array, minItems: 1, items: {type: object, required: [use]}}
+    under: {type: object, required: [use]}
+options:
+  widths: [equal, wide-narrow, narrow-wide]
+  line-up: [top, middle, foot, item]   # item: `line-up: {item: <id>}` lines the others up with that item, with an arrow
+draws: {connector: starter/connector}
+define:
+  panel:
+    fields: {type: object, properties: {heading: {type: string, x-pkit-prose: true}}}
+    parts:
+      heading: {when: heading, text: "{heading}", style: key, width: =width}
+      body: {use: item, y: "=heading.bottom + min(heading.height, @space.03)", width: =width}
+    preferred: {height: =body.bottom}
+parts:
+  panels: {repeat: panels, draw: panel, width: =width,
+           row: {gap: =@space.07, shares: {by: widths, equal: [1], wide-narrow: [3, 2], narrow-wide: [2, 3]},
+                 align: {by: line-up, top: top, middle: middle, foot: bottom, item: item}, connector: connector}}
+  under: {when: under, use: "{under}", y: "=panels.bottom + min(under.height, @space.05)", width: =width}
+preferred: {height: =under.bottom}

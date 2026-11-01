@@ -1,0 +1,38 @@
+schema_version: 1
+name: deck
+kind: top
+status: experimental
+about: A presentation. Each slide is a page, drawn in one of the deck's layouts, which a brand supplies.
+pages: slides
+layouts:
+  cover:   {slots: [title, subtitle, author, link]}
+  section: {slots: [number, title, summary]}
+  slide:   {slots: [title, lead, visual, limit, footer]}
+labels:  # words a layout draws beside a slot, per language
+  limit: {en: "Limit:", cs: "Omezení:"}
+fields:
+  type: object
+  additionalProperties: false
+  required: [title, slides]
+  properties:
+    title: {type: string, x-pkit-prose: true}
+    author: {type: string}
+    slides:
+      type: array
+      items:
+        type: object
+        additionalProperties: false
+        required: [id, layout]
+        properties:
+          id: {type: string, pattern: "^[a-z0-9][a-z0-9-]*$"}
+          layout: {enum: [cover, section, slide]}
+          title: {type: string, x-pkit-prose: true}
+          subtitle: {type: string, x-pkit-prose: true}
+          author: {type: string}
+          link: {type: string}
+          number: {type: string}
+          summary: {type: string, x-pkit-prose: true}
+          lead: {type: string, x-pkit-prose: true}
+          visual: {type: object, required: [use]}
+          limit: {type: string, x-pkit-prose: true}
+          footer: {type: string, x-pkit-prose: true}
