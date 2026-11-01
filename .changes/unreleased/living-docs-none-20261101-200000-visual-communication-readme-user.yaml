@@ -1,0 +1,6 @@
+component: living-docs
+kind: none
+body: >
+  project-kit's own living-docs configuration assigns the
+  visual-communication capability's README to the user space (#2427).
+  Nothing living-docs ships to an adopter changes.
