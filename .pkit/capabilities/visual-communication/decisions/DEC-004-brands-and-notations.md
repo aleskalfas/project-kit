@@ -116,7 +116,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 
 ### 11. What the checks report, and how severely
 
-Each finding below fails validation where it lies in a file the project can correct, as the record of files and validation decides ([visual-communication:DEC-002-files-and-validation] point 7). Elsewhere, as in a released library version, it asks for attention and names who can correct it (COR-055 points 1 and 4). A delivered piece's drawing is not judged, as that record decides.
+Each finding below fails validation where it lies in a file the project can correct, as the record of files and validation decides ([visual-communication:DEC-002-files-and-validation] point 7). Elsewhere, as in a released library version, it asks for attention and names who can correct it (COR-055 points 1 and 4). A final piece's drawing is not judged, as that record decides.
 - **Fails validation:**
   - a value given to a role its base does not open, an open role its base does not have, or an alias to a token its base keeps private
   - a brand built on another that adds an axis or a mode, or changes a default

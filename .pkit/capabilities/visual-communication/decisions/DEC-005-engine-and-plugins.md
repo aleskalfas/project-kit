@@ -137,11 +137,11 @@ Validation runs each validator under a fixed bound, and the work of computing ev
 - **Each render keeps a record of its piece's findings,** beside the piece, keyed by a hash of every file its scenes were computed from, as the record of work outside the engine and outputs gives such a key its form. The project commits it, so a fresh clone reads it. It is a file a command rewrites, apart from content (the record of files and validation, [visual-communication:DEC-002-files-and-validation] point 5).
 - **A record that verifies is read.** Its findings are the check's for that piece. The engine's version is not in the key, since a new engine reaches a piece only at a render a person runs (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 7).
 - **A piece whose record is missing or does not verify** has its scenes computed by the check, in that run, from the files alone. So the work grows with what a change touched, not with the project, and no result kept outside the repository is needed.
-- **A delivered piece's scenes are not computed** (the record of files and validation, [visual-communication:DEC-002-files-and-validation] point 7).
+- **A final piece's scenes are not computed** (the record of files and validation, [visual-communication:DEC-002-files-and-validation] point 7).
 
 ### 14. What the checks report, and how severely
 
-Each finding below fails validation where it lies in a file the project can correct, as the record of files and validation decides ([visual-communication:DEC-002-files-and-validation] point 7). Elsewhere, as in a released library version, it asks for attention and names who can correct it (COR-055 points 1 and 4). A delivered piece's drawing is not judged, as that record decides.
+Each finding below fails validation where it lies in a file the project can correct, as the record of files and validation decides ([visual-communication:DEC-002-files-and-validation] point 7). Elsewhere, as in a released library version, it asks for attention and names who can correct it (COR-055 points 1 and 4). A final piece's drawing is not judged, as that record decides.
 - **Fails validation:**
   - a formula that cannot be read, reads what it may not reach, adds a number with no unit to a length, or divides by zero
   - a loop of references, a value with two owners, a reference to an exposed part or point that is missing, or a component that places itself
