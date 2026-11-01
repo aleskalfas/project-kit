@@ -10,7 +10,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Context
 
-The founding record sends work the engine's tools cannot compute to a program run while a piece is prepared, never inside the engine. Examples are items placed on a circle, the layout of a graph and a picture made by a program, such as a 3D render. The program is a *helper*, a script of the project's own, or a *producer*, a plugin the capability ships.
+The founding record sends work the engine's tools cannot compute to a program run while a piece is prepared, never inside the engine ([visual-communication:DEC-001-visual-communication-discipline] point 8). Examples are items placed on a circle, the layout of a graph and a picture made by a program, such as a 3D render. The program is a *helper*, a script of the project's own, or a *producer*, a plugin the capability ships.
 
 A local component holds no raw values, but a picture holds the brand's values in its pixels, so it needs rules of its own. A case asks for such pictures: a game platform draws its boards in 3D, and wants each in a game's manual, a deck and a documentation page, under each game's brand ([project-kit#2423](https://github.com/aleskalfas/project-kit/issues/2423)).
 
@@ -19,7 +19,7 @@ Three facts shape the rules on such a picture:
 - **A picture's look depends on the values it reads,** and a brand's modes on several axes multiply the combinations a piece is drawn in.
 - **A program may call an outside program,** such as a browser that draws a 3D scene. Such a program can draw differently from one machine to another, and it updates itself outside the project.
 
-A piece is also handed out as files, such as a PDF of a talk or a picture in a documentation page. The talk the design started from was drawn on a whiteboard service, which exported only whole boards ([project-kit#2424](https://github.com/aleskalfas/project-kit/issues/2424)). Once handed out, a piece's files are its real freeze, as the founding record says. A figure in documentation must be committed for a repository host to show it, and kept fresh.
+A piece is also handed out as files, such as a PDF of a talk or a picture in a documentation page. The talk the design started from was drawn on a whiteboard service, which exported only whole boards ([project-kit#2424](https://github.com/aleskalfas/project-kit/issues/2424)). Once handed out, a piece's files are its real freeze, as the founding record says ([visual-communication:DEC-001-visual-communication-discipline] point 7). A figure in documentation must be committed for a repository host to show it, and kept fresh.
 
 The core layer supplies one validation that the capability's check joins, with one severity that fails it (COR-055). Software-analysis keeps a fingerprint of the texts that a requirement's revisits depend on ([software-analysis:DEC-006-text-in-body] points 6 and 7). Living-docs decides where a page's images lie ([living-docs:DEC-002-visual-elements] point 5).
 
@@ -29,7 +29,7 @@ The core layer supplies one validation that the capability's check joins, with o
 
 ### 1. A program run while preparing may write a picture
 
-A helper or a producer run while preparing may write a local component, and also a picture, such as a 3D render. The engine never runs either. The founding record sets this frame, and lets such a program write a picture. This record decides the rules on both outputs beyond what the founding record sets.
+A helper or a producer run while preparing may write a local component, and also a picture, such as a 3D render. The engine never runs either. The founding record sets this frame, and lets such a program write a picture ([visual-communication:DEC-001-visual-communication-discipline] point 8). This record decides the rules on both outputs beyond what the founding record sets.
 - **Run on purpose.** No render, no check, no export and no upgrade runs a program. A person or an agent runs it.
 - **Who starts it.** A helper runs as the project runs any script of its own, under the project's permission model (COR-028). A producer runs through a command of the capability.
 - **What it reads is declared first.** Before it runs, a program declares its input files and the brand's values it reads, by name. It also declares what it reads from the engine, such as an element's measured frame.
@@ -41,11 +41,11 @@ A helper or a producer run while preparing may write a local component, and also
 ### 2. A picture takes its values from the brand alone, and holds none of the piece's words
 
 These rules bind every picture made while preparing, whichever program writes it.
-- **Values from the brand.** Every value the program applies that a role could stand for, such as a colour, comes from the brand the piece names, under its lock, as the founding record decides. The program reads it through the document of resolved values that the record of the engine and its plugins decides.
+- **Values from the brand.** Every value the program applies that a role could stand for, such as a colour, comes from the brand the piece names, under its lock, as the founding record decides ([visual-communication:DEC-001-visual-communication-discipline] point 8). The program reads it through the document of resolved values that the record of the engine and its plugins decides.
 - **Roles in what is written for the picture.** The inputs written for the picture, such as a 3D scene's lights and materials, name roles, never raw values. The schema of a producer's inputs refuses a raw value.
 - **Art keeps its own.** A model, its texture and any lettering on the thing shown are art, made in the tools made for them. Their own colours and lettering change with neither the brand nor the language, as a content picture's do not.
 - **None of the piece's words,** as the founding record decides. The piece places every word it says, such as a label, as ordinary text, measured from the committed fonts and translated with the content.
-- **Exposed points.** The program also writes the picture's exposed points, the named points in its pixels that the piece may point at (the record of the engine and its plugins). The piece places a label at one, or ends a connector there, as parts of its content, by an option that names the picture's item and the point (the founding record, point 6).
+- **Exposed points.** The program also writes the picture's exposed points, the named points in its pixels that the piece may point at (the record of the engine and its plugins). The piece places a label at one, or ends a connector there, as parts of its content, by an option that names the picture's item and the point (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 6).
 - **The same exposed points in every variant** (point 3), by name, so a label holds in every mode. The variants that one scene holds also keep each point at the same place, as the record of the engine and its plugins requires. A variant for another scene, such as one a size axis changes, may place it elsewhere.
 - **What no check sees.** A check reads a program's inputs and the record beside its output, never what the program did. A project's script can read a file it did not declare, which its fingerprint then misses. A reviewer judges such a read, and a picture that breaks these rules, such as one with a label drawn into it.
 
@@ -63,7 +63,7 @@ These rules bind every picture made while preparing, whichever program writes it
 - **In the piece that uses it.** A produced picture, or a local component a helper writes, lives in the folder of the piece that uses it, with its record beside it. It is made under that piece's lock, so another piece under another lock makes its own.
 - **Committed.** Both are committed, so the scene and the check read them on a fresh clone without running the program.
 - **Apart from content.** Produced output is kept apart from the pictures the content holds, such as a screenshot, as the record of files and validation keeps what a program rewrites apart from what a person writes. Living-docs keeps produced images apart from hand-made ones the same way ([living-docs:DEC-002-visual-elements] point 5).
-- **Never in a library copy.** A library copy that a lock names is never rewritten, as the founding record says. A library may hold a model, or a picture, as a plain file, and a component may declare a slot that a produced picture fills.
+- **Never in a library copy.** A library copy that a lock names is never rewritten, as the founding record says ([visual-communication:DEC-001-visual-communication-discipline] point 11). A library may hold a model, or a picture, as a plain file, and a component may declare a slot that a produced picture fills.
 - **Written code,** such as CSS variables, goes where its declaration names, with its record beside it, as the record of files and validation places them. The code that reads it, such as a web page or a game, lives in the project's tree.
 - **Written code follows its declaration's lock,** which a person moves on purpose (the record of the engine and its plugins). The lock says what the code holds, so the code takes no numbered versions.
 - **Whether written code is committed** is the project's choice, as for any file its own build writes, and its record goes with it. Where neither is present, as on a fresh clone that commits neither, the check states that as a fact and names the command that writes them.
@@ -122,7 +122,7 @@ These findings join the capability's check within validation, at the severities 
 
 ## Rationale
 
-**Why a program may write a picture.** A picture a program makes holds the brand's values in its pixels, so the engine cannot colour it as it colours data. Kept as content made elsewhere, it would follow no brand, and the founding record reports such a picture at every switch. Fed only the brand's values while preparing, it follows the brand, and the engine still runs no program.
+**Why a program may write a picture.** A picture a program makes holds the brand's values in its pixels, so the engine cannot colour it as it colours data. Kept as content made elsewhere, it would follow no brand, and the founding record reports such a picture at every switch ([visual-communication:DEC-001-visual-communication-discipline] point 3). Fed only the brand's values while preparing, it follows the brand, and the engine still runs no program.
 
 **Why a helper runs as the project's own script, framed by commands.** A command of the capability that ran a project's script would run that code with the trust the project gives the capability's commands. Run as the project runs its own scripts, it stays under the project's permission model (COR-028). The commands before and after the run refuse a record whose inputs moved during it. A record written from inputs read after the run could describe inputs the output was not made from.
 

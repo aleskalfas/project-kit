@@ -10,7 +10,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Context
 
-The capability's founding record makes the engine the capability's code that computes the *scene* from a piece's content and its libraries. Renderers only project the scene. The engine knows no component by name, and computes with a small set of general tools. It runs no program and reads only the project's files. Three kinds of plugin meet it: renderers, producers of pictures and code writers (its points 2, 4 and 8). This record decides the tools, what the scene holds, and the seam between the engine and its plugins.
+The capability's founding record makes the engine the capability's code that computes the *scene* from a piece's content and its libraries. Renderers only project the scene. The engine knows no component by name, and computes with a small set of general tools. It runs no program and reads only the project's files. Three kinds of plugin meet it: renderers, producers of pictures and code writers ([visual-communication:DEC-001-visual-communication-discipline] points 2, 4 and 8). This record decides the tools, what the scene holds, and the seam between the engine and its plugins.
 
 The capability's design work ([project-kit#2424](https://github.com/aleskalfas/project-kit/issues/2424)) found what the engine must do:
 - **The talk's generator placed every box in code.** It estimated each text's width as a number of characters times a constant. Among 2,479 objects in two languages, 6 texts were estimated to wrap past their box.
@@ -28,10 +28,10 @@ A review of existing tools found none that lays out one component specification 
 
 A *formula* computes one number in a component's data.
 - **What it may use:** numbers with no unit, such as counts, factors and ratios, the four operations, parentheses, and a few functions of numbers, such as the least, the greatest and rounding. It may read the component's own named values, and an item's place in its list with the list's count.
-- **Where lengths come from:** a role's value, the size the component gets, and the frames point 3 lets it read. A *frame* is an element's place and size. A literal length would be a raw value, which no component holds (the founding record, point 5).
+- **Where lengths come from:** a role's value, the size the component gets, and the frames point 3 lets it read. A *frame* is an element's place and size. A literal length would be a raw value, which no component holds (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 5).
 - **Dimensions are checked.** The terms of a sum share one dimension. A number with no unit may scale a length, and is never added to one.
 - **What it never holds:** a comparison, a condition, a loop, text, or a function a library defines.
-- **A choice is declared, never computed.** A component chooses between values or parts by an option, or by whether a field is filled, which its schema checks (the founding record, point 6).
+- **A choice is declared, never computed.** A component chooses between values or parts by an option, or by whether a field is filled, which its schema checks (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 6).
 - **A new function or name is a new tool of the engine.** The capability's reference holds the grammar.
 
 ### 2. Layout operators arrange, and connectors route simply
@@ -40,7 +40,7 @@ A *formula* computes one number in a component's data.
 - **Layout operators** stack elements, align them, distribute them and give them equal sizes. They reach a list's first item, its last, or an item by its id. Their names follow CSS's flexible layout where the meanings match.
 - **No operator chooses, filters or sorts items by what they hold.** The content's order and the declared options decide.
 - **Connectors** join named elements, straight, with corners or curved, with their ends spread evenly. They never route around obstacles.
-- **A layout no operator computes,** such as a graph's, is work outside the engine (the founding record, point 8). A new operator is added when a need recurs, and built and tested once (its point 4).
+- **A layout no operator computes,** such as a graph's, is work outside the engine (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 8). A new operator is added when a need recurs, and built and tested once ([visual-communication:DEC-001-visual-communication-discipline] point 4).
 
 ### 3. An element asks for a size and gets one, and references never loop
 
@@ -58,7 +58,7 @@ A *formula* computes one number in a component's data.
 - **Lines broken by the engine.** It breaks text into lines by Unicode's rules and each language's own rules, kept as data in the engine. So a new language's rules arrive with a release of the capability. In Czech, for example, a one-letter word never ends a line.
 - **A margin keeps lines stable.** The engine breaks against the planned width minus a small margin, and places the text in the planned width. So a renderer's slightly different metrics move no word, and centred text stays centred.
 - **Text never shrinks to fit.** A word longer than its line breaks after a slash, or is marked as overflowing. There is no hyphenation and no justified text at first.
-- **A renderer draws the lines as given.** A medium that wraps text itself, and whose edits come back as plain text, may wrap within the measured width, as a declared choice (the founding record, point 2).
+- **A renderer draws the lines as given.** A medium that wraps text itself, and whose edits come back as plain text, may wrap within the measured width, as a declared choice (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 2).
 
 ### 5. The scene holds every element's final frame, values and source
 
@@ -71,7 +71,7 @@ A *formula* computes one number in a component's data.
 - **Values stay roles.** Each value that moves nothing, such as a colour or a picture, names its role. Its value comes from the document of point 7, so one scene serves every mode of the value axes. So the variants of one picture in one scene share one pixel size, and the same exposed points at the same places.
 - **The root says what the scene is:** the piece, its lock, its language, the key over its size axes, and the seam's version.
 - **Pages are declared by a slot.** A top component's slot says that its items are pages. A diagram is then a page alone, and part of a page inside a slide. A page inside a page is an error.
-- **Every element carries its trace** (the founding record, point 3). Its id comes from the path of instances, parts and item ids, or an item's place where it has no id, never from the order of drawing. Each property names its source: a content field, an option, a library's default, a role, or the engine.
+- **Every element carries its trace** (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 3). Its id comes from the path of instances, parts and item ids, or an item's place where it has no id, never from the order of drawing. Each property names its source: a content field, an option, a library's default, a role, or the engine.
 - **Computed, never committed.** Order and rounding are fixed, so under one release of the capability the same files give the same scene on every machine, and two scenes compare.
 
 ### 6. A piece names the modes it is drawn in
@@ -101,7 +101,7 @@ A *formula* computes one number in a component's data.
 
 - **The three kinds:**
   - A *renderer* draws a scene in one medium.
-  - A *producer* makes a picture while a piece is prepared, from its own inputs and the values it declares. A person or an agent runs it, never the engine (the founding record, point 8). The record of work outside the engine and outputs decides the rules on its pictures.
+  - A *producer* makes a picture while a piece is prepared, from its own inputs and the values it declares. A person or an agent runs it, never the engine (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 8). The record of work outside the engine and outputs decides the rules on its pictures.
   - A *code writer* writes the document of values as code in one language, under the naming rule of the record of brands and notations.
 - **Each declares what it supports.** A renderer declares, for each primitive and property, whether it draws it, updates it in place, recreates it, or reads it back. A producer declares the inputs it takes and the kinds of value it can use. A code writer declares the kinds of value its language has a form for.
 - **Each declares what it needs beyond the project's files:** the outside programs it calls, and any service it reaches, as the record of files and validation decides.
@@ -128,14 +128,14 @@ A *formula* computes one number in a component's data.
 ### 12. A project adds no plugin, for now
 
 - **Every plugin is the capability's.** A plugin is code the capability runs with the trust its commands have, and the seam is too new to promise to code outside it.
-- **The ways out today:** a project's own program run while preparing is a helper, and makes a picture a producer would (the founding record, point 8). Code reads the JSON a code writer writes. A project that needs another medium asks for its renderer.
+- **The ways out today:** a project's own program run while preparing is a helper, and makes a picture a producer would (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 8). Code reads the JSON a code writer writes. A project that needs another medium asks for its renderer.
 - **When to revisit:** once a project needs a plugin the capability will not ship. The seam's own version lets it open then without a break.
 
 ### 13. The scene check reads each piece's last render, and computes only what changed
 
 Validation runs each validator under a fixed bound, and the work of computing every scene grows with a project's pieces, languages and combinations. So the check judges what it can read from the files without computing every scene.
 - **Each render keeps a record of its piece's findings,** beside the piece, keyed by a hash of every file its scenes were computed from, as the record of work outside the engine and outputs gives such a key its form. The project commits it, so a fresh clone reads it. It is a file a command rewrites, apart from content (the record of files and validation).
-- **A record that verifies is read.** Its findings are the check's for that piece. The engine's version is not in the key, since a new engine reaches a piece only at a render a person runs (the founding record, point 7).
+- **A record that verifies is read.** Its findings are the check's for that piece. The engine's version is not in the key, since a new engine reaches a piece only at a render a person runs (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 7).
 - **A piece whose record is missing or does not verify** has its scenes computed by the check, in that run, from the files alone. So the work grows with what a change touched, not with the project, and no result kept outside the repository is needed.
 - **A delivered piece's scenes are not computed** (the record of files and validation).
 
@@ -162,9 +162,9 @@ Each finding below fails validation where it lies in a file the project can corr
 
 **Why versions apart, and why written code is declared with a lock.** The files a project keeps change with what people write, the seam with what plugins read, and the document with what code outside reads. A game's runtime has no lock of its own, and every component moves with the methodology's version, so a code writer keeps each form it shipped. Written code changes only when a person moves its declaration, as a piece's lock moves.
 
-**Why one pattern for three kinds.** Each kind meets the same two questions: what can it take, and what did it lose (the founding record, point 2). One declaration and one loss report give one check, and one way to accept a loss.
+**Why one pattern for three kinds.** Each kind meets the same two questions: what can it take, and what did it lose (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 2). One declaration and one loss report give one check, and one way to accept a loss.
 
-**Why the check reads each piece's last render.** Validation runs each validator under one fixed bound, and its validators are declared once, so neither can grow with a project. Computing every scene in every run would fail a large project for its size, for no fault in its files. A record keyed by what the scenes were computed from is a fact about the files, as a stale picture's record is, and a change touches few pieces. Keeping the engine's version out of the key follows the founding record: a piece meets a new engine at a render a person runs.
+**Why the check reads each piece's last render.** Validation runs each validator under one fixed bound, and its validators are declared once, so neither can grow with a project. Computing every scene in every run would fail a large project for its size, for no fault in its files. A record keyed by what the scenes were computed from is a fact about the files, as a stale picture's record is, and a change touches few pieces. Keeping the engine's version out of the key follows the founding record: a piece meets a new engine at a render a person runs ([visual-communication:DEC-001-visual-communication-discipline] point 7).
 
 ### Alternatives considered
 

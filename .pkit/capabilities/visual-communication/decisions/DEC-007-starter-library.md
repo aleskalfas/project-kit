@@ -10,7 +10,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Context
 
-The founding record of this capability has it ship component libraries: the foundations, which hold the interface every library shares, and others. It leaves to a later record the component library the capability ships to start from. That library, the *starter*, is the first component library a project meets.
+The founding record of this capability has it ship component libraries: the foundations, which hold the interface every library shares, and others ([visual-communication:DEC-001-visual-communication-discipline] point 5). It leaves to a later record the component library the capability ships to start from ([visual-communication:DEC-001-visual-communication-discipline], Implications). That library, the *starter*, is the first component library a project meets.
 
 The design work found how libraries were used and missed ([project-kit#2424](https://github.com/aleskalfas/project-kit/issues/2424)):
 - **Small blocks were reused, and arrangements were rebuilt.** A talk took small blocks from an earlier library and drew each arrangement anew. It even remade a step from another block rather than use the library's own.
@@ -31,14 +31,14 @@ The starter is planned to cover the jobs visuals commonly do, not only those one
 - **What it holds.** Patterns, which arrange items, and *blocks*. A block is a small component, such as a card or a connector, that a pattern draws its items with or that content places alone. The top components, such as a deck, are the foundations'.
 - **The order of building.** A job the evidence shows comes first. The other common jobs follow, built ahead of need, so the starter grows wide in steps.
 - **Recurrence is a reason, not a condition.** A local component that recurs is a reason to add a component to the starter. Its owner judges, and no count decides.
-- **No privilege.** The engine knows none of the starter's components by name, as the founding record says. So a project may ignore the starter, or publish a library of its own beside it.
+- **No privilege.** The engine knows none of the starter's components by name, as the founding record says ([visual-communication:DEC-001-visual-communication-discipline] point 4). So a project may ignore the starter, or publish a library of its own beside it.
 
 ### 2. Organised by the job a visual does
 
 - **One job per pattern.** Each pattern answers one question a visual answers, such as "in what order does it happen?", "what rests on what?" or "which items belong together?". Two patterns never share a job, and one pattern never does two.
 - **The jobs come from published classifications.** Nancy Duarte's forms of abstract ideas, a practitioners' classification, name them. The classification of visual representations by Lohse, Biolsi, Walker and Rueter, and Yuri Engelhardt's principles that join a visual's parts, check them.
 - **The starter's README** lists the patterns by job. For each it gives its question, form, source, evidence and options. It also states the boundary with its neighbours, such as "a list has no order, steps follow one another, a timeline says when".
-- **Options stay few.** A pattern's options choose only its arrangement, as the founding record says. About four is the guide, not a limit. Past it, a pattern probably does two jobs, and is split.
+- **Options stay few.** A pattern's options choose only its arrangement, as the founding record says ([visual-communication:DEC-001-visual-communication-discipline] point 6). About four is the guide, not a limit. Past it, a pattern probably does two jobs, and is split.
 - **More than a pattern offers** is a local component, built from the starter's blocks and the engine's tools.
 - **Only what data can draw.** A job that needs a tool the engine lacks waits for that tool, such as items on a circle or the layout of a graph.
 
@@ -57,7 +57,7 @@ The starter's owner, whoever maintains the capability, marks a component stable,
 
 - **A generic form is a starter component,** which a brand styles with its values. A design system's tile, for example, can be the starter's card in that brand's colours, corners and fonts.
 - **Close to the established forms.** The starter draws each generic form close to the forms design systems share, so a brand's values can give it that brand's look. A brand reaches a component only through the roles and component tokens it names, as the record of brands and notations decides. So a starter component names a role for each value a brand's look may change, such as its corners.
-- **What stays out.** A form that one brand alone uses is that brand's, as the founding record lets a brand hold parts no shared component has. A subject's concepts belong to a notation (COR-014).
+- **What stays out.** A form that one brand alone uses is that brand's, as the founding record lets a brand hold parts no shared component has ([visual-communication:DEC-001-visual-communication-discipline] point 5). A subject's concepts belong to a notation (COR-014).
 - **Where values fall short,** a brand's own part is a different component, with its own name and job, under the founding record's rule. It is never a changed copy of a starter component.
 
 ## Rationale
@@ -81,7 +81,7 @@ The starter's owner, whoever maintains the capability, marks a component stable,
 ### Alternatives considered
 
 - **A small starter, with a pattern added once a local component recurs about three times, as COR-007 builds tooling.** Rejected. Recurrence in one project would shape a library for every project, and arrangements rebuilt each time show their recurrence late.
-- **Patterns chosen by their look, or split by kind of work.** Rejected. Two patterns would serve one job, and the founding record already rejects libraries split by kind of work.
+- **Patterns chosen by their look, or split by kind of work.** Rejected. Two patterns would serve one job, and the founding record already rejects libraries split by kind of work ([visual-communication:DEC-001-visual-communication-discipline], Alternatives considered).
 - **A slide tool's categories as the classification.** Rejected. They lean to slides, and sorted the evidence by how it looks.
 - **Unproven components in a library of their own.** Rejected. A piece would lock two libraries for one job, and a component moving between them would change its name.
 - **A hard limit on options, enforced by a check.** Rejected. It would refuse a fifth option that is right.
