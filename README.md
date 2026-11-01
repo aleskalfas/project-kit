@@ -419,7 +419,7 @@ The friction check asks nothing of your documents until you declare where they l
 ## Go deeper
 
 - **The permission model, explained:** [`docs/permissions/README.md`](docs/permissions/README.md) — why it exists, and how to turn it on.
-- **The operational rules, explained:** [`docs/rules/README.md`](docs/rules/README.md) — why every session loads them, and how to add your own.
+- **The operational rules, explained:** [`docs/rules/README.md`](docs/rules/README.md) — why sessions load them, and how to add your own.
 - **Adopting / navigating the methodology:** [`.pkit/README.md`](.pkit/README.md) — maps every area. The foundational pattern is in [`.pkit/decisions/README.md`](.pkit/decisions/README.md).
 - **The command surface:** [`.pkit/cli/README.md`](.pkit/cli/README.md).
 - **Working on project-kit itself:** [`CONTRIBUTING.md`](CONTRIBUTING.md).

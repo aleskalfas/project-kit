@@ -58,7 +58,7 @@ Operational rules are the instructions an agent session reads at its start, thro
 
 ## Why they exist
 
-An agent keeps nothing between sessions but what the repository holds. Without rule files that every session reads, and that update without touching yours, these things go wrong:
+An agent keeps nothing between sessions but what the repository holds. Without rules files that every session reads, and that update without touching yours, these things go wrong:
 
 - **Each session starts without your conventions.** A convention you gave an agent yesterday, such as running the tests before each commit, is not in today's session. So today's agent commits untested.
 - **An update of rules shared across projects overwrites your own.** You add a rule to the shared file, and the next update replaces the file with its newer version. So you stop taking updates, or add your rules again after each one.
@@ -134,12 +134,12 @@ Without the operational rules, you keep your agents' rules in `CLAUDE.md` by han
 
 ### When you do not need it
 
-Each session of a project that installs project-kit reads the methodology's rules. You do not need the operational rules, or a rule of your own, in these cases:
+You do not need the operational rules, or a rule of your own, in these cases:
 
 - **You want each session to read your instructions alone.** project-kit's sessions read the methodology's rules too. Keep your rules in `CLAUDE.md` by hand, as the comparison above credits.
 - **The rule is about your files, not about what a session does.** Keep it in a rule set, which binds only on the files its scope selects ([the reference, "Which file a rule goes in"](../../.pkit/rules/README.md#which-file-a-rule-goes-in)).
 - **What you write is context, not a rule, such as what the project is and how to build it.** Write it in `CLAUDE.md`'s own text, which a sync keeps as you wrote it.
-- **It is a procedure for one task.** Every session reads each rule whole, and a task's procedure belongs in a skill ([COR-006](../../.pkit/decisions/core/COR-006-artifact-roles.md)).
+- **It is a procedure for one task.** A session reads each rule whole, and a task's procedure belongs in a skill ([COR-006](../../.pkit/decisions/core/COR-006-artifact-roles.md)).
 
 ## How the rules reach a session
 
@@ -165,11 +165,11 @@ flowchart TD
 - **The index,** `capabilities.md`. It includes each installed capability's file, and each install, sync, upgrade and uninstall renders it again. Nobody edits it ([the reference, "The capabilities' rules index"](../../.pkit/rules/README.md#the-capabilities-rules-index)).
 - **Your rules,** `project.md`. `pkit init` does not create it, and Claude Code skips the include of a missing file. Once you write it, no sync or upgrade writes it ([the reference, "Layout"](../../.pkit/rules/README.md#layout)).
 - **`CLAUDE.md`** includes the three, in that order. A sync puts back a line that is missing, as the first task shows.
-- **How the layers stand.** Every layer's rules bind at once, and a capability's and yours add to the methodology's, never loosening them. Where two cannot both be kept, the upper layer's binds: the methodology's above a capability's, and both above yours. Where two capabilities' rules clash, the session stops the step and reports it ([COR-070](../../.pkit/decisions/core/COR-070-capability-loaded-rules.md) point 4).
+- **How the layers stand.** Every layer's rules bind at once, and a capability's and yours add to the methodology's, never loosening them. Where two cannot both be kept, the upper layer's binds: the methodology's stands above a capability's, and both stand above yours. Where two capabilities' rules clash, the session stops the step and reports it ([COR-070](../../.pkit/decisions/core/COR-070-capability-loaded-rules.md) point 4).
 
 ## Start every session with the rules loaded
 
-Run `pkit sync` in each clone after you pull a change. It puts in place what the clone's sessions read: `core.md` at the version your project records, the index, and `CLAUDE.md`'s lines. What it does, and what you keep yourself:
+Run `pkit sync` in each clone after you pull a change. It puts in place what the clone's sessions read: `core.md`, the index and `CLAUDE.md`'s lines. What it does, and what you keep yourself:
 
 - **What it adds to `CLAUDE.md`.** It puts back a missing line of the methodology's rules or of the index, and removes nothing. Your own rules' line comes back only with the methodology's. Without a `CLAUDE.md`, the sync creates one with a heading and the three lines ([the adapter's README, `merge-claude-md.sh`](../../.pkit/adapters/claude-code/README.md#merge-claude-mdsh)).
 - **When it adds nothing.** Where the methodology's line stands only in a code fence or a code span, the sync inserts nothing and reports it. Move the line out of the code.
@@ -253,7 +253,7 @@ Loaded files — 1   (every layer's, in the order a session reads them)
 
 ## Keep each rules file within its budget
 
-Each rules file may have a budget, the most words it may hold, and `pkit validate` reports each file's count against it. Every session reads each rules file whole, so each word in one is paid for in every session. Who keeps each budget, and what it asks of you:
+Each rules file may have a budget, the most words it may hold, and `pkit validate` reports each file's count against it. A session reads each rules file whole, so each word in one is paid for in every session. Who keeps each budget, and what it asks of you:
 
 - **The methodology's file and each capability's** have budgets their authors keep. You see their counts, and are never failed for them.
 - **Yours** takes its budget from `rule-sets.plain-file-budget` in your project's configuration, while `project.md` is a plain file. Without the key it has none, and nothing fails. No install or upgrade sets it.
