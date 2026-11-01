@@ -1,7 +1,7 @@
 ---
 id: DEC-004
 title: A brand gives roles their values on axes of modes, and a notation gives concepts their roles
-status: proposed
+status: accepted
 date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
