@@ -47,7 +47,7 @@ These rules bind every picture made while preparing, whichever program writes it
 - **Roles in what is written for the picture.** The inputs written for the picture, such as a 3D scene's lights and materials, name roles, never raw values. The schema of a producer's inputs refuses a raw value.
 - **Art keeps its own.** A model, its texture and any lettering on the thing shown are art, made in the tools made for them. Their own colours and lettering change with neither the brand nor the language, as a content picture's do not.
 - **None of the piece's words.** The piece places every word it says, such as a label, as ordinary text, measured from the committed fonts and translated with the content.
-- **Exposed points.** The program also writes the picture's exposed points, the named points in its pixels that the piece may point at (the record of the engine and its plugins). The piece places a label at one, or ends a connector there, as parts of its content.
+- **Exposed points.** The program also writes the picture's exposed points, the named points in its pixels that the piece may point at (the record of the engine and its plugins). The piece places a label at one, or ends a connector there, as parts of its content, by an option that names the picture's item and the point (the founding record, point 6).
 - **The same exposed points in every variant** (point 3), by name, so a label holds in every mode. The variants that one scene holds also keep each point at the same place, as the record of the engine and its plugins requires. A variant for another scene, such as one a size axis changes, may place it elsewhere.
 - **What no check sees.** A check reads a program's inputs and the record beside its output, never what the program did. A project's script can read a file it did not declare, which its fingerprint then misses. A reviewer judges such a read, and a picture that breaks these rules, such as one with a label drawn into it.
 
@@ -63,10 +63,12 @@ These rules bind every picture made while preparing, whichever program writes it
 ### 4. Where produced output and written code live
 
 - **In the piece that uses it.** A produced picture, or a local component a helper writes, lives in the folder of the piece that uses it, with its record beside it. It is made under that piece's lock, so another piece under another lock makes its own.
+- **Committed.** Both are committed, so the scene and the check read them on a fresh clone without running the program.
 - **Apart from content.** Produced output is kept apart from the pictures the content holds, such as a screenshot, as the record of files and validation keeps what a program rewrites apart from what a person writes. Living-docs keeps produced images apart from hand-made ones the same way ([living-docs:DEC-002-visual-elements] point 5).
 - **Never in a library copy.** A library copy that a lock names is never rewritten, as the founding record says. A library may hold a model, or a picture, as a plain file, and a component may declare a slot that a produced picture fills.
-- **Written code,** such as CSS variables, goes where its declaration names, as a file of the project's own, with its record beside it (the record of files and validation). The code that reads it, such as a web page or a game, lives in the project's tree.
-- **Written code follows its declaration's lock** (the record of the engine and its plugins), and a person moves that lock on purpose, as a piece's lock moves. The lock says what the code holds, so the code takes no numbered versions. Whether it is committed is the project's choice, as for any file its own build writes.
+- **Written code,** such as CSS variables, goes where its declaration names, with its record beside it, as the record of files and validation places them. The code that reads it, such as a web page or a game, lives in the project's tree.
+- **Written code follows its declaration's lock,** which a person moves on purpose (the record of the engine and its plugins). The lock says what the code holds, so the code takes no numbered versions.
+- **Whether written code is committed** is the project's choice, as for any file its own build writes, and its record goes with it. Where neither is present, as on a fresh clone that commits neither, the check states that as a fact and names the command that writes them.
 
 ### 5. A fingerprint says when output is stale, and the rest is only recorded
 
@@ -87,7 +89,8 @@ Each output of point 1, and each file of written code, carries a record beside i
 
 The fingerprint follows the shape software-analysis gives the fingerprint of a requirement's texts ([software-analysis:DEC-006-text-in-body] point 7). It reads files and values instead of texts.
 - **One reading.** Each thing is read in one canonical form, so the same input gives the same fingerprint on every machine.
-- **An input** is a file, or a part of a content file named by its path of keys. A file of the capability's format, or a part of one, is read as the value the converters give, in one canonical text (the record of change over time). So an edit elsewhere in the file, or the file's rewrite to a newer format, changes nothing. Any other file, such as a model, is read as its bytes.
+- **An input** is a file, or a part of a content file named by its path of keys. A file of the capability's format, or a part of one, is read as the value the converters give, in one canonical text (the record of change over time). So an edit elsewhere in the file changes nothing. Any other file, such as a model, is read as its bytes.
+- **Across a change of format.** A fingerprint names the format number it read at, and the check reads each input converted to that number, so a release that raises the number makes no output stale. The command that rewrites a file to a newer format takes again each fingerprint that verified before it.
 - **A value** is read in the form's own canonical text for its type, such as one notation for a colour. So a value written another way gives the same fingerprint, whatever document carried it.
 - **Its version and hash.** The fingerprint names the form's version and the hash it uses. A version fixes how each kind of thing is read, and tests of example inputs pin each one.
 - **Each version kept.** The check verifies each fingerprint under the version it names, so the capability keeps every version it shipped. The command may rewrite a fingerprint that verifies into the current version without running the program.
@@ -99,24 +102,24 @@ An *export* is a file a piece is handed out as, such as a PDF or a picture, in a
 - **What a run makes.** An export run makes each format the piece declares, in each of its languages and each combination of modes the piece names (the record of the engine and its plugins). A format whose medium switches modes while open, such as a web page, holds the modes of the value axes in one file.
 - **A number for each run.** Each export run is one version, numbered within its piece, and every language, format and combination of modes it makes shares that number. So version 3 in English matches version 3 in Czech. No export overwrites another.
 - **The name carries it.** Each exported file's name carries its piece's name and its version, since an exported file travels alone.
-- **The record of versions** holds, for each version, a fingerprint of every file its scene was computed from. Those are the piece's own files, its lock and the outputs of point 1 among them, and any shared content it reads. It also holds a hash of each file the version wrote. The engine's version is only recorded (below), so a release of the capability makes no export stale.
+- **The record of exports** holds, for each version, a fingerprint of every file its scene was computed from. Those are the piece's own files, its lock and the outputs of point 1 among them, and any shared content it reads. It also holds a hash of each file the version wrote. The engine's version is only recorded (below), so a release of the capability makes no export stale.
 - **What it only records:** when the version was made, the piece's state then, and the versions of the engine, the renderers and each outside program. It names each output of point 1 the version used, and any it used while stale.
 - **No stale output.** An export stops on a stale output of point 1 and names it. The person who runs it may say to use the output as it is. A delivered piece's exports use its outputs as they were delivered.
-- **In the piece's folder.** A piece's exports and their record live in its folder, beside its sources, so a piece is still copied, archived or removed in one step (the record of files and validation).
-- **What is committed.** The version a person names as handed out, when marking the piece delivered (the record of change over time), is committed as the piece's real freeze. A living piece's current copy and the record of versions are committed too. Every other version stays on the machine that made it.
-- **A living piece's current copy.** A living piece keeps an unnumbered copy of each file its export makes, which a page links to, since a link cannot follow a number. A documentation page may keep its produced images beside it, apart from hand-made ones. The piece then names that place, and the copy is written there ([living-docs:DEC-002-visual-elements] point 5). Removing the piece removes the copy.
+- **Where a version lies.** An export run writes its files where previews lie, local to each clone and never committed (the record of files and validation).
+- **What is committed, in the piece's folder.** The version a person names as handed out, when marking the piece delivered (the record of change over time), is moved into the piece's folder and committed as its real freeze. A living piece's current copy and the record of exports lie there and are committed too. So the piece stays one folder, copied, archived or removed in one step. Every other version stays on the machine that made it.
+- **A living piece's current copy.** A living piece keeps an unnumbered copy of each file its export makes, which a page links to, since a link cannot follow a number. Where a documentation page shows the copy, it lies where the documentation's rules put that page's produced images, beside the page and apart from hand-made ones where living-docs is installed ([living-docs:DEC-002-visual-elements] point 5). The piece then names that place, and the copy is written there. Removing the piece removes the copy.
 - **Previews are not exports.** A render made for a person to look at takes no number and is never committed.
 
 ### 8. What the check reports, and how seriously
 
-These findings join the capability's check within validation, at the severities that the policy of the record of files and validation allows (COR-055). An output that people or other software read directly fails when something it read changed. One that reaches a reader only through a piece warns, since the piece's exports guard it.
+These findings join the capability's check within validation, at the severities that the policy of the record of files and validation allows (COR-055). An output that people or other software read directly fails when something it read changed. One that reaches a reader only through a piece asks for attention, since the piece's exports guard it.
 - **They fail validation,** each an invariant the project mends in its own files:
   - an output of point 1, or a file of written code, with no record, or a record that names a variant whose file is missing
-  - variants of one picture whose exposed points differ in their names
+  - variants of one picture whose exposed points differ in their names, or variants one scene holds that differ in pixel size or in the places of their exposed points (the record of the engine and its plugins)
   - a label placed at an exposed point that the picture's frame cuts off
   - a file of written code, or a living piece's current copy, stale because something it read changed
   - a file of the version a piece was delivered with that is missing, or whose hash no longer matches
-- **A warning:** a stale picture or local component, and a living piece's current copy made over a stale output, until both are made again. So is written code stale only by its writer's version: its values still hold, so a release of the capability fails no project.
+- **They ask for attention:** a stale picture or local component, and a living piece's current copy made over a stale output, until both are made again. So is written code stale only by its writer's version: its values still hold, so a release of the capability fails no project.
 - **Never reported:** an outside program whose version differs from the one recorded, and a delivered piece's outputs that a change made stale. A delivered piece keeps them as they were delivered.
 
 ## Rationale
@@ -137,14 +140,14 @@ These findings join the capability's check within validation, at the severities 
 
 **Why software-analysis's shape, and why each version is kept.** One canonical reading, with its version and hash named, lets a value verify on every machine and under every later release. Software-analysis reads texts, and this form reads files and values, so only the shape is shared. Every version is kept, since a new one that made every output stale would run each program again with no input changed. A picture made again may differ in its pixels.
 
-**Why a stale picture warns, and what is read directly fails.** People read a living piece's copy, and a project's software reads written code, so either misleads at once when stale. A picture or a local component reaches a reader only through an export, which stops on it. A draft also goes stale and fresh many times while it is made, and its program may need an outside program the machine lacks.
+**Why a stale picture asks for attention, and what is read directly fails.** People read a living piece's copy, and a project's software reads written code, so either misleads at once when stale. A picture or a local component reaches a reader only through an export, which stops on it. A draft also goes stale and fresh many times while it is made, and its program may need an outside program the machine lacks.
 - **The precedent.** Software-analysis fails a stale overview for the same reason as the copy: readers read it ([software-analysis:DEC-003-analysis-diagrams] point 8).
 
-**Why a delivered piece's outputs are never reported stale.** A delivered piece keeps what it was delivered with, and making its pictures again would change it. A warning that must never be acted on would only be noise.
+**Why a delivered piece's outputs are never reported stale.** A delivered piece keeps what it was delivered with, and making its pictures again would change it. A finding that must never be acted on would only be noise.
 
-**Why every export keeps a number.** A handed-out file is what an audience saw, so it stays as it was, and a hash of it shows if it was overwritten. A number is short, sorts and is easy to say, as in "send me version 3", and the record keeps the time. The person who delivers a piece names the version handed out, since a file is often handed out before its piece is marked delivered.
+**Why every export keeps a number.** A handed-out file is what an audience saw, so it stays as it was, and a hash of it shows if it was overwritten. A number is short, sorts and is easy to say, as in "send me version 3", and the record keeps the time.
 
-**Why in the piece's folder, and what is committed.** A piece is then one folder: what it is, its content and what it made. A repository host shows only committed files, so a living piece's copy is committed. A large file stays in a repository's history for good, so the versions nobody handed out stay out.
+**Why in the piece's folder, and what is committed.** A piece is then one folder: what it is, its content and what it made. A repository host shows only committed files, so a living piece's copy is committed. A large file stays in a repository's history for good, so the versions nobody handed out stay out, local to the clone that made them, where nothing in the piece's folder has to keep them out of version control.
 
 ### Alternatives considered
 
@@ -165,8 +168,9 @@ These findings join the capability's check within validation, at the severities 
 - **Graph positions and shared models** are decided by the change that builds them, within point 1.
 - **The record of the engine and its plugins** decides the document of resolved values, what a plugin declares and how it is versioned. It also decides how the scene holds a picture's variants and exposed points, and the lock in written code's declaration. And it decides how the engine hands a program what it computed, such as measured frames, computed without that program's own output.
 - **The record of brands and notations** decides the key that names a combination of modes, and the key a variant takes.
-- **The record of change over time** decides the states, how a piece becomes delivered and when a lock moves. An upgrade's before-and-after shows the committed pictures, reports the stale ones and runs no program.
+- **The record of change over time** decides the states, how a piece becomes delivered and when a lock moves.
+- **A lock move's before-and-after** shows the committed pictures, reports the stale ones and runs no program.
 - **The record of files and validation** decides where pieces and the declarations of written code lie, and the severity policy. It also decides how the outside programs a producer calls are checked.
 - **The CLI reference** names the commands that frame a program's run, run a producer, export a piece and list a project's exports.
 - **A documentation page** that shows a piece anchors the piece's content, never its copy, as living-docs asks ([living-docs:DEC-002-visual-elements] point 4).
-- **Two branches that export one piece** may take one number, and the record of versions conflicts on merge. A delivered version never takes a new number. The other version takes the next free one, its files renamed with it.
+- **Two branches that export one piece** may take one number, and the record of exports conflicts on merge. A delivered version never takes a new number. The other version takes the next free one, its files renamed with it.

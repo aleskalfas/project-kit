@@ -81,7 +81,9 @@ A *formula* computes one number in a component's data.
 ### 7. The engine owns one document of a brand's resolved values
 
 - **What it holds:** each exported token of a brand, resolved over its chain of bases, in each combination asked for, named by token path and key. It also holds the component tokens of the component libraries resolved with it.
-- **Under a lock.** A piece's lock names every version. *Written code*, a brand written out by a code writer, is declared by the project like a piece, in a file of its own that names where the code goes (the record of files and validation). The declaration also names the code writer, the version of the form it follows, and a lock of the brand, its bases and the component libraries it holds. A brand checked alone takes the newest version the project holds of each major it builds on.
+- **Under a lock.** A piece's lock names every version. *Written code*, a brand written out by a code writer, is declared by the project like a piece, in a declaration the record of files and validation places. The declaration names the code writer, the version of the form it follows, and a lock of the brand, its bases and the component libraries it holds.
+- **A person moves written code's lock,** on purpose, as a piece's lock moves, so written code changes only then. The declaration is then a file a command rewrites. So it is kept apart from content, and carried over at a change of format, as the records of files and validation and of change over time treat such files.
+- **A brand checked alone** takes the newest version the project holds of each major it builds on.
 - **Who reads it.** A renderer takes the scene's roles from it. The code writer for JSON writes it out unchanged, and every other code writer writes it in its own language.
 - **What a program run while preparing receives.** A command of the capability writes, for a producer or a helper, the values it declares. It adds the measured frames it declares, from a scene computed with that program's own output left out, so its output never changes what it measured. They come in the document's form.
 - **Computed, never edited or committed,** like the scene.
@@ -127,17 +129,23 @@ A *formula* computes one number in a component's data.
 - **The ways out today:** a project's own program run while preparing is a helper, and makes a picture a producer would (the founding record, point 8). Code reads the JSON a code writer writes. A project that needs another medium asks for its renderer.
 - **When to revisit:** once a project needs a plugin the capability will not ship. The seam's own version lets it open then without a break.
 
-### 13. What the checks report, and how severely
+### 13. The scene check reads each piece's last render, and computes only what changed
 
-Each finding below fails validation where it lies in a file the project can correct, as the record of files and validation decides. Elsewhere, as in a released library version or a delivered piece's drawing, it asks for attention and names who can correct it (COR-055 points 1 and 4).
-- **Within validation's time.** The check computes every scene it judges in each run, from the files alone. It finishes within validation's bound with no result kept from an earlier run, as on a fresh clone. Where one validator cannot, the scene check is split among several validators. No finding is read from a render's record, since the scene is never committed.
+Validation runs each validator under a fixed bound, and the work of computing every scene grows with a project's pieces, languages and combinations. So the check judges what it can read from the files without computing every scene.
+- **Each render keeps a record of its piece's findings,** beside the piece, keyed by a hash of every file its scenes were computed from, as the record of work outside the engine and outputs gives such a key its form. The project commits it, so a fresh clone reads it. It is a file a command rewrites, apart from content (the record of files and validation).
+- **A record that verifies is read.** Its findings are the check's for that piece. The engine's version is not in the key, since a new engine reaches a piece only at a render a person runs (the founding record, point 7).
+- **A piece whose record is missing or does not verify** has its scenes computed by the check, in that run, from the files alone. So the work grows with what a change touched, not with the project, and no result kept outside the repository is needed.
+- **A delivered piece's scenes are not computed** (the record of files and validation).
+
+### 14. What the checks report, and how severely
+
+Each finding below fails validation where it lies in a file the project can correct, as the record of files and validation decides. Elsewhere, as in a released library version, it asks for attention and names who can correct it (COR-055 points 1 and 4). A delivered piece's drawing is not judged, as that record decides.
 - **Fails validation:**
   - a formula that cannot be read, reads what it may not reach, adds a number with no unit to a length, or divides by zero
   - a loop of references, a value with two owners, a reference to an exposed part or point that is missing, or a component that places itself
   - a page inside a page, or a mode a piece names that its brand lacks
-  - variants of one picture in one scene that differ in pixel size, or in the places of their exposed points
   - a text that overflows its box, or a component that gets less than it asks for, measured from a font file
-- **A warning, never failing:** an overflow measured from a table or by an estimate, and a loss nobody has accepted.
+- **Asks for attention, never failing:** an overflow measured from a table or by an estimate, and a loss nobody has accepted.
 
 ## Rationale
 
@@ -154,6 +162,8 @@ Each finding below fails validation where it lies in a file the project can corr
 
 **Why one pattern for three kinds.** Each kind meets the same two questions: what can it take, and what did it lose (the founding record, point 2). One declaration and one loss report give one check, and one way to accept a loss.
 
+**Why the check reads each piece's last render.** Validation runs each validator under one fixed bound, and its validators are declared once, so neither can grow with a project. Computing every scene in every run would fail a large project for its size, for no fault in its files. A record keyed by what the scenes were computed from is a fact about the files, as a stale picture's record is, and a change touches few pieces. Keeping the engine's version out of the key follows the founding record: a piece meets a new engine at a render a person runs.
+
 ### Alternatives considered
 
 - **A constraint solver,** such as Cassowary. Rejected. Its results are hard to predict, and a conflict is hard to explain.
@@ -162,10 +172,12 @@ Each finding below fails validation where it lies in a file the project can corr
 - **Renderers that wrap text, or text measured in a browser.** Rejected. A browser is heavy, and a whiteboard service's fonts are not in one.
 - **A scene for every combination of modes.** Rejected. Colours would multiply scenes, and a page could not switch modes while open.
 - **One version for everything, a producer reading a code writer's JSON, or written code that follows the newest values.** Rejected for the reasons above.
+- **Every scene computed in every run, split among several validators where one cannot.** Rejected. The validators are declared once, so the split cannot follow a project's size.
+- **A stale record of findings failing validation until the piece is rendered again.** Rejected. A draft goes stale at every edit, and would hold every change of the project.
 
 ## Implications
 
 - **The capability's reference** lists the formula's functions and names, the operators, the primitives and each plugin's declaration. Its schemas hold the forms of the seam and of the document of values.
-- **The walking skeleton** draws one pattern with one block, using a formula and a layout operator. It measures text from a committed font in one profile, and breaks lines in the engine. A small program reads the values it declares, and the piece places a label at its picture's exposed point. The renderer of vector pictures draws the scene and reports what it could not draw.
+- **The walking skeleton** draws one pattern with one item component, using a formula and a layout operator. It measures text from a committed font in one profile, and breaks lines in the engine. A small program reads the values it declares, and the piece places a label at its picture's exposed point. The renderer of vector pictures draws the scene and reports what it could not draw. Its render keeps the record of findings the check reads (point 13).
 - **Later slices** build the whiteboard renderer with its profile and its record, the web page renderer, producers, and taking edits back.
 - **The record of work outside the engine and outputs** decides a produced picture's rules, its variants, exposed points and the record of what it was made from, and where written code goes.

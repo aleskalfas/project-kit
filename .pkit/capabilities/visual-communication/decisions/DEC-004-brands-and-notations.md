@@ -27,7 +27,7 @@ The capability's design work ([project-kit#2424](https://github.com/aleskalfas/p
 - **A value may alias another token.** A chain of aliases ends in a value, never in a loop.
 - **What the format cannot say goes in its own extension point,** under one name the capability keeps for itself. Examples are a picture given as a value, how a font is measured, and whether an axis changes values or sizes. So a brand's files stay valid DTCG, and other tools read them.
 - **The modes are one Resolver document.** It holds the brand's token files as sets, each axis as a modifier, each mode as one of its contexts, a default for each axis, and the order in which sources win.
-- **The brand's library file** names the version of the DTCG format its tokens follow, 2025.10 first, and holds its open roles (point 6).
+- **The brand's library file** names the version of the DTCG format its tokens follow, 2025.10 first, and holds its open roles (point 6). The engine keeps reading every DTCG version a released brand may name, since a library copy is never rewritten.
 - **A brand's own form,** its layouts and the parts no shared component has, is made of components. They take the format every component has, and are read with the brand's name (the founding record, point 4).
 
 ### 2. Modes lie on axes, and each axis changes values or sizes
@@ -100,7 +100,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 
 - **A font role gives a list of families.** The first family measures each character it has, and the next measures the rest.
 - **Each font profile says how each font is measured:** from font files, from a table of widths, or by an estimate. The default profile measures and draws from files. A table or an estimate stands only for a font a medium holds itself, such as a whiteboard service's. That table ships with the renderer for the medium, and the scene records how each text was measured.
-- **A font file is committed unchanged with its licence,** where its licence allows. A font the brand may not ship is a file the project commits in its own place, which the brand names by a hash. A project that may not commit it either cannot draw in that profile. The record of files and validation decides the place.
+- **A font file is committed unchanged with its licence,** where its licence allows. A font the brand may not ship is a file the project commits in the capability's location (the record of files and validation), which the brand names by a hash. A project that may not commit it either cannot draw in that profile.
 - **Never a font found on the machine,** since the engine reads only the project's files (the founding record, point 8).
 - **A missing font refuses the render,** before anything is laid out, naming the font. Every character is checked against the families that measure it.
 
@@ -114,7 +114,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 
 ### 11. What the checks report, and how severely
 
-Each finding below fails validation where it lies in a file the project can correct, as the record of files and validation decides. Elsewhere, as in a released library version or a delivered piece's drawing, it asks for attention and names who can correct it (COR-055 points 1 and 4).
+Each finding below fails validation where it lies in a file the project can correct, as the record of files and validation decides. Elsewhere, as in a released library version, it asks for attention and names who can correct it (COR-055 points 1 and 4). A delivered piece's drawing is not judged, as that record decides.
 - **Fails validation:**
   - a value given to a role its base does not open, an open role its base does not have, or an alias to a token its base keeps private
   - a brand built on another that adds an axis or a mode, or changes a default
@@ -158,7 +158,7 @@ Each finding below fails validation where it lies in a file the project can corr
 - **Two bases, or new axes in a brand built on another.** Rejected for the reasons above.
 - **A key that holds every axis, or only mode names, or axes in an order each brand declares.** Rejected. The first renames everything when an axis is added, the second lets modes clash, and the third can be broken.
 - **Every token exported.** Rejected. A palette's shape would become a promise.
-- **A font profile set on each renderer.** Rejected. Fonts are design, which the logical layer sets (the founding record, point 2).
+- **Fonts chosen by a renderer, outside the brand.** Rejected. Fonts are design, which the logical layer sets (the founding record, point 2). A renderer only names which of the brand's profiles it draws in.
 
 ## Implications
 

@@ -71,7 +71,7 @@ A *library* is a named, versioned set that pieces share, released by one owner. 
 Each library holds one of three kinds of content:
 - **A brand holds values:** what each role looks like, such as colours, fonts, sizes, spacing and pictures, in each of its *modes*, such as light and dark. It may also hold the form that is its own: how it draws the layouts of the kinds of work it serves, and the few parts that no shared component has. A brand may build on another brand. It keeps its base's form and every value it does not change, and changes only the values its base lists as open to change.
 - **A component library holds structure:** components, which name roles and never raw values. The capability ships component libraries, and anyone may publish another.
-- **A notation holds meaning:** it maps each *concept* of a subject to roles, such as a colour, an icon or a shape, and keeps the subject's own marks, such as its logo. A piece may name several notations.
+- **A notation holds meaning:** it maps each *concept* of a subject to colour roles, and perhaps to an icon or a shape. It keeps the subject's own marks, such as its logo. A piece may name several notations.
 
 What holds across the three:
 - **Roles stand between structure and values.** A *role* is a named purpose a value serves, such as an accent colour or a surface. A component names roles, and a brand gives each role its value. A *raw value* is a literal a role could stand for, such as a colour code or a font file, and only a brand holds one. A notation's marks, a library's plain files and the pictures in content are files of their own, not values a role stands for.
@@ -84,7 +84,7 @@ One model binds every component, whichever library publishes it, a local compone
 - **A pattern arranges items.** A *pattern* is a component that lays out one or more lists of items, such as the steps of a flow or the levels of a pyramid. It decides their order, direction and numbering, the arrows between them, and their sizes.
 - **An item component draws each item.** For each list, the pattern names the component that draws its items by default. Content may name another for the whole list, and an item may name its own, a pattern included, so a row of cards may end in a note. An item's fields are its item component's, with any the pattern declares for its arrangement, each checked by the schema that declares it.
 - **What content places says what it is, and its component decides how that looks.** An item, or any other component the content places, may carry a *state* its component declares, such as marked or broken. It may name a concept, read with its notation (point 5). Its component gives each state its look, through roles of any kind, such as a colour or a line's style.
-- **Options are declared, never free.** A component's *option* takes a word from a list the component declares, or the id of an item it names (point 3). It never takes a free number, a size or a raw value. A pattern's options choose only its arrangement, the colour each place gives its item included. The rest of an item's look is its item component's.
+- **Options are declared, never free.** A component's *option* takes a word from a list the component declares, or names something in the piece: an item by its id (point 3), or a named point of a picture made while preparing (point 8). It never takes a free number, a size or a raw value. A pattern's options choose only its arrangement, the colour each place gives its item included. The rest of an item's look is its item component's.
 - **Colour says what a thing is.** An item's colour comes from the concept it names, and each of its parts takes its role from that colour. Where it names none, a default applies: the pattern's for the item's place, else its item component's, else that of the component it sits in. A state may change the colour. Content may also point one part at another role, never at a value.
 
 ### 7. A piece's libraries change only when a person moves its lock
@@ -99,7 +99,7 @@ Each piece names the exact version of each library it uses, the libraries those 
 
 Some pieces need what the engine's tools cannot compute, such as items placed on a circle, the layout of a graph, or a picture made by a program, such as a 3D render. Such work runs while a piece is prepared, never inside the engine.
 - **Who runs it, and what it writes.** A person or an agent runs a program: a *helper*, which is a script of the project's own, or one of the capability's producers (point 2). It writes a local component, as data, or a picture.
-- **Checked like everything else.** Its output is kept beside the piece. A local component it writes holds no raw values and takes its text from the content. It places its parts by formulas, or is written once for each scene it is drawn in, so it fits each language and set of fonts. A picture takes its values from the brand alone.
+- **Checked like everything else.** Its output is kept beside the piece. A local component it writes holds no raw values and takes its text from the content. It places its parts by formulas, or is written once for each scene it is drawn in, so it fits each language and set of fonts. A picture takes its values from the brand alone, holds none of the piece's words, and may name points in its pixels, so the piece places a label at one as its own text.
 - **A record of its inputs says when its output is stale,** so the program runs again when any of them changes.
 - **The engine runs no helper, no producer and no other program,** and reads neither the machine's fonts nor the network. It computes only from the project's files, so the same files give the same scene on every machine, and its check can run within validation.
 - **A helper needed again and again** is a sign that the engine lacks a general tool (point 4).
@@ -120,7 +120,7 @@ The capability works with no other capability installed.
 
 The capability is shipped by the methodology (COR-031), and a project installs it only when it asks for it (COR-017).
 - **A project's own pieces and libraries** live in its own files, never in the capability's folder. So no project's work ships with the capability.
-- **Every copy of a library in a project** is the project's file, whoever releases the library, a shipped library's copy included (COR-001). A copy that a lock names is never rewritten, so an update of the capability changes no piece's libraries.
+- **Every copy of a library in a project** is the project's file, whoever releases the library, a shipped library's copy included (COR-001). A *library copy* is a released version of a library, held whole in the project. A copy that a lock names is never rewritten, so an update of the capability changes no piece's libraries.
 
 ## Rationale
 
