@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=5 fingerprint=sha256:d9bcb997aad3d7dca1bab702afd49436d224b13ff01782d21a5dfb9dc8f7a7d4 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:1eb28c25ced258370eff654c85273a323721a23ea96874b9268ce5c145d16b2e -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -346,6 +346,43 @@ flowchart LR
     UC_048(["UC-048 — Put the system's CLI on my machine at a release"])
   end
   ACT_adopter --> step_1
+  step_1 --> step_2
+```
+
+#### [JRN-008 — Release a breaking backbone change with its migration](../use-case-model/journeys/JRN-008-release-breaking-backbone-change.md)
+
+```mermaid
+flowchart LR
+  accTitle: JRN-008 — Release a breaking backbone change with its migration
+  accDescr: The flow of JRN-008: ACT-methodology-maintainer takes 2 steps in order, UC-010, UC-008. It relies on 3 use cases outside the journey, drawn apart with no arrow.
+  ACT_methodology_maintainer["ACT-methodology-maintainer — Methodology maintainer"]
+  step_1(["1. UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across"])
+  step_2(["2. UC-008 — Release the backbone so adopters can upgrade and pin to it"])
+  subgraph relies_on["Relied on, outside the journey"]
+    UC_003(["UC-003 — Declare what my change means for the next release"])
+    UC_014(["UC-014 — Develop the methodology in its source repository"])
+    UC_034(["UC-034 — Land my change on the default branch"])
+  end
+  ACT_methodology_maintainer --> step_1
+  step_1 --> step_2
+```
+
+#### [JRN-009 — Release a breaking change of my component with its migration](../use-case-model/journeys/JRN-009-release-breaking-component-change.md)
+
+```mermaid
+flowchart LR
+  accTitle: JRN-009 — Release a breaking change of my component with its migration
+  accDescr: The flow of JRN-009: ACT-component-author takes 2 steps in order, UC-011, UC-009. It relies on 4 use cases outside the journey, drawn apart with no arrow.
+  ACT_component_author["ACT-component-author — Component author"]
+  step_1(["1. UC-011 — Carry the projects that installed my component across a breaking change of it"])
+  step_2(["2. UC-009 — Release my component on its own version"])
+  subgraph relies_on["Relied on, outside the journey"]
+    UC_003(["UC-003 — Declare what my change means for the next release"])
+    UC_015(["UC-015 — Package a recurring discipline as a capability"])
+    UC_019(["UC-019 — Adapt the system to another harness"])
+    UC_034(["UC-034 — Land my change on the default branch"])
+  end
+  ACT_component_author --> step_1
   step_1 --> step_2
 ```
 
