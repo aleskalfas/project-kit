@@ -6,7 +6,7 @@ date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** a project keeps its libraries and its pieces in one location of its own tree, which it may choose. Each file says at its top which schema checks it. A content file holds only content, keeps a few keys and marks free for what may read it later, and lies apart from the files commands rewrite. The capability's check joins the project's one validation. It fails the project only for what the project can correct in its own files.
+**In plain terms:** a project keeps its libraries and its pieces in one working folder of its own tree, apart from its documentation, and may choose where. Each file says at its top which schema checks it. A content file holds only content, keeps a few keys and marks free for what may read it later, and lies apart from the files commands rewrite. The capability's check joins the project's one validation. It fails the project only for what the project can correct in its own files.
 
 ## Context
 
@@ -20,13 +20,14 @@ Four facts shape the answer:
 
 ## Decision
 
-**A project's libraries and pieces lie in one location of its own tree, a documentation location the capability declares. Each file of the capability's format names its schema at its top. Content files share one shape, keep free the keys and marks a later reading needs, and lie apart from what commands rewrite. The capability's check is one validator of the project's validation, and every finding of every check follows one severity policy.**
+**A project's libraries and pieces lie in one location of its own tree, a working folder apart from its documentation. Each file of the capability's format names its schema at its top. Content files share one shape, keep free the keys and marks a later reading needs, and lie apart from what commands rewrite. The capability's check is one validator of the project's validation, and every finding of every check follows one severity policy.**
 
 ### 1. The capability's files and the project's work lie apart
 
 - **The capability's own files** are its code, its plugins, its schemas and the libraries it ships. They lie in its folder, which the methodology ships, and the project never edits them (COR-001).
 - **A project's work lies in one location** of its own tree, the capability's *location*: its libraries and its pieces. None of it lies in the capability's folder, as the founding record requires ([visual-communication:DEC-001-visual-communication-discipline] point 11).
-- **It is a documentation location the capability declares** (COR-049 point 4). Its default lies under the project's internal documentation root, and a project may record another path. It is recorded when a command first writes there, so a later change of a root or of the default moves nothing (COR-049 point 5). Moving the work is an operation a person runs on purpose (COR-049 point 6). The location lies inside the repository, outside the methodology's own folder and outside any hidden folder, where the core's data validation reads.
+- **It is a working folder, apart from the documentation.** Its default is one folder of a fixed name at the top of the repository, which lies outside the documentation roots (COR-049) unless a root is the repository itself. A project may record another path. The location lies inside the repository, outside the methodology's own folder and outside any hidden folder, where the core's data validation reads.
+- **Recorded once, moved on purpose.** A command records the location in the capability's configuration when it first writes there, as a component records a location it derives (COR-049 point 5), so a later change of the default moves no recorded location. Where the default folder already holds files of another kind, the command records nothing and asks for a path. Moving the work is an operation a person runs on purpose. The capability shows the location, and whether a command recorded it, where it reports its state.
 - **Libraries** lie in one folder of the location, the *library folder*. The record of change over time decides what it holds.
 - **Each piece's sources are one folder:** what the piece is, its content in each language, its local components and the pictures its content shows. So they are copied, archived or removed in one step. Where what a piece produces lies, such as an export or a figure a documentation page shows, the record of work outside the engine and outputs decides, with the rules of what shows it ([living-docs:DEC-002-visual-elements] point 5).
 - **A declaration that a brand be written out as code** is a file of its own in the location, beside the pieces, since it is the project's visual work as a piece is. It names where the code goes, a file of the project's own anywhere in its tree, and the record beside that code lies with it. The check finds both through the declaration. What else a declaration holds, the record of the engine and its plugins decides.
@@ -36,7 +37,7 @@ Four facts shape the answer:
 ### 2. The configuration holds only the project's choices as a whole
 
 - **Where it lies:** in the capability's own project configuration, as other capabilities keep theirs. Its schema refuses an unknown key.
-- **What it holds:** which plugins that reach a service are turned on (point 8). The location is recorded where the core records a capability's documentation locations (point 1).
+- **What it holds:** the location, once a command has recorded it (point 1), and which plugins that reach a service are turned on (point 8).
 - **What it never holds:** a look, a lock, or a choice that belongs to one piece or one declaration. Those lie in a library, a piece or a declaration (point 1), so a piece copied to another project reads the same there.
 
 ### 3. Each file names its schema
@@ -100,7 +101,7 @@ Each record of the capability sets the severity of each finding its checks raise
 
 ## Rationale
 
-**Why one location, declared as a documentation location.** A project's work is its own, so it lies in its own tree. One location keeps a piece's libraries in reach of every piece, and keeps a project's visual work in one tree to copy, review or exclude. A deck or a poster is no page of the documentation. Yet the core's documentation location already gives a capability's folder all it needs: a default under a root, a value recorded at first use, a line in the status report, and the frame within which a component declares the places the change check reads (COR-049, COR-050 point 1). A setting of the capability's own would repeat it all.
+**Why one location, a working folder apart from the documentation.** A project's work is its own, so it lies in its own tree. One location keeps a piece's libraries in reach of every piece, and keeps a project's visual work in one tree to copy, review or exclude. A deck, a poster or a library is no page of the documentation. It is a working source that changes while the work goes on, with files no reader of the documentation looks for, such as content in each language, locks, fonts and pictures a program wrote. The documentation is kept in order for its readers, so it holds only what its pages show. The core derives a documentation location only under a documentation root (COR-049 point 4), so the capability keeps the location in its own configuration, recorded at first use as the core records a location.
 
 **Why each file names its schema.** Bound by its path, a file would need a pattern that follows every project's location. A pattern cannot, and one that matches everywhere claims other tools' files. The field at the top makes the binding visible to a reader and to the methodology's tools (COR-023). The core skips a file that names no schema, so the capability's check catches one that should.
 
@@ -118,7 +119,7 @@ Each record of the capability sets the severity of each finding its checks raise
 
 - **A path pattern for each schema, or one for the default location beside the field.** Rejected. A pattern cannot follow a location each project chooses, and two ways to bind one file add a second answer to "which schema is this?".
 - **Binding by path, through a refinement of the core that reads a pattern within a capability's location.** Rejected. It needs a core change before the first release, and a piece copied out of the location would lose its binding. The field travels with the file.
-- **A setting of the capability's own for the location.** Rejected. It repeats the core's documentation location, and leaves a later reading of content no location to declare its places within.
+- **A documentation location the capability declares (COR-049 point 4), under the internal documentation root.** Rejected. Its default would put working sources among documentation kept in order for its readers. It would have given a later reading of content its places within the core's frame, which a working folder gains only through a refinement of the core (Implications).
 - **Freeing the container's key once the later reading is decided.** Rejected. Every file written before would need a new format.
 - **A piece's lock inside its content.** Rejected. Every render would change the content.
 - **A check of its own, outside validation.** Rejected. A gate that calls one command forgets nothing registered (COR-055).
@@ -130,5 +131,5 @@ Each record of the capability sets the severity of each finding its checks raise
 - **The references hold the inventory:** the CLI reference lists the commands and which of them write. The capability's README names the location's default and the configuration's keys. The schemas hold the shapes.
 - **The other records** set the severities of their own findings under point 7: change over time for locks and versions, brands and notations for contrast and fonts, the engine for overflow and references between elements, work outside the engine for stale pictures and exports.
 - **The core's data validation keeps its own severity** on every file bound through it, a library copy included. A file its schema refuses fails the project, wherever it lies. The commands that bring in a library version refuse one the installed capability cannot read, so such a copy arrives only by hand. What a change of the format number asks of the core, the record of change over time says.
-- **A later reading of content** can declare its places within the capability's location, and the library folder as held documents, so that no library copy is read as an artefact the project must keep up to date (COR-050 point 1).
+- **A later reading of content needs a refinement of the core.** It would declare its places within the capability's location, and the library folder as held documents, so that no library copy is read as an artefact the project must keep up to date. The core lets a component declare places and held documents only within its documentation locations (COR-050 point 1), and keeps a capability's documents under the documentation roots (COR-049). So the refinement that makes a content file an artefact also lets a capability declare them within a working folder of its own.
 - **The capability's name and its schemas' names are written in every file.** A library copy is never rewritten, so the capability keeps these names for good. A project that uninstalls the capability keeps its files, which then name a schema nothing installed holds. The core's data validation fails them until the capability is installed again or the files leave the project.
