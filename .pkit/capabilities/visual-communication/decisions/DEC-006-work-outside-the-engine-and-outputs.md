@@ -1,17 +1,172 @@
 ---
 id: DEC-006
-title: <short imperative title>
+title: A program run while preparing may write a picture that follows the brand, and every export keeps its number
 status: proposed
 date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+**In plain terms:** a program run while a piece is prepared computes what the engine cannot, such as a ring of items or a 3D render. It may write a local component, and also a picture, which takes its values from the brand alone and holds none of the piece's words. Each such output says what it was made from, so a check can tell when it is stale. Every file a piece is handed out as is kept under a version number.
+
 ## Context
+
+The founding record sends work the engine's tools cannot compute to a program run while a piece is prepared, never inside the engine. Examples are items placed on a circle, the layout of a graph and a picture made by a program, such as a 3D render. The program is a *helper*, a script of the project's own, or a *producer*, a plugin the capability ships.
+
+The capability's design first let a helper write only a local component, as data with no raw values. A picture holds the brand's values in its pixels, so it could not meet that rule.
+
+A later case asked for one. A game platform draws its boards in 3D, and wants each in a game's manual, a deck and a documentation page, under each game's brand. On 1 November the maintainer approved widening the work done while preparing to pictures made by a program ([project-kit#2423](https://github.com/aleskalfas/project-kit/issues/2423)).
+
+Three facts shape the rules on such a picture:
+- **Text inside a picture** is measured from no committed font, and is not translated with the content.
+- **A picture's look depends on the values it reads,** and a brand's modes on several axes multiply the combinations a piece is drawn in.
+- **A program may call an outside program,** such as a browser that draws a 3D scene. Such a program can draw differently from one machine to another, and it updates itself outside the project.
+
+A piece is also handed out as files, such as a PDF of a talk or a picture in a documentation page. The talk the design started from was drawn on a whiteboard service, which exported only whole boards ([project-kit#2424](https://github.com/aleskalfas/project-kit/issues/2424)). Once handed out, a piece's files are its real freeze, as the founding record says. A figure in documentation must be committed for a repository host to show it, and kept fresh.
+
+The core layer supplies one validation that the capability's check joins, with one severity that fails it (COR-055). Software-analysis keeps a fingerprint of the texts that a requirement's revisits depend on ([software-analysis:DEC-006-text-in-body] points 6 and 7). Living-docs decides where a page's images lie ([living-docs:DEC-002-visual-elements] point 5).
 
 ## Decision
 
-### 1. Point title
+**A program run while preparing may write a picture, as well as a local component, and the engine never runs it. A picture takes every value from the brand, holds none of the piece's words, and is made once for each distinct set of values it reads. Each such output carries a fingerprint of what it read, kept apart from what is only recorded. Every export keeps a version number, with a record of what it was made from.**
+
+### 1. A program run while preparing may write a picture
+
+A helper or a producer run while preparing may write a local component, and also a picture, such as a 3D render. The engine never runs either. The founding record sets this frame, and its widening to pictures is the one the maintainer approved on 1 November. This record decides the rules on both outputs.
+- **Run on purpose.** No render, no check, no export and no upgrade runs a program. A person or an agent runs it.
+- **Who starts it.** A helper runs as the project runs any script of its own, under the project's permission model (COR-028). A producer runs through a command of the capability.
+- **What it reads is declared first.** Before it runs, a program declares its input files and the brand's values it reads, by name. It also declares what it reads from the engine, such as a node's measured size.
+- **Commands of the capability frame the run.** One, before the run, takes the fingerprint of what was declared (point 5) and hands over the declared values. Another, after it, checks that no input changed during the run and writes the record beside the output.
+- **A helper stays the project's code.** It never goes into a library, since a library holds data. A helper that several pieces need is a sign that the engine lacks a tool, as the founding record says.
+- **A local component that a helper writes** follows the founding record's rules for one, such as no raw values and text taken from the content. This record adds its fingerprint.
+- **A graph's layout** is such work: a helper may arrange a graph while preparing. How its positions are kept, and how several views share one model, are decided by the change that builds them.
+
+### 2. A picture takes its values from the brand alone, and holds none of the piece's words
+
+These rules bind every picture made while preparing, whichever program writes it.
+- **Values from the brand.** Every value the program applies that a role could stand for, such as a colour, comes from the brand the piece names, under its lock. The program reads it through the document of resolved values that the record of the engine and its plugins decides.
+- **Roles in what is written for the picture.** The inputs written for the picture, such as a 3D scene's lights and materials, name roles, never raw values. The schema of a producer's inputs refuses a raw value.
+- **Art keeps its own.** A model, its texture and any lettering on the thing shown are art, made in the tools made for them. Their own colours and lettering change with neither the brand nor the language, as a content picture's do not.
+- **None of the piece's words.** The piece places every word it says, such as a label, as ordinary text, measured from the committed fonts and translated with the content.
+- **Exposed points.** The program also writes the picture's *exposed points*: named points in its pixels that the piece may point at. The piece places a label at one, or ends a connector there, as parts of its content.
+- **The same exposed points in every variant** (point 3), each at its own place, so a label holds in every mode.
+- **What no check sees.** A check reads a program's inputs and the record beside its output, never what the program did. A project's script can read a file it did not declare, which its fingerprint then misses. A reviewer judges such a read, and a picture that breaks these rules, such as one with a label drawn into it.
+
+### 3. One picture for each set of values it reads, at a fixed pixel size
+
+- **Variants.** A picture is made once for each distinct set of the values it reads, never once for each combination of modes. Each is a *variant*, and combinations that give it the same values share one.
+- **An example.** A picture whose colours change between light and dark, and not with contrast, has two variants, however many combinations the piece is drawn in.
+- **Named by the brand's key.** A variant takes the key of the first combination it serves, in the order the brand declares its axes and modes. The record of brands and notations decides the key, and the record beside the variants says which variant each combination takes.
+- **Every variant travels with the scene,** so a medium that switches modes while open, such as a web page, switches the picture too. The record of the engine and its plugins decides how the scene holds them.
+- **A fixed pixel size.** Each variant is made at a pixel size fixed before the program runs. It is given as an input, or read from the brand as one of its values. A medium that needs more pixels, such as print, gets them through that size, never from a renderer. A size that an axis changes gives a variant of its own, by the rule above.
+- **Exposed points scale with the picture.** They are written in the variant's pixels, and the engine maps them into the frame the picture fills.
+
+### 4. Where produced output and written code live
+
+- **In the piece that uses it.** A produced picture, or a local component a helper writes, lives in the folder of the piece that uses it, with its record beside it. It is made under that piece's lock, so another piece under another lock makes its own.
+- **Apart from content.** Produced output is kept apart from the pictures the content holds, such as a screenshot. A program rewrites the one, and a person owns the other, as living-docs keeps produced images apart from hand-made ones ([living-docs:DEC-002-visual-elements] point 5).
+- **Never in a library copy.** A library copy that a lock names is never rewritten, as the founding record says. A library may hold a model, or a picture, as a plain file, and a component may declare a slot that a produced picture fills.
+- **Written code** is what a code writer writes out from a brand, such as CSS variables. It goes where the project names, as a file of the project's own. The code that reads it, such as a web page or a game, lives in the project's tree.
+- **Written code follows a version the project names,** and a person moves that version on purpose, as a piece's lock moves. The brand's version says what the code holds, so it takes no numbered versions. Whether it is committed is the project's choice, as for any file its own build writes.
+
+### 5. A fingerprint says when output is stale, and the rest is only recorded
+
+Each output of point 1, and each file of written code, carries a record beside it. The record holds a hash of each thing the program read, and its *fingerprint* is the hash of them all. A command of the capability writes it, so nobody writes a fingerprint by hand. Every fingerprint the capability keeps, an export's included (point 7), follows this point and the next.
+- **What it compares:**
+  - each input file, a helper's own files among them
+  - each value it read from the brand, in each combination of modes it serves, from the brand version it follows
+  - what it read from the engine, such as a node's measured size
+  - each variant's pixel size
+  - a producer's or a code writer's own version
+- **Values, not versions.** Everything a program read is compared by its value. So a release of the engine that changes a measurement makes stale only the outputs that read it.
+- **A plugin's own version** is the one thing compared by version, since what a plugin does inside is no value a check can read. The record of the engine and its plugins decides how a plugin is versioned. Reference outputs pinned to each version catch a change made without a new one.
+- **What is only recorded:** each outside program the program called, with its version, and the machine, the time and the capability's version. They are kept beside the fingerprint and never compared.
+- **The check verifies it** within validation, and runs no program. An output whose fingerprint no longer verifies is *stale*. The finding names each thing that changed, and the program to run again.
+- **A combination that the record maps to no variant,** such as one a brand's new mode adds, makes the picture stale too.
+
+### 6. The fingerprint's form
+
+The fingerprint follows the shape software-analysis gives the fingerprint of a requirement's texts ([software-analysis:DEC-006-text-in-body] point 7). It reads files and values instead of texts.
+- **One reading.** Each thing is read in one canonical form, so the same input gives the same fingerprint on every machine.
+- **An input** is a file, or a part of a content file named by its path of keys. A file is read as its bytes. A part is read as its parsed value in one canonical text, so an edit elsewhere in the file changes nothing.
+- **A value** is read in the form's own canonical text for its type, such as one notation for a colour. So a value written another way gives the same fingerprint, whatever document carried it.
+- **Its version and hash.** The fingerprint names the form's version and the hash it uses. A version fixes how each kind of thing is read, and tests of example inputs pin each one.
+- **Each version kept.** The check verifies each fingerprint under the version it names, so the capability keeps every version it shipped. The command may rewrite a fingerprint that verifies into the current version without running the program.
+
+### 7. Every export keeps its number
+
+An *export* is a file a piece is handed out as, such as a PDF or a picture, in a format the piece declares. The record of change over time decides a piece's states. A delivered piece was handed out, and a living one is kept current where others read it.
+- **Made from the scene.** A renderer that needs no service draws it from the scene. It is never fetched from a medium that others can edit, such as a board. So a handed-out file depends on no service, and on no edit left there.
+- **A number for each run.** Each export run is one version, numbered within its piece, and every language, format and combination of modes it makes shares that number. So version 3 in English matches version 3 in Czech. No export overwrites another.
+- **The name carries it.** Each exported file's name carries its piece's name and its version, since an exported file travels alone.
+- **The record of versions** holds, for each version, a fingerprint of every file its scene was computed from. Those are the piece's own files, its lock and the outputs of point 1 among them, and any shared content it reads. It also holds a hash of each file the version wrote.
+- **What it only records:** when the version was made, the piece's state then, and the versions of the engine, the renderers and each outside program. It names each output of point 1 the version used, and any it used while stale.
+- **No stale output.** An export stops on a stale output of point 1 and names it. The person who runs it may say to use the output as it is. A delivered piece's exports use its outputs as they were delivered.
+- **In the piece's folder.** A piece's exports and their record live in its folder, so a piece is copied, archived or removed in one step.
+- **What is committed.** When a piece becomes delivered, the person names the version that was handed out, and that version is committed as the piece's real freeze. A living piece's current copy and the record of versions are committed too. Every other version stays on the machine that made it.
+- **A living piece's current copy.** A living piece keeps an unnumbered copy of each file its export makes, which a page links to, since a link cannot follow a number. A documentation page may keep its produced images beside it, apart from hand-made ones. The piece then names that place, and the copy is written there ([living-docs:DEC-002-visual-elements] point 5). Removing the piece removes the copy.
+- **Previews are not exports.** A render made for a person to look at takes no number and is never committed.
+
+### 8. What the check reports, and how seriously
+
+These findings join the capability's check within validation, at the severities that the policy of the record of files and validation allows (COR-055). An output that people or other software read directly fails when something it read changed. One that reaches a reader only through a piece warns, since the piece's exports guard it.
+- **They fail validation,** each an invariant the project mends in its own files:
+  - an output of point 1, or a file of written code, with no record, or a record that names a variant whose file is missing
+  - variants of one picture whose exposed points differ
+  - a label placed at an exposed point that a variant lacks, or that the picture's frame cuts off
+  - a file of written code, or a living piece's current copy, stale because something it read changed
+  - a file of the version a piece was delivered with that is missing, or whose hash no longer matches
+- **A warning:** a stale picture or local component, and a living piece's current copy made over a stale output, until both are made again. So is written code stale only by its writer's version: its values still hold, so a release of the capability fails no project.
+- **Never reported:** an outside program whose version differs from the one recorded, and a delivered piece's outputs that a change made stale. A delivered piece keeps them as they were delivered.
 
 ## Rationale
 
+**Why a program may write a picture.** A picture a program makes holds the brand's values in its pixels, so the engine cannot colour it as it colours data. Kept as content made elsewhere, it would follow no brand, and the founding record reports such a picture at every switch. Fed only the brand's values while preparing, it follows the brand, and the engine still runs no program.
+
+**Why a helper runs as the project's own script, framed by commands.** A command of the capability that ran a project's script would run that code with the trust the project gives the capability's commands. Run as the project runs its own scripts, it stays under the project's permission model (COR-028). The commands before and after the run refuse a record whose inputs moved during it. A record written from inputs read after the run could describe inputs the output was not made from.
+
+**Why none of the piece's words in a picture, and why exposed points.** A word that the piece places is measured, broken into lines, translated and checked for fit in each language. A word drawn into a picture is none of these, and would need a picture for each language. An exposed point lets a label point into a picture, and stay text.
+- **The name.** "Anchor" is what an artefact rests on in this methodology (COR-050). "Landmark" names a page's regions in the accessibility markup of web and tagged outputs.
+
+**Why one picture for each set of values.** The combinations of modes are the product of each axis's modes, so they multiply fast. A picture made for each combination would repeat identical files wherever an axis changes nothing it reads.
+
+**Why a fixed pixel size.** The same inputs then give the same pixels, and an exposed point has one place in them. A renderer that chose a size would make a picture of its own, which no check could compare.
+
+**Why produced output lives in its piece.** It is made under one piece's lock, from that lock's values, and another piece may lock another version of the brand. A library copy is never rewritten, so it cannot hold output that changes with a brand. The cost is a picture made again for each piece that shows it.
+
+**Why compared by value, and outside programs only recorded.** A value read is what the output depends on, whichever release computed it. Compared by an engine's version instead, every release would make every such output stale, though few measurements change. An outside program, such as a browser, updates on its own and differs between machines. Compared, it would report pictures stale on every machine but one, and recorded, it explains a picture that differs after it is made again.
+
+**Why software-analysis's shape, and why each version is kept.** One canonical reading, with its version and hash named, lets a value verify on every machine and under every later release. Software-analysis reads texts, and this form reads files and values, so only the shape is shared. Every version is kept, since a new one that made every output stale would run each program again with no input changed. A picture made again may differ in its pixels.
+
+**Why a stale picture warns, and what is read directly fails.** People read a living piece's copy, and a project's software reads written code, so either misleads at once when stale. A picture or a local component reaches a reader only through an export, which stops on it. A draft also goes stale and fresh many times while it is made, and its program may need an outside program the machine lacks.
+- **The precedent.** Software-analysis fails a stale overview for the same reason as the copy: readers read it ([software-analysis:DEC-003-analysis-diagrams] point 8).
+
+**Why a delivered piece's outputs are never reported stale.** A delivered piece keeps what it was delivered with, and making its pictures again would change it. A warning that must never be acted on would only be noise.
+
+**Why every export keeps a number.** A handed-out file is what an audience saw, so it stays as it was, and a hash of it shows if it was overwritten. A number is short, sorts and is easy to say, as in "send me version 3", and the record keeps the time. The person who delivers a piece names the version handed out, since a file is often handed out before its piece is marked delivered.
+
+**Why in the piece's folder, and what is committed.** A piece is then one folder: what it is, its content and what it made. A repository host shows only committed files, so a living piece's copy is committed. A large file stays in a repository's history for good, so the versions nobody handed out stay out.
+
+### Alternatives considered
+
+- **A picture made by a program, kept as content made elsewhere.** Rejected. It follows no brand, and a page that switches modes would show the wrong picture.
+- **A command of the capability running a project's helper.** Rejected. It would run project code with the trust given to the capability's commands.
+- **A record written after the run from the inputs as they then are.** Rejected. An input changed during the run would be recorded as the one the output was made from.
+- **One picture for each combination of modes.** Rejected. Identical pictures would multiply with every axis.
+- **The engine's version in the fingerprint.** Rejected. Each release would make every output stale that read from the engine, measured or not.
+- **Comparing an outside program's version.** Rejected. A browser that updates itself would make pictures stale on every machine but one.
+- **A stale picture failing validation.** Rejected. A draft would hold every change of the project until its program ran again.
+- **A date and time instead of a version number.** Rejected. It is long and hard to say, and the record keeps the time anyway.
+- **Committing every version.** Rejected. Large files nobody handed out would stay in history for good.
+
 ## Implications
+
+- **The walking skeleton** proves the seam with a small producer kept for its tests, which calls no outside program. It makes a picture once for each set of values, and places a label at one exposed point. It reports the picture stale when a value it read changes. It writes an export and records its version, and its code fixes the format of exposed points.
+- **The change that builds the first real producer** decides the format of a 3D scene file, and may extend that of exposed points. It also tests whether two machines give the same picture, before any piece relies on one.
+- **Graph positions and shared models** are decided by the change that builds them, within point 1.
+- **The record of the engine and its plugins** decides the document of resolved values, what a plugin declares and how it is versioned. It also decides how the scene holds a picture's variants and exposed points. And it decides how the engine hands a program what it computed, such as measured sizes, computed without that program's own output.
+- **The record of brands and notations** decides the key that names a combination of modes, and the order of a brand's axes and modes.
+- **The record of change over time** decides the states, how a piece becomes delivered and when a lock moves. An upgrade's before-and-after shows the committed pictures, reports the stale ones and runs no program.
+- **The record of files and validation** decides where pieces live, the severity policy, and the configuration that names written code's place and brand version. It also decides how the outside programs a producer calls are checked, and what the capability adds to the permission model.
+- **The CLI reference** names the commands that frame a program's run, run a producer, export a piece and list a project's exports.
+- **A documentation page** that shows a piece anchors the piece's content, never its copy, as living-docs asks ([living-docs:DEC-002-visual-elements] point 4).
+- **Two branches that export one piece** may take one number, and the record of versions conflicts on merge. A delivered version never takes a new number. The other version takes the next free one, its files renamed with it.
