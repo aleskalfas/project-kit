@@ -1,7 +1,7 @@
 ---
 id: DEC-007
 title: Any hand-over between an actor's own use cases is a sign of a path
-status: proposed
+status: accepted
 date: 2026-10-31
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
