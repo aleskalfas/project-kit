@@ -94,7 +94,7 @@ MAIN = "main"
 SAN_REL = f"{SA.as_posix()}/rule-sets/san.md"
 ANALYSIS_SET = "tech-docs/rule-sets/analysis.md"
 ANALYSIS_SET_TEXT = (
-    "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@1]\n"
+    "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@2]\n"
     "scope:\n  types: [software-analysis:actor, software-analysis:term, "
     "software-analysis:use-case, software-analysis:journey, "
     "software-analysis:quality-requirement, software-analysis:functional-requirement, "
