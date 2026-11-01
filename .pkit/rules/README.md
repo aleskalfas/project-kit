@@ -87,7 +87,7 @@ Every layer's rules bind at once: core's, each installed capability's and the pr
 Core's rules are a *loaded rule set* (COR-068). Its accepted rules bind on the work of every session that loads the file generated from it. Each rule has what a rule of any set has: a permanent id, a status, an origin, and a successor when it retires.
 
 - **The set** is `OPS`, at `.pkit/rule-sets/ops.md`, shipped and synced with the backbone. Its front matter carries `loaded: true`, and each rule's status and origin. Each rule keeps the number it had: core rule 19 is `backbone:RS-OPS-019`, cited either way (the schemas README, "Rule-set files").
-- **The loaded file** is `core.md`, where the include reads it. It holds the set's accepted rules under the set's sections, each headed `### N. Title (RS-OPS-0NN)` with its statement. It holds none of the set's data: no front matter, no origin, no retired rule.
+- **The loaded file** is `core.md`, the file `CLAUDE.md`'s include names. It holds the set's accepted rules under the set's sections, each headed `### N. Title (RS-OPS-0NN)` with its statement. It holds none of the set's data: no front matter, no origin, no retired rule.
 - **It is generated.** `pkit rule-sets generate` writes `core.md` from `OPS` where the set is authored, in the methodology's source. A change to a rule regenerates the file in the same change, and `pkit validate` fails there on a `core.md` that differs from its set. In a project the two arrive together by sync, and the command refuses to write `core.md`.
 - **Citations of a rule** by layer and number, such as "core rule 19", or by id are read by `pkit validate`. One that names a missing, superseded or withdrawn rule is a warning (the CLI reference, `validate`).
 
@@ -113,16 +113,17 @@ The index, `capabilities.md` beside this file, is how a session reaches each ins
 
 - **What it holds:** a marker line, an HTML comment the harness drops. Then it holds one entry per registered capability that ships a loaded set, in the order of the capabilities' names. It holds no rules of its own, and nothing else.
 - **When it is rendered:** at first install, sync and upgrade, and at each capability's install, register, upgrade and uninstall. It is committed with `.pkit/`, so every checkout that holds `core.md` holds it too.
-- **Nobody edits it.** A hand edit is overwritten at the next render, and `pkit validate` fails it until then. A file at its path that is not the index stops sync and upgrade before they write. What counts as the index there is the lifecycle reference's ([its "The capabilities' rules index"](../lifecycle/README.md#the-capabilities-rules-index)).
+- **Nobody edits it.** A hand edit is overwritten at the next render, and `pkit validate` fails it until then. A file at its path that is not the index stops sync and upgrade before they write.
 - **Reached by one line,** `@.pkit/rules/capabilities.md`, which `CLAUDE.md` keeps after core's include. The adapter's merge inserts it wherever it is absent. The line never needs removing, since uninstalling a capability changes the index alone.
 - **Checked.** `pkit validate` fails these (the CLI reference, `validate`):
   - an index out of step with the registered capabilities
   - an entry whose file is missing
   - a `CLAUDE.md` without the line
+- **Note:** what counts as the index at its path is the lifecycle reference's ([its "The capabilities' rules index"](../lifecycle/README.md#the-capabilities-rules-index)).
 
 ## Each rules file's budget
 
-Each rules file may have a budget, the most words it may hold ([COR-069](../decisions/core/COR-069-rules-word-budget.md)). `pkit validate` reports each file's count against its budget in every project. It fails a file past its budget where the file's owner can shorten it. How a word is counted, and what the check says, are the CLI reference's (`validate`, the `rule-sets` member).
+Each rules file may have a budget, the most words it may hold ([COR-069](../decisions/core/COR-069-rules-word-budget.md)). `pkit validate` reports each file's count against its budget in every project. It fails a file past its budget where the file's owner can shorten it.
 
 - **A component's budget:** `core.md`'s is `budget` in `OPS`'s front matter, beside `loaded: true`, and a capability's `rules.md` takes its own set's (the schemas README, "Rule-set files"). A component's loaded set must give one. A project receives each such file with its budget, and is never failed for it.
 - **`project.md`'s budget,** while the file is a plain file, is `rule-sets.plain-file-budget` in the project's configuration (the CLI reference, ["Configuration file"](../cli/README.md#configuration-file)). Without the key, the file has no budget, and nothing is checked. No install or upgrade sets it.
@@ -130,13 +131,14 @@ Each rules file may have a budget, the most words it may hold ([COR-069](../deci
 - **Raising a budget is a person's decision.** A new rule that needs room raises the budget in the change in which a person accepts the rule. Any other raise lands only in a change a person authorises. An agent whose change would take a file past its budget trims the file instead, or brings the raise to that person.
 - **A raise is listed.** `pkit rule-sets altered` lists each budget a change raises, so whoever reviews the change sees it (the CLI reference, `rule-sets altered`).
 - **Lowering one** is any change's to make. A budget is a ceiling, not a target, so a change that trims a file may lower its budget, keeping what room it chooses.
+- **Note:** how a word is counted, and what the check says, are the CLI reference's (`validate`, the `rule-sets` member).
 
 <a id="what-goes-in-coremd"></a><a id="what-does-not-go-in-coremd"></a>
 ## Which file a rule goes in
 
 A rule goes in the file of the layer where it must bind. A session loads each rules file whole, so a rule holds what it requires, not why.
 
-- **Core's set,** `OPS`: a rule that must bind on a session's work in every project, in words that fit any project (COR-014). A rule tied to one project's own tooling goes in that project's file.
+- **Core's set,** `OPS`: a rule that must bind on a session's work in every project, in words that fit any project (COR-014). A project's own mechanics, such as its version policy, go in that project's own records and instructions, never in core's set.
 - **A capability's loaded set:** a rule that binds only where the capability is installed. It goes neither in core's set, whose rules bind in every project, nor in the capability's documentation, which no session loads (COR-070 point 5).
 - **`project.md`:** the project's own rules.
 - **An ordinary rule set:** a rule a project chooses to bind on its own files, not on a session's work (COR-068 point 1 and [the decisions README, "Rule sets"](../decisions/README.md#rule-sets--a-separate-family-with-the-same-guarantees)). Core rule 24 has every session follow the rules such sets bind on what its change owns, as `pkit rule-sets altered` lists them.
