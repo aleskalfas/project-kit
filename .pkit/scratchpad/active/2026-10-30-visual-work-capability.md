@@ -780,7 +780,7 @@ Its counter-alternatives: the scene as a subset of SVG, or names that map onto S
 
 - **The core holds only the interface:** role names, and each discipline's top component with its named layouts and slots. It changes rarely, and every library builds on it.
 - **Opinionated components go into a starter library** the capability ships (point 8). An adopter uses it, ignores it, or uses their own instead. It may improve faster without touching the interface, and pieces lock it like any library.
-- **The Friday talk's Carbon-flavoured components go into the maintainer's IBM library,** not the starter (COR-014).
+- **The Friday talk's Carbon-flavoured components go into the maintainer's IBM library,** not the starter (COR-014). (Refined by point 8, 1 November: only where their form is IBM's own; a generic form goes to the starter, drawn in IBM's values.)
 
 **The alternative.** One core with the components: one library fewer, but every adopter carries the capability's opinions, and every change to a card changes the library everything builds on.
 
@@ -1356,7 +1356,15 @@ Wave 2 is built ahead of need on decided tools, each with a named use: `tree` (i
 
 Set aside: no wrap (a long list becomes a table or a local component); building by job rather than by evidence.
 
-**Still open in point 8, in this order:** where the Friday talk's twelve new reusable pieces go (`terminal`, `term_image`, `highlight`, `pstage`, `step_card`, `kind`, `kind_group`, `tree_bar`, `tree_tag`, `tree_note`, `divider`, `talk_cover`); whether a notation for software work ships, and as which kind of library; a legend and icons, so colour is never the only signal (RS-VISUAL-006); the neutral brand's themes (`teal-calm`, `warm-paper`, their modes) and fonts.
+**The form goes to the starter, the values to the brand. Agreed (1 November).** The critic found the first draft of the starter's blocks moving into the starter templates whose own notes call them IBM's ("Carbon tile", "Carbon inline notification", "code snippet (Carbon)", "IBM technical-diagram node"), against 18b's "the Friday talk's Carbon-flavoured components go into the maintainer's IBM library". 18b's own table says a brand changes colours, radius and spacing, "not that a card has its heading on top", and what makes these Carbon is mostly values: flat fills, square corners, IBM Plex, Carbon's colours.
+- **A generic form is a starter component,** and a brand gives it its values: a Carbon tile is the starter's card in IBM's colours, corners and fonts.
+- **A brand keeps a component of its own only where its form is its own,** its anatomy unlike every starter component's, not only its colours.
+- **Layouts are always the brand's** (4g).
+- **Why:** if IBM kept its own tile, stage and arrow beside the starter's card and connector, the maintainer's pieces would use IBM's, and the starter would go untested by the one user it has; a brand is "not a fork of the components" (4g). The risk: the starter's card must be close enough to Carbon's tile that IBM's values alone make it look right; where it is not, the rule lets IBM keep its own, so the cost is a duplicate, not a wrong look.
+- **It refines 18b:** Carbon-flavoured components go to the IBM library only where their form is IBM's own.
+- Set aside: 18b as written (two sets of near-identical blocks), and everything into the starter, IBM-only forms included (IBM's anatomy shipped to every adopter, against COR-014).
+
+**Still open in point 8, in this order:** the starter's building blocks (level 4), and where each of the Friday board's 38 reusable templates goes; whether a notation for software work ships, and as which kind of library; a legend and icons, so colour is never the only signal (RS-VISUAL-006); the neutral brand's themes (`teal-calm`, `warm-paper`, their modes) and fonts.
 
 ## Architect's review (31 October)
 
