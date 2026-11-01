@@ -132,7 +132,7 @@ Taken one at a time, in this order. The order may change as the answers come. Po
     - ~~18d. A scene per font profile (point 2, with point 5).~~ Decided: font profiles set by the context, one scene per profile (see "Discussion", point 18d).
 19. ~~**References between elements.** One element using another's measured size, one owner per dimension, cycles refused.~~ Decided: two sizes per element, public anchors, list operations as layout operators (see "Discussion", points 19 and 20).
 20. ~~**Format numbers** on every file from its first commit, read by the engine forever.~~ Decided: pkit's `schema_version` for breaking changes, `requires` for added features, semver for each library's content (see "Discussion", points 19 and 20).
-21. ~~**An escape for hand-drawn one-offs**, such as an area the renderer leaves alone; the architect's largest risk to the product.~~ Decided: the risk is a missing tool; four tools are added, and helper scripts run while preparing write checked data (see "Discussion", points 21 and 22).
+21. ~~**An escape for hand-drawn one-offs**, such as an area the renderer leaves alone; the architect's largest risk to the product.~~ Decided: the risk is a missing tool; four tools are added, and helper scripts run while preparing write checked data (see "Discussion", points 21 and 22). Widened by point 29: a helper may also write a picture made by a program.
 22. ~~**Graphs:** graph layout as an engine tool, or relation graphs left to Mermaid as software-analysis does.~~ Decided: a helper arranges graphs while preparing, views share one model file, and other capabilities connect later through a contract with fallback (see "Discussion", points 21 and 22).
 23. ~~**Where the first slice's code lives.**~~ Decided (31 October), then reversed the same day. First: a new repository of its own, incubating the capability (COR-031), nothing shipping to anyone, as the architect advised. **Reversed by the maintainer during point 11:** a new repository is an unnecessary delay; the capability is built directly in project-kit, at `.pkit/capabilities/visual-communication/`, as living-docs and software-analysis were, starting at 0.1.0 and opt-in like every capability. What follows:
     - **What ships:** each release carries the capability as it stands, at 0.x, installed only by a project that asks for it, as the other capabilities started. The architect's wish to prove the first slice outside the shipped tree is given up for speed.
@@ -141,6 +141,10 @@ Taken one at a time, in this order. The order may change as the answers come. Po
     - **Unchanged:** the Mural plugin reuses the mural-boards tool's client, sign-in, pacing and sync record, and the mural-boards skill keeps working until the capability replaces it (point 15). Point 7, the capability's origin, is settled: shipped by project-kit.
 24. **A protocol between capabilities.** How a consumer such as software-analysis declares a contract, how visual-work is connected to it, and whether pkit's slots and connection points can carry a request with input or need a core decision. Use case 13; not built now.
 25. **Anchors on a piece's facts.** Whether a piece, or its content, carries pkit's anchors (COR-050), so a doc figure is flagged when the code or decision it shows changes, and `graphic-design-reviewer` becomes the fixer of pieces (project-management DEC-056). Came from point 9.
+26. ~~**A brand built on another brand.** Whether a brand may build on another, and how the base limits what a brand built on it changes. Came from the maintainer's game platform (1 November).~~ Decided (1 November): a brand names its base with `extends` and changes values only; the base lists in `contract:` what may change, and `check` enforces it; compatibility is by the base's major version, and a library's `builds_on` maps each library it builds on to a major (see "Discussion", point 26).
+27. ~~**Modes on several axes.** Whether a brand's modes are only light and dark, and how they are written.~~ Decided (1 November): axes in a DTCG Resolver document, each marked as changing values or sizes, and one canonical key for a combination of modes (see "Discussion", point 27).
+28. ~~**A brand written out as code.** Whether a brand's values can leave the capability as code, for a web page, a game or an app.~~ Decided (1 November): yes, by a code writer, a third kind of plugin beside the renderers; CSS variables first, then JSON (see "Discussion", point 28).
+29. ~~**Pictures made by a program, 3D first.** How a 3D render, or any picture a program makes, enters a piece and follows its brand.~~ Decided (1 November): a helper run while preparing may write a picture, which widens point 21; producers are plugins, three.js in headless Chrome first; no text inside the picture; one picture per distinct set of values it reads (see "Discussion", point 29).
 
 ## Discussion
 
@@ -424,7 +428,7 @@ What each change does:
 **Outcome (30 October).** The maintainer accepted the eight levels in three scopes, after the worked example. It is built lean:
 
 - start with token roles and values, one frame per context, a small shared core, and one-offs inside each talk;
-- add recipes and kinds, component tokens, and extra modes or scales only when a real talk needs them. (Revised by point 8 for patterns: the starter adds them ahead of need, each entering as experimental.)
+- add recipes and kinds, component tokens, and extra modes or scales only when a real talk needs them. (Revised by point 8 for patterns: the starter adds them ahead of need, each entering as experimental. Revised by points 26 and 27: a namespace for component tokens, and mode axes, are in the format from the first version.)
 
 **On the terms** (the maintainer asked whether "one-off" and "talk" are design terms):
 
@@ -584,7 +588,7 @@ Four parts were shaped by the talks, each with its correction:
 
 - **Libraries by owner, one version each.** Point 4d stands. A library is split only when a second user needs part of it alone.
 - **A library holds one of three kinds of content:**
-  - **Values.** A context, such as IBM, DAM, or the neutral one the capability ships, gives values to tokens of any type: colour, font, size, spacing, picture, in each of its modes (light, dark). It also holds its frame (the named layouts of each discipline it serves) and the parts only its brand uses.
+  - **Values.** A context, such as IBM, DAM, or the neutral one the capability ships, gives values to tokens of any type: colour, font, size, spacing, picture, in each of its modes (light, dark). It also holds its frame (the named layouts of each discipline it serves) and the parts only its brand uses. (Point 27: modes on several axes. Point 26: a brand built on another changes values only, and takes its base's layouts.)
   - **Structure.** Components, and each discipline's top component with its named layouts and their slots. The capability ships the core; anyone may publish another, such as a docs team's `docs-kit`. A component uses a token for anything a context may change.
   - **Meaning.** A subject, such as `pkit`, maps each of its concepts to roles (colour, icon, shape) and carries its own marks (logo, icons).
 - **A name is read with its library** (`core/card`, `docs-kit/callout`). No library replaces another's piece.
@@ -669,7 +673,7 @@ Its recommendation (CA1): copies kept by version, with a lock per piece, owned b
 - **A project's list of libraries** is one small file: each library's link, and the versions present.
 - **Each piece's lock names versions,** readably: `uses: {core: 1.4.0, ibm: 2.0.0, pkit: 1.1.0}`. Drafting work moves to the newest version present at every render. Living work moves through the preview. Delivered work never moves. Old versions stay as long as a lock names them.
 - **A release is a git tag** in the author's repository, `<library>/v<version>` where a repository holds several libraries.
-- **A library's own file** gives its name, its version, and the one number of the visual-work format it fits.
+- **A library's own file** gives its name, its version, and the one number of the visual-work format it fits. (Revised by point 26: it also names, in `builds_on`, each library it builds on, with a major version.)
 - **The commands** (working names):
   - `add <link>` fetches a version into its folder and lists the library;
   - `outdated` lists libraries with newer tags (read-only);
@@ -1016,7 +1020,7 @@ Counter-alternatives: a one-off generator run while authoring, never by the engi
   - lining up with one item of a list or one line of a text (the terminal level with the marked step of "One skill, step by step": `=steps[mark].middle`);
   - a tree (folders indented by depth, coloured by owner, joined by lines, as `gen.py`'s `tree()` drew them);
   - a colour ramp by level (`level-1` … `level-n` roles with readable text colours, replacing the pyramid's raw values).
-- **Helper scripts are allowed while preparing, never run by the engine.** For a picture no tool can build, such as the cycle ring (a circle needs sine and cosine, which the formula language lacks), a script writes an ordinary one-off component beside the material. It is checked like everything else: no raw colours, text from the material, positions as formulas relative to the frame, and a fingerprint of its inputs that says when to run it again. A script needed again and again becomes a tool (about three uses, 4c).
+- **Helper scripts are allowed while preparing, never run by the engine.** For a picture no tool can build, such as the cycle ring (a circle needs sine and cosine, which the formula language lacks), a script writes an ordinary one-off component beside the material (widened by point 29, approved by the maintainer on 1 November: a helper may also write a picture made by a program). It is checked like everything else: no raw colours, text from the material, positions as formulas relative to the frame, and a fingerprint of its inputs that says when to run it again. A script needed again and again becomes a tool (about three uses, 4c).
 - **A drawing made elsewhere is a content image,** one per language, reported at every theme switch.
 - **The reserved area is dropped.**
 
@@ -1081,7 +1085,7 @@ With that, Mermaid's look beside the libraries' look in a project's docs is a tr
 
 **Outcome (31 October).** The maintainer agreed to the three agents, `graphic-designer`, `graphic-design-reviewer` and `translator`. It adds three things:
 
-- an `audience:` field in a piece;
+- an `audience:` field in a piece (point 27: the audience axis must not collide with it);
 - a render into the agent workspace that leaves no record and sends nothing;
 - a new question, point 25: whether a piece's facts carry pkit's anchors, so a doc figure is flagged when what it shows changes; the reviewer would then be the fixer of pieces.
 
@@ -1375,6 +1379,149 @@ Set aside: no wrap (a long list becomes a table or a local component); building 
 
 **Still open in point 8, in this order:** the starter's building blocks (level 4), and where each of the Friday board's 38 reusable templates goes; whether a notation for software work ships, and as which kind of library; a legend and icons, so colour is never the only signal (RS-VISUAL-006); the neutral brand's themes (`teal-calm`, `warm-paper`, their modes) and fonts.
 
+### 26. A brand built on another brand (1 November)
+
+**Where points 26 to 29 came from.** On 1 November the maintainer described a possible later use: an online board-game platform, played on several devices. The platform has its own graphic, used on the web, in presentations and in mobile apps. Each game looks very different. It restyles the controls the platform provides, within the platform's limits. Each game has a visual manual, and its board is drawn in 3D with three.js. He asked for three things in the brand model from the first version, with nothing built for games: a brand built on another brand (point 26), modes on several axes (point 27) and a brand written out as code (point 28). He also asked that 3D renders be designed in from the start: "when we would not think about it from very beginning in our architecture then it will be very hard to add it later" (point 29). He had already left the remaining design questions to the agent: "you have enough answers to be able to decide following questions alone". So the agent decided points 26 to 29, and the maintainer approved them with the plan for the capability's EPIC (#2423): "ok go ahead".
+
+**The question.** Can a brand build on another brand, so that one base look serves several brands that differ, while the base still decides what each may change?
+
+**What pulls it.**
+- **The game platform.** The platform's brand is the base. Each game is a brand of its own, made and released by the game's owner. It must look very different, and still stay inside the platform's limits.
+- **One library per owner (4g).** The Resolver could hold every game as one more mode of a brand axis (its own examples name "brandA"). Then the platform's library would hold every game's values, and no game could release alone.
+- **Shadowing.** 4g set aside ordered layers (its option 2): a later layer could shadow any piece of an earlier one, so a fix to the earlier one could be hidden. A contract limits what a brand built on another may shadow to the values its base lists.
+- **The same split as point 8.** The form goes to the starter, the values to the brand: a Carbon tile is the starter's card in IBM's values. A game restyling the platform's controls is that split one level up. The platform owns each control's form, and the game gives it values.
+- **Component tokens.** With roles alone, a brand cannot change one component without changing a role everywhere. The research advised component tokens only where a context actually differs. A game may want to restyle one control without changing the platform's `accent` everywhere.
+
+**Outcome (1 November).** Decided by the agent under the maintainer's delegation, and approved by the maintainer with the plan.
+- **A brand may build on another brand.** It names its base with `extends`.
+- **It changes values only.** The structure, the roles and the components the base defines stay the base's, its layouts among them.
+- **The base declares a contract.** Its `contract:` list names which of its roles a brand built on it may change. `check` reports a value given to anything outside the list.
+- **Compatibility is by the base's major version.** A library's `builds_on` becomes a map from each library it builds on to the major version it fits, such as `builds_on: {platform: 2}`.
+- **A namespace is kept for component tokens** from the first version, so a component's own tokens never take a role's name. No brand has to define one.
+- **The game example.** The platform's brand is the base, with its contract. Each game is a brand built on it, and restyles the platform's controls within the contract. Nothing of a game is built: the platform is the case the format is tested against.
+- **Built first in the walking skeleton** (#2428), which reads a base brand and its contract.
+
+**What it revises.**
+- **4i:** a library's own file gave "its name, its version, and the one number of the visual-work format it fits", and named no other library. It now also names the libraries it builds on, each by its major version.
+- **4g's warning about a diamond** comes back in a small form: a game's brand builds on the platform's, and both build on the foundations. It stays small for two reasons. A base is named by its major version only, never by a range. And a piece's lock still names one version of each library (4i), so two libraries that need different majors of one base cannot be used in one piece. 4g's "one library per owner, one version each" stands, and so does "no library replaces another's piece": a brand built on another gives new values, never new components.
+- **4c's lean start** added component tokens "only when a real talk needs them". Their namespace is kept now; the tokens still come when needed.
+- **4g's outcome and point 8** give every brand its own layouts ("Layouts are always the brand's"). A brand built on another takes its base's.
+
+**Left to the records** (the Task that writes the capability's records, #2427):
+- whether `extends` stays a field of its own or marks one entry of `builds_on`;
+- whether a brand may build on a brand that itself builds on another, or on two at once;
+- whether a contract may name component tokens, and the namespace's name;
+- what counts as a breaking change of a base, as point 8 settled it for components;
+- whether a brand built on another may add roles, layouts or parts of its own;
+- how `check` reports a lock whose libraries need different majors of one base, and the severity of each finding;
+- the name `contract:`, flagged as the naming pass flags a clash: point 22 already calls a contract what another capability asks to have drawn (use case 13).
+
+### 27. Modes on several axes (1 November)
+
+**The question.** Are a brand's modes only light and dark, or several axes that change apart, and how are they written?
+
+**What pulls it.**
+- **The game platform** (point 26) needs more than light and dark. The maintainer named a colour scheme, a device, an audience and a contrast.
+- **Until now a brand had two modes.** 4g gave a brand values "in each of its modes (light, dark)", and the prototype's brands hold a file per theme and mode.
+- **The research found the axes.** Adobe Spectrum keeps product family, colour and scale as separate switches, and 4c's research concluded: "Context, mode and output scale are separate axes".
+- **A standard writes them as data.** DTCG 2025.10's Resolver module has sets (token files always read), modifiers (one per axis, each with its contexts, which are the modes, and a default) and a resolutionOrder (which source wins when two give one token a value).
+- **Combinations multiply.** Their number is the product of the modes on each axis (the research). An axis whose modes change sizes needs a scene for each (4h), so such axes multiply scenes too.
+- **Point 5 named the output scale** (slide, doc, narrow screen) as an axis with a scene of its own, not built yet.
+- **Pictures, exports and code** each need to say which combination they hold (points 13, 28 and 29).
+
+**Outcome (1 November).** Decided by the agent and approved with the plan (see point 26).
+- **Modes are axes:** a colour scheme, a contrast, a device, an audience, and any other a brand needs. A mode is one value on one axis.
+- **A brand writes its axes as a DTCG Resolver document:** its token files as sets, each axis as a modifier, each mode as one of the modifier's contexts, a default for each axis, and the resolutionOrder.
+- **Each axis is marked as changing values (colours) or sizes.** An axis that changes values moves nothing, and every mode's values travel beside the scene (4h). An axis that changes sizes needs its own scene for each combination of its modes (4h).
+- **The device axis is point 5's output scale.**
+- **One canonical key names a combination of modes.** Pictures (point 29), exports (point 13) and code (point 28) use the same key.
+- **A naming constraint:** the audience axis must not collide with a piece's `audience` field (points 9 and 11), which says in words who the piece is for.
+- **Built first in the walking skeleton** (#2428), which resolves two axes that change values: the colour scheme and the contrast.
+
+**What it revises.**
+- **4g's outcome:** a brand's modes were light and dark. Light and dark are now the modes of one axis, the colour scheme.
+- **4c's lean start** added "extra modes or scales only when a real talk needs them". The format holds axes from the first version; a brand adds an axis or a mode when it needs one.
+- **4c's research** kept context, mode and output scale apart. The brand stays a library (point 26). Mode and output scale become axes of one document, and "switching mode swaps values only" now holds only for an axis that changes values.
+- **4h:** a scene's root names "its mode". Read it as the key of the scene's combination on the axes that change sizes; the axes that change values travel beside it.
+- **The Names table:** a mode is one value on one axis, not "light or dark".
+
+**Left to the records** (#2427):
+- the key's spelling, and the order of the axes in it;
+- where an axis is marked as changing values or sizes, since the Resolver does not say what a modifier changes;
+- the name of the audience axis;
+- what an axis that changes sizes may change, such as spacing or the type scale;
+- how a brand built on another (point 26) takes its base's axes, and whether it may add one;
+- whether the neutral brand's themes (`teal-calm`, `warm-paper`, point 8) form one more axis, and whether a font profile (18d) is written as one;
+- which combinations a piece renders, previews and exports.
+
+### 28. A brand written out as code (1 November)
+
+**The question.** Can a brand's values leave the capability as code, so that a web page, a game or an app uses the same values as the pieces?
+
+**What pulls it.**
+- **The game platform** (point 26) runs on the web and on phones, and draws its game boards live in 3D with three.js. Its pages, apps and boards need the brand's values in their own code, not as pictures.
+- **The HTML renderer needs it too.** The architect placed it as SVG in a page with CSS variables per mode, so a page can switch modes while open (4h).
+- **The established tool is Style Dictionary.** It turns one token tree into CSS variables, Android resources or Swift constants (the research). It runs on Node, which point 17 rules out, and it does not yet read DTCG 2025.10 fully (the architect). The architect placed a small Python reader of the tokens and the Resolver in the capability, so code can be written from what it reads.
+- **It is not a renderer.** A renderer projects a scene (18c). Code written from a brand has no scene: it takes a library, with its axes and modes.
+- **A live view is not a projection.** A game draws its board many times a second, in its own runtime. Point 2 has renderers project the scene, adding no design of their own.
+
+**Outcome (1 November).** Decided by the agent and approved with the plan (see point 26).
+- **A brand can be written out as code.** CSS variables come first. JSON comes next, read by three.js and by a game's runtime. Swift and Kotlin come later.
+- **A code writer does it: a third kind of plugin.** It takes a library, not a scene, so it is not a renderer (18c).
+- **The three kinds of plugin share one pattern.** Renderers draw from the scene; producers make pictures (point 29); code writers write a brand as code. Each declares what it supports, and reports what it lost, as 18c decided for renderers.
+- **One naming rule** turns a brand's names into names in code, for every code writer.
+- **The JSON holds the brand's resolved values, named by the canonical key** (point 27). A producer of pictures reads the brand through it (point 29).
+- **A live 3D game board stays outside the capability.** It is the game's runtime, which reads the brand through this export. Point 2 stays: renderers project the scene; they do not draw natively.
+- **Built first in the walking skeleton** (#2428), which writes its brand out as CSS variables under the naming rule.
+
+**What it revises.**
+- **18c:** the plugin pattern (a declared list of what a plugin supports, and a report of what it lost) now covers three kinds of plugin, not renderers alone. What 18c decided for renderers stands.
+- Nothing else. Point 2 stands as decided.
+
+**Left to the records** (#2427):
+- the naming rule itself;
+- where written code goes, whether it is committed, and whether it gets numbered versions like an export (point 13);
+- what each code writer declares and reports, such as a token type its language has no form for.
+
+How the HTML renderer uses the CSS writer's output is left to the slice that builds both (the EPIC's slice 4, #2423).
+
+### 29. Pictures made by a program, 3D first (1 November)
+
+**The question.** How does a 3D render, or any picture a program makes, enter any piece and follow its brand, while the engine never runs the program?
+
+**What pulls it.**
+- **The maintainer's worry** (point 26): he wants "some mechanism how to do 3d renders and include them into any visual". A game's board, drawn in 3D, must appear in its manual, in a deck and in a doc page.
+- **The engine runs no project code** (4a). Point 21 sends what the engine cannot compute to a helper run while preparing. But that helper writes a local component with no raw colours, and a picture holds the brand's values in its pixels.
+- **A picture must follow the brand.** A drawing made elsewhere does not, and is reported at every theme switch (point 21). A doc page switches to dark mode while open (4h), so a produced picture must switch too.
+- **Text inside a picture** is not measured from committed fonts (point 5), and is not translated with the content (point 13).
+- **The same picture on every machine.** The architect chose resvg for pictures because it draws the same on every platform. WebGL drawn in software may not, and Chrome updates itself, outside the project.
+- **Outside programs and the network.** Chrome is an outside program, called only on the path that needs it (point 17). The network is opened only where Mural is used (point 12), so three.js cannot be fetched while drawing.
+
+**Outcome (1 November).** Decided by the agent and approved with the plan (see point 26).
+- **A helper run while preparing may also write a picture made by a program.** The engine never runs it. This widens point 21, and the maintainer approved the widening on 1 November, with the plan.
+- **Producers are plugins** (point 28). The first is three.js in headless Chrome: three.js vendored and pinned, no Node, no network, and Chrome an outside program on the path that needs it (point 17). Blender's `bpy` is another.
+- **Inputs:** a 3D scene file (models, a camera, lights, and materials that name brand roles), and the brand's resolved values, read through its JSON export (point 28).
+- **No text inside the picture.** The producer writes named points, in 2D, into a file beside the picture. The piece places labels at them as ordinary scene text, measured from committed fonts and translated like any text.
+- **One picture per distinct set of resolved values it reads,** not one per combination of modes. Each is named by the canonical key (point 27). The scene's image leaf holds the variants, so a doc page switching to dark mode switches the picture (4h sends every mode's values beside the scene). Each variant has a fixed pixel size.
+- **Fingerprint and provenance.** They follow the foundation's one rule for a fingerprint, kept apart from what is only recorded (its choice 10, #2424). The fingerprint holds the inputs, the brand values the picture read, the producer's version, the pinned three.js and the pixel size. `check` reports a picture stale when any of them changes. The Chrome version is recorded beside it, and never compared.
+- **Produced pictures live only in pieces,** since a fetched library is read-only (4i). A library may hold models and pictures as plain assets, and a component may declare a slot for a produced picture.
+- **An export records the pictures it used** (point 13). `upgrade`'s before-and-after shows the committed pictures and reports the stale ones; it never runs a producer.
+- **No live 3D view in the capability** (point 28).
+- **The short test comes with the producer,** at the start of the slice that builds it (the EPIC's slice 8, #2423), not before the records: three.js in headless Chrome, WebGL drawn in software, on macOS and in CI. Do two machines give the same picture? The walking skeleton (#2428) proves the seam first, with a small Python program and no Chrome.
+- **AI-generated images** would fit the same seam, but do not follow a brand repeatably. Later, not decided.
+
+**What it revises.**
+- **Point 21:** its helper wrote only a checked local component, with no raw colours. It may now also write a picture, whose pixels hold the brand's values. Those values come only from the brand, through its export, and the fingerprint tells when they change. The maintainer approved this revision on 1 November, with the plan, and the record of work computed outside the engine states it (#2427).
+- **4h:** an image leaf held one picture, with a fit and a tint. It may now hold variants, named by the canonical key.
+- **Point 13:** an export's record in `versions.yaml` also names the pictures it used.
+
+**Left to the records** (#2427):
+- the formats of the 3D scene file and of the file of named points;
+- the name of the named points: "anchors", the word first used for them, clashes with pkit's anchors, as "public anchor" did before the naming pass chose "exposed part";
+- where produced pictures sit in a piece's folder;
+- how the values a picture reads are found, which decides its distinct sets;
+- each variant's pixel size, and how an axis that changes sizes (point 27) meets it.
+
 ## Architect's review (31 October)
 
 The maintainer asked, after 4h, whether to consult the architect. It reviewed points 1 to 4j as a whole, read-only, with a check per layer of what to adopt, wrap or build. Sources it fetched that day are named in its report; claims from its own knowledge are marked as such there.
@@ -1443,7 +1590,7 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 | pattern | level 5: a library component that is a whole arrangement filled with content, such as a pyramid, a timeline or a comparison; "recipe" and "kind" before the naming pass | decided (naming pass) |
 | option, variant | a choice a component declares, such as a card's tone | kept (naming pass; Figma says "variants" and "component properties") |
 | design tokens, raw values, roles, component tokens | the design language as data | kept (naming pass; DTCG; Material 3's "colour roles") |
-| theme, mode | a set of values; light or dark | kept (naming pass) |
+| theme, mode | a set of values; a mode is one value on one axis, such as light or dark on the colour scheme (point 27) | kept (naming pass) |
 | brand | the values library a piece names, such as IBM, DAM or neutral: its token values, layouts, logo and brand-only parts; "context" before the naming pass | decided (naming pass) |
 | frame | an element's box: `x`, `y`, `width`, `height` (points 4h, 19); before the naming pass, also level 6 | decided (naming pass): this meaning only |
 | recipe, kind | level 5 before the naming pass | replaced by "pattern" (naming pass) |
@@ -1468,7 +1615,7 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 | exposed part | a part a component lets its ancestors point at (point 19); "public anchor" before the naming pass | decided (naming pass) |
 | helper script | a script run while preparing, writing a checked local component (point 21) | kept (naming pass) |
 | model | the file of a system's elements and relations that several views read (point 22) | kept (naming pass) |
-| contract, coverage, fallback | the visuals another capability needs drawn; how many a library draws; the drawing used for the rest (point 22) | kept (naming pass) |
+| contract, coverage, fallback | the visuals another capability needs drawn; how many a library draws; the drawing used for the rest (point 22); clashes with a base brand's `contract:` (point 26), left to the records | kept (naming pass) |
 | graphic-designer, graphic-design-reviewer, translator | the capability's agents: the producer, the reviewer of pieces, and the translator that returns text (point 9) | decided (point 9) |
 
 A naming pass with the maintainer comes before any record or code fixes a name. It starts with the names that appear inside files (the architect's review), one decision at a time: the capability's name first, which is also the repository's.
