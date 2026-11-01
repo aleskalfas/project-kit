@@ -47,6 +47,10 @@ analyses:
       - analysis: core
   - component: demo-recording
     folder: demo-recording
+    # Its one area's goal (software-analysis DEC-003 point 8 and DEC-005
+    # point 1).
+    areas:
+      010-record-demos: "Record a demo of a command line from an executable storyboard that people still read as a document."
     builds-on:
       - analysis: core
   - component: software-engineering
