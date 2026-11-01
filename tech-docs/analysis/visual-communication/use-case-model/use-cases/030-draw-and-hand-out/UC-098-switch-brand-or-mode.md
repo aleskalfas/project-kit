@@ -8,7 +8,7 @@ other-actors:
 requirements: []
 after:
   - [UC-093, UC-094, UC-095, UC-104]
-  - [UC-105, UC-106]
+  - [UC-105, UC-106, UC-109]
 pkit:
   friction:
     anchors:
@@ -28,7 +28,7 @@ pkit:
 **Preconditions:**
 
 - **From [UC-093](../010-make/UC-093-build-presentation.md), [UC-094](../010-make/UC-094-put-figure-in-page.md), [UC-095](../010-make/UC-095-draw-views-of-system.md), or [UC-104](../020-build-libraries/UC-104-add-kind-of-piece.md):** The piece exists, drawn in one brand.
-- **From [UC-105](../020-build-libraries/UC-105-make-brand.md), or [UC-106](../020-build-libraries/UC-106-build-brand-on-brand.md):** The other brand is in the project.
+- **From [UC-105](../020-build-libraries/UC-105-make-brand.md), [UC-106](../020-build-libraries/UC-106-build-brand-on-brand.md), or [UC-109](../020-build-libraries/UC-109-take-in-shared-library.md):** The other brand is in the project.
 
 **Assumptions:**
 

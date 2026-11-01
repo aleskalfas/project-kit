@@ -44,6 +44,7 @@ pkit:
 **Variants:**
 
 - **2a.** A field was edited both where the piece is drawn and in the content since the last drawing. The system writes neither edit, and lists the conflict.
+- **6a.** A listed edit is to what a library taken in from another project draws ([UC-109](../020-build-libraries/UC-109-take-in-shared-library.md)). The system names that library's repository, or offers to make the edited part a local component of the piece.
 
 **Postconditions:** The content and the piece's local components hold each edit that had exactly one field to go to. The developer knows each other edit.
 

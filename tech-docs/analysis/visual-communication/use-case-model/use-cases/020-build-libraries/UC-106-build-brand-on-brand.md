@@ -7,7 +7,7 @@ other-actors:
   - core:ACT-ai-agent
 requirements: []
 after:
-  - [UC-105]
+  - [UC-105, UC-109]
 pkit:
   friction:
     anchors:
@@ -24,7 +24,7 @@ pkit:
 
 - **AI agent** (`core:ACT-ai-agent`): does the work for the developer, and may run any step the developer runs.
 
-**Preconditions:** **From [UC-105](UC-105-make-brand.md):** The brand to build on exists, and lists what a brand built on it may alter.
+**Preconditions:** **From [UC-105](UC-105-make-brand.md), or [UC-109](UC-109-take-in-shared-library.md):** The brand to build on exists, and lists what a brand built on it may alter.
 
 **Assumptions:**
 

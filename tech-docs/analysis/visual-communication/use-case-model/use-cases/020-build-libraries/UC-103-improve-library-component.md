@@ -61,7 +61,7 @@ pkit:
 
 What the developer needs here that no accepted record decides yet:
 
-- **A library another project shares.** Its library owner improves it there. This project asks which of its libraries have newer library versions, and takes in a new one as from step 3. No use case yet tells how a project takes in a library by its link.
+- **A library another project shares.** Its library owner improves it there. This project takes in the newer library version, and moves its pieces, as [UC-109](UC-109-take-in-shared-library.md) tells in its variants 1a and 6a.
 - **A draft piece.** Point 4j of the planning note moves its lock to the newest library version present at each drawing. Step 4 shows it before and after. Which of the two holds for a draft piece.
 
 ## Sources

@@ -1,6 +1,6 @@
 # Overview of the analysis of visual-communication
 
-<!-- pkit:overview reads=5 fingerprint=sha256:42e05b3625ced1c3e14d79a6dff54bbbfb975f31bda9fdf80cee37966510bc21 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:c27e3bb1a239934e27e10bb81bbe8a9ea109ebc07af383172ba346b4433a3899 -->
 
 No record states what visual-communication is for yet. Write one with `pkit new decision`, and name it as `purpose` in the entry of visual-communication under `analyses` in `.pkit/capabilities/software-analysis/project/config.yaml`.
 
@@ -39,6 +39,7 @@ Build the libraries pieces are made from, and carry their look into code, so all
 - [UC-105 — Make a brand with modes on the axes it needs](../use-case-model/use-cases/020-build-libraries/UC-105-make-brand.md)
 - [UC-106 — Build a brand on another brand](../use-case-model/use-cases/020-build-libraries/UC-106-build-brand-on-brand.md)
 - [UC-107 — Use a brand's values in code](../use-case-model/use-cases/020-build-libraries/UC-107-use-brand-in-code.md)
+- [UC-109 — Take in a library another project shares](../use-case-model/use-cases/020-build-libraries/UC-109-take-in-shared-library.md)
 
 ### 030-draw-and-hand-out
 
