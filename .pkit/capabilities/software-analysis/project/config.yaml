@@ -50,6 +50,11 @@ analyses:
     # The record that states what software-engineering is for
     # (software-analysis DEC-003 point 8).
     purpose: software-engineering:DEC-003
+    # Each area's goal, in the order the areas build on each other
+    # (software-analysis DEC-003 point 8 and DEC-005 point 1).
+    areas:
+      010-build: "Build each change with an AI agent that writes its code to the project's own conventions, each answer the change was not asked for decided by a person."
+      020-review: "Review each change before it merges, so no merge rests on code or an answer that does not hold."
     builds-on:
       - analysis: core
       - analysis: project-management
