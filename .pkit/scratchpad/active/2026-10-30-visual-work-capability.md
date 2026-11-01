@@ -942,7 +942,7 @@ row:
 
 ```yaml
 # ibm/2.0.0/library.yaml
-version: 2.0.0                  # the library's content, semver: major removes or renames, minor adds, patch fixes
+version: 2.0.0                  # the library's content, semver: major removes or renames, minor adds, patch fixes (for stable components, point 8)
 schema_version: 1               # the shape of the files: rises only on a breaking change, the format's major
 requires: {visual-work: "1.4"}  # the oldest capability release with the tools the library uses, the format's minor
 ```
@@ -1278,9 +1278,15 @@ Point 13 is decided.
 - The owner may mark it `deprecated` in any release, and it is removed in the next major one (4c).
 - This holds for every library: the starter's owner is project-kit, a project's own library's owner is that project.
 - **It revises decided points.** 4c's outcome added patterns "only when a real talk needs them": the starter now adds them ahead of need, each entering as experimental. The Names section promoted a local component once it recurred about three times: recurring is a reason to promote it, not a condition, and the owner judges. Point 21's rule, a helper script becoming an engine tool after about three uses, is about the engine's code and stays.
-- **Left open:** what each status promises, such as whether an experimental component may be renamed in a minor release (point 20's semver says a major removes or renames), and whether a check compares a stable component's fields with its previous version's.
 
-**Still open in point 8, in this order:** the list of jobs and its mapping table; what each status promises; how far a pattern's options go; the log of misses; the build order, with the engine tools each pattern needs; where the Friday talk's twelve new reusable pieces go (`terminal`, `term_image`, `highlight`, `pstage`, `step_card`, `kind`, `kind_group`, `tree_bar`, `tree_tag`, `tree_note`, `divider`, `talk_cover`); whether a notation for software work ships, and as which kind of library; a legend and icons, so colour is never the only signal (RS-VISUAL-006); the neutral brand's themes (`teal-calm`, `warm-paper`, their modes) and fonts.
+**What each status promises. Agreed (1 November).** The critic noted that a wide starter needs this settled first: if an experimental component could change only in a major release, every pattern built ahead of need would be a promise from its first day.
+- **Experimental** may change in any release of its library: renamed, reshaped or removed. A piece that uses one is told so when it renders, as a note, never a failure; its lock protects it as it protects every piece.
+- **Stable** changes in a breaking way only in a major release of its library. Breaking means removing or renaming a field, an option or a part, or changing what one means. A change to how it looks may come in a minor release; a piece moving to it still gets the before-and-after (4j, 4i).
+- **The promise is checked, not trusted.** When a library is released, a check compares each stable component's fields, options and parts with the previous version's, and refuses a breaking change outside a major release, as Carbon's snapshot tests do.
+- **It narrows point 20:** "a major removes or renames" holds for stable components; an experimental one may be renamed or removed in a minor release.
+- Set aside: experimental components changing only with a migration note in a minor release (the cost of every wide addition comes back to the starter's owner), and no status at all, with unproven components in a separate `starter-labs` library that pieces lock like any other.
+
+**Still open in point 8, in this order:** the list of jobs and its mapping table; how far a pattern's options go; the log of misses; the build order, with the engine tools each pattern needs; where the Friday talk's twelve new reusable pieces go (`terminal`, `term_image`, `highlight`, `pstage`, `step_card`, `kind`, `kind_group`, `tree_bar`, `tree_tag`, `tree_note`, `divider`, `talk_cover`); whether a notation for software work ships, and as which kind of library; a legend and icons, so colour is never the only signal (RS-VISUAL-006); the neutral brand's themes (`teal-calm`, `warm-paper`, their modes) and fonts.
 
 ## Architect's review (31 October)
 
