@@ -1,0 +1,22 @@
+component: software-analysis
+kind: major
+custom:
+  category: Changed
+body: >
+  `SAN`'s rule on areas and journeys, `RS-SAN-014`, is accepted (software-analysis
+  DEC-005 and DEC-007, #2105). Each use case lies in the functional area whose
+  goal it is a step toward, no two areas serve one function, and a journey of
+  its actor tells each path one actor's use cases make. Accepting it takes `SAN`
+  to 2.0.0 (COR-051 point 7). The rule declares no check, so the rule-set
+  reviewer judges it wherever it binds.
+  **Breaking:** a set of your own that pins `software-analysis:SAN@1` is behind
+  its set, so no rule of `SAN` binds through it, and `pkit validate` fails on
+  the pin until you re-pin it to `SAN@2`. Re-pinning brings your whole analysis
+  under the rule at once: each use case that lies in no area's folder, and each
+  path no journey tells, is a break of the rule. Plan the areas from what the
+  use cases do, as the `analysis-author` skill's `build-analysis.md` says, move
+  each use case into its area's folder, and revalidate each move in the same
+  change (COR-050 point 3). Then write a journey for each path. Or leave a file
+  out of your set's scope until it is mended. COR-060 point 2 gives the other
+  ways out. No migration ships, since only a person can say what function a use
+  case serves and whether use cases make a path.
