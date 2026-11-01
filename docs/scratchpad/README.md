@@ -25,6 +25,7 @@ pkit:
         - .pkit/scratchpad/README.md#front-matter
         - .pkit/scratchpad/README.md#commands
         - .pkit/cli/README.md#new-scratchpad-slug
+        - .pkit/cli/README.md#scratchpad-commands
         - .pkit/cli/README.md#scratchpad-done-slug---produced-ref
         - .pkit/cli/README.md#scratchpad-drop-slug
         - .pkit/cli/README.md#scratchpad-reported-slug-ref
@@ -114,7 +115,7 @@ What the output proves, claim by claim:
 
 - **Folder as state.** `pkit scratchpad list` groups the notes by folder. The open questions lie in `active/`, and in `reported/` once sent upstream ([the reference, "States"](../../.pkit/scratchpad/README.md#states)).
 - **Dropped, and kept.** `retry-policy` lies in `dropped/`. Before you drop a note, you end it with why its line of thought stopped ([the reference, "Body"](../../.pkit/scratchpad/README.md#body)).
-- **Retired with what it produced.** `done` moved `cache-layer` to `done/`. It added `retired`, today's date, and `produced`, the two references given, to the note's front matter.
+- **Retired with what it produced.** `done` moved `cache-layer` to `done/`. It added `retired`, today's date, and `produced`, the two values given, to the note's front matter.
 - **Tracked upstream.** `pkit scratchpad reported` recorded the issue, and the listing marks the note `[modified since reported]` after the edit. Here the listing cannot read the issue, so it shows its state as unknown. Where `gh` can read it, the listing shows it open or closed, with its title.
 
 ### Compared with the alternatives
@@ -124,11 +125,11 @@ Without scratchpad notes, you think a question through in a file of your own in 
 | What you need | A file of your own | An issue | A scratchpad note |
 | --- | --- | --- | --- |
 | Tell the open questions from the settled ones | ❌ Nothing marks a draft as finished | ✅ Open issues are listed apart from closed ones | ✅ Each state is a folder |
-| Keep a dead end, with why it stopped | ❌ It is deleted, or left looking open | ✅ It is closed, and you say why in a comment | ✅ It moves to `dropped/`, and you say why in it |
+| Keep a dead end, with why it stopped | ❌ It is deleted, or left looking open | ✅ It is closed, and you say why in a comment | ✅ It moves to `dropped/`, and you say why in it ([the reference, "Body"](../../.pkit/scratchpad/README.md#body)) |
 | Know what the exploration produced | ❌ Nothing records it | ✅ Pull requests that name it are listed on it | ✅ `produced` names what you list |
 | Read it beside the code, at any commit | ✅ It is a file in the repository | ❌ It lives in the tracker | ✅ It is a file in the repository |
 | Discuss it among many people | ❌ Only in pull-request reviews | ✅ Comments, and a notice to each person who follows it | ❌ Only in pull-request reviews |
-| Start one | ✅ Create a file, and write | ✅ Open an issue, and write | ❌ A command, with a slug no other note ends with |
+| Start one | ✅ Create a file, and write | ✅ Open an issue, and write | ❌ A command, and a slug it accepts ([the CLI reference, `new scratchpad`](../../.pkit/cli/README.md#new-scratchpad-slug)) |
 | Cost of each edit | ❌ A commit | ✅ None | ❌ A commit |
 
 ### When you do not need it
@@ -158,8 +159,8 @@ stateDiagram-v2
 
 - **Open:** `pkit new scratchpad` stamps a note into `active/`. A note sent upstream as a report moves to `reported/`, and is still open there ([the reference, "States"](../../.pkit/scratchpad/README.md#states)).
 - **Settled:** `pkit scratchpad done` moves a note to `done/` once other documents hold what it found. `pkit scratchpad drop` moves it to `dropped/` when its line of thought fails. Either retires a note from `active/` or from `reported/`.
-- **The front matter** records who writes in the note and since when. Once the note retires, it records when, and what the note produced. A reported note also records the issue it became, and a hash of what was sent ([the reference, "Front matter"](../../.pkit/scratchpad/README.md#front-matter)).
-- **What the commands leave to you:** each moves the file on disk, and stages nothing in git. Commit the move. Where the note changed little, git shows it as a rename ([the reference, "States"](../../.pkit/scratchpad/README.md#states)).
+- **The front matter** records who writes in the note, and the day the note started. Once the note retires, the front matter records the day it retired, and what it produced. A reported note also records the issue it became, and a hash of what was sent ([the reference, "Front matter"](../../.pkit/scratchpad/README.md#front-matter)).
+- **What the commands leave to you:** each moves the file on disk, and stages nothing in git ([the CLI reference, "Scratchpad commands"](../../.pkit/cli/README.md#scratchpad-commands)). Commit the move. Where the note changed little, git shows it as a rename ([the reference, "States"](../../.pkit/scratchpad/README.md#states)).
 - **Who owns the notes:** your project. Installing project-kit creates the folders, and a sync updates only the area's README. It never reads or writes a note ([the reference, "Layout"](../../.pkit/scratchpad/README.md#layout)).
 - **A note binds nothing.** No work rests on it. What it found binds once a decision record states it, and a person accepts that record ([the decisions README, "The acceptance gate"](../../.pkit/decisions/README.md#the-acceptance-gate)).
 
@@ -180,7 +181,7 @@ started: <any>
 # Cache layer
 ```
 
-- **Its name:** the day it started, then the slug. The slug takes lower-case letters and digits, joined by hyphens. Where another note's name ends with the slug already, the command mostly refuses and writes nothing ([the reference, "File name"](../../.pkit/scratchpad/README.md#file-name), says when).
+- **Its name:** the day it started, then the slug. The slug takes lower-case letters and digits, joined by hyphens. Where another note's name ends with the slug already, the command mostly refuses and writes nothing ([the CLI reference, `new scratchpad`](../../.pkit/cli/README.md#new-scratchpad-slug), says when).
 - **Its front matter:** you as its author, from your git configuration, and the day it started ([the reference, "Front matter"](../../.pkit/scratchpad/README.md#front-matter)).
 - **Its title:** drawn from the slug ([the reference, "Body"](../../.pkit/scratchpad/README.md#body)). Change it to the question the note explores.
 - **With your agent:** ask it to start one, such as "Use the scratchpad-author skill to start a note on how we cache build results". The skill agrees the slug with you, keeps the note to one question and drafts its opening.

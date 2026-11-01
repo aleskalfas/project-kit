@@ -1233,7 +1233,7 @@ Refuses if the storyboard already exists or no agent of that name is found. It a
 
 Stamps a new active-state scratchpad note at `.pkit/scratchpad/active/<YYYY-MM-DD>-<slug>.md` per the convention in COR-012 and the spec in `.pkit/scratchpad/README.md`. The command is the deterministic part of starting a note: pick today's date, validate the slug, seed the frontmatter, write an H1 derived from the slug.
 
-- **`<slug>`** is a kebab-case shorthand of the question the note explores (e.g. `agent-architecture`, `versioning-policy`). The command refuses the slug where a state folder holds exactly one note whose filename ends in `-<slug>.md`, so a short slug can be refused for a longer one. Where each folder holds none, or two or more, it stamps the note.
+- **`<slug>`** is a kebab-case shorthand of the question the note explores (e.g. `agent-architecture`, `versioning-policy`). The command refuses the slug where a state folder holds exactly one note whose filename ends in `-<slug>.md`, so a short slug can be refused for a longer one. Where each folder holds none, or two or more, it stamps the note, unless `active/` holds today's file for the slug already.
 
 The stamped file includes:
 

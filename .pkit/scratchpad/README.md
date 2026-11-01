@@ -87,7 +87,7 @@ A note's file is `<YYYY-MM-DD>-<slug>.md` (COR-012):
 - **`<YYYY-MM-DD>`** is the day the note was stamped. It never changes when the note moves.
 - **`<slug>`** names the question in two to four words of kebab-case: lower-case letters and digits, joined by single hyphens.
 - **A slug finds every note whose file name ends in `-<slug>.md`,** so `layer` finds `2026-06-03-cache-layer.md` ([the CLI reference, `scratchpad done`](../cli/README.md#scratchpad-done-slug---produced-ref)).
-- **`pkit new scratchpad` refuses a slug** where a state folder holds exactly one note whose file name ends in it. Where each folder holds none or two or more, the slug is stamped ([the CLI reference, `new scratchpad`](../cli/README.md#new-scratchpad-slug)).
+- **`pkit new scratchpad` refuses a slug** where a state folder holds exactly one note whose file name ends in it. Where each folder holds none or two or more, the note is stamped, unless today's file for the slug exists ([the CLI reference, `new scratchpad`](../cli/README.md#new-scratchpad-slug)).
 
 Examples: `2026-05-12-agent-architecture.md`, `2026-06-03-cache-layer.md`.
 
@@ -213,6 +213,7 @@ Each command has its full entry in the CLI reference, which each name below link
   - `new scratchpad`:
     - a slug that is not kebab-case
     - a slug that ends the file name of exactly one note in a state folder ("File name" above)
+    - a slug whose file of today's date lies in `active/` already
     - a project with no `active/`
   - `done` and `drop`:
     - no `active/`
