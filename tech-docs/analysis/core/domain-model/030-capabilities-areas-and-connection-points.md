@@ -27,6 +27,7 @@ pkit:
         - COR-053
         - COR-061#1
         - COR-061#5
+        - COR-070#1
         - PRJ-002#D4
       artefact:
         - TERM-capability
@@ -47,7 +48,7 @@ A [capability](../glossary.md#term-capability--capability) packages one discipli
 ```mermaid
 classDiagram
   accTitle: Capabilities, areas and connection points
-  accDescr: A capability is a component a project chooses to install. A component declares a range on the backbone, and a capability may declare a range on another capability. An area is a slice of a project's .pkit tree that needs no install. A capability provides roles, and under a role it defines connection points, which other components fill, depend on or subscribe to. A data point is the kind of connection point that takes data in. A capability also defines processes, and a connection point may offer one for others to depend on.
+  accDescr: A capability is a component a project chooses to install. A component declares a range on the backbone, and a capability may declare a range on another capability. An area is a slice of a project's .pkit tree that needs no install. A capability provides roles, and under a role it defines connection points, which other components fill, depend on or subscribe to. A data point is the kind of connection point that takes data in. A capability also defines processes, and a connection point may offer one for others to depend on. A capability may ship operational rules of its own.
   class Component["Component"]
   class Backbone["Backbone"]
   class Project["Project"]
@@ -68,6 +69,7 @@ classDiagram
   class Process["Process"]
   Process : states
   Process : moves and their conditions
+  class OperationalRule["Operational rule"]
   Capability --|> Component
   Project o-- Capability : installs
   Project *-- Area : holds
@@ -80,6 +82,7 @@ classDiagram
   DataPoint --|> ConnectionPoint
   Capability "1" --> "*" Process : defines
   ConnectionPoint ..> Process : offers, where its kind is a process
+  Capability ..> OperationalRule : may ship
 ```
 
 ```mermaid
@@ -119,6 +122,7 @@ A capability is a [component](../glossary.md#term-component--component) that pac
 - A project installs it, or registers it where the project authors the capability itself ([COR-031 point D3](../../../../.pkit/decisions/core/COR-031-capability-origin.md#d3--registering-an-incubated-capability-does-not-copy)).
 - It may depend on other capabilities, each through a [range](../glossary.md#term-range--range) ([COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)).
 - It ships the agent definitions its discipline needs ([COR-026](../../../../.pkit/decisions/core/COR-026-agent-placement-by-discipline.md)).
+- It may ship [operational rules](../glossary.md#term-operational-rule--operational-rule) of its own, as one loaded [rule set](../glossary.md#term-rule-set--rule-set) ([COR-070 point 1](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#1-a-capability-ships-at-most-one-loaded-set-and-its-loaded-file-travels-with-it)).
 
 **States:** None.
 

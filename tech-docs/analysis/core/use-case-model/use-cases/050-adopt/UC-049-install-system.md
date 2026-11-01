@@ -33,6 +33,8 @@ pkit:
         - src/project_kit/status.py
         - src/project_kit/provisioning.py
         - src/project_kit/workspace.py
+        - src/project_kit/loaded_rules.py
+        - .pkit/adapters/claude-code/merge-claude-md.sh
       record:
         - COR-001
         - COR-002
@@ -43,6 +45,8 @@ pkit:
         - ADR-065#4
         - ADR-065#11
         - ADR-034#1
+        - COR-070#2
+        - ADR-076#2
       artefact:
         - ACT-adopter
         - ACT-operator
@@ -81,10 +85,11 @@ pkit:
 5. The system writes `.pkit/manifest.yaml`, recording the CLI's [backbone](../../../glossary.md#term-backbone--backbone) [version](../../../glossary.md#term-version--version) as the target, before it copies anything ([ADR-065 point 4](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#4-a-transition-runs-in-cor-010s-order-with-seed-paths-after-the-migrations) and [REQ-026](../../../requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md)).
 6. The system copies the methodology's [areas](../../../glossary.md#term-area--area) from the content the CLI carries into `.pkit/` ([COR-001](../../../../../../.pkit/decisions/core/COR-001-content-mechanisms.md) and [ADR-033](../../../../../architecture/decisions/ADR-033-official-install-bundles-content.md)).
 7. The system creates each seed path, such as each area's `project/` folder and the agents' [overlay](../../../glossary.md#term-overlay--overlay) (COR-001 and [ADR-065 point 11](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#11-each-writer-of-a-project-owned-path-is-named-and-each-owner-of-derivable-state)).
-8. The system registers each adapter it copied, at the version the adapter ships. Each adapter's scripts then merge the methodology's entries into the files its [harness](../../../glossary.md#term-harness--harness) reads, and deploy its [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition). For Claude Code those are `.claude/settings.json` and `CLAUDE.md` ([COR-002](../../../../../../.pkit/decisions/core/COR-002-merge-delivery.md) and [REQ-002](../../../requirements/functional/REQ-002-project-owned-writers.md)).
+8. The system registers each adapter it copied, at the version the adapter ships. Each adapter's scripts then merge the methodology's entries into the files its [harness](../../../glossary.md#term-harness--harness) reads, and deploy its [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition). For Claude Code those are `.claude/settings.json` and `CLAUDE.md` ([COR-002](../../../../../../.pkit/decisions/core/COR-002-merge-delivery.md) and [REQ-002](../../../requirements/functional/REQ-002-project-owned-writers.md)). `CLAUDE.md` gains three includes of [operational rules](../../../glossary.md#term-operational-rule--operational-rule): the backbone's, then the [capabilities](../../../glossary.md#term-capability--capability)' rules index, then the project's own ([COR-070 point 2](../../../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#2-the-adapter-delivers-the-loaded-file-by-the-route-that-carries-cores-rules)).
+13. Before the adapters' scripts of step 8 run, the system renders the capabilities' rules index, `.pkit/rules/capabilities.md` ([ADR-076 point 2](../../../../../architecture/decisions/ADR-076-capability-rules-index.md#2-the-backbone-renders-an-index-and-claudemd-includes-it)). It lists the file of operational rules of each capability installed, and none is installed yet. Installing one later adds its file to the index ([UC-023](../020-set-up/UC-023-add-or-remove-capability.md)).
 9. The system renders `.pkit/.gitignore`, creates the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace), and provisions each registered query command ([ADR-009 point 7](../../../../../architecture/decisions/ADR-009-git-footprint-visibility.md#7-runtime-local-ignore-lines-ship-through-a-pkit-owned-pkitgitignore-rendered-wholesale)).
 10. The system records `completed_version` last, and prints `Install complete. Recommended next steps:`. Where no installed `pkit` is on the `PATH`, the first step names the CLI's install of the highest [release](../../../glossary.md#term-release--release), through the tag `latest` ([REQ-031](../../../requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md)). The others name the adapter's project settings file, and `.claude/settings.json` to review, with that file's backup only where variant 8a made one. They end with lines for `.gitignore`, which the system never writes ([ADR-009](../../../../../architecture/decisions/ADR-009-git-footprint-visibility.md)), and `pkit visibility private`.
-11. The adopter runs `pkit status`. The system shows how the methodology is wired into the project, and writes nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)). It shows the backbone's version, the agent workspace, the adapter, each [capability](../../../glossary.md#term-capability--capability), the [rule sets](../../../glossary.md#term-rule-set--rule-set) and the connections.
+11. The adopter runs `pkit status`. The system shows how the methodology is wired into the project, and writes nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)). It shows the backbone's version, the agent workspace, the adapter, each capability, the [rule sets](../../../glossary.md#term-rule-set--rule-set) and the connections.
 12. The adopter commits `.pkit/` and the files the adapter deployed, so the team shares one methodology. The project's visibility stays `shared`, the default ([ADR-009 point 2](../../../../../architecture/decisions/ADR-009-git-footprint-visibility.md#2-shared-default--pkit-is-committed-infoexclude-is-kept-clear)).
 
 **Variants:**

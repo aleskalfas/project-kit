@@ -501,7 +501,7 @@ TERM-operational-rule:
   name: operational rule
   noun-forms: [operational rules]
   status: active
-  definition: "instruction every AI agent session loads through the harness's include, numbered in the system's file or the repository's own"
+  definition: "instruction every AI agent session loads through the harness's include, from the backbone's file, each installed capability's through an index, or the repository's own"
   pkit:
     friction:
       anchors:
@@ -509,12 +509,16 @@ TERM-operational-rule:
           - .pkit/rules/core.md
           - .pkit/rule-sets/ops.md
           - .pkit/adapters/README.md
+          - src/project_kit/loaded_rules.py
         record:
           - COR-014
           - COR-051#1
           - COR-068#1
           - COR-068#6
           - COR-068#7
+          - COR-070#1
+          - COR-070#2
+          - COR-070#5
 TERM-overlay:
   name: overlay
   status: active
@@ -1559,13 +1563,13 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 
 Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#operational-rule).
 
-**Example:** core rule 8 asks an agent to pause before a destructive operation, and [project](#term-project--project) rule 4 asks for signed commits in project-kit.
+**Example:** core rule 8 asks an agent to pause before a destructive operation. Where the `software-engineering` [capability](#term-capability--capability) is installed, `software-engineering:RS-SWE-001` asks an agent to run the tests of what it changed. [Project](#term-project--project) rule 4 asks for signed commits in project-kit.
 
 **Distinctions:**
 
 - **Rule:** a statement in a [rule set](#term-rule-set--rule-set), with an id, an origin and a status ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). An operational rule in a loaded set is a [rule](#term-rule--rule) too, with an id, an origin and a status. It binds on what a session does, not on [artefacts](#term-artefact--artefact) ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
-- **Core rule and project rule:** the analysis's names for an operational rule of the [methodology](#term-methodology--methodology)'s file and of the project's, cited by number, as in *core rule 2*. A core rule is a rule of the [backbone](#term-backbone--backbone)'s loaded set `OPS`, so core rule 2 is `backbone:RS-OPS-002` (COR-068). A project rule is a rule of a loaded set only where the project keeps its rules as a loaded set.
-- **Core or project:** the methodology's file holds what fits any project, and the project's file holds what fits only that project ([COR-014](../../../.pkit/decisions/core/COR-014-universal-applicability.md)).
+- **Core rule and project rule:** the analysis's names for an operational rule of the [backbone](#term-backbone--backbone)'s file and of the project's, cited by number, as in *core rule 2*. A core rule is a rule of the backbone's loaded set `OPS`, so core rule 2 is `backbone:RS-OPS-002` (COR-068). A project rule is a rule of a loaded set only where the project keeps its rules as a loaded set. A capability's operational rule takes no such name, and is cited by its id with the capability's name ([COR-070 point 1](../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#1-a-capability-ships-at-most-one-loaded-set-and-its-loaded-file-travels-with-it)).
+- **Core, capability or project:** the backbone's file holds what fits any project, and the project's file holds what fits only that project ([COR-014](../../../.pkit/decisions/core/COR-014-universal-applicability.md)). A capability's file holds what binds only where that capability is installed ([COR-070 point 5](../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#5-a-rule-that-binds-only-with-a-capability-belongs-to-that-capability)).
 
 ## TERM-overlay — overlay
 

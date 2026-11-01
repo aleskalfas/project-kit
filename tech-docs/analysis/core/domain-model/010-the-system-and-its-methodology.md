@@ -25,7 +25,12 @@ pkit:
         - COR-051
         - COR-058
         - COR-068
+        - COR-070#1
+        - COR-070#2
+        - COR-070#4
+        - COR-070#5
         - PRJ-011
+        - ADR-076#2
       artefact:
         - TERM-system
         - TERM-harness
@@ -51,7 +56,7 @@ Some questions are too large for a decision record at first, and the work that m
 ```mermaid
 classDiagram
   accTitle: The system and its methodology
-  accDescr: The system ships and enforces the methodology. The methodology is made of decision records, rules, operational rules and conventions. A decision record holds points. A scratchpad note may produce decision records. Work builds only on accepted decision records and rules, as the acceptance gate says. A harness loads the operational rules through its include.
+  accDescr: The system ships and enforces the methodology. The methodology is made of decision records, rules, operational rules and conventions. A decision record holds points. A scratchpad note may produce decision records. Work builds only on accepted decision records and rules, as the acceptance gate says. An operational rule has a layer: core's, an installed capability's or the project's. A harness loads the operational rules of every layer through its include.
   class System["System"]
   class Harness["Harness"]
   class Methodology["Methodology"]
@@ -69,6 +74,7 @@ classDiagram
   class AcceptanceGate["Acceptance gate"]
   class OperationalRule["Operational rule"]
   OperationalRule : number
+  OperationalRule : layer
   System --> Methodology : ships and enforces
   Methodology o-- DecisionRecord
   Methodology o-- Rule
@@ -307,28 +313,31 @@ The acceptance gate is the condition that work builds only on what is already ac
 
 Defined in [TERM-operational-rule](../glossary.md#term-operational-rule--operational-rule).
 
-**Why:** An instruction shipped to every repository must fit any of them, since one that fits a single repository cannot apply elsewhere ([COR-014](../../../../.pkit/decisions/core/COR-014-universal-applicability.md)). So a repository keeps its own instructions in a file of its own (COR-014). A citation by number names another [rule](../glossary.md#term-rule--rule) when the rules are renumbered, and nothing says so ([COR-068](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)). So the [system](../glossary.md#term-system--system)'s rules are kept as a loaded [rule set](../glossary.md#term-rule-set--rule-set), with a permanent id for each (COR-068).
+**Why:** An instruction shipped to every repository must fit any of them, so a repository keeps those that fit only itself in its own file ([COR-014](../../../../.pkit/decisions/core/COR-014-universal-applicability.md)). Neither file suits an instruction binding only where a [capability](../glossary.md#term-capability--capability) is installed: the shipped one binds everywhere, and each repository would write it again ([COR-070](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md)). A citation by number names another [rule](../glossary.md#term-rule--rule) when the rules are renumbered, and nothing says so ([COR-068](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)). So the [backbone](../glossary.md#term-backbone--backbone)'s rules, and each capability's, are kept as loaded [rule sets](../glossary.md#term-rule-set--rule-set) of their own, with a permanent id for each (COR-068 and COR-070).
 
-An operational rule is an instruction that every session loads through the [harness](../glossary.md#term-harness--harness)'s include. It is cited by its number in its file, such as core rule 8.
-- **Core rules:** each is a rule of the [backbone](../glossary.md#term-backbone--backbone)'s loaded set `OPS`, so core rule 8 is `backbone:RS-OPS-008`. The file a session loads is generated from the set ([COR-068 point 3](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#3-the-loaded-file-is-generated-from-the-set-where-the-set-is-authored)).
+An operational rule is an instruction that every session loads through the [harness](../glossary.md#term-harness--harness)'s include. The rules come in three layers: core's, each installed capability's and the [project](../glossary.md#term-project--project)'s. A rule of core's or of the project's is cited by its number in its file, such as core rule 8.
+- **Core rules:** each is a rule of the backbone's loaded set `OPS`, so core rule 8 is `backbone:RS-OPS-008`. The file a session loads is generated from the set ([COR-068 point 3](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#3-the-loaded-file-is-generated-from-the-set-where-the-set-is-authored)).
+- **Capability rules:** each is a rule of the one loaded set an installed capability may ship. It is cited by its id with the capability's name, as in `software-engineering:RS-SWE-001` ([COR-070 point 1](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#1-a-capability-ships-at-most-one-loaded-set-and-its-loaded-file-travels-with-it)).
 - **Project rules:** a plain file, loaded as it stands, until the repository keeps them as a loaded set of its own ([COR-068 point 7](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#7-a-projects-rules-not-yet-in-a-set)).
 
 **Attributes:**
 
 - its number in its file, which is its id's number in a loaded set
+- its layer: core's, an installed capability's or the project's ([COR-070 point 4](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#4-rules-add-up-across-layers-and-none-loosens-another))
 - its statement, mostly with a pointer to where its reasons are
 - in a loaded set, a rule's id, origin and status ([COR-068 point 6](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#6-ids-origins-and-citations))
 
 **Relations:**
 
-- The harness's include loads it into each session.
+- The harness's include loads it into each session. A capability's rules come through the capabilities' rules index, which lists each installed capability's file ([COR-070 point 2](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#2-the-adapter-delivers-the-loaded-file-by-the-route-that-carries-cores-rules) and [ADR-076 point 2](../../../architecture/decisions/ADR-076-capability-rules-index.md#2-the-backbone-renders-an-index-and-claudemd-includes-it)).
 - In a loaded set, it binds on the work of each session that loads it, never on an [artefact](../glossary.md#term-artefact--artefact) ([COR-068 point 2](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#2-where-its-accepted-rules-bind)).
 
 **States:** In a loaded set, those of a rule. Only an accepted one is in the file a session loads (COR-068 point 3). In a plain file, none.
 
 **Always true:**
 
-- An operational rule that fits any repository is in the file the system ships. One that fits only one repository is in that repository's own file (COR-014).
+- An operational rule that fits any repository is in the backbone's file. One that fits only one repository is in that repository's own file (COR-014). One that binds only where a capability is installed is in that capability's file ([COR-070 point 5](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#5-a-rule-that-binds-only-with-a-capability-belongs-to-that-capability)).
+- A capability's rule never loosens one of core's, and a project's rule never loosens one of core's or of a capability's. Core's layer is above a capability's, which is above the project's. Where two rules of different layers cannot both be kept, the upper layer's rule binds. Where two capabilities' rules clash, the session stops the step and reports the clash (COR-070 point 4).
 - A citation such as core rule 19 names the same rule for as long as the set stands (COR-068 point 6).
 
 ## Methodology
@@ -461,6 +470,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 **Rule:**
 
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
 - [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
 - [UC-040 — Have a drafted record or rule become binding only through my own review](../use-case-model/use-cases/030-change/UC-040-accept-through-review.md)
@@ -480,8 +490,10 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 - [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
 - [UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's](../use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md)
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
 - [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md)
 - [UC-029 — Get a delegated agent's result back whole](../use-case-model/use-cases/020-set-up/UC-029-get-result-whole.md)
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
 - [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
 - [REQ-002 · Functional · Project-owned content is written only by the writers records name](../requirements/functional/REQ-002-project-owned-writers.md)
 
