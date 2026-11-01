@@ -6,6 +6,8 @@ date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+**In plain terms:** the engine computes where every element of a piece lies, how big it is and which values it takes, with a small fixed set of tools: arithmetic formulas, a few layout operators, references between elements, and text it measures from committed fonts. The tools never grow into a programming language. Renderers, producers of pictures and code writers all meet the engine at one versioned seam, say what they can take, and report what they lost in one form. One document of a brand's resolved values feeds them all, and each piece's last render keeps the findings the check reads.
+
 ## Context
 
 The capability's founding record makes the engine the capability's code that computes the *scene* from a piece's content and its libraries. Renderers only project the scene. The engine knows no component by name, and computes with a small set of general tools. It runs no program and reads only the project's files. Three kinds of plugin meet it: renderers, producers of pictures and code writers (its points 2, 4 and 8). This record decides the tools, what the scene holds, and the seam between the engine and its plugins.
@@ -16,11 +18,11 @@ The capability's design work ([project-kit#2424](https://github.com/aleskalfas/p
 - **Arithmetic covered most slides.** A pyramid's levels, and arrows spread around a slot, needed only an item's index, the count of items and the theme's sizes. Arrows that end at a slot two levels down inside another box also need that slot's measured place.
 - **A prototype drew four slides and a figure** with formulas and a few layout operators, measuring text from committed font files.
 
-A review of existing tools found none that lays out one component specification for several media. It advised adopting an established library to shape text, fixing the formula grammar so it never grows into a programming language, and giving each size one owner. The design approved with the capability's plan ([project-kit#2423](https://github.com/aleskalfas/project-kit/issues/2423)) had a producer read a brand's values through the JSON a code writer writes. Point 7 makes that more exact.
+A review of existing tools found none that lays out one component specification for several media. It advised adopting an established library to shape text, fixing the formula grammar so it never grows into a programming language, and giving each size one owner.
 
 ## Decision
 
-**The engine computes the scene with a closed set of tools. They are formulas of plain arithmetic, a few layout operators, references between elements that never loop, and text it measures from committed fonts and breaks into lines itself. It also resolves a brand's values into one document. Renderers, producers and code writers meet the engine at one seam, in one pattern, with one form of loss report. The seam and the document each have a version of their own. Only the capability ships plugins, for now.**
+**The engine computes the scene with a closed set of tools. They are formulas of plain arithmetic, a few layout operators, references between elements that never loop, and text it measures from committed fonts and breaks into lines itself. It also resolves a brand's values into one document. Renderers, producers and code writers meet the engine at one seam, in one pattern, with one form of loss report. The seam and the document each have a version of their own. Only the capability ships plugins, until a project needs one it will not ship.**
 
 ### 1. A formula is arithmetic, and stays arithmetic
 
@@ -87,7 +89,7 @@ A *formula* computes one number in a component's data.
 - **Who reads it.** A renderer takes the scene's roles from it. The code writer for JSON writes it out unchanged, and every other code writer writes it in its own language.
 - **What a program run while preparing receives.** A command of the capability writes, for a producer or a helper, the values it declares. It adds the measured frames it declares, from a scene computed with that program's own output left out, so its output never changes what it measured. They come in the document's form.
 - **Computed, never edited or committed,** like the scene.
-- **More exact than the approved design.** There, a producer read a brand through the JSON a code writer wrote. Now producers, helpers and code writers all read the engine's document. So no plugin takes its values from another plugin's output, and a game's runtime reading the JSON reads, under the same lock, exactly the values a picture was made from.
+- **No plugin reads another plugin's output.** Producers, helpers and code writers all read this document. So a game's runtime reading the JSON reads, under the same lock, exactly the values a picture was made from.
 
 ### 8. The seam and the document of values each have a version
 

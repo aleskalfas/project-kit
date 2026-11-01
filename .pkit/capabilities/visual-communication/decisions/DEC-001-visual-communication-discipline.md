@@ -6,6 +6,8 @@ date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+**In plain terms:** a piece of visual work, such as a talk's slides or a figure in a documentation page, keeps what it shows as content and takes its look from shared libraries. A brand holds values, a component library holds structure, and a notation holds what a subject's concepts look like. An engine computes one drawing from them, and each renderer only draws that drawing in its medium, adding no design of its own. A piece names the exact versions of the libraries it uses, so a release changes nothing until a person looks. What the engine cannot compute, a program makes while the piece is prepared, and its output is checked like the rest.
+
 ## Context
 
 A project makes visual work: the slides of a talk, the figures in its documentation, a poster or a handout. Drawn piece by piece in one tool, each piece's look lives in that tool, and the tool's limits shape it. A second language, another brand or another medium means drawing it again, and what was made before is rarely reused.
@@ -43,7 +45,7 @@ The capability has two layers, and the first is the source of the second.
 - **What a renderer cannot draw** as the scene sets it, it approximates, draws as a picture or refuses, and it reports what it lost.
 - **A different look comes only from the logical layer,** from another brand or another library, never from a renderer.
 - **An edit made in a renderer,** where the medium can be edited, changes the source only when it is taken back into the logical layer, as a change a person reviews. The formats leave room for that from their first version (point 3).
-- **Plugins.** Three kinds are known: renderers draw a scene, producers make pictures while a piece is prepared (point 8), and code writers write a brand's values out as code (point 9). Each says what it supports and reports what it lost. Every plugin the capability ships is part of it, and none is a capability of its own. The record of the engine and its plugins decides whether a project may add a plugin of its own.
+- **Plugins.** They are of three kinds: renderers draw a scene, producers make pictures while a piece is prepared (point 8), and code writers write a brand's values out as code (point 9). Each says what it supports and reports what it lost. Every plugin the capability ships is part of it, and none is a capability of its own. The record of the engine and its plugins decides whether a project may add a plugin of its own.
 
 ### 3. A piece and its content
 
@@ -113,7 +115,7 @@ Some pieces need what the engine's tools cannot compute, such as items placed on
 ### 10. Independent, and connected to others later
 
 The capability works with no other capability installed.
-- **A figure in a documentation page** is, to that page, an image produced from a source: the piece's content. This capability is then what living-docs calls the renderer, and the piece's libraries and lock are that renderer's settings ([living-docs:DEC-002-visual-elements] points 1 and 4). A change of brand changes no content, as living-docs asks of a change of theme, since content names only what its libraries declare and never a value. Where such an image lies, and how its freshness is checked, the records of this capability's outputs and files settle with that capability's rules on images ([living-docs:DEC-002-visual-elements] points 2 and 5).
+- **A figure in a documentation page** is, to that page, an image produced from a source: the piece's content. This capability is then what living-docs calls the image's renderer, the tool that produces it from its source, and the piece's libraries and lock are that renderer's settings ([living-docs:DEC-002-visual-elements] points 1 and 4). A change of brand changes no content, as living-docs asks of a change of theme, since content names only what its libraries declare and never a value. Where such an image lies, and how its freshness is checked, the records of this capability's outputs and files settle with that capability's rules on images ([living-docs:DEC-002-visual-elements] points 2 and 5).
 - **Another capability's visuals,** such as an analysis's diagrams, may later be drawn by this one, through a contract that names what is to be drawn. This capability reports what it cannot draw. What the other capability does then, and how the two connect, is decided with that capability.
 
 ### 11. Shipped with the methodology, and a project's work stays the project's

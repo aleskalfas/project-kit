@@ -1,6 +1,6 @@
 ---
 id: DEC-002
-title: A project's visual work lies in its own files, each file names its schema, and one check judges them within validation
+title: A project's visual work lies in its own files, and one check judges them within validation
 status: proposed
 date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
@@ -85,9 +85,9 @@ Each record of the capability sets the severity of each finding its checks raise
 - **A stale output is a fact about the files as they are.** An output carries a record of what it was made from, such as a picture made while preparing or an export. Whether that record still matches the files is read from the working tree alone, so a validator reports it. The record of work outside the engine and outputs sets its severity.
 - **Each finding names its fix:** the file, the field or the item, and the command that mends it where one does.
 
-### 8. Python run with uv, and no network to draw
+### 8. Python, run as the methodology's own code, and no network to draw
 
-- **One runtime.** The capability's code is Python, run with uv as the methodology's own code is. It needs the runtime of no other language.
+- **One runtime.** The capability's code is Python, run as the methodology's own code is. It needs the runtime of no other language.
 - **Outside programs on the path that needs them.** A program of another tool, such as one that writes a PDF, is called only by the command that needs it. The methodology installs none, so that command checks for it and names what is missing. Validation needs none.
 - **No network to draw.** Drawing a piece to a file needs no network. A plugin that reaches a service, such as a renderer for a whiteboard service, declares that service. It runs only where the project has turned it on in the configuration. Its sign-in and the hosts it reaches come through the methodology's shared sign-in, decided apart ([project-kit#2418](https://github.com/aleskalfas/project-kit/issues/2418)).
 
@@ -112,7 +112,7 @@ Each record of the capability sets the severity of each finding its checks raise
 
 **Why a comparison is a command.** A comparison needs a base, and the base differs from run to run. Validation answers about the files as they are, so the same files give the same answer (COR-055 point 2).
 
-**Why Python and no network.** The methodology and the whiteboard tool the capability grew from are Python, and the methodology installs a capability's Python dependencies. Most drawing tools run on Node, which would put a second runtime on every machine. The engine reads no network, so a piece draws the same in continuous integration as on a laptop.
+**Why Python and no network.** The methodology and the whiteboard tool the capability grew from ([project-kit#2424](https://github.com/aleskalfas/project-kit/issues/2424)) are Python, and the methodology installs a capability's Python dependencies. Most drawing tools run on Node, which would put a second runtime on every machine. The engine reads no network, so a piece draws the same in continuous integration as on a laptop.
 
 ### Alternatives considered
 

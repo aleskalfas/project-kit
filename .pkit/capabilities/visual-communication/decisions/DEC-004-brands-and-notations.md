@@ -6,6 +6,8 @@ date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+**In plain terms:** a brand keeps its values, such as colours, fonts and sizes, as design tokens in the format design tools share. Its modes, such as light and dark or a high contrast, lie on separate axes, so no value is copied for each combination of them. A brand may build on one other brand, and change only what that base opens to it. The names a brand exports are public, since code outside the capability reads them, and one naming rule turns them into names in code. A notation says which colour roles, icons or shapes stand for the concepts of one subject, never which values.
+
 ## Context
 
 The capability's founding record makes a brand the library that holds values, and a notation the library that holds meaning (its point 5). Components name roles, and only a brand gives a role a value. A name is read with its library. A brand may build on another brand, and changes only the values its base lists as open to change. A brand's values can leave the capability as code, which live views read (its point 9). This record decides the formats of brands and notations.
@@ -19,7 +21,7 @@ The capability's design work ([project-kit#2424](https://github.com/aleskalfas/p
 
 ## Decision
 
-**A brand keeps its values as design tokens and its modes as one Resolver document, in the DTCG format. Its modes lie on axes that vary apart. An axis that changes values moves nothing, and one that changes sizes needs scenes of its own. A brand may build on one other brand, and gives values only to the roles that base declares open. The names a brand exports are public, and one naming rule turns them into names in code. A notation maps each concept, read with the notation's name, to roles, never to values.**
+**A brand keeps its values as design tokens and its modes as one Resolver document, in the DTCG format. Its modes lie on axes that vary apart. An axis that changes only colours and pictures moves nothing on the page, and one that changes sizes needs scenes of its own. A brand may build on one other brand, and gives values only to the roles that base declares open. The names a brand exports are public, and one naming rule turns them into names in code. A notation maps each concept, read with the notation's name, to roles, never to values.**
 
 ### 1. A brand's values are design tokens in the DTCG format
 
@@ -167,4 +169,4 @@ Each finding below fails validation where it lies in a file the project can corr
 - **The walking skeleton** reads a base brand and its open roles, and resolves two value axes, the colour scheme and the contrast. It writes the brand out as CSS under the naming rule, and checks contrast and missing fonts at the severities of point 11.
 - **The record of the engine and its plugins** decides how text is measured, and the document of a brand's resolved values that code writers and producers read.
 - **Later slices** build a brand built on another with its open roles checked, axes that change sizes in use, and the words a notation gives translators.
-- **No brand for projects to lock ships yet.** The capability's tests, and the reference renders of the component library it ships to start from, draw with a brand kept for its tests, which no project locks. Whether the capability ships a brand that projects may lock, such as a neutral one to start from, is left to a later change.
+- **A brand for projects to lock is left to a later change.** The capability's tests, and the reference renders of the component library it ships to start from, draw with a brand kept for its tests, which no project locks. Whether the capability ships a brand that projects may lock, such as a neutral one to start from, is left to a later change.

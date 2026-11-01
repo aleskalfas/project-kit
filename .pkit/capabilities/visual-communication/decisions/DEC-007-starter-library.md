@@ -36,7 +36,7 @@ The starter is planned to cover the jobs visuals commonly do, not only those one
 ### 2. Organised by the job a visual does
 
 - **One job per pattern.** Each pattern answers one question a visual answers, such as "in what order does it happen?", "what rests on what?" or "which items belong together?". Two patterns never share a job, and one pattern never does two.
-- **The jobs come from published classifications.** A practitioners' classification of the forms that abstract ideas take names them. A researchers' classification of visual representations, and the principles that join a visual's parts, check them.
+- **The jobs come from published classifications.** Nancy Duarte's forms of abstract ideas, a practitioners' classification, name them. The classification of visual representations by Lohse, Biolsi, Walker and Rueter, and Yuri Engelhardt's principles that join a visual's parts, check them.
 - **The starter's README** lists the patterns by job. For each it gives its question, form, source, evidence and options. It also states the boundary with its neighbours, such as "a list has no order, steps follow one another, a timeline says when".
 - **Options stay few.** A pattern's options choose only its arrangement, as the founding record says. About four is the guide, not a limit. Past it, a pattern probably does two jobs, and is split.
 - **More than a pattern offers** is a local component, built from the starter's blocks and the engine's tools.
