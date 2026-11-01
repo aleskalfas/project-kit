@@ -1349,7 +1349,14 @@ Wave 2 is built ahead of need on decided tools, each with a named use: `tree` (i
 
 **No log of misses, for now. Decided by the maintainer (1 November).** The agent proposed that each local component record which library component it considered and why it did not fit, listed across pieces for the library's owner. The maintainer finds it unnecessary for now and skipped it. Whether the breadth works is judged by the owner, as stable is.
 
-**Still open in point 8, in this order:** the build order, with the engine tools each pattern needs; where the Friday talk's twelve new reusable pieces go (`terminal`, `term_image`, `highlight`, `pstage`, `step_card`, `kind`, `kind_group`, `tree_bar`, `tree_tag`, `tree_note`, `divider`, `talk_cover`); whether a notation for software work ships, and as which kind of library; a legend and icons, so colour is never the only signal (RS-VISUAL-006); the neutral brand's themes (`teal-calm`, `warm-paper`, their modes) and fonts.
+**The build order, and the tools each pattern needs. Agreed (1 November).** Each pattern was checked against the decided tools: all fit but `list`, which needs one new layout operator, wrap (items flow into the next row when one is full; Mockingbird's five cards in rows of three and two needed it). `table` works with equal columns or named shares; columns sized to their content need rows lining up across siblings, which point 19 left for later.
+1. The first slice, as decided: `layers`, `panels`, `groups`, `network`, `list` in one row, and the card, terminal and connector blocks.
+2. The rest of wave 1: `steps`, `table`, `branches`, `equation`, `timeline`; wrap is added here, with `list`, under flexbox's name, as the architect advised for the layout operators.
+3. Wave 2: `tree`, `annotations`, `overlap`, and `steps`' arrow back.
+
+Set aside: no wrap (a long list becomes a table or a local component); building by job rather than by evidence.
+
+**Still open in point 8, in this order:** where the Friday talk's twelve new reusable pieces go (`terminal`, `term_image`, `highlight`, `pstage`, `step_card`, `kind`, `kind_group`, `tree_bar`, `tree_tag`, `tree_note`, `divider`, `talk_cover`); whether a notation for software work ships, and as which kind of library; a legend and icons, so colour is never the only signal (RS-VISUAL-006); the neutral brand's themes (`teal-calm`, `warm-paper`, their modes) and fonts.
 
 ## Architect's review (31 October)
 
