@@ -127,7 +127,7 @@ The panel is three reviewer agents that judge a pull request at merge time ([sof
 
 - **The verdict.** Its first line is `Reviewer agent (local, <name>): APPROVED` or `Reviewer agent (local, <name>): CHANGES_REQUESTED`. The verdict marker follows the findings, as `<!-- pkit-verdict sha=<head> base=<base> -->` once posted, naming the head and base reviewed.
 - **Read-only.** A reviewer never changes the pull request or the repository. It keeps the working files a review needs, such as a dumped diff or a reproduction, in the agent workspace ([the agents README, "Reviewers"](../../agents/README.md#body-conventions)).
-- **Running it.** `pkit project-management review-pr <N>` runs each reviewer pull request `<N>` requires, and posts each verdict. `land-work` runs the same review as one of its steps ([project-management's README](../project-management/README.md#landing-a-pull-request-in-one-command--land-work-1203)).
+- **Running it.** `pkit project-management review-pr <N>` runs each reviewer that the pull request closing issue `<N>` requires, and posts each verdict. `land-work` runs the same review as one of its steps ([project-management's README](../project-management/README.md#landing-a-pull-request-in-one-command--land-work-1203)).
 
 **A diff too large for `gh pr diff`.** This rule is owned here, and each reviewer's definition carries it and points here:
 
