@@ -1278,8 +1278,8 @@ In an analysis that builds on another, an actor of that analysis follows your ow
 
 `rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds fourteen rules. Each has DEC-001, DEC-002, DEC-004 or DEC-005 as its origin, save the source rule, which names who decided it and when.
 
-- **Two accepted rules,** each of which a check enforces in part: the format rule (DEC-001 point 1), and the append-only rule (DEC-001 point 3).
-- **Twelve proposed judgement rules,** which declare no check but the rule of logical consequence. Its check holds what a script can read of `after`. They cover:
+- **Three accepted rules.** A check enforces two of them in part: the format rule (DEC-001 point 1) and the append-only rule (DEC-001 point 3). A reviewer judges the third, the rule on areas and journeys (DEC-005 points 1, 2 and 5, and DEC-007).
+- **Eleven proposed judgement rules,** which declare no check but the rule of logical consequence. Its check holds what a script can read of `after`. They cover:
   - a use case's actors and its goal (DEC-001 points 1, 2 and 4)
   - what an artefact's anchors name (DEC-001 points 2, 4, 9 and 11, DEC-002 points 5 to 7, and DEC-004 point 5)
   - a requirement against the records it rests on (DEC-002 point 8)
@@ -1290,7 +1290,6 @@ In an analysis that builds on another, an actor of that analysis follows your ow
   - the order of a domain model's views (DEC-004 point 6)
   - one name for one concept (DEC-001 points 1 and 2)
   - a step the system does not carry out yet, which an accepted record decides (DEC-001 points 1 and 5)
-  - the functional area each use case lies in, and the journey that tells each path (DEC-005 points 1, 2 and 5, and DEC-007)
 
 | Rule | Status | Statement |
 |---|---|---|
@@ -1307,7 +1306,7 @@ In an analysis that builds on another, an actor of that analysis follows your ow
 | `RS-SAN-011` | proposed | A domain-model view names a concept that another view of its analysis explains only where that view's number is lower. |
 | `RS-SAN-012` | proposed | No two terms in force share a name, within an analysis and across the analyses it builds on. No term takes a name another term in force replaces. |
 | `RS-SAN-013` | proposed | A use case describes a step or a variant the system has never carried out only where an accepted decision record decides it, and a box below it says so. |
-| `RS-SAN-014` | proposed | Each use case lies in a functional area whose goal it is a step toward, and no two areas serve one function. Where one actor's use cases make a path, a journey tells it. |
+| `RS-SAN-014` | accepted | Each use case lies in a functional area whose goal it is a step toward, and no two areas serve one function. Where one actor's use cases make a path, a journey tells it. |
 
 - **What the format rule binds.** The presence and the order of every part an artefact kind ships, and the form of each part and front-matter field its structure gives one. It binds the glossary's head too, wherever it binds on a term of the glossary. A withdrawn artefact is held to no part or form that came after its withdrawal. A revalidation record is no artefact, so the rule does not cover it: the capability checks a record's structure itself, always. A hint binds nothing, so the voice a hint asks for is no part of the rule. For text of the `sentence` form, the rule's *How* says where a sentence ends, and that a part of that form holds no list.
 - **What the append-only rule binds.** A use case's steps and variants keep their numbers and letters across a change, and a new one goes past them, as the rule's *How* says.
@@ -1352,7 +1351,7 @@ In an analysis that builds on another, an actor of that analysis follows your ow
 ---
 rule-set: ANALYSIS
 version: 1.0.0
-inherits: [software-analysis:SAN@1]
+inherits: [software-analysis:SAN@2]
 scope:
   types: [software-analysis:actor, software-analysis:term, software-analysis:domain-model-view, software-analysis:use-case, software-analysis:journey, software-analysis:quality-requirement, software-analysis:functional-requirement, software-analysis:constraint]
 rules: {}
@@ -1368,7 +1367,7 @@ rules: {}
 - **Its scope** selects the analysis by the capability's types, so it reaches the artefacts wherever they lie. A revalidation record has no type, and no scope selects one. The capability checks a record's structure itself.
 - **A set created before the domain-model view** selects no `software-analysis:domain-model-view`. Add it to its scope, so `SAN` binds on your views. Until you do, the check counts each view among the artefacts no rule of `SAN` binds on.
 - **A set created before the requirement kinds** selects the four types DEC-001 gives, and none of the three DEC-002 adds. It is yours, so nothing changes it. Add `software-analysis:quality-requirement`, `software-analysis:functional-requirement` and `software-analysis:constraint` to its scope, so `SAN` binds on your requirements. Until you do, the check counts each requirement among the artefacts no rule of `SAN` binds on.
-- **Its pin,** `SAN@1`, decides when a new major of `SAN` starts binding. Accepting a rule of `SAN` gives `SAN` a new major. Your pin then falls behind, and no rule of `SAN` binds through it until you review the new major and update the pin (COR-051 point 7). `pkit rule-sets reach` lists each rule a pin behind its set holds back. `SAN` 1.0.0 accepted its format rule and its append-only rule, so a set pinned at `SAN@0` binds neither, and `pkit validate` fails on its pin, until you re-pin it.
+- **Its pin,** `SAN@2`, decides when a new major of `SAN` starts binding. Accepting a rule of `SAN` gives `SAN` a new major. Your pin then falls behind, and no rule of `SAN` binds through it until you review the new major and update the pin (COR-051 point 7). `pkit rule-sets reach` lists each rule a pin behind its set holds back. `SAN` 1.0.0 accepted its format rule and its append-only rule, so a set pinned at `SAN@0` binds neither, and `pkit validate` fails on its pin, until you re-pin it.
 - **A set you have already** that selects the analysis may inherit `SAN` instead, before you install, and install then creates none. Changing what a set inherits gives that set a new major.
 - **Never silent.** The check's summary counts the artefacts no rule of `SAN` binds on. Where it binds on none of the analysis, the check says so, at the analysis's folder. It reports this while no rule of `SAN` is accepted, and warns once one is. Neither fails `pkit validate`. If you choose not to inherit `SAN`, you keep the warning.
 

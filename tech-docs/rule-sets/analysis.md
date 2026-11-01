@@ -1,7 +1,7 @@
 ---
 rule-set: ANA
-version: 4.1.1
-inherits: [WRITE@2, software-analysis:SAN@1]
+version: 5.0.0
+inherits: [WRITE@2, software-analysis:SAN@2]
 scope:
   types:
     - software-analysis:actor
@@ -73,7 +73,7 @@ These are the rules project-kit's analysis follows: seven rules of its own, and 
 - **What it does not select:** a revalidation record. A revalidation record is a held document, never an artefact, so no scope selects it. Whoever writes one still follows `WRITE`, through project-kit's operational rules (`.pkit/rules/project.md`).
 - **What it inherits:** the accepted rules of both sets bind on the analysis through this set (COR-051 point 7).
   - `WRITE`, project-kit's general writing rules, pinned at `WRITE@2`.
-  - `software-analysis:SAN`, the software-analysis method, pinned at `SAN@1`. `SAN` takes no scope, so its rules bind on project-kit's analysis only through this set (software-analysis DEC-001 point 1).
+  - `software-analysis:SAN`, the software-analysis method, pinned at `SAN@2`. `SAN` takes no scope, so its rules bind on project-kit's analysis only through this set (software-analysis DEC-001 point 1).
   - **The pins:** a rule accepted in an inherited set gives that set a new major. The same change re-pins this set, which gives it a new major too (COR-051 point 7).
 - **The set's own rules:** the actor's voice in needs and goals (RS-ANA-001), and each kind's list of labels (RS-ANA-002), which fills `RS-WRITE-002#labels`. Then the analyses project-kit keeps, their areas and the numbers of its domain-model views (RS-ANA-003, RS-ANA-007, RS-ANA-004 and RS-ANA-005), and the version a capability's links to the analyses it builds on name (RS-ANA-006).
   - RS-ANA-003 to RS-ANA-007 are project-kit's choices where software-analysis leaves them to each project (software-analysis DEC-001 points 2 and 12, DEC-004 point 4). They are the form of an area's number and of a view's, which analyses it keeps, the core's five areas, and which version its links name.
