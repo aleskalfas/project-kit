@@ -16,7 +16,7 @@ A path anchor matches as both friction checks match it, and a path under
 project receives by sync ties nothing, and neither does a path anchor of a record that is
 not accepted. Only accepted records are listed, a superseded one by the records that
 replace it, the project's own first. Core rule 22 tells an agent to run it before it
-changes files, and the rules README lists the rule's section.
+changes files, under core.md's section "Before changing files".
 """
 
 from __future__ import annotations
