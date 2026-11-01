@@ -36,7 +36,7 @@ pkit:
 
 1. The developer asks for the piece as a PDF.
 2. The system writes one PDF for each language of the piece. It holds a page for each page of the piece, such as each slide, in order.
-3. The system gives this export a new number, one number for all its languages. It records the export's date, the piece's state then, and the versions of the libraries it used.
+3. The system gives this export a new number, one number for all its languages. It records the export's date, the piece's state then, and the library versions it used.
 4. The developer hands out the PDF of each language.
 
 **Variants:**
@@ -44,7 +44,7 @@ pkit:
 - **2a.** The piece is also drawn on a board. The system still writes the PDF from the piece itself, never from the board.
 - **2b.** A program the system writes PDFs with is not on the machine. The system names it and writes nothing, and the use case ends.
 - **2c.** The developer asks for a PDF that screen readers follow. The system writes it with headings, a reading order and a text for each picture.
-- **4a.** The piece has done its job, such as a talk that was given, and the developer marks it delivered. This export is kept with the piece as its final form. From then on, no new version of a library alters the piece's look.
+- **4a.** The piece has done its job, such as a talk that was given, and the developer marks it delivered. This export is kept with the piece as its final form. From then on, no new library version alters the piece's look.
 
 **Postconditions:** The developer holds a PDF for each language, all under one export number, and knows what each export holds.
 

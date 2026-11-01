@@ -40,7 +40,7 @@ pkit:
 4. For each mode, the developer gives the values that differ in it.
 5. For each axis, the developer says whether its modes alter only colours, or also sizes and spacing, such as a device.
 6. The developer adds how the brand draws each layout of each kind of piece it serves.
-7. The system checks that the brand draws each layout of each kind of piece it serves, with the slots that kind names.
+7. The system checks that the brand draws each layout of each kind of piece it serves, with the content slots that kind names.
 
 **Variants:**
 

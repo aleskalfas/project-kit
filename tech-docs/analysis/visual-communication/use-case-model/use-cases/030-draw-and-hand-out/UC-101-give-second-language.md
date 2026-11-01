@@ -56,6 +56,6 @@ pkit:
 
 ## Sources
 
-- **The goal:** use case 7 of the planning note `2026-10-30-visual-work-capability`, from the Czech version of the Friday talk.
-- **The steps and the guarantee:** the decisions the note records in its points 9 and 13, with what the Czech version taught. Variant 6b also waits on #2416, so that content can carry what it rests on.
+- **The goal:** use case 7 of the planning note `2026-10-30-visual-work-capability`, from the Friday talk, which was also translated into Czech.
+- **The steps and the guarantee:** the decisions the note records in its points 9 and 13, with what translating the talk into Czech taught. Variant 6b also waits on #2416, so that content can carry what it rests on.
 - **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.

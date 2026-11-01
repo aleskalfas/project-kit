@@ -44,7 +44,7 @@ pkit:
 
 - **2a.** The program is not on the machine. The system names it and makes nothing, and the use case ends.
 - **2b.** The brand gives other values in another mode, such as dark. The program makes one picture for each set of values it reads, and the piece shows the picture of the mode it is drawn in.
-- **4a.** An input of the picture was edited since the picture was made, such as a value of the brand or the program's version. The system says the picture is out of date, and the path rejoins at step 2.
+- **4a.** An input of the picture changed since the picture was made, such as a value of the brand, or the program itself. The system says the picture is out of date, and the path rejoins at step 2.
 
 **Postconditions:** The piece shows the picture in its brand's colours, in each mode, with its labels in each of the piece's languages.
 

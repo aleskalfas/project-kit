@@ -47,13 +47,13 @@ pkit:
 
 - **2a.** The figure was first drawn for a slide. The developer takes its content out of the presentation unaltered, as a piece of its own.
 - **6a.** The figure's content was edited, and the figure was not drawn again. The system's check fails on the figure until it is drawn again.
-- **6b.** The developer takes in a new version of a library the figure uses. The system proposes to move the figure to it, as a change of its own, with the figure before and after. The figure moves only once that change lands.
+- **6b.** The developer takes in a new library version of a library the figure uses. The system proposes to move the figure to it, as a change of its own, with the figure before and after. The figure moves only once that change lands.
 
 **Postconditions:** The page shows the figure, drawn from its current content, in the mode its reader uses.
 
 **Minimal guarantees:**
 
-- A figure never moves to a new version of a library unless a change that shows it before and after lands.
+- A figure never moves to a new library version unless a change that shows it before and after lands.
 - An earlier state of the documentation, such as one a tag names, shows the figure as it was then.
 
 ## Sources

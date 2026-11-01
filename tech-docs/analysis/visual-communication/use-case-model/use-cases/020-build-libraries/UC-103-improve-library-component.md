@@ -37,31 +37,32 @@ pkit:
 **Main path:**
 
 1. The developer improves the library component in its library.
-2. The developer gives the library a new version.
-3. The system keeps the new version beside the version the pieces use now.
-4. For each piece that uses the library component, the system draws the piece with both versions, and shows the developer the piece before and after.
-5. The developer moves each piece that the new version improves to it, and leaves each other piece where it is.
-6. The developer removes each version that no piece uses any more.
+2. The developer gives the library a new library version.
+3. The system keeps the new library version beside the one the pieces use now.
+4. For each piece using the library component, the system draws the piece with both library versions, and shows the developer the piece before and after.
+5. The developer moves each piece that the new library version improves to it, and leaves each other piece where it is.
+6. The developer removes each library version that no piece uses any more.
 
 **Variants:**
 
-- **2a.** The improvement breaks a stable library component, such as by removing a field, and the new version keeps the major number. The system refuses the version and names each break.
-- **2b.** The library component is experimental, so any version of its library may alter it. The system says so when it draws a piece that uses the component.
+- **2a.** The improvement breaks a stable library component, such as by removing a field, and the new library version keeps the major number. The system refuses the library version and names each break.
+- **2b.** The library component is experimental, so any library version may alter it. The system says so when it draws a piece that uses the component.
 - **4a.** A piece is living, such as a figure in a page. The system proposes the move as a change of its own, with the piece before and after ([UC-094](../010-make/UC-094-put-figure-in-page.md), variant 6b).
-- **4b.** A piece is delivered. The system leaves it at the versions it was delivered with, and draws no before and after.
+- **4b.** A piece is delivered. The system leaves it at the library versions it was delivered with, and draws no before and after.
 
-**Postconditions:** Each piece the developer moved uses the improved library component. Every other piece still uses the versions it used before.
+**Postconditions:** Each piece the developer moved uses the improved library component. Every other piece still uses the library versions it used before.
 
 **Minimal guarantees:**
 
-- A delivered piece never moves to a new version of a library.
-- A stable library component breaks only in a new major version of its library.
+- A delivered piece never moves to a new library version.
+- A stable library component breaks only in a library version whose major number rose.
 
 ## Open for the design
 
 What the developer needs here that no accepted record decides yet:
 
-- **A library another project shares.** Its owner improves it there. This project asks which of its libraries have newer versions, and takes in a new one as from step 3. No use case yet tells how a project takes in a library by its link.
+- **A library another project shares.** Its library owner improves it there. This project asks which of its libraries have newer library versions, and takes in a new one as from step 3. No use case yet tells how a project takes in a library by its link.
+- **A draft piece.** Point 4j of the planning note moves its lock to the newest library version present at each drawing. Step 4 shows it before and after. Which of the two holds for a draft piece.
 
 ## Sources
 

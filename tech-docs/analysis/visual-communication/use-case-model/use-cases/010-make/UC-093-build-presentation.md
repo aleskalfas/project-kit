@@ -33,7 +33,7 @@ pkit:
 **Main path:**
 
 1. The developer starts a piece for the presentation. The developer names the brand that draws it, and the notation of the subject it is about.
-2. The developer writes the presentation's content: its title, and for each slide the layout it takes and what fills each slot of that layout.
+2. The developer writes the presentation's content: its title, and for each slide the layout it takes and what fills each content slot of that layout.
 3. For each slide's picture, the developer chooses a library component that does its job, such as one that shows layers or one that shows steps. The developer fills it with the slide's own content.
 4. The system draws the presentation in the brand, with the library components the content names.
 5. The system says which texts do not fit where they go, and which library components are still experimental.
@@ -42,11 +42,11 @@ pkit:
 **Variants:**
 
 - **1a.** The presentation is about several subjects, such as two projects. The developer names the notation of each. Where two notations name one concept differently, the system says so, and the developer settles the name for this piece.
-- **1b.** The developer starts from a delivered presentation, to give it to a new audience. The system copies it as an adapted piece. The copy keeps the versions of the libraries the delivered piece used, until the developer moves it to newer ones ([UC-103](../020-build-libraries/UC-103-improve-library-component.md)). The path goes on at step 2.
+- **1b.** The developer starts from a delivered presentation, to give it to a new audience. The system copies it as an adapted piece. The copy keeps the library versions the delivered piece used, until the developer moves it to newer ones ([UC-103](../020-build-libraries/UC-103-improve-library-component.md)). The path goes on at step 2.
 - **3a.** No library component fits a slide's picture. The developer makes a local component for it, inside this piece ([UC-096](UC-096-add-visual-as-data.md)). The path goes on at step 4.
 - **4a.** The content does not fit what a library component declares, such as a field the library component does not have. The system names each fault and draws nothing. The developer mends the content, and the path rejoins at step 4.
 - **5a.** A text does not fit. The developer shortens it, or chooses another option the library component declares, and the path rejoins at step 4.
-- **5b.** A library component is experimental. The system still draws it, and says only that it may be altered in any version of its library.
+- **5b.** A library component is experimental. The system still draws it, and says only that it may be altered in any library version.
 
 **Postconditions:** The presentation is drawn in the brand it names, from library components filled with its own content.
 

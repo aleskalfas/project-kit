@@ -18,7 +18,7 @@ pkit:
 
 # UC-106 — Build a brand on another brand
 
-**Goal:** Build a brand on another brand, changing only what that brand lets me change, and give my brand versions of its own.
+**Goal:** Build a brand on another brand, changing only what that brand lets me change, and give my brand its own library versions.
 
 **Other actors:**
 
@@ -34,16 +34,16 @@ pkit:
 
 **Main path:**
 
-1. The developer starts a brand that names the brand it builds on, and the major version of that brand it fits.
+1. The developer starts a brand that names the brand it builds on, and the major number of that brand's library versions it fits.
 2. The developer gives new values to what the brand it builds on lets it alter.
 3. The system checks the new brand, and names each value it gives that the brand it builds on does not list.
-4. The developer gives the new brand versions of its own, apart from the brand it builds on.
+4. The developer gives the new brand its own library versions, apart from the brand it builds on.
 5. A piece that names the new brand is drawn in its values, with the layouts and library components of the brand it builds on.
 
 **Variants:**
 
-- **3a.** The new brand gives a value that the brand it builds on does not list. The developer removes the value, or asks the owner of that brand to list it, and the path rejoins at step 3.
-- **5a.** A piece uses two libraries that fit different major versions of one brand. The system says that the two cannot be used in one piece.
+- **3a.** The new brand gives a value that the brand it builds on does not list. The developer removes the value, or asks that brand's library owner to list it, and the path rejoins at step 3.
+- **5a.** A piece uses two libraries that fit different major numbers of one brand. The system says that the two cannot be used in one piece.
 
 **Postconditions:** The new brand differs from the brand it builds on only in what that brand lets it alter.
 

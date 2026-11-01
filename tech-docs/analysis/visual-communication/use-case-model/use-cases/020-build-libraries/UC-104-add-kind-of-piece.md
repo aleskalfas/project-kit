@@ -34,14 +34,14 @@ pkit:
 
 **Main path:**
 
-1. The developer adds the top library component of the new kind of piece to a library the project owns. It names the layouts such a piece has, and the slots of each layout.
+1. The developer adds the top library component of the new kind of piece to a library the project owns. It names the layouts such a piece has, and the content slots of each layout.
 2. For each brand the project uses, the developer adds how that brand draws each new layout.
-3. The developer starts a piece of the new kind, and fills the slots of its layouts with content.
+3. The developer starts a piece of the new kind, and fills the content slots of its layouts.
 4. The system draws the piece in its brand, as it draws any other kind of piece.
 
 **Variants:**
 
-- **4a.** The brand lacks a layout the new kind names, or draws it with other slots. The system names what is missing. The developer adds it, and the path rejoins at step 4.
+- **4a.** The brand lacks a layout the new kind names, or draws it with other content slots. The system names what is missing. The developer adds it, and the path rejoins at step 4.
 
 **Postconditions:** Pieces of the new kind are made and drawn like any other, and the capability's own files are as they were.
 
