@@ -1,0 +1,80 @@
+answers:
+  - artefact: tech-docs/analysis/core/requirements/constraints/REQ-003-python-floor.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - moved-835fea364b80.yaml
+    revalidated:
+      at: 2026-11-01T14:26:20Z
+      outcome: unchanged
+      unchanged-because: pyproject.toml only leaves the scratchpad's working drafts out of ruff; the linter and the type checker still hold the package's code to Python 3.11, and the declared floor is untouched.
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023128Z-752860d8.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T155551Z-be632892.yaml
+      - 20261030T161257Z-5352f58f.yaml
+      - 20261030T164324Z-d7667894.yaml
+      - 20261030T231942Z-8fe86054.yaml
+      - 20261030T235059Z-0bb410f6.yaml
+      - 20261031T003126Z-7b1634e4.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+    revalidated:
+      at: 2026-11-01T14:26:24Z
+      outcome: unchanged
+      unchanged-because: pyproject.toml only leaves the scratchpad's working drafts out of ruff; the package, its dependencies, its commands and the checks the README describes for the project's code are unchanged.

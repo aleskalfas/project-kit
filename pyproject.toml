@@ -219,6 +219,11 @@ path = "hatch_build.py"
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
+# A scratchpad note is a working draft (COR-012): code kept beside one, such as
+# a prototype or a one-off generator, is not the project's code, and moves or
+# retires with its note. It meets the house style when it moves into the
+# project's own trees.
+extend-exclude = [".pkit/scratchpad/"]
 
 # Where a tree runs on an older Python than the package's own floor, ruff is
 # told so; otherwise pyupgrade offers rewrites onto an API that runtime lacks
