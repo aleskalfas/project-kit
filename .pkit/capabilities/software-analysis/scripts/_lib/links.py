@@ -89,6 +89,12 @@ written again where it belongs, so a link written by hand is held as the command
 Another link is the writer's, and its text is skipped. In an analysis that keeps no
 domain model, a link to a glossary entry is the writer's too.
 
+**Every mention, not only the first** (`Heard`). `pkit analysis uses` lists where an
+analysis uses a term by the mentions this reading finds, in the same sections. So it
+reads each section here, and takes each mention through `heard`: the first or not, in
+the section's own term's text, and in text that stays plain. The escape still marks one
+as no mention. So the two commands never disagree on what a mention is.
+
 **A view's closing section** (`closing`). Each view in force ends with a section headed
 `What is built on these concepts`, which opens with one sentence that says what it lists
 (`CLOSING_OPENING`). Under each concept it explains, labelled by its section's heading,
@@ -641,6 +647,19 @@ class _Mention:
     start: int
     end: int
     term: str
+    name: str  # the name of the term it matched, as the vocabulary lists it
+
+
+@dataclass(frozen=True)
+class Heard:
+    """A mention of a term in a section, as the command reads it, whether or not it takes
+    a link: the line it starts on, counted from 1 in the file, its text as written, the
+    term's id, and the name of the term it matched (`pkit analysis uses`)."""
+
+    line: int
+    text: str
+    term: str
+    name: str
 
 
 def _chosen(
@@ -673,7 +692,7 @@ def _chosen(
                 s <= m.start() and m.end() <= e and m.end() - m.start() < e - s for s, e in named
             ):
                 continue
-            candidates.append(_Mention(m.start(), m.end(), term_id))
+            candidates.append(_Mention(m.start(), m.end(), term_id, name))
     candidates.sort(key=lambda c: (c.start, -(c.end - c.start), c.term))
     chosen: list[_Mention] = []
     reached = 0
@@ -701,9 +720,7 @@ def _wanted(
     linked: set[str] = set()
     wanted: list[_Wanted] = []
     for mention in mentions:
-        if any(
-            text[end : mention.start].strip(" \t") == "" for end in escapes if end <= mention.start
-        ):
+        if _escaped(text, mention.start, escapes):
             continue
         if _overlaps(mention.start, mention.end, plain):
             continue
@@ -715,6 +732,31 @@ def _wanted(
         linked.add(mention.term)
         wanted.append(_Wanted(mention.start, mention.end, term.target(path), term.id))
     return wanted
+
+
+def _escaped(text: str, start: int, escapes: Sequence[int]) -> bool:
+    """Whether the escape marks the mention at `start` as no mention: an escape ends before
+    it on its line, with nothing but spaces between."""
+    return any(text[end:start].strip(" \t") == "" for end in escapes if end <= start)
+
+
+def _heard(
+    text: str,
+    vocabulary: Vocabulary,
+    hide: Collection[int],
+    skip: Sequence[tuple[int, int]],
+    first_line: int,
+) -> list[Heard]:
+    """Every mention of a term in one section's `text`, as `_wanted` reads them, but each
+    one, the first or not: in the section's own term's text too, and in text that stays
+    plain. The escape still marks one as no mention. `first_line` is the line `text`
+    starts on in its file."""
+    mentions, escapes = _chosen(text, vocabulary, hide, skip)
+    return [
+        Heard(first_line + text.count("\n", 0, m.start), text[m.start : m.end], m.term, m.name)
+        for m in mentions
+        if not _escaped(text, m.start, escapes)
+    ]
 
 
 def _render(text: str, wanted: Sequence[tuple[int, int, str]]) -> str:
@@ -752,12 +794,14 @@ def section(
     cuts: Collection[int] = (),
     *,
     ids: Ids | None = None,
+    heard: list[Heard] | None = None,
 ) -> tuple[str, list[Difference]]:
     """One section's `text`, its links written as the command writes them, and how the
     links it holds depart from those; `first_line` is the line `text` starts on in the
     file at `path`, `own` the id of the section's own term, and `hide` the lines of
     `text`, counted from 0, that link a view's section to a term, which are neither read
-    nor rewritten here (`with_definitions`).
+    nor rewritten here (`with_definitions`). With a `vocabulary`, each mention of a term
+    the section holds is added to `heard`, where given (`_heard`).
 
     With a `vocabulary`, the first mention of each term takes its link (DEC-004 point 7).
     `quiet` gives the spans of the text, its links unwritten, that say a datum again:
@@ -791,6 +835,8 @@ def section(
         still = quiet(plain) if quiet is not None else ()
         skip = [*placed.spans, *((m.start, m.end) for m in by_id)]
         terms = _wanted(plain, own, vocabulary, path, hide, still, skip)
+        if heard is not None:
+            heard += _heard(plain, vocabulary, hide, skip, first_line)
     of_ids: list[id_links.Wanted] = []
     if ids is not None:
         quiet_ids = ids.quiet(plain) if ids.quiet is not None else ()
@@ -1017,11 +1063,13 @@ def glossary(
     vocabulary: Vocabulary | None,
     cites: Cites | None = None,
     named: id_links.Named | None = None,
+    heard: list[Heard] | None = None,
 ) -> Linked:
     """The glossary at `path`, LF `text`, with the links of each of `entries`, the terms
     in force it holds, written: each entry's section as the backbone spans it, below its
     heading. Its head takes none. The links of ids are written where `named` is given
-    (DEC-001 point 14), an entry's own id taking none."""
+    (DEC-001 point 14), an entry's own id taking none. Each mention of a term the entries
+    hold is added to `heard`, where given."""
     lines = text.split("\n")
     departures: list[Departure] = []
     for entry in sorted(entries, key=lambda e: e.span or (0, 0), reverse=True):
@@ -1033,7 +1081,14 @@ def glossary(
             continue
         ids = Ids(named, entry.id) if named is not None else None
         rewritten, found = section(
-            "\n".join(body), entry.id, vocabulary, path, first + 1, cites=cites, ids=ids
+            "\n".join(body),
+            entry.id,
+            vocabulary,
+            path,
+            first + 1,
+            cites=cites,
+            ids=ids,
+            heard=heard,
         )
         lines[first : first + len(body)] = rewritten.split("\n")
         departures += [_departure(entry.location, d) for d in found]
@@ -1048,6 +1103,7 @@ def view(
     cites: Cites | None = None,
     closing: Sequence[str] | None = None,
     named: id_links.Named | None = None,
+    heard: list[Heard] | None = None,
 ) -> Linked:
     """A view in force, LF `text`, with each section's link to its term and the links of
     its mentions and its citations written: its opening and each section below its
@@ -1056,7 +1112,8 @@ def view(
     `closing` gives its lines, in place of any it holds, and read for no mention and no
     citation; where `closing` is `None`, what is built on its concepts is not known here,
     and the section it holds is kept as written. The links of ids are written where
-    `named` is given (DEC-001 point 14), the view's own id taking none."""
+    `named` is given (DEC-001 point 14), the view's own id taking none. Each mention of a
+    term the view holds is added to `heard`, where given, by its line in `text`."""
     path = artefact.path
     ids = Ids(named, artefact.id) if named is not None else None
     whole = text.split("\n")
@@ -1086,7 +1143,7 @@ def view(
     departures += [
         _departure(artefact.location, d)
         for _rewritten, found in _parts(
-            written, view_sections(written, start), owners, vocabulary, path, cites, ids
+            written, view_sections(written, start), owners, vocabulary, path, cites, ids, heard
         )
         for d in found
     ]
@@ -1289,12 +1346,14 @@ def _parts(
     path: str,
     cites: Cites | None,
     ids: Ids | None = None,
+    heard: list[Heard] | None = None,
 ) -> list[tuple[str, list[Difference]]]:
     """Each of `parts` of a body among `lines`, with its links written, and how the links
     it holds depart from those. A part's own term is `owners`' entry in its place: none
     for a view's opening. Its lines in the form of a section's link to its term are
     `with_definitions`', and read for no mention, no citation and no id. The links of ids
-    are written as `ids` gives them."""
+    are written as `ids` gives them. Each mention of a term is added to `heard`, where
+    given."""
     found: list[tuple[str, list[Difference]]] = []
     for k, (first, past) in enumerate(parts):
         if first == past:
@@ -1302,7 +1361,9 @@ def _parts(
         own = owners[k] if k < len(owners) else None
         hide = [index - first for index in definition_lines(lines, first, past)]
         text = "\n".join(lines[first:past])
-        found.append(section(text, own, vocabulary, path, first + 1, hide, cites, ids=ids))
+        found.append(
+            section(text, own, vocabulary, path, first + 1, hide, cites, ids=ids, heard=heard)
+        )
     return found
 
 
@@ -1418,9 +1479,11 @@ def document(
     kind: structure.Kind | None,
     cites: Cites | None = None,
     named: id_links.Named | None = None,
+    heard: list[Heard] | None = None,
 ) -> Linked:
     """An artefact in force of a kind with a file of its own, but a view, LF `text`, with
-    its links written.
+    its links written. Each mention of a term its parts hold is added to `heard`, where
+    given.
 
     - **The mentions' links**, given a `vocabulary` and the `kind` of an actor, a use
       case, a journey or a requirement: in each part of its body, read as `kind` gives
@@ -1467,6 +1530,7 @@ def document(
             quiet=of_terms,
             cuts=[index - first for index in opens if first < index < past],
             ids=Ids(leads, artefact.id, of_ids, leading) if leads is not None else None,
+            heard=heard,
         )
         linked += rewritten.split("\n")
         departures += [_departure(artefact.location, d) for d in found]

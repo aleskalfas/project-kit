@@ -1,0 +1,14 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit analysis uses <TERM-id>` lists where an analysis uses a term: each
+  mention of its names, and of the names it replaces, in the artefacts in
+  force, by artefact and line, with `--json` (#1795). A mention is what
+  `pkit analysis link` reads as one, read by the links' own code, so the two
+  never disagree. Each mention is listed, not only the first. A withdrawn
+  term is searched too, and a name another term holds is listed apart. Where
+  the settings list several analyses, `--analysis` names the one read.
+  **The skill.** The `analysis-author` skill's term step runs it after a
+  rename, a merge or a withdrawal, to find each use `RS-SAN-008` asks to mend.
