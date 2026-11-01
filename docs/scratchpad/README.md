@@ -21,6 +21,7 @@ pkit:
         - .pkit/scratchpad/README.md#layout
         - .pkit/scratchpad/README.md#states
         - .pkit/scratchpad/README.md#file-name
+        - .pkit/scratchpad/README.md#body
         - .pkit/scratchpad/README.md#front-matter
         - .pkit/scratchpad/README.md#commands
         - .pkit/cli/README.md#new-scratchpad-slug
@@ -54,10 +55,13 @@ A scratchpad note is a working draft in your repository, where you think a quest
 Some questions are too large to decide at once. Their options are not all known yet, and neither is what pulls between them. Without a place to think such a question through, this goes wrong:
 
 - **A decision record comes too early.** A record states one choice. Written before the options are mapped, it states the first one you thought of, and its review argues about the rest.
-- **The thinking scatters, or is skipped.** One person keeps a draft at the repository's root, another in a chat, a third nowhere. Nobody can list the questions still open.
+- **The thinking scatters, or is skipped.** One person keeps a draft at the repository's root. Another keeps one in a chat, and a third keeps none. Nobody can list the questions still open.
 - **A dead end leaves no trace.** The draft of a line of thought that failed is deleted. The next person to meet the question tries the same line again.
 - **Nobody can tell what a draft produced.** A year on, nothing says which decision records or documents came out of which exploration.
-- **A draft sent upstream loses its track.** You paste it into an issue for the methodology's maintainers. Nothing then records which issue it became, whether that issue is closed, or whether your copy still matches what you sent.
+- **A draft sent upstream loses its track.** You paste it into an issue for the methodology's maintainers. Nothing then records any of these:
+  - which issue it became
+  - whether that issue is closed
+  - whether your copy still matches what you sent
 
 ### What a note does instead
 
@@ -68,7 +72,11 @@ A note gives such a question a place to be thought through before any record sta
 - **Retiring a note writes into it when it retired, and what it produced.**
 - **A note you record as sent upstream names the issue it became, and its listing flags an edit made after.**
 
-Below, four notes are started. One is retired as done, one is dropped, and one is recorded as sent upstream, then edited:
+Below, four notes are started, and three of them then move:
+
+- one is retired as done
+- one is dropped
+- one is recorded as sent upstream, then edited
 
 ```console
 $ pkit new scratchpad cache-layer
@@ -105,9 +113,9 @@ dropped/
 What the output proves, claim by claim:
 
 - **Folder as state.** `pkit scratchpad list` groups the notes by folder. The open questions lie in `active/`, and in `reported/` once sent upstream ([the reference, "States"](../../.pkit/scratchpad/README.md#states)).
-- **Dropped, and kept.** `retry-policy` lies in `dropped/`. Before you drop a note, you end it with why its line of thought stopped ("Retire a note" below).
+- **Dropped, and kept.** `retry-policy` lies in `dropped/`. Before you drop a note, you end it with why its line of thought stopped ([the reference, "Body"](../../.pkit/scratchpad/README.md#body)).
 - **Retired with what it produced.** `done` moved `cache-layer` to `done/`. It added `retired`, today's date, and `produced`, the two references given, to the note's front matter.
-- **Tracked upstream.** The stamp recorded the issue, and the listing marks the note `[modified since reported]` after the edit. Here the listing cannot read the issue, so it shows its state as unknown. Where `gh` can read it, the listing shows it open or closed, with its title.
+- **Tracked upstream.** `pkit scratchpad reported` recorded the issue, and the listing marks the note `[modified since reported]` after the edit. Here the listing cannot read the issue, so it shows its state as unknown. Where `gh` can read it, the listing shows it open or closed, with its title.
 
 ### Compared with the alternatives
 
@@ -172,14 +180,22 @@ started: <any>
 # Cache layer
 ```
 
-- **Its name:** the day it started, then the slug. The slug takes lower-case letters and digits, joined by hyphens. Where a note in any folder ends with the slug already, the command refuses and writes nothing ([the reference, "File name"](../../.pkit/scratchpad/README.md#file-name)).
-- **Its front matter:** you as its author, from your git configuration, and the day it started.
-- **Its title:** drawn from the slug. Change it to the question the note explores.
+- **Its name:** the day it started, then the slug. The slug takes lower-case letters and digits, joined by hyphens. Where another note's name ends with the slug already, the command mostly refuses and writes nothing ([the reference, "File name"](../../.pkit/scratchpad/README.md#file-name), says when).
+- **Its front matter:** you as its author, from your git configuration, and the day it started ([the reference, "Front matter"](../../.pkit/scratchpad/README.md#front-matter)).
+- **Its title:** drawn from the slug ([the reference, "Body"](../../.pkit/scratchpad/README.md#body)). Change it to the question the note explores.
 - **With your agent:** ask it to start one, such as "Use the scratchpad-author skill to start a note on how we cache build results". The skill agrees the slug with you, keeps the note to one question and drafts its opening.
 
 ## Work the question through
 
-Write in the note's body whatever the question needs, since no section is required. The skill opens a note with the question, what pulls the answer each way, what is known, the candidate answers and what is still open.
+Write in the note's body whatever the question needs, since no section is required. The skill opens a note with these parts:
+
+- the question
+- what pulls the answer each way
+- what is known
+- the candidate answers
+- what is still open
+
+Then, as you work:
 
 - **Commit as you go,** so others can read the note and add to it. Add each person who writes in it to its `authors`.
 - **One question to a note.** Where you find two, start a second note, and link the two notes from each other's body.
@@ -195,16 +211,16 @@ pkit report feedback --title "Caching build results" --body "The attached note m
 ```
 
 > [!WARNING]
-> The report is a public issue on project-kit's repository, and it holds the whole note, front matter included. So it shows each author's name and e-mail address. The check before the post looks only for paths into your home folder.
+> The report is a public issue on project-kit's repository, and it holds the whole note, front matter included. So it shows each author's name and e-mail address. The check before the post looks only for paths into your home folder ([the CLI reference, "report"](../../.pkit/cli/README.md#report-bug--report-feedback--report-change-request)).
 
-- **After a post that succeeds,** the note moves to `reported/`. Its front matter records the issue, the date, and a hash of the note as sent.
-- **With your agent:** ask it to use the `report-author` skill, which composes the report with you. The agent stages the report, and posts nothing. Its last line names the command that posts it, which you run at a terminal ([the CLI reference, "report submit"](../../.pkit/cli/README.md#report-submit-id)):
+- **After a post that succeeds,** the note moves to `reported/`. Its front matter records the issue, the date, and a hash of the note as sent ([the reference, "Front matter"](../../.pkit/scratchpad/README.md#front-matter)).
+- **With your agent:** ask it to use the `report-author` skill, which composes the report with you. The agent stages the report, and posts nothing. The staging's first line names the command that posts the report, and you run that command at a terminal ([the CLI reference, "report submit"](../../.pkit/cli/README.md#report-submit-id)):
 
 ```sh
 pkit report submit 20261101-151200-feedback
 ```
 
-- **Filed in a browser instead,** the command's last line names the command that records the issue. Run it with the issue the note became:
+- **Filed in a browser instead,** the report command's last line names the command that records the issue ([the CLI reference, "report"](../../.pkit/cli/README.md#report-bug--report-feedback--report-change-request)). Run it with the issue the note became:
 
 ```console
 $ pkit new scratchpad cache-layer >/dev/null
@@ -217,11 +233,11 @@ Recorded: aleskalfas/project-kit#9999
 - **Its issue's state:** `pkit scratchpad list` reads each issue's state each time you run it, so the state it shows is never stored. Once every issue of a note is closed, the listing prints the command that retires the note. It never retires one itself.
 
 > [!WARNING]
-> Nothing stops an edit to a reported note. The listing, and composing a report, only warn of one, and a later send of the note ends the listing's warning. The issue keeps the text you sent.
+> Nothing stops an edit to a reported note. The listing, and composing a report, only warn of one, and a later send of the note ends the listing's warning ([the reference, "Front matter"](../../.pkit/scratchpad/README.md#front-matter)). The issue keeps the text you sent.
 
 ## Retire a note
 
-Retire a note as done once other documents hold what it found, such as a decision record, a guide or a skill. Name each with `--produced`: a record's id, a file's path or a web address. Then commit the move:
+Retire a note as done once other documents hold what it found, such as a decision record, a guide or a skill. Name each with `--produced`: a record's id, a file's path or a web address ([the reference, "Front matter"](../../.pkit/scratchpad/README.md#front-matter)). Then commit the move:
 
 ```console
 $ pkit new scratchpad cache-layer >/dev/null && git add .pkit/scratchpad && git commit -qm "Start a note on caching"
@@ -231,7 +247,7 @@ $ git add -A .pkit/scratchpad && git status --short
 R  .pkit/scratchpad/active/<any>-cache-layer.md -> .pkit/scratchpad/done/<any>-cache-layer.md
 ```
 
-When the line of thought failed, end the note with why, then drop it:
+When the line of thought failed, end the note with why, then drop it ([the reference, "Body"](../../.pkit/scratchpad/README.md#body)):
 
 ```console
 $ pkit new scratchpad retry-policy >/dev/null
@@ -243,4 +259,4 @@ Moved: .pkit/scratchpad/active/<any>-retry-policy.md -> .pkit/scratchpad/dropped
 
 - **What each writes:** both add `retired`, today's date, to the front matter. `done` also adds `produced`, where you name anything ([the reference, "Front matter"](../../.pkit/scratchpad/README.md#front-matter)).
 - **From `reported/`:** the same commands retire a reported note. Name its issue among what it produced. The folder `reported/` goes once it is empty.
-- **Reopening one:** no command does it yet. Move the file back to `active/` by hand, and remove what retiring it added ([the reference, "Commands"](../../.pkit/scratchpad/README.md#commands)).
+- **Reopening one:** no command does it yet. Move the file back to `active/` by hand. Then remove each front-matter field an active note does not hold, and a dropped note's closing paragraph ([the reference, "Commands"](../../.pkit/scratchpad/README.md#commands)).

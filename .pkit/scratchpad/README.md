@@ -68,13 +68,13 @@ The folder a note lies in is its state, and no field of its front matter holds o
 | State (folder) | Meaning |
 |---|---|
 | **`active/`** | The question is open, and the note is being filled or referenced. |
-| **`reported/`** | The note is still open, and was sent upstream as a report. Only a send enters this state: a successful post, or the manual stamp of a send made outside the tooling (COR-043 point 3). |
+| **`reported/`** | The note is still open, and was sent upstream as a report. Only a send enters this state: a successful post, or `pkit scratchpad reported` for a send made outside the tooling (COR-043 point 3). |
 | **`done/`** | Other documents, such as records, guides, skills or agents, hold the note's content. The note is kept. |
 | **`dropped/`** | The line of thought failed. The note is kept, ending with why it stopped. |
 
-- **A move between states** is a move of the file, which a command makes ("Commands" below). The command writes the file in its new folder and deletes the old one, and stages nothing in git. Once both paths are staged, git shows the move as a rename where the note changed little.
+- **A move between states** is a move of the file, which a command makes ("Commands" below). The command writes the file in its new folder and deletes the old one, and stages nothing in git ([the CLI reference, "Scratchpad commands"](../cli/README.md#scratchpad-commands)). Once both paths are staged, git shows the move as a rename where the note changed little.
 - **A reported note is frozen by convention.** Do not edit it, since the issue holds the text as sent. Put further thinking in a new note that links it (COR-043 point 4).
-- **An edit to it is detected, never prevented.** `pkit scratchpad list` marks a reported note `[modified since reported]` when it differs from the hash stamped at the send. Composing a report warns of such a note too ([the CLI reference, "report"](../cli/README.md#report-bug--report-feedback--report-change-request)).
+- **An edit to it is detected, never prevented.** `pkit scratchpad list` marks a reported note `[modified since reported]` when it differs from the hash recorded at the send. Composing a report warns of such a note too ([the CLI reference, "report"](../cli/README.md#report-bug--report-feedback--report-change-request)).
 - **Its issues' states are read live.** `pkit scratchpad list` reads each through `gh` at each run, and stores none. A state it cannot read shows as `state unknown` (COR-043 point 5).
 - **Retiring a note is a person's decision.** Once every issue of a reported note is closed, the listing prints the `pkit scratchpad done` command that retires it, and never runs it (COR-043 point 5).
 
@@ -86,7 +86,8 @@ A note's file is `<YYYY-MM-DD>-<slug>.md` (COR-012):
 
 - **`<YYYY-MM-DD>`** is the day the note was stamped. It never changes when the note moves.
 - **`<slug>`** names the question in two to four words of kebab-case: lower-case letters and digits, joined by single hyphens.
-- **A slug finds every note whose file name ends in `-<slug>.md`,** so `layer` finds `2026-06-03-cache-layer.md`. `pkit new scratchpad` refuses a slug that a note in any state folder ends with ("Commands" below).
+- **A slug finds every note whose file name ends in `-<slug>.md`,** so `layer` finds `2026-06-03-cache-layer.md` ([the CLI reference, `scratchpad done`](../cli/README.md#scratchpad-done-slug---produced-ref)).
+- **`pkit new scratchpad` refuses a slug** where a state folder holds exactly one note whose file name ends in it. Where each folder holds none or two or more, the slug is stamped ([the CLI reference, `new scratchpad`](../cli/README.md#new-scratchpad-slug)).
 
 Examples: `2026-05-12-agent-architecture.md`, `2026-06-03-cache-layer.md`.
 
@@ -112,6 +113,8 @@ The front matter holds who writes in a note and when it moved, and its fields de
 
 ### `active/`
 
+The stamp writes two fields:
+
 ```yaml
 ---
 authors:
@@ -120,14 +123,17 @@ started: 2026-05-12
 ---
 ```
 
-- **`authors`:** each person who writes in the note, as `Name <email>`. The stamp writes git's `user.name` and `user.email`, the name alone where git has no e-mail, or `<unknown>` where it has no name. Add each later writer.
+- **`authors`:** each person who writes in the note, as `Name <email>`. Add each later writer. The stamp writes one author from git's configuration:
+  - `Name <email>`, from `user.name` and `user.email`
+  - the name alone, where git has no e-mail
+  - `<unknown>`, where git has no name
 - **`started`:** the day the note was stamped, the date its file name holds.
 
 <a id="reported-side-state-of-active-cor-043"></a>
 
 ### `reported/`
 
-The stamp adds these fields to the note's own (COR-043 point 3):
+Recording a send adds these fields to the note's own (COR-043 point 3):
 
 ```yaml
 ---
@@ -143,12 +149,14 @@ reported_hash: sha256:<hex>
 
 - **`reported`:** the day the note was first sent.
 - **`reported_to`:** each issue the note became, as `owner/repo#N`. A GitHub issue's web address given in its place is written in that form. One note may become several issues.
-- **`reported_hash`:** `sha256:` and the SHA-256 of the note as sent, without the fields the stamp writes. The listing compares it with the note as it is now.
+- **`reported_hash`:** `sha256:` and the SHA-256 of the note as sent, without the fields that recording a send writes ([the CLI reference, `scratchpad reported`](../cli/README.md#scratchpad-reported-slug-ref)). The listing compares it with the note as it is now.
 - **`project` and `workstream`:** the report's context, where the report named it. Only a report's post writes them.
 - **Who writes these fields:** the successful post of a report composed with `--scratchpad <slug>`, or `pkit scratchpad reported <slug> <ref>...`. A report staged or filed in a browser writes nothing until one of the two runs.
-- **A later send** of a reported note adds each new issue to `reported_to`, and stamps the hash again. So the listing no longer marks an edit made before that send. Where every issue given is recorded already, nothing changes.
+- **A later send** of a reported note adds each new issue to `reported_to`, and records the hash again. So the listing no longer marks an edit made before that send. Where every issue given is recorded already, nothing changes.
 
 ### `done/`
+
+Retiring a note as done adds `retired`, and `produced` where any value is given:
 
 ```yaml
 ---
@@ -168,6 +176,8 @@ produced:
 - **A reported note retired** keeps its reported fields.
 
 ### `dropped/`
+
+Dropping a note adds `retired` alone:
 
 ```yaml
 ---
@@ -194,14 +204,16 @@ Each command has its full entry in the CLI reference, which each name below link
 | [`pkit scratchpad drop <slug>`](../cli/README.md#scratchpad-drop-slug) | Moves the note from `active/` or `reported/` to `dropped/`, and adds `retired`. |
 | [`pkit scratchpad reported <slug> <ref>...`](../cli/README.md#scratchpad-reported-slug-ref) | Records a send made outside the tooling. Moves the note from `active/` to `reported/` and adds the reported fields, or adds new issues to a reported note. |
 | [`pkit scratchpad list`](../cli/README.md#scratchpad-list) | Lists the notes by folder, each reported note with its issues' live states. Marks an edited reported note, and names the retiring command once all its issues are closed. Writes nothing. |
-| [`pkit report feedback … --scratchpad <slug>`](../cli/README.md#report-bug--report-feedback--report-change-request), and the `bug` and `change-request` verbs alike | Attaches the whole note, front matter included, to a public issue. Stamps the note reported on a successful post only. |
+| [`pkit report feedback … --scratchpad <slug>`](../cli/README.md#report-bug--report-feedback--report-change-request), and the `bug` and `change-request` verbs alike | Attaches the whole note, front matter included, to a public issue. Moves the note to `reported/` on a successful post only. |
 
 - **No skill pairs `done`, `drop` or `reported`,** since each is mechanical (COR-006).
-- **A report run by an agent** goes through the `report-author` skill. Run with `--yes`, the verb only stages the report. A person posts it at a terminal with `pkit report submit <id>`, and only that post stamps the note.
-- **Before a note is sent,** tell the person that its authors' names and e-mail addresses go into the public issue with it.
+- **A report run by an agent** goes through the `report-author` skill. Run with `--yes`, the verb only stages the report. A person posts it at a terminal with `pkit report submit <id>`, and only that post moves the note to `reported/`.
 - **`<slug>`** of `done`, `drop` and `reported`, and of `--scratchpad`, is a slug or a whole file name. A slug finds every note whose file name ends in `-<slug>.md` ("File name" above). Give the whole file name where a short slug could find another note.
 - **The refusals** write nothing:
-  - `new scratchpad`: a slug that is not kebab-case, or that a note in any state folder ends with, or a project with no `active/`
+  - `new scratchpad`:
+    - a slug that is not kebab-case
+    - a slug that ends the file name of exactly one note in a state folder ("File name" above)
+    - a project with no `active/`
   - `done` and `drop`:
     - no `active/`
     - a slug that finds no note in `active/` or `reported/`, or that finds two in one folder
@@ -210,6 +222,7 @@ Each command has its full entry in the CLI reference, which each name below link
   - `reported`:
     - a ref that is neither `owner/repo#N` nor a GitHub issue's web address
     - a note that lies in neither `active/` nor `reported/`
+    - a slug that finds two notes in one folder
     - a note with no front matter
     - a file of the same name in `reported/` already
 - **Not built yet:** a command that reopens a note (COR-007). Move its file from `done/` or `dropped/` back to `active/` by hand, with `git mv`. Then remove each front-matter field `active/` does not hold, and a dropped note's closing paragraph on why it stopped.

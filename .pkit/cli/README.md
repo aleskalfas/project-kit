@@ -1233,7 +1233,7 @@ Refuses if the storyboard already exists or no agent of that name is found. It a
 
 Stamps a new active-state scratchpad note at `.pkit/scratchpad/active/<YYYY-MM-DD>-<slug>.md` per the convention in COR-012 and the spec in `.pkit/scratchpad/README.md`. The command is the deterministic part of starting a note: pick today's date, validate the slug, seed the frontmatter, write an H1 derived from the slug.
 
-- **`<slug>`** is a kebab-case shorthand of the question the note explores (e.g. `agent-architecture`, `versioning-policy`). Slugs are unique across the entire scratchpad area — the command refuses if any state folder already contains a note with this slug.
+- **`<slug>`** is a kebab-case shorthand of the question the note explores (e.g. `agent-architecture`, `versioning-policy`). The command refuses the slug where a state folder holds exactly one note whose filename ends in `-<slug>.md`, so a short slug can be refused for a longer one. Where each folder holds none, or two or more, it stamps the note.
 
 The stamped file includes:
 
@@ -1252,7 +1252,7 @@ Scratchpad notes (per COR-012) move between three state folders — `active/`, `
 
 Moves a note from `active/` — or from `reported/`, retirement proceeds from the side-state by the same gesture — to `done/` and appends `retired` (today) and `produced` (the list of `--produced` refs) to its frontmatter. Use when the note's content has been incorporated into other artifacts (records, docs, skills, agents). A reported note's `produced` refs naturally include the upstream issue(s) it became.
 
-- **`<slug>`** is a slug or the full filename. A slug matches each note whose filename ends in `-<slug>.md`, so a short slug can match a note with a longer one (the scratchpad README, "File name"). Use the full filename to disambiguate.
+- **`<slug>`** is a slug or the full filename. A slug matches each note whose filename ends in `-<slug>.md`, so a short slug can match a note with a longer one. Use the full filename to disambiguate.
 - **`--produced <ref>`** is repeatable. Each value is a record ID (`COR-013`), file path (`.pkit/agents/README.md`), or URL. May be omitted; the `produced:` field is then not added (the author can edit it later by hand).
 
 Supports `--dry-run`. Refuses if no active or reported note matches the slug, or if the destination filename already exists in `done/`. When the move empties `reported/`, the directory is removed (it is lazy — COR-043).
