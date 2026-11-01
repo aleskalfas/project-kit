@@ -44,7 +44,7 @@ The starter is planned to cover the jobs visuals commonly do, not only those one
 
 ### 3. Each component enters as experimental
 
-A component enters the starter as experimental, the status that the record of change over time defines, with no use needed first. It enters once it has:
+A component enters the starter as experimental, the status that the record of change over time defines ([visual-communication:DEC-003-change-over-time] point 7), with no use needed first. It enters once it has:
 - its job, the established form it follows and that form's source
 - its fields and its options, each option a word from a declared list
 - its reference renders, each value of each option drawn once, with the combinations the evidence uses
@@ -93,7 +93,7 @@ The starter's owner, whoever maintains the capability, marks a component stable,
 - **The starter's README** holds the list of patterns and blocks by job, the boundaries between them, and what is left out and why. A change of the list is a change of the README and of the starter, not of this record.
 - **The starter is built in steps.** What the first pieces need comes first, as experimental components, then the other jobs the evidence shows, then those built ahead of need. A pattern that needs a tool the engine lacks waits for the tool.
 - **The reference renders need a brand.** They draw with the brand the capability keeps for its tests, as the record of brands and notations has it. That record leaves open whether a brand ships that projects may lock.
-- **This record adds no check to validation.** Its bar for entry is judged in review by the starter's owner. The note a piece gets when it uses an experimental component is the record of change over time's.
+- **This record adds no check to validation.** Its bar for entry is judged in review by the starter's owner. The note a piece gets when it uses an experimental component is the record of change over time's ([visual-communication:DEC-003-change-over-time] point 9).
 - **A project's own component library** may follow these principles. They bind only the starter.
 - **Left to the starter's README and later changes:** the blocks that a legend and icons need, so colour is never the only sign.
 - **Left open:** whether a notation for software work ships, and as which kind of library, with the diagrams of software work, such as states, classes and sequences.

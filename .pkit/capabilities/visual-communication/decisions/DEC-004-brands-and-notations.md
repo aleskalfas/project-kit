@@ -63,7 +63,7 @@ A name in code has two parts: a *token path*, a token's place in the brand's tre
 ### 5. The names a brand exports are public
 
 A brand exports its roles, the component tokens it gives values, and its axes, modes and keys. Code outside the capability reads them, such as a game's runtime, and no lock protects that code (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 7). A brand's other tokens, such as a palette its roles alias, stay private: never exported, never open.
-- **Breaking changes,** beyond what the record of change over time counts for every library:
+- **Breaking changes,** beyond what the record of change over time counts for every library ([visual-communication:DEC-003-change-over-time] point 6):
   - removing or renaming an exported token, or changing its type
   - removing or renaming an axis or a mode, or changing an axis's default
   - turning a value axis into a size axis, or the reverse
@@ -81,7 +81,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 - **It varies its values on its base's axes,** by their names and modes, in its own Resolver document. It adds no axis and no mode, and changes no default. So pieces, pictures and code switch between the same combinations under the base and every brand built on it.
 - **What it keeps:** every value it is not open to change, and its base's axes, layouts and parts.
 - **What it may add:** roles of its own, parts of its own with their component tokens, and the layouts of a kind of work its base does not serve. It never replaces a layout or a part its base has.
-- **The engine resolves the base first,** then the brand's own values over it. What a lock does when its libraries need two majors of one base is the record of change over time's.
+- **The engine resolves the base first,** then the brand's own values over it. What a lock does when its libraries need two majors of one base is the record of change over time's ([visual-communication:DEC-003-change-over-time] point 8).
 
 ### 7. Roles a library adds lie under its own name
 

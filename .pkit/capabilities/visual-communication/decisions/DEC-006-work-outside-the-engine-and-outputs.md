@@ -87,7 +87,7 @@ Each output of point 1, and each file of written code, carries a record beside i
 
 The fingerprint follows the shape software-analysis gives the fingerprint of a requirement's texts ([software-analysis:DEC-006-text-in-body] point 7). It reads files and values instead of texts.
 - **One reading.** Each thing is read in one canonical form, so the same input gives the same fingerprint on every machine.
-- **An input** is a file, or a part of a content file named by its path of keys. A file of the capability's format, or a part of one, is read as the value the converters give, in one canonical text (the record of change over time). So an edit elsewhere in the file changes nothing. Any other file, such as a model, is read as its bytes.
+- **An input** is a file, or a part of a content file named by its path of keys. A file of the capability's format, or a part of one, is read as the value the converters give, in one canonical text (the record of change over time, [visual-communication:DEC-003-change-over-time] point 2). So an edit elsewhere in the file changes nothing. Any other file, such as a model, is read as its bytes.
 - **Across a change of format.** A fingerprint names the format number it read at, and the check reads each input converted to that number, so a release that raises the number makes no output stale. The command that rewrites a file to a newer format takes again each fingerprint that verified before it.
 - **A value** is read in the form's own canonical text for its type, such as one notation for a colour. So a value written another way gives the same fingerprint, whatever document carried it.
 - **Its version and hash.** The fingerprint names the form's version and the hash it uses. A version fixes how each kind of thing is read, and tests of example inputs pin each one.
@@ -95,7 +95,7 @@ The fingerprint follows the shape software-analysis gives the fingerprint of a r
 
 ### 7. Every export keeps its number
 
-An *export* is a file a piece is handed out as, such as a PDF or a picture, in a format the piece declares. The record of change over time decides a piece's states. A final piece was handed out, and a published one is kept current where others read it.
+An *export* is a file a piece is handed out as, such as a PDF or a picture, in a format the piece declares. The record of change over time decides a piece's states ([visual-communication:DEC-003-change-over-time] point 8). A final piece was handed out, and a published one is kept current where others read it.
 - **Made from the scene.** A renderer that needs no service draws it from the scene. It is never fetched from a medium that others can edit, such as a board. So a handed-out file depends on no service, and on no edit left there.
 - **What a run makes.** An export run makes each format the piece declares, in each of its languages and each combination of modes the piece names (the record of the engine and its plugins). A format whose medium switches modes while open, such as a web page, holds the modes of the value axes in one file.
 - **A number for each run.** Each export run is one version, numbered within its piece, and every language, format and combination of modes it makes shares that number. So version 3 in English matches version 3 in Czech. No export overwrites another.
@@ -166,7 +166,7 @@ These findings join the capability's check within validation, at the severities 
 - **Graph positions and shared models** are decided by the change that builds them, within point 1.
 - **The record of the engine and its plugins** decides the document of resolved values, what a plugin declares and how it is versioned. It also decides how the scene holds a picture's variants and exposed points, and the lock in written code's declaration. And it decides how the engine hands a program what it computed, such as measured frames, computed without that program's own output.
 - **The record of brands and notations** decides the key that names a combination of modes, and the key a variant takes.
-- **The record of change over time** decides the states, how a piece becomes final and when a lock moves.
+- **The record of change over time** decides the states, how a piece becomes final and when a lock moves ([visual-communication:DEC-003-change-over-time] point 8).
 - **A lock move's before-and-after** shows the committed pictures, reports the stale ones and runs no program.
 - **The record of files and validation** decides where pieces and the declarations of written code lie, and the severity policy ([visual-communication:DEC-002-files-and-validation] points 1 and 7). It also decides how the outside programs a producer calls are checked ([visual-communication:DEC-002-files-and-validation] point 8).
 - **The CLI reference** names the commands that frame a program's run, run a producer, export a piece and list a project's exports.
