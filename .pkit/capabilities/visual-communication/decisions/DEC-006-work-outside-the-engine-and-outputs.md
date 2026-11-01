@@ -1,7 +1,7 @@
 ---
 id: DEC-006
 title: A program run while preparing may write a picture that follows the brand, and every export keeps its number
-status: proposed
+status: accepted
 date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
