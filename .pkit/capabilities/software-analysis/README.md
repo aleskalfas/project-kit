@@ -1188,7 +1188,7 @@ Run a suite against a sandbox, and read its result.
 
 **Its journeys:**
 
-- [JRN-001 — Run the suite and read why it failed](../use-case-model/journeys/JRN-001-run-and-read-failure.md)
+- [JRN-002 — Run a suite and read its report](../use-case-model/journeys/JRN-002-run-and-read-report.md)
 
 ### 020-report
 
