@@ -46,15 +46,16 @@ A *key* names a combination of modes over a set of axes. A scene's key spans its
 - **It leaves default modes out.** For each axis whose mode is not its default, it holds the axis's name and the mode's name. The combination of every default has a reserved key that no other key can spell.
 - **Axes come in the order of their names,** so no order is declared, kept or broken.
 - **So a key stays the same when an axis with a default is added.** Every combination that existed takes the new axis's default, which the key leaves out.
-- **Everything that names a combination uses its key:** a scene, an export and a name in code. A picture's variant, which serves several combinations, takes the first of their keys, the reserved key before all others and the rest in the order of their spelling.
+- **Everything that names a combination uses its key:** a scene, an export and a name in code.
+- **A picture's variant takes the first key it serves.** A *variant* is one version of a picture made while preparing, which serves one or more combinations. It takes the first of their keys: the one that holds the fewest axes, and among those the first in the order of its spelling. The reserved key holds none, so it comes first. Adding an axis with a default adds only keys that hold one axis more than a key that existed, so a variant's key stays the same too.
 
 ### 4. One naming rule turns a brand's names into names in code
 
 A name in code has two parts: a *token path*, a token's place in the brand's tree of tokens, and a key.
 - **Both are made of segments.** Each segment of a path names one group or token. Each segment of a key is one axis with its mode.
-- **Every name that enters a path or a key has one shape:** lower-case words of letters and digits, joined by hyphens. Roles, component tokens, axes, modes, and the names of libraries and components all take it.
+- **Every name that enters a path or a key has one shape:** lower-case words of letters and digits, joined by hyphens. Roles, component tokens, axes, modes, and the names of libraries and components all take it. It is stricter than the rule of the record of files and validation, that no name holds a path mark, and holds beside it.
 - **Each code writer spells both parts in its language.** It keeps a segment apart from the words inside it, and the path apart from the key, so no two names spell the same. It may spell the key into the name, or as the context its language switches modes by. CSS, for example, keeps one variable for each token path and gives each value axis's modes a selector, so a page switches modes while open.
-- **Each code writer's spelling is public, and versioned.** The writer keeps writing every spelling it shipped, so written code moves to a new one only when the project moves it (the record of the engine and its plugins).
+- **Each code writer's spelling is public,** since code outside the capability names what it spells. How a spelling is versioned is the record of the engine and its plugins'.
 - **A brand built on another is written out whole,** the values it keeps from its base included.
 
 ### 5. The names a brand exports are public
@@ -87,6 +88,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 - **A component token's default aliases a role, never a value.** So a component library holds no raw value, and no brand has to give the token a value.
 - **A shared role the foundations add after their first version** carries a default that aliases an older role. Every brand already released still gives it a value.
 - **A base may open a component token alone,** so a brand built on it restyles that one part without changing the shared role everywhere. A component declares one only where a brand needs to differ.
+- **How far a brand reaches into a component.** A brand reaches a component only through the roles it names and the component tokens it declares. So a component that names a role for its corners, its strokes or its fonts lets each brand draw them its own way. Its parts, their arrangement and its options stay the component's.
 
 ### 8. Pairs of colours that must contrast
 
@@ -130,7 +132,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 **Why axes, and why each changes values or sizes.** Combinations are the product of the modes on each axis, so a file for each combination copies values, as the prototype's did. Adobe's Spectrum keeps such axes as separate switches. A value axis moves nothing, so one scene serves all its modes. A size axis may change anything, so a look tuned for children may change both colours and sizes on one axis. Font profiles change sizes for a group of renderers, so they need no mechanism of their own.
 
-**Why a key leaves defaults out, names each axis, and sorts by name.** If a key held every axis, adding one would rename every picture, export and name in code. Naming the axis beside its mode keeps one axis's new mode from meeting another's. Sorting by name leaves no order to change. A shared axis the foundations add could meet a brand's own axis of that name, so it waits for a major release, which a lock moves on purpose.
+**Why a key leaves defaults out, names each axis, and sorts by name.** If a key held every axis, adding one would rename every picture, export and name in code. Naming the axis beside its mode keeps one axis's new mode from meeting another's. Sorting by name leaves no order to change. A variant takes the key with the fewest axes for the same reason: ordered by spelling alone, a new axis whose name sorts first would hand a variant one of its new keys. A shared axis the foundations add could meet a brand's own axis of that name, so it waits for a major release, which a lock moves on purpose.
 
 **Why exported names are public, and the rest private.** A piece has its lock and its before-and-after. A game's runtime has neither, so a renamed token breaks it silently. A palette left private can be reshaped without a major release. Opening a token later breaks nothing, while closing one does.
 
@@ -165,3 +167,4 @@ Each finding below fails validation where it lies in a file the project can corr
 - **The walking skeleton** reads a base brand and its open roles, and resolves two value axes, the colour scheme and the contrast. It writes the brand out as CSS under the naming rule, and checks contrast and missing fonts at the severities of point 11.
 - **The record of the engine and its plugins** decides how text is measured, and the document of a brand's resolved values that code writers and producers read.
 - **Later slices** build a brand built on another with its open roles checked, axes that change sizes in use, and the words a notation gives translators.
+- **No brand for projects to lock ships yet.** The capability's tests, and the reference renders of the component library it ships to start from, draw with a brand kept for its tests, which no project locks. Whether the capability ships a brand that projects may lock, such as a neutral one to start from, is left to a later change.

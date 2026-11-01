@@ -45,7 +45,7 @@ A *formula* computes one number in a component's data.
 - **Two sizes for each element.** It asks for a size, from its content and its formulas. It gets one from its parent, by default the size it asked for.
 - **One owner for each value.** An element's place and the size it gets, across and down, are each set by exactly one thing: its component, its measured text, or its parent's layout. A second writer is an error.
 - **A formula reads its own component and what lies below it.** It reads its component's parts and the size its component gets. It reads the parts a component it places *exposes*, and a component may expose a part of a component it places in turn. Every component between keeps the rest private, so its library may change it freely. Removing or renaming an exposed part is a breaking change, as the record of change over time counts it.
-- **How a reference reads.** It names a part, then each exposed part below it, one name a step, then the measure of the frame it reads. A role is named by its token path, marked apart from a part. A connector names its ends the same way.
+- **How a reference reads.** It names a part, then each exposed part below it, one name a step, then the measure of the frame it reads. A step into a list names the list, then the item, by its id or as the first or the last. An option that names an item of a list its own component declares gives the id alone (the record of files and validation). A role is named by its token path, marked apart from a part. A connector names its ends the same way.
 - **Computed value by value,** in the order the references give, as a spreadsheet computes its cells. So a parent's width and a child's measured height form no loop. A loop is refused, naming every element in it.
 - **A missing optional part** has zero size, at its place. Dividing by zero is an error that names the formula.
 - **A component never places itself,** directly or through others, except over the items of its content, which end.
@@ -64,7 +64,7 @@ A *formula* computes one number in a component's data.
 - **Primitives at the leaves:** a box, an ellipse, a text, a line and an image, with a path kept for later. Their properties take SVG's names. Draw order is the tree's order.
   - A text holds paragraphs of runs, each with a style role and perhaps a link. It holds its lines, its explicit line height, its measured height, its font, and how it was measured.
   - A line carries its whole shape. Its attached ends are hints for a medium with connectors of its own.
-  - An image has a fit and a tint by role. One made while preparing holds its variants by key, and its *exposed points*, the named points the record of the outputs decides. A formula or a connector reads an exposed point as it reads an exposed part, mapped into the image's frame.
+  - An image has a fit and a tint by role. One made while preparing holds its variants by key (the record of brands and notations), and its *exposed points*: named points in its pixels that the piece may point at, such as to place a label. The record of work outside the engine and outputs decides the rules on both. A formula or a connector reads an exposed point as it reads an exposed part, mapped into the image's frame.
   - Documents and PDF files get alternative text, a reading order, and structure such as headings, lists, tables and captions.
 - **Values stay roles.** Each value that moves nothing, such as a colour or a picture, names its role. Its value comes from the document of point 7, so one scene serves every mode of the value axes. So the variants of one picture in one scene share one pixel size, and the same exposed points at the same places.
 - **The root says what the scene is:** the piece, its lock, its language, the key over its size axes, and the seam's version.
@@ -76,12 +76,12 @@ A *formula* computes one number in a component's data.
 
 - **Each axis, its modes.** A piece names, in one place of its own, the modes it is drawn in on each axis of its brand. An axis it names none for is drawn in its default. The font profile is the exception: each renderer of the piece's outputs names its own (point 10).
 - **One scene for each language and each combination of size-axis modes,** font profiles included. The values of every combination named come with each scene.
-- **Every combination named is checked and previewed.** Which combinations an export holds is the record of the outputs'.
+- **Every combination named is checked and previewed.** Which combinations an export holds is the record of work outside the engine and outputs'.
 
 ### 7. The engine owns one document of a brand's resolved values
 
 - **What it holds:** each exported token of a brand, resolved over its chain of bases, in each combination asked for, named by token path and key. It also holds the component tokens of the component libraries resolved with it.
-- **Under a lock.** A piece's lock names every version. *Written code*, a brand written out by a code writer, is declared by the project like a piece. The declaration names the code writer, the version of the form it follows, and a lock of the brand, its bases and the component libraries it holds. The record of files and validation decides where the declaration lies. A brand checked alone takes the newest version the project holds of each major it builds on.
+- **Under a lock.** A piece's lock names every version. *Written code*, a brand written out by a code writer, is declared by the project like a piece, in a file of its own that names where the code goes (the record of files and validation). The declaration also names the code writer, the version of the form it follows, and a lock of the brand, its bases and the component libraries it holds. A brand checked alone takes the newest version the project holds of each major it builds on.
 - **Who reads it.** A renderer takes the scene's roles from it. The code writer for JSON writes it out unchanged, and every other code writer writes it in its own language.
 - **What a program run while preparing receives.** A command of the capability writes, for a producer or a helper, the values it declares. It adds the measured frames it declares, from a scene computed with that program's own output left out, so its output never changes what it measured. They come in the document's form.
 - **Computed, never edited or committed,** like the scene.
@@ -97,7 +97,7 @@ A *formula* computes one number in a component's data.
 
 - **The three kinds:**
   - A *renderer* draws a scene in one medium.
-  - A *producer* makes a picture while a piece is prepared, from its own inputs and the values it declares. A person or an agent runs it, never the engine (the founding record, point 8). The record of the outputs decides the rules on its pictures.
+  - A *producer* makes a picture while a piece is prepared, from its own inputs and the values it declares. A person or an agent runs it, never the engine (the founding record, point 8). The record of work outside the engine and outputs decides the rules on its pictures.
   - A *code writer* writes the document of values as code in one language, under the naming rule of the record of brands and notations.
 - **Each declares what it supports.** A renderer declares, for each primitive and property, whether it draws it, updates it in place, recreates it, or reads it back. A producer declares the inputs it takes and the kinds of value it can use. A code writer declares the kinds of value its language has a form for.
 - **Each declares what it needs beyond the project's files:** the outside programs it calls, and any service it reaches, as the record of files and validation decides.
@@ -130,11 +130,12 @@ A *formula* computes one number in a component's data.
 ### 13. What the checks report, and how severely
 
 Each finding below fails validation where it lies in a file the project can correct, as the record of files and validation decides. Elsewhere, as in a released library version or a delivered piece's drawing, it asks for attention and names who can correct it (COR-055 points 1 and 4).
+- **Within validation's time.** The check computes every scene it judges in each run, from the files alone. It finishes within validation's bound with no result kept from an earlier run, as on a fresh clone. Where one validator cannot, the scene check is split among several validators. No finding is read from a render's record, since the scene is never committed.
 - **Fails validation:**
   - a formula that cannot be read, reads what it may not reach, adds a number with no unit to a length, or divides by zero
-  - a loop of references, a value with two owners, a missing exposed part or point, or a component that places itself
+  - a loop of references, a value with two owners, a reference to an exposed part or point that is missing, or a component that places itself
   - a page inside a page, or a mode a piece names that its brand lacks
-  - variants of one picture in one scene that differ in pixel size, or in the names or places of their exposed points
+  - variants of one picture in one scene that differ in pixel size, or in the places of their exposed points
   - a text that overflows its box, or a component that gets less than it asks for, measured from a font file
 - **A warning, never failing:** an overflow measured from a table or by an estimate, and a loss nobody has accepted.
 
@@ -143,10 +144,11 @@ Each finding below fails validation where it lies in a file the project can corr
 **Why formulas stay arithmetic.** A schema checks data, and an agent writes data against it. A formula with conditions and loops would be a program inside the data. A choice made by an option is declared, checked, and drawn once for each value. Vega's limited expressions draw the same line, and list operations live in the operators. Lengths come from roles so a brand's spacing reaches every component.
 
 **Why references, with one owner and reading downward.** Stacks and equal sizes put a note under the tallest card. An arrow to a slot inside another box, or a label at a picture's exposed point, needs a measured place no operator gives. Two sizes per element are how CSS and Flutter let a parent stretch a child. One owner per value, the rule of the Bluefish diagram library, keeps two writers from fighting over a size. Exposure through each component between keeps every component's inside its own.
+- **The name of exposed points.** A picture's named points are read as a component's exposed parts are, so they share the word. "Anchor" is what an artefact rests on in this methodology (COR-050). "Landmark" names a page's regions in the accessibility markup of web and tagged outputs.
 
 **Why the engine measures from committed fonts, and breaks lines.** The estimate served the talk, yet every text past its box was a broken drawing, and exact measuring costs nothing more where a font file exists. A font found on the machine differs between machines. Shaping is the hardest part of the stack, so the engine adopts a library. If renderers wrapped text, a small error in a width would move a word and push down every box below.
 
-**Why the engine owns the resolved values.** A producer that read a code writer's output would depend on that writer's spelling. A picture's fingerprint must hold the exact values the picture read. One document gives renderers, pictures and code the same values.
+**Why the engine owns the resolved values.** A producer that read a code writer's output would depend on that writer's spelling. A picture's record of its inputs must hold the exact values the picture read. One document gives renderers, pictures and code the same values.
 
 **Why versions apart, and why written code is declared with a lock.** The files a project keeps change with what people write, the seam with what plugins read, and the document with what code outside reads. A game's runtime has no lock of its own, and every component moves with the methodology's version, so a code writer keeps each form it shipped. Written code changes only when a person moves its declaration, as a piece's lock moves.
 
@@ -166,4 +168,4 @@ Each finding below fails validation where it lies in a file the project can corr
 - **The capability's reference** lists the formula's functions and names, the operators, the primitives and each plugin's declaration. Its schemas hold the forms of the seam and of the document of values.
 - **The walking skeleton** draws one pattern with one block, using a formula and a layout operator. It measures text from a committed font in one profile, and breaks lines in the engine. A small program reads the values it declares, and the piece places a label at its picture's exposed point. The renderer of vector pictures draws the scene and reports what it could not draw.
 - **Later slices** build the whiteboard renderer with its profile and its record, the web page renderer, producers, and taking edits back.
-- **The record of the outputs** decides a produced picture's rules, its variants, exposed points and fingerprint, and where written code goes.
+- **The record of work outside the engine and outputs** decides a produced picture's rules, its variants, exposed points and the record of what it was made from, and where written code goes.
