@@ -1364,6 +1364,13 @@ Set aside: no wrap (a long list becomes a table or a local component); building 
 - **It refines 18b:** Carbon-flavoured components go to the IBM library only where their form is IBM's own.
 - Set aside: 18b as written (two sets of near-identical blocks), and everything into the starter, IBM-only forms included (IBM's anatomy shipped to every adopter, against COR-014).
 
+**Colour says what a thing is. Agreed (1 November).** The second draft of the blocks gave each block's colour exactly one source and refused two; the critic found it fails on the evidence: states change colour (the broken tie turns red, the marked step is filled), and the three `map` tables colour their columns with levels 1, 3, 4 and 5 of the pyramid, skipping 2, so the colour says which layer a column is, not which column it is. "Colour" here is the role a component paints its parts with (border, fill, bar, icon), never a value; the brand gives each role its colour (IBM: `decision` is Carbon's purple 70; the neutral brand: teal 70), and the text's colour follows from the fill so it stays readable. The rule:
+1. **What the thing is:** the item names a concept, and the notation gives it its colour, so a decision has one colour on the pyramid, on the maps, everywhere (RS-VISUAL-004).
+2. **A state can change it:** a broken tie turns red, a marked step is filled, always with a second signal, such as a dashed line (RS-VISUAL-006).
+3. **Otherwise the component's default:** a pyramid in a project without a notation still shades its levels dark to light; arrows take the connector's colour; an aside its attention colour.
+
+4e's override of one part through a role stays as decided. Whether a row names its concept once for all its items is left to building. Set aside: one source, both refused (it fails on the maps and the pyramid); the pattern's position before the concept (the same layer would look different from one slide to the next).
+
 **Still open in point 8, in this order:** the starter's building blocks (level 4), and where each of the Friday board's 38 reusable templates goes; whether a notation for software work ships, and as which kind of library; a legend and icons, so colour is never the only signal (RS-VISUAL-006); the neutral brand's themes (`teal-calm`, `warm-paper`, their modes) and fonts.
 
 ## Architect's review (31 October)
