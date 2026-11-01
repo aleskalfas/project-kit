@@ -31,13 +31,13 @@ pkit:
 2. [UC-110](../use-cases/020-build-libraries/UC-110-add-library-component.md) — Add a library component and mark it stable
    - **Needs from step 1 (UC-096):** the local component, written as data in the piece. One that a helper script wrote stays in its piece (UC-110, variant 1b).
 3. [UC-093](../use-cases/010-make/UC-093-build-presentation.md) — Build a presentation from library components
-   - **Needs from step 2 (UC-110):** the library component, in a new library version of the library. An adapted presentation keeps the library versions it was copied with, so it lacks the library component until its lock moves (UC-093, variant 1b).
+   - **Needs from step 2 (UC-110):** the library component, in a new library version of the library. A copied presentation is a draft with its lock pinned (UC-093, variant 1b). It keeps the library versions it was copied with, so it lacks the library component until a person moves its lock.
 
 **Variants:**
 
 None.
 
-**Postconditions:** The library holds the library component, and another presentation is drawn with it. The piece the local component came from uses it too, unless that piece is delivered.
+**Postconditions:** The library holds the library component, and another presentation is drawn with it. The piece the local component came from uses it too, unless that piece is final.
 
 **Minimal guarantees:** None.
 

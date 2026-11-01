@@ -44,7 +44,7 @@ pkit:
 
 - **2a.** A view needs a fact the model lacks. The developer adds the fact to the model, never to the view, and the path rejoins at step 2.
 - **3a.** The model gained or lost an element or a relation since the view's positions were laid out. The system says the positions are out of date, and the developer lays the view out again.
-- **5a.** A view is delivered. The system leaves it as it was delivered.
+- **5a.** A view is final. The system leaves it as it was handed out.
 - **5b.** The developer gives a kind of element a new look in a new library version of the notation, not in the model. Each view moves to that library version only as any piece moves to a new library version ([UC-103](../020-build-libraries/UC-103-improve-library-component.md)).
 
 **Postconditions:** Each view shows the elements it names from the model, in the notation's look, and each fact is written only in the model.

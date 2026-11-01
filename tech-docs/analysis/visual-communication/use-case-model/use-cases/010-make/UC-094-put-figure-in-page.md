@@ -36,7 +36,7 @@ pkit:
 
 **Main path:**
 
-1. The developer starts a piece for the figure, and names its brand and its notation. The piece is living: it lasts as long as the page that shows it.
+1. The developer starts a piece for the figure, and names its brand and its notation. The piece is published: it stays in use as long as the page that shows it.
 2. The developer writes the figure's content, and chooses the library component that does its job.
 3. The system draws the figure in each mode of the brand's colour scheme, such as light and dark.
 4. The developer shows the figure in the page, from a copy that always holds the figure's current drawing.
@@ -60,5 +60,5 @@ pkit:
 
 - **The goal:** proposed on 31 October, in planning the capability (#2423), to test its design beyond presentations.
 - **The steps and the guarantees:** the capability's shared choices (#2424) on a piece, its content and its lock, and on a brand's modes. Step 4 and variant 6a also follow the shared choices on outputs and their versions, and on how `check` reports.
-- **Not among the shared choices:** the living state, whose lock moves only through a change that shows the piece before and after. It is the maintainer's decision of 31 October, made in planning the capability (#2423).
+- **Not among the shared choices:** the published state, whose lock moves only through a change that shows the piece before and after. It is the maintainer's decision of 31 October, made in planning the capability (#2423).
 - **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.

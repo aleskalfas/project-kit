@@ -24,6 +24,11 @@ Make each piece, such as a deck or a figure in a documentation page, from librar
 - [UC-096 — Add a new kind of visual to a piece as data](../use-case-model/use-cases/010-make/UC-096-add-visual-as-data.md)
 - [UC-097 — Put a picture that a program makes in a piece](../use-case-model/use-cases/010-make/UC-097-put-produced-picture.md)
 
+**Its journeys:**
+
+- [JRN-010 — Give a talk in two languages and hand out its slides](../use-case-model/journeys/JRN-010-give-talk.md)
+- [JRN-011 — Move a local component into a library](../use-case-model/journeys/JRN-011-move-component-into-library.md)
+
 ### 020-build-libraries
 
 Build the libraries pieces are made from, and carry their look into code, so all share one look and take each improvement only on purpose.
@@ -42,6 +47,10 @@ Build the libraries pieces are made from, and carry their look into code, so all
 - [UC-109 — Take in a library another project shares](../use-case-model/use-cases/020-build-libraries/UC-109-take-in-shared-library.md)
 - [UC-110 — Add a library component and mark it stable](../use-case-model/use-cases/020-build-libraries/UC-110-add-library-component.md)
 
+**Its journeys:**
+
+- [JRN-011 — Move a local component into a library](../use-case-model/journeys/JRN-011-move-component-into-library.md)
+
 ### 030-draw-and-hand-out
 
 Draw a piece in each brand, mode, language and renderer it needs, hand it out as files, and take back what people change where it is drawn.
@@ -58,6 +67,10 @@ Draw a piece in each brand, mode, language and renderer it needs, hand it out as
 - [UC-101 — Give a piece in a second language](../use-case-model/use-cases/030-draw-and-hand-out/UC-101-give-second-language.md)
 - [UC-102 — Hand out a piece as a PDF for each language](../use-case-model/use-cases/030-draw-and-hand-out/UC-102-hand-out-pdf.md)
 
+**Its journeys:**
+
+- [JRN-010 — Give a talk in two languages and hand out its slides](../use-case-model/journeys/JRN-010-give-talk.md)
+
 ### 040-draw-for-capabilities
 
 Draw what another capability shows in the look of the project's libraries, with what they do not cover drawn the capability's own way.
@@ -67,6 +80,8 @@ Draw what another capability shows in the look of the project's libraries, with 
 **Its use cases:**
 
 - [UC-108 — Have another capability's diagrams drawn in my libraries' look](../use-case-model/use-cases/040-draw-for-capabilities/UC-108-draw-capability-visuals.md)
+
+**Its journeys:** none.
 
 ## Reference
 

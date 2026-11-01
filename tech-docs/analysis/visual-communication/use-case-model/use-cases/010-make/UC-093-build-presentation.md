@@ -42,7 +42,7 @@ pkit:
 **Variants:**
 
 - **1a.** The presentation is about several subjects, such as two projects. The developer names the notation of each. Where two notations name one concept differently, the system says so, and the developer settles the name for this piece.
-- **1b.** The developer starts from a delivered presentation, to give it to a new audience. The system copies it as an adapted piece. The copy keeps the library versions the delivered piece used, until the developer moves it to newer ones ([UC-103](../020-build-libraries/UC-103-improve-library-component.md)). The path goes on at step 2.
+- **1b.** The developer starts from a final presentation, to give it to a new audience. The system copies it as a draft with its lock pinned. The copy keeps the library versions the final presentation used, until the developer moves it to newer ones ([UC-103](../020-build-libraries/UC-103-improve-library-component.md)). The path goes on at step 2.
 - **3a.** No library component fits a slide's picture. The developer makes a local component for it, inside this piece ([UC-096](UC-096-add-visual-as-data.md)). The path goes on at step 4.
 - **4a.** The content does not fit what a library component declares, such as a field the library component does not have. The system names each fault and draws nothing. The developer mends the content, and the path rejoins at step 4.
 - **5a.** A text does not fit. The developer shortens it, or chooses another option the library component declares, and the path rejoins at step 4.
@@ -64,5 +64,5 @@ What the developer needs here that no accepted record decides yet:
 
 - **The goal:** the maintainer asked for it on 30 October, in planning the capability (#2423). Variant 1a, a piece about several subjects, was proposed in the same planning on 31 October.
 - **The steps and the guarantee:** the capability's shared choices (#2424) on what a component, a library, a piece and its content are, and on a piece's lock. Step 5 also follows the shared choices on text measured from committed fonts, and on a component's status and its promise.
-- **Not among the shared choices:** the states of a piece, the capability's agents and its layered glossary. They are the maintainer's decisions of 30 and 31 October, made in planning the capability (#2423). Variant 1b's adapted piece is one of the states, and variant 1a follows the glossary.
+- **Not among the shared choices:** the states of a piece, the capability's agents and its layered glossary. They are the maintainer's decisions of 30 and 31 October, made in planning the capability (#2423). Variant 1b's copy, a draft with its lock pinned, rests on the states, and variant 1a follows the glossary.
 - **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.

@@ -47,14 +47,14 @@ pkit:
 
 - **2a.** The improvement breaks a stable library component, such as by removing a field, and the new library version keeps the major number. The system refuses the library version and names each break.
 - **2b.** The library component is experimental, so any library version may alter it. The system says so when it draws a piece that uses the component.
-- **4a.** A piece is living, such as a figure in a page. The system proposes the move as a change of its own, with the piece before and after ([UC-094](../010-make/UC-094-put-figure-in-page.md), variant 6b).
-- **4b.** A piece is delivered. The system leaves it at the library versions it was delivered with, and draws no before and after.
+- **4a.** A piece is published, such as a figure in a page. The system proposes the move as a change of its own, with the piece before and after ([UC-094](../010-make/UC-094-put-figure-in-page.md), variant 6b).
+- **4b.** A piece is final. The system leaves it at the library versions it was handed out with, and draws no before and after.
 
 **Postconditions:** Each piece the developer moved uses the improved library component. Every other piece still uses the library versions it used before.
 
 **Minimal guarantees:**
 
-- A delivered piece never moves to a new library version.
+- A final piece never moves to a new library version.
 - A stable library component breaks only in a library version whose major number rose.
 
 ## Open for the design

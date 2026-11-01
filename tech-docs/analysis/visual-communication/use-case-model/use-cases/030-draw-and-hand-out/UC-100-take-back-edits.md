@@ -56,7 +56,7 @@ pkit:
 
 What the developer needs here that no accepted record decides yet:
 
-- **Edits to a delivered piece.** Whether the system refuses to take them back, or first copies the piece as an adapted one. The architect, reviewing the capability's design on 31 October, asked for one of the two (#2423).
+- **Edits to a final piece.** Whether the system refuses to take them back, or first copies the piece as a draft with its lock pinned. The architect, reviewing the capability's design on 31 October, asked for one of the two (#2423).
 
 ## Sources
 

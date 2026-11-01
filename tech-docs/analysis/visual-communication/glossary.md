@@ -14,6 +14,7 @@ builds-on:
       - {id: TERM-pull-request, name: pull request}
       - {id: TERM-system, name: system}
       - {id: TERM-version, name: version}
+      - {id: TERM-version-pin, name: version pin}
     actors:
       - id: ACT-developer
         name: Developer
@@ -43,15 +44,6 @@ builds-on:
         name: AI agent
       - id: ACT-operator
         name: Operator
-TERM-adapted:
-  name: adapted
-  status: active
-  definition: "copied from a delivered piece for a new audience, with a lock that moves only when a person moves it"
-  pkit:
-    friction:
-      anchors:
-        path:
-          - .pkit/capabilities/visual-communication/README.md
 TERM-axis:
   name: axis
   status: active
@@ -88,19 +80,10 @@ TERM-content-slot:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
-TERM-delivered:
-  name: delivered
-  status: active
-  definition: "done with its job, such as a talk that was given, with a lock that never moves again and its exports kept as handed out"
-  pkit:
-    friction:
-      anchors:
-        path:
-          - .pkit/capabilities/visual-communication/README.md
 TERM-draft:
   name: draft
   status: active
-  definition: "still being made, with a lock that moves to the newest library version present each time the piece is drawn"
+  definition: "still being made, with a lock that moves to the newest library version present each time the piece is drawn, unless a person pinned it"
   pkit:
     friction:
       anchors:
@@ -119,6 +102,15 @@ TERM-export:
   name: export
   status: active
   definition: "numbered set of files a piece is handed out as, such as a PDF for each of its languages, kept and never overwritten"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/visual-communication/README.md
+TERM-final:
+  name: final
+  status: active
+  definition: "handed out and marked so by a person, with a lock that never moves again and the exports handed out kept as they were"
   pkit:
     friction:
       anchors:
@@ -173,15 +165,6 @@ TERM-library-version:
   name: library version
   status: active
   definition: "numbered state, such as 2.1.0, of a brand, a notation or another shared set pieces take their look from, kept whole and never changed"
-  pkit:
-    friction:
-      anchors:
-        path:
-          - .pkit/capabilities/visual-communication/README.md
-TERM-living:
-  name: living
-  status: active
-  definition: "lasting as long as the documentation page that shows it, with a lock that moves only through a change showing the piece before and after"
   pkit:
     friction:
       anchors:
@@ -250,6 +233,24 @@ TERM-piece:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+TERM-pinned:
+  name: pinned
+  status: active
+  definition: "held in place, said of a draft's lock, so that it moves only when a person moves it, never each time the piece is drawn"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/visual-communication/README.md
+TERM-published:
+  name: published
+  status: active
+  definition: "in use where others rely on it, with a lock that moves only through a reviewed change showing the piece before and after"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/visual-communication/README.md
 TERM-renderer:
   name: renderer
   status: active
@@ -295,6 +296,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [pull request](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-pull-request--pull-request)
   - **Term:** [system](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-system--system)
   - **Term:** [version](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-version--version)
+  - **Term:** [version pin](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-version-pin--version-pin)
   - **Actor:** [Developer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-developer.md)
     - Build a presentation from library components that exist, filled with my own content, so nothing made once is made again.
     - Put a figure in a documentation page that follows the page's light or dark mode, and stays current as the page changes.
@@ -317,14 +319,6 @@ The words of the domain and what each means. A term's id is stable, and its name
     - Have another capability's diagrams drawn in my libraries' look, the rest drawn that capability's own way, and see how much my libraries cover.
   - **Actor:** [AI agent](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md)
   - **Actor:** [Operator](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-operator.md)
-
-## TERM-adapted — adapted
-
-**Example:** A talk given in October is given again to another team. Its adapted copy keeps the talk's library versions until a person moves it.
-
-**Distinctions:**
-
-- **Adapter:** the core's word for what fits the system to a harness. It is another word, for another thing.
 
 ## TERM-axis — axis
 
@@ -360,21 +354,14 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Data point:** the core's place where a component takes what other components contribute, which the core once called a slot ([COR-052](../../../.pkit/decisions/core/COR-052-slots.md)). The analysis never says slot alone, so the two never share a word.
 - **Placeholder:** PowerPoint's word for a layout's content slot, which a reader may also take for mock text.
 
-## TERM-delivered — delivered
-
-**Example:** A talk is marked delivered once it was given. No later library version changes its look, and its PDFs stay as they were handed out.
-
-**Distinctions:**
-
-- **Adapted:** said of a copy of a delivered piece, made for a new audience. The delivered piece stays as it was.
-
 ## TERM-draft — draft
 
 **Example:** A talk being written for next month is a draft. Each time it is drawn, it takes the newest library versions the project holds.
 
 **Distinctions:**
 
-- **Living:** said of a piece whose lock moves only through a change that shows it before and after.
+- **Pinned:** said of a draft's lock that a person pinned. The piece is still a draft, and its lock moves only when a person moves it.
+- **Published:** said of a piece whose lock moves only through a change that shows it before and after.
 
 ## TERM-experimental — experimental
 
@@ -391,6 +378,15 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **What a renderer drew:** a board or a page changes each time the piece is drawn again. An export stays as it was made, and its PDF is written from the piece, never from a board.
+
+## TERM-final — final
+
+**Example:** A talk is marked final once it was given, with the PDFs that were handed out. No later library version changes its look, and those PDFs stay as they were.
+
+**Distinctions:**
+
+- **Pinned:** said of the lock of a final piece's copy, taken up again for a new audience. The copy is a draft, and its lock moves when a person moves it. The final piece stays as it was.
+- **Published:** said of a piece that stays in use, whose lock moves through a change a person reviews. A final piece's lock never moves.
 
 ## TERM-helper-script — helper script
 
@@ -442,14 +438,6 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **Version:** the core's word for the number of a state of a top-level part of the system, such as a capability. A library is data the system reads, never such a part, so a numbered state of it is a library version.
 - **Major number:** a library version's first number. A brand built on another names the major number of the brand it fits. A stable library component breaks only in a library version whose major number rose.
-
-## TERM-living — living
-
-**Example:** A figure of the project's parts is living. A new library version reaches it only once a change that shows the figure before and after lands.
-
-**Distinctions:**
-
-- **Delivered:** said of a piece whose job is done. A living piece's job lasts as long as its page.
 
 ## TERM-local-component — local component
 
@@ -513,6 +501,23 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **Deck:** a presentation, one kind of piece.
 - **Talk:** a presentation given to an audience, one kind of piece. The word never stands for every piece.
+
+## TERM-pinned — pinned
+
+**Example:** A talk given in October is given again to another team. Its copy is a draft with its lock pinned, so it keeps the talk's library versions until a person moves them.
+
+**Distinctions:**
+
+- **Final:** said of a piece that was handed out. Its lock never moves, while a pinned lock moves when a person moves it.
+- **Version pin:** the core's directive that names the release a project's commands run at. A pinned lock names library versions, and is no version pin.
+
+## TERM-published — published
+
+**Example:** A figure of the project's parts, shown in its documentation, is published. A new library version reaches it only once a change that shows the figure before and after lands.
+
+**Distinctions:**
+
+- **Final:** said of a piece that was handed out, whose lock never moves. A published piece stays in use, and its lock moves through a change a person reviews.
 
 ## TERM-renderer — renderer
 

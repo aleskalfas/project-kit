@@ -45,7 +45,7 @@ pkit:
 - **1b.** A helper script wrote the local component. The local component stays in its piece until visual-communication can do the script's work itself, and the use case ends.
 - **1c.** The library is one another project shares, so the project's copy is never edited. The developer asks its library owner to add the library component, and the use case ends. Once the library owner gives the library a new library version, the project takes it in ([UC-109](UC-109-take-in-shared-library.md), variant 1a).
 - **2a.** A check fails, such as on a fixed colour. The system names each fault. The developer mends it, and the path rejoins at step 2.
-- **4a.** The library component came from a local component (variant 1a). The system draws the piece it came from with the library component, and with the local component. Once the developer has seen the two, the developer moves the piece to the library component, and removes the local component. A delivered piece keeps its local component.
+- **4a.** The library component came from a local component (variant 1a). The system draws the piece it came from with the library component, and with the local component. Once the developer has seen the two, the developer moves the piece to the library component, and removes the local component. A final piece keeps its local component.
 
 **Postconditions:** The library component is in the library, marked stable, and only a library version whose major number rose may break it.
 

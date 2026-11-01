@@ -45,8 +45,8 @@ pkit:
 - **2a.** The link cannot be reached. The system says so and writes nothing, and the use case ends.
 - **3a.** The library fits a format that the project's visual-communication does not read. The system names the format and takes nothing in, and the use case ends.
 - **5a.** The copy was edited in the project. It no longer matches its hash, so the system's check fails on it until the developer fetches it again.
-- **6a.** The library was in the project already (variant 1a). The system draws each piece whose lock names the library with both library versions, and shows the developer the piece before and after. The developer moves the lock of each piece the newer library version improves, and leaves each other piece where it is. A delivered piece's lock stays.
-- **6b.** A piece is living. The system proposes the move of its lock as a change of its own, with the piece before and after ([UC-094](../010-make/UC-094-put-figure-in-page.md), variant 6b).
+- **6a.** The library was in the project already (variant 1a). The system draws each piece whose lock names the library with both library versions, and shows the developer the piece before and after. The developer moves the lock of each piece the newer library version improves, and leaves each other piece where it is. A final piece's lock stays.
+- **6b.** A piece is published. The system proposes the move of its lock as a change of its own, with the piece before and after ([UC-094](../010-make/UC-094-put-figure-in-page.md), variant 6b).
 - **6c.** The newer library version breaks what a piece uses, such as by renaming a library component. Its library owner gives a note on the break. On the developer's request, the system rewrites the piece's content to follow it, and the developer reviews that change like any other.
 - **6d.** No lock names an earlier library version any more. The developer removes it.
 
@@ -55,7 +55,7 @@ pkit:
 **Minimal guarantees:**
 
 - The system never writes into a library version it took in.
-- A delivered piece's lock never moves to a newer library version.
+- A final piece's lock never moves to a newer library version.
 
 ## Open for the design
 

@@ -44,7 +44,7 @@ pkit:
 - **2a.** The piece is also drawn on a board. The system still writes the PDF from the piece itself, never from the board.
 - **2b.** A program the system writes PDFs with is not on the machine. The system names it and writes nothing, and the use case ends.
 - **2c.** The developer asks for a PDF that screen readers follow. The system writes it with headings, a reading order and a text for each picture.
-- **4a.** The piece has done its job, such as a talk that was given, and the developer marks it delivered. This export is kept with the piece as its final form. From then on, no new library version alters the piece's look.
+- **4a.** The piece has done its job, such as a talk that was given, and the developer marks it final. This export is kept with the piece as the one handed out. From then on, no new library version alters the piece's look.
 
 **Postconditions:** The developer holds a PDF for each language, all under one export number, and knows what each export holds.
 
@@ -56,5 +56,5 @@ pkit:
 
 - **The goal:** drawn in planning the capability (#2423), from the Friday talk. That talk needed a script of its own to cut a board's export into one PDF for each language.
 - **The steps and the guarantee:** the capability's shared choices (#2424) on outputs and their versions, and on outside programs, which the capability checks for. The maintainer asked on 31 October that every export be kept and numbered.
-- **Not among the shared choices:** the delivered state of variant 4a, in which the piece's export is its final form. It rests on the maintainer's decisions of 30 and 31 October, made in planning the capability (#2423).
+- **Not among the shared choices:** the final state of variant 4a, in which the piece keeps the export that was handed out. It rests on the maintainer's decisions of 30 and 31 October, made in planning the capability (#2423).
 - **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.
