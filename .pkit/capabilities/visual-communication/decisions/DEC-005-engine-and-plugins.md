@@ -54,7 +54,7 @@ A *formula* computes one number in a component's data.
 
 ### 4. The engine measures text from committed fonts, and breaks its lines
 
-- **Measured from the brand's fonts.** The engine shapes each run of text with an established shaping library, HarfBuzz, from the committed font file, and reads font metrics with an established font library. Where a font profile gives a table of widths or an estimate, it measures by that. The record of brands and notations decides fonts, font profiles and what a missing font does.
+- **Measured from the brand's fonts.** The engine shapes each run of text with an established shaping library, HarfBuzz, from the committed font file, and reads font metrics with an established font library. Where a font profile gives a table of widths or an estimate, it measures by that. The record of brands and notations decides fonts, font profiles and what a missing font does ([visual-communication:DEC-004-brands-and-notations] points 2 and 9).
 - **Lines broken by the engine.** It breaks text into lines by Unicode's rules and each language's own rules, kept as data in the engine. So a new language's rules arrive with a release of the capability. In Czech, for example, a one-letter word never ends a line.
 - **A margin keeps lines stable.** The engine breaks against the planned width minus a small margin, and places the text in the planned width. So a renderer's slightly different metrics move no word, and centred text stays centred.
 - **Text never shrinks to fit.** A word longer than its line breaks after a slash, or is marked as overflowing. There is no hyphenation and no justified text at first.
@@ -66,7 +66,7 @@ A *formula* computes one number in a component's data.
 - **Primitives at the leaves:** a box, an ellipse, a text, a line and an image, with a path kept for later. Their properties take SVG's names. Draw order is the tree's order.
   - A text holds paragraphs of runs, each with a style role and perhaps a link. It holds its lines, its explicit line height, its measured height, its font, and how it was measured.
   - A line carries its whole shape. Its attached ends are hints for a medium with connectors of its own.
-  - An image has a fit and a tint by role. One made while preparing holds its variants by key (the record of brands and notations), and its *exposed points*: named points in its pixels that the piece may point at, such as to place a label. The record of work outside the engine and outputs decides the rules on both. A formula or a connector reads an exposed point as it reads an exposed part, mapped into the image's frame.
+  - An image has a fit and a tint by role. One made while preparing holds its variants by key (the record of brands and notations, [visual-communication:DEC-004-brands-and-notations] point 3), and its *exposed points*: named points in its pixels that the piece may point at, such as to place a label. The record of work outside the engine and outputs decides the rules on both ([visual-communication:DEC-006-work-outside-the-engine-and-outputs] points 2 and 3). A formula or a connector reads an exposed point as it reads an exposed part, mapped into the image's frame.
   - Documents and PDF files get alternative text, a reading order, and structure such as headings, lists, tables and captions.
 - **Values stay roles.** Each value that moves nothing, such as a colour or a picture, names its role. Its value comes from the document of point 7, so one scene serves every mode of the value axes. So the variants of one picture in one scene share one pixel size, and the same exposed points at the same places.
 - **The root says what the scene is:** the piece, its lock, its language, the key over its size axes, and the seam's version.
@@ -78,7 +78,7 @@ A *formula* computes one number in a component's data.
 
 - **Each axis, its modes.** A piece names, in one place of its own, the modes it is drawn in on each axis of its brand. An axis it names none for is drawn in its default. The font profile is the exception: each renderer of the piece's outputs names its own (point 10).
 - **One scene for each language and each combination of size-axis modes,** font profiles included. The values of every combination named come with each scene.
-- **Every combination named is checked and previewed.** Which combinations an export holds is the record of work outside the engine and outputs'.
+- **Every combination named is checked and previewed.** Which combinations an export holds is the record of work outside the engine and outputs' ([visual-communication:DEC-006-work-outside-the-engine-and-outputs] point 7).
 
 ### 7. The engine owns one document of a brand's resolved values
 
@@ -101,8 +101,8 @@ A *formula* computes one number in a component's data.
 
 - **The three kinds:**
   - A *renderer* draws a scene in one medium.
-  - A *producer* makes a picture while a piece is prepared, from its own inputs and the values it declares. A person or an agent runs it, never the engine (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 8). The record of work outside the engine and outputs decides the rules on its pictures.
-  - A *code writer* writes the document of values as code in one language, under the naming rule of the record of brands and notations.
+  - A *producer* makes a picture while a piece is prepared, from its own inputs and the values it declares. A person or an agent runs it, never the engine (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 8). The record of work outside the engine and outputs decides the rules on its pictures ([visual-communication:DEC-006-work-outside-the-engine-and-outputs] points 2 and 3).
+  - A *code writer* writes the document of values as code in one language, under the naming rule of the record of brands and notations ([visual-communication:DEC-004-brands-and-notations] point 4).
 - **Each declares what it supports.** A renderer declares, for each primitive and property, whether it draws it, updates it in place, recreates it, or reads it back. A producer declares the inputs it takes and the kinds of value it can use. A code writer declares the kinds of value its language has a form for.
 - **Each declares what it needs beyond the project's files:** the outside programs it calls, and any service it reaches, as the record of files and validation decides ([visual-communication:DEC-002-files-and-validation] point 8).
 - **Each has a version of its own,** apart from the capability's. It rises when the same input could give another output, and reference outputs pinned to it in the capability's tests catch a change made without one. So a release that changes no plugin's output leaves no picture or written code stale.
@@ -134,7 +134,7 @@ A *formula* computes one number in a component's data.
 ### 13. The scene check reads each piece's last render, and computes only what changed
 
 Validation runs each validator under a fixed bound, and the work of computing every scene grows with a project's pieces, languages and combinations. So the check judges what it can read from the files without computing every scene.
-- **Each render keeps a record of its piece's findings,** beside the piece, keyed by a hash of every file its scenes were computed from, as the record of work outside the engine and outputs gives such a key its form. The project commits it, so a fresh clone reads it. It is a file a command rewrites, apart from content (the record of files and validation, [visual-communication:DEC-002-files-and-validation] point 5).
+- **Each render keeps a record of its piece's findings,** beside the piece, keyed by a hash of every file its scenes were computed from, as the record of work outside the engine and outputs gives such a key its form ([visual-communication:DEC-006-work-outside-the-engine-and-outputs] point 6). The project commits it, so a fresh clone reads it. It is a file a command rewrites, apart from content (the record of files and validation, [visual-communication:DEC-002-files-and-validation] point 5).
 - **A record that verifies is read.** Its findings are the check's for that piece. The engine's version is not in the key, since a new engine reaches a piece only at a render a person runs (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 7).
 - **A piece whose record is missing or does not verify** has its scenes computed by the check, in that run, from the files alone. So the work grows with what a change touched, not with the project, and no result kept outside the repository is needed.
 - **A final piece's scenes are not computed** (the record of files and validation, [visual-communication:DEC-002-files-and-validation] point 7).
@@ -182,4 +182,4 @@ Each finding below fails validation where it lies in a file the project can corr
 - **The capability's reference** lists the formula's functions and names, the operators, the primitives and each plugin's declaration. Its schemas hold the forms of the seam and of the document of values.
 - **The walking skeleton** draws one pattern with one item component, using a formula and a layout operator. It measures text from a committed font in one profile, and breaks lines in the engine. A small program reads the values it declares, and the piece places a label at its picture's exposed point. The renderer of vector pictures draws the scene and reports what it could not draw. Its render keeps the record of findings the check reads (point 13).
 - **Later slices** build the whiteboard renderer with its profile and its record, the web page renderer, producers, and taking edits back.
-- **The record of work outside the engine and outputs** decides a produced picture's rules, its variants, exposed points and the record of what it was made from, and where written code goes.
+- **The record of work outside the engine and outputs** decides a produced picture's rules, its variants, exposed points and the record of what it was made from, and where written code goes ([visual-communication:DEC-006-work-outside-the-engine-and-outputs] points 2 to 5).

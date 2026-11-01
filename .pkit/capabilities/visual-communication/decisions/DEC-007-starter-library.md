@@ -56,7 +56,7 @@ The starter's owner, whoever maintains the capability, marks a component stable,
 ### 4. The form to the starter, the values to the brand
 
 - **A generic form is a starter component,** which a brand styles with its values. A design system's tile, for example, can be the starter's card in that brand's colours, corners and fonts.
-- **Close to the established forms.** The starter draws each generic form close to the forms design systems share, so a brand's values can give it that brand's look. A brand reaches a component only through the roles and component tokens it names, as the record of brands and notations decides. So a starter component names a role for each value a brand's look may change, such as its corners.
+- **Close to the established forms.** The starter draws each generic form close to the forms design systems share, so a brand's values can give it that brand's look. A brand reaches a component only through the roles and component tokens it names, as the record of brands and notations decides ([visual-communication:DEC-004-brands-and-notations] point 7). So a starter component names a role for each value a brand's look may change, such as its corners.
 - **What stays out.** A form that one brand alone uses is that brand's, as the founding record lets a brand hold parts no shared component has ([visual-communication:DEC-001-visual-communication-discipline] point 5). A subject's concepts belong to a notation (COR-014).
 - **Where values fall short,** a brand's own part is a different component, with its own name and job, under the founding record's rule. It is never a changed copy of a starter component.
 
@@ -92,7 +92,7 @@ The starter's owner, whoever maintains the capability, marks a component stable,
 
 - **The starter's README** holds the list of patterns and blocks by job, the boundaries between them, and what is left out and why. A change of the list is a change of the README and of the starter, not of this record.
 - **The starter is built in steps.** What the first pieces need comes first, as experimental components, then the other jobs the evidence shows, then those built ahead of need. A pattern that needs a tool the engine lacks waits for the tool.
-- **The reference renders need a brand.** They draw with the brand the capability keeps for its tests, as the record of brands and notations has it. That record leaves open whether a brand ships that projects may lock.
+- **The reference renders need a brand.** They draw with the brand the capability keeps for its tests, as the record of brands and notations has it ([visual-communication:DEC-004-brands-and-notations], Implications). That record leaves open whether a brand ships that projects may lock.
 - **This record adds no check to validation.** Its bar for entry is judged in review by the starter's owner. The note a piece gets when it uses an experimental component is the record of change over time's ([visual-communication:DEC-003-change-over-time] point 9).
 - **A project's own component library** may follow these principles. They bind only the starter.
 - **Left to the starter's README and later changes:** the blocks that a legend and icons need, so colour is never the only sign.

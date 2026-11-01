@@ -39,13 +39,13 @@ The capability is for *visual work*: items made to show something to people, suc
 
 The capability has two layers, and the first is the source of the second.
 - **The logical layer** holds a piece's content, the layout its components define, and the libraries that give it its look.
-- **The engine** is the capability's code that computes the *scene* from the logical layer: each element's final place, size and values, and where each came from. A scene is computed, never edited. The record of the engine and its plugins decides what it holds.
+- **The engine** is the capability's code that computes the *scene* from the logical layer: each element's final place, size and values, and where each came from. A scene is computed, never edited. The record of the engine and its plugins decides what it holds ([visual-communication:DEC-005-engine-and-plugins] point 5).
 - **A renderer** draws the scene in one medium: it *projects* the scene. It decides nothing the scene sets, so it adds no place, size, colour or font of its own.
 - **What a renderer may decide is bounded.** Its medium may need a choice the scene leaves open, such as where a line breaks within the width the scene measured, or how pages lie on a board. The renderer declares each such choice.
 - **What a renderer cannot draw** as the scene sets it, it approximates, draws as a picture or refuses, and it reports what it lost.
 - **A different look comes only from the logical layer,** from another brand or another library, never from a renderer.
 - **An edit made in a renderer,** where the medium can be edited, changes the source only when it is taken back into the logical layer, as a change a person reviews. The formats leave room for that from their first version (point 3).
-- **Plugins.** They are of three kinds: renderers draw a scene, producers make pictures while a piece is prepared (point 8), and code writers write a brand's values out as code (point 9). Each says what it supports and reports what it lost. Every plugin the capability ships is part of it, and none is a capability of its own. The record of the engine and its plugins decides whether a project may add a plugin of its own.
+- **Plugins.** They are of three kinds: renderers draw a scene, producers make pictures while a piece is prepared (point 8), and code writers write a brand's values out as code (point 9). Each says what it supports and reports what it lost. Every plugin the capability ships is part of it, and none is a capability of its own. The record of the engine and its plugins decides whether a project may add a plugin of its own ([visual-communication:DEC-005-engine-and-plugins] point 12).
 
 ### 3. A piece and its content
 
@@ -95,7 +95,7 @@ Each piece names the exact version of each library it uses, the libraries those 
 - **A library's release never changes a piece others rely on,** such as one handed out or a figure in published documentation. A person moves its lock, after a before-and-after of what the move changes.
 - **A piece being drafted** may follow the newest versions the project holds, since its author sees each render.
 - **The engine and the renderers move with the capability.** A new release of them reaches a piece only at a render a person runs, whose difference shows. So a piece handed out keeps its exports as they were handed out, and they are its real freeze.
-- **The record of change over time** decides the states a piece moves through, and how each state moves its lock.
+- **The record of change over time** decides the states a piece moves through, and how each state moves its lock ([visual-communication:DEC-003-change-over-time] point 8).
 
 ### 8. What the engine cannot compute is computed while preparing
 
@@ -115,7 +115,7 @@ Some pieces need what the engine's tools cannot compute, such as items placed on
 ### 10. Independent, and connected to others later
 
 The capability works with no other capability installed.
-- **A figure in a documentation page** is, to that page, an image produced from a source: the piece's content. This capability is then what living-docs calls the image's renderer, the tool that produces it from its source, and the piece's libraries and lock are that renderer's settings ([living-docs:DEC-002-visual-elements] points 1 and 4). A change of brand changes no content, as living-docs asks of a change of theme, since content names only what its libraries declare and never a value. Where such an image lies, and how its freshness is checked, the records of this capability's outputs and files settle with that capability's rules on images ([living-docs:DEC-002-visual-elements] points 2 and 5).
+- **A figure in a documentation page** is, to that page, an image produced from a source: the piece's content. This capability is then what living-docs calls the image's renderer, the tool that produces it from its source, and the piece's libraries and lock are that renderer's settings ([living-docs:DEC-002-visual-elements] points 1 and 4). A change of brand changes no content, as living-docs asks of a change of theme, since content names only what its libraries declare and never a value. Where such an image lies, and how its freshness is checked, the records of this capability's outputs ([visual-communication:DEC-006-work-outside-the-engine-and-outputs] points 5 and 7) and files ([visual-communication:DEC-002-files-and-validation] points 1 and 7) settle with that capability's rules on images ([living-docs:DEC-002-visual-elements] points 2 and 5).
 - **Another capability's visuals,** such as an analysis's diagrams, may later be drawn by this one, through a contract that names what is to be drawn. This capability reports what it cannot draw. What the other capability does then, and how the two connect, is decided with that capability.
 
 ### 11. Shipped with the methodology, and a project's work stays the project's
