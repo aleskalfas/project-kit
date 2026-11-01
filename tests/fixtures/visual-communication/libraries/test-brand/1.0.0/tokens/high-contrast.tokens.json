@@ -1,0 +1,19 @@
+{
+  "$description": "High contrast, in either colour scheme: text and lines at the scheme's strongest.",
+  "background": {
+    "$type": "color",
+    "$value": "{scheme.strong-paper}"
+  },
+  "text-primary": {
+    "$type": "color",
+    "$value": "{scheme.strong-ink}"
+  },
+  "text-secondary": {
+    "$type": "color",
+    "$value": "{scheme.ink}"
+  },
+  "line": {
+    "$type": "color",
+    "$value": "{scheme.strong-ink}"
+  }
+}

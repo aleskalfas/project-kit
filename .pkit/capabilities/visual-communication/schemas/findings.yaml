@@ -1,0 +1,38 @@
+# The record of a piece's findings, `pieces/<piece>/findings.yaml`
+# (visual-communication DEC-002 point 7, DEC-005 point 13): a key over every file the
+# piece's scenes were computed from, and what computing them found, each finding at the
+# level its record sets. The check reads it while its key verifies. `pkit visual render`
+# rewrites it.
+#
+# The body below is the reference instance.
+
+pkit_schema: visual-communication:findings
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+key:
+  form: 1
+  hash: sha256
+  format: 1
+  value: 93c29ddb073d8c11ef07a37af56cf46006d720bd0289bc1291b13c128ba43213
+  inputs:
+    - file: content.en.yaml
+      sha256: ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73
+    - file: piece.yaml
+      sha256: 34235a2c502e3919d3f00af5dabb87cb58aef4566b10631f2a5db94950ebffbd
+    - library: foundations
+      version: 1.0.0
+      path: roles.yaml
+      sha256: 66cf5513b37462be52e7fe7b1791b7a6b704f97577680acc2f270e365a1b01e3
+    - library: test-brand
+      version: 1.0.0
+      path: fonts/SourceSansPro-Regular.otf
+      sha256: 795ea3efa43d0872b63bf0067be97553b46983e4f075097669391e9d15388ecc
+findings:
+  - code: text-overflow
+    level: fails
+    message: The title is 12 px wider than its box.
+    file: visual/pieces/example/content.en.yaml
+    where: figure/caption
+    fix: Shorten the title, then run `pkit visual render example`.

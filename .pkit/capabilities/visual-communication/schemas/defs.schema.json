@@ -1,0 +1,398 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "defs.schema.json",
+  "title": "Shared shapes of the visual-communication capability's format 1",
+  "description": "The shapes every schema of the capability shares: names, ids, token paths, keys, versions, hashes, paths, fingerprints and records. Each schema refers here, so a shape is written once. The capability's Python reads the same patterns (`_lib/names.py`); a test holds the two equal.",
+  "$defs": {
+    "name": {
+      "description": "The one name shape (DEC-002 point 4, DEC-004 point 4): lower-case words of letters and digits joined by single hyphens, starting with a letter. A name holds no `.`, `/` or `#`, and YAML never reads one as a number or a yes-or-no.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "token-path": {
+      "description": "A token's place in a brand's tree of tokens: segments joined by `.`, each lower-case words of letters and digits joined by hyphens; a segment may start with a digit, as in `space.3` (DEC-004 point 4).",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*$"
+    },
+    "alias": {
+      "description": "A DTCG alias of a token path, `{a.b}`.",
+      "type": "string",
+      "pattern": "^\\{[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*\\}$"
+    },
+    "id": {
+      "description": "An id (DEC-002 point 4): a letter, then letters, digits, `-` and `_`; never a word YAML 1.1 reads as a yes-or-no, in any case.",
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
+      "not": {
+        "pattern": "^([Yy]|[Nn]|[Yy][Ee][Ss]|[Nn][Oo]|[Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[Oo][Nn]|[Oo][Ff][Ff])$"
+      }
+    },
+    "language": {
+      "description": "A language tag: two or three lower-case letters, then subtags of two to eight letters or digits.",
+      "type": "string",
+      "pattern": "^[a-z]{2,3}(-[a-z0-9]{2,8})*$"
+    },
+    "use": {
+      "description": "A component by its library: `<library>/<component>`, or `piece/<component>` for a component of the piece itself. Never a version: the lock alone says which version is read (DEC-002 point 4).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*/[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "library-name": {
+      "description": "A library's name: a name, other than `piece` and `component`, which no library takes (DEC-002 point 4, DEC-004 point 7). That no library takes a top group of the shared roles, the capability's check judges.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/name"
+        },
+        {
+          "not": {
+            "enum": [
+              "piece",
+              "component"
+            ]
+          }
+        }
+      ]
+    },
+    "version": {
+      "description": "A library's version, `X.Y.Z` with X at least 1 in format 1. Its major is its line.",
+      "type": "string",
+      "pattern": "^[1-9][0-9]*\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "release": {
+      "description": "A release of the capability, or a plugin's version: `X.Y.Z`.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "key": {
+      "description": "A combination's key (DEC-004 point 3): `default`, or the non-default modes as `<axis>.<mode>` in the order of the axes' names, joined by `+`.",
+      "type": "string",
+      "pattern": "^(default|[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*(\\+[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*)*)$"
+    },
+    "sha256": {
+      "description": "A SHA-256 in lower-case hexadecimal.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "text": {
+      "description": "Text for a person to read: not empty, not blank.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "time": {
+      "description": "A moment, RFC 3339, in UTC or with its offset. Commands write it quoted.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})$"
+    },
+    "repository-path": {
+      "description": "A path within the repository, relative to its top, written with `/`: no empty segment, no segment that starts with `.`, so neither the top itself, a path outside it, `.pkit/` nor a hidden folder (DEC-002 point 1).",
+      "type": "string",
+      "pattern": "^[^/.\\\\][^/\\\\]*(/[^/.\\\\][^/\\\\]*)*$"
+    },
+    "version-path": {
+      "description": "A path within a library's version folder, relative to it, written with `/`: no empty segment and no `..`.",
+      "type": "string",
+      "pattern": "^[^/\\\\]+(/[^/\\\\]+)*$",
+      "not": {
+        "pattern": "(^|/)\\.\\.(/|$)"
+      }
+    },
+    "trace": {
+      "description": "A trace id (DEC-005 point 5) or a token path: what a loss names.",
+      "type": "string",
+      "pattern": "^\\S+$"
+    },
+    "lock": {
+      "description": "A lock: each library the piece or the declaration uses, those they build on included, at one version (DEC-001 point 7).",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/library-name"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/version"
+      }
+    },
+    "accept-losses": {
+      "description": "The losses a plugin reports that a person accepted, each with the plugin, what it lost (a trace id or a token path), and why it is accepted. An accepted loss is not reported again.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": [
+          "plugin",
+          "what",
+          "reason"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "plugin": {
+            "$ref": "#/$defs/name"
+          },
+          "what": {
+            "$ref": "#/$defs/trace"
+          },
+          "reason": {
+            "$ref": "#/$defs/text"
+          }
+        }
+      }
+    },
+    "plugins": {
+      "description": "Plugins by name, each with its version.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/name"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/release"
+      }
+    },
+    "recorded": {
+      "description": "What a record only records, never compares (DEC-006 point 5): the plugins and their versions, each outside program called with its version, the machine, the time and the capability's release.",
+      "type": "object",
+      "required": [
+        "plugins",
+        "programs",
+        "machine",
+        "time",
+        "capability"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "plugins": {
+          "$ref": "#/$defs/plugins"
+        },
+        "programs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "machine": {
+          "$ref": "#/$defs/text"
+        },
+        "time": {
+          "$ref": "#/$defs/time"
+        },
+        "capability": {
+          "$ref": "#/$defs/release"
+        }
+      }
+    },
+    "fingerprint": {
+      "description": "A fingerprint, form 1 (DEC-006 points 5 and 6): self-describing — its form, its hash, the format number its inputs were read at, its value (the hash of the canonical text of its inputs), and each input with its identity and its hash, sorted by the identity's canonical text. The README gives each input set.",
+      "type": "object",
+      "required": [
+        "form",
+        "hash",
+        "format",
+        "value",
+        "inputs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "form": {
+          "const": 1
+        },
+        "hash": {
+          "const": "sha256"
+        },
+        "format": {
+          "const": 1
+        },
+        "value": {
+          "$ref": "#/$defs/sha256"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/input"
+          }
+        }
+      }
+    },
+    "input": {
+      "description": "One input of a fingerprint: an identity, apart from where the work lies, and the hash of what was read.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "file",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "file": {
+              "$ref": "#/$defs/version-path"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "file",
+            "keys",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "file": {
+              "$ref": "#/$defs/version-path"
+            },
+            "keys": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "library",
+            "version",
+            "path",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "library": {
+              "$ref": "#/$defs/library-name"
+            },
+            "version": {
+              "$ref": "#/$defs/version"
+            },
+            "path": {
+              "$ref": "#/$defs/version-path"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "font",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "font": {
+              "$ref": "#/$defs/sha256"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "plugin",
+            "version",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "plugin": {
+              "$ref": "#/$defs/name"
+            },
+            "version": {
+              "$ref": "#/$defs/release"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "value",
+            "key",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "value": {
+              "$ref": "#/$defs/token-path"
+            },
+            "key": {
+              "$ref": "#/$defs/key"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "frame",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "frame": {
+              "$ref": "#/$defs/trace"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "pixels",
+            "width",
+            "height",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "pixels": {
+              "$ref": "#/$defs/key"
+            },
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "$ref": "#/$defs/name"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

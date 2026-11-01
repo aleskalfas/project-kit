@@ -1,0 +1,40 @@
+# The record of a piece's exports, `pieces/<piece>/exports.yaml` (visual-communication
+# DEC-006 point 7): each numbered export, the fingerprint of what it was made from, each
+# file it made with its hash, and what is only recorded. `pkit visual export` rewrites it.
+#
+# The body below is the reference instance.
+
+pkit_schema: visual-communication:exports
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+versions:
+  - version: 1
+    fingerprint:
+      form: 1
+      hash: sha256
+      format: 1
+      value: 93c29ddb073d8c11ef07a37af56cf46006d720bd0289bc1291b13c128ba43213
+      inputs:
+        - file: content.en.yaml
+          sha256: ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73
+        - file: piece.yaml
+          sha256: 34235a2c502e3919d3f00af5dabb87cb58aef4566b10631f2a5db94950ebffbd
+        - library: foundations
+          version: 1.0.0
+          path: roles.yaml
+          sha256: 66cf5513b37462be52e7fe7b1791b7a6b704f97577680acc2f270e365a1b01e3
+        - library: test-brand
+          version: 1.0.0
+          path: fonts/SourceSansPro-Regular.otf
+          sha256: 795ea3efa43d0872b63bf0067be97553b46983e4f075097669391e9d15388ecc
+    files:
+      example.v1.en.default.svg: '0000000000000000000000000000000000000000000000000000000000000004'
+    recorded:
+      time: '2026-11-01T10:00:00Z'
+      state: draft
+      capability: 0.1.0
+      renderers:
+        svg: 1.0.0
+      used-stale: []

@@ -1,0 +1,25 @@
+# A library version's `library.yaml`, `libraries/<name>/<version>/library.yaml` in the
+# location (visual-communication DEC-001 point 5, DEC-003 points 1 and 4, DEC-004
+# point 1): its name, version, kind, the oldest release of the capability it needs, and
+# what it builds on by major. A brand also names its DTCG version, its Resolver document
+# and its open roles.
+#
+# The body below is the reference instance: a brand.
+
+pkit_schema: visual-communication:library
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+name: test-brand
+version: 1.0.0
+kind: brand
+needs-release: 0.1.0
+builds-on:
+  - name: foundations
+    major: 1
+dtcg: '2025.10'
+resolver: test-brand.resolver.json
+open:
+  - accent
+  - space

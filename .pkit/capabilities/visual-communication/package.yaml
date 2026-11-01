@@ -5,3 +5,15 @@ component:
   version: 0.1.0
 description: Visual work from reusable parts — pieces whose content is data, styled by libraries of components, brands and notations, and drawn by several renderers.
 requires_backbone: ">=2.0.0,<3.0.0"
+aliases:
+  - visual
+# What a render or an export makes that is not committed — previews, exports nobody
+# has handed out, hand-overs to a producer — lies under this path, local to each clone
+# (DEC-002 point 1). Declared repository-relative; the renderer rebases it onto
+# `.pkit/.gitignore`.
+runtime_ignore:
+  - .pkit/capabilities/visual-communication/project/local/
+commands:
+  status:
+    script: scripts/status.py
+    help: "Show where the visual work lies, and each piece with its state and its lock (DEC-002 point 1, DEC-003 point 8): the location, and whether a command recorded it in the capability's configuration or it is the default, `visual/`, not recorded yet; then each piece of the location with its state, pinned or not, and the version of each library its lock names. Reads only; exit 1 when the configuration cannot be read or records a location that is refused or missing."
