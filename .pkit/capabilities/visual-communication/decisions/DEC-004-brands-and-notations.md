@@ -55,7 +55,7 @@ A *key* names a combination of modes over a set of axes. A scene's key spans its
 
 A name in code has two parts: a *token path*, a token's place in the brand's tree of tokens, and a key.
 - **Both are made of segments.** Each segment of a path names one group or token. Each segment of a key is one axis with its mode.
-- **Every name that enters a path or a key has one shape:** lower-case words of letters and digits, joined by hyphens. Roles, component tokens, axes, modes, and the names of libraries and components all take it. It is stricter than the rule of the record of files and validation, that no name holds a path mark, and holds beside it.
+- **Every name that enters a path or a key has one shape:** lower-case words of letters and digits, joined by hyphens. Roles, component tokens, axes, modes, and the names of libraries and components all take it. It is stricter than the rule of the record of files and validation, that no name holds a path mark ([visual-communication:DEC-002-files-and-validation] point 4), and holds beside it.
 - **Each code writer spells both parts in its language.** It keeps a segment apart from the words inside it, and the path apart from the key, so no two names spell the same. It may spell the key into the name, or as the context its language switches modes by. CSS, for example, keeps one variable for each token path and gives each value axis's modes a selector, so a page switches modes while open.
 - **Each code writer's spelling is public,** since code outside the capability names what it spells. How a spelling is versioned is the record of the engine and its plugins'.
 - **A brand built on another is written out whole,** the values it keeps from its base included.
@@ -102,7 +102,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 
 - **A font role gives a list of families.** The first family measures each character it has, and the next measures the rest.
 - **Each font profile says how each font is measured:** from font files, from a table of widths, or by an estimate. The default profile measures and draws from files. A table or an estimate stands only for a font a medium holds itself, such as a whiteboard service's. That table ships with the renderer for the medium, and the scene records how each text was measured.
-- **A font file is committed unchanged with its licence,** where its licence allows. A font the brand may not ship is a file the project commits in the capability's location (the record of files and validation), which the brand names by a hash. A project that may not commit it either cannot draw in that profile.
+- **A font file is committed unchanged with its licence,** where its licence allows. A font the brand may not ship is a file the project commits in the capability's location (the record of files and validation, [visual-communication:DEC-002-files-and-validation] point 1), which the brand names by a hash. A project that may not commit it either cannot draw in that profile.
 - **Never a font found on the machine,** since the engine reads only the project's files (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 8).
 - **A missing font refuses the render,** before anything is laid out, naming the font. Every character is checked against the families that measure it.
 
@@ -116,7 +116,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 
 ### 11. What the checks report, and how severely
 
-Each finding below fails validation where it lies in a file the project can correct, as the record of files and validation decides. Elsewhere, as in a released library version, it asks for attention and names who can correct it (COR-055 points 1 and 4). A delivered piece's drawing is not judged, as that record decides.
+Each finding below fails validation where it lies in a file the project can correct, as the record of files and validation decides ([visual-communication:DEC-002-files-and-validation] point 7). Elsewhere, as in a released library version, it asks for attention and names who can correct it (COR-055 points 1 and 4). A delivered piece's drawing is not judged, as that record decides.
 - **Fails validation:**
   - a value given to a role its base does not open, an open role its base does not have, or an alias to a token its base keeps private
   - a brand built on another that adds an axis or a mode, or changes a default

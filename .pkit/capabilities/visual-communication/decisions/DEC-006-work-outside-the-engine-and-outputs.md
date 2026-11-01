@@ -62,9 +62,9 @@ These rules bind every picture made while preparing, whichever program writes it
 
 - **In the piece that uses it.** A produced picture, or a local component a helper writes, lives in the folder of the piece that uses it, with its record beside it. It is made under that piece's lock, so another piece under another lock makes its own.
 - **Committed.** Both are committed, so the scene and the check read them on a fresh clone without running the program.
-- **Apart from content.** Produced output is kept apart from the pictures the content holds, such as a screenshot, as the record of files and validation keeps what a program rewrites apart from what a person writes. Living-docs keeps produced images apart from hand-made ones the same way ([living-docs:DEC-002-visual-elements] point 5).
+- **Apart from content.** Produced output is kept apart from the pictures the content holds, such as a screenshot, as the record of files and validation keeps what a program rewrites apart from what a person writes ([visual-communication:DEC-002-files-and-validation] point 5). Living-docs keeps produced images apart from hand-made ones the same way ([living-docs:DEC-002-visual-elements] point 5).
 - **Never in a library copy.** A library copy that a lock names is never rewritten, as the founding record says ([visual-communication:DEC-001-visual-communication-discipline] point 11). A library may hold a model, or a picture, as a plain file, and a component may declare a slot that a produced picture fills.
-- **Written code,** such as CSS variables, goes where its declaration names, with its record beside it, as the record of files and validation places them. The code that reads it, such as a web page or a game, lives in the project's tree.
+- **Written code,** such as CSS variables, goes where its declaration names, with its record beside it, as the record of files and validation places them ([visual-communication:DEC-002-files-and-validation] point 1). The code that reads it, such as a web page or a game, lives in the project's tree.
 - **Written code follows its declaration's lock,** which a person moves on purpose (the record of the engine and its plugins). The lock says what the code holds, so the code takes no numbered versions.
 - **Whether written code is committed** is the project's choice, as for any file its own build writes, and its record goes with it. Where neither is present, as on a fresh clone that commits neither, the check states that as a fact and names the command that writes them.
 
@@ -103,14 +103,14 @@ An *export* is a file a piece is handed out as, such as a PDF or a picture, in a
 - **The record of exports** holds, for each version, a fingerprint of every file its scene was computed from. Those are the piece's own files, its lock and the outputs of point 1 among them, and any shared content it reads. It also holds a hash of each file the version wrote. The engine's version is only recorded (below), so a release of the capability makes no export stale.
 - **What it only records:** when the version was made, the piece's state then, and the versions of the engine, the renderers and each outside program. It names each output of point 1 the version used, and any it used while stale.
 - **No stale output.** An export stops on a stale output of point 1 and names it. The person who runs it may say to use the output as it is. A delivered piece's exports use its outputs as they were delivered.
-- **Where a version lies.** An export run writes its files where previews lie, local to each clone and never committed (the record of files and validation).
+- **Where a version lies.** An export run writes its files where previews lie, local to each clone and never committed (the record of files and validation, [visual-communication:DEC-002-files-and-validation] point 1).
 - **What is committed, in the piece's folder.** The version a person names as handed out, when marking the piece delivered (the record of change over time), is moved into the piece's folder and committed as its real freeze. A living piece's current copy and the record of exports lie there and are committed too. So the piece stays one folder, copied, archived or removed in one step. Every other version stays on the machine that made it.
 - **A living piece's current copy.** A living piece keeps an unnumbered copy of each file its export makes, which a page links to, since a link cannot follow a number. Where a documentation page shows the copy, it lies where the documentation's rules put that page's produced images ([living-docs:DEC-002-visual-elements] point 5). The piece then names that place, and the copy is written there. Removing the piece removes the copy.
 - **Previews are not exports.** A render made for a person to look at takes no number and is never committed.
 
 ### 8. What the check reports, and how seriously
 
-These findings join the capability's check within validation, at the severities that the policy of the record of files and validation allows (COR-055). An output that people or other software read directly fails when something it read changed. One that reaches a reader only through a piece asks for attention, since the piece's exports guard it.
+These findings join the capability's check within validation, at the severities that the policy of the record of files and validation allows ([visual-communication:DEC-002-files-and-validation] point 7, COR-055). An output that people or other software read directly fails when something it read changed. One that reaches a reader only through a piece asks for attention, since the piece's exports guard it.
 - **They fail validation,** each an invariant the project mends in its own files:
   - an output of point 1, or a file of written code, with no record, or a record that names a variant whose file is missing
   - variants of one picture whose exposed points differ in their names, or variants one scene holds that differ in pixel size or in the places of their exposed points (the record of the engine and its plugins)
@@ -168,7 +168,7 @@ These findings join the capability's check within validation, at the severities 
 - **The record of brands and notations** decides the key that names a combination of modes, and the key a variant takes.
 - **The record of change over time** decides the states, how a piece becomes delivered and when a lock moves.
 - **A lock move's before-and-after** shows the committed pictures, reports the stale ones and runs no program.
-- **The record of files and validation** decides where pieces and the declarations of written code lie, and the severity policy. It also decides how the outside programs a producer calls are checked.
+- **The record of files and validation** decides where pieces and the declarations of written code lie, and the severity policy ([visual-communication:DEC-002-files-and-validation] points 1 and 7). It also decides how the outside programs a producer calls are checked ([visual-communication:DEC-002-files-and-validation] point 8).
 - **The CLI reference** names the commands that frame a program's run, run a producer, export a piece and list a project's exports.
 - **A documentation page** that shows a piece anchors the piece's content, never its copy, as living-docs asks ([living-docs:DEC-002-visual-elements] point 4).
 - **Two branches that export one piece** may take one number, and the record of exports conflicts on merge. A delivered version never takes a new number. The other version takes the next free one, its files renamed with it.

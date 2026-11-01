@@ -28,7 +28,7 @@ The capability's design review asked how a format change reaches files that no m
 
 ### 1. Three numbers, each with one job
 
-- **The format number** is one integer, shared by every schema of the capability. Each file of the capability's format carries it as its schema version (the record of files and validation). It rises only on a change that older files cannot follow. An addition, such as a new optional field or a new tool of the engine, leaves it as it is.
+- **The format number** is one integer, shared by every schema of the capability. Each file of the capability's format carries it as its schema version (the record of files and validation, [visual-communication:DEC-002-files-and-validation] point 3). It rises only on a change that older files cannot follow. An addition, such as a new optional field or a new tool of the engine, leaves it as it is.
 - **The release a library needs.** A library names the oldest release of the capability whose tools and fields it uses. The engine computes that release from what the library uses, and checks it against what the library names. An older engine refuses the library, and names the release it needs.
 - **A library's own version** follows semantic versioning. A major release carries a breaking change (point 6), a minor one an addition or a change of look, and a patch a fix. For pictures the number is a signal, not a promise: the lock and the before-and-after protect each piece, whatever the number says.
 
@@ -36,7 +36,7 @@ The capability's design review asked how a format change reaches files that no m
 
 - **A converter for each change.** A change that raises the format number ships a converter from the number before it. Converters chain, so a file of any older number is read. No converter is ever retired, since a library copy can never be converted.
 - **Shapes only.** A converter moves, renames and reshapes keys, and keeps every value as written. A value with no place in the new shape is reported, never dropped in silence.
-- **The files commands write are carried over.** The same change ships a migration of the capability that brings each file a command rewrites to the new number: every file a record of the capability names a command the writer of (the record of files and validation), such as a piece's own file with its lock, the list of a project's libraries, and each record a command keeps. It acts only on a file whose binding names the capability at an older number, wherever in the repository it lies. It moves keys and keeps every value as written, which this record allows a migration to do (COR-059 point 3). A piece's own file also holds what a person set, such as its state, and the migration moves those keys too. It writes no content file, no local component and no library version.
+- **The files commands write are carried over.** The same change ships a migration of the capability that brings each file a command rewrites to the new number: every file a record of the capability names a command the writer of (the record of files and validation, [visual-communication:DEC-002-files-and-validation] point 9), such as a piece's own file with its lock, the list of a project's libraries, and each record a command keeps. It acts only on a file whose binding names the capability at an older number, wherever in the repository it lies. It moves keys and keeps every value as written, which this record allows a migration to do (COR-059 point 3). A piece's own file also holds what a person set, such as its state, and the migration moves those keys too. It writes no content file, no local component and no library version.
 - **A command reads its own file the same way.** A command that finds a file it rewrites at an older number reads it through the converters and writes it at the current number. The migration is that carry-over for every such file at once.
 - **The files people write are read in memory.** The engine and the check read an older content file, local component or library version through the converters, and never write it.
 - **What a program wrote, it writes again.** A local component that a program wrote while preparing is carried over when that program runs again and writes it at the current number. No command of the capability writes it.
@@ -47,12 +47,12 @@ The capability's design review asked how a format change reaches files that no m
 ### 3. A change of the format number waits until validation accepts older files
 
 - **Why it breaks nothing installed.** After such a change, its migration has carried over every file a command writes, as the core asks of a schema version raised on a change of shape (COR-010). Every other file still reads through the converters, and the check judges it the same way. So no command stops working. What stays at the older number is what this record lets no migration rewrite: what people wrote, for the reason its Rationale gives, and library copies, as the founding record states ([visual-communication:DEC-001-visual-communication-discipline] point 11).
-- **What breaks while the core refuses a differing version.** The core's data validation refuses any difference between a bound file's schema version and its schema's (COR-023). Every file of the capability's format is bound through it (the record of files and validation). So every older file people wrote would fail the project's validation, a library copy among them, which the project cannot correct.
+- **What breaks while the core refuses a differing version.** The core's data validation refuses any difference between a bound file's schema version and its schema's (COR-023). Every file of the capability's format is bound through it (the record of files and validation, [visual-communication:DEC-002-files-and-validation] point 3). So every older file people wrote would fail the project's validation, a library copy among them, which the project cannot correct.
 - **So it waits.** No change that raises the format number ships until validation accepts a bound file at an older number that the capability still reads. The first format number, and every change that only adds, need nothing. Until then the format changes only by additions that every file written before still meets: no field becomes required, and no value accepted before is refused. The ways there are named in the Implications.
 
 ### 4. The library folder keeps each version whole, as released
 
-- **A folder for each version.** Each version of a library that a lock may name is a folder of its own in the library folder (the record of files and validation), holding the version whole, as it was released.
+- **A folder for each version.** Each version of a library that a lock may name is a folder of its own in the library folder (the record of files and validation, [visual-communication:DEC-002-files-and-validation] point 1), holding the version whole, as it was released.
 - **Committed.** So drawing needs no network, and continuous integration needs no sign-in.
 - **One list.** The location keeps one list of the project's libraries: the source of each, the versions present, which of them are released, and a hash of each released one. So the check reads from the files alone whether a version is released, and whether its folder still holds what was released.
 - **One library to a name.** A name ties a library to its source in the list. A second library of one name is refused, so a library built on a base finds it by name.
@@ -78,7 +78,7 @@ Each library component carries a status that its library's owner marks in the li
 - **Experimental:** it may change in any release, renamed, reshaped or removed.
 - **Stable:** it changes in a breaking way only in a major release of its library.
 - **Deprecated:** its owner may mark it so in any release. It may be removed only in a major release.
-- **The promise is checked.** When a version is released, a command compares each stable component with the previous release, and refuses a breaking change outside a major release. It compares with an earlier version, so it is a command and never part of validation (the record of files and validation).
+- **The promise is checked.** When a version is released, a command compares each stable component with the previous release, and refuses a breaking change outside a major release. It compares with an earlier version, so it is a command and never part of validation (the record of files and validation, [visual-communication:DEC-002-files-and-validation] point 7).
 
 ### 8. A piece's state says who moves its lock
 
@@ -92,7 +92,7 @@ A piece's lock names one version of each library it uses, those they build on in
 
 ### 9. The severities of these checks
 
-Under the policy of the record of files and validation (COR-055 point 4):
+Under the policy of the record of files and validation ([visual-communication:DEC-002-files-and-validation] point 7, COR-055 point 4):
 - **These fail.** A lock that names a version the project does not hold, a version that needs a newer release or format than the installed capability reads, or libraries that build on two majors of one library. A lock of a delivered, living or adapted piece that names a version not yet released. A library version that no longer matches its released hash. A library of the project's own, not yet released, that names an older release of the capability than it needs. On a delivered piece, a finding at its lock that only a move of the lock would mend never fails (the record of files and validation).
 - **These ask for attention.** A piece that uses a deprecated component, which its author is expected to replace. A released library that names an older release of the capability than it needs, which its owner is expected to correct.
 - **These state a fact.** A piece that uses an experimental component. A living piece whose lock is behind a newer released version, naming the command that proposes the move.
