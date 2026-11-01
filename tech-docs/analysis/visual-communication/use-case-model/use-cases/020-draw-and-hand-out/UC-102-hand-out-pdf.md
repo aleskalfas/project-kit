@@ -1,0 +1,59 @@
+---
+id: UC-102
+title: Hand out a piece as a PDF for each language
+status: active
+actor: core:ACT-developer
+other-actors:
+  - core:ACT-ai-agent
+requirements: []
+after:
+  - [UC-093, UC-094]
+pkit:
+  friction:
+    anchors:
+      record:
+        - COR-017
+        - COR-013
+---
+
+# UC-102 — Hand out a piece as a PDF for each language
+
+**Goal:** Hand out a piece as a PDF, one for each language, with a page for each slide in order.
+
+**Other actors:**
+
+- **AI agent** (`core:ACT-ai-agent`): does the work for the developer, and may run any step the developer runs.
+
+**Preconditions:** **From [UC-093](../010-make/UC-093-build-presentation.md), or [UC-094](../010-make/UC-094-put-figure-in-page.md):** The piece exists.
+
+**Assumptions:**
+
+- The project has visual-communication installed ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
+
+**Trigger:** The audience asks for the slides, such as after a talk.
+
+**Main path:**
+
+1. The developer asks for the piece as a PDF.
+2. The system writes one PDF for each language of the piece, with a page for each slide, in order.
+3. The system gives this export a new number, one number for all its languages. It records the export's date, the piece's state then, and the versions of the libraries it used.
+4. The developer hands out the PDF of each language.
+
+**Variants:**
+
+- **2a.** The piece is also drawn on a board. The system still writes the PDF from the piece itself, never from the board.
+- **2b.** A program the system writes PDFs with is not on the machine. The system names it and writes nothing, and the use case ends.
+- **2c.** The developer asks for a PDF that screen readers follow. The system writes it with headings, a reading order and a text for each picture.
+- **4a.** The talk is given, and the developer marks the piece delivered. This export is kept with the piece as its final form. From then on, no new version of a library alters the piece's look.
+
+**Postconditions:** The developer holds a PDF for each language, all under one export number, and knows what each export holds.
+
+**Minimal guarantees:**
+
+- An export never overwrites an earlier one.
+
+## Sources
+
+- **The goal:** use case 8 of the planning note `2026-10-30-visual-work-capability`, from the Friday talk. That talk needed a script of its own to cut a board's export into one PDF for each language.
+- **The steps and the guarantee:** the decisions the note records in its points 4d, 13, 17 and 18a. The maintainer asked on 31 October that every export be kept and numbered.
+- **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.
