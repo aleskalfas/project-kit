@@ -1,0 +1,7 @@
+schema_version: 1
+component:
+  kind: capability
+  name: visual-communication
+  version: 0.1.0
+description: Visual work from reusable parts — pieces whose content is data, styled by libraries of components, brands and notations, and drawn by several renderers.
+requires_backbone: ">=2.0.0,<3.0.0"
