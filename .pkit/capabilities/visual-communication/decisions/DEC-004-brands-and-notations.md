@@ -1,7 +1,7 @@
 ---
 id: DEC-004
 title: A brand gives roles their values on axes of modes, and a notation gives concepts their roles
-status: proposed
+status: accepted
 date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
@@ -10,7 +10,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Context
 
-The capability's founding record makes a brand the library that holds values, and a notation the library that holds meaning (its point 5). Components name roles, and only a brand gives a role a value. A name is read with its library. A brand may build on another brand, and changes only the values its base lists as open to change. A brand's values can leave the capability as code, which live views read (its point 9). This record decides the formats of brands and notations.
+The capability's founding record makes a brand the library that holds values, and a notation the library that holds meaning ([visual-communication:DEC-001-visual-communication-discipline] point 5). Components name roles, and only a brand gives a role a value. A name is read with its library. A brand may build on another brand, and changes only the values its base lists as open to change. A brand's values can leave the capability as code, which live views read ([visual-communication:DEC-001-visual-communication-discipline] point 9). This record decides the formats of brands and notations.
 
 Design systems keep such values as *design tokens*: named values, each with a type, which may alias one another. The W3C Design Tokens Community Group (DTCG) published the first stable version of its format, 2025.10. Its *Resolver* module describes modes as data. A Resolver document holds token files as *sets*, each way the values vary as a *modifier* with its *contexts* and a default, and an order that says which source wins. Design tools import and export the format.
 
@@ -30,7 +30,7 @@ The capability's design work ([project-kit#2424](https://github.com/aleskalfas/p
 - **What the format cannot say goes in its own extension point,** under one name the capability keeps for itself. Examples are a picture given as a value, how a font is measured, and whether an axis changes values or sizes. So a brand's files stay valid DTCG, and other tools read them.
 - **The modes are one Resolver document.** It holds the brand's token files as sets, each axis as a modifier, each mode as one of its contexts, a default for each axis, and the order in which sources win.
 - **The brand's library file** names the version of the DTCG format its tokens follow, 2025.10 first, and holds its open roles (point 6). The engine keeps reading every DTCG version a released brand may name, since a library copy is never rewritten.
-- **A brand's own form,** its layouts and the parts no shared component has, is made of components. They take the format every component has, and are read with the brand's name (the founding record, point 4).
+- **A brand's own form,** its layouts and the parts no shared component has, is made of components. They take the format every component has, and are read with the brand's name (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 4).
 
 ### 2. Modes lie on axes, and each axis changes values or sizes
 
@@ -38,9 +38,9 @@ An *axis* is one way a brand's values vary apart from the others, such as the co
 - **The foundations name the shared axes** and their common modes, as they name the shared roles. So a piece that names a mode keeps it when its brand is switched. A brand has the shared axes it needs, and may add axes of its own. An axis with one mode is not declared.
 - **A value axis** changes only values that move nothing, such as colours and pictures. The capability's schema for a brand names those kinds of value, member by member for a token made of several. Every mode of a value axis is drawn from one scene, so a page can switch between them while open.
 - **A size axis** may change any value, sizes, spacing, the type scale and fonts among them. Each combination of its modes needs a scene of its own.
-- **Fonts for a group of renderers are one size axis.** A *font profile* is the set of fonts a brand gives a group of renderers. The profiles are the modes of a shared axis, and the default profile measures and draws the brand's own font files. Which profile a renderer draws in is the record of the engine and its plugins'.
+- **Fonts for a group of renderers are one size axis.** A *font profile* is the set of fonts a brand gives a group of renderers. The profiles are the modes of a shared axis, and the default profile measures and draws the brand's own font files. Which profile a renderer draws in is the record of the engine and its plugins' ([visual-communication:DEC-005-engine-and-plugins] point 10).
 - **Looks that share a form are modes, not brands.** Two palettes of one owner that share every layout are two modes of one value axis. A look with another owner, or a form of its own, is a brand, perhaps built on the first.
-- **An axis for the people a look is tuned for,** such as an age group, is named apart from the piece's field that says who the piece is for (the founding record, point 3). One word for two things would mislead every reader.
+- **An axis for the people a look is tuned for,** such as an age group, is named apart from the piece's field that says who the piece is for (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 3). One word for two things would mislead every reader.
 
 ### 3. One key names a combination of modes
 
@@ -55,15 +55,15 @@ A *key* names a combination of modes over a set of axes. A scene's key spans its
 
 A name in code has two parts: a *token path*, a token's place in the brand's tree of tokens, and a key.
 - **Both are made of segments.** Each segment of a path names one group or token. Each segment of a key is one axis with its mode.
-- **Every name that enters a path or a key has one shape:** lower-case words of letters and digits, joined by hyphens. Roles, component tokens, axes, modes, and the names of libraries and components all take it. It is stricter than the rule of the record of files and validation, that no name holds a path mark, and holds beside it.
+- **Every name that enters a path or a key has one shape:** lower-case words of letters and digits, joined by hyphens. Roles, component tokens, axes, modes, and the names of libraries and components all take it. It is stricter than the rule of the record of files and validation, that no name holds a path mark ([visual-communication:DEC-002-files-and-validation] point 4), and holds beside it.
 - **Each code writer spells both parts in its language.** It keeps a segment apart from the words inside it, and the path apart from the key, so no two names spell the same. It may spell the key into the name, or as the context its language switches modes by. CSS, for example, keeps one variable for each token path and gives each value axis's modes a selector, so a page switches modes while open.
-- **Each code writer's spelling is public,** since code outside the capability names what it spells. How a spelling is versioned is the record of the engine and its plugins'.
+- **Each code writer's spelling is public,** since code outside the capability names what it spells. How a spelling is versioned is the record of the engine and its plugins' ([visual-communication:DEC-005-engine-and-plugins] point 8).
 - **A brand built on another is written out whole,** the values it keeps from its base included.
 
 ### 5. The names a brand exports are public
 
-A brand exports its roles, the component tokens it gives values, and its axes, modes and keys. Code outside the capability reads them, such as a game's runtime, and no lock protects that code (the founding record, point 7). A brand's other tokens, such as a palette its roles alias, stay private: never exported, never open.
-- **Breaking changes,** beyond what the record of change over time counts for every library:
+A brand exports its roles, the component tokens it gives values, and its axes, modes and keys. Code outside the capability reads them, such as a game's runtime, and no lock protects that code (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 7). A brand's other tokens, such as a palette its roles alias, stay private: never exported, never open.
+- **Breaking changes,** beyond what the record of change over time counts for every library ([visual-communication:DEC-003-change-over-time] point 6):
   - removing or renaming an exported token, or changing its type
   - removing or renaming an axis or a mode, or changing an axis's default
   - turning a value axis into a size axis, or the reverse
@@ -73,7 +73,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 
 ### 6. A brand may build on one other brand, within the roles its base declares open
 
-- **One base, by major version.** A brand marks one of the libraries it builds on as its base, named by the major version it fits (the founding record, point 5). It has at most one base. Its base may build on a brand in turn, so brands form chains.
+- **One base, by major version.** A brand marks one of the libraries it builds on as its base, named by the major version it fits (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 5). It has at most one base. Its base may build on a brand in turn, so brands form chains.
 - **The base declares its open roles:** the list of its roles that a brand built on it may give values. The list names roles, component tokens (point 7) or groups of them, a group matched by whole segments of its path. A value given to any other role fails validation.
 - **Merged before aliases are resolved.** A value the brand gives an open role, for every mode or for some, wins over its base's in the combinations it covers. Its base's value holds elsewhere. Every token that aliases the role follows it.
 - **Its aliases reach only what its base exports,** so its base may reshape its private tokens freely.
@@ -81,7 +81,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 - **It varies its values on its base's axes,** by their names and modes, in its own Resolver document. It adds no axis and no mode, and changes no default. So pieces, pictures and code switch between the same combinations under the base and every brand built on it.
 - **What it keeps:** every value it is not open to change, and its base's axes, layouts and parts.
 - **What it may add:** roles of its own, parts of its own with their component tokens, and the layouts of a kind of work its base does not serve. It never replaces a layout or a part its base has.
-- **The engine resolves the base first,** then the brand's own values over it. What a lock does when its libraries need two majors of one base is the record of change over time's.
+- **The engine resolves the base first,** then the brand's own values over it. What a lock does when its libraries need two majors of one base is the record of change over time's ([visual-communication:DEC-003-change-over-time] point 8).
 
 ### 7. Roles a library adds lie under its own name
 
@@ -96,14 +96,14 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 
 - **Declared pairs.** The foundations declare the pairs of shared colour roles that must contrast, such as body text on a surface. Each pair names the contrast it must reach, by WCAG's levels for text and for other marks. A library declares the pairs that involve its own roles.
 - **Checked in every combination of the axes that change a colour.**
-- **Checked as drawn.** The engine also measures each text a scene draws against the fill under it, at WCAG's level for the text's size, in every combination the piece is drawn in. Content may point a part at another role (the founding record, point 6), which no declared pair foresees. A text its component marks as decorative is not measured. Nor is a text over a picture, which a reviewer judges.
+- **Checked as drawn.** The engine also measures each text a scene draws against the fill under it, at WCAG's level for the text's size, in every combination the piece is drawn in. Content may point a part at another role (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 6), which no declared pair foresees. A text its component marks as decorative is not measured. Nor is a text over a picture, which a reviewer judges.
 
 ### 9. Fonts come from committed files, and a missing font refuses the render
 
 - **A font role gives a list of families.** The first family measures each character it has, and the next measures the rest.
 - **Each font profile says how each font is measured:** from font files, from a table of widths, or by an estimate. The default profile measures and draws from files. A table or an estimate stands only for a font a medium holds itself, such as a whiteboard service's. That table ships with the renderer for the medium, and the scene records how each text was measured.
-- **A font file is committed unchanged with its licence,** where its licence allows. A font the brand may not ship is a file the project commits in the capability's location (the record of files and validation), which the brand names by a hash. A project that may not commit it either cannot draw in that profile.
-- **Never a font found on the machine,** since the engine reads only the project's files (the founding record, point 8).
+- **A font file is committed unchanged with its licence,** where its licence allows. A font the brand may not ship is a file the project commits in the capability's location (the record of files and validation, [visual-communication:DEC-002-files-and-validation] point 1), which the brand names by a hash. A project that may not commit it either cannot draw in that profile.
+- **Never a font found on the machine,** since the engine reads only the project's files (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 8).
 - **A missing font refuses the render,** before anything is laid out, naming the font. Every character is checked against the families that measure it.
 
 ### 10. A notation maps concepts to roles, read with its name
@@ -116,7 +116,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 
 ### 11. What the checks report, and how severely
 
-Each finding below fails validation where it lies in a file the project can correct, as the record of files and validation decides. Elsewhere, as in a released library version, it asks for attention and names who can correct it (COR-055 points 1 and 4). A delivered piece's drawing is not judged, as that record decides.
+Each finding below fails validation where it lies in a file the project can correct, as the record of files and validation decides ([visual-communication:DEC-002-files-and-validation] point 7). Elsewhere, as in a released library version, it asks for attention and names who can correct it (COR-055 points 1 and 4). A final piece's drawing is not judged, as that record decides.
 - **Fails validation:**
   - a value given to a role its base does not open, an open role its base does not have, or an alias to a token its base keeps private
   - a brand built on another that adds an axis or a mode, or changes a default
@@ -142,7 +142,7 @@ Each finding below fails validation where it lies in a file the project can corr
 
 **Why a brand built on another adds no axis.** Code written for the platform and for each game then has one shape, and a base that adds an axis meets no axis a game holds. An addition such as a role or a part cannot hide a fix in the base. A replacement would.
 
-**Why the list is called the open roles.** The founding record calls a contract what another capability asks to have drawn. The list holds roles, component tokens among them.
+**Why the list is called the open roles.** The founding record calls a contract what another capability asks to have drawn ([visual-communication:DEC-001-visual-communication-discipline] point 10). The list holds roles, component tokens among them.
 
 **Why a library's own roles, and component tokens, lie under names.** A base and a brand built on it are released by different owners. Without a group for each, a role a base adds could take the name of one a brand built on it holds. A component token gives a brand one control without changing a role everywhere. Infinum found role tokens alone made one brand hard to adjust, and would add component tokens earlier ([Infinum](https://infinum.com/blog/multibrand-design-system-tokens/)). A default that aliases a role asks nothing of a brand that does not care.
 
@@ -160,13 +160,13 @@ Each finding below fails validation where it lies in a file the project can corr
 - **Two bases, or new axes in a brand built on another.** Rejected for the reasons above.
 - **A key that holds every axis, or only mode names, or axes in an order each brand declares.** Rejected. The first renames everything when an axis is added, the second lets modes clash, and the third can be broken.
 - **Every token exported.** Rejected. A palette's shape would become a promise.
-- **Fonts chosen by a renderer, outside the brand.** Rejected. Fonts are design, which the logical layer sets (the founding record, point 2). A renderer only names which of the brand's profiles it draws in.
+- **Fonts chosen by a renderer, outside the brand.** Rejected. Fonts are design, which the logical layer sets (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 2). A renderer only names which of the brand's profiles it draws in.
 
 ## Implications
 
 - **The foundations** declare the shared roles with their types, the shared axes with their common modes, the colour families, the shapes, and the contrast pairs among shared roles.
 - **The capability's schema for a brand** names the extension point, the kinds of value a value axis may change, and how a key is spelled. The capability's reference gives each code writer's spelling.
 - **The walking skeleton** reads a base brand and its open roles, and resolves two value axes, the colour scheme and the contrast. It writes the brand out as CSS under the naming rule, and checks contrast and missing fonts at the severities of point 11.
-- **The record of the engine and its plugins** decides how text is measured, and the document of a brand's resolved values that code writers and producers read.
+- **The record of the engine and its plugins** decides how text is measured, and the document of a brand's resolved values that code writers and producers read ([visual-communication:DEC-005-engine-and-plugins] points 4 and 7).
 - **Later slices** build a brand built on another with its open roles checked, axes that change sizes in use, and the words a notation gives translators.
 - **A brand for projects to lock is left to a later change.** The capability's tests, and the reference renders of the component library it ships to start from, draw with a brand kept for its tests, which no project locks. Whether the capability ships a brand that projects may lock, such as a neutral one to start from, is left to a later change.
