@@ -182,6 +182,10 @@ JUDGEMENT_RULES = {
             "software-analysis:DEC-005#1",
             "software-analysis:DEC-005#2",
             "software-analysis:DEC-005#5",
+            "software-analysis:DEC-007#1",
+            "software-analysis:DEC-007#2",
+            "software-analysis:DEC-007#3",
+            "software-analysis:DEC-007#4",
         ],
     ),
 }

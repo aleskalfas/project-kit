@@ -87,9 +87,15 @@ You may not know every concept yet. A concept a later step finds is added then, 
 
 **Write a journey for each path the use cases make** (DEC-005 point 2, `journey.md`). A path is a goal one actor reaches only through several of its own use cases, taken in turn, each taking up what an earlier one left. Its use cases are written by now, in step 3.
 
-1. **Find the paths.** Start from those you noted in step 3. Then read each actor's use cases for a precondition that another use case of the same actor makes true. `pkit analysis diagram chain` draws those links. Each is a sign of a path, never proof: ask whether the actor takes the two in turn toward one goal of its own.
-2. **Judge from content, never by count.** An actor with many use cases may take no path, and one with two may take one. Never write a journey for an actor or an area only so that it has one.
-3. **One journey for each whole path.** A stretch of a path needs no journey of its own, and a shorter path the actor sometimes takes is a variant of the journey. A path's steps may lie in several areas, and its journey is one.
+1. **Find the paths.** Start from those you noted in step 3. Then read each actor's own use cases, those whose `actor` it is, even where others do their work. Look for a hand-over with another of them ([software-analysis:DEC-007-path-edges] point 2):
+   - a precondition that the other use case makes true, which `pkit analysis diagram chain` draws
+   - a trigger that is the other's end, or a state, a file or a result it leaves
+   - a step, of the main path or of a variant, that takes up what the other left, or names it as the next work
+
+   The diagram draws no trigger and no step, so read those yourself. Each is a sign of a path, never proof: ask whether the actor takes the two in turn toward one goal of its own.
+2. **Read each edge as `journey.md` step 1 says.** It says what a use case reaches alone, and when a step that names the next use case hands over to it. It also says how a standing condition, and a goal a run did not meet, join use cases in a path.
+3. **Judge from content, never by count.** An actor with many use cases may take no path, and one with two may take one. Never write a journey for an actor or an area only so that it has one.
+4. **One journey for each whole path.** A stretch of a path needs no journey of its own, and a shorter path the actor sometimes takes is a variant of the journey. A path's steps may lie in several areas, and its journey is one.
 
 **Done when:**
 

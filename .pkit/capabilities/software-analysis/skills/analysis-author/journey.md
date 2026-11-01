@@ -4,15 +4,31 @@ A journey is an end-to-end path one actor takes across several use cases, includ
 
 ## 1. Is it a journey?
 
-Write one for each path the use cases make ([software-analysis:DEC-005-finding-functionality] point 2). A path is an end-to-end path: a goal one actor reaches only through several of its own use cases, taken in turn, such as onboarding, a first release or a month-end close. Each step takes up what an earlier one left, and that hand-over can break.
+Write one for each path the use cases make ([software-analysis:DEC-005-finding-functionality] point 2). A path is an end-to-end path: a goal one actor reaches only through several of its own use cases, taken in turn, such as onboarding, a first release or a month-end close. Each step takes up what an earlier one left, and that hand-over can break. How to read a path at its edges is [software-analysis:DEC-007-path-edges]'s.
 
-- **A sign, never proof.** A precondition that an earlier use case of the same actor makes true is a sign of a path. Ask whether the actor takes the two in turn toward one goal of its own.
+- **The actor's own use cases.** Each use case whose `actor` it is, even where another actor starts it or does all its work. So a customer's use case in which a courier brings the order is the customer's own.
+- **A sign, never proof.** A use case that states a hand-over with another use case of the same actor gives a sign of a path. It takes up what the other leaves, or the other takes up what it leaves. Ask whether the actor takes the two in turn toward one goal of its own.
+  - **Where to look:** its preconditions, its trigger, and the steps of its main path and its variants. A diagram of the chain draws the preconditions alone.
+  - **How it names the other:** by its id, or only by what it leaves, such as a log it wrote or a test that failed.
+  - **No sign:** a mention that takes nothing up, such as a step that works as another use case does.
+- **A step that names the next use case.** Ask what starts the named use case.
+  - **An event of its own:** its actor's own choice, or the end of the use case that names it. The step hands over to it, so it is a sign, as above.
+  - **That step alone:** the named use case runs only inside the step, so it is part of the one that names it. The two make no path.
+- **What a use case reaches alone** is what its own steps make true. A postcondition that only the next use case's steps make true, such as a parcel delivered, is reached through that use case. So an order whose last step names the delivery may make a path with it.
+- **A standing condition.** A state one use case leaves standing, such as an open account, serves any number of later runs.
+  - **A path:** only where the actor takes the two in turn toward one goal, as a first purchase takes opening an account and then placing an order.
+  - **No path:** where the goal is served again each time a later run relies on the state, as a saved card serves every later order. A path ends.
+  - **No standing condition:** a hand-over the next run takes up once, such as a parcel that one delivery brings.
+- **A goal a run did not meet.** What one run leaves where it did not meet the actor's goal, such as a test run's failures, is a sign like any other.
+  - **A path:** where one goal joins the two, as knowing why a suite fails joins running it and reading a failure. A variant then ends the journey early where nothing fails.
+  - **No path:** toward a goal the use case only restores, where the other's main path reaches it alone.
+  - **A standing state:** what later runs meet because of a state left standing is read as a standing condition.
 - **From content, never by count.** Judge from what the use cases do, never from how many the actor has.
 - **No path:** a single use case with variants, and use cases the actor never takes in turn toward one goal.
 - **One journey for the whole path.** A stretch of it needs no journey of its own. A shorter path the actor sometimes takes is a variant of the journey, such as one that skips a step.
 - **Another actor's use case** on the way is no step. List it with `--relies-on` (step 2).
 - **Across areas.** A path's steps may lie in several areas. Its journey is one, whichever areas it passes through.
-- **Part of building.** Once the use cases of a path are written, the path takes its journey in the same change, never as an extra afterwards (`build-analysis.md`, step 4). A change that withdraws or shortens a journey, or changes a use case's actor or goal, checks that no path is left untold.
+- **Part of building.** Once the use cases of a path are written, the path takes its journey in the same change, never as an extra afterwards (`build-analysis.md`, step 4). A change that withdraws or shortens a journey checks that no path is left untold. So does one that changes a use case's actor, goal, preconditions, trigger or steps.
 
 ## 2. Name the actor and the steps
 
