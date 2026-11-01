@@ -53,6 +53,8 @@ TERM-axis:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-004#2
 TERM-brand:
   name: brand
   status: active
@@ -62,6 +64,9 @@ TERM-brand:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-001#5
+          - visual-communication:DEC-004#1
 TERM-content:
   name: content
   status: active
@@ -71,6 +76,8 @@ TERM-content:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-001#3
 TERM-content-slot:
   name: content slot
   status: active
@@ -80,15 +87,19 @@ TERM-content-slot:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-001#4
 TERM-draft:
   name: draft
   status: active
-  definition: "still being made, with a lock that moves to the newest library version present each time the piece is drawn, unless a person pinned it"
+  definition: "still being made, its lock moving at each drawing to the newest library versions present within its major numbers, unless a person pinned it"
   pkit:
     friction:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-003#8
 TERM-experimental:
   name: experimental
   status: active
@@ -98,15 +109,19 @@ TERM-experimental:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-003#7
 TERM-export:
   name: export
   status: active
-  definition: "numbered set of files a piece is handed out as, such as a PDF for each of its languages, kept and never overwritten"
+  definition: "file a piece is handed out as, such as a PDF of one language, numbered by the run that made it, never overwritten"
   pkit:
     friction:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-006#7
 TERM-final:
   name: final
   status: active
@@ -116,15 +131,20 @@ TERM-final:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-003#8
 TERM-helper-script:
   name: helper script
   status: active
-  definition: "program run while a piece is prepared, never while it is drawn, that writes what the piece is drawn from, such as a local component"
+  definition: "project's own program, run while a piece is prepared and never while it is drawn, that writes a local component or a picture for it"
   pkit:
     friction:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-001#8
+          - visual-communication:DEC-006#1
 TERM-layout:
   name: layout
   status: active
@@ -134,6 +154,8 @@ TERM-layout:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-001#4
 TERM-library:
   name: library
   status: active
@@ -143,6 +165,8 @@ TERM-library:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-001#5
 TERM-library-component:
   name: library component
   status: active
@@ -152,6 +176,8 @@ TERM-library-component:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-001#4
 TERM-library-owner:
   name: library owner
   status: active
@@ -161,15 +187,21 @@ TERM-library-owner:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-001#5
+          - visual-communication:DEC-003#7
 TERM-library-version:
   name: library version
   status: active
-  definition: "numbered state, such as 2.1.0, of a brand, a notation or another shared set pieces take their look from, kept whole and never changed"
+  definition: "numbered state, such as 2.1.0, of a brand, a notation or a shared set of parts, kept whole and never changed once released"
   pkit:
     friction:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-003#1
+          - visual-communication:DEC-003#6
 TERM-local-component:
   name: local component
   status: active
@@ -179,15 +211,19 @@ TERM-local-component:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-001#4
 TERM-lock:
   name: lock
   status: active
-  definition: "list kept with a piece of the library version it is drawn with, one for each library it uses"
+  definition: "list kept with a piece of the library version it is drawn with, one for each library it uses, those they build on included"
   pkit:
     friction:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-001#7
 TERM-mode:
   name: mode
   status: active
@@ -197,6 +233,8 @@ TERM-mode:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-004#2
 TERM-model:
   name: model
   status: active
@@ -206,15 +244,21 @@ TERM-model:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-001#3
+          - visual-communication:DEC-006#1
 TERM-notation:
   name: notation
   status: active
-  definition: "library that says what each thing of a subject is, and how every piece marks it, such as by a colour"
+  definition: "library that says what each thing of a subject is, and how every piece marks it, such as by a colour family or an icon"
   pkit:
     friction:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-001#5
+          - visual-communication:DEC-004#10
 TERM-option:
   name: option
   status: active
@@ -224,6 +268,8 @@ TERM-option:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-001#6
 TERM-piece:
   name: piece
   status: active
@@ -233,6 +279,8 @@ TERM-piece:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-001#3
 TERM-pinned:
   name: pinned
   status: active
@@ -242,6 +290,8 @@ TERM-pinned:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-003#8
 TERM-published:
   name: published
   status: active
@@ -251,6 +301,8 @@ TERM-published:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-003#8
 TERM-renderer:
   name: renderer
   status: active
@@ -260,6 +312,8 @@ TERM-renderer:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-001#2
 TERM-stable:
   name: stable
   status: active
@@ -269,6 +323,8 @@ TERM-stable:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-003#7
 TERM-starter-library:
   name: starter library
   status: active
@@ -278,6 +334,8 @@ TERM-starter-library:
       anchors:
         path:
           - .pkit/capabilities/visual-communication/README.md
+        record:
+          - visual-communication:DEC-007#1
 ---
 
 # Glossary
@@ -326,7 +384,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Colours or sizes:** the modes of one axis alter only colours, such as those of a colour scheme. The modes of another also alter sizes and spacing, such as those of a device. A piece is laid out again only for the second kind.
+- **Colours or sizes:** the modes of one axis alter only values that move nothing on the page, such as the colours and pictures of a colour scheme. The modes of another may alter any value, sizes and spacing among them, such as those of a device. A piece is laid out again only for the second kind.
 
 ## TERM-brand — brand
 
@@ -356,7 +414,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-draft — draft
 
-**Example:** A talk being written for next month is a draft. Each time it is drawn, it takes the newest library versions the project holds.
+**Example:** A talk being written for next month is a draft. Each time it is drawn, it takes the newest library versions the project holds, within the major numbers its lock names.
 
 **Distinctions:**
 
@@ -373,7 +431,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-export — export
 
-**Example:** After a talk, its third export holds a PDF in English and a PDF in Czech, both under the number 3.
+**Example:** After a talk, its third export run made a PDF in English and one in Czech, both numbered 3.
 
 **Distinctions:**
 
@@ -446,7 +504,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Library component:** a part a library shares with every piece that uses it. A local component becomes one once it moves into a library, generalised on the way.
-- **One-off:** a working name for a local component, which the capability's issues still use, such as #2423.
+- **One-off:** a local component drawn for one page of a piece, whose cost the founding record measures ([DEC-001](../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md), Implications).
 
 ## TERM-lock — lock
 
@@ -477,12 +535,12 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-notation — notation
 
-**Example:** A project's notation says which colour and which icon mark a decision, on every slide and in every figure about the project.
+**Example:** A project's notation says which colour family and which icon mark a decision, on every slide and in every figure about the project.
 
 **Distinctions:**
 
 - **Legend:** the key that a figure shows its reader. A notation is the set of meanings behind it.
-- **Brand:** the values, such as colours. A notation says which of them marks what.
+- **Brand:** the values, such as colours. A notation names the colour family that marks each thing, never a value, so each brand colours it its own way.
 
 ## TERM-option — option
 
@@ -538,7 +596,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-starter-library — starter library
 
-**Example:** A new project draws its first presentation with the starter library's cards and layers, before it has a library of its own.
+**Example:** A new project draws its first presentation with the starter library's cards and layers, before it makes a library component of its own.
 
 **Distinctions:**
 
