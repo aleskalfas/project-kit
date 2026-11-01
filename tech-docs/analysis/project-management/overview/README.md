@@ -29,6 +29,8 @@ Define the Milestones and workstreams a project's work falls into, and plan each
 - [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md) ([not built yet](#not-built-yet): step 8)
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md) ([not built yet](#not-built-yet): step 4, step 9, variant 11a)
 
+**Its journeys:** none.
+
 ### 020-file-and-move
 
 File each Task under its parent, and move each issue through its lifecycle, each filing and each move checked.
@@ -50,6 +52,8 @@ File each Task under its parent, and move each issue through its lifecycle, each
 - [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/020-file-and-move/UC-060-file-task.md) ([not built yet](#not-built-yet): step 6, step 8, variant 6c, variant 6e)
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md) ([not built yet](#not-built-yet): step 4, step 7, variant 1a, variant 7a)
 
+**Its journeys:** none.
+
 ### 030-review-and-land
 
 Have each pull request reviewed by the reviewers its change requires, and land it once the merge authoriser authorises its head.
@@ -67,6 +71,8 @@ Have each pull request reviewed by the reviewers its change requires, and land i
 **Its use cases:**
 
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md) ([not built yet](#not-built-yet): variant 1b, step 9)
+
+**Its journeys:** none.
 
 ### 040-work-in-parallel
 
@@ -100,6 +106,10 @@ Run several AI agents on one project at once, each on its own scope and never on
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md) ([not built yet](#not-built-yet): step 1)
 - [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md) ([not built yet](#not-built-yet): variant 3b)
+
+**Its journeys:**
+
+- [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 
 ## Reference
 
