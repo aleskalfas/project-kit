@@ -161,7 +161,7 @@ stateDiagram-v2
 - **Retired:** `pkit scratchpad done` moves a note to `done/` once other documents hold what it found. `pkit scratchpad drop` moves it to `dropped/` when its line of thought fails. Either retires a note from `active/` or from `reported/`.
 - **The front matter** records who writes in the note, and the day the note started. Once the note retires, the front matter records the day it retired, and what it produced. A reported note also records the issue it became, and a hash of what was sent ([the reference, "Front matter"](../../.pkit/scratchpad/README.md#front-matter)).
 - **What the commands leave to you:** each moves the file on disk, and stages nothing in git ([the CLI reference, "Scratchpad commands"](../../.pkit/cli/README.md#scratchpad-commands)). Commit the move. Where the note changed little, git shows it as a rename ([the reference, "States"](../../.pkit/scratchpad/README.md#states)).
-- **Who owns the notes:** your project. Installing project-kit creates the folders, and a sync updates only the area's README. A sync never reads or writes a note ([the reference, "Layout"](../../.pkit/scratchpad/README.md#layout)).
+- **Who owns the notes:** your project. Installing project-kit creates `active/`, `done/` and `dropped/`, and a sync updates only the area's README. A sync never reads or writes a note ([the reference, "Layout"](../../.pkit/scratchpad/README.md#layout)).
 - **A note binds nothing.** No work rests on it. What it found binds once a decision record states it, and a person accepts that record ([the decisions README, "The acceptance gate"](../../.pkit/decisions/README.md#the-acceptance-gate)).
 
 ## Start a note
@@ -221,7 +221,7 @@ pkit report feedback --title "Caching build results" --body "The attached note m
 pkit report submit 20261101-151200-feedback
 ```
 
-- **Filed in a browser instead,** the report command's last line names the command that records the issue ([the CLI reference, "report"](../../.pkit/cli/README.md#report-bug--report-feedback--report-change-request)). Run it with the issue the note became:
+- **Filed in a browser instead,** the report command's last line names the command that records the issue ([the CLI reference, "report"](../../.pkit/cli/README.md#report-bug--report-feedback--report-change-request)). Run that recording command with the issue the note became:
 
 ```console
 $ pkit new scratchpad cache-layer >/dev/null

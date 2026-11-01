@@ -57,7 +57,7 @@ Each note is the file `<state>/<YYYY-MM-DD>-<slug>.md` ("File name" below).
 - **Only `.md` files are notes.** A command moves a note's own file and nothing beside it, and `pkit scratchpad list` lists `.md` files only.
 - **`active/`, `done/` and `dropped/`** are seed paths. The first install and each transition of the backbone create each one that is missing, with an empty `.gitkeep` ([the lifecycle README, "Seed paths"](../lifecycle/README.md#seed-paths)).
 - **`reported/` is lazy.** It is created when the first note enters it, and removed when a retirement empties it (COR-043 point 2).
-- **`.report-drafts/`** holds each report that `pkit report feedback --yes`, or the `bug` or `change-request` verb, stages until `pkit report submit` posts it. It keeps itself out of git ([the CLI reference, "report submit"](../cli/README.md#report-submit-id)).
+- **`.report-drafts/`** holds each report that `pkit report feedback --yes`, or the `bug` or `change-request` verb, stages until `pkit report submit` posts it. The folder keeps itself out of git ([the CLI reference, "report submit"](../cli/README.md#report-submit-id)).
 
 <a id="lifecycle"></a>
 
@@ -73,8 +73,8 @@ The folder a note lies in is its state, and no field of its front matter holds o
 | **`dropped/`** | The line of thought failed. The note is kept, ending with why it stopped. |
 
 - **A move between states** is a move of the file, which a command makes ("Commands" below). The command writes the file in its new folder and deletes the old one, and stages nothing in git ([the CLI reference, "Scratchpad commands"](../cli/README.md#scratchpad-commands)). Once both paths are staged, git shows the move as a rename where the note changed little.
-- **A reported note is frozen by convention.** Do not edit it, since the issue holds the text as sent. Put further thinking in a new note that links it (COR-043 point 4).
-- **An edit to it is detected, never prevented.** `pkit scratchpad list` marks a reported note `[modified since reported]` when it differs from the hash recorded at the send. Composing a report warns of such a note too ([the CLI reference, "report"](../cli/README.md#report-bug--report-feedback--report-change-request)).
+- **A reported note is frozen by convention.** Do not edit it, since the issue holds the text as sent. Put further thinking in a new note that links the reported note (COR-043 point 4).
+- **An edit to a reported note is detected, never prevented.** `pkit scratchpad list` marks a reported note `[modified since reported]` when it differs from the hash recorded at the send. Composing a report warns of such a note too ([the CLI reference, "report"](../cli/README.md#report-bug--report-feedback--report-change-request)).
 - **Its issues' states are read live.** `pkit scratchpad list` reads each through `gh` at each run, and stores none. A state it cannot read shows as `state unknown` (COR-043 point 5).
 - **Retiring a note is a person's decision.** Once every issue of a reported note is closed, the listing prints the `pkit scratchpad done` command that retires it, and never runs it (COR-043 point 5).
 
