@@ -393,7 +393,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Theme:** a set of values alone. A brand also holds the layouts it draws each kind of page in, and parts that only it uses.
-- **Mode:** one value on one axis of a brand, such as dark on its colour scheme. A brand holds its values in each of its modes.
+- **Mode:** one setting on one axis of a brand, such as dark on its colour scheme. A brand holds its values in each of its modes.
 
 ## TERM-content — content
 

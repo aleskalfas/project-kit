@@ -54,7 +54,7 @@ pkit:
 
 - **1a.** The library is one another project shares, so the project's copy is never edited. Its library owner improves the library component there, and the developer takes in the newer library version ([UC-109](UC-109-take-in-shared-library.md), variants 1a and 6a). The use case ends.
 - **2a.** The improvement breaks a stable library component, such as by removing a field, and the new library version keeps the major number. The system refuses the library version and names each break.
-- **2b.** The library component is experimental, so any library version may alter it. The system says so when it draws a piece that uses the component.
+- **2b.** The library component is experimental, so any library version may alter it. The system says so when it draws a piece that uses the library component.
 - **4a.** A piece is published, such as a figure in a page. The system proposes the move as a change of its own, with the piece before and after ([UC-094](../010-make/UC-094-put-figure-in-page.md), variant 6b).
 - **4b.** A piece is final. The system leaves it at the library versions it was handed out with, and draws no before and after.
 - **4c.** A piece is a draft whose lock is not pinned. Its lock moves to the new library version at the piece's next drawing, within the major number it names. The system draws no before and after for it.

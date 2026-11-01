@@ -41,7 +41,7 @@ pkit:
 
 1. The developer asks for the piece's exports. The piece names a PDF among the files it is handed out as.
 2. The system writes one PDF for each language of the piece. It holds a page for each page of the piece, such as each slide, in order.
-3. The system gives the exports of this run a new number, one number for all its languages. It records when the run was made, the piece's state then, and the library versions it used.
+3. The system gives the exports of this run a new number, one number for all its languages. It records when the run was made and the piece's state then. It also records the library versions the run used.
 4. The developer hands out the PDF of each language.
 
 **Variants:**

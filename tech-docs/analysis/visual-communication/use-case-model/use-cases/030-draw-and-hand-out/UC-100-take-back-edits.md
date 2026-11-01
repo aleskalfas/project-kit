@@ -41,7 +41,7 @@ pkit:
 1. The developer asks the system to take back the edits made since the piece was last drawn there.
 2. The system finds each edit, and traces it to where the edited object came from. That is a field of the content, a local component of the piece, or a library.
 3. The system writes each edit that has exactly one field of the content or of a local component to go to into that field. An example is a title, written into its slide's title.
-4. The system lists each other edit, and writes nothing for it. Examples are a colour picked by hand, a box moved where the layout sets its position, and an edit to what a library draws.
+4. The system lists each other edit, and writes nothing for it. One example is a colour picked by hand. Another is a box moved where the layout sets its position. A third is an edit to what a library draws.
 5. The developer reads what the system wrote as a diff, and commits it or reverts it.
 6. For each listed edit, the developer picks another option of the library component, alters the brand or a library, or drops the edit.
 
@@ -66,7 +66,7 @@ What the developer needs here that no accepted record decides yet:
 
 - **The goal:** the maintainer asked for it on 30 October, in planning the capability (#2423). It rests on an edit made where a piece is drawn, which changes the source only once taken back and reviewed ([DEC-001 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#2-the-logical-layer-is-the-source-and-renderers-only-project-it)).
 - **The steps and the guarantees, in part:**
-  - **Steps 2 to 4:** every part the engine draws traces back to the component that drew it, and to the content field it shows. An edit that cannot be placed is reported ([DEC-001 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content)).
+  - **Steps 2 to 4:** every part the engine draws traces back to the library or local component that drew it, and to the content field it shows. An edit that cannot be placed is reported ([DEC-001 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content)).
   - **Step 2:** an edit is found by comparing the medium with the renderer's committed record of what it last drew ([DEC-005 point 11](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#11-a-renderer-that-draws-into-a-lasting-medium-commits-a-record-of-what-it-last-drew)).
   - **Step 5:** an edit is taken back as a change a person reviews ([DEC-001 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#2-the-logical-layer-is-the-source-and-renderers-only-project-it)).
   - **The first guarantee:** the system writes no edit into a library, since a library copy that a lock names is never rewritten ([DEC-001 point 11](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#11-shipped-with-the-methodology-and-a-projects-work-stays-the-projects)).

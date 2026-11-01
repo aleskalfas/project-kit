@@ -55,7 +55,7 @@ pkit:
 - **5a.** The copy was edited in the project. It no longer matches its hash, so the system's check fails on it until the developer fetches it again.
 - **6a.** The library was in the project already (variant 1a). The system draws each piece whose lock names the library with both library versions, and shows the developer the piece before and after. The developer moves the lock of each piece the newer library version improves, and leaves each other piece where it is. A final piece's lock stays.
 - **6b.** A piece is published. The system proposes the move of its lock as a change of its own, with the piece before and after ([UC-094](../010-make/UC-094-put-figure-in-page.md), variant 6b).
-- **6c.** The newer library version breaks what a piece uses, such as by renaming a library component. Its library owner gives a note on the break. On the developer's request, the system rewrites the piece's content to follow it, and the developer reviews that change like any other.
+- **6c.** The newer library version breaks what a piece uses, such as by renaming a library component. Its library owner gives a note on the break. On the developer's request, the system rewrites the piece's content to follow the note, and the developer reviews that change like any other.
 - **6d.** No lock names an earlier library version any more. The developer removes it.
 - **6e.** A piece is a draft whose lock is not pinned. Its lock moves to the newer library version at the piece's next drawing, within the major number it names. The system draws no before and after for it.
 
