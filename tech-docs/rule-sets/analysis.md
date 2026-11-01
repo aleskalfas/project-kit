@@ -51,11 +51,11 @@ rules:
           record: ["software-analysis:DEC-001#2"]
   RS-ANA-005:
     status: proposed
-    origin: {why: "On 19 October, a map of project-kit's chain of use cases on main found five stages, each building on the ones before it. The maintainer took them as the core's areas (the design note on analysis concepts and order, PR #1808)."}
+    origin: {why: "On 19 October, a map of project-kit's chain of use cases on main found five stages, each building on the ones before it. The maintainer took them as the core's areas (the design note on analysis concepts and order, PR #1808). software-analysis cuts an area by the one function its use cases serve (software-analysis DEC-005 point 1). Each stage is such a function, whose goal software-analysis's settings state, so the five stand as functions, in the order the stages give."}
     pkit:
       friction:
         anchors:
-          record: ["software-analysis:DEC-001#2", "software-analysis:DEC-001#12"]
+          record: ["software-analysis:DEC-001#2", "software-analysis:DEC-001#12", "software-analysis:DEC-005#1"]
   RS-ANA-006:
     status: proposed
     origin: {why: "A link at the version a capability requires of another component names the definitions the capability was written against. software-analysis leaves the links' version to each project (software-analysis DEC-001 point 2). A floor is project-kit's mechanism, raised only when a change declares it (PRJ-002 D4). The maintainer's delegate chose the floor on 19 October, under the maintainer's standing delegation (the design note on analysis concepts and order, PR #1808)."}
@@ -159,7 +159,7 @@ Keep each artefact in the analysis of the component it describes, in a folder of
 Keep each use case of the core's analysis in one of its five areas: `010-develop`, `020-set-up`, `030-change`, `040-release` and `050-adopt`.
 
 - **How:**
-  - **The stages.** The areas are the five stages of the chain of use cases, in the order in which they build on each other.
+  - **The functions.** Each area is one function of the core, the summary goal its use cases are steps toward, as software-analysis's settings state it (software-analysis DEC-005 point 1). The areas' numbers give the order in which they build on each other, the stages of the chain of use cases.
   - **A new area** needs a change to this rule, since the five are the maintainer's choice.
 - **Breaks the rule:** "`change/` and `release/`", the core's two areas (`tech-docs/analysis/use-case-model/use-cases/` on main, 19 October)
 - **Keeps the rule:** "`010-develop`, `020-set-up`, `030-change`, `040-release` and `050-adopt`" (the design note on analysis concepts and order)
