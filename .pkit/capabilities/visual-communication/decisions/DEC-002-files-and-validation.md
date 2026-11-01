@@ -1,7 +1,7 @@
 ---
 id: DEC-002
 title: A project's visual work lies in its own files, and one check judges them within validation
-status: proposed
+status: accepted
 date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
