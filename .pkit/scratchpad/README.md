@@ -203,7 +203,7 @@ Each command has its full entry in the CLI reference, which each name below link
 | [`pkit scratchpad done <slug> [--produced <ref>...]`](../cli/README.md#scratchpad-done-slug---produced-ref) | Moves the note from `active/` or `reported/` to `done/`, and adds `retired` and any `produced`. |
 | [`pkit scratchpad drop <slug>`](../cli/README.md#scratchpad-drop-slug) | Moves the note from `active/` or `reported/` to `dropped/`, and adds `retired`. |
 | [`pkit scratchpad reported <slug> <ref>...`](../cli/README.md#scratchpad-reported-slug-ref) | Records a send made outside the tooling. Moves the note from `active/` to `reported/` and adds the reported fields, or adds new issues to a reported note. |
-| [`pkit scratchpad list`](../cli/README.md#scratchpad-list) | Lists the notes by folder, each reported note with its issues' live states. Marks an edited reported note, and names the retiring command once all its issues are closed. Writes nothing. |
+| [`pkit scratchpad list`](../cli/README.md#scratchpad-list) | Lists the notes by folder, each reported note with its issues' live states. Marks an edited reported note, and names the retiring command once all of a reported note's issues are closed. Writes nothing. |
 | [`pkit report feedback … --scratchpad <slug>`](../cli/README.md#report-bug--report-feedback--report-change-request), and the `bug` and `change-request` verbs alike | Attaches the whole note, front matter included, to a public issue. Moves the note to `reported/` on a successful post only. |
 
 - **No skill pairs `done`, `drop` or `reported`,** since each is mechanical (COR-006).

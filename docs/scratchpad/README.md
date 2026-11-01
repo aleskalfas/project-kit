@@ -230,7 +230,7 @@ Moved: .pkit/scratchpad/active/<any>-cache-layer.md -> .pkit/scratchpad/reported
 Recorded: aleskalfas/project-kit#9999
 ```
 
-- **Then leave the note as you sent it.** Write further thinking in a new note that links it.
+- **Then leave the note as you sent it.** Write further thinking in a new note that links the reported note.
 - **Its issue's state:** `pkit scratchpad list` reads each issue's state each time you run it, so the state it shows is never stored. Once every issue of a note is closed, the listing prints the command that retires the note. It never retires one itself.
 
 > [!WARNING]
