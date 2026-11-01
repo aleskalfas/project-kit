@@ -243,12 +243,14 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
+- [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
 
 **Authorisation:**
 
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md)
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md)
 - [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md)
+- [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
 - [REQ-042 · Functional · A move a person holds is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)
 
 **Cascade:**
@@ -269,4 +271,5 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 **Bypass:**
 
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md)
+- [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
 - [REQ-042 · Functional · A move a person holds is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)

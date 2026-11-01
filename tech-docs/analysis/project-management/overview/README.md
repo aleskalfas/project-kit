@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=5 fingerprint=sha256:d8dd94e6bf0d48b9879e1bfb4dc922e72223c9b4c1bbe8fb62b67b5d6856b209 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:9b27a5b79f222c127e89eed7f652f3e4f6657f4c8a76f51af9c40515663ffe80 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -52,7 +52,9 @@ File each Task under its parent, and move each issue through its lifecycle, each
 - [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/020-file-and-move/UC-060-file-task.md) ([not built yet](#not-built-yet): step 6, step 8, variant 6c, variant 6e)
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md) ([not built yet](#not-built-yet): step 4, step 7, variant 1a, variant 7a)
 
-**Its journeys:** none.
+**Its journeys:**
+
+- [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
 
 ### 030-review-and-land
 
@@ -72,7 +74,9 @@ Have each pull request reviewed by the reviewers its change requires, and land i
 
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md) ([not built yet](#not-built-yet): variant 1b, step 9)
 
-**Its journeys:** none.
+**Its journeys:**
+
+- [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
 
 ### 040-work-in-parallel
 
@@ -110,6 +114,7 @@ Run several AI agents on one project at once, each on its own scope and never on
 **Its journeys:**
 
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
+- [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
 
 ## Reference
 
@@ -170,6 +175,41 @@ flowchart LR
   core_ACT_adopter --> step_1
   step_1 --> step_2
   step_2 --> step_3
+```
+
+#### [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
+
+```mermaid
+flowchart LR
+  accTitle: JRN-012 — Take up my Task, and land its change
+  accDescr: The flow of JRN-012: core:ACT-developer takes 2 steps in order, UC-061, UC-062. It relies on 2 use cases outside the journey, drawn apart with no arrow.
+  core_ACT_developer["core:ACT-developer"]
+  step_1(["1. UC-061 — Move my issue through its lifecycle, each move checked"])
+  step_2(["2. UC-062 — Have the reviewers my change requires review my pull request, and land it"])
+  subgraph relies_on["Relied on, outside the journey"]
+    UC_060(["UC-060 — File a Task under its parent, its title and body checked as it is filed"])
+    UC_063(["UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan"])
+  end
+  core_ACT_developer --> step_1
+  step_1 --> step_2
+```
+
+#### [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
+
+```mermaid
+flowchart LR
+  accTitle: JRN-013 — Build my next Task, and land it while other agents land theirs
+  accDescr: The flow of JRN-013: ACT-worker-agent takes 2 steps in order, UC-084, UC-089. It relies on 3 use cases outside the journey, drawn apart with no arrow.
+  ACT_worker_agent["ACT-worker-agent — Worker agent"]
+  step_1(["1. UC-084 — Take my next ready Task, and build it up to its merge"])
+  step_2(["2. UC-089 — Land my Task while other agents land theirs"])
+  subgraph relies_on["Relied on, outside the journey"]
+    UC_060(["UC-060 — File a Task under its parent, its title and body checked as it is filed"])
+    UC_083(["UC-083 — Plan an intent into Tasks that one agent can each finish"])
+    UC_092(["UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent"])
+  end
+  ACT_worker_agent --> step_1
+  step_1 --> step_2
 ```
 
 ### Not built yet
