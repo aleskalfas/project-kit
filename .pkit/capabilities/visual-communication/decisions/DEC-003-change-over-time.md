@@ -1,7 +1,7 @@
 ---
 id: DEC-003
 title: A released version never changes, an older format is read and never rewritten unasked, and a piece's state says who moves its lock
-status: proposed
+status: accepted
 date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
