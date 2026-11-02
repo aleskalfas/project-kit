@@ -101,7 +101,7 @@ A classification axis is one dimension along which every issue is classified. Th
 
 Defined in [TERM-kind-of-work](../glossary.md#term-kind-of-work--kind-of-work).
 
-**Why:** A reader should see from a [Task](../glossary.md#term-task--task)'s title, and from the [pull request](../../core/glossary.md#term-pull-request--pull-request) that closes it, what sort of work it holds. One fixed set of values keeps each title prefix and each commit type in step with the work ([DEC-011](../../../../.pkit/capabilities/project-management/decisions/DEC-011-title-formats.md) and [DEC-012](../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
+**Why:** A reader should see from a [Task](../glossary.md#term-task--task)'s title, and from the [pull request](../../core/glossary.md#term-pull-request--pull-request) that closes the Task, which kind of work the Task holds. One fixed set of values keeps each title prefix and each commit type in step with the work ([DEC-011](../../../../.pkit/capabilities/project-management/decisions/DEC-011-title-formats.md) and [DEC-012](../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
 A kind of work is the value an [issue](../glossary.md#term-issue--issue) takes on the `type` axis, such as `bug`, `docs` or `test`. A Task's kind of work sets the prefix its title opens with, such as `[Docs]`. The kind of work also sets the commit type of the pull request that closes the Task.
 
