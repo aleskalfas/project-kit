@@ -34,6 +34,20 @@ pkit:
         - COR-050#2
         - COR-050#13
         - COR-055#3
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#3
+        - COR-050#6
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
 ---
 
 # UC-035 — Record a demo of my command line

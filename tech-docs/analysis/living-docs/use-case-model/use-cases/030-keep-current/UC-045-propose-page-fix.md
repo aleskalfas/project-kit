@@ -36,6 +36,18 @@ pkit:
         - COR-050#5
         - COR-050#6
         - COR-050#13
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
       artefact:
         - REQ-022
         - REQ-025
@@ -79,7 +91,7 @@ pkit:
 
 - **1a.** The developer asks for every stale [page](../../../glossary.md#term-page--page) the [debt](../../../../core/glossary.md#term-debt--debt) listing shows. The agent takes them in the check's order, upstream first, and writes one [proposal](../../../glossary.md#term-proposal--proposal) for each.
 - **1b.** A work-tracking [capability](../../../../core/glossary.md#term-capability--capability)'s command starts the agent as the fixer of pages, on the pages the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) left stale, with nobody to ask. The agent takes only those pages, in the order its brief gives, and writes only in the workspace the brief names ([DEC-001 point 5](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#5-fixes-are-proposed-never-applied-blind)). The path goes on at step 2, and variants 6a and 8a apply.
-- **2a.** `explain` reports the page current, or unanchored. The agent says that there is nothing to fix, or that the page needs anchors first, and offers onboarding or a [reader-review](../../../glossary.md#term-reader-review--reader-review). The use case ends.
+- **2a.** `explain` reports the page current, or unanchored. The agent says that there is nothing to fix, or that the page needs anchors first, and offers [onboarding](../../../glossary.md#term-onboarding--onboarding) or a [reader-review](../../../glossary.md#term-reader-review--reader-review). The use case ends.
 - **2b.** The [artefact](../../../../core/glossary.md#term-artefact--artefact) is no page, such as a [decision record](../../../../core/glossary.md#term-decision-record--decision-record), a [rule](../../../../core/glossary.md#term-rule--rule), or another [component](../../../../core/glossary.md#term-component--component)'s artefact. The agent says that its owner revalidates it, and stops ([COR-050 point 6](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)).
 - **2c.** `explain` reports the page `unresolved`, so it was not judged. The agent proposes nothing for its text, and says why from the [anchor](../../../../core/glossary.md#term-anchor--anchor)'s [finding](../../../../core/glossary.md#term-finding--finding). Where the anchor's kind misspells a registered one, it proposes the one-line correction of the anchor.
 - **2d.** A [friction](../../../../core/glossary.md#term-friction--friction) document carries a `schema_version` other than 1. The agent refuses it, naming the command and the version, and proposes nothing from it ([core:REQ-019](../../../../core/requirements/functional/030-change/REQ-019-reading-document-versioned.md)). The use case ends.

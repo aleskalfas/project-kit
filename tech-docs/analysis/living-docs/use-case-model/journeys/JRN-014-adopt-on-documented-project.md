@@ -18,6 +18,10 @@ pkit:
         - living-docs:DEC-001#1
         - living-docs:DEC-001#2
         - living-docs:DEC-001#8
+        - COR-001
+        - COR-010
+        - COR-053#8
+        - COR-059#3
       artefact:
         - UC-043
         - UC-047
@@ -47,5 +51,5 @@ pkit:
 
 **Minimal guarantees:**
 
-- Stopping after step 1 moves no document. `pkit living-docs new space` writes three things, and nothing else. They are the [space definition](../../glossary.md#term-space-definition--space-definition), its path in the [capability](../../../core/glossary.md#term-capability--capability)'s configuration and the definitions location ([living-docs DEC-001 point 2](../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content)).
+- Stopping after step 1 moves no document. `pkit living-docs new space` writes three things, and nothing else. They are the [space definition](../../glossary.md#term-space-definition--space-definition), its path in the [capability](../../../core/glossary.md#term-capability--capability)'s configuration and the space definitions' [documentation location](../../glossary.md#term-documentation-location--documentation-location) ([living-docs DEC-001 point 2](../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content)).
 - Stopping in step 2 changes no document the adopter has not accepted. Each [proposal](../../glossary.md#term-proposal--proposal) passes the adopter's review, and lands as an ordinary [change](../../../core/glossary.md#term-change--change) ([living-docs DEC-001 point 8](../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).

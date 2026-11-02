@@ -33,6 +33,20 @@ pkit:
         - COR-013
         - COR-017
         - COR-031
+        - COR-051#4
+        - COR-066#1
+        - COR-066#3
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#6
+        - COR-050#9
+        - COR-066#2
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
 ---
 
 # UC-080 — Have a change's answers checked by a reviewer other than their writer
@@ -52,7 +66,7 @@ pkit:
 - The change carries the answers it owes, written by the agent making it or by the developer, as `core:UC-002` describes ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - The merge gate requires the `docs-reviewer` where a pull request's diff touches code, or its closing issue has a `type` ([project-management DEC-032 point D1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d1--the-required-local-reviewer-set-resolves-from-the-prs-closing-issues)). project-management runs the reviewer on the pull request's head, posts the reviewer's verdict and counts it, as `project-management:UC-062` describes ([project-management DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). It runs the reviewer a capability contributes even where the project registers no local reviewer of its own ([project-management DEC-032 point D4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d4--review-pr-invokes-the-resolved-set)).
 - Where the project opts out of the `docs-reviewer`, and chooses no other reviewer of the answers, the answers stand checked by their writer alone. COR-050 point 3 accepts that limit.
-- Where the merge gate does not require the `docs-reviewer`, as for an unclassified pull request changing only documents, the code-review panel checks no answer. COR-050 point 3 does not name that case, and #1732 asks a record to decide it.
+- Where the merge gate does not require the `docs-reviewer`, the code-review panel checks no answer. An unclassified pull request changing only documents is such a case (project-management DEC-032 point D1). COR-050 point 3 does not name a pull request the merge gate leaves without the `docs-reviewer`. #1732 asks a record to decide whether such a pull request's answers are checked.
 - The change check lists every answer the change wrote, in plain words, in its last section, "Answers written in this change". It flags each answer the change was not asked for (COR-050 points 3 and [12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
 - The merge authoriser is told each sentence on an updated artefact, and each artefact left out of date, as `project-management:UC-062` describes ([project-management DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
 
@@ -69,7 +83,7 @@ pkit:
    - **Updated in this change:** the changed target contradicts nothing the modified trigger fields now say.
    - **Still accurate:** the entry's reason says truly why the target still stands against the change.
    - **Out of date, fixed later:** the entry's reason holds, and names a follow-up issue that is open.
-7. The reviewer gives its verdict, which project-management posts on the pull request. Each answer that does not hold is a `[block]` finding, so the verdict requests changes (software-engineering DEC-002 point 1). After its findings, a short paragraph names the answers it checked and found holding.
+7. The reviewer gives its verdict, which project-management posts on the pull request. Each answer that does not hold is a `[block]` finding, so the verdict withholds approval (software-engineering DEC-002 point 1). After its findings, a short paragraph names the answers it checked and found holding.
 8. With the verdict approving the change, the merge authoriser authorises the merge, relying on the reviewer for each reason, deferral and sentence ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 
 **Variants:**
@@ -78,7 +92,7 @@ pkit:
 - **1b.** The agent making the change is to commit it straight to the default branch, with no pull request. Before the commit, the agent has the `docs-reviewer` check the answers as on a pull request ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)). A `[block]` finding stops the commit, and the merge authoriser, here the person the agent works for, is told the sentences first.
 
 > [!WARNING]
-> **Not built yet:** the reviewer starts from a pull request's number, and requests changes where it cannot fetch one. COR-050 point 3 decides that the reviewer checks a direct commit's answers before the commit, and #1966 tracks it.
+> **Not built yet:** the reviewer starts from a pull request's number, and withholds approval where it cannot fetch one. COR-050 point 3 decides that the reviewer checks a direct commit's answers before the commit, and #1966 tracks it.
 
 - **2a.** The list says `none`, or the check reports itself dormant in the project. Nothing is left to check, and the path goes on at step 7.
 - **2b.** The list flags as "not asked for by this change" an answer no change owes, which the developer or the delegate decided, as [UC-081](../010-build/UC-081-decide-unasked-answers.md) describes:
@@ -98,7 +112,7 @@ pkit:
 - **6a.** A target the change revisited by changing it contradicts nothing, yet leaves part of the change unmet. The reviewer names that part in an `[advisory]` finding, and blocks on nothing ([software-engineering DEC-002 point 3](../../../../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md#3-block-threshold-discipline-per-agent)).
 - **6b.** A revisit does not hold, such as a test that still checks the value the change replaced. A `[block]` finding names the trigger field and quotes the target, and the path rejoins at step 1 once the revisit is mended.
 - **7a.** The developer edits a sentence in the description after the verdict. An edit of the description makes no verdict stale, so nobody checks the edited sentence ([project-management DEC-055 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#5-what-this-does-not-verify)).
-- **7b.** The verdict requests changes, and a person bypasses the `docs-reviewer` on record, with a reason. The answers then stand checked by their writer alone, a limit [COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) accepts ([project-management DEC-055 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#5-what-this-does-not-verify)).
+- **7b.** The verdict withholds approval, and the developer bypasses the `docs-reviewer` on record, with a reason, as `project-management:UC-062` describes in its variant 13c. The answers then stand checked by their writer alone, a limit [COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) accepts ([project-management DEC-055 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#5-what-this-does-not-verify)).
 
 **Postconditions:** A reviewer other than their writer checked each answer and each revisit the change owed against the change. It checked each answer no change owes against what that answer answers. The verdict approves the change only where each holds.
 

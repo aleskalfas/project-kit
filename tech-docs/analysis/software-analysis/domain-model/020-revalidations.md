@@ -58,7 +58,7 @@ classDiagram
   RevalidationProposal : commands or question
   class Shortfall
   Shortfall : record
-  Shortfall : issue
+  Shortfall : work item
   class UseCase["Use case"]
   Revalidation "1" --> "*" RevalidationOutcome : gives, one for each artefact
   RevalidationProposal "*" --> "1" Revalidation : drafts the outcomes of
@@ -180,7 +180,7 @@ Defined in [TERM-design-source](../glossary.md#term-design-source--design-source
 
 **Why:** A pointer returns the exact text reviewed, which no version number does. So a planned [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) points at the text itself. No [artefact](../../core/glossary.md#term-artefact--artefact) of the [analysis](../glossary.md#term-analysis--analysis), and no revalidation record, carries a declared version ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
-A design source is one text of a proposed [change](../../core/glossary.md#term-change--change) that a planned [revalidation](../glossary.md#term-revalidation--revalidation) read, such as an issue's body or a design note. Its revalidation record names it with a pointer to the text read. In this repository, the pointer is a commit the [default branch](../../core/glossary.md#term-default-branch--default-branch) holds, or the change the record lands in.
+A design source is one text of a proposed [change](../../core/glossary.md#term-change--change) that a planned [revalidation](../glossary.md#term-revalidation--revalidation) read, such as a work item's body or a design note. Its revalidation record names it with a pointer to the text read. In this repository, the pointer is a commit the [default branch](../../core/glossary.md#term-default-branch--default-branch) holds, or the change the record lands in.
 
 **Attributes:**
 
@@ -231,13 +231,13 @@ Defined in [TERM-shortfall](../glossary.md#term-shortfall--shortfall).
 
 **Why:** An accepted [decision record](../../core/glossary.md#term-decision-record--decision-record) binds the [system](../../core/glossary.md#term-system--system) from its acceptance, and the code may follow later. A [use case](../glossary.md#term-use-case--use-case) written to the code alone would hide what the record asks. One written to the record alone would describe behaviour that is not there. With a box below the step, both stay true ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
-A shortfall is a step or a variant of a use case that the system does not carry out yet. An accepted decision record decides it, so the step keeps the words the record decides. A box below the step says what the system lacks, and names the record and the issue that tracks building it.
+A shortfall is a step or a variant of a use case that the system does not carry out yet. An accepted decision record decides it, so the step keeps the words the record decides. A box below the step says what the system lacks, and names the record and the work item that tracks building it.
 
 **Attributes:**
 
 - its box, which says what the system lacks ([DEC-001 point 1](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape))
 - the accepted decision record that decides it, one of the use case's record anchors (DEC-001 point 1)
-- the issue that tracks building it (DEC-001 point 1)
+- the work item that tracks building it (DEC-001 point 1)
 
 **Relations:**
 
@@ -247,7 +247,7 @@ A shortfall is a step or a variant of a use case that the system does not carry 
   - where the code regressed a step a decision record decides
   - where it finds such a description with no behaviour
 
-**States:** A shortfall stays open until the [change](../../core/glossary.md#term-change--change) that builds its step removes the box and the entry. The [pull request](../../core/glossary.md#term-pull-request--pull-request) of that change closes the shortfall's issue (DEC-001 point 1).
+**States:** A shortfall stays open until the [change](../../core/glossary.md#term-change--change) that builds its step removes the box and the entry. The [pull request](../../core/glossary.md#term-pull-request--pull-request) of that change closes the shortfall's work item (DEC-001 point 1).
 
 **Always true:**
 

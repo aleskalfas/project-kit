@@ -39,6 +39,19 @@ pkit:
         - COR-039#1
         - COR-039#2
         - COR-051#7
+        - COR-001
+        - COR-010
+        - COR-053#8
+        - COR-059#3
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
+        - COR-028
+        - COR-039
+        - PRJ-004
+        - ADR-063
+        - software-analysis:DEC-001#3
       artefact:
         - REQ-050
         - REQ-051

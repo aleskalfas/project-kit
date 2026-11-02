@@ -28,6 +28,14 @@ pkit:
         - COR-050#6
         - COR-050#8
         - COR-050#14
+        - COR-001
+        - COR-010
+        - COR-053#8
+        - COR-059#3
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
       artefact:
         - REQ-022
 ---
@@ -58,7 +66,7 @@ pkit:
 1. The adopter assigns each [place](../../../../core/glossary.md#term-place--place) outside every [documentation root](../../../../core/glossary.md#term-documentation-root--documentation-root) that holds documents to a [documentation space](../../../glossary.md#term-documentation-space--documentation-space), under `places` in `.pkit/capabilities/living-docs/project/config.yaml` ([DEC-001 point 1](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces)).
 2. The adopter runs `pkit living-docs validate`.
 3. The [system](../../../../core/glossary.md#term-system--system) lists the [unclassified documents](../../../glossary.md#term-unclassified-document--unclassified-document), and the pages left unanchored apart from those accepted with a reason (DEC-001 points [4](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated) and [8](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)). It exits 0.
-4. The adopter asks the `living-docs` agent to onboard the documentation.
+4. The adopter asks the `living-docs` agent for the [onboarding](../../../glossary.md#term-onboarding--onboarding) of the documentation.
 5. The agent gathers its evidence:
    - [validation](../../../../core/glossary.md#term-validation--validation)'s [findings](../../../../core/glossary.md#term-finding--finding)
    - the [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check)'s measures
@@ -91,7 +99,7 @@ pkit:
 - **10a.** A proposal adds anchors to a document that has front matter already. The adopter answers for it in the same [pull request](../../../../core/glossary.md#term-pull-request--pull-request), as `core:UC-002` describes, and the path goes on at step 11.
 - **11a.** [Unclassified documents](../../../glossary.md#term-unclassified-document--unclassified-document) or pages left unanchored remain, or the [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check) still measures surface that no page anchors. The path rejoins at step 4.
 
-**Postconditions:** Each document in the [documentation spaces](../../../glossary.md#term-documentation-space--documentation-space)' places is a [page](../../../glossary.md#term-page--page) of a space, or left out of the spaces' rules on purpose. Each page carries anchors, or a reason for none that a person accepted, and the declared surface is covered ([DEC-001 point 8](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
+**Postconditions:** Each document in the [documentation spaces](../../../glossary.md#term-documentation-space--documentation-space)' places is a [page](../../../glossary.md#term-page--page) of a space, or left out of the spaces' rules on purpose. Each page names its [reader](../../../glossary.md#term-reader--reader) and its [page kind](../../../glossary.md#term-page-kind--page-kind) (DEC-001 points [3](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#3-what-the-shared-rules-require) and [4](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)). Each page carries anchors, or a reason for none that a person accepted, and the declared surface is covered ([DEC-001 point 8](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
 
 **Minimal guarantees:**
 
