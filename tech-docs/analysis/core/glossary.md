@@ -298,6 +298,18 @@ TERM-consent:
           - COR-048#5
           - COR-059#4
           - COR-002
+TERM-cross-repository-guard:
+  name: cross-repository guard
+  status: active
+  definition: "check each writing command of the system makes, comparing where its working directory would write with the session anchor, refusing or asking on a mismatch"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/session_guard.py
+        record:
+          - ADR-034#1
+          - COR-039
 TERM-data-point:
   name: data point
   noun-forms: [data points]
@@ -396,6 +408,20 @@ TERM-deploy-mark:
           - .pkit/adapters/claude-code/deploy-agents.sh
           - .pkit/adapters/claude-code/deploy-skills.sh
           - .pkit/adapters/claude-code/undeploy-capability.sh
+TERM-diagnostic-session:
+  name: diagnostic session
+  noun-forms: [diagnostic sessions]
+  status: active
+  definition: "period, turned on by the operator and expiring by itself, during which the permission hook logs each call it defers, so remediations can be recommended"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/adapters/claude-code/permission-hook.py
+          - src/project_kit/permissions.py
+        record:
+          - PRJ-006#1
+          - PRJ-006#5
 TERM-distribution:
   name: distribution
   noun-forms: [distributions]
@@ -422,6 +448,18 @@ TERM-documentation-root:
           - COR-049#1
           - COR-049#3
           - COR-049#5
+TERM-enforcement-declaration:
+  name: enforcement declaration
+  noun-forms: [enforcement declarations]
+  status: active
+  definition: "adapter's statement, for each dimension of the permission model, of the layer that enforces it in its harness and how: `native`, `runtime` or `none`"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/adapters/claude-code/permission-enforcement.yaml
+        record:
+          - COR-028#3
 TERM-finding:
   name: finding
   noun-forms: [findings]
@@ -468,7 +506,7 @@ TERM-friction:
 TERM-grant:
   name: grant
   status: active
-  definition: "entry of the permission model that allows or denies a subject one or more privileges, within a scope where it names one"
+  definition: "entry of the permission model allowing or denying one or more privileges to `all`, `operator` or one agent, within any scope it names"
   pkit:
     friction:
       anchors:
@@ -479,11 +517,23 @@ TERM-grant:
           - COR-028#1
           - COR-028#2
           - ADR-005#2
+TERM-grant-subject:
+  name: grant subject
+  noun-forms: [grant subjects]
+  status: active
+  definition: "party an entry of the permission model is for: `all`, `operator`, or one agent as `agent:<name>`"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/permissions/decide.py
+        record:
+          - COR-028#1
 TERM-guardrail:
   name: guardrail
   noun-forms: [guardrails]
   status: active
-  definition: "privilege denied to every subject whatever any grant allows, whose deny each adapter also holds where its harness fails closed"
+  definition: "privilege denied to every grant subject whatever any grant allows, which each adapter also holds as a native deny where its harness fails closed"
   pkit:
     friction:
       anchors:
@@ -650,6 +700,18 @@ TERM-migration:
           - .pkit/migrations/backbone/1.150.0/001-keep-process-journal-logging.sh
         record:
           - COR-010
+TERM-native-deny:
+  name: native deny
+  noun-forms: [native denies]
+  status: active
+  definition: "entry in a harness's own settings that refuses a call, which the harness enforces itself even where the permission hook fails"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/permissions/projection.py
+        record:
+          - COR-028#2
 TERM-operational-rule:
   name: operational rule
   noun-forms: [operational rules]
@@ -710,6 +772,18 @@ TERM-passage-for-a-person:
           - .pkit/agents/core/rule-set-reviewer.md
         record:
           - COR-057#3
+TERM-permission-code:
+  name: permission code
+  status: active
+  definition: "backbone's logic under `.pkit/permissions/` that decides each tool call against the grants and guardrails, alike for every adapter and for the system's own commands"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/permissions/decide.py
+        record:
+          - ADR-003
+          - COR-028#2
 TERM-permission-hook:
   name: permission hook
   noun-forms: [permission hooks]
@@ -726,6 +800,19 @@ TERM-permission-hook:
           - COR-028#3
           - ADR-002#4
           - ADR-003
+TERM-permission-model:
+  name: permission model
+  status: active
+  definition: "harness-neutral body of grants, privileges and guardrails that decides what each grant subject may do, which each adapter realises in its harness"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/permissions/decide.py
+          - .pkit/schemas/privilege-catalog.yaml
+        record:
+          - COR-028#1
+          - COR-028#2
 TERM-place:
   name: place
   other-senses: [in place]
@@ -753,6 +840,20 @@ TERM-point:
           - COR-058#1
           - COR-058#3
           - COR-058#4
+TERM-posture:
+  name: posture
+  noun-forms: [postures]
+  status: active
+  definition: "setting, which an active profile sets and the project commits, for a call no grant decides: `lenient` hands it to the harness, `strict` denies it"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/permissions/decide.py
+          - .pkit/permissions/project/config.yaml
+        record:
+          - ADR-005#2
+          - ADR-032
 TERM-privilege:
   name: privilege
   status: active
@@ -771,7 +872,7 @@ TERM-process:
   name: process
   noun-forms: [processes]
   status: active
-  definition: "declared course of one kind of subject through states, with a condition on each move, which a capability defines and the backbone's engine checks"
+  definition: "course a capability declares for things of one kind, such as issues, through states with a condition on each move, which the backbone's engine checks"
   pkit:
     friction:
       anchors:
@@ -781,6 +882,19 @@ TERM-process:
           - COR-033
           - COR-044
           - COR-053#2
+TERM-process-subject:
+  name: process subject
+  noun-forms: [process subjects]
+  status: active
+  definition: "thing of one kind that a capability's declared course through states moves, such as an issue, whose state the engine reads from what it observes"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/process.py
+        record:
+          - COR-033#P1
+          - COR-033#P3
 TERM-profile:
   name: profile
   status: active
@@ -1383,7 +1497,7 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 
 - **Acceptance:** a record's or a [rule](#term-rule--rule)'s status moved from `proposed` to `accepted` in a reviewed change. Where that path involves a person, the person's review accepts the record or the rule ([COR-051 point 4](../../../.pkit/decisions/core/COR-051-rule-sets.md#4-statuses-and-the-gate)).
 - **Merge gate:** the checks and approvals a [pull request](#term-pull-request--pull-request) waits for before it merges ([project-management DEC-028](../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). It judges a change, not what the change builds on.
-- **A process's gate:** a condition on one move of a subject between states ([COR-033 P4](../../../.pkit/decisions/core/COR-033-process-substrate.md#p4--gates-must-be-checkable)).
+- **A process's gate:** a condition on one move of a process subject between states ([COR-033 P4](../../../.pkit/decisions/core/COR-033-process-substrate.md#p4--gates-must-be-checkable)).
 
 ## TERM-adapter — adapter
 
@@ -1661,6 +1775,18 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 - **A choice that keeps its own:** such as [merge delivery](#term-merge-delivery--merge-delivery)'s tier that asks, or a [data point](#term-data-point--data-point)'s question. A transition's one consent does not cover it (COR-059 point 4 and [COR-061](../../../.pkit/decisions/core/COR-061-point-questions.md)).
 - **A person's decision:** an [answer](#term-answer--answer) on an [artefact](#term-artefact--artefact) that the person was shown word for word and accepted before it was written ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 
+## TERM-cross-repository-guard — cross-repository guard
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#cross-repository-guard).
+
+**Example:** An agent's session is anchored in one clone, and the agent runs `pkit pull-request merge` from a clone of another project. The cross-repository guard refuses.
+
+**Distinctions:**
+
+- **Session anchor:** the directory the cross-repository guard compares with. It stays put when the working directory changes (ADR-034 point 1).
+- **A command outside the system:** such as `git -C <path> push`, which no guard sees. Only the system's own commands carry the cross-repository guard (ADR-034 point 5).
+- **Sync's guard:** stops a command that would propagate under another version. It shares only the word (COR-059 point 9).
+
 ## TERM-data-point — data point
 
 Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#data-point).
@@ -1751,6 +1877,18 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 - **Deployed copy:** what an adapter regenerates for its harness. Its deploy mark is what shows it to be one.
 - **A file without it:** the project's own, which no run of the adapter writes over or removes (`.pkit/adapters/README.md`).
 
+## TERM-diagnostic-session — diagnostic session
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#diagnostic-session).
+
+**Example:** The operator runs `pkit permissions diagnose on`, and later `pkit permissions diagnose report`, which lists the calls the diagnostic session logged, by group.
+
+**Distinctions:**
+
+- **A harness's session:** one run of an AI agent. A diagnostic session spans whichever sessions run while it is on (PRJ-006 point 1).
+- **Its log:** local and git-ignored, size-capped, with command tails redacted by default (PRJ-006 point 5).
+- **A fix:** recommended, never applied by itself (PRJ-006 point 4).
+
 ## TERM-distribution — distribution
 
 Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#distribution).
@@ -1775,6 +1913,18 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 - **Place:** a path declared to hold anchored [artefacts](#term-artefact--artefact) ([COR-050 point 1](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)). A root may hold files that no [place](#term-place--place) reads.
 - **Space:** living-docs' body of pages for one audience, under a root or in places assigned to it ([living-docs DEC-001 point 1](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces)).
 - **A recorded location:** a location derived from a root is recorded when first used, so changing the root later moves nothing ([COR-049 point 5](../../../.pkit/decisions/core/COR-049-documentation-roots.md#5-a-derived-location-is-recorded-when-it-is-first-used)).
+
+## TERM-enforcement-declaration — enforcement declaration
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#enforcement-declaration).
+
+**Example:** Claude Code's enforcement declaration gives `command-deny` the layer `settings`, enforced `native`. `pkit permissions diff` reads it to name each dimension the harness cannot enforce.
+
+**Distinctions:**
+
+- **Support declaration:** an adapter's grading of how far its harness meets each harness requirement (COR-047 point 2).
+- **Enforcement:** the system's word for a registered permission hook. It shares only the word.
+- **A dimension with `none`:** reported as a gap to close outside the harness, such as at the operating system (COR-028 point 3).
 
 ## TERM-finding — finding
 
@@ -1819,9 +1969,20 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 **Distinctions:**
 
-- **Subject:** whom a grant is for: `all`, `operator`, or one agent as `agent:<name>`. An agent's effective grants are those to `all` and its own, and a deny wins ([COR-028 point 1](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth)).
+- **Grant subject:** whom a grant is for: `all`, `operator`, or one agent as `agent:<name>`. An agent's effective grants are those to `all` and its own, and a deny wins ([COR-028 point 1](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth)).
 - **Settings rule:** an allow or a deny in the [harness](#term-harness--harness)'s settings files. `pkit permissions apply` writes one where the harness can express a grant natively ([COR-028 point 2](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
 - **A profile's grants:** a layer the active [profile](#term-profile--profile) adds to the [project](#term-project--project)'s own grants in `.pkit/permissions/project/grants.yaml`. Activating a profile swaps that layer and never edits the file, so a grant written by hand survives ([ADR-005 point 2](../../architecture/decisions/ADR-005-permission-profile-surface.md#2-contents--posture-plus-a-layered-grant-source-confinement-and-native-allow-referenced-not-owned)).
+
+## TERM-grant-subject — grant subject
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#grant-subject).
+
+**Example:** A grant to `agent:researcher` has that agent as its grant subject. The agent's effective grants are those to `all` and to `agent:researcher`.
+
+**Distinctions:**
+
+- **Process subject:** a thing a process moves through its states. It shares only the word.
+- **`all`:** every agent and the operator. A deny to `all` wins over an allow to one agent (COR-028 point 1).
 
 ## TERM-guardrail — guardrail
 
@@ -1831,7 +1992,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 **Distinctions:**
 
-- **Deny grant:** a [grant](#term-grant--grant) that denies one subject a [privilege](#term-privilege--privilege). A [project](#term-project--project) writes it, and can remove it. A guardrail comes from the catalog's `guardrail: true`, whatever the grants say.
+- **Deny grant:** a [grant](#term-grant--grant) that denies one grant subject a [privilege](#term-privilege--privilege). A [project](#term-project--project) writes it, and can remove it. A guardrail comes from the catalog's `guardrail: true`, whatever the grants say.
 - **The double lock:** a guardrail's two layers. The [backbone](#term-backbone--backbone)'s permission code denies it, and the [adapter](#term-adapter--adapter)'s own deny in its [harness](#term-harness--harness) holds where the [permission hook](#term-permission-hook--permission-hook) fails ([COR-028 point 2](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
 - **A capability's privilege:** a privilege a [capability](#term-capability--capability)'s catalog fragment adds. It is never a guardrail, and the backbone refuses a fragment that marks one ([ADR-021 point 3](../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#3-a-capability-contributed-privilege-may-never-be-a-guardrail--reject-do-not-strip)).
 
@@ -1994,6 +2155,17 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 - **Sync:** the operation that rewrites a project's [synced copies](#term-synced-copy--synced-copy) at its [recorded versions](#term-recorded-version--recorded-version). It runs no migration. A migration changes what sync cannot derive, such as a project's own settings ([COR-010](../../../.pkit/decisions/core/COR-010-resource-lifecycle.md)).
 - **The migration check:** `pkit migrations check-diff`, which finds the renames and removals of a [change](#term-change--change) that no migration covers. It runs no migration.
 
+## TERM-native-deny — native deny
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#native-deny).
+
+**Example:** Claude Code's settings hold a native deny of `git push --force`. The push stays refused even where the permission hook fails and defers the call.
+
+**Distinctions:**
+
+- **Deny grant:** a grant in the permission model that denies a grant subject a privilege. An adapter writes a native deny from it where its harness can express one.
+- **Native rules:** the allows and denies a harness enforces itself. A native deny is one that refuses.
+
 ## TERM-operational-rule — operational rule
 
 Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#operational-rule).
@@ -2041,6 +2213,17 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 - **A rule the change moves:** a finding under a rule the change makes bind, or stop binding, on text it alters is a passage for a person too (COR-057 point 3).
 - **How it reaches a person:** the gate that invoked the reviewer says (COR-057 point 3).
 
+## TERM-permission-code — permission code
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#permission-code).
+
+**Example:** Claude Code's permission hook hands each tool call to the permission code, which denies `git push --force` under the guardrail `vcs-history-rewrite`.
+
+**Distinctions:**
+
+- **Permission hook:** an adapter's script that has its harness ask the permission code before each tool call.
+- **A fault in deciding:** the permission hook defers the call to the harness, whose native denies still hold each guardrail (COR-028 point 2).
+
 ## TERM-permission-hook — permission hook
 
 Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#permission-hook).
@@ -2049,10 +2232,22 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 **Distinctions:**
 
-- **The backbone's permission code:** the code under `.pkit/permissions/` that decides each call. Every [adapter](#term-adapter--adapter)'s permission hook calls it, so a hook decides as the [system](#term-system--system)'s own commands do ([ADR-003](../../architecture/decisions/ADR-003-permission-core-code-home.md)).
+- **Permission code:** the backbone's code under `.pkit/permissions/` that decides each call. Every [adapter](#term-adapter--adapter)'s permission hook calls it, so a hook decides as the [system](#term-system--system)'s own commands do ([ADR-003](../../architecture/decisions/ADR-003-permission-core-code-home.md)).
 - **Hook of an agent:** a name an [agent definition](#term-agent-definition--agent-definition) invokes to run an operation, which a [skill](#term-skill--skill) or a script provides ([COR-013 point 4](../../../.pkit/decisions/core/COR-013-agent-architecture.md#4-the-hook-pattern-agents-executing-in-other-areas)). It decides no permission.
 - **Enforcement:** the system's word for a registered permission hook. `pkit permissions enable` registers the hook with the harness, and `pkit permissions disable` removes the registration. The adapter ships the script either way.
 - **Native rules:** the allows and denies a harness enforces itself. They hold the [guardrails](#term-guardrail--guardrail) even where the permission hook fails and defers the call ([COR-028 point 2](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
+
+## TERM-permission-model — permission model
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#permission-model).
+
+**Example:** The permission model grants `agent:researcher` the privilege `web-fetch`. The `claude-code` adapter realises that grant in `.claude/settings.json` and its permission hook.
+
+**Distinctions:**
+
+- **The harness's settings:** what an adapter writes from the permission model. The model is the source of truth, and the settings follow it (COR-028 point 1).
+- **Sandbox:** the operating system's bound on what commands reach. The permission model decides what may be invoked, and confines nothing (ADR-004 point 1).
+- **Profile:** a named set of grants and a posture, which adds one layer to the permission model.
 
 ## TERM-place — place
 
@@ -2083,6 +2278,17 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **Connection point:** a [component](#term-component--component)'s declared interface under a [role](#term-role--role) ([COR-053 point 2](../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds)). It shares only the word.
 - **To point at:** to lead to something, as a tag points at a commit. It shares only the word.
 
+## TERM-posture — posture
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#posture).
+
+**Example:** Under the `strict` posture, an agent's `docker` command that no grant allows is denied. Under `lenient`, the harness asks the operator.
+
+**Distinctions:**
+
+- **Profile:** a named set of grants and a posture, which an operator activates on one machine.
+- **A per-machine choice:** the posture is shared policy, never one machine's choice (ADR-032).
+
 ## TERM-privilege — privilege
 
 Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#privilege).
@@ -2093,7 +2299,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 - **Path-scoped privilege:** a privilege recognised only for a file tool whose target lies in its folders, such as `workspace` ([ADR-060 point 1](../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#1-recognition-from-the-target-path-for-the-file-tools-only)).
 - **A capability's privilege:** a privilege a [capability](#term-capability--capability)'s catalog fragment defines, under an id that opens with the capability's name ([ADR-021](../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md)).
-- **Guardrail:** a privilege the catalog marks `guardrail: true`, which every subject is denied.
+- **Guardrail:** a privilege the catalog marks `guardrail: true`, which every grant subject is denied.
 
 ## TERM-process — process
 
@@ -2107,6 +2313,17 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 - **State machine:** the [backbone](#term-backbone--backbone)'s shape that each process binds to, which holds no discipline of its own ([COR-033 P1](../../../.pkit/decisions/core/COR-033-process-substrate.md#p1--vocabulary-one-substrate-two-altitudes)).
 - **Process connection point:** the kind of [connection point](#term-connection-point--connection-point) through which a capability offers its process for other [components](#term-component--component) to depend on ([COR-053 point 2](../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds)).
 - **Operating-system process:** a running program, such as the one a command starts. It shares only the word.
+
+## TERM-process-subject — process subject
+
+Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#process-subject).
+
+**Example:** An issue is a process subject of project-management's `issue-lifecycle`. `pkit process status` says which state it is in, from a live check.
+
+**Distinctions:**
+
+- **Grant subject:** whom a grant is for. It shares only the word.
+- **A commit's subject:** git's name for the first line of a commit's message. It shares only the word.
 
 ## TERM-profile — profile
 
@@ -2420,7 +2637,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 **Distinctions:**
 
 - **Confinement:** the bound the sandbox puts on a command's reach. The operator's need speaks of the agents' confinement, which the sandbox alone enforces ([ADR-004 point 2](../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#2-confinement-how-bounded-reach-is)).
-- **Grant:** an entry that decides what a subject may invoke. It spares a prompt, and confines nothing ([ADR-004 point 1](../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked)).
+- **Grant:** an entry that decides what a grant subject may invoke. It spares a prompt, and confines nothing ([ADR-004 point 1](../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked)).
 - **Per-agent confinement:** none exists. The agents of a session share one sandbox, so no agent is confined apart from another ([ADR-004 point 5](../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#5-no-per-agent-confinement)).
 - **Exclusion:** a command carved out of the sandbox, which then runs unconfined ([ADR-008 point 4](../../architecture/decisions/ADR-008-confinement-allowances.md#4-widening-path--explicit-loud-never-persisted-always-reported)).
 - **Enforcement declaration:** an [adapter](#term-adapter--adapter)'s statement of what its [harness](#term-harness--harness) enforces. A dimension the harness cannot enforce is reported as a gap to close outside it, such as at the operating system ([COR-028 point 3](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
