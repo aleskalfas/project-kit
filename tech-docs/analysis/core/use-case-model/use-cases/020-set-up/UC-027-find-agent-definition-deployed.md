@@ -99,7 +99,7 @@ pkit:
 8. The adapter writes the deployed agent definition with its own deploy mark, so a later run tells its own files from the adopter's (`.pkit/adapters/README.md`).
 9. A session dispatches the agent for its remit.
 10. The harness loads the deployed agent definition. The agent finds the project's own paths in its front matter, and only the tools its `tools:` list names ([ADR-004 point 1](../../../../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked)).
-11. Where the adapter's [permission hook](../../../glossary.md#term-permission-hook--permission-hook) is registered, it hands each of the agent's tool calls to the [backbone](../../../glossary.md#term-backbone--backbone)'s permission code, for the subject `agent:<name>`. That code needs only the system `python3` ([REQ-016](../../../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)). It applies the grants to `all` and the agent's own, and a deny wins over an allow ([REQ-013](../../../requirements/functional/020-set-up/REQ-013-deny-wins.md)).
+11. Where the adapter's [permission hook](../../../glossary.md#term-permission-hook--permission-hook) is registered, it hands each of the agent's tool calls to the [backbone](../../../glossary.md#term-backbone--backbone)'s permission code, for the subject `agent:<name>`. That code needs only the operating system's `python3` ([REQ-016](../../../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)). It applies the grants to `all` and the agent's own, and a deny wins over an allow ([REQ-013](../../../requirements/functional/020-set-up/REQ-013-deny-wins.md)).
 
 **Variants:**
 
