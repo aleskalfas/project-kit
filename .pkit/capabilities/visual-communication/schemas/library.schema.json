@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "library.schema.json",
+  "title": "A library version — visual-communication capability",
+  "description": "Formal shape of a library version's `library.yaml` (DEC-001 point 5, DEC-003 points 1 and 4, DEC-004 points 1 and 6): its name, its version, its kind, the oldest release of the capability whose tools it uses, and the libraries it builds on, each by its major. A brand may mark one of them as its base. A brand also names the DTCG version of its tokens, its Resolver document, and its open roles. Format 1 reads component libraries and brands. Document-shaped schema. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "name",
+    "version",
+    "kind",
+    "needs-release",
+    "builds-on"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:library`.",
+      "const": "visual-communication:library"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "name": {
+      "$ref": "defs.schema.json#/$defs/library-name"
+    },
+    "version": {
+      "$ref": "defs.schema.json#/$defs/version"
+    },
+    "kind": {
+      "enum": [
+        "components",
+        "brand"
+      ]
+    },
+    "needs-release": {
+      "description": "The oldest release of the capability whose tools and fields the library uses.",
+      "$ref": "defs.schema.json#/$defs/release"
+    },
+    "builds-on": {
+      "description": "The libraries it builds on, each by the major it fits. A brand marks at most one of them, a brand, as its base (DEC-004 point 6).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "major"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "$ref": "defs.schema.json#/$defs/library-name"
+          },
+          "major": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "base": {
+            "description": "Marks the brand this brand builds on as its base: it resolves first, and this brand gives values only to the roles it opens.",
+            "const": true
+          }
+        }
+      },
+      "contains": {
+        "required": [
+          "base"
+        ]
+      },
+      "minContains": 0,
+      "maxContains": 1,
+      "uniqueItems": true
+    },
+    "dtcg": {
+      "description": "The DTCG version the brand's tokens follow.",
+      "const": "2025.10"
+    },
+    "resolver": {
+      "description": "The brand's Resolver document, within its version folder.",
+      "$ref": "defs.schema.json#/$defs/version-path"
+    },
+    "open": {
+      "description": "The brand's open roles: roles it exports, or groups of them by whole segments, that a brand built on it may give values (DEC-004 point 6). A brand with a base opens only roles its base opens to it.",
+      "type": "array",
+      "items": {
+        "$ref": "defs.schema.json#/$defs/token-path"
+      },
+      "uniqueItems": true
+    }
+  },
+  "if": {
+    "properties": {
+      "kind": {
+        "const": "brand"
+      }
+    },
+    "required": [
+      "kind"
+    ]
+  },
+  "then": {
+    "required": [
+      "dtcg",
+      "resolver",
+      "open"
+    ]
+  },
+  "else": {
+    "properties": {
+      "builds-on": {
+        "items": {
+          "properties": {
+            "base": false
+          }
+        }
+      },
+      "dtcg": false,
+      "resolver": false,
+      "open": false
+    }
+  }
+}

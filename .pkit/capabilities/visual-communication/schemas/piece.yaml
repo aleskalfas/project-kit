@@ -1,0 +1,42 @@
+# A piece's own file, `pieces/<piece>/piece.yaml` (visual-communication DEC-001 points 3
+# and 7, DEC-002 point 5, DEC-003 point 8): what the piece is, its state, its modes, the
+# pictures produced for it, the losses it accepts, and its lock. A person writes it; a
+# render rewrites only `lock`, keeping every other byte.
+#
+# Format 1 takes `state: draft` alone. The body below is the reference instance.
+
+pkit_schema: visual-communication:piece
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+top: foundations/figure
+brand: test-brand
+languages:
+  - en
+  - cs
+audience: Maintainers who review the capability's design.
+shown: In the capability's README, as a figure.
+explains: true
+exports:
+  - svg
+state: draft
+modes:
+  colour-scheme:
+    - light
+    - dark
+produced:
+  marker:
+    producer: square
+    inputs:
+      fill: accent
+    pixels:
+      width: 64
+      height: 64
+accept-losses:
+  - plugin: svg
+    what: figure/body
+    reason: The preview needs no shadow.
+lock:
+  foundations: 1.0.0
+  test-brand: 1.0.0

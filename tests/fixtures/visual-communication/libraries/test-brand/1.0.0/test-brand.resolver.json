@@ -1,0 +1,59 @@
+{
+  "version": "2025.10",
+  "name": "test-brand",
+  "description": "The test brand's modes: the colour scheme and the contrast, the foundations' two value axes.",
+  "sets": {
+    "palette": {
+      "sources": [
+        {
+          "$ref": "tokens/palette.tokens.json"
+        }
+      ]
+    },
+    "base": {
+      "sources": [
+        {
+          "$ref": "tokens/base.tokens.json"
+        }
+      ]
+    }
+  },
+  "modifiers": {
+    "colour-scheme": {
+      "contexts": {
+        "light": [],
+        "dark": [
+          {
+            "$ref": "tokens/dark.tokens.json"
+          }
+        ]
+      },
+      "default": "light"
+    },
+    "contrast": {
+      "contexts": {
+        "standard": [],
+        "high": [
+          {
+            "$ref": "tokens/high-contrast.tokens.json"
+          }
+        ]
+      },
+      "default": "standard"
+    }
+  },
+  "resolutionOrder": [
+    {
+      "$ref": "#/sets/palette"
+    },
+    {
+      "$ref": "#/sets/base"
+    },
+    {
+      "$ref": "#/modifiers/colour-scheme"
+    },
+    {
+      "$ref": "#/modifiers/contrast"
+    }
+  ]
+}

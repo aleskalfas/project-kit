@@ -1,0 +1,17 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit visual` draws a piece end to end (#2428). `render` moves a draft's
+  lock, computes its scenes, keeps their findings in the committed
+  `findings.yaml` and draws SVG previews; `check` joins `pkit validate` as
+  the `visual-communication:check` member, reporting overflow, contrast,
+  missing fonts and broken references at the severities DEC-002 and DEC-005
+  fix; `produce` keeps a producer's picture with its exposed points, one
+  variant per distinct set of values; `export` makes numbered exports and
+  records each version; `write-code` writes a brand as CSS variables with
+  its record; `status` shows the location and each piece. The work lies in
+  `visual/` unless a project records another. The file formats are format
+  1, and the foundations library ships as a version not yet released. No
+  brand and no producer ship yet.
