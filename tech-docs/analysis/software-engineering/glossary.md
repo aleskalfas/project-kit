@@ -23,6 +23,8 @@ builds-on:
       - {id: TERM-pull-request, name: pull request}
       - {id: TERM-reviewer, name: reviewer}
       - {id: TERM-revisit, name: revisit}
+      - {id: TERM-rule, name: rule}
+      - {id: TERM-rule-set, name: rule set}
       - {id: TERM-trigger-field, name: trigger field}
       - {id: TERM-whole-repository-check, name: whole-repository check}
     actors:
@@ -117,6 +119,8 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [pull request](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-pull-request--pull-request)
   - **Term:** [reviewer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-reviewer--reviewer)
   - **Term:** [revisit](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-revisit--revisit)
+  - **Term:** [rule](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-rule--rule)
+  - **Term:** [rule set](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-rule-set--rule-set)
   - **Term:** [trigger field](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-trigger-field--trigger-field)
   - **Term:** [whole-repository check](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-whole-repository-check--whole-repository-check)
   - **Actor:** [Developer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-developer.md)

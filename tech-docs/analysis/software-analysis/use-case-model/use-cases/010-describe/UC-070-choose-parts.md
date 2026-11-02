@@ -22,16 +22,22 @@ pkit:
         - .pkit/capabilities/software-analysis/schemas/artefact-kinds.yaml
         - .pkit/capabilities/software-analysis/schemas/structures.schema.json
         - .pkit/capabilities/software-analysis/scripts/_lib/project_structure.py
+        - .pkit/capabilities/software-analysis/scripts/_lib/stamp.py
         - .pkit/capabilities/software-analysis/scripts/new.py
         - .pkit/capabilities/software-analysis/scripts/validate.py
       record:
         - software-analysis:DEC-001#1
+        - software-analysis:DEC-002#1
+        - software-analysis:DEC-002#4
+        - software-analysis:DEC-004#2
         - ADR-034#1
         - COR-005
         - COR-013
         - COR-017
         - COR-023
         - COR-031
+        - COR-039#1
+        - COR-039#2
         - COR-051#7
       artefact:
         - REQ-050
@@ -57,7 +63,7 @@ pkit:
 - The [backbone](../../../../core/glossary.md#term-backbone--backbone) answers where each [rule](../../../../core/glossary.md#term-rule--rule) binds, through `pkit rule-sets reach`, and where a proposed rule would bind with `--preview` ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 - `pkit validate` checks `structures.yaml` against its schema, with the project's other data ([COR-023](../../../../../../.pkit/decisions/core/COR-023-schema-binds-inline.md)).
 
-**Trigger:** The adopter has installed software-analysis, and is about to write the first [artefact](../../../../core/glossary.md#term-artefact--artefact) or record of a kind.
+**Trigger:** The adopter has installed software-analysis, and is about to write the first [artefact](../../../../core/glossary.md#term-artefact--artefact) or [revalidation record](../../../glossary.md#term-revalidation-record--revalidation-record) of a kind.
 
 **Main path:**
 
@@ -84,7 +90,7 @@ pkit:
 
 **Variants:**
 
-- **2a.** No [rule set](../../../../core/glossary.md#term-rule-set--rule-set) of the [project](../../../../core/glossary.md#term-project--project)'s own inherits `SAN`. The agent writes one as the [capability](../../../../core/glossary.md#term-capability--capability)'s README shows, with a scope that selects the [analysis](../../../glossary.md#term-analysis--analysis) by its types. Without it, the preview shows nothing of a [candidate](../../../glossary.md#term-candidate--candidate)'s structure ([DEC-001 point 1](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)).
+- **2a.** No [rule set](../../../../core/glossary.md#term-rule-set--rule-set) of the [project](../../../../core/glossary.md#term-project--project)'s own inherits `SAN`. The agent writes one as the [capability](../../../../core/glossary.md#term-capability--capability)'s README shows, with a scope that selects the [analysis](../../../glossary.md#term-analysis--analysis) by its types. Without it, the preview shows nothing of a [candidate](../../../glossary.md#term-candidate--candidate)'s [declared structure](../../../glossary.md#term-declared-structure--declared-structure) ([DEC-001 point 1](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)).
 - **3a.** The kind is the [revalidation record](../../../glossary.md#term-revalidation-record--revalidation-record)'s. Its template shows each part's example alone, since its [stamp](../../../../core/glossary.md#term-stamp--stamp) writes every part from its command line. The adopter may relabel its parts, and adds none, since no [rule](../../../../core/glossary.md#term-rule--rule) binds on a record ([DEC-001 point 1](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)).
 - **3b.** The kind is one of the three kinds of requirement, which share their fields and every part but one. The agent shows the three together, and the path goes on at step 4 for each in turn.
 - **4a.** The kind needs another [artefact](../../../../core/glossary.md#term-artefact--artefact) first. A journey needs two [use cases](../../../glossary.md#term-use-case--use-case) of its actor, and a domain-model view needs the terms it explains. The agent stamps those first.
