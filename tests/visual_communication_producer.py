@@ -21,7 +21,7 @@ from __future__ import annotations
 import struct
 import sys
 import zlib
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -140,7 +140,7 @@ def producing_project(
     modes: Mapping[str, list[str]] | None = None,
     produced: Mapping[str, Any] | None = None,
     lock: Mapping[str, str] | None = LOCK,
-    accept_losses: list[Mapping[str, str]] | None = None,
+    accept_losses: Sequence[Mapping[str, str]] | None = None,
 ) -> Path:
     """A project whose piece `flow` declares `marker`, made by `square` from `accent` at
     64 × 64 pixels, drawn in every mode of both axes unless `modes` says otherwise; and
