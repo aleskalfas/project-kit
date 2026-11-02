@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=5 fingerprint=sha256:822316e86f255b3fd7bedd2e39b7aedde9344398b82473da4f22607de3ff51f9 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:3bb87b381fdbff15c8cac4b4c2df904507be608f2338e2bd32d4f5b7ac56f569 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -65,7 +65,7 @@ Set up a project once, so its people and AI agents work with the same backbone c
 - [REQ-011 · Constraint · A suggestion of what to install never uses the network](../requirements/constraints/020-set-up/REQ-011-suggestion-offline.md)
 - [REQ-013 · Functional · Where an allow and a deny conflict, the deny wins](../requirements/functional/020-set-up/REQ-013-deny-wins.md)
 - [REQ-014 · Functional · A later edit of a documentation root moves no document](../requirements/functional/020-set-up/REQ-014-root-change-moves-nothing.md)
-- [REQ-016 · Constraint · The permission model's code needs only the operating system's `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
+- [REQ-016 · Constraint · The permission code needs only the operating system's `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
 
 **Its use cases:**
 
@@ -138,6 +138,7 @@ Release the backbone and each component on its own version, so projects can move
 - [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
 - [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
 - [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
+- [080 — Agents and permissions](../domain-model/080-agents-and-permissions.md)
 
 **Its requirements:**
 
