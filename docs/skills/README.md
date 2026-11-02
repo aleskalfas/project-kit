@@ -68,7 +68,7 @@ Beyond what the repository holds, an agent keeps little between sessions, and no
 Skills answer these problems with two claims, and the commands after the list prove each one. Claude Code answers the second problem itself, by loading a skill only for its task ("How a skill reaches a session" below).
 
 - **A skill you write in `.pkit/skills/project/` reaches Claude Code at your next `pkit sync`, and no sync writes over it.**
-- **Each of the methodology's authoring skills runs a command that fills in what a program can work out, such as a decision record's number.**
+- **Each of the methodology's authoring skills names a command that fills in what a program can work out, such as a decision record's number.**
 
 Each fence on this page starts from a fresh project where `pkit init` has run, and its files are committed. So the methodology's skills are already deployed.
 
@@ -89,14 +89,16 @@ $ tail -n 1 .pkit/skills/project/release-notes.md
 Below, you list the commands the methodology's skills pair with, and run `pkit new decision` twice. `2>/dev/null` drops its warning that the project has no remote ([the CLI reference, `new decision`](../../.pkit/cli/README.md#new-decision-namespace-slug---yes)):
 
 ```console
-$ grep -r "wraps_command:" .pkit/skills/core | sort
+$ grep -rE "wraps_commands?:" .pkit/skills/core | sort
 .pkit/skills/core/adapter-author.md:  wraps_command: pkit new adapter
 .pkit/skills/core/agent-author.md:  wraps_command: pkit new agent
 .pkit/skills/core/area-author.md:  wraps_command: pkit new area
 .pkit/skills/core/capability-author.md:  wraps_command: pkit new capability
 .pkit/skills/core/decision-author.md:  wraps_command: pkit new decision
 .pkit/skills/core/migration-author.md:  wraps_command: pkit new migration
+.pkit/skills/core/process/process.md:  wraps_commands:
 .pkit/skills/core/report-author.md:  wraps_command: pkit report
+.pkit/skills/core/schema/schema.md:  wraps_commands:
 .pkit/skills/core/scratchpad-author.md:  wraps_command: pkit new scratchpad
 .pkit/skills/core/storyboard-author.md:  wraps_command: pkit new storyboard
 $ pkit new decision project use-postgres 2>/dev/null
@@ -108,7 +110,7 @@ Stamped: .pkit/decisions/project/PRJ-002-use-redis.md
 What the output proves, claim by claim:
 
 - **Deployed, and kept.** The sync links your skill where Claude Code reads skills. It puts back the methodology's skill you changed, and leaves yours as you wrote it ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
-- **Paired.** Each of the nine skills names the command it runs, and the two composite skills, `process` and `schema`, list theirs under `wraps_commands`. `pkit new decision` gives each record the next number and the project's folder. So an agent that follows `decision-author` takes neither from memory ([the reference, "Pairing a skill with a command"](../../.pkit/skills/README.md#pairing-a-skill-with-a-command)).
+- **Paired.** Each of the eleven skills names its command. The two composite skills, `process` and `schema`, list theirs under `wraps_commands`. `pkit new decision` gives each record the next number and the project's folder. So an agent that follows `decision-author` takes neither from memory ([the reference, "Pairing a skill with a command"](../../.pkit/skills/README.md#pairing-a-skill-with-a-command)).
 - **Not every command numbers.** Commands for other kinds of file fill in their place and their front matter, and some number nothing ([the CLI reference, "Authoring commands"](../../.pkit/cli/README.md#authoring-commands)).
 
 ### Compared with procedures kept by hand
@@ -187,7 +189,7 @@ Write the skill as a file in `.pkit/skills/project/`, and run `pkit sync`. No co
 > [!WARNING]
 > A skill of yours with the name of a skill the methodology or a capability ships replaces it in Claude Code. Only a capability's upgrade, and its install for some skills, asks you first. Updates of the replaced skill then reach no session ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
 
-Below, you write a skill that cites the document holding your notes' format, then sync, check where the skill is deployed, and validate:
+Below, you write a skill that cites the document holding your notes' format. Then you sync, check where the skill is deployed, and validate:
 
 ```console
 $ printf -- '---\nname: release-notes\ndescription: Write the release notes from the pull requests merged since the last tag. Use when cutting a release.\nreads:\n  paths: [docs/release-notes.md]\n---\n\n# Release notes\n\n1. List the pull requests merged since the last tag.\n2. Write each note in the format `docs/release-notes.md` gives.\n' > .pkit/skills/project/release-notes.md
@@ -251,4 +253,4 @@ reads:
 3. Write the steps under the heading the script wrote.
 ```
 
-The methodology's own artefacts that a `pkit new` command stamps, such as a decision record, follow its rules instead. Your agents write each through its paired skill or the command, and never stamp one by hand (core rule 3).
+**Note:** the methodology's own artefacts that a `pkit new` command stamps, such as a decision record, follow its rules instead. Your agents write each through its paired skill or the command, and never stamp one by hand (core rule 3).
