@@ -56,9 +56,9 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How a candidate moves
-  accDescr: The stamp writes a candidate with a hint in each part. A writer fills the parts and deletes the hints. A person confirms the candidate, which is committed, an artefact taking its id, or discards it.
+  accDescr: The stamp writes a candidate with a hint in each part. A writer fills the parts and deletes the hints. A person confirms the candidate or discards it. A confirmed candidate is committed, and one that is an artefact takes its id.
   stamped([The stamp writes the candidate, a hint in each part]) --> filled[Candidate filled]
-  filled -->|a person confirms it| committed[Committed, an artefact's id taken]
+  filled -->|a person confirms it| committed[Committed, an artefact taking its id]
   filled -->|a person discards it| discarded[Discarded, no id taken]
 ```
 
@@ -142,9 +142,9 @@ A hint is a marked comment on one line, `<!-- pkit:hint … -->`, which says wha
 
 Defined in [TERM-tightening](../glossary.md#term-tightening--tightening).
 
-**Why:** The shipped parts come from established practice, not from a [project](../../core/glossary.md#term-project--project)'s own software. What a project's review of them finds goes into its own additions to the [declared structure](../glossary.md#term-declared-structure--declared-structure). Those serve the project alone, so the project decides whether each binds ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
+**Why:** The shipped parts come from established practice, not from a [project](../../core/glossary.md#term-project--project)'s own software. What a project's review of them finds goes into its own edits to the [declared structure](../glossary.md#term-declared-structure--declared-structure). Those serve the project alone, so the project decides whether each binds ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
-A tightening is a group of a project's own additions to one [artefact kind](../glossary.md#term-artefact-kind--artefact-kind)'s declared structure, in the [capability](../../core/glossary.md#term-capability--capability)'s `project/structures.yaml`. It adds parts, makes a part required, or closes the kind's list of labels. It names the project's own [rule](../../core/glossary.md#term-rule--rule) that asks for it.
+A tightening is a group of a project's own edits to one [artefact kind](../glossary.md#term-artefact-kind--artefact-kind)'s declared structure, in the [capability](../../core/glossary.md#term-capability--capability)'s `project/structures.yaml`. It adds parts, makes a part required, or closes the kind's list of labels. It names the project's own [rule](../../core/glossary.md#term-rule--rule) that asks for it.
 
 **Attributes:**
 
