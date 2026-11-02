@@ -43,6 +43,10 @@ places:
   .pkit/capabilities/software-analysis/README.md: user
   .pkit/capabilities/software-engineering/README.md: user
   .pkit/capabilities/visual-communication/README.md: user
+  .pkit/capabilities/visual-communication/files.md: user
+  .pkit/capabilities/visual-communication/components.md: user
+  .pkit/capabilities/visual-communication/outputs.md: user
+  .pkit/capabilities/visual-communication/checks.md: user
   .pkit/cli/README.md: user
   .pkit/decisions/README.md: user
   .pkit/lifecycle/README.md: user

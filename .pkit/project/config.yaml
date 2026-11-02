@@ -84,6 +84,10 @@ friction:
     - {path: .pkit/capabilities/software-analysis/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/software-engineering/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/visual-communication/README.md, type: living-docs:page}
+    - {path: .pkit/capabilities/visual-communication/files.md, type: living-docs:page}
+    - {path: .pkit/capabilities/visual-communication/components.md, type: living-docs:page}
+    - {path: .pkit/capabilities/visual-communication/outputs.md, type: living-docs:page}
+    - {path: .pkit/capabilities/visual-communication/checks.md, type: living-docs:page}
     - {path: .pkit/cli/README.md, type: living-docs:page}
     - {path: .pkit/decisions/README.md, type: living-docs:page}
     - {path: .pkit/lifecycle/README.md, type: living-docs:page}

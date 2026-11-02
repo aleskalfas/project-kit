@@ -1,0 +1,28 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: One step of a flow, its head on a raised box as wide as it is given.
+
+fields:
+  type: object
+  required: [head]
+  properties:
+    head:
+      type: string
+      description: What the step does.
+      x-pkit-prose: true
+
+parts:
+  box:
+    box: {fill: surface, stroke: line, stroke-width: "=@stroke.thin"}
+    width: "=:width"
+    height: "=:height"
+  head:
+    text: {content: head, style: type.body, fill: text-primary}
+    x: "=@space.2"
+    y: "=@space.2"
+    width: "=:width - 2 * @space.2"
+
+preferred:
+  height: "=head.bottom + @space.2"

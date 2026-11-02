@@ -1,0 +1,29 @@
+{
+  "$description": "The edition in every combination: its own palette, private, and a wider largest space, a role its base opens.",
+  "palette": {
+    "$description": "The edition's palette: private, never exported; its accent aliases it.",
+    "$type": "color",
+    "orange": {
+      "300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            1.0,
+            0.651,
+            0.3412
+          ],
+          "hex": "#ffa657"
+        }
+      }
+    }
+  },
+  "space": {
+    "$type": "dimension",
+    "4": {
+      "$value": {
+        "value": 40,
+        "unit": "px"
+      }
+    }
+  }
+}

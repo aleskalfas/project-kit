@@ -20,6 +20,7 @@ pkit:
         - src/project_kit/session_guard.py
         - src/project_kit/cli.py
         - .pkit/permissions/decide.py
+        - .pkit/adapters/claude-code/permission-hook.py
         - .pkit/rules/core.md
       record:
         - COR-039#1
