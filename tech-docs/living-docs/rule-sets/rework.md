@@ -24,7 +24,8 @@ scope:
     - docs/capabilities/software-engineering/README.md
     - .pkit/rules/README.md
     - docs/rules/README.md
-    - .pkit/lifecycle/README.md
+    # The lifecycle README joins once #1862 settles what the passages it keeps
+    # word for word state: until then the scope leaves it out (COR-060 point 2).
     - .pkit/lifecycle/manifest.md
     - .pkit/lifecycle/component-registry.md
     - .pkit/lifecycle/migrations.md
