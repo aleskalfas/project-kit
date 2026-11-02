@@ -32,6 +32,7 @@ pkit:
         - .pkit/cli/README.md#upgrade
         - .pkit/cli/README.md#status
         - .pkit/cli/README.md#validate
+        - .pkit/cli/README.md#authoring-commands
         - .pkit/cli/README.md#new-decision-namespace-slug---yes
         - .pkit/cli/README.md#new-agent-namespace-name---with-storyboard---dry-run
       source: [claude-code-skills, claude-code-plugins]
@@ -97,7 +98,7 @@ Stamped: .pkit/decisions/project/PRJ-002-use-redis.md
 What the output proves, claim by claim:
 
 - **Deployed, and kept.** The sync links your skill where Claude Code reads skills. It puts back the methodology's skill you changed, and leaves yours as you wrote it ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
-- **Paired.** `decision-author` names `pkit new decision`, and the command gives each record the next number and the project's folder. So an agent that follows the skill takes neither from memory ([the reference, "Pairing a skill with a command"](../../.pkit/skills/README.md#pairing-a-skill-with-a-command)). Commands for other kinds of file fill in their place and their front matter, and some number nothing ([the CLI reference, `new decision`](../../.pkit/cli/README.md#new-decision-namespace-slug---yes)).
+- **Paired.** `decision-author` names `pkit new decision`, and the command gives each record the next number and the project's folder. So an agent that follows the skill takes neither from memory ([the reference, "Pairing a skill with a command"](../../.pkit/skills/README.md#pairing-a-skill-with-a-command)). Commands for other kinds of file fill in their place and their front matter, and some number nothing ([the CLI reference, "Authoring commands"](../../.pkit/cli/README.md#authoring-commands)).
 
 ### Compared with procedures kept by hand
 
