@@ -144,7 +144,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Actor:** [AI agent](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md)
   - **Actor:** [Merge authoriser](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-merge-authoriser.md)
     - Have a reviewer other than their writer check a change's answers, so no merge I authorise rests on an answer that does not hold.
-- **From project-management at 2.0.0:** its terms of planning work into Tasks, reviewing a pull request and merging it. No release holds project-management's analysis yet, so the links name the next release, 2.0.0, rather than software-engineering's floor of project-management, 0.54.0.
+- **From project-management at 2.0.0:** its terms of planning work into Tasks, reviewing a pull request and merging it. No release holds project-management's analysis yet, so the links name the next release, 2.0.0, rather than software-engineering's floor of project-management, 0.55.0.
   - **Term:** [authorisation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-authorisation--authorisation)
   - **Term:** [bypass](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-bypass--bypass)
   - **Term:** [Feature](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-feature--feature)
@@ -184,7 +184,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-walking-skeleton — walking skeleton
 
-**Example:** each Task of new reporting work would lay out its code alone. A walking skeleton builds one report end to end first. The `software-engineer` agent writes the layout it settles into the conventions corpus, in the skeleton's change.
+**Example:** each Task of new reporting work would lay out its code alone. A walking skeleton builds one report end to end first. The `software-engineer` agent writes the layout the skeleton settles into the conventions corpus, in the skeleton's change.
 
 **Distinctions:**
 

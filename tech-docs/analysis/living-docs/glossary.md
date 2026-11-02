@@ -280,7 +280,7 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#captur
 
 ## TERM-documentation-location — documentation location
 
-**Example:** living-docs declares its `definitions` documentation location at `living-docs`, below the internal [documentation root](../core/glossary.md#term-documentation-root--documentation-root). The first [space definition](#term-space-definition--space-definition) placed recorded it as `tech-docs/living-docs`, in `.pkit/capabilities/living-docs/project/docs-locations.yaml`.
+**Example:** living-docs declares its `definitions` documentation location at `living-docs`, below the internal [documentation root](../core/glossary.md#term-documentation-root--documentation-root). Placing the first [space definition](#term-space-definition--space-definition) recorded it as `tech-docs/living-docs`, in `.pkit/capabilities/living-docs/project/docs-locations.yaml`.
 
 **Distinctions:**
 
