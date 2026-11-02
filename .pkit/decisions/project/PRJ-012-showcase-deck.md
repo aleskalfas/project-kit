@@ -1,7 +1,7 @@
 ---
 id: PRJ-012
 title: project-kit's own deck shows how it uses visual-communication, its notation stays its own, and the capability's cost is measured on its pieces
-status: proposed
+status: accepted
 date: 2026-11-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
