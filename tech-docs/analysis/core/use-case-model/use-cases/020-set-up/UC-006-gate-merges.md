@@ -115,7 +115,7 @@ pkit:
 
 - **3a.** The job does not run `pkit sync` first. A registered validator then says "environment not provisioned — run `pkit sync`", an `error` [finding](../../../glossary.md#term-finding--finding), so `pkit validate` fails.
 - **3b.** The job's checkout lacks the [base](../../../glossary.md#term-base--base). Each check that compares refuses with its fixes, such as fetching the base or naming another.
-- **3c.** The job's checkout is shallow. The change check names, in its header, each [artefact](../../../glossary.md#term-artefact--artefact) whose history the cut hides ([UC-002](UC-002-answer-stale.md)).
+- **3c.** The job's checkout is shallow. The change check names, in its header, each [artefact](../../../glossary.md#term-artefact--artefact) whose history the cut hides ([UC-002](../030-change/UC-002-answer-stale.md)).
 - **3d.** The [project](../../../glossary.md#term-project--project)'s merges go through a merge queue, so the job runs on each merge the queue builds too. That merge holds the answers of the changes queued ahead. The change check judges what each [answer](../../../glossary.md#term-answer--answer) read against the [head](../../../glossary.md#term-head--head) of the answer's own [change](../../../glossary.md#term-change--change), never against the queue's merge ([COR-062 point 4](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#4-each-answer-names-what-it-read)).
 
 > [!WARNING]

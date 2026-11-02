@@ -80,7 +80,7 @@ pkit:
    - the rest, which no allow entry covers
 7. The system groups the logged calls, and ranks the groups by frequency within bands, in this order: defects, recommendations and judgement calls.
 8. For each group, the system names a remediation, such as granting a [privilege](../../../glossary.md#term-privilege--privilege) of the catalog, or narrowing a chain to single commands. It applies none of them ([PRJ-006 point 3](../../../../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md#3-classification-is-advisory-a-safe-set-gates-any-fix)).
-9. The operator applies the chosen remediations, such as with `pkit permissions grant <subject> <privilege>` ([UC-022](UC-022-add-own-additions.md)).
+9. The operator applies the chosen remediations, such as with `pkit permissions grant <subject> <privilege>` ([UC-022](../020-set-up/UC-022-add-own-additions.md)).
 10. The operator runs `pkit permissions diagnose off`, and the hook stops logging. The log stays.
 
 **Variants:**
