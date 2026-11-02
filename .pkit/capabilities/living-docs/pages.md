@@ -27,6 +27,7 @@ pkit:
         - RS-LDOC-007
         - RS-LDOC-008
         - .pkit/schemas/README.md#the-friction-block
+        - .pkit/schemas/backbone-files.md#the-friction-block
         - .pkit/cli/README.md#validate
         - .pkit/cli/README.md#friction-check---base-ref---head-rev---json
         - .pkit/cli/README.md#friction-artefacts---at-rev---json

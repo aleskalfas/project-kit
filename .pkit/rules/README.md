@@ -15,6 +15,7 @@ pkit:
       record: [COR-001, COR-014, "COR-051#5", "COR-051#6", "COR-066#1", COR-068, COR-069, COR-070, ADR-075, ADR-076, ADR-077]
       artefact:
         - .pkit/schemas/README.md#rule-set-files
+        - .pkit/schemas/backbone-files.md#rule-set-files
         - .pkit/decisions/README.md#rule-sets--a-separate-family-with-the-same-guarantees
         - .pkit/lifecycle/README.md#the-capabilities-rules-index
         - .pkit/lifecycle/README.md#what-a-step-newly-binds

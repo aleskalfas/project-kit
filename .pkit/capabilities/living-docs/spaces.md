@@ -22,7 +22,7 @@ pkit:
         - RS-LDOC-006
         - RS-LDOC-007
         - RS-LDOC-008
-        - .pkit/schemas/README.md#the-friction-block
+        - .pkit/schemas/backbone-files.md#the-friction-block
         - .pkit/cli/README.md#configuration-file
         - .pkit/cli/README.md#config-set-key-value---yes
         - .pkit/schemas/README.md#rule-set-files
