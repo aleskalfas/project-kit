@@ -1,0 +1,37 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  The steps of a flow side by side in one row, each as wide as the others and as tall
+  as the tallest, drawn by the card unless a step names its own component.
+
+fields:
+  type: object
+  required: [steps]
+  properties:
+    steps:
+      type: array
+      minItems: 1
+      description: The steps in order, each with the fields of the component that draws it.
+      items: {type: object}
+
+# How far apart the steps stand.
+options:
+  spacing: [normal, wide]
+
+values:
+  gap:
+    by: spacing
+    normal: "=@space.2"
+    wide: "=@space.2 * 2"
+
+parts:
+  steps:
+    repeat: steps
+    draw: tests/card
+    width: "=:width"
+    row: {gap: "=gap", sizes: equal, align-items: stretch}
+
+preferred:
+  height: "=steps.height"

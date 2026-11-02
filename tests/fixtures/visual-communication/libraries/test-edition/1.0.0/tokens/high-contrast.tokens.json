@@ -1,0 +1,7 @@
+{
+  "$description": "High contrast, in either colour scheme: the accent takes the primary text's colour, a role the base exports.",
+  "accent": {
+    "$type": "color",
+    "$value": "{text-primary}"
+  }
+}
