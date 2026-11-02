@@ -154,7 +154,11 @@ Defined in [TERM-substrate-map](../glossary.md#term-substrate-map--substrate-map
 
 **Why:** Some projects cannot create the labels project-management writes, since their tracker already has conventions of its own. Such a [project](../../core/glossary.md#term-project--project) says where each axis already lives. Each check that needs an axis the project cannot carry then warns, rather than refusing ([DEC-036](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md)).
 
-A substrate map is a file of the project's own. It binds each [classification axis](../glossary.md#term-classification-axis--classification-axis), and an [issue](../glossary.md#term-issue--issue)'s state, to one carrier on GitHub. The carrier may be project-management's own labels, or labels the project already has ([DEC-062 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#3-the-map-can-name-the-kits-own-labels)). It may also be a title prefix, a field of the project's board, or whether the issue is open ([DEC-036 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#1-a-dedicated-substrate-mapyaml-schema)).
+A substrate map is a file of the project's own. It binds each [classification axis](../glossary.md#term-classification-axis--classification-axis), and an [issue](../glossary.md#term-issue--issue)'s state, to one carrier on GitHub. The carrier may be project-management's own labels, or labels the project already has ([DEC-062 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#3-the-map-can-name-the-kits-own-labels)). It may also be one of these ([DEC-036 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#1-a-dedicated-substrate-mapyaml-schema)):
+
+- a title prefix
+- a field of the project's board
+- whether the issue is open
 
 **Attributes:**
 

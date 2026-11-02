@@ -392,7 +392,7 @@ TERM-ownership:
   name: ownership
   noun-forms: [ownerships]
   status: active
-  definition: "instance's mark on an issue it owns, naming in a topology a seat and a clone's key, counting until lapsed or its seat released"
+  definition: "instance's mark on an issue it owns, naming a topology's seat and a clone's key, counting until it lapses or that seat is released"
   pkit:
     friction:
       anchors:
