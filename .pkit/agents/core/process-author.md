@@ -15,6 +15,9 @@ reads:
     - COR-042
   paths:
     - .pkit/process/README.md
+    - .pkit/process/shape.md
+    - .pkit/process/engine.md
+    - .pkit/process/connections.md
     - .pkit/cli/README.md
     - .pkit/agents/project/overlay.yaml
   patterns:
@@ -40,7 +43,7 @@ That makes you the reason a process can be trusted. A shape with unwritten teeth
 - A **cascade fold's** member source or membership test is needed — the same seam shape, one subject at a time.
 - An existing predicate is **wrong, brittle, or silently returning empty** — the last being the dangerous one, since it looks like a clean answer.
 
-Those are the slots as they stand, not a closed list: the rule is *every evaluable the shape declares*, and `.pkit/process/README.md` owns the authoritative set. If the shape grows a new one, it is yours by that rule without this list being updated.
+Those are the slots as they stand, not a closed list: the rule is *every evaluable the shape declares*, and the shape contract in `.pkit/process/shape.md` owns the authoritative set. If the shape grows a new one, it is yours by that rule without this list being updated.
 
 Not for you: changing what states or transitions exist, adding a coupling, or declaring a contract. Those are shape, and they route back (below).
 
@@ -59,7 +62,10 @@ The adopter populates that category with their own definition files and predicat
 
 ## Key documents to read
 
-- **`.pkit/process/README.md`** — the authoritative spec: the shape contract, and the **predicate-runner contract** your scripts must satisfy. Read this before writing a predicate, every time; the runner contract is the part people get wrong.
+- **`.pkit/process/README.md`** — the substrate's specification and its vocabulary, leading to the three pages beside it.
+- **`.pkit/process/engine.md`** — the **predicate-runner contract** your scripts must satisfy, under "The predicate runner". Read this before writing a predicate, every time; the runner contract is the part people get wrong.
+- **`.pkit/process/shape.md`** — the shape contract: every evaluable a definition declares, and how a detection's answer is read under each mode.
+- **`.pkit/process/connections.md`** — what a cascade's member seams and a hand-off contract's seams must answer.
 - **`.pkit/cli/README.md`** — the grammar of the process commands you invoke to verify your work, and of the stamps that own registration.
 - **`.pkit/agents/project/overlay.yaml`** — the declaration of what you may write.
 - **COR-033** — the substrate: what a position is, and why detection is inferred rather than stored.
