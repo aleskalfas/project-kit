@@ -88,7 +88,6 @@ A `location:` line with no value, such as `location:` alone or `location: null`,
 - **`--location <path>`** names the location where none is recorded. The path is relative to the working directory, or absolute. The command records it. `--location visual` confirms the default.
 - **With a location recorded,** a command refuses a `--location` that names another folder. It also refuses when the recorded folder is missing.
 - **The check and the commands that only read** take the recorded location. With none recorded, they take `visual/` only where it holds the marker; otherwise there is no visual work. A recorded location whose folder is missing fails.
-- **`pkit visual status`** shows the location, and whether the configuration records it.
 
 The *marker* tells that a folder holds the capability's work. It is the list of libraries, `libraries/libraries.yaml`, or any YAML file whose `pkit_schema` names one of the capability's schemas.
 
@@ -149,7 +148,7 @@ So a name holds no `.`, `/` or `#`, and starts with a letter, so YAML never read
 - **In every mapping that places a component,** an item included: `id`, `use`, `concept`, `state` and `override`. No component declares a field of these names, so each means the same everywhere (DEC-002 point 4).
 - **`pkit`** is kept for the methodology's container, at a content file's top and in every mapping that places a component. No component declares a field of that name, and the capability never reads or writes anything under it (DEC-002 point 4).
 - **At a file's top:** `pkit_schema` and `schema_version`, the binding.
-- **Library names:** no library takes `piece`, the word by which `use` names the piece itself, nor `component`, the token group of component tokens, which holds no shared role. Nor does a library take the name of a top group of the shared roles, such as `space` or `font` (DEC-004 point 7). The check reports such a name as `library-name`, for each library a piece's lock names, against the top groups of the foundations that lock names (*Libraries and locks*).
+- **Library names:** no library takes `piece`, the word by which `use` names the piece itself, nor `component`, the token group of component tokens, which holds no shared role. Nor does a library take the name of a top group of the shared roles, such as `space` or `font` (DEC-004 point 7).
 
 ### The binding
 
@@ -247,9 +246,9 @@ caption: The flow.
 - **`state`** names a state the component declares, such as `state: marked`.
 - **`override`** points a painted part of the component at another role, by its token path, never at a value. `override: {b: accent}` paints the part `b` with `accent`.
 - **`concept`** is reserved.
-- **An id** marks an item, or another component the content places, that another part of the piece names (DEC-001 point 3). It is unique in its list. Each list holds the same ids, in the same order, in every language as in the source language.
+- **An id** marks an item, or another component the content places, that another part of the piece names (DEC-001 point 3). It is unique in its list. Each list holds the same ids in every language as in the source language, in any order.
 
-Each key must be a field or an option of the component, or a reserved key. The check names the nearest known key for any other (*What the check reports*). How a component declares its fields, options, states, slots and lists is in *Components*.
+Each key must be a field or an option of the component, or a reserved key. How a component declares its fields, options, states, slots and lists is in *Components*.
 
 ## The library folder
 

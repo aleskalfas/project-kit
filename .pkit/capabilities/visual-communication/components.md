@@ -287,7 +287,7 @@ The part's *layout operator*, `row` or `column`, lays the items along a line, ac
 
 - **Each element asks** for its `preferred` size, and **gets** one (DEC-005 point 3). It gets a size from what places it. A top component gets what it asks for. A component placed by `use` or `slot` gets its part's size, else what it asks for. An item gets what the operator gives it. A formula reads the size it gets as `:width` and `:height`.
 - **Each value has one owner:** a part's formula, its measured text, or its parent's layout.
-- **A component that gets less than it asks for** is reported (*checks*).
+- **A component that gets less than it asks for** is reported.
 
 ## How the engine computes a scene
 

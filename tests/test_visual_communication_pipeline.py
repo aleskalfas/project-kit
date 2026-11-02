@@ -207,6 +207,22 @@ def test_a_piece_that_cannot_be_read_is_refused_naming_the_file(
     assert said in str(refused.value)
 
 
+@pytest.mark.parametrize(
+    "lock",
+    [
+        pytest.param({**LOCK, "foundations": "../../x"}, id="version"),
+        pytest.param({**LOCK, "../x": "1.0.0"}, id="name"),
+    ],
+)
+def test_a_lock_that_would_lead_out_of_the_library_folder_is_refused_before_any_read(
+    tmp_path: Path, lock: dict[str, str]
+) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    piece = piece_of(root)
+    with pytest.raises(pl.Refused, match="which is no library at a version"):
+        pl.Project(piece, lock, pl.Held(root, "visual"))
+
+
 def test_a_piece_the_location_lacks_is_refused(tmp_path: Path) -> None:
     root = drawing_project(tmp_path)
     with pytest.raises(pl.Refused, match="holds no piece `other`"):
@@ -217,6 +233,13 @@ def test_a_piece_needs_its_brand_its_top_and_each_library_its_content_uses(
     tmp_path: Path,
 ) -> None:
     assert pl.needed(piece_of(drawing_project(tmp_path))) == ["foundations", "test-brand", "tests"]
+
+
+def test_a_piece_always_needs_the_foundations_whose_roles_every_piece_reads(
+    tmp_path: Path,
+) -> None:
+    piece = piece_of(drawing_project(tmp_path, top="tests/steps", picture=False))
+    assert pl.needed(piece) == ["foundations", "test-brand", "tests"]
 
 
 # --- writing the lock ---------------------------------------------------------------------------

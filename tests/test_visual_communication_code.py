@@ -198,6 +198,7 @@ def test_the_lock_is_never_moved(root: Path) -> None:
         ("visual/libraries", "library folder"),
         ("web", "is a folder"),
         ("visual/code/brand.css", "folder of declarations"),
+        ("visual/pieces/flow/piece.yaml", "folder of pieces"),
     ],
 )
 def test_an_out_the_rules_refuse_is_refused(root: Path, out: str, why: str) -> None:

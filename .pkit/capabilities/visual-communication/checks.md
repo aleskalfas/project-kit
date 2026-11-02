@@ -34,11 +34,15 @@ pkit:
       record: ["visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006"]
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
+        - .pkit/capabilities/visual-communication/components.md#breaking-lines
         - .pkit/capabilities/visual-communication/components.md#errors
         - .pkit/capabilities/visual-communication/components.md#fields
         - .pkit/capabilities/visual-communication/components.md#layouts
+        - .pkit/capabilities/visual-communication/components.md#placing-a-component-use-and-slot
+        - .pkit/capabilities/visual-communication/components.md#primitives
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/components.md#values-states-and-colour
+        - .pkit/capabilities/visual-communication/components.md#what-an-element-asks-for-and-what-it-gets
         - .pkit/capabilities/visual-communication/files.md#brands
         - .pkit/capabilities/visual-communication/files.md#content-files
         - .pkit/capabilities/visual-communication/files.md#how-the-files-are-read
@@ -152,8 +156,8 @@ Each content file is read against the `fields` and `options` of each component i
 |---|---|---|
 | `id-shape` | An id is not of the id shape. | Write an id of that shape. |
 | `id-twice` | An id appears twice in one list. | Make each id unique in its list. |
-| `id-languages` | A list lacks ids it holds in the piece's first language, or holds ids it lacks there. The message names each. The order is free: a translation may order a list's items its own way. An id twice in one list is `id-twice`. | Give each item the same id in every language. |
-| `content-key` | A key that is no field or option of the component, and no reserved key. The message names the nearest known key, where one is close. | Rename or remove the key. |
+| `id-languages` | A list lacks ids it holds in the piece's first language, or holds ids it lacks there. The message names each. The order is free: a translation may order a list's items its own way. An id twice in one list is `id-twice`. | Give each item the same id in every language ([content files](files.md#content-files)). |
+| `content-key` | A key that is no field or option of the component, and no reserved key ([content files](files.md#content-files)). The message names the nearest known key, where one is close. | Rename or remove the key. |
 | `content-required` | A required field is missing. | Add the field. |
 | `content-type` | A value is of another type than the field's. | Change the value. |
 | `content-value` | A value is not one the field's `enum` or `const` allows. | Change the value. |
@@ -194,11 +198,11 @@ Each fails, unless its row says otherwise.
 | Label | What it means | Where it points |
 |---|---|---|
 | `component-shape` | A component holds a key, a part, an option or an exposed name its format does not allow ([a component's file](components.md#a-components-file)). | the component, `#<key path>` |
-| `two-owners` | A text part gives a `height`, which its measured text sets. | the component |
+| `two-owners` | A text part gives a `height`, which its measured text sets ([primitives](components.md#primitives)). | the component |
 | `formula-unreadable`, `formula-reach`, `formula-dimension`, `unknown-role` | A formula cannot be read, reads what it may not reach, has dimensions that disagree, or reads a role the brand gives no value ([errors](components.md#errors)). | the component |
 | `unknown-component` | The piece's top, a part or an item names no component. | the content or the component that names it, `#<trace>` |
 | `not-top` | The piece's top declares no layouts. | the top's component |
-| `places-itself` | A component places itself, directly or through others. | the component |
+| `places-itself` | A component places itself, directly or through others ([placing a component](components.md#placing-a-component-use-and-slot)). | the component |
 | `page-in-page` | A slot of pages lies inside a page, so what it places is a page inside a page. A top component with no slot of pages is part of the page that holds it, never a page inside it ([layouts](components.md#layouts)). | the content, `#<trace>` |
 | `option-word`, `option-missing`, `unknown-item`, `unknown-state`, `override`, `content-shape` | What a component was given does not fit it: a word its option does not take, a missing option that names an item, an item no list holds, a state it does not declare, an `override` that names no painted part or no role, a field of the wrong shape. | the content, a value a part passed on from it included; else the component whose part gave it, or left it out |
 | `loop` | References make a loop. The message names every element in it. | the component |
@@ -207,8 +211,8 @@ Each fails, unless its row says otherwise.
 | `missing-exposed` | A formula reads an exposed part, point or item that is missing. | the component |
 | `no-colour` | A part paints `:colour.<member>`, and the instance has no colour family, one the foundations do not declare, or one with no such member ([values, states and colour](components.md#values-states-and-colour)). | the component, `#<trace>` |
 | `unknown-role`, `role-type` | A text's style role has no value, or is no typography. | the component, `#<trace>` |
-| `gets-less` | A component gets less width or height than it asks for. | the content, `#<trace>` |
-| `text-overflow` | A word is wider than its text's width. Text never shrinks to fit. | the content, `#<trace>` |
+| `gets-less` | A component gets less width or height than it asks for ([what an element asks for](components.md#what-an-element-asks-for-and-what-it-gets)). | the content, `#<trace>` |
+| `text-overflow` | A word is wider than its text's width. Text never shrinks to fit ([breaking lines](components.md#breaking-lines)). | the content, `#<trace>` |
 | `missing-picture` | The piece has no produced output the content names. Left out where a produced-picture finding already reports that output. The fix is `pkit visual produce <piece> <output>`. | the content, or the component whose part gave it, `#<trace>` |
 | `picture-variants` | The variants of a picture differ in pixel size or in the places of their points, and one scene holds them all. | as above |
 | `font-missing` | A font family has no committed file, or no family measures a character. Nothing is laid out (DEC-004 point 9). The check reports it where it computes the scenes. `pkit visual render` refuses instead, and writes no record. | `<piece>/piece.yaml#brand` |

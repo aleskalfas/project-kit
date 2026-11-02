@@ -213,6 +213,9 @@ def out_problem(root: Path, location: str, out: str) -> str | None:
     for folder, why in (
         (libraries.FOLDER, "lies in the library folder, whose copies no command writes"),
         (FOLDER, "lies in the folder of declarations, where its record would read as one"),
+        # The location's folder of pieces (`pipeline.PIECES`, not imported: a command that
+        # writes code measures no text).
+        ("pieces", "lies in the folder of pieces, whose files the piece's commands write"),
     ):
         inside = f"{location}/{folder}"
         if out == inside or out.startswith(f"{inside}/"):

@@ -18,17 +18,23 @@ pkit:
       record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-007", COR-017, COR-023, COR-031, COR-055]
       artefact:
         - .pkit/capabilities/visual-communication/checks.md
+        - .pkit/capabilities/visual-communication/checks.md#the-findings-record
         - .pkit/capabilities/visual-communication/checks.md#when-the-check-reads-it
         - .pkit/capabilities/visual-communication/components.md
         - .pkit/capabilities/visual-communication/files.md
         - .pkit/capabilities/visual-communication/files.md#a-piece
         - .pkit/capabilities/visual-communication/files.md#brands
         - .pkit/capabilities/visual-communication/files.md#the-binding
+        - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#the-library-folder
         - .pkit/capabilities/visual-communication/files.md#the-location
+        - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/outputs.md
+        - .pkit/capabilities/visual-communication/outputs.md#exports
+        - .pkit/capabilities/visual-communication/outputs.md#previews
         - .pkit/capabilities/visual-communication/outputs.md#produced-pictures
+        - .pkit/capabilities/visual-communication/outputs.md#the-declaration
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-an-export
         - .pkit/capabilities/visual-communication/outputs.md#written-code
         - .pkit/cli/README.md#sync
@@ -72,9 +78,9 @@ The visual work lies in one folder of the repository, the *location*: `visual/` 
 
 1. **Bring the libraries.** Put each library version a piece uses in the location's library folder, and list it in `libraries/libraries.yaml`. A piece needs a brand, and none ships, so the project writes its own ([The library folder](files.md#the-library-folder), [Brands](files.md#brands)).
 2. **Write the piece.** A piece is a folder under `pieces/`: its `piece.yaml` names its libraries, languages, modes and exports, and its content names the components that draw it ([A piece](files.md#a-piece)).
-3. **Draw it.** `pkit visual render <piece>` writes the piece's lock, computes its scenes, keeps their findings in `findings.yaml`, and draws an SVG preview of each scene. Open the previews under `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`.
+3. **Draw it.** `pkit visual render <piece>` writes the piece's lock, computes its scenes, keeps their findings in `findings.yaml`, and draws an SVG preview of each scene. Open the previews under `.pkit/capabilities/visual-communication/project/local/previews/<piece>/` ([The clone's local folder](files.md#the-clones-local-folder)).
 4. **Check it.** `pkit visual check <piece>`, or `pkit validate`, reports what the piece breaks ([What the check reports](checks.md)).
-5. **Commit the piece's folder:** `piece.yaml`, the content and `findings.yaml`. The previews stay local to the clone.
+5. **Commit the piece's folder:** `piece.yaml`, the content and `findings.yaml`. The previews stay local to the clone ([The clone's local folder](files.md#the-clones-local-folder)).
 6. **Hand it out.** `pkit visual export <piece>` makes a numbered export in each format the piece declares, and records the version in the piece's `exports.yaml`. Commit `exports.yaml`; the exported files stay local until they are handed out.
 
 A brand's values reach code the same way: a declaration under the location's `code/` folder names the brand and where the code goes, and `pkit visual write-code <name>` writes it ([Written code](outputs.md#written-code)).
@@ -95,10 +101,10 @@ Shows where the visual work lies, and each piece with its state and its lock.
 
 Draws a piece in each of its languages and each combination of modes it names.
 
-- **Moves the lock** of a draft to the newest versions the project holds that fit together, within the lines the lock names, and writes it into `piece.yaml`, every other byte kept. A pinned piece's lock is checked, never moved.
+- **Moves the lock** of a draft to the newest versions the project holds that fit together, within the lines the lock names, and writes it into `piece.yaml`, every other byte kept. A pinned piece's lock is checked, never moved ([The lock](files.md#the-lock)).
 - **Computes every scene.** A font with no file, or a character no font family can measure, refuses the render before anything is laid out.
-- **Writes `findings.yaml`** beside `piece.yaml`: what computing the scenes found, keyed by a fingerprint of every file they were computed from.
-- **Draws the previews** with the SVG renderer, one file for each page, language and combination of modes, in `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`. They replace the piece's previews from before.
+- **Writes `findings.yaml`** beside `piece.yaml`: what computing the scenes found, keyed by a fingerprint of every file they were computed from ([The findings record](checks.md#the-findings-record)).
+- **Draws the previews** with the SVG renderer, one file for each page, language and combination of modes, in `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`. They replace the piece's previews from before ([Previews](outputs.md#previews)).
 - **Prints** the lock, each finding, and each loss the renderer reports that the piece does not accept.
 - **Exits** 0 when it drew the piece, findings or not; 1 when it refused, with nothing written.
 
@@ -125,7 +131,7 @@ Runs the producer a piece declares for one of its produced outputs, and keeps it
 
 Makes a numbered export of a piece in each format it declares.
 
-- **Numbers the run:** every file it makes carries the next version number of the piece's `exports.yaml`, as `<piece>.v<N>.<language>.<key>.svg`, in `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`. No file overwrites another.
+- **Numbers the run:** every file it makes carries the next version number of the piece's `exports.yaml`, as `<piece>.v<N>.<language>.<key>.svg`, in `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`. No file overwrites another ([Exports](outputs.md#exports)).
 - **Records the version** in `exports.yaml`.
 - **Uses the lock** `piece.yaml` holds, and never moves it.
 - **Refuses** a piece with no lock yet, a lock that does not hold, and a produced picture that is missing or stale, unless `--use-stale <output>` names it. `--use-stale` may repeat. Every reason it refuses is under [What refuses an export](outputs.md#what-refuses-an-export).
@@ -136,7 +142,7 @@ Makes a numbered export of a piece in each format it declares.
 Writes a brand out as code, as the declaration `code/<name>.yaml` in the location asks.
 
 - **Writes** the code to the declaration's `out`, and its record beside it, `<out>.record.yaml`. Where the record verifies and the code is what the writer writes now, it writes nothing and says the code is up to date.
-- **Never moves** the declaration's lock: a person moves it on purpose.
+- **Never moves** the declaration's lock: a person moves it on purpose ([The declaration](outputs.md#the-declaration)).
 - **Prints** each token the writer has no form for as a loss, unless the declaration accepts it under `accept-losses`.
 - **Exits** 0 when it wrote the code or found it up to date; 1 when it refused; 2 on a usage error.
 

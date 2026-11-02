@@ -230,6 +230,14 @@ def _is_lock(value: Any) -> bool:
     )
 
 
+def _is_version(text: Any) -> bool:
+    try:
+        Version.parse(text)
+    except ValueError:
+        return False
+    return True
+
+
 def _is_modes(value: Any) -> bool:
     return isinstance(value, Mapping) and all(
         isinstance(named, list) and all(isinstance(mode, str) for mode in named)
@@ -251,9 +259,10 @@ def uses(value: Any) -> Iterator[str]:
 
 
 def needed(piece: Piece) -> list[str]:
-    """The libraries the piece names itself: its top's, its brand, and every library its
-    content uses, in name order. What they build on the lock adds."""
-    found = {piece.brand}
+    """The libraries the piece names itself: the foundations, which hold the shared roles
+    every piece reads, its top's, its brand, and every library its content uses, in name
+    order. What they build on the lock adds."""
+    found = {FOUNDATIONS, piece.brand}
     for use in [piece.top, *(use for content in piece.contents.values() for use in uses(content))]:
         library = use.partition("/")[0]
         if _is_use(use) and library != PIECE:
@@ -341,6 +350,15 @@ class Project:
     declarations or the brand cannot be read."""
 
     def __init__(self, piece: Piece, lock: Mapping[str, str], held: Held) -> None:
+        # Each name and version of the lock becomes a segment of a path below the library
+        # folder, so a lock that holds anything else is refused before any is read. The
+        # check reports such a lock as a finding first (`lock-version`).
+        for library, version in lock.items():
+            if not is_name(library) or not _is_version(version):
+                raise Refused(
+                    f"the lock of {piece.file(PIECE_FILE)} names `{library}: {version}`, "
+                    f"which is no library at a version `X.Y.Z`"
+                )
         self.piece = piece
         self.lock = dict(lock)
         self.held = held

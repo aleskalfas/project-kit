@@ -40,6 +40,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/files.md#keys-of-combinations
         - .pkit/capabilities/visual-communication/files.md#shapes
+        - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
 ---
 
 # What is made from a piece
@@ -118,7 +119,7 @@ The `svg` renderer draws a scene as SVG files: one for each page, each language 
 
 ### Previews
 
-A *preview* is a render for a person to look at, which `pkit visual render` draws. It takes no version number, and is never an export (DEC-006 point 7). The previews of a piece lie in `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`, a folder local to the clone, of which no file is committed (DEC-002 point 1). Each is named `<piece>.<language>.<key>.svg`, such as `flow.en.colour-scheme.dark.svg`, where the key names the combination of modes ([Keys of combinations](files.md#keys-of-combinations)). A piece of more than one page adds the page's number, from 1: `<piece>.<language>.<key>.<n>.svg`.
+A *preview* is a render for a person to look at, which `pkit visual render` draws. It takes no version number, and is never an export (DEC-006 point 7). The previews of a piece lie in `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`, a folder local to the clone, of which no file is committed (DEC-002 point 1; [The clone's local folder](files.md#the-clones-local-folder)). Each is named `<piece>.<language>.<key>.svg`, such as `flow.en.colour-scheme.dark.svg`, where the key names the combination of modes ([Keys of combinations](files.md#keys-of-combinations)). A piece of more than one page adds the page's number, from 1: `<piece>.<language>.<key>.<n>.svg`.
 
 ### What the SVG renderer loses
 
@@ -155,7 +156,7 @@ versions:
 | Field | What it holds |
 |---|---|
 | `version` | the version's number, from 1 |
-| `fingerprint` | the fingerprint of every file the version's scenes were computed from (*The fingerprint*) |
+| `fingerprint` | the version's fingerprint, whose inputs *The fingerprint* in *What the check reports* lists |
 | `files` | each file the run made, by name, with the SHA-256 of the file |
 | `recorded` | only recorded, never compared, so a new release of the capability makes no export stale: the `time` in UTC, the piece's `state` then (`draft`, the only state of format 1), the release of the `capability`, each of the `renderers` with its version, each produced output the run used with the version of its picture, the `value` of its record's fingerprint (`used`), and each of those it used while it was stale (`used-stale`) |
 
@@ -328,7 +329,7 @@ out: web/brand.css
 
 - **The lock is the declaration's own.** A person moves it on purpose, and no command moves it, so the code changes only when the declaration changes (DEC-005 point 7).
 - **What the code holds:** every token the brand exports, in every combination of the brand's axes, at the versions the lock names. It follows no piece's modes.
-- **Where `out` may not lie:** outside the repository, under `.pkit/`, under a hidden folder, or in the location's library folder or its `code/` folder. Nor may it be reached through a link, or be a folder.
+- **Where `out` may not lie:** outside the repository, under `.pkit/`, under a hidden folder, or in the location's library folder, its `code/` folder or its `pieces/` folder. Nor may it be reached through a link, or be a folder.
 - **Committing the code** is the project's choice, as for any file its build writes. Its record goes with it (DEC-006 point 4).
 
 ### The record beside the code
