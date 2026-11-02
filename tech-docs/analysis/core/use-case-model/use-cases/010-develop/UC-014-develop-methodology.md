@@ -81,7 +81,7 @@ pkit:
 7. The system runs each [adapter](../../../glossary.md#term-adapter--adapter)'s merge delivery into the files its harness reads, such as `claude-code`'s into `.claude/settings.json` and `CLAUDE.md`. Each adapter deploys the skills and agent definitions as edited. The system also does these ([ADR-065 point 11](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#11-each-writer-of-a-project-owned-path-is-named-and-each-owner-of-derivable-state)):
    - it renders `.pkit/.gitignore`
    - it makes the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace), `.agent-workspace/`
-   - it sets up each command a [capability](../../../glossary.md#term-capability--capability) registers
+   - it sets up each [query command](../../../glossary.md#term-query-command--query-command) a [capability](../../../glossary.md#term-capability--capability) registers
 8. The system prints `Self-host sync complete (deploy primitives re-run).`
 
 **Variants:**
@@ -110,7 +110,7 @@ pkit:
 
 - Every `pkit` command run in the checkout runs the checkout's own code, and reads its own `.pkit/`. So what the [source repository](../../../glossary.md#term-source-repository--source-repository) ships runs there before any adopter runs it.
 - No [sync](../../../glossary.md#term-sync--sync) has copied a file into the [methodology](../../../glossary.md#term-methodology--methodology)'s tree. There, sync only regenerates what derives from the tree.
-- Each [adapter](../../../glossary.md#term-adapter--adapter) the tree holds deploys the [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) as edited, where its [harness](../../../glossary.md#term-harness--harness) reads them. Its [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) also merges the [operational rules](../../../glossary.md#term-operational-rule--operational-rule) into the harness's instruction file.
+- Each [adapter](../../../glossary.md#term-adapter--adapter) the tree holds deploys the [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) as edited, where its [harness](../../../glossary.md#term-harness--harness) reads them. Its [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) also merges the [operational rules](../../../glossary.md#term-operational-rule--operational-rule) into the harness's [instruction file](../../../glossary.md#term-instruction-file--instruction-file).
 - The source repository runs the [system](../../../glossary.md#term-system--system) as written, with no [release](../../../glossary.md#term-release--release) and no [install](../../../glossary.md#term-install--install).
 
 **Minimal guarantees:**
