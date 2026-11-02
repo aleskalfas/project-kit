@@ -1,0 +1,6 @@
+component: living-docs
+kind: none
+body: >
+  The skills guide and reference capture Claude Code's skills documentation
+  as a source in living-docs' project tier (#2456). The project tier is this
+  repository's own and never ships, so no surface moves.
