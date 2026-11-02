@@ -969,8 +969,8 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#ownership).
 **Distinctions:**
 
 - **Owner:** the [instance](#term-instance--instance) an [issue](#term-issue--issue) belongs to. An ownership makes that instance the [owner](#term-owner--owner), and may lapse or stop counting while the instance goes on ([DEC-035 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#2-ownership-is-carried-by-a-marker-paired-with-the-assignee) and [DEC-059 point 9](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
-- **Claim:** the code's word for an ownership. The analysis writes *ownership* for the same thing.
 - **A seat's holder:** the clone that holds a seat, which the seat's [state issue](#term-state-issue--state-issue) shows. An ownership marks an issue of work instead ([DEC-058 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)).
+- **Claim:** the code's word for an ownership. The analysis writes *ownership* for the same thing.
 
 ## TERM-parent-reference — parent reference
 

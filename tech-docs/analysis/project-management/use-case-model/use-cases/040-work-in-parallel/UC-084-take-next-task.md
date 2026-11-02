@@ -117,7 +117,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** nothing renews an ownership, or checks an ownership before a push. DEC-059 point 9 decides both, and #2136 tracks it.
 
-7. The worker builds the Task on the Task's branch through the build command, which starts a [builder agent](../../../glossary.md#term-builder-agent--builder-agent) for the Task ([DEC-063 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-063-task-builder.md#1-the-build-command-is-the-only-way-a-workers-task-is-built)). The worker then checks the work, pushes it and opens the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request): `pkit pm review-work <N>`, as `UC-061` step 7 describes (DEC-026).
+7. The worker builds the Task on the Task's branch through the build command, which starts a [builder agent](../../../glossary.md#term-builder-agent--builder-agent) for the Task ([DEC-063 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-063-task-builder.md#1-the-build-command-is-the-only-way-a-workers-task-is-built)). The worker then checks the work and pushes it. The worker opens the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) with `pkit pm review-work <N>`, as `UC-061` step 7 describes (DEC-026).
 
 > [!WARNING]
 > **Not built yet:** no build command exists, so the worker builds the Task in its own session. DEC-063 point 1 decides the build command, and #2287 tracks it.

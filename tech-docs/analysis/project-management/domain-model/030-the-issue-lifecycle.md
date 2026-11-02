@@ -34,9 +34,9 @@ pkit:
 
 An agent makes most of an [issue](../glossary.md#term-issue--issue)'s moves, but scheduling and ending the work are commitments a person must authorise. A person authorises a move back from In Progress too, since that move settles what becomes of the scheduling. Without fixed states, and a way for the issues above to follow, what the agent does is not deterministic ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
-The [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) fixes the states and the moves between them. An [authorisation](../glossary.md#term-authorisation--authorisation) is a person's decision on a move they hold. The [cascade](../glossary.md#term-cascade--cascade) brings the issues above along with each move. A [bypass](../glossary.md#term-bypass--bypass) overrides a check with a person's reason, which an [audit comment](../glossary.md#term-audit-comment--audit-comment) records.
+The [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) fixes the states and the moves between them. An [authorisation](../glossary.md#term-authorisation--authorisation) is a person's decision on a move they hold. The [cascade](../glossary.md#term-cascade--cascade) brings the issues above along with each move. A [bypass](../glossary.md#term-bypass--bypass) overrides a check with a person's reason, which an [audit comment](../glossary.md#term-audit-comment--audit-comment) records where the [project](../../core/glossary.md#term-project--project) keeps audit comments.
 
-Where the [project](../../core/glossary.md#term-project--project) keeps a [journal](../glossary.md#term-journal--journal), each move goes into it.
+Where the project keeps a [journal](../glossary.md#term-journal--journal), each move goes into it.
 
 ```mermaid
 classDiagram
@@ -228,7 +228,7 @@ A bypass overrides one check that refuses by default, such as scheduling an [iss
 
 **Relations:**
 
-- An [audit comment](../glossary.md#term-audit-comment--audit-comment) records its reason, before the write it allows (DEC-014).
+- Where the [project](../../core/glossary.md#term-project--project) keeps [audit comments](../glossary.md#term-audit-comment--audit-comment), an audit comment records its reason, before the write it allows (DEC-014).
 - It is how a person authorises a move that the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) refuses unless a person overrides it ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
 **States:** None.
@@ -261,7 +261,7 @@ A journal is the record the [backbone](../../core/glossary.md#term-backbone--bac
 **Always true:**
 
 - A move that fails to go into the journal is surfaced, and never dropped silently (DEC-049 point 1).
-- Where the core's engine cannot run, a command reads where the issue stands itself, and warns that the move went into no journal ([DEC-033](../../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
+- Where the backbone's engine cannot run, a command reads where the issue stands itself, and warns that the move went into no journal ([DEC-033](../../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
 
 ## What is built on these concepts
 
