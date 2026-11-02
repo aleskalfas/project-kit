@@ -160,16 +160,16 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 **Outside fact:**
 
-- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/UC-036-ground-claim.md)
+- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/010-ground-claims/UC-036-ground-claim.md)
 
 **Evidence record:**
 
-- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/UC-036-ground-claim.md)
+- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/010-ground-claims/UC-036-ground-claim.md)
 
 **Evidence scope:**
 
-- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/UC-036-ground-claim.md)
+- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/010-ground-claims/UC-036-ground-claim.md)
 
 **Citation:**
 
-- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/UC-036-ground-claim.md)
+- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/010-ground-claims/UC-036-ground-claim.md)

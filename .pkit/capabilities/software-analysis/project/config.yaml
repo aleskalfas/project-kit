@@ -39,10 +39,18 @@ analyses:
       - analysis: core
   - component: evidence
     folder: evidence
+    # Its one area's goal (software-analysis DEC-003 point 8 and DEC-005
+    # point 1).
+    areas:
+      010-ground-claims: "Ground each claim a project's documents make about an outside fact in a recorded excerpt of its source, so a reader can follow the claim to its source."
     builds-on:
       - analysis: core
   - component: demo-recording
     folder: demo-recording
+    # Its one area's goal (software-analysis DEC-003 point 8 and DEC-005
+    # point 1).
+    areas:
+      010-record-demos: "Record a demo of a command line from an executable storyboard that people still read as a document."
     builds-on:
       - analysis: core
   - component: software-engineering
@@ -50,6 +58,11 @@ analyses:
     # The record that states what software-engineering is for
     # (software-analysis DEC-003 point 8).
     purpose: software-engineering:DEC-003
+    # Each area's goal, in the order the areas build on each other
+    # (software-analysis DEC-003 point 8 and DEC-005 point 1).
+    areas:
+      010-build: "Build each change with an AI agent that writes its code to the project's own conventions, each answer the change was not asked for decided by a person."
+      020-review: "Review each change before it merges, so no merge rests on code or an answer that does not hold."
     builds-on:
       - analysis: core
       - analysis: project-management
@@ -58,6 +71,11 @@ analyses:
     # The record that states what software-analysis is for (software-analysis
     # DEC-003 point 8).
     purpose: software-analysis:DEC-001
+    # Each area's goal, in the order the areas build on each other
+    # (software-analysis DEC-003 point 8 and DEC-005 point 1).
+    areas:
+      010-describe: "Describe a project in its analysis, each kind of artefact in the parts the project chose, and each artefact under an id that names it alone."
+      020-revalidate: "Keep the analysis true as the project changes, revised before a change is built or revalidated after it, and never rewritten to match broken code."
     builds-on:
       - analysis: core
       - analysis: project-management
@@ -67,6 +85,12 @@ analyses:
     # The record that states what living-docs is for (software-analysis DEC-003
     # point 8).
     purpose: living-docs:DEC-001
+    # Each area's goal, in the order the areas build on each other
+    # (software-analysis DEC-003 point 8 and DEC-005 point 1).
+    areas:
+      010-set-up: "Set up the documentation spaces a project's readers need, and bring the documents it already has into them."
+      020-write: "Write each page so it serves the reader it names, each of its statements grounded in what it anchors."
+      030-keep-current: "Keep each page true as what it rests on changes, each fix proposed with its evidence and applied only once a person accepts it."
     builds-on:
       - analysis: core
       - analysis: project-management
