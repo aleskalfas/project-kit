@@ -38,7 +38,7 @@ TERM-evidence-record:
   name: evidence record
   noun-forms: [evidence records]
   status: active
-  definition: "entry of a fixed-name YAML file keeping a verbatim excerpt of an outside fact's source, where the source lies and when the excerpt was fetched"
+  definition: "entry of a directory's fixed-name YAML file keeping a verbatim excerpt of an outside fact's source, with the source's location and fetch time"
   pkit:
     friction:
       anchors:
