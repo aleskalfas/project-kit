@@ -25,6 +25,7 @@ pkit:
         - src/project_kit/sync.py
         - src/project_kit/install.py
         - .pkit/adapters/README.md
+        - .pkit/adapters/claude-code/merge-claude-md.sh
         - .pkit/rules/core.md
         - .pkit/rule-sets/ops.md
         - .pkit/rules/README.md
@@ -35,6 +36,7 @@ pkit:
         - COR-014
         - COR-068#3
         - COR-070#2
+        - ADR-076#2
         - ADR-076#3
         - ADR-059
         - ADR-034#1

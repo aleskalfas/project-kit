@@ -32,6 +32,7 @@ pkit:
         - src/project_kit/sync.py
         - src/project_kit/cli.py
         - .pkit/adapters/README.md
+        - .pkit/adapters/claude-code/deploy-agents.sh
         - .pkit/agents/README.md
         - .pkit/lifecycle/ownership.py
         - .pkit/permissions/decide.py

@@ -35,6 +35,8 @@ pkit:
         - src/project_kit/install.py
         - src/project_kit/agents_overlay.py
         - .pkit/adapters/README.md
+        - .pkit/adapters/claude-code/deploy-agents.sh
+        - .pkit/adapters/claude-code/deploy-skills.sh
         - .pkit/skills/README.md
       record:
         - COR-001

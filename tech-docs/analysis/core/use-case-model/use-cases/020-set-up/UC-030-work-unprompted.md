@@ -39,6 +39,7 @@ pkit:
         - .pkit/permissions/decide.py
         - .pkit/permissions/profiles/autonomous.yaml
         - .pkit/adapters/README.md
+        - .pkit/adapters/claude-code/permission-hook.py
       record:
         - COR-028#1
         - COR-028#2
@@ -57,6 +58,7 @@ pkit:
         - ADR-030
         - ADR-025#1
         - ADR-025#2
+        - ADR-025#5
         - ADR-028
         - ADR-029#2
         - COR-004

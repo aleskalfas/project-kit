@@ -32,6 +32,7 @@ pkit:
         - src/project_kit/agents_overlay.py
         - src/project_kit/install.py
         - .pkit/permissions/decide.py
+        - .pkit/adapters/claude-code/merge-claude-md.sh
       record:
         - COR-001
         - COR-002

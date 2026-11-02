@@ -45,6 +45,7 @@ pkit:
         - COR-004
         - ADR-034#1
         - COR-028#2
+        - COR-028#3
       artefact:
         - ACT-operator
         - REQ-002

@@ -14,6 +14,7 @@ pkit:
         - .pkit/schemas/harness-requirements.yaml
         - src/project_kit/harness_support.py
         - .pkit/adapters/README.md
+        - .pkit/adapters/claude-code/harness-support.yaml
       record:
         - COR-047#2
         - COR-047#3

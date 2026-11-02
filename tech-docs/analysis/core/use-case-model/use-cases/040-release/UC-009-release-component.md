@@ -38,6 +38,7 @@ pkit:
         - PRJ-004
         - COR-010
         - COR-041
+        - COR-059#3
         - COR-004
         - ADR-034#1
       artefact:

@@ -28,6 +28,8 @@ pkit:
         - src/project_kit/upgrade.py
         - src/project_kit/status.py
         - src/project_kit/cli.py
+        - .pkit/adapters/claude-code/merge-settings.sh
+        - .pkit/adapters/claude-code/merge-claude-md.sh
       record:
         - ADR-059
         - ADR-039#1

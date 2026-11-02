@@ -24,6 +24,7 @@ pkit:
         - src/project_kit/visibility.py
         - .pkit/permissions/diagnose_capture.py
         - .pkit/permissions/decide.py
+        - .pkit/adapters/claude-code/permission-hook.py
       record:
         - PRJ-006#1
         - PRJ-006#2
@@ -31,6 +32,7 @@ pkit:
         - PRJ-006#4
         - PRJ-006#5
         - COR-028#1
+        - COR-028#3
         - ADR-016
         - ADR-060#7
         - ADR-034#1
