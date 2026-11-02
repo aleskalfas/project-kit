@@ -1,0 +1,39 @@
+answers:
+  - artefact: docs/capabilities/living-docs/010-set-up-your-spaces.md
+    revalidated:
+      at: 2026-11-02T00:15:05Z
+      outcome: unchanged
+      unchanged-because: The living-docs use cases it anchors only moved into their functional areas' folders, with their link paths rewritten and their steps, goals and postconditions as before, so what the page says of them still holds.
+  - artefact: docs/capabilities/living-docs/020-bring-in-your-documents.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+    revalidated:
+      at: 2026-11-02T00:15:09Z
+      outcome: unchanged
+      unchanged-because: The living-docs use cases it anchors only moved into their functional areas' folders, with their link paths rewritten and their steps, goals and postconditions as before, so what the page says of them still holds.
+  - artefact: docs/capabilities/living-docs/030-write-a-page.md
+    revalidated:
+      at: 2026-11-02T00:15:12Z
+      outcome: unchanged
+      unchanged-because: The living-docs use cases it anchors only moved into their functional areas' folders, with their link paths rewritten and their steps, goals and postconditions as before, so what the page says of them still holds.
+  - artefact: docs/capabilities/living-docs/040-have-a-page-read-as-its-reader.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+    revalidated:
+      at: 2026-11-02T00:15:16Z
+      outcome: unchanged
+      unchanged-because: The living-docs use cases it anchors only moved into their functional areas' folders, with their link paths rewritten and their steps, goals and postconditions as before, so what the page says of them still holds.
+  - artefact: docs/capabilities/living-docs/050-fix-a-stale-page.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+    revalidated:
+      at: 2026-11-02T00:15:20Z
+      outcome: unchanged
+      unchanged-because: The living-docs use cases it anchors only moved into their functional areas' folders, with their link paths rewritten and their steps, goals and postconditions as before, so what the page says of them still holds.
+  - artefact: docs/capabilities/living-docs/README.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+    revalidated:
+      at: 2026-11-02T00:15:24Z
+      outcome: unchanged
+      unchanged-because: The living-docs use cases it anchors only moved into their functional areas' folders, with their link paths rewritten and their steps, goals and postconditions as before, so what the page says of them still holds.

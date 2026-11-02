@@ -1,14 +1,28 @@
 # Overview of the analysis of evidence
 
-<!-- pkit:overview reads=5 fingerprint=sha256:7c1e55bcffdc80a453459215f9ff2784dfde9f6534866e62053ca2727bca205a -->
+<!-- pkit:overview reads=5 fingerprint=sha256:a482125b007a3623e5db79735398f58d79d8cc64cc7a0859b74dee1fc0719ad9 -->
 
 No record states what evidence is for yet. Write one with `pkit new decision`, and name it as `purpose` in the entry of evidence under `analyses` in `.pkit/capabilities/software-analysis/project/config.yaml`.
 
 This analysis describes what evidence does: who uses it, what they do with it, and what it must meet. It builds on the analysis of core.
 
-## Use cases
+## Areas
 
-- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/UC-036-ground-claim.md)
+### 010-ground-claims
+
+Ground each claim a project's documents make about an outside fact in a recorded excerpt of its source, so a reader can follow the claim to its source.
+
+**Its concepts:**
+
+- [010 — Outside facts and citations](../domain-model/010-outside-facts-and-citations.md)
+
+**Its requirements:** none.
+
+**Its use cases:**
+
+- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/010-ground-claims/UC-036-ground-claim.md)
+
+**Its journeys:** none.
 
 ## Reference
 
@@ -16,8 +30,8 @@ This analysis describes what evidence does: who uses it, what they do with it, a
 
 | Actor | Who they are | Areas they act in |
 | --- | --- | --- |
-| core:ACT-ai-agent — AI agent | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [the use cases](#use-cases) |
-| core:ACT-developer — Developer | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [the use cases](#use-cases) |
+| core:ACT-ai-agent — AI agent | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [010-ground-claims](#010-ground-claims) |
+| core:ACT-developer — Developer | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [010-ground-claims](#010-ground-claims) |
 
 ### Concepts
 

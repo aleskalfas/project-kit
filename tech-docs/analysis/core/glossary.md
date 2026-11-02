@@ -1865,7 +1865,7 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#rule-set).
 
-**Example:** `ANA` is project-kit's rule set for its analysis. Its scope selects the analysis by type, and it inherits `WRITE@2` and `software-analysis:SAN@1`.
+**Example:** `ANA` is project-kit's rule set for its analysis. Its scope selects the analysis by type, and it inherits `WRITE@2` and `software-analysis:SAN@2`.
 
 **Distinctions:**
 

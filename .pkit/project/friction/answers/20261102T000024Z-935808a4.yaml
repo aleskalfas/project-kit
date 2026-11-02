@@ -1,0 +1,54 @@
+answers:
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T114612Z-ece11007.yaml
+      - 20261031T011427Z-45248979.yaml
+      - 20261101T134626Z-e7f1b78f.yaml
+      - 20261101T145814Z-cbb4f94d.yaml
+      - 20261101T150931Z-cb546c1b.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T162642Z-9490cb38.yaml
+    revalidated:
+      at: 2026-11-02T00:00:24Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/domain-model/070-artefacts-and-friction.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044308Z-41eae20f.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-11-02T00:00:36Z
+      outcome: unchanged
+      unchanged-because: TERM-rule-set changed only its example, which now names software-analysis:SAN@2, the pin ANA holds, and this view names no pin of SAN, so it still explains a rule set as the term defines it.
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-001-migration-runs-again.md
+    read:
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+    revalidated:
+      at: 2026-11-02T00:00:40Z
+      outcome: unchanged
+      unchanged-because: The test of software-analysis's rule-set migration changed only the pin it expects the created set to carry, now SAN@2, and it still runs the migration again and finds nothing changed, so it still verifies this requirement as its Verified by says.

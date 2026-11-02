@@ -10,12 +10,14 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
   rule;
 - it holds the **append-only rule**, `RS-SAN-002`, accepted, its origin DEC-001 and
   its anchor DEC-001 point 3 (#1370);
-- both rules were **accepted together**, on 17 October (#1370), so the set is at 1.0.0;
+- both rules were **accepted together**, on 17 October (#1370), so the set reached
+  1.0.0. Accepting the area rule, below, on 2 November (#2105) was a new major, so the
+  set is at 2.0.0;
 - it holds nine **judgement rules**, `RS-SAN-003` to `RS-SAN-005` (#1577), each
   with DEC-001 as its origin, and the six below, each proposed and declaring no
   check: a reviewer judges each. Each
   *How* leaves out what the stamp and the check hold always, and judges an artefact
-  in force alone. Proposed rules move no version, so the set stays at 1.0.0;
+  in force alone. Proposed rules move no version;
 - the **anchors rule**, `RS-SAN-005`, asks of a use case the anchors DEC-001 points
   4 and 11 give it, in their one direction: the decisions that answer it and the
   views that realise it, beside what it rests on (#1686). It asks of a requirement
@@ -25,7 +27,7 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
   (#1695);
 - the **source rule**, `RS-SAN-007`, asks each goal, minimal guarantee and
   requirement for its source, in the four forms the maintainer chose on 17 October
-  (#1681). Both stay proposed with the others, so the set stays at 1.0.0;
+  (#1681). Both stay proposed with the others;
 - the **concept rule**, `RS-SAN-008`, holds what the build order of DEC-001 point 12
   leaves in the analysis: a domain concept only where one term of the glossary
   defines it, by that term's name (#1784). It stays proposed with the others;
@@ -40,7 +42,8 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
   name only the analyses its component depends on (#1809). Both stay proposed;
 - the **area rule**, `RS-SAN-014`, its origin DEC-005, asks each use case to lie in
   its function's area, and a journey to tell each path, planned from content and
-  never from counts (#2106). It stays proposed, and its record ships accepted;
+  never from counts (#2106). Its record ships accepted, and the maintainer accepted
+  the rule on 2 November (#2105), so it binds where the format rule binds;
 - each rule **declares the part a check enforces** beside it, under `checks`: the
   format rule names the command behind the `software-analysis:artefacts` member of
   `pkit validate`, and the append-only rule `check-numbers`. The consequence rule
@@ -48,7 +51,8 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
 - **validation accepts the set**, and **it binds nothing while its rule is
   proposed**, even where a project set with a scope inherits it: a proposed copy
   shows it. Accepted, as shipped, the same rule binds there, and its declared part
-  is the check's.
+  is the check's. The area rule binds beside it, and the proposed judgement rules
+  bind nothing.
 """
 
 from __future__ import annotations
@@ -207,8 +211,17 @@ ORIGINS = {
 SOURCE_RULE = "RS-SAN-007"
 #: The area rule (#2106): each use case in its function's area, a journey for each path.
 AREA_RULE = "RS-SAN-014"
-#: The record the area rule rests on, which ships accepted while the rule stays proposed.
+#: The record the area rule rests on, which ships accepted, as the rule does (#2105).
 AREA_RECORD = f"{SA.as_posix()}/decisions/DEC-005-finding-functionality.md"
+#: The judgement rules the maintainer has accepted: the area rule, on 2 November (#2105).
+ACCEPTED_JUDGEMENT_RULES = (AREA_RULE,)
+#: The judgement rules that stay proposed until he accepts them.
+PROPOSED_JUDGEMENT_RULES = tuple(r for r in JUDGEMENT_RULES if r not in ACCEPTED_JUDGEMENT_RULES)
+#: `SAN`'s version as it ships. Accepting its first rules was a new major, and so was
+#: accepting the area rule (COR-051 point 7).
+SAN_VERSION = "2.0.0"
+#: The major of `SAN` a project set pins to inherit it as it ships.
+SAN_MAJOR = 2
 #: The concept rule (#1784): what an artefact uses of the domain, the glossary defines.
 CONCEPT_RULE = "RS-SAN-008"
 ACTOR = actor_at("ACT-tester")
@@ -261,7 +274,9 @@ def test_the_set_ships_under_dec_001_s_name_with_no_scope() -> None:
     assert "inherits" not in data
     # Accepting its first rules was a new major (COR-051 point 7): the maintainer
     # accepted both on 17 October (#1370), and the set reached 1.0.0 with them.
-    assert data["version"] == "1.0.0"
+    # Accepting the area rule was a new major too: he accepted it on 2 November
+    # (#2105), and the set reached 2.0.0 with it.
+    assert data["version"] == SAN_VERSION
 
 
 def test_the_set_holds_the_format_rule_accepted_its_origin_dec_001() -> None:
@@ -412,7 +427,7 @@ def test_the_format_rule_declares_the_part_the_capability_s_check_enforces() -> 
         "a functional requirement, a constraint or a domain-model view is left to the heading "
         "check"
     ) in part
-    assert data["version"] == "1.0.0"
+    assert data["version"] == SAN_VERSION
     assert "record" not in part
     # It names each form an artefact kind's structure gives, and none that only a
     # record's gives: the check enforces those always, outside the rule.
@@ -428,17 +443,18 @@ def test_the_format_rule_declares_the_part_the_capability_s_check_enforces() -> 
 
 # Asserts what the shipped rules' answers hold, so the short check runs it (ADR-067).
 @pytest.mark.answers
-def test_the_judgement_rules_ship_proposed_declaring_no_check() -> None:
+def test_the_judgement_rules_ship_proposed_until_accepted_declaring_no_check() -> None:
     """The maintainer's three judgement rules (8 October, on #1360), proposed until he
     accepts them (#1577), each with DEC-001 as its origin. Beside them the record rule,
     from DEC-002 point 8 (#1695), the source rule (#1681) and the concept rule, from
-    DEC-001 point 12 (#1784), proposed until all are accepted in one major. Each anchors
-    to the points it rests on. None declares a check but the consequence rule, whose
-    check holds what a script reads of `after` (#1816): a reviewer judges the rest of
-    each (COR-057). A proposed rule moves no version (COR-051 point 7), so `SAN` stays at
-    1.0.0."""
+    DEC-001 point 12 (#1784), proposed until all are accepted in one major. The area
+    rule, from DEC-005 (#2106), he accepted on 2 November (#2105). Each anchors to the
+    points it rests on. None declares a check but the consequence rule, whose check
+    holds what a script reads of `after` (#1816): a reviewer judges the rest of each
+    (COR-057). A proposed rule moves no version (COR-051 point 7), so `SAN` stays at the
+    major the area rule's acceptance gave it."""
     data, body = _shipped()
-    assert data["version"] == "1.0.0"
+    assert data["version"] == SAN_VERSION
     # Each rule's answers live in this tree's answer files (COR-062 point 1).
     location = SAN.relative_to(REPO).as_posix()
     deferral_reasons: dict[str, list[str | None]] = {}
@@ -449,10 +465,14 @@ def test_the_judgement_rules_ship_proposed_declaring_no_check() -> None:
                 reasons = deferral_reasons.setdefault(rule_id, [])
                 reasons.extend(deferral.reason for deferral in entry.deferrals)
     assert set(ORIGINS) | {SOURCE_RULE} == set(JUDGEMENT_RULES)
+    assert set(PROPOSED_JUDGEMENT_RULES) | set(ACCEPTED_JUDGEMENT_RULES) == set(JUDGEMENT_RULES)
     assert [rule_id for rule_id in JUDGEMENT_RULES if rule_id in data["checks"]] == [LOGIC_RULE]
+    for rule_id in ACCEPTED_JUDGEMENT_RULES:
+        assert data["rules"][rule_id]["status"] == "accepted", rule_id
     for rule_id, (statement, anchors) in JUDGEMENT_RULES.items():
         entry = data["rules"][rule_id]
-        assert entry["status"] == "proposed", rule_id
+        if rule_id in PROPOSED_JUDGEMENT_RULES:
+            assert entry["status"] == "proposed", rule_id
         if rule_id in ORIGINS:
             assert entry["origin"] == {"decision": ORIGINS[rule_id]}, rule_id
         assert entry["pkit"]["friction"]["anchors"] == {"record": anchors}, rule_id
@@ -490,7 +510,7 @@ def test_the_consequence_rule_declares_what_the_check_reads_of_after() -> None:
     )
     how = " ".join(_section(body, LOGIC_RULE).split())
     assert "Until this set declares a check of them under `checks`, a reviewer judges" in how
-    assert data["version"] == "1.0.0"
+    assert data["version"] == SAN_VERSION
 
 
 def test_each_judgement_rule_leaves_the_checks_their_part_by_its_own_words() -> None:
@@ -917,7 +937,9 @@ def test_each_judgement_rule_judges_an_artefact_in_force_alone() -> None:
 # --- validation and reach in an adopter (COR-051 points 4 and 7) ---------------------------
 
 
-def _with_an_actor_and_a_set_inheriting_san(project: AdopterRepo, *, major: int = 1) -> None:
+def _with_an_actor_and_a_set_inheriting_san(
+    project: AdopterRepo, *, major: int = SAN_MAJOR
+) -> None:
     project.write(
         {
             ACTOR: "---\nid: ACT-tester\nname: Tester\nneeds: [Run a suite.]\n---\n\n"
@@ -965,26 +987,41 @@ def test_the_set_binds_nothing_while_its_rule_is_proposed(project: AdopterRepo) 
 def test_accepted_the_same_rule_binds_and_its_part_is_the_check_s(project: AdopterRepo) -> None:
     """The control: the route above carries the rule as `SAN` ships it, accepted, and
     the part it declares names a check that is there, so a reviewer leaves it to the
-    check."""
+    check. The area rule, accepted too, binds beside it with no check's part, so a
+    reviewer judges the whole of it (COR-057 point 1)."""
     _with_an_actor_and_a_set_inheriting_san(project)
     assert not rs.validate_rule_sets(project.root).errors
-    assert _bound(project) == ["software-analysis:" + RULE, "software-analysis:" + STEPS_RULE]
+    assert _bound(project) == [
+        "software-analysis:" + r for r in (RULE, STEPS_RULE, *ACCEPTED_JUDGEMENT_RULES)
+    ]
     document = reading.reach_document(project.root)
     (entry,) = [a for a in document["artefacts"] if a["location"] == ACTOR]
     checks = {r["id"]: [(c["check"], c["there"]) for c in r["checks"]] for r in entry["rules"]}
     assert checks == {
         RULE: [("software-analysis:validate", True)],
         STEPS_RULE: [("software-analysis:check-numbers", True)],
+        AREA_RULE: [],
     }
 
 
 def test_the_judgement_rules_bind_nothing_while_proposed(project: AdopterRepo) -> None:
     """As `SAN` ships them, on the route above: validation accepts the set, and no
-    judgement rule binds, since a proposed rule binds nothing (COR-051 point 4)."""
+    proposed judgement rule binds, since a proposed rule binds nothing (COR-051 point 4).
+    The area rule, accepted, binds where the format rule binds."""
     _with_an_actor_and_a_set_inheriting_san(project)
     assert not rs.validate_rule_sets(project.root).errors
-    # The route binds the two accepted rules, so it is there, and nothing more.
-    assert _bound(project) == ["software-analysis:" + RULE, "software-analysis:" + STEPS_RULE]
+    # The route binds the three accepted rules, so it is there, and nothing more.
+    bound = _bound(project)
+    assert bound == ["software-analysis:" + r for r in (RULE, STEPS_RULE, AREA_RULE)]
+    assert not {"software-analysis:" + r for r in PROPOSED_JUDGEMENT_RULES} & set(bound)
+
+
+def _at_the_next_major(text: str) -> str:
+    """`SAN`'s text at the major after the one it ships at, as accepting a rule gives it
+    (COR-051 point 7): a fixture, not the acceptance."""
+    shipped = f"\nversion: {SAN_VERSION}\n"
+    assert text.count(shipped) == 1
+    return text.replace(shipped, f"\nversion: {SAN_MAJOR + 1}.0.0\n")
 
 
 #: The source rule's origin as it ships, with no why.
@@ -1003,10 +1040,10 @@ def test_the_source_rule_cannot_be_accepted_without_its_why(project: AdopterRepo
     """Its origin ships with its date and its decider only. An accepted rule carries a
     complete origin (COR-051 point 5), so a copy that accepts it as shipped fails
     validation on its `why`, and passes once the why is given."""
-    _with_an_actor_and_a_set_inheriting_san(project, major=2)
-    text = with_status(
-        (project.root / SAN_REL).read_text(encoding="utf-8"), SOURCE_RULE, "accepted"
-    ).replace("version: 1.0.0", "version: 2.0.0", 1)
+    _with_an_actor_and_a_set_inheriting_san(project, major=SAN_MAJOR + 1)
+    text = _at_the_next_major(
+        with_status((project.root / SAN_REL).read_text(encoding="utf-8"), SOURCE_RULE, "accepted")
+    )
     project.write({SAN_REL: text})
     (error,) = rs.validate_rule_sets(project.root).errors
     assert error.location == f"{SAN_REL}#{SOURCE_RULE}"
@@ -1018,16 +1055,14 @@ def test_the_source_rule_cannot_be_accepted_without_its_why(project: AdopterRepo
 
 
 def test_the_area_rule_cannot_be_accepted_before_its_record(project: AdopterRepo) -> None:
-    """The area rule's origin is DEC-005, which ships accepted. An accepted rule cites an
-    accepted record (COR-051 point 5), so a copy that accepts the rule while its record
-    is still proposed, a fixture, fails validation on its origin. It passes once the
-    record is accepted, as it ships."""
-    _with_an_actor_and_a_set_inheriting_san(project, major=2)
+    """The area rule's origin is DEC-005, which ships accepted, as the rule now does
+    (#2105). An accepted rule cites an accepted record (COR-051 point 5), so a copy of the
+    record still proposed, a fixture, fails validation on the rule's origin. It passes
+    once the record is accepted, as it ships."""
+    _with_an_actor_and_a_set_inheriting_san(project)
     record = (project.root / AREA_RECORD).read_text(encoding="utf-8")
     assert record.count("\nstatus: accepted\n") == 1
     project.write({AREA_RECORD: record.replace("\nstatus: accepted\n", "\nstatus: proposed\n")})
-    text = with_status((project.root / SAN_REL).read_text(encoding="utf-8"), AREA_RULE, "accepted")
-    project.write({SAN_REL: text.replace("version: 1.0.0", "version: 2.0.0", 1)})
     (error,) = rs.validate_rule_sets(project.root).errors
     assert error.location == f"{SAN_REL}#{AREA_RULE}"
     assert error.kind == Kind.DECISION_NOT_ACCEPTED
@@ -1063,17 +1098,18 @@ def test_the_area_rule_plans_from_content_and_leaves_a_path_to_a_reviewer() -> N
 def test_accepted_each_judgement_rule_binds_with_no_check_to_leave(
     project: AdopterRepo,
 ) -> None:
-    """A copy with the judgement rules accepted, a fixture and not the acceptance: each
-    binds on the route above, and the answer gives it no check's part, so a reviewer
-    judges the whole of it (COR-057 point 1). The consequence rule alone leaves its part
-    to the capability's check, which is there. Accepting a rule gives `SAN` a new major,
-    and the set re-pins to it, as an acceptance would (COR-051 point 7). The source
-    rule's origin gains its why, as its acceptance must give it."""
-    _with_an_actor_and_a_set_inheriting_san(project, major=2)
+    """A copy with the proposed judgement rules accepted, a fixture and not the
+    acceptance: each binds on the route above beside the area rule, accepted as it
+    ships, and the answer gives it no check's part, so a reviewer judges the whole of it
+    (COR-057 point 1). The consequence rule alone leaves its part to the capability's
+    check, which is there. Accepting a rule gives `SAN` a new major, and the set re-pins
+    to it, as an acceptance would (COR-051 point 7). The source rule's origin gains its
+    why, as its acceptance must give it."""
+    _with_an_actor_and_a_set_inheriting_san(project, major=SAN_MAJOR + 1)
     text = _source_rule_with_its_why((project.root / SAN_REL).read_text(encoding="utf-8"))
-    for rule_id in JUDGEMENT_RULES:
+    for rule_id in PROPOSED_JUDGEMENT_RULES:
         text = with_status(text, rule_id, "accepted")
-    project.write({SAN_REL: text.replace("version: 1.0.0", "version: 2.0.0", 1)})
+    project.write({SAN_REL: _at_the_next_major(text)})
     assert not rs.validate_rule_sets(project.root).errors
     assert _bound(project) == [
         "software-analysis:" + r for r in (RULE, STEPS_RULE, *JUDGEMENT_RULES)
