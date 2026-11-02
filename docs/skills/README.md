@@ -6,10 +6,12 @@ pkit:
     anchors:
       path:
         - .pkit/adapters/claude-code/deploy-skills.sh
+        - .pkit/skills/core/process/process.md
+        - .pkit/skills/core/schema/schema.md
         - src/project_kit/install.py
         - src/project_kit/refs.py
         - src/project_kit/scaffolds.py
-      record: [COR-001, COR-003, COR-005, COR-006, COR-007, COR-013, COR-015, COR-017, COR-068]
+      record: [COR-001, COR-003, COR-005, COR-006, COR-007, COR-013, COR-015, COR-017, COR-020, COR-068]
       artefact:
         - ACT-developer
         - ACT-ai-agent
@@ -151,7 +153,7 @@ flowchart TD
   session["A Claude Code session"] -->|loads when used| claude
 ```
 
-- **Your skills,** in `.pkit/skills/project/`. No sync writes them, so a skill there stays as you wrote it ([COR-001](../../.pkit/decisions/core/COR-001-content-mechanisms.md)).
+- **Your skills,** in `.pkit/skills/project/`. No sync writes them, as the first claim's fence shows ([What skills do instead](#what-skills-do-instead)).
 - **The methodology's skills,** in `.pkit/skills/core/`. Each sync puts them back at the version your project records, and an upgrade brings newer ones ([the CLI reference, `upgrade`](../../.pkit/cli/README.md#upgrade)).
 - **A capability's skills,** in its own `skills/` folder. They arrive with its install.
 - **The deploy.** Each sync runs the adapter's deploy, which links each skill under `.claude/skills/`. Where two places ship one name, yours is linked ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
@@ -202,7 +204,7 @@ $ git status --short .claude/skills .pkit/skills
 ```
 
 - **Commit both** your skill's file and the link the sync made under `.claude/skills/`, so a fresh clone has the skill. Where you keep project-kit private, git ignores both, and the skill stays in your clone ([the adapter's README, "Git footprint"](../../.pkit/adapters/claude-code/README.md#git-footprint-per-adr-009)).
-- **Edit the file in `.pkit/skills/project/`.** The link leads to it, so an edit needs no new sync.
+- **Edit the file in `.pkit/skills/project/`.** The link leads to it, so an edit needs no new sync ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
 - **What validation reads.** `pkit validate` warns where the body cites a record or a file that the front matter does not declare. It also warns where the front matter declares a record the body never cites ([the reference, "Front matter"](../../.pkit/skills/README.md#front-matter)).
 - **When the sync stops.** Where your `pkit` is at another version than your project records, the sync stops before it writes, and names the remedy ([the CLI reference, `sync`](../../.pkit/cli/README.md#sync)).
 - **A family of tasks.** Several operations that share their framing, such as writing, extending and renaming one kind of file, become one composite skill ([the reference, "A composite skill"](../../.pkit/skills/README.md#a-composite-skill)).

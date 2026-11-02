@@ -150,10 +150,10 @@ Every authoring command of the methodology's command line ships with a paired sk
 
 ## Deployment
 
-A skill runs from where its harness reads skills, never from `.pkit/`. The adapter deploys each skill there at `pkit init`, at each sync and upgrade, and at a capability's install, register, upgrade and uninstall.
+A skill runs from where its harness reads skills, never from `.pkit/`. The adapter deploys each skill there at `pkit init`, at each sync and upgrade, and at a capability's install, register and upgrade. A capability's uninstall runs the deploy again, which drops the capability's skills.
 
 - **Where Claude Code reads it:** `.claude/skills/<name>/SKILL.md`, a link to the skill's file. A folder-form skill has a link to each of its other files beside it ([the Claude Code adapter's README, `deploy-skills.sh`](../adapters/claude-code/README.md#deploy-skillssh)).
-- **Which skills:** the project's, core's, and those of each capability the manifest registers. Where two of them ship one name, the project's is deployed, then core's, then a capability's, the first by name ([the same section](../adapters/claude-code/README.md#deploy-skillssh)).
+- **Which skills:** the project's, core's, and those of each capability the manifest registers. Where two ship one name, the project's is deployed first, then core's is, then a capability's is, the first by name ([the same section](../adapters/claude-code/README.md#deploy-skillssh)).
 - **Suspension.** Skills are suspendable ([COR-003](../decisions/core/COR-003-artifact-mechanisms.md)). A project skill that takes the name of core's skill, or of a capability's, replaces it in the harness by the order above. Updates of the replaced skill then reach no session. No project file disables a skill without replacing it.
 - **What warns of a suspension:** only a capability's questions below. Otherwise the deploy prints the link it makes, and `pkit status` lists the skill as the project's.
 - **A capability's upgrade** asks a person about each skill new in its version whose name the project already uses ([the lifecycle reference, "A new collision"](../lifecycle/README.md#a-new-collision)). A skill its installed copy holds, or one the project skipped, is not new. The answers are override, skip or inspect. With nobody to answer, it refuses.
