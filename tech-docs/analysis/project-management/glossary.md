@@ -106,7 +106,7 @@ TERM-builder-agent:
   name: builder agent
   noun-forms: [builder agents]
   status: active
-  definition: "helper the build command starts in a fresh session for one worker's Task, in a sandboxed clone of its own, seeing only the Task's brief"
+  definition: "assistant the build command starts in a fresh session for one worker's Task, in a sandboxed clone of its own, seeing only the Task's brief"
   pkit:
     friction:
       anchors:
