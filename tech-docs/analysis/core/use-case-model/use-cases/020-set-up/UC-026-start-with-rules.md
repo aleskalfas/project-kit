@@ -102,7 +102,7 @@ pkit:
 
 **Minimal guarantees:**
 
-- [Merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) never removes or rewrites what the instruction file already holds. It adds only the includes, with a heading where the file has none ([COR-002](../../../../../../.pkit/decisions/core/COR-002-merge-delivery.md)).
+- [Merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) never removes or rewrites what the instruction file already holds. It adds only the includes, with a heading where the file has none ([COR-002](../../../../../../.pkit/decisions/core/COR-002-merge-delivery.md) and Claude Code's `merge-claude-md.sh`).
 - [Sync](../../../glossary.md#term-sync--sync) never writes `.pkit/rules/project.md` ([COR-001](../../../../../../.pkit/decisions/core/COR-001-content-mechanisms.md) and `install.py`).
-- A second run of an [adapter](../../../glossary.md#term-adapter--adapter)'s script changes nothing (`.pkit/adapters/README.md`).
+- A second run of an [adapter](../../../glossary.md#term-adapter--adapter)'s script changes nothing (`.pkit/adapters/README.md` and Claude Code's `merge-claude-md.sh`).
 - A script that fails stops sync with its exit status, so a partial deploy never reads as a whole one (`install.py`).
