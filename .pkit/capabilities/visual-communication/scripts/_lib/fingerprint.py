@@ -31,7 +31,8 @@ its *inputs*, and its value is the hash of them all:
 - `findings-key`, the key of a piece's findings record: the piece's own files, each locked
   library version's files, and each font of the location's `fonts/` the piece's scenes
   read. A piece's own files are every file of its folder but `findings.yaml` and
-  `exports.yaml`, and, under `produced/`, all but each output's `record.yaml`.
+  `exports.yaml`; under `produced/`, only each output's `record.yaml` is one, since it
+  holds the hash of each of its pictures.
 - `produced-record`, a produced output's record: its declaration, the part of `piece.yaml`
   at `[produced, <output>]`; each value it read, in each combination it serves; each
   variant's pixel size; and the producer's version.
@@ -287,7 +288,8 @@ def library_version_inputs(
 
 def piece_files(piece: Path, files: Iterable[Path]) -> list[Path]:
     """A piece's own files, among every file of its folder: all but its findings and
-    exports records, and, under `produced/`, all but each output's `record.yaml`."""
+    exports records; and, under `produced/`, only each output's `record.yaml`, which holds
+    the hash of each of its pictures."""
     own = []
     for path in files:
         parts = path.relative_to(piece).parts

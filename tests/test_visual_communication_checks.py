@@ -21,9 +21,9 @@ from tests.test_visual_communication_pipeline import (
     write_content,
     write_picture,
 )
-from tests.visual_communication_project import bound, write, yaml_text
+from tests.visual_communication_project import bound, write, write_list, yaml_text
 
-checks, pl, framing, seam, findings_, svg_declaration = load(
+checks, pl, framing, seam, findings_, svg_declaration, fingerprint = load(
     "visual-communication",
     "checks",
     "pipeline",
@@ -31,6 +31,7 @@ checks, pl, framing, seam, findings_, svg_declaration = load(
     "plugins.seam",
     "findings",
     "plugins.svg_declaration",
+    "fingerprint",
 )
 
 PIECE_FILE = f"{PIECE_FOLDER}/piece.yaml"
@@ -112,6 +113,104 @@ def test_a_whole_lock_has_no_finding(tmp_path: Path) -> None:
     assert checks.lock_findings(pl.Held(root, "visual"), piece_of(root)) == []
 
 
+# --- library names and released versions ------------------------------------------------------
+
+
+def held_as(root: Path, name: str, *, released: bool = False) -> Path:
+    """The drawing project without its picture, the `tests` library held, listed and used
+    under `name` instead; released where `released` says so."""
+    folder = root / "visual" / "libraries" / name
+    (root / "visual" / "libraries" / "tests").rename(folder)
+    for path in folder.rglob("*.yaml"):
+        text = path.read_text(encoding="utf-8")
+        path.write_text(
+            text.replace("name: tests", f"name: {name}").replace("tests/", f"{name}/"),
+            encoding="utf-8",
+        )
+    unreleased = {"1.0.0": {"released": False}}
+    write_list(
+        root,
+        {
+            "foundations": {"source": {"kind": "shipped"}, "versions": unreleased},
+            "test-brand": {"source": {"kind": "project"}, "versions": unreleased},
+            name: {
+                "source": {"kind": "project"},
+                "versions": {"1.0.0": released_entry(folder / "1.0.0", name)}
+                if released
+                else unreleased,
+            },
+        },
+    )
+    steps = [{"id": "plan", "head": "Plan."}, {"id": "build", "head": "Build."}]
+    write_content(root, body={"use": f"{name}/steps", "steps": steps})
+    lock = {"foundations": "1.0.0", "test-brand": "1.0.0", name: "1.0.0"}
+    write(
+        root / PIECE_FILE,
+        (root / PIECE_FILE)
+        .read_text(encoding="utf-8")
+        .replace("  tests: 1.0.0\n", f"  {name}: 1.0.0\n"),
+    )
+    assert piece_of(root).lock == lock
+    return root
+
+
+def released_entry(folder: Path, name: str) -> dict[str, Any]:
+    """The list's entry of a released version, its fingerprint over its folder as it is."""
+    files = sorted(path for path in folder.rglob("*") if path.is_file())
+    inputs = fingerprint.library_version_inputs(
+        library=name, version=folder.name, folder=folder, files=files
+    )
+    return {"released": True, "hash": fingerprint.fingerprint(inputs)}
+
+
+def test_a_library_named_after_a_top_group_of_the_shared_roles_fails(tmp_path: Path) -> None:
+    root = held_as(drawing_project(tmp_path, picture=False), "line")
+    report = checks.check(root)
+    [(finding, level)] = [(f, level) for f, level in report.judged if f.code == "library-name"]
+    assert level == "fails"
+    assert checks.place(finding) == "visual/libraries/line/1.0.0/library.yaml#name"
+    assert finding.message == "`line` is a top group of the shared roles, so no library takes it"
+    assert finding.library == "line@1.0.0"
+
+
+def test_a_failing_finding_in_a_released_version_asks_its_owner_for_attention(
+    tmp_path: Path,
+) -> None:
+    root = held_as(drawing_project(tmp_path, picture=False), "line", released=True)
+    report = checks.check(root)
+    [(finding, level)] = [(f, level) for f, level in report.judged if f.code == "library-name"]
+    assert level == "attention"
+    assert finding.who == "the owner of `line`, who corrects it in a new release"
+    assert checks.said(finding).startswith(
+        "`line` is a top group of the shared roles, so no library takes it — for the owner of "
+        "`line`, who corrects it in a new release — "
+    )
+
+
+def test_a_released_version_that_changed_fails_as_the_projects_to_restore(
+    tmp_path: Path,
+) -> None:
+    root = held_as(drawing_project(tmp_path, picture=False), "line", released=True)
+    write(root / "visual/libraries/line/1.0.0/notes.txt", "Added after the release.\n")
+    report = checks.check(root)
+    levels = {f.code: (level, f.who) for f, level in report.judged}
+    assert levels["library-changed"] == ("fails", "")
+    assert levels["library-name"] == ("fails", "")
+
+
+def test_a_finding_lowered_in_a_released_version_names_the_owner_and_is_never_stored() -> None:
+    finding = findings_.Finding("text-overflow", "fails", "too wide", library="tests@1.0.0")
+    assert findings_.as_read(finding, released=False) == (finding, "fails")
+    lowered, level = findings_.as_read(finding, released=True)
+    assert (level, lowered.who) == (
+        "attention",
+        "the owner of `tests`, who corrects it in a new release",
+    )
+    assert finding.who == "" and finding.level == "fails"
+    fact = findings_.Finding("component-experimental", "fact", "a fact", library="tests@1.0.0")
+    assert findings_.as_read(fact, released=True) == (fact, "fact")
+
+
 # --- the content --------------------------------------------------------------------------------
 
 
@@ -133,6 +232,30 @@ def test_ids_are_of_the_id_shape_unique_in_their_list_and_the_same_in_every_lang
     ]
     assert found[0].message == (
         "the ids `plan` appear twice in one list: an id is unique in its list"
+    )
+
+
+def test_a_translation_may_order_a_lists_items_its_own_way(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, languages=["en", "cs"])
+    write_content(root, body=steps({"id": "plan", "head": "A"}, {"id": "build", "head": "B"}))
+    write_content(root, "cs", body=steps({"id": "build", "head": "B"}, {"id": "plan", "head": "A"}))
+    assert checks.id_findings(piece_of(root)) == []
+
+
+def test_an_id_one_language_lacks_is_named_and_a_repeated_id_still_reported(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, languages=["en", "cs"])
+    write_content(root, body=steps({"id": "plan", "head": "A"}, {"id": "build", "head": "B"}))
+    write_content(root, "cs", body=steps({"id": "plan", "head": "A"}, {"id": "plan", "head": "B"}))
+    found = checks.id_findings(piece_of(root))
+    assert [(f.code, f.file) for f in found] == [
+        ("id-twice", f"{PIECE_FOLDER}/content.cs.yaml"),
+        ("id-languages", f"{PIECE_FOLDER}/content.cs.yaml"),
+    ]
+    assert found[1].message == (
+        "`body.steps` in `cs` lacks the ids `build`, which it holds in `en`: an item keeps "
+        "its id in every language"
     )
 
 
@@ -386,13 +509,6 @@ def test_past_the_deadline_a_piece_without_a_record_fails_as_not_checked(tmp_pat
     assert checks.place(finding) == f"{PIECE_FOLDER}/findings.yaml"
     assert finding.fix == "run `pkit visual render flow` and commit its findings record"
     assert "of 0 computed now, of 1 not checked" in report.summary[0]
-
-
-def test_a_released_pieces_scenes_are_never_computed(tmp_path: Path) -> None:
-    root = drawing_project(tmp_path, state="final")
-    write_picture(root, framing)
-    report = checks.check(root)
-    assert [f.code for f, _ in report.judged] == []
 
 
 def test_a_file_bound_to_another_schema_fails_and_a_piece_named_alone_is_checked_alone(

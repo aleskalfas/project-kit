@@ -8,8 +8,9 @@ colour roles; and the pairs of colour roles that must contrast, at WCAG's levels
 role carries no value, so it is no DTCG token.
 
 **A brand** is one library version of kind `brand`. Its `library.yaml` names the DTCG
-version, its Resolver document and its open roles. Format 1 reads this subset of DTCG
-2025.10, and refuses the rest, which a later format may add:
+version, its Resolver document, its open roles, and the brand it builds on as its base, if
+any. Format 1 reads this subset of DTCG 2025.10, and refuses the rest, which a later
+format may add:
 
 - *Token files* hold groups and tokens. A token has `$value`, and may have `$type`,
   `$description`, `$extensions` and `$deprecated`; a group may have the same but `$value`,
@@ -34,11 +35,32 @@ combination, to its declared type; a loop or a dangling alias fails; a value axi
 changes anything but a colour fails. Open roles name roles the brand exports, or groups of
 them by whole segments.
 
+**A brand built on another** (DEC-004 point 6) marks one entry of its `builds-on`, a
+brand, `base: true`. The caller gives the version folder of each library the lock names
+(`locked`), and the base is read from the one of its name, first, its own base before it;
+its major is the one the entry names. In each combination:
+
+- *merged before aliases are resolved:* the base's tokens come first, then the brand's
+  own sources in its resolution order. The brand's value for a role its base opens wins in
+  the combinations its sources cover, and the base's holds elsewhere; every token that
+  aliases the role, the base's own included, follows the merged value. A value the brand
+  gives a role its base does not open is a finding, and the base's value holds;
+- *each library's private tokens stay its own:* an alias reaches the exported roles and
+  the tokens of the library that writes it, never a token its base keeps private, which
+  fails. So a base may reshape its private tokens freely;
+- *the base's axes:* the brand varies values on its base's axes, by their names and modes.
+  A modifier for another axis, a context for another mode, or another default fails;
+- *chains narrow:* the brand's open roles name only roles its base opens to it (format 1
+  has no brand's own roles), so each link of a chain opens at most what the last opens.
+
 A brand that cannot be resolved raises TokenError, carrying its findings. One that can is
 a Brand, whose `findings` hold what is wrong but leaves it usable: an open role it does
-not have, a font file nothing holds, a declared pair below its contrast. Every finding of
-a brand names the brand's version as where it lies, so its level is read where it lies
-(DEC-002 point 7).
+not have, a value for a role its base does not open, a font file nothing holds, a declared
+pair below its contrast. Every finding of a brand names the brand's version as where it
+lies, so its level is read where it lies (DEC-002 point 7); a fault of the lock, a base it
+names at another major or not at all, names none, and always fails. A brand's findings
+hold its base's too, each naming the base's version; a pair or a font family is judged at
+the brand only where the brand's values change what the base gives.
 
 Knows nothing of the working folder, pieces, the list or the configuration.
 """
@@ -320,13 +342,32 @@ def _read_pairs(raw: Any, roles: Mapping[str, Role], problems: _Problems) -> tup
 @dataclass(frozen=True)
 class _Token:
     """A token as one file writes it: its type, given or passed down by its group in that
-    file, its value, its extensions, and the file."""
+    file, its value, its extensions and the file; the library whose file holds it
+    (`owner`, its label, or "" for a shared role's default), and how findings name that
+    library's version folder (`prefix`)."""
 
     path: str
     type: str | None
     value: Any
     extensions: Mapping[str, Any]
     file: str
+    owner: str = ""
+    prefix: str = ""
+
+    @property
+    def shown(self) -> str:
+        """The token's file, as findings name it."""
+        return f"{self.prefix}{self.file}"
+
+
+@dataclass(frozen=True)
+class _View:
+    """The tokens of one combination before aliases are resolved (DEC-004 point 6): the
+    token that gives each exported role its value, whichever library of the chain writes
+    it, and each library's private tokens, by its label."""
+
+    roles: dict[str, _Token]
+    private: dict[str, dict[str, _Token]]
 
 
 @dataclass(frozen=True)
@@ -336,19 +377,25 @@ class _Resolved:
 
 
 class _Problem(Exception):
-    def __init__(self, code: str, message: str, file: str, where: str) -> None:
+    """A token that cannot be resolved; `shown` is its file as findings name it."""
+
+    def __init__(self, code: str, message: str, shown: str, where: str) -> None:
         super().__init__(message)
-        self.code, self.message, self.file, self.where = code, message, file, where
+        self.code, self.message, self.shown, self.where = code, message, shown, where
 
 
 class Brand:
-    """One brand version, read and checked against the foundations' declarations.
+    """One brand version, read and checked against the foundations' declarations, over its
+    base when it builds on one.
 
-    - `name`, `version`: as its `library.yaml` gives them.
+    - `name`, `version`, `label` (`<name>@<version>`): as its `library.yaml` gives them.
     - `axes`: the shared axes, each a key's axis, whether the brand varies it or not.
     - `roles`: the token paths it exports, the shared roles, in path order.
     - `open`: its open roles, as its `library.yaml` lists them.
-    - `findings`: what is wrong, leaving it usable.
+    - `opened`: the roles a brand built on it may give values: those its open roles name,
+      narrowed to those its base opens to it.
+    - `base`: the brand it builds on as its base, read, or None.
+    - `findings`: what is wrong, leaving it usable: its own, then its base's.
     """
 
     def __init__(
@@ -359,6 +406,9 @@ class Brand:
         folder: Path,
         foundations: Declarations,
         open_roles: tuple[str, ...],
+        opened: frozenset[str],
+        base: Brand | None,
+        views: dict[str, _View],
         resolved: dict[str, dict[str, _Resolved]],
         fonts: dict[str, Path | None],
         findings: tuple[Finding, ...],
@@ -369,10 +419,17 @@ class Brand:
         self.axes = dict(foundations.axes)
         self.roles = tuple(sorted(foundations.roles))
         self.open = open_roles
+        self.opened = opened
+        self.base = base
         self.findings = findings
         self._foundations = foundations
+        self._views = views
         self._resolved = resolved
         self._fonts = fonts
+
+    @property
+    def label(self) -> str:
+        return f"{self.name}@{self.version}"
 
     def resolve(self, token_path: str, combination: Mapping[str, str]) -> Any:
         """The value of the role at `token_path` in `combination` (an axis left out takes
@@ -422,39 +479,64 @@ def read_brand(
     *,
     fonts: Path | None = None,
     root: Path | None = None,
+    locked: Mapping[str, Path] | None = None,
 ) -> Brand:
     """The brand whose version folder is `folder`, read and checked against
-    `foundations`. `fonts` is the location's folder of fonts a brand names by hash; findings
-    name files relative to `root` when given, else to `folder`. Raises TokenError."""
-    shown = folder.relative_to(root).as_posix() + "/" if root is not None else ""
-    library_file = f"{shown}library.yaml"
+    `foundations`, over its base when it marks one. `fonts` is the location's folder of
+    fonts a brand names by hash. `locked` gives the version folder of each library the lock
+    names, by its name; a base is read from it. Findings name files relative to `root`
+    when given, else to the version folder they lie in. Raises TokenError."""
+    shown = _shown(folder, root)
     try:
         library = read_bound(folder / "library.yaml", "library")
     except (ReadError, FileError) as exc:
-        raise TokenError([Finding("brand-unreadable", FAILS, str(exc), file=library_file)]) from exc
-    label = f"{library.get('name')}@{library.get('version')}"
-    reader = _BrandReader(folder, foundations, library, label, shown, fonts)
+        raise TokenError([_unreadable(exc, folder, shown)]) from exc
+    reader = _BrandReader(folder, foundations, library, shown, fonts, root, locked or {}, ())
     return reader.read()
 
 
+def _shown(folder: Path, root: Path | None) -> str:
+    """How findings name a version folder: relative to `root`, or "" without one."""
+    return folder.relative_to(root).as_posix() + "/" if root is not None else ""
+
+
+def _unreadable(exc: Exception, folder: Path, shown: str) -> Finding:
+    """A brand whose `library.yaml` cannot be read, naming the version its folder holds,
+    `libraries/<name>/<version>/`, so its level is read where it lies."""
+    return Finding(
+        "brand-unreadable",
+        FAILS,
+        str(exc),
+        file=f"{shown}library.yaml",
+        library=f"{folder.parent.name}@{folder.name}",
+    )
+
+
 class _BrandReader:
-    """Reads one brand version; collects what it finds as findings."""
+    """Reads one brand version; collects what it finds as findings. `chain` names the
+    brands built on it that are being read, the last built on it directly."""
 
     def __init__(
         self,
         folder: Path,
         foundations: Declarations,
         library: Mapping[str, Any],
-        label: str,
         shown: str,
         fonts: Path | None,
+        root: Path | None,
+        locked: Mapping[str, Path],
+        chain: tuple[str, ...],
     ) -> None:
         self.folder = folder
         self.foundations = foundations
         self.library = library
-        self.label = label
+        self.name = str(library.get("name"))
+        self.label = f"{library.get('name')}@{library.get('version')}"
         self.shown = shown
         self.fonts_folder = fonts
+        self.root = root
+        self.locked = locked
+        self.chain = chain
         self.fatal: list[Finding] = []
         self.kept: list[Finding] = []
         self.flat: dict[str, dict[str, _Token]] = {}
@@ -462,19 +544,53 @@ class _BrandReader:
     # findings
 
     def _finding(
-        self, code: str, message: str, file: str = "", where: str = "", level: str = FAILS
+        self,
+        code: str,
+        message: str,
+        file: str = "",
+        where: str = "",
+        level: str = FAILS,
+        *,
+        shown: str | None = None,
+        fix: str = "",
+        who: str = "",
     ) -> Finding:
+        """A finding of this brand version; `shown`, when given, names its file as it is,
+        such as a token file of its base."""
         return Finding(
-            code, level, message, file=f"{self.shown}{file}", where=where, library=self.label
+            code,
+            level,
+            message,
+            file=shown if shown is not None else f"{self.shown}{file}",
+            where=where,
+            fix=fix,
+            library=self.label,
+            who=who,
         )
 
     def _fail(self, code: str, message: str, file: str = "", where: str = "") -> None:
         self.fatal.append(self._finding(code, message, file, where))
 
+    def _fail_problem(self, problem: _Problem) -> None:
+        self.fatal.append(
+            self._finding(problem.code, problem.message, where=problem.where, shown=problem.shown)
+        )
+
     def _keep(
-        self, code: str, message: str, file: str = "", where: str = "", level: str = FAILS
+        self,
+        code: str,
+        message: str,
+        file: str = "",
+        where: str = "",
+        level: str = FAILS,
+        *,
+        shown: str | None = None,
+        fix: str = "",
+        who: str = "",
     ) -> None:
-        self.kept.append(self._finding(code, message, file, where, level))
+        self.kept.append(
+            self._finding(code, message, file, where, level, shown=shown, fix=fix, who=who)
+        )
 
     # the whole
 
@@ -496,10 +612,12 @@ class _BrandReader:
                 "library.yaml",
                 "dtcg",
             )
-        resolver = self._read_resolver(library.get("resolver"))
+        base = self._read_base(library.get("builds-on"))
+        resolver = self._read_resolver(library.get("resolver"), base)
         if self.fatal or resolver is None:
-            raise TokenError(self.fatal)
+            raise TokenError(self._unique(self.fatal))
         order, sets, modifiers = resolver
+        views: dict[str, _View] = {}
         resolved: dict[str, dict[str, _Resolved]] = {}
         everything = keys.combinations(
             {axis.name: axis.modes for axis in self.foundations.axes.values()},
@@ -508,24 +626,28 @@ class _BrandReader:
         for combination in everything:
             key = keys.key_of(combination, self.foundations.axes)
             sources = self._sources(order, sets, modifiers, combination)
-            resolved[key] = self._resolve_combination(sources, key)
+            views[key] = self._view(sources, base, key)
+            resolved[key] = self._resolve_combination(views[key], key)
         if self.fatal:
             raise TokenError(self._unique(self.fatal))
         self._check_value_axes(resolved)
         if self.fatal:
             raise TokenError(self._unique(self.fatal))
-        open_roles = self._check_open(library.get("open", []))
-        fonts = self._read_fonts(resolved)
-        self._check_pairs(resolved)
+        open_roles, opened = self._check_open(library.get("open", []), base)
+        fonts = self._read_fonts(resolved, base)
+        self._check_pairs(resolved, base)
         return Brand(
-            name=str(library.get("name")),
+            name=self.name,
             version=str(library.get("version")),
             folder=self.folder,
             foundations=self.foundations,
             open_roles=open_roles,
+            opened=opened,
+            base=base,
+            views=views,
             resolved=resolved,
             fonts=fonts,
-            findings=tuple(self._unique(self.kept)),
+            findings=(*self._unique(self.kept), *(base.findings if base is not None else ())),
         )
 
     @staticmethod
@@ -540,10 +662,106 @@ class _BrandReader:
                 out.append(finding)
         return out
 
+    # the base
+
+    def _read_base(self, raw: Any) -> Brand | None:
+        """The brand that `builds-on` marks as the base, read first from the folder the lock
+        gives; None when it marks none, or when the base cannot be read, failing why."""
+        marked = (
+            [entry for entry in raw if isinstance(entry, Mapping) and "base" in entry]
+            if isinstance(raw, list)
+            else []
+        )
+        if not marked:
+            return None
+        name, major = marked[0].get("name"), marked[0].get("major")
+        if (
+            len(marked) > 1
+            or marked[0].get("base") is not True
+            or not is_name(name)
+            or not isinstance(major, int)
+            or isinstance(major, bool)
+        ):
+            self._fail(
+                "base-shape",
+                "`builds-on` does not mark one base as `{name, major, base: true}`: a brand "
+                "has at most one base",
+                "library.yaml",
+                "builds-on",
+            )
+            return None
+        if name == self.name or name in self.chain:
+            loop = " → ".join((*self.chain, self.name, name))
+            self._fail(
+                "base-loop", f"the brands build on each other: {loop}", "library.yaml", "builds-on"
+            )
+            return None
+        folder = self.locked.get(name)
+        if folder is None or not (folder / "library.yaml").is_file():
+            self._fail_lock(
+                f"{self.label} builds on its base `{name}` {major}, and the lock names no "
+                f"version of it the project holds",
+                f"name a version of `{name}` of major {major} in the lock",
+            )
+            return None
+        shown = _shown(folder, self.root)
+        try:
+            data = read_bound(folder / "library.yaml", "library")
+        except (ReadError, FileError) as exc:
+            self.fatal.append(_unreadable(exc, folder, shown))
+            return None
+        if data.get("kind") != "brand":
+            self._fail(
+                "base-kind",
+                f"the base `{name}` of {self.label} is not a brand (`kind: {data.get('kind')}`): "
+                f"a brand builds only on a brand as its base",
+                "library.yaml",
+                "builds-on",
+            )
+            return None
+        version = str(data.get("version"))
+        if version.partition(".")[0] != str(major):
+            self._fail_lock(
+                f"the lock names {name}@{version}, but {self.label} builds on its base `{name}` "
+                f"{major}",
+                f"name a version of `{name}` of major {major} in the lock",
+            )
+            return None
+        reader = _BrandReader(
+            folder,
+            self.foundations,
+            data,
+            shown,
+            self.fonts_folder,
+            self.root,
+            self.locked,
+            (*self.chain, self.name),
+        )
+        try:
+            return reader.read()
+        except TokenError as exc:
+            self.fatal.extend(exc.findings)
+            return None
+
+    def _fail_lock(self, message: str, fix: str) -> None:
+        """A base the lock does not give at the major the brand builds on: a fault only the
+        lock that combines the versions shows, so it names no version and always fails
+        (DEC-002 point 7)."""
+        self.fatal.append(
+            Finding(
+                "base-lock",
+                FAILS,
+                message,
+                file=f"{self.shown}library.yaml",
+                where="builds-on",
+                fix=fix,
+            )
+        )
+
     # the Resolver document
 
     def _read_resolver(
-        self, path: Any
+        self, path: Any, base: Brand | None
     ) -> (
         tuple[
             tuple[tuple[str, str], ...],
@@ -580,7 +798,7 @@ class _BrandReader:
             )
         raw_sets, raw_modifiers = doc.get("sets", {}), doc.get("modifiers", {})
         sets = self._read_sets(raw_sets, rel)
-        modifiers = self._read_modifiers(raw_modifiers, rel)
+        modifiers = self._read_modifiers(raw_modifiers, rel, base)
         names = {
             "sets": set(raw_sets) if isinstance(raw_sets, Mapping) else set(),
             "modifiers": set(raw_modifiers) if isinstance(raw_modifiers, Mapping) else set(),
@@ -608,14 +826,28 @@ class _BrandReader:
             sets[name] = self._read_sources(spec.get("sources"), rel, where)
         return sets
 
-    def _read_modifiers(self, raw: Any, rel: str) -> dict[str, dict[str, tuple[str, ...]]]:
+    def _read_modifiers(
+        self, raw: Any, rel: str, base: Brand | None
+    ) -> dict[str, dict[str, tuple[str, ...]]]:
+        """Each modifier, one of the shared axes; a brand built on another keeps its base's
+        axes, modes and defaults (DEC-004 point 6), and adds or changes none."""
         if not isinstance(raw, Mapping):
             self._fail("resolver-shape", "`modifiers` is not an object", rel, "modifiers")
             return {}
+        axes = base.axes if base is not None else self.foundations.axes
         modifiers = {}
         for name, spec in raw.items():
             where = f"modifiers.{name}"
-            axis = self.foundations.axes.get(name)
+            axis = axes.get(name)
+            if axis is None and base is not None:
+                self._fail(
+                    "base-axis",
+                    f"the modifier `{name}` adds an axis, and a brand built on {base.label} "
+                    f"varies only its base's axes: {', '.join(sorted(axes))}",
+                    rel,
+                    where,
+                )
+                continue
             if axis is None:
                 self._fail(
                     "brand-axis",
@@ -635,6 +867,27 @@ class _BrandReader:
                 )
                 continue
             contexts = spec.get("contexts")
+            added = sorted(set(contexts) - set(axis.modes)) if isinstance(contexts, Mapping) else []
+            if base is not None and added:
+                self._fail(
+                    "base-axis",
+                    f"the modifier `{name}` adds the mode {', '.join(f'`{m}`' for m in added)}, "
+                    f"and a brand built on {base.label} varies only its base's modes of "
+                    f"`{name}`: {', '.join(axis.modes)}",
+                    rel,
+                    f"{where}.contexts",
+                )
+                continue
+            if base is not None and spec.get("default") != axis.default:
+                self._fail(
+                    "base-axis",
+                    f"the modifier `{name}` changes the default to `{spec.get('default')}`, "
+                    f"and a brand built on {base.label} keeps its base's default, "
+                    f"`{axis.default}`",
+                    rel,
+                    f"{where}.default",
+                )
+                continue
             if not isinstance(contexts, Mapping) or set(contexts) != set(axis.modes):
                 self._fail(
                     "brand-axis",
@@ -846,7 +1099,9 @@ class _BrandReader:
                 path,
             )
             return
-        self.flat[file][path] = _Token(path, type_, node["$value"], extensions, file)
+        self.flat[file][path] = _Token(
+            path, type_, node["$value"], extensions, file, owner=self.label, prefix=self.shown
+        )
 
     # resolution
 
@@ -862,23 +1117,58 @@ class _BrandReader:
             files.extend(sets[name] if kind == "sets" else modifiers[name][combination[name]])
         return files
 
-    def _resolve_combination(self, sources: list[str], key: str) -> dict[str, _Resolved]:
-        merged: dict[str, _Token] = {}
-        for role in self.foundations.roles.values():
-            if role.default is not None:
-                merged[role.path] = _Token(role.path, role.type, f"{{{role.default}}}", {}, "")
+    def _view(self, sources: list[str], base: Brand | None, key: str) -> _View:
+        """The tokens of the combination `key` before aliases are resolved: the base's, or
+        the shared roles' defaults without a base, then the brand's own sources in order,
+        later winning. A role its base does not open keeps the base's token, a finding."""
+        if base is None:
+            roles = {
+                role.path: _Token(
+                    role.path, role.type, f"{{{role.default}}}", {}, "", prefix=self.shown
+                )
+                for role in self.foundations.roles.values()
+                if role.default is not None
+            }
+            below: dict[str, dict[str, _Token]] = {}
+        else:
+            roles = dict(base._views[key].roles)
+            below = base._views[key].private
+        own: dict[str, _Token] = {}
         for file in sources:
-            merged.update(self.flat.get(file, {}))
-        self._check_paths(merged)
+            for path, token in self.flat.get(file, {}).items():
+                if path not in self.foundations.roles:
+                    own[path] = token
+                elif base is None or path in base.opened:
+                    roles[path] = token
+                else:
+                    self._keep(
+                        "role-not-open",
+                        f"the brand gives `{path}` a value, but its base {base.label} does not "
+                        f"open it to the brand, so the base's value holds; it opens: "
+                        f"{', '.join(sorted(base.opened)) or 'nothing'}",
+                        where=path,
+                        shown=token.shown,
+                        fix=f"take `{path}` out of {token.file}",
+                    )
+        return _View(roles, {**below, self.label: own})
+
+    def _resolve_combination(self, view: _View, key: str) -> dict[str, _Resolved]:
+        """Every exported role and every private token of this brand, resolved in the
+        combination `key`; a base's private tokens are resolved only where an alias leads."""
+        self._check_paths(view)
+        done: dict[tuple[str, str], _Resolved] = {}
         resolved: dict[str, _Resolved] = {}
-        for path in merged:
+        refs = [("", path) for path in view.roles] + [
+            (self.label, path) for path in view.private[self.label]
+        ]
+        for ref in refs:
             try:
-                resolved[path] = self._resolve(path, merged, resolved, ())
+                resolved[ref[1]] = self._resolve(ref, view, done, ())
             except _Problem as problem:
-                self._fail(problem.code, problem.message, problem.file, problem.where)
+                self._fail_problem(problem)
         for role in self.foundations.roles.values():
             found = resolved.get(role.path)
-            if role.path not in merged:
+            if role.path not in view.roles:
                 self._fail(
                     "role-missing",
                     f"the brand gives the role `{role.path}` no value in the combination `{key}`",
@@ -886,20 +1176,23 @@ class _BrandReader:
                     role.path,
                 )
             elif found is not None and found.type != role.type:
-                self._fail(
-                    "role-type",
-                    f"the role `{role.path}` is of type `{role.type}`, but the brand gives it a "
-                    f"`{found.type}` in the combination `{key}`",
-                    merged[role.path].file,
-                    role.path,
+                self.fatal.append(
+                    self._finding(
+                        "role-type",
+                        f"the role `{role.path}` is of type `{role.type}`, but the brand gives "
+                        f"it a `{found.type}` in the combination `{key}`",
+                        where=role.path,
+                        shown=view.roles[role.path].shown,
+                    )
                 )
         return resolved
 
-    def _check_paths(self, merged: Mapping[str, _Token]) -> None:
+    def _check_paths(self, view: _View) -> None:
         shared_groups = set(self.foundations.top_groups)
-        for path, token in merged.items():
+        tokens = {**view.roles, **view.private[self.label]}
+        for path, token in tokens.items():
             if (
-                token.file
+                token.owner == self.label
                 and path.split(".")[0] in shared_groups
                 and path not in self.foundations.roles
             ):
@@ -910,75 +1203,103 @@ class _BrandReader:
                     token.file,
                     path,
                 )
-            for other in merged:
+            for other in tokens:
                 if other.startswith(f"{path}."):
-                    self._fail(
-                        "tokens-shape",
-                        f"`{path}` is a token in one file and a group in another",
-                        token.file,
-                        path,
+                    self.fatal.append(
+                        self._finding(
+                            "tokens-shape",
+                            f"`{path}` is a token in one file and a group in another",
+                            where=path,
+                            shown=token.shown,
+                        )
                     )
                     break
 
     def _resolve(
         self,
-        path: str,
-        merged: Mapping[str, _Token],
-        done: dict[str, _Resolved],
-        chain: tuple[str, ...],
+        ref: tuple[str, str],
+        view: _View,
+        done: dict[tuple[str, str], _Resolved],
+        chain: tuple[tuple[str, str], ...],
     ) -> _Resolved:
-        if path in done:
-            return done[path]
-        token = merged[path]
-        if path in chain:
-            loop = " → ".join((*chain[chain.index(path) :], path))
-            raise _Problem("alias-loop", f"the aliases make a loop: {loop}", token.file, path)
-        chain = (*chain, path)
+        """The value of the token `ref` names: `("", <role>)` for an exported role,
+        `(<library>, <path>)` for a library's private token."""
+        if ref in done:
+            return done[ref]
+        scope, path = ref
+        token = view.private[scope][path] if scope else view.roles[path]
+        if ref in chain:
+            loop = " → ".join(step for _, step in (*chain[chain.index(ref) :], ref))
+            raise _Problem("alias-loop", f"the aliases make a loop: {loop}", token.shown, path)
+        chain = (*chain, ref)
         target = self._alias(token.value)
         if target is not None:
-            if target not in merged:
-                raise _Problem(
-                    "alias-dangling",
-                    f"`{path}` aliases `{target}`, which the brand does not hold",
-                    token.file,
-                    path,
-                )
-            found = self._resolve(target, merged, done, chain)
+            found = self._resolve(self._target(token, target, path, view), view, done, chain)
             if token.type is not None and token.type != found.type:
                 raise _Problem(
                     "alias-type",
                     f"`{path}` is of type `{token.type}` but aliases `{target}`, of type "
                     f"`{found.type}`",
-                    token.file,
+                    token.shown,
                     path,
                 )
-            done[path] = found
+            done[ref] = found
             return found
         if token.type is None:
             raise _Problem(
-                "token-type", f"`{path}` has no `$type`, and its group gives none", token.file, path
+                "token-type",
+                f"`{path}` has no `$type`, and its group gives none",
+                token.shown,
+                path,
             )
         if token.type == "typography":
-            value = self._typography(token, merged, done, chain)
+            value = self._typography(token, view, done, chain)
         else:
-            value = _canonical(token.type, token.value, token.file, path)
+            value = _canonical(token.type, token.value, token.shown, path)
         found = _Resolved(token.type, value)
-        done[path] = found
+        done[ref] = found
         return found
+
+    def _target(self, token: _Token, target: str, where: str, view: _View) -> tuple[str, str]:
+        """Where an alias in `token`, at `where`, leads: an exported role, or a private token
+        of the library that writes `token` (DEC-004 point 6). Raises _Problem for an alias
+        into another library's private token, or one that leads nowhere."""
+        if target in view.roles:
+            return ("", target)
+        if target in view.private.get(token.owner, {}):
+            return (token.owner, target)
+        holder = next(
+            (owner for owner, held in view.private.items() if target in held),
+            None,
+        )
+        if holder is not None:
+            raise _Problem(
+                "alias-private",
+                f"`{where}` aliases `{target}`, which {holder} keeps private: a brand aliases "
+                f"only the roles its base exports",
+                token.shown,
+                token.path,
+            )
+        raise _Problem(
+            "alias-dangling",
+            f"`{where}` aliases `{target}`, which the brand does not hold",
+            token.shown,
+            token.path,
+        )
 
     def _typography(
         self,
         token: _Token,
-        merged: Mapping[str, _Token],
-        done: dict[str, _Resolved],
-        chain: tuple[str, ...],
+        view: _View,
+        done: dict[tuple[str, str], _Resolved],
+        chain: tuple[tuple[str, str], ...],
     ) -> dict[str, Any]:
         raw = token.value
         if not isinstance(raw, Mapping) or set(raw) != set(TYPOGRAPHY):
             raise _Problem(
                 "token-value",
                 f"`{token.path}` is a typography, which holds exactly {', '.join(TYPOGRAPHY)}",
-                token.file,
+                token.shown,
                 token.path,
             )
         value = {}
@@ -986,21 +1307,14 @@ class _BrandReader:
             target = self._alias(raw[member])
             where = f"{token.path}.{member}"
             if target is None:
-                value[member] = _canonical(type_, raw[member], token.file, where)
+                value[member] = _canonical(type_, raw[member], token.shown, where)
                 continue
-            if target not in merged:
-                raise _Problem(
-                    "alias-dangling",
-                    f"`{where}` aliases `{target}`, which the brand does not hold",
-                    token.file,
-                    token.path,
-                )
-            found = self._resolve(target, merged, done, chain)
+            found = self._resolve(self._target(token, target, where, view), view, done, chain)
             if found.type != type_:
                 raise _Problem(
                     "alias-type",
                     f"`{where}` must be a `{type_}`, but aliases a `{found.type}`",
-                    token.file,
+                    token.shown,
                     token.path,
                 )
             value[member] = found.value
@@ -1020,8 +1334,8 @@ class _BrandReader:
             for axis in axes.values():
                 if axis.kind != "value" or combination[axis.name] == axis.default:
                     continue
-                base = keys.key_of({**combination, axis.name: axis.default}, axes)
-                before = resolved[base]
+                at_default = keys.key_of({**combination, axis.name: axis.default}, axes)
+                before = resolved[at_default]
                 for path in sorted(set(values) | set(before)):
                     one, other = values.get(path), before.get(path)
                     if one == other:
@@ -1038,27 +1352,50 @@ class _BrandReader:
                         path,
                     )
 
-    def _check_open(self, raw: Any) -> tuple[str, ...]:
+    def _check_open(self, raw: Any, base: Brand | None) -> tuple[tuple[str, ...], frozenset[str]]:
+        """The open roles as `open` lists them, and the roles they open: those each entry
+        names, narrowed to those its base opens to it (DEC-004 point 6)."""
         if not isinstance(raw, list):
             self._keep("open-shape", "`open` is not a list of roles", "library.yaml", "open")
-            return ()
+            return (), frozenset()
         exported = self.foundations.roles
+        open_to_it = base.opened if base is not None else frozenset(exported)
+        opened: set[str] = set()
         for entry in raw:
-            if not is_token_path(entry) or not any(
-                path == entry or path.startswith(f"{entry}.") for path in exported
-            ):
+            named = {
+                path
+                for path in exported
+                if is_token_path(entry) and (path == entry or path.startswith(f"{entry}."))
+            }
+            if not named:
                 self._keep(
                     "open-unknown",
                     f"the open role `{entry}` names no role the brand exports, nor a group of them",
                     "library.yaml",
                     "open",
                 )
-        return tuple(entry for entry in raw if isinstance(entry, str))
+                continue
+            closed = sorted(named - open_to_it)
+            if closed and base is not None:
+                self._keep(
+                    "open-wider",
+                    f"the open role `{entry}` opens {', '.join(f'`{p}`' for p in closed)}, which "
+                    f"its base {base.label} does not open to it: a brand opens only roles open "
+                    f"to it",
+                    "library.yaml",
+                    "open",
+                    fix=f"take `{entry}` out of `open`, or name only roles {base.label} opens",
+                )
+            opened |= named & open_to_it
+        return tuple(entry for entry in raw if isinstance(entry, str)), frozenset(opened)
 
     def _read_fonts(
-        self, resolved: Mapping[str, Mapping[str, _Resolved]]
+        self, resolved: Mapping[str, Mapping[str, _Resolved]], base: Brand | None
     ) -> dict[str, Path | None]:
-        fonts: dict[str, Path | None] = {}
+        """The file of each font family, the base's first, then the brand's own; a family
+        a value names with no file is a finding, unless the base names it too, whose
+        finding it is."""
+        fonts: dict[str, Path | None] = dict(base._fonts) if base is not None else {}
         declared: dict[str, tuple[Any, str, str]] = {}
         for file, tokens in self.flat.items():
             for path, token in tokens.items():
@@ -1088,13 +1425,9 @@ class _BrandReader:
                     declared[family] = (where, file, path)
         for family, (where, file, path) in declared.items():
             fonts[family] = self._font_path(family, where, file, path)
-        named = set()
-        for values in resolved.values():
-            for found in values.values():
-                if found.type == "fontFamily":
-                    named.update(found.value)
-                elif found.type == "typography":
-                    named.update(found.value["fontFamily"])
+        named = _families(resolved)
+        if base is not None:
+            named -= _families(base._resolved)
         for family in sorted(named - set(fonts)):
             self._keep(
                 "font-missing",
@@ -1152,10 +1485,19 @@ class _BrandReader:
                     return candidate
         return None
 
-    def _check_pairs(self, resolved: Mapping[str, Mapping[str, _Resolved]]) -> None:
+    def _check_pairs(
+        self, resolved: Mapping[str, Mapping[str, _Resolved]], base: Brand | None
+    ) -> None:
+        """Each declared pair in every combination; a combination where the pair is as its
+        base gives it is the base's to report."""
         for pair in self.foundations.pairs:
             for key, values in resolved.items():
                 text, under = values[pair.text].value, values[pair.under].value
+                if base is not None and (text, under) == (
+                    base._resolved[key][pair.text].value,
+                    base._resolved[key][pair.under].value,
+                ):
+                    continue
                 if under["alpha"] < 1:
                     self._keep(
                         "pair-translucent",
@@ -1164,6 +1506,9 @@ class _BrandReader:
                         "",
                         pair.under,
                         level=ATTENTION,
+                        fix=f"give `{pair.under}` an opaque colour in `{key}`, or judge the "
+                        f"contrast where it is drawn",
+                        who=f"the owner of the brand {self.name}",
                     )
                     continue
                 ratio = contrast_ratio(text, under)
@@ -1176,6 +1521,18 @@ class _BrandReader:
                         "",
                         pair.text,
                     )
+
+
+def _families(resolved: Mapping[str, Mapping[str, _Resolved]]) -> set[str]:
+    """The font families the resolved values name, in any combination."""
+    named: set[str] = set()
+    for values in resolved.values():
+        for found in values.values():
+            if found.type == "fontFamily":
+                named.update(found.value)
+            elif found.type == "typography":
+                named.update(found.value["fontFamily"])
+    return named
 
 
 # --- values -------------------------------------------------------------------------------------
@@ -1194,12 +1551,12 @@ _SHAPES = {
 _INVALID = object()
 
 
-def _canonical(type_: str, value: Any, file: str, where: str) -> Any:
-    """`value` of `type_` in canonical form; _Problem when it is not of that type as format
-    1 reads it."""
+def _canonical(type_: str, value: Any, shown: str, where: str) -> Any:
+    """`value` of `type_` in canonical form; _Problem, naming the file `shown`, when it is
+    not of that type as format 1 reads it."""
     found = _canonical_or_none(type_, value)
     if found is _INVALID:
-        raise _Problem("token-value", f"`{where}` is no {_SHAPES[type_]}", file, where)
+        raise _Problem("token-value", f"`{where}` is no {_SHAPES[type_]}", shown, where)
     return found
 
 

@@ -4,6 +4,7 @@ other byte of the configuration kept, and the files of a folder as git sees them
 
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 
@@ -130,6 +131,20 @@ def test_a_recorded_location_that_cannot_be_used_is_refused(
         location.for_reading(root)
 
 
+@pytest.mark.parametrize("line", ["location:\n", "location: null\n", "location: ~\n"])
+def test_an_empty_location_is_refused_saying_how_to_mend_it(tmp_path: Path, line: str) -> None:
+    root = project(tmp_path)
+    config(root, f"{BINDING}{line}")
+    said = (
+        "records an empty `location:`: write the folder that holds the work there, such as "
+        "`location: visual`, or remove the line"
+    )
+    for find in (location.for_reading, location.for_writing):
+        with pytest.raises(location.LocationRefused, match=re.escape(said)):
+            find(root)
+    assert (root / CONFIG).read_text(encoding="utf-8") == f"{BINDING}{line}"
+
+
 # --- writing ------------------------------------------------------------------------------------
 
 
@@ -236,6 +251,11 @@ def test_the_same_value_leaves_the_file_and_another_is_refused() -> None:
     assert config_text.with_key(existing, "location", "art") == existing
     with pytest.raises(config_text.ConfigRefused, match="never moves it"):
         config_text.with_key(existing, "location", "visual")
+
+
+def test_an_empty_key_is_refused_plainly() -> None:
+    with pytest.raises(config_text.ConfigRefused, match=r"records an empty `location:`"):
+        config_text.with_key(f"{BINDING}location:\n", "location", "visual")
 
 
 def test_a_flow_mapping_at_the_top_is_left_for_a_person() -> None:

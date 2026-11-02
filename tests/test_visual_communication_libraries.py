@@ -1,6 +1,6 @@
 """The library folder, its list, versions, and a piece's lock (DEC-001 point 5, DEC-003
-points 1, 4, 8 and 9). Each project is laid in the test's own folder, outside git, so its
-files are listed by walking."""
+points 1, 4, 8 and 9, DEC-004 point 6). Each project is laid in the test's own folder,
+outside git, so its files are listed by walking."""
 
 from __future__ import annotations
 
@@ -15,16 +15,20 @@ from tests.visual_communication_project import (
     CAPABILITY,
     FOUNDATIONS,
     TEST_BRAND,
+    TEST_EDITION,
     add_library,
+    bound,
     copy_library,
     project,
     version_folder,
     write,
     write_list,
+    write_piece,
+    yaml_text,
 )
 
-libraries, fingerprint, files, reading = load(
-    "visual-communication", "libraries", "fingerprint", "files", "reading"
+libraries, fingerprint, files, reading, checks, pl = load(
+    "visual-communication", "libraries", "fingerprint", "files", "reading", "checks", "pipeline"
 )
 
 V = libraries.Version.parse
@@ -95,6 +99,23 @@ def test_the_shipped_foundations_and_the_test_brand_read() -> None:
     assert brand.kind == "brand"
     assert brand.builds_on == (libraries.BuildsOn("foundations", 1),)
     assert brand.label == "test-brand@1.0.0"
+    assert brand.base is None
+
+
+def test_a_brand_marks_the_brand_it_builds_on_as_its_base() -> None:
+    edition = libraries.read_library(TEST_EDITION)
+    assert edition.builds_on == (
+        libraries.BuildsOn("foundations", 1),
+        libraries.BuildsOn("test-brand", 1, base=True),
+    )
+    assert edition.base == libraries.BuildsOn("test-brand", 1, base=True)
+
+
+LIBRARY_TEXT = (
+    "pkit_schema: visual-communication:library\nschema_version: 1\nname: x\n"
+    "version: 1.0.0\nkind: components\nneeds-release: 0.1.0\nbuilds-on: []\n"
+)
+TWO_BASES = "builds-on: [{name: alpha, major: 1, base: true}, {name: beta, major: 1, base: true}]"
 
 
 @pytest.mark.parametrize(
@@ -105,21 +126,26 @@ def test_the_shipped_foundations_and_the_test_brand_read() -> None:
         ("version: 1.0.0", "version: 0.1.0", "X at least 1"),
         ("needs-release: 0.1.0", "needs-release: next", "is not a release"),
         ("builds-on: []", "builds-on: {}", "not a list"),
-        ("builds-on: []", "builds-on: [{name: y, major: 0}]", "a major from 1"),
-        ("builds-on: []", "builds-on: [{name: y, major: true}]", "a major from 1"),
+        ("builds-on: []", "builds-on: [{name: alpha, major: 0}]", "a major from 1"),
+        ("builds-on: []", "builds-on: [{name: alpha, major: true}]", "a major from 1"),
+        ("builds-on: []", "builds-on: [{name: alpha, major: 1, base: no}]", "`base: true`"),
+        ("builds-on: []", "builds-on: [{name: alpha, major: 1, base: true}]", "only a brand"),
         ("schema_version: 1", "schema_version: 2", "format 2"),
     ],
 )
 def test_a_library_file_the_capability_cannot_read_is_refused(
     tmp_path: Path, old: str, new: str, said: str
 ) -> None:
-    text = (
-        "pkit_schema: visual-communication:library\nschema_version: 1\nname: x\n"
-        "version: 1.0.0\nkind: components\nneeds-release: 0.1.0\nbuilds-on: []\n"
-    )
-    assert old in text
-    write(tmp_path / "library.yaml", text.replace(old, new))
+    assert old in LIBRARY_TEXT
+    write(tmp_path / "library.yaml", LIBRARY_TEXT.replace(old, new))
     with pytest.raises(libraries.LibraryError, match=said):
+        libraries.read_library(tmp_path)
+
+
+def test_a_brand_has_at_most_one_base(tmp_path: Path) -> None:
+    brand = LIBRARY_TEXT.replace("kind: components", "kind: brand")
+    write(tmp_path / "library.yaml", brand.replace("builds-on: []", TWO_BASES))
+    with pytest.raises(libraries.LibraryError, match="`alpha`, `beta` as bases"):
         libraries.read_library(tmp_path)
 
 
@@ -258,6 +284,35 @@ def test_the_shipped_foundations_and_the_test_brand_lock_together(tmp_path: Path
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     lock = libraries.move_lock(libraries.Held(root, "visual"), ["foundations", "test-brand"])
     assert lock == {"foundations": "1.0.0", "test-brand": "1.0.0"}
+
+
+def edition_project(tmp_path: Path) -> Path:
+    """The shipped foundations, the test brand, and the test edition built on it."""
+    root = project(tmp_path)
+    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
+    copy_library(root, TEST_EDITION, "test-edition", "1.0.0")
+    return root
+
+
+def test_a_brands_lock_names_its_base(tmp_path: Path) -> None:
+    root = edition_project(tmp_path)
+    roots = ["foundations", "test-edition"]
+    lock = libraries.move_lock(held(root), roots)
+    assert lock == {"foundations": "1.0.0", "test-brand": "1.0.0", "test-edition": "1.0.0"}
+    without_base = {"foundations": "1.0.0", "test-edition": "1.0.0"}
+    with pytest.raises(libraries.LockRefused, match="needs `test-brand`, which its pinned lock"):
+        libraries.move_lock(held(root), roots, without_base, pinned=True)
+
+
+def test_the_check_finds_a_lock_that_leaves_out_a_brands_base(tmp_path: Path) -> None:
+    root = edition_project(tmp_path)
+    lock = {"foundations": "1.0.0", "test-edition": "1.0.0"}
+    write_piece(root, "card", brand="test-edition", lock=lock)
+    write(root / "visual/pieces/card/content.en.yaml", yaml_text(bound("content", caption="x")))
+    (finding,) = checks.lock_findings(held(root), pl.read_piece(root, "visual", "card"))
+    assert finding.code == "lock-incomplete"
+    assert "test-edition@1.0.0 builds on `test-brand`" in finding.message
 
 
 def test_a_first_lock_takes_the_newest_of_each_with_what_it_builds_on(tmp_path: Path) -> None:

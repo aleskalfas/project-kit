@@ -154,6 +154,19 @@ def test_a_run_whose_record_verifies_writes_nothing(root: Path) -> None:
     assert record_of(root)["recorded"]["time"] == "2026-11-02T10:30:00Z"
 
 
+def test_code_a_checkout_gave_crlf_endings_is_up_to_date_as_the_check_reads_it(
+    root: Path,
+) -> None:
+    run(root)
+    sheet = root / "web/brand.css"
+    crlf = sheet.read_bytes().replace(b"\n", b"\r\n")
+    sheet.write_bytes(crlf)
+    again = code.write(root, "visual", NAME, now=datetime(2027, 1, 1, tzinfo=UTC))
+    assert again.changed is False
+    assert sheet.read_bytes() == crlf
+    assert record_of(root)["recorded"]["time"] == "2026-11-02T10:30:00Z"
+
+
 def test_a_run_reports_the_losses_its_declaration_does_not_accept(root: Path) -> None:
     written = run(root)
     assert [(loss.plugin, loss.what, loss.did) for loss in written.losses] == [

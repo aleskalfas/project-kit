@@ -10,7 +10,8 @@
   folder, in the location's library folder, whose copies no command writes (DEC-002 point
   9), and in its folder of declarations, where the record would read as one. Its record
   lies beside it, `<out>.record.yaml` (format `code-record`). The CRLF line endings a
-  checkout may give the code are read as the LF it was written with.
+  checkout may give the code are read as the LF it was written with, by the check and by a
+  run alike (`as_written`), so a run leaves such code as it is.
 - **The lock is the declaration's,** which a person moves on purpose (DEC-005 point 7).
   The command reads the brand at the versions it names, and never moves it.
 - **A run** resolves every token the brand exports in every combination of its axes
@@ -441,9 +442,15 @@ def _check_lock(held: libraries.Held, declaration: Declaration) -> set[str]:
     return seen
 
 
+def as_written(code: Path) -> bytes:
+    """The code's bytes as the writer wrote them: the CRLF line endings a checkout may give
+    it read as LF. The check and a run compare the code so."""
+    return code.read_bytes().replace(b"\r\n", b"\n")
+
+
 def _up_to_date(code: Path, record: Path, taken: Mapping[str, Any], data: bytes) -> bool:
     """Whether the record beside the code holds the fingerprint just taken and the hash of
-    `data`, and the code is `data`."""
+    `data`, and the code, read as written (`as_written`), is `data`."""
     if not (code.is_file() and record.is_file()):
         return False
     try:
@@ -455,7 +462,7 @@ def _up_to_date(code: Path, record: Path, taken: Mapping[str, Any], data: bytes)
         and binding_problem(kept, "code-record") is None
         and kept.get("fingerprint") == taken
         and kept.get("sha256") == sha256(data)
-        and code.read_bytes() == data
+        and as_written(code) == data
     )
 
 
@@ -625,7 +632,7 @@ def _written(root: Path, planned: Plan) -> list[Finding]:
             )
         ]
     found = []
-    if sha256(code.read_bytes().replace(b"\r\n", b"\n")) != kept["sha256"]:
+    if sha256(as_written(code)) != kept["sha256"]:
         found.append(
             Finding(
                 "code-edited",

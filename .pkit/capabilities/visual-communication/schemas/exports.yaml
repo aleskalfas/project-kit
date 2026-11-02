@@ -1,6 +1,7 @@
 # The record of a piece's exports, `pieces/<piece>/exports.yaml` (visual-communication
 # DEC-006 point 7): each numbered export, the fingerprint of what it was made from, each
-# file it made with its hash, and what is only recorded. `pkit visual export` rewrites it.
+# file it made with its hash, and what is only recorded, among it each produced output the
+# version used, by its record's fingerprint. `pkit visual export` rewrites it.
 #
 # The body below is the reference instance.
 
@@ -15,12 +16,14 @@ versions:
       form: 1
       hash: sha256
       format: 1
-      value: 93c29ddb073d8c11ef07a37af56cf46006d720bd0289bc1291b13c128ba43213
+      value: 64108f49ac716f4e6c44c1ea50a351edcd39ad706af4cd574003afb0c8e8821c
       inputs:
         - file: content.en.yaml
           sha256: ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73
         - file: piece.yaml
           sha256: 34235a2c502e3919d3f00af5dabb87cb58aef4566b10631f2a5db94950ebffbd
+        - file: produced/marker/record.yaml
+          sha256: b4c5ae46384c05f7ffe5451bbb3640c8d110996088a589feaaa77d0e426ab77d
         - library: foundations
           version: 1.0.0
           path: roles.yaml
@@ -37,4 +40,6 @@ versions:
       capability: 0.1.0
       renderers:
         svg: 1.0.0
+      used:
+        marker: 10b959245e41d549969b8a3619a083c45212ff88540b8bc68f69cf794401df2b
       used-stale: []

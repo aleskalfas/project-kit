@@ -4,12 +4,13 @@
 - **One name shape for every name** a person gives: a library, a component, a field, an
   option and its words, a state, a concept, a layout, a slot, an exposed part or point, an
   axis, a mode, a role's segment, a piece, a produced output, a declaration. Lower-case
-  words of letters and digits joined by single hyphens, starting with a letter. So a name
-  holds no `.`, `/` or `#`, and YAML never reads one as a number or a yes-or-no.
+  words of letters and digits joined by single hyphens, starting with a letter, and none
+  of the words YAML reads as another value than text (`YAML_WORDS`). So a name holds no
+  `.`, `/` or `#`, and YAML never reads one as a number, a yes-or-no or nothing.
 - **A token path's segments** take the same words, and may start with a digit, as in
   `space.3`. The segments are joined by `.`.
-- **An id** starts with a letter and holds letters, digits, `-` and `_`. It is never one of
-  the words YAML 1.1 reads as a yes-or-no, in any case.
+- **An id** starts with a letter and holds letters, digits, `-` and `_`. It is none of the
+  words of `YAML_WORDS`, in any case.
 - **A language** is a lower-case tag: two or three letters, then subtags of two to eight
   letters or digits.
 
@@ -25,8 +26,10 @@ SEGMENT = r"^[a-z0-9]+(-[a-z0-9]+)*$"
 ID = r"^[A-Za-z][A-Za-z0-9_-]*$"
 LANGUAGE = r"^[a-z]{2,3}(-[a-z0-9]{2,8})*$"
 
-#: The words YAML 1.1 reads as a yes-or-no, which no id may be, in any case.
-YAML11_BOOLEANS = ("y", "n", "yes", "no", "true", "false", "on", "off")
+#: The words YAML reads as another value than text where they stand alone: a yes-or-no in
+#: YAML 1.1 (`y`, `n`, `yes`, `no`, `on`, `off`) or in YAML 1.2 too (`true`, `false`), and
+#: nothing (`null`). No name is one, and no id is one in any case (DEC-002 point 4).
+YAML_WORDS = ("y", "n", "yes", "no", "on", "off", "true", "false", "null")
 
 #: The keys every mapping that places a component reserves (DEC-002 point 4), the
 #: methodology's container among them.
@@ -55,8 +58,8 @@ _LANGUAGE = re.compile(LANGUAGE)
 
 
 def is_name(s: object) -> bool:
-    """Whether `s` takes the one name shape."""
-    return isinstance(s, str) and _NAME.match(s) is not None
+    """Whether `s` takes the one name shape, and is no word YAML reads as another value."""
+    return isinstance(s, str) and _NAME.match(s) is not None and s not in YAML_WORDS
 
 
 def is_segment(s: object) -> bool:
@@ -70,8 +73,9 @@ def is_token_path(s: object) -> bool:
 
 
 def is_id(s: object) -> bool:
-    """Whether `s` takes the id shape and is no word YAML 1.1 reads as a yes-or-no."""
-    return isinstance(s, str) and _ID.match(s) is not None and s.lower() not in YAML11_BOOLEANS
+    """Whether `s` takes the id shape and is no word YAML reads as another value, in any
+    case."""
+    return isinstance(s, str) and _ID.match(s) is not None and s.lower() not in YAML_WORDS
 
 
 def is_language(s: object) -> bool:

@@ -12,7 +12,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from tests.in_process import load
-from tests.visual_communication_project import FOUNDATIONS, SCHEMAS, TEST_BRAND
+from tests.visual_communication_project import FOUNDATIONS, SCHEMAS, TEST_BRAND, TEST_EDITION
 
 files, reading = load("visual-communication", "files", "reading")
 
@@ -64,8 +64,9 @@ def test_each_reference_instance_holds_its_schema(kind: str) -> None:
         (FOUNDATIONS / "library.yaml", "library"),
         (FOUNDATIONS / "roles.yaml", "roles"),
         (TEST_BRAND / "library.yaml", "library"),
+        (TEST_EDITION / "library.yaml", "library"),
     ],
-    ids=["foundations-library", "foundations-roles", "test-brand-library"],
+    ids=["foundations-library", "foundations-roles", "test-brand-library", "test-edition-library"],
 )
 def test_the_shipped_libraries_and_the_fixtures_hold_their_schemas(path: Path, kind: str) -> None:
     assert refused(reading.read_yaml(path), kind) == []
@@ -96,6 +97,19 @@ def test_a_brand_names_its_dtcg_version_and_a_component_library_none() -> None:
     assert refused(brand, "library") != []
     components = {**reading.read_yaml(FOUNDATIONS / "library.yaml"), "dtcg": "2025.10"}
     assert refused(components, "library") != []
+
+
+def test_a_brand_marks_at_most_one_base_and_a_component_library_none() -> None:
+    brand = instance("library")
+    assert brand["builds-on"][1] == {"name": "test-brand", "major": 1, "base": True}
+    two = [{**entry, "base": True} for entry in brand["builds-on"]]
+    assert refused({**brand, "builds-on": two}, "library") != []
+    unmarked = [{**entry, "base": False} for entry in brand["builds-on"]]
+    assert refused({**brand, "builds-on": unmarked}, "library") != []
+    components = reading.read_yaml(FOUNDATIONS / "library.yaml")
+    marked = {**components, "builds-on": [{"name": "core", "major": 1, "base": True}]}
+    assert refused(marked, "library") != []
+    assert refused({**marked, "builds-on": [{"name": "core", "major": 1}]}, "library") == []
 
 
 @pytest.mark.parametrize(
@@ -132,9 +146,19 @@ def test_the_configuration_refuses_a_location_the_rules_refuse(location: str) ->
     assert refused({**instance("config"), "location": location}, "config") != []
 
 
-@pytest.mark.parametrize("value", ["no", "No", "YES", "y", "off", "true", "1a", "a.b", ""])
-def test_an_id_is_never_a_yes_or_no_nor_another_shape(value: str) -> None:
+@pytest.mark.parametrize(
+    "value", ["no", "No", "YES", "y", "off", "true", "null", "Null", "NULL", "1a", "a.b", ""]
+)
+def test_an_id_is_never_a_yes_or_no_nor_nothing_nor_another_shape(value: str) -> None:
     defs = json.loads((SCHEMAS / "defs.schema.json").read_text(encoding="utf-8"))
     validator = Draft202012Validator(defs["$defs"]["id"])
     assert not validator.is_valid(value)
     assert validator.is_valid("nope")
+
+
+@pytest.mark.parametrize("value", ["y", "n", "yes", "no", "on", "off", "true", "false", "null"])
+def test_a_name_is_never_a_yes_or_no_nor_nothing(value: str) -> None:
+    defs = json.loads((SCHEMAS / "defs.schema.json").read_text(encoding="utf-8"))
+    validator = Draft202012Validator(defs["$defs"]["name"])
+    assert not validator.is_valid(value)
+    assert validator.is_valid(f"{value}-1")

@@ -127,7 +127,7 @@ def test_shapes_are_drawn_as_pinned_for_version_1_0_0() -> None:
     assert page.id == "figure"
     assert page.svg == (
         HEAD + "<defs><style>text{white-space:pre}</style></defs>"
-        '<g data-id="figure" data-component="foundations/figure">'
+        '<g data-id="figure" data-component="foundations/figure" data-version="1.0.0">'
         '<rect data-id="figure/back" x="1" y="1" width="198" height="98" rx="4" '
         'fill="#ffffff" stroke="#808080" stroke-width="2"/>'
         '<g data-id="figure/mark" data-component="tests/card" data-version="1.0.0" '
@@ -174,7 +174,7 @@ def test_text_is_drawn_as_its_measured_lines_with_its_font_embedded() -> None:
         "@font-face{font-family:'Source Sans Pro';font-weight:600;"
         "src:url(data:font/otf;base64,…) format('opentype');}"
         "text{white-space:pre}</style></defs>"
-        '<g data-id="figure" data-component="foundations/figure">'
+        '<g data-id="figure" data-component="foundations/figure" data-version="1.0.0">'
         '<text data-id="figure/title" xml:space="preserve" font-family="\'Source Sans Pro\'" '
         'font-size="16" font-weight="600" text-anchor="middle" fill="#000000">'
         '<tspan x="60" y="20.2">Plan &amp; &lt;do&gt;</tspan><tspan x="60" y="40.2">it</tspan>'

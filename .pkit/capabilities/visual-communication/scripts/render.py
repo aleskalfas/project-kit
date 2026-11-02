@@ -25,7 +25,9 @@ and draw its previews (DEC-003 point 8, DEC-005 points 5, 9, 13 and 14).
 - **Prints** what the renderer loses that the piece does not accept, and the findings.
 
 It writes in the location, so where the configuration records none it takes `visual/` and
-records it before its first write, or the path `--location` names.
+records it before its first write, or the path `--location` names. Every check that can
+refuse runs before that first write, so a refused render writes nothing, the location
+included.
 
 Usage:
   pkit visual render <piece> [--location <path>]
@@ -40,8 +42,9 @@ from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
+from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
@@ -49,6 +52,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import checks, fingerprint, libraries, location, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
+from _lib.files import write_whole
 from _lib.findings import Finding
 from _lib.plugins import seam
 from _lib.root import LOCAL, project_root
@@ -105,12 +109,19 @@ def _render(root: Path, name: str, given: str | None) -> int:
     found = checks.scene_findings(project, results)
     lost = _known(results)
     previews = _draw(project, results, lost)
+    # What can refuse is checked before the first write, so a refusal writes nothing.
+    locked = pl.locked(piece, lock)
+    sources = pl.findings_key_sources(root, held, piece, lock, sorted(project.env.fonts_read))
+    key = _key(sources)
+    folder = root / PREVIEWS / name
+    for path in (piece.folder / pl.FINDINGS_FILE, *(folder / file for file in previews)):
+        pl.writable(root, path)
     if where.record:
         print(location.record(root, where.path))
-    if pl.write_lock(piece, lock):
+    if locked is not None:
+        write_whole(piece.folder / pl.PIECE_FILE, locked)
         print(f"lock: {', '.join(f'{lib} {lock[lib]}' for lib in sorted(lock))}")
-    sources = pl.findings_key_sources(root, held, piece, lock, sorted(project.env.fonts_read))
-    key = fingerprint.fingerprint(fingerprint.findings_key_inputs(**sources))
+        key = _key(sources)
     record = {
         "pkit_schema": "visual-communication:findings",
         "schema_version": 1,
@@ -120,7 +131,6 @@ def _render(root: Path, name: str, given: str | None) -> int:
     pl.write_file(
         root, piece.folder / pl.FINDINGS_FILE, pl.yaml_text(record, HEADER).encode("utf-8")
     )
-    folder = root / PREVIEWS / name
     if folder.is_dir():
         for old in folder.glob("*.svg"):
             old.unlink()
@@ -134,6 +144,15 @@ def _render(root: Path, name: str, given: str | None) -> int:
     _print(checks.rooted(finding, piece) for finding in found if finding.code != "loss")
     print(f"findings: {len(found)} kept in {piece.file(pl.FINDINGS_FILE)}")
     return 0
+
+
+def _key(sources: Mapping[str, Any]) -> dict[str, Any]:
+    """The findings record's key over the files as they are now. Raises Refused where one
+    of them cannot be read under form 1."""
+    try:
+        return fingerprint.fingerprint(fingerprint.findings_key_inputs(**sources))
+    except fingerprint.FingerprintError as exc:
+        raise pl.Refused(f"the findings record's key cannot be taken: {exc}") from exc
 
 
 def _draw(project: pl.Project, results: Results, lost: list[seam.Loss]) -> dict[str, str]:

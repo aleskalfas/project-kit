@@ -10,15 +10,22 @@
   folder, never committed; no export overwrites another.
 - **No stale output.** A run stops on a produced picture whose record no longer verifies,
   naming what changed, unless the person names it to be used as it is; it stops on a
-  picture that is missing whatever is named.
+  picture that is missing whatever is named. Naming an output the piece does not declare
+  is refused; one that is not stale is used as it is, and the command says so.
 - **The record.** `exports.yaml` keeps, for each version, the fingerprint of every file
   its scenes were computed from and of the formats it made (form 1), the hash of each file
   it made, and what is only recorded: when, the piece's state, the capability's release,
-  the renderers' versions and the outputs used while stale.
+  the renderers' versions, each produced output the scenes used with the version used
+  (the `value` of its record's fingerprint, by which the check knows it), and those used
+  while stale (DEC-006 point 7).
+- **Refused before any write.** Everything that can refuse a run, a file of its number
+  already in the exports folder and a file reached through a link included, is checked
+  by `plan`, so a refused run writes nothing.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -50,16 +57,22 @@ HEADER = (
 )
 
 
+#: The value of a fingerprint: a SHA-256 in lower-case hexadecimal.
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
+
 @dataclass(frozen=True)
 class Planned:
-    """An export computed and not yet written: its number, each file's name and text, and
-    the record's versions with the new one last."""
+    """An export computed and not yet written: its number, each file's name and text, the
+    record's versions with the new one last, the produced outputs used while stale, and
+    those named to be used while stale that were not."""
 
     piece: pl.Piece
     number: int
     files: dict[str, str]
     versions: list[dict[str, Any]]
     used_stale: list[str]
+    not_stale: list[str]
 
     @property
     def folder(self) -> Path:
@@ -102,7 +115,12 @@ def stale_outputs(project: pl.Project) -> dict[str, list[str]]:
         except framing.Refused as exc:
             stale[output] = [str(exc)]
             continue
-        changes = fingerprint.verify(record["fingerprint"], "produced-record", **sources)
+        kept = record.get("fingerprint")
+        changes = (
+            fingerprint.verify(kept, "produced-record", **sources)
+            if isinstance(kept, Mapping)
+            else ["the record keeps no fingerprint"]
+        )
         mapped = record.get("combinations") or {}
         changes += [
             f"the combination `{key}` has no variant" for key in project.keys if key not in mapped
@@ -114,11 +132,20 @@ def stale_outputs(project: pl.Project) -> dict[str, list[str]]:
 
 def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None = None) -> Planned:
     """The next export of the project's piece, computed: every file drawn, the record's
-    new version written out. Raises Refused, naming what stops it."""
+    new version written out, and every file it writes checked. Raises Refused, naming what
+    stops it, so `write` refuses nothing."""
     piece = project.piece
     if not piece.exports:
         raise pl.Refused(
             f"{piece.file(pl.PIECE_FILE)} declares no format under `exports`: name `svg` there"
+        )
+    undeclared = sorted(set(use_stale) - set(piece.produced))
+    if undeclared:
+        named = ", ".join(f"`--use-stale {output}`" for output in undeclared)
+        declared = ", ".join(f"`{output}`" for output in sorted(piece.produced)) or "none"
+        raise pl.Refused(
+            f"{named} {'names' if len(undeclared) == 1 else 'name'} no produced output of "
+            f"`{piece.name}`, which declares {declared}"
         )
     try:
         results = project.scenes()
@@ -146,10 +173,14 @@ def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None 
     sources = pl.findings_key_sources(
         project.root, project.held, piece, project.lock, sorted(project.env.fonts_read)
     )
-    used = sorted(stale)
+    try:
+        taken = fingerprint.fingerprint(fingerprint.export_inputs(**sources))
+    except fingerprint.FingerprintError as exc:
+        raise pl.Refused(f"the export's fingerprint cannot be taken: {exc}") from exc
+    used_stale = sorted(stale)
     entry = {
         "version": number,
-        "fingerprint": fingerprint.fingerprint(fingerprint.export_inputs(**sources)),
+        "fingerprint": taken,
         "files": {name: sha256(text.encode("utf-8")) for name, text in files.items()},
         "recorded": {
             "time": now or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -159,10 +190,28 @@ def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None 
                 RENDERERS[form]: seam.declaration(RENDERERS[form], seam.RENDERER)["version"]
                 for form in sorted(set(piece.exports))
             },
-            "used-stale": used,
+            "used": used_versions(project),
+            "used-stale": used_stale,
         },
     }
-    return Planned(piece, number, files, [*versions, entry], used)
+    not_stale = sorted(set(use_stale) - set(stale))
+    planned = Planned(piece, number, files, [*versions, entry], used_stale, not_stale)
+    writable(planned)
+    return planned
+
+
+def used_versions(project: pl.Project) -> dict[str, str]:
+    """Each produced output the piece's scenes read, with the version used: the `value` of
+    its record's fingerprint, by which the check knows that record (DEC-006 point 7). A
+    record whose fingerprint has no value is stale, and named with the outputs used while
+    stale alone."""
+    used = {}
+    for output, record in sorted(project.env.records.items()):
+        kept = record.get("fingerprint")
+        value = kept.get("value") if isinstance(kept, Mapping) else None
+        if isinstance(value, str) and _SHA256.match(value):
+            used[output] = value
+    return used
 
 
 def _drawn(
@@ -182,9 +231,9 @@ def _drawn(
     return files
 
 
-def write(planned: Planned) -> None:
-    """Write a planned export's files, then its record. Raises Refused, writing nothing,
-    when a file of its number lies in the exports folder already."""
+def writable(planned: Planned) -> None:
+    """Raise Refused where a planned export could not be written: a file of its number lies
+    in the exports folder already, or a file it writes is reached through a link."""
     piece = planned.piece
     taken = sorted(name for name in planned.files if (planned.folder / name).exists())
     if taken:
@@ -193,6 +242,18 @@ def write(planned: Planned) -> None:
             f"{piece.file(pl.EXPORTS_FILE)} does not record: move it away, since no export "
             f"overwrites another"
         )
+    for path in (
+        *(planned.folder / name for name in planned.files),
+        piece.folder / pl.EXPORTS_FILE,
+    ):
+        pl.writable(piece.root, path)
+
+
+def write(planned: Planned) -> None:
+    """Write a planned export's files, then its record. Raises Refused, writing nothing,
+    where it could not be written (`writable`), which `plan` already checked."""
+    piece = planned.piece
+    writable(planned)
     for name, text in planned.files.items():
         pl.write_file(piece.root, planned.folder / name, text.encode("utf-8"))
     record = {

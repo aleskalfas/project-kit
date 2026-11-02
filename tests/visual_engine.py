@@ -1,12 +1,13 @@
 """The visual-communication engine in the test's own process, and the in-memory `Env` its
 tests read through (#2428).
 
-The engine reads every component, role, font and produced picture through one protocol,
-`Env` (`_lib/env.py`). Its tests stand in for it with `FakeEnv`, never with the data
-layer's modules: components come from the test library's and the foundations' files
-(read with ruamel's safe loader) or from mappings a test writes, roles from a mapping of
-resolved DTCG values, the font from the test brand's committed Source Sans Pro, and
-produced pictures from `PictureInfo`s. A component a test needs broken is a mapping in
+The engine reads every component, role, colour family, font and produced picture through
+one protocol, `Env` (`_lib/env.py`). Its tests stand in for it with `FakeEnv`, never with
+the data layer's modules: components come from the test library's and the foundations'
+files (read with ruamel's safe loader) or from mappings a test writes, roles from a
+mapping of resolved DTCG values, colour families from a mapping a test writes, the font
+from the test brand's committed Source Sans Pro, and produced pictures from
+`PictureInfo`s. A component a test needs broken is a mapping in
 memory, never a file: the repository's validation reads every bound YAML file under
 `tests/`.
 """
@@ -83,7 +84,8 @@ def square(tip: tuple[float, float] = (75, 25), size: int = 100) -> Any:
 
 
 class FakeEnv:
-    """An `Env` in memory. Each argument adds to, or replaces, the defaults."""
+    """An `Env` in memory. Each argument adds to, or replaces, the defaults. Its colour
+    families are none, as the foundations declare none, unless `families` gives them."""
 
     def __init__(
         self,
@@ -91,11 +93,13 @@ class FakeEnv:
         roles: Mapping[str, Any] | None = None,
         fonts: Mapping[str, Path] | None = None,
         pictures: Mapping[str, Any] | None = None,
+        families: Mapping[str, Mapping[str, str]] | None = None,
     ) -> None:
         self.components = {**COMPONENTS, **(components or {})}
         self.roles = {**ROLES, **(roles or {})}
         self.fonts = {FAMILY: FONT} if fonts is None else dict(fonts)
         self.pictures = {"square": square()} if pictures is None else dict(pictures)
+        self.families = {name: dict(members) for name, members in (families or {}).items()}
         self.asked: list[str] = []
 
     def component(self, use: str) -> dict:
@@ -115,6 +119,10 @@ class FakeEnv:
     def picture(self, output: str) -> Any:
         self.asked.append(f"picture {output}")
         return self.pictures[output]
+
+    def family(self, name: str) -> dict[str, str]:
+        self.asked.append(f"family {name}")
+        return self.families[name]
 
     def library_version(self, library: str) -> str:
         return VERSIONS[library]

@@ -101,6 +101,23 @@ def test_each_run_takes_the_next_number_and_records_it(tmp_path: Path) -> None:
     assert "time: '" in (root / RECORD).read_text(encoding="utf-8")
 
 
+def test_the_record_names_each_produced_output_used_by_its_records_fingerprint(
+    tmp_path: Path,
+) -> None:
+    root = ready(tmp_path)
+    produced = reading.read_yaml(root / PIECE_FOLDER / "produced" / "square" / "record.yaml")
+    assert run(root, PIECE).returncode == 0
+    [version] = reading.read_yaml(root / RECORD)["versions"]
+    assert version["recorded"]["used"] == {"square": produced["fingerprint"]["value"]}
+
+
+def test_a_piece_that_shows_no_produced_output_records_none_used(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    assert run(root, PIECE).returncode == 0
+    [version] = reading.read_yaml(root / RECORD)["versions"]
+    assert (version["recorded"]["used"], version["recorded"]["used-stale"]) == ({}, [])
+
+
 def test_an_export_draws_what_the_preview_draws(tmp_path: Path) -> None:
     root = ready(tmp_path)
     assert run(root, PIECE).returncode == 0
@@ -153,6 +170,29 @@ def test_a_stale_picture_named_is_used_and_recorded(tmp_path: Path) -> None:
     assert "used while stale: square" in shown.stdout.splitlines()
     [version] = reading.read_yaml(root / RECORD)["versions"]
     assert version["recorded"]["used-stale"] == ["square"]
+
+
+def test_naming_an_output_the_piece_does_not_declare_is_refused(tmp_path: Path) -> None:
+    root = ready(tmp_path)
+    make_stale(root)
+    shown = run(root, PIECE, "--use-stale", "sqaure")
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        "error: `--use-stale sqaure` names no produced output of `flow`, which declares `square`\n"
+    )
+    assert not (root / CONFIG).exists()
+    assert not (root / FOLDER).exists()
+    assert not (root / RECORD).exists()
+
+
+def test_naming_an_output_that_is_not_stale_uses_it_as_it_is_and_says_so(tmp_path: Path) -> None:
+    root = ready(tmp_path)
+    shown = run(root, PIECE, "--use-stale", "square")
+    assert shown.returncode == 0, shown.stderr
+    assert "not stale, so used as it is: square" in shown.stdout.splitlines()
+    assert "used while stale: square" not in shown.stdout.splitlines()
+    [version] = reading.read_yaml(root / RECORD)["versions"]
+    assert version["recorded"]["used-stale"] == []
 
 
 def test_a_combination_the_record_does_not_map_makes_the_picture_stale(tmp_path: Path) -> None:
@@ -226,8 +266,10 @@ def test_a_file_of_the_next_number_left_in_the_folder_is_never_overwritten(
     shown = run(root, PIECE)
     assert shown.returncode == 1
     assert "holds flow.v1.en.default.svg already" in shown.stderr
+    assert shown.stdout == ""
     assert left.read_text(encoding="utf-8") == "kept\n"
     assert not (root / RECORD).exists()
+    assert not (root / CONFIG).exists()
 
 
 def test_a_record_that_cannot_be_read_stops_the_next_export(tmp_path: Path) -> None:

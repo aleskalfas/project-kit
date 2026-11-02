@@ -24,7 +24,9 @@ own script reuses the same steps.
    each point lies within the pixels.
 8. **Only then** are the variants moved into the piece's `produced/<output>/<key>.png`,
    a variant file left from before removed, and `produced/<output>/record.yaml` written
-   (schema `produced-record`). A refused run writes nothing in the location.
+   (schema `produced-record`). Every check that can refuse, the files it keeps reached
+   through a link included, runs before the location is recorded, so a refused run
+   writes nothing in the location, and records no location.
 
 **A producer's seam, version 1.** Its declaration is plain data (`seam.register`, or a
 shipped `<name>_declaration.py`):
@@ -37,7 +39,12 @@ shipped `<name>_declaration.py`):
   it takes. Format 1 reads no other keyword, and every input is a role, so a raw value is
   refused;
 - `values`: the kinds of value it uses, as DTCG types (`color`, `dimension`, ...); each
-  input's type is one of them.
+  input's type is one of them;
+- `programs`, `services`: what it needs beyond the project's files (DEC-005 point 9), the
+  outside programs it calls and the services it reaches, each a list of names; left out,
+  none. A run is refused before the producer runs where the machine lacks a program it
+  names, or where it names a service, since format 1's configuration turns on no plugin
+  that reaches one (DEC-002 point 8).
 
 Its implementation has `produce(handover: dict, out_dir: Path) -> dict`.
 
@@ -50,10 +57,17 @@ Its implementation has `produce(handover: dict, out_dir: Path) -> dict`.
 - **It writes** one PNG per variant, `out_dir/<variant key>.png`, at the variant's pixels.
   It writes nothing else that is kept.
 - **It returns** `{"points": {<point>: {<variant key>: {"x": <number>, "y": <number>}}},
-  "programs": {<outside program>: <its version>}}`: each exposed point in each variant's
-  pixels, the origin at the top-left corner and y down (the format of exposed points,
-  DEC-006 point 2), and each outside program it called, which is only recorded.
-  `programs` may be left out; no other key is read.
+  "programs": {<outside program>: <its version>}, "losses": [<loss>, ...]}`: each exposed
+  point in each variant's pixels, the origin at the top-left corner and y down (the format
+  of exposed points, DEC-006 point 2); each outside program it called, one its declaration
+  names, which is only recorded; and what it could not make as handed, in the seam's one
+  form of loss (`seam.Loss`: `plugin`, its own name; `what`, a trace id or token path;
+  `did`, one of `seam.OUTCOMES`; `why`). `programs` and `losses` may be left out; a result
+  with any other key is refused, and nothing is kept.
+
+The record keeps the losses. The command prints each one the piece does not accept under
+`accept-losses`, and the check reports it, asking the piece's author for attention, as it
+does a renderer's (DEC-005 points 9 and 14).
 
 `findings(root, location, piece)` gives what the check reports of a piece's produced
 outputs (DEC-006 points 5 and 8): a missing record or variant file fails, a record whose
@@ -80,7 +94,7 @@ from ruamel.yaml.scalarstring import SingleQuotedScalarString
 from _lib import fingerprint, keys, libraries, tokens, values
 from _lib import location as loc
 from _lib.files import FORMAT, FileError, nearest, read_bound, refuse_links, schema_of, write_whole
-from _lib.findings import ATTENTION, FAILS, Finding
+from _lib.findings import ATTENTION, FAILS, Finding, accepted, loss_finding
 from _lib.names import is_name, is_token_path
 from _lib.plugins import seam
 from _lib.reading import ReadError, load_yaml, sha256
@@ -117,7 +131,16 @@ _SCHEMA_KEYS = ("type", "properties", "required", "additionalProperties", "descr
 _PROPERTY_KEYS = ("description", ROLE)
 
 #: What a producer's result may hold.
-_RESULT_KEYS = ("points", "programs")
+_RESULT_KEYS = ("points", "programs", "losses")
+
+#: What a producer's declaration may name that it needs beyond the project's files.
+_NEEDS = ("programs", "services")
+
+#: The kind of plugin a producer's loss names, in words.
+_KIND = "producer"
+
+#: A loss's keys, in the seam's one form (`seam.Loss`).
+_LOSS_KEYS = ("plugin", "what", "did", "why")
 
 #: A PNG file's first bytes, and where its header gives the width and the height.
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -163,6 +186,7 @@ class Plan:
     - `variants`: each variant's key -> the keys of the combinations it serves.
     - `sources`: what form 1's input set of a produced record is worked out from.
     - `inputs`: that input set, read now.
+    - `accepting`: the losses the piece accepts, its `accept-losses`.
     """
 
     piece: str
@@ -174,6 +198,7 @@ class Plan:
     variants: dict[str, list[str]]
     sources: dict[str, Any]
     inputs: list[fingerprint.Input]
+    accepting: tuple[Mapping[str, Any], ...] = ()
 
     @property
     def output(self) -> str:
@@ -195,12 +220,19 @@ class Plan:
 @dataclass(frozen=True)
 class Produced:
     """A run that kept its picture: the plan it ran, the record written, the variant files
-    left from before that it removed, and what it said when it recorded the location."""
+    left from before that it removed, what it said when it recorded the location, and what
+    the producer lost, each recorded."""
 
     plan: Plan
     record: Path
     removed: tuple[str, ...]
     location: str | None
+    losses: tuple[seam.Loss, ...] = ()
+
+    @property
+    def unaccepted(self) -> tuple[seam.Loss, ...]:
+        """The losses the piece does not accept, which the command prints."""
+        return tuple(loss for loss in self.losses if not accepted(loss, self.plan.accepting))
 
 
 # --- the run ------------------------------------------------------------------------------------
@@ -211,6 +243,7 @@ def produce(root: Path, where: loc.ForWriting, piece: str, output: str) -> Produ
     its picture. Raises Refused, writing nothing in the location; loc.LocationRefused when
     the location cannot be recorded."""
     before = plan(root, where.path, piece, output)
+    runnable(before)
     handed = handover(before)
     write_handover(root, before, handed)
     out = run_folder(root, before)
@@ -223,10 +256,11 @@ def produce(root: Path, where: loc.ForWriting, piece: str, output: str) -> Produ
             f"Run `{PRODUCE} {piece} {output}` again"
         )
     checked = check(before, out, result)
+    keepable(root, before)
     said = loc.record(root, where.path) if where.record else None
     record, removed = keep(root, before, out, checked)
     shutil.rmtree(out)
-    return Produced(before, record, removed, said)
+    return Produced(before, record, removed, said, checked.losses)
 
 
 def plan(root: Path, location: str, piece: str, output: str) -> Plan:
@@ -280,7 +314,30 @@ def plan(root: Path, location: str, piece: str, output: str) -> Plan:
         variants=variants,
         sources=sources,
         inputs=inputs,
+        accepting=tuple(_accepting(data)),
     )
+
+
+def runnable(plan: Plan) -> None:
+    """Refuse, before the producer runs, a run that needs what is not to hand: a service
+    it reaches, which format 1's configuration never turns on (DEC-002 point 8), or an
+    outside program it calls that this machine lacks. Raises Refused."""
+    name, version = plan.plugin["name"], plan.plugin["version"]
+    services = plan.plugin.get("services") or []
+    if services:
+        raise Refused(
+            f"the producer `{name}` {version} reaches the service `{'`, `'.join(services)}`, "
+            f"and the project's configuration turns on no plugin that reaches a service: "
+            f"format 1 takes none, so it cannot run"
+        )
+    lacking = [
+        program for program in plan.plugin.get("programs") or [] if not shutil.which(program)
+    ]
+    if lacking:
+        raise Refused(
+            f"the producer `{name}` {version} calls `{'`, `'.join(lacking)}`, which this machine "
+            f"lacks: install it, then run `{PRODUCE} {plan.piece} {plan.output}` again"
+        )
 
 
 def handover(plan: Plan) -> dict[str, Any]:
@@ -343,12 +400,13 @@ def run(plan: Plan, handed: Mapping[str, Any], out: Path) -> Mapping[str, Any]:
 
 @dataclass(frozen=True)
 class Checked:
-    """A producer's result that passed every check: each variant's hash, its points, and
-    the outside programs it called."""
+    """A producer's result that passed every check: each variant's hash, its points, the
+    outside programs it called, and what it lost, each once."""
 
     digests: dict[str, str]
     points: dict[str, dict[str, dict[str, Any]]]
     programs: dict[str, str]
+    losses: tuple[seam.Loss, ...] = ()
 
 
 def check(plan: Plan, out: Path, result: Mapping[str, Any]) -> Checked:
@@ -380,6 +438,15 @@ def check(plan: Plan, out: Path, result: Mapping[str, Any]) -> Checked:
         for name, version in programs.items()
     ):
         problems.append("its `programs` is not a mapping of each outside program to its version")
+    else:
+        declared = plan.plugin.get("programs") or []
+        problems.extend(
+            f"it called `{program}`, which its declaration does not name under `programs`"
+            for program in sorted(programs)
+            if program not in declared
+        )
+    losses, lost = loss_problems(result.get("losses", []), plan.plugin["name"])
+    problems.extend(lost)
     if problems:
         raise Refused(
             f"the producer `{plan.plugin['name']}` {plan.plugin['version']} made a picture "
@@ -394,17 +461,70 @@ def check(plan: Plan, out: Path, result: Mapping[str, Any]) -> Checked:
             for name, places in sorted(points.items())
         },
         programs={name: programs[name] for name in sorted(programs)},
+        losses=losses,
     )
+
+
+def recorded_losses(record: Mapping[str, Any]) -> list[seam.Loss]:
+    """The losses a produced record keeps. An entry not of the seam's one form is passed
+    over: the record's schema refuses it, and the check reports that apart."""
+    given = record.get("losses")
+    found: list[seam.Loss] = []
+    for entry in given if isinstance(given, list) else []:
+        if not isinstance(entry, Mapping) or set(entry) != set(_LOSS_KEYS):
+            continue
+        if all(_text(entry[key]) for key in _LOSS_KEYS) and entry["did"] in seam.OUTCOMES:
+            found.append(seam.Loss(**{key: entry[key] for key in _LOSS_KEYS}))
+    return found
+
+
+def loss_problems(given: Any, name: str) -> tuple[tuple[seam.Loss, ...], list[str]]:
+    """A producer's losses, each once, in the order it gave them; and what is wrong with
+    them: each is a mapping of `plugin`, its own name, `what`, a trace id or token path,
+    `did`, one of the seam's outcomes, and `why`, a reason (DEC-005 point 9)."""
+    if not isinstance(given, list):
+        return (), ["its `losses` is not a list of losses, each `plugin`, `what`, `did` and `why`"]
+    found: list[seam.Loss] = []
+    problems: list[str] = []
+    for number, entry in enumerate(given, start=1):
+        at = f"its loss {number}"
+        if not isinstance(entry, Mapping) or set(entry) != set(_LOSS_KEYS):
+            problems.append(
+                f"{at} is not of the seam's one form, a mapping of `plugin`, `what`, `did` and "
+                f"`why`"
+            )
+            continue
+        plugin, what, did, why = (entry[key] for key in _LOSS_KEYS)
+        if plugin != name:
+            problems.append(f"{at} names the plugin `{plugin}`, not `{name}`")
+        elif did not in seam.OUTCOMES:
+            problems.append(f"{at} did `{did}`, which is not one of {', '.join(seam.OUTCOMES)}")
+        elif not (_text(what) and not any(c.isspace() for c in what) and _text(why)):
+            problems.append(
+                f"{at} names no trace id or token path under `what`, or no reason under `why`"
+            )
+        else:
+            loss = seam.Loss(plugin, what, did, why)
+            if loss not in found:
+                found.append(loss)
+    return tuple(found), problems
+
+
+def keepable(root: Path, plan: Plan) -> None:
+    """Refuse a run whose picture `keep` could not write whole: a variant's file or the
+    record, or a folder above them, is a link. Raises Refused, writing nothing."""
+    target = plan.folder / PRODUCED / plan.output
+    for name in (*sorted(f"{key}.png" for key in plan.variants), RECORD):
+        _refuse_links(root, target / name)
 
 
 def keep(root: Path, plan: Plan, out: Path, checked: Checked) -> tuple[Path, tuple[str, ...]]:
     """Move the variants into the piece's `produced/<output>/`, write the record, and
     remove a variant file left from before; returns the record's path and what was
-    removed."""
+    removed. Raises Refused, writing nothing, where `keepable` refuses."""
     target = plan.folder / PRODUCED / plan.output
     wanted = {f"{key}.png" for key in plan.variants}
-    for name in (*sorted(wanted), RECORD):
-        _refuse_links(root, target / name)
+    keepable(root, plan)
     target.mkdir(parents=True, exist_ok=True)
     for name in sorted(wanted):
         write_whole(target / name, (out / name).read_bytes())
@@ -437,6 +557,7 @@ def record_of(plan: Plan, checked: Checked) -> dict[str, Any]:
         },
         "combinations": {key: served[key] for key in plan.combinations},
         "points": checked.points,
+        "losses": [loss.as_dict() for loss in checked.losses],
         "recorded": {
             "plugins": {name: version},
             "programs": checked.programs,
@@ -518,6 +639,13 @@ def declaration_problem(found: Mapping[str, Any]) -> str | None:
     required = schema.get("required", [])
     if not isinstance(required, (list, tuple)) or not all(name in properties for name in required):
         return "requires an input its `inputs.properties` does not hold"
+    for key in _NEEDS:
+        needs = found.get(key, [])
+        if not isinstance(needs, (list, tuple)) or not all(_text(need) for need in needs):
+            return f"names its `{key}` other than as a list of names"
+        twice = sorted({need for need in needs if needs.count(need) > 1})
+        if twice:
+            return f"names `{'`, `'.join(twice)}` twice under `{key}`"
     return None
 
 
@@ -775,13 +903,19 @@ def findings(root: Path, location: str, piece: str) -> list[Finding]:
                     who=AUTHORS,
                 )
             )
+    accepting = _accepting(data)
     for output in declared:
-        found.extend(_output_findings(root, location, piece, output, listed))
+        found.extend(_output_findings(root, location, piece, output, listed, accepting))
     return found
 
 
 def _output_findings(
-    root: Path, location: str, piece: str, output: str, listed: set[str]
+    root: Path,
+    location: str,
+    piece: str,
+    output: str,
+    listed: set[str],
+    accepting: list[Mapping[str, Any]],
 ) -> list[Finding]:
     rel = f"{location}/{PIECES}/{piece}"
     base = f"{rel}/{PRODUCED}/{output}"
@@ -898,6 +1032,11 @@ def _output_findings(
                 fix=fix,
             )
         )
+    for loss in recorded_losses(record):
+        if not accepted(loss, accepting):
+            found.append(
+                loss_finding(loss, _KIND, file=f"{rel}/piece.yaml", where=f"produced.{output}")
+            )
     return found
 
 
@@ -914,6 +1053,20 @@ def _size(given: Any) -> tuple[int, int] | None:
     if isinstance(width, int) and isinstance(height, int) and width >= 1 and height >= 1:
         return width, height
     return None
+
+
+def _accepting(data: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """The entries of a piece's `accept-losses`; a value of another shape the piece's
+    schema refuses, so it accepts none."""
+    given = data.get("accept-losses")
+    return (
+        [entry for entry in given if isinstance(entry, Mapping)] if isinstance(given, list) else []
+    )
+
+
+def _text(given: Any) -> bool:
+    """Whether `given` is text that is not blank."""
+    return isinstance(given, str) and bool(given.strip())
 
 
 def _place(given: Any) -> tuple[float, float] | None:

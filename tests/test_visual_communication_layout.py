@@ -7,22 +7,23 @@ in memory and read through an in-memory `Env` (`tests/visual_engine.py`):
 - parts: primitives, a nested `use`, a slot, a `repeat`; `when` for optional parts; a
   missing part with zero size at its place;
 - `values`, `preferred`, `exposes`; switches on an option; options of words, of an item,
-  of an item's point;
+  of an item's point; list fields, which may also be null;
 - the operators `row` and `column`: `gap`, `align-items`, `justify-content`, equal sizes;
-- colour families, states and `override`;
-- formulas: dimensions checked when a component is read, `:index` and `:count`, steps
-  into a list;
+- colour families, whose members the foundations map to roles; states and `override`;
+- formulas: dimensions checked when a component is read, `:index` and `:count` over the
+  items drawn, steps into a list;
+- pages: a diagram is a page alone, and part of the page that holds it;
 - what is refused: a loop, naming every element in it; two owners of a value; division
   by zero; a component that places itself, except over its items; a page inside a page;
-  a component that gets less than it asks for; a component, role or picture that is not
-  there.
+  a component that gets less than it asks for; a component, role, picture or colour
+  family member that is not there; an item option no single part repeats over.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from tests.visual_engine import block, codes, draw, env, frame, top
+from tests.visual_engine import block, codes, draw, env, frame, layout, top
 
 
 def box(**geometry: Any) -> dict[str, Any]:
@@ -166,10 +167,10 @@ def test_a_switch_names_every_word_of_its_option() -> None:
 
 
 def test_when_takes_an_option_and_its_words() -> None:
-    parts = {"b": box(when={"mark": ["on"]})}
-    component = top(parts, options={"mark": ["off", "on"]})
+    parts = {"b": box(when={"mark": ["shown"]})}
+    component = top(parts, options={"mark": ["hidden", "shown"]})
 
-    assert draw({"mark": "on"}, components=lab(top=component)).scene.find("top/b") is not None
+    assert draw({"mark": "shown"}, components=lab(top=component)).scene.find("top/b") is not None
     assert draw({}, components=lab(top=component)).scene.find("top/b") is None
 
 
@@ -339,6 +340,41 @@ def test_index_and_count_are_an_items_own() -> None:
     assert "is no item" in finding(draw(components=outside), "formula-reach").message
 
 
+def test_index_and_count_count_only_the_items_drawn() -> None:
+    components = listed("row", {})
+    components["lab/chip"]["preferred"]["height"] = "=@space.1 * :count"
+    # Left out: an item that is no mapping, one that repeats an id, one with no component.
+    content = {
+        "items": [
+            {"id": "a"},
+            "no mapping",
+            {"id": "a"},
+            {"id": "b"},
+            {"id": "x", "use": "lab/nothing"},
+            {"id": "c"},
+        ]
+    }
+
+    result = draw(content, components=components)
+
+    # Each chip is @space.3 (16) wide times its place, and @space.1 (4) tall times the count.
+    assert item_frames(result) == [
+        (0.0, 0.0, 16.0, 12.0),
+        (16.0, 0.0, 32.0, 12.0),
+        (48.0, 0.0, 48.0, 12.0),
+    ]
+
+
+def test_a_field_that_may_also_be_null_is_a_list_field() -> None:
+    components = listed("row", {})
+    components["lab/top"]["fields"]["properties"]["items"]["type"] = ["array", "null"]
+
+    result = draw(ITEMS, components=components)
+
+    assert result.findings == []
+    assert item_frames(result)[2] == (48.0, 0.0, 48.0, 16.0)
+
+
 def test_an_item_option_names_an_item_of_the_list_its_component_declares() -> None:
     components = listed("row", {})
     components["lab/top"]["options"] = {"pick": {"item": "items"}}
@@ -351,6 +387,27 @@ def test_an_item_option_names_an_item_of_the_list_its_component_declares() -> No
     assert frame(picked, "top/mark")[0] == 48.0
     assert "`pick` names `z`" in finding(unknown, "unknown-item").message
     assert "needs the option `pick`" in finding(missing, "option-missing").message
+
+
+def test_a_formula_reading_an_item_option_needs_exactly_one_part_repeating_over_its_list() -> None:
+    """Refused when the component is read, never a crash when the scene is computed. The
+    part may come before the list it reads."""
+    fields = {"items": {"type": "array", "items": {"type": "object"}}}
+    options = {"pick": {"item": "items"}}
+    mark = box(x="={pick}.x")
+    items = {"repeat": "items", "draw": "lab/chip", "row": {}}
+    content = {**ITEMS, "pick": {"item": "c"}}
+
+    def drawn(parts: dict[str, Any]) -> Any:
+        component = top(parts, fields=fields, options=options)
+        return draw(content, components=lab(top=component, chip=chip()))
+
+    assert frame(drawn({"mark": mark, "items": items}), "top/mark")[0] == 48.0
+    for broken in (drawn({"mark": mark}), drawn({"mark": mark, "items": items, "too": items})):
+        assert "not exactly one part repeats" in finding(broken, "component-shape").message
+        refused = finding(broken, "formula-reach")
+        assert refused.where == "parts.mark.x" and "reads `{pick}`" in refused.message
+        assert frame(broken, "top/mark")[0] == 0.0
 
 
 def test_a_point_option_names_a_point_the_item_exposes() -> None:
@@ -429,6 +486,18 @@ def test_the_variants_of_a_picture_share_its_pixels_and_points() -> None:
 
     assert kept.findings == []
     assert "differ in pixels or points" in finding(differ, "picture-variants").message
+
+
+def test_a_scene_reads_the_first_variant_in_key_order_the_default_first() -> None:
+    picture = env.PictureInfo(
+        variants={
+            key: {"file": f"{key}.png", "pixels": {"width": 100, "height": 100}}
+            for key in ("colour-scheme.dark", "default", "colour-scheme.dark+contrast.high")
+        },
+        points={},
+    )
+
+    assert layout.first_variant(picture) == "default"
 
 
 def test_the_piece_is_drawn_from_a_top_component() -> None:
@@ -541,13 +610,29 @@ def test_a_component_may_place_itself_over_the_items_of_its_content() -> None:
     assert result.scene.find("top/t/kids[a]/kids[b]") is not None
 
 
-def test_a_page_inside_a_page_is_refused() -> None:
-    content = {"body": {"use": "foundations/figure", "body": {"use": "tests/card", "head": "x"}}}
+def test_a_diagram_is_a_page_alone_and_part_of_the_page_that_holds_it() -> None:
+    """A top component with no slot of pages (DEC-005 point 5)."""
+    diagram = top({"b": box()}, preferred={"width": "=@space.4", "height": "=@space.4"})
+    slide = top({"s": {"slot": "body"}}, fields={"body": {"type": "object"}})
+    deck = top(
+        {"slides": {"repeat": "slides", "draw": "lab/slide", "width": "=:width", "column": {}}},
+        fields={"slides": {"type": "array", "items": {"type": "object"}}},
+        layouts={"slide": {"slots": {"slides": {"pages": True}}}},
+    )
+    components = lab(diagram=diagram, slide=slide, deck=deck)
+    placed = {"use": "lab/diagram"}
 
-    result = draw(content, use="foundations/figure")
+    alone = draw(components=components, use="lab/diagram")
+    in_a_figure = draw({"body": placed}, components=components, use="foundations/figure")
+    on_a_slide = draw(
+        {"slides": [{"id": "one", "body": placed}]}, components=components, use="lab/deck"
+    )
 
-    assert finding(result, "page-in-page").where == "figure/body"
-    assert result.scene.pages == ["figure", "figure/body"]
+    assert alone.scene.pages == ["diagram"]
+    assert in_a_figure.scene.pages == ["figure"] and in_a_figure.findings == []
+    assert on_a_slide.scene.pages == ["deck/slides[one]"] and on_a_slide.findings == []
+    body = in_a_figure.scene.find("figure/body")
+    assert body is not None and "page" not in body.properties
 
 
 def test_the_items_of_a_slot_of_pages_are_pages() -> None:
@@ -566,6 +651,7 @@ def test_the_items_of_a_slot_of_pages_are_pages() -> None:
     )
 
     assert alone.scene.pages == ["deck/slides[one]", "deck/slides[two]"] and alone.findings == []
+    # A slot of pages inside a page holds pages inside a page.
     assert [f.where for f in inside.findings if f.code == "page-in-page"] == [
         "figure/body/slides[one]",
         "figure/body/slides[two]",
@@ -590,47 +676,50 @@ def coloured(**keys: Any) -> dict[str, dict[str, Any]]:
     return lab(top=top({"s": {"slot": "body"}}, fields={"body": {"type": "object"}}), swatch=swatch)
 
 
+#: The colour families the foundations declare in these tests: each member to a colour role.
+FAMILIES = {"blue": {"fill": "surface"}, "red": {"fill": "accent"}}
+
+
 def fill(result: Any) -> tuple[str, str]:
     element = result.scene.find("top/s/b")
     assert element is not None
     return element.properties.get("fill"), element.sources.get("fill")
 
 
-def test_a_part_paints_with_its_family_and_a_state_changes_it() -> None:
-    components = coloured(colour="blue")
+def swatch(body: dict[str, Any], *, families: Any = FAMILIES, **keys: Any) -> Any:
+    """The scene of a swatch the content places, with `keys` added to its component."""
+    return draw({"body": body}, components=coloured(**keys), families=families)
 
-    assert fill(draw({"body": {"use": "lab/swatch"}}, components=components)) == (
-        "blue.fill",
-        "default:lab/swatch",
-    )
-    assert (
-        fill(draw({"body": {"use": "lab/swatch", "state": "quiet"}}, components=components))[0]
-        == "blue.fill"
-    )
-    marked = draw({"body": {"use": "lab/swatch", "state": "marked"}}, components=components)
-    assert fill(marked) == ("red.fill", "content:body.state")
-    unknown = draw({"body": {"use": "lab/swatch", "state": "loud"}}, components=components)
+
+def test_a_part_paints_with_the_role_its_family_maps_the_member_to() -> None:
+    assert fill(swatch({"use": "lab/swatch"}, colour="blue")) == ("surface", "default:lab/swatch")
+    assert fill(swatch({"use": "lab/swatch", "state": "quiet"}, colour="blue"))[0] == "surface"
+    marked = swatch({"use": "lab/swatch", "state": "marked"}, colour="blue")
+    assert fill(marked) == ("accent", "content:body.state")
+    unknown = swatch({"use": "lab/swatch", "state": "loud"}, colour="blue")
     assert "declares no state `loud`" in finding(unknown, "unknown-state").message
 
 
-def test_a_family_member_with_no_family_is_a_finding() -> None:
-    result = draw({"body": {"use": "lab/swatch"}}, components=coloured())
+def test_a_member_with_no_family_or_one_its_family_lacks_paints_nothing() -> None:
+    nameless = swatch({"use": "lab/swatch"})
+    lacking = swatch({"use": "lab/swatch"}, colour="blue", families={"blue": {"edge": "line"}})
+    undeclared = swatch({"use": "lab/swatch"}, colour="green")
 
-    assert finding(result, "no-colour").where == "top/s/b"
+    assert finding(nameless, "no-colour").where == "top/s/b"
+    assert "the colour family `blue` has no member `fill`" in finding(lacking, "no-colour").message
+    assert "`green`, which the foundations do not declare" in (
+        finding(undeclared, "no-colour").message
+    )
+    for result in (nameless, lacking, undeclared):
+        assert fill(result) == (None, None)
 
 
 def test_override_points_a_part_at_another_role_never_a_value() -> None:
-    components = coloured(colour="blue")
-
-    pointed = draw(
-        {"body": {"use": "lab/swatch", "override": {"b": "accent"}}}, components=components
-    )
-    raw = draw({"body": {"use": "lab/swatch", "override": {"b": "#ff0000"}}}, components=components)
-    nowhere = draw(
-        {"body": {"use": "lab/swatch", "override": {"z": "accent"}}}, components=components
-    )
+    pointed = swatch({"use": "lab/swatch", "override": {"b": "accent"}}, colour="blue")
+    raw = swatch({"use": "lab/swatch", "override": {"b": "#ff0000"}}, colour="blue")
+    nowhere = swatch({"use": "lab/swatch", "override": {"z": "accent"}}, colour="blue")
 
     assert fill(pointed) == ("accent", "content:body.override.b")
     assert "not a role" in finding(raw, "override").message
-    assert fill(raw)[0] == "blue.fill"
+    assert fill(raw)[0] == "surface"
     assert "no painted part" in finding(nowhere, "override").message

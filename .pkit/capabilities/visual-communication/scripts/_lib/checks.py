@@ -13,6 +13,8 @@ and 11, DEC-005 points 9, 13 and 14, DEC-006 point 8).
   a library the piece uses that the lock does not name, libraries that build on another
   major than the one locked; a piece with no lock yet;
 - the brand each piece locks, and its findings: open roles, fonts, declared pairs;
+- the name of each library a piece locks, against the top groups of the shared roles of
+  the foundations it locks (DEC-004 points 7 and 11);
 - the ids in each content file, and each content file against the fields and options of
   the components it fills, the nearest known key named.
 
@@ -28,8 +30,10 @@ the validator's bound (`PKIT_COMMAND_DEADLINE`) is near: each piece left fails a
 checked, naming `pkit visual render <piece>`.
 
 **Severity** is computed when a finding is read: a failing finding in a released library
-version asks for attention instead (`findings.level_where`), and whether a version is
-released is read from the list.
+version asks for attention instead, naming the library's owner (`findings.as_read`).
+Whether a version is released is read from the list. A released version whose folder no
+longer matches what was released is the project's to restore, so a finding in it fails
+(DEC-002 point 7, DEC-003 point 9).
 
 In the findings record, a finding's file is relative to the piece's folder, or, where it
 lies in a library version, to that version's folder, so the record stays true when the
@@ -51,12 +55,21 @@ from _lib import code, fingerprint, framing, location, names, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.files import FileError, binding_problem, nearest, read_bound, schema_of
-from _lib.findings import ATTENTION, FACT, FAILS, SEVERITY, Finding, level_where
+from _lib.findings import (
+    ATTENTION,
+    FACT,
+    FAILS,
+    SEVERITY,
+    Finding,
+    accepted,
+    as_read,
+)
+from _lib.findings import loss_finding as _loss_finding
 from _lib.libraries import FOLDER, Held, Version
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml
 from _lib.root import CONFIG
-from _lib.scene import Scene, SceneResult
+from _lib.scene import SceneResult
 
 #: The renderers that draw every piece: its previews, and its SVG exports.
 RENDERERS = ("svg",)
@@ -78,14 +91,6 @@ BLACK = {"colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1}
 
 #: The properties of a scene element that are no property it draws.
 _STRUCTURE = ("type", "id", "sources", "children")
-
-#: What a renderer did with a loss, in words.
-_DID = {
-    seam.APPROXIMATED: "approximates",
-    seam.PICTURE: "draws as a picture",
-    seam.LEFT_OUT: "leaves out",
-    seam.REFUSED: "refuses",
-}
 
 _CONTENT_FILE = re.compile(r"^content\.(?P<language>[^.]+)\.yaml$")
 
@@ -135,7 +140,7 @@ def check(root: Path, *, only: str | None = None, deadline: float | None = None)
         run.all(only)
     except location.GitFailed as exc:
         run.add(Finding("files-unlisted", FAILS, f"the location's files cannot be listed: {exc}"))
-    judged = [(finding, run.level(finding)) for finding in [*config, *run.found]]
+    judged = [run.judged(finding) for finding in [*config, *run.found]]
     return Report(run.summary(only), judged)
 
 
@@ -176,18 +181,32 @@ class _Run:
         self.held = Held(root, location_path)
         self.unbound: set[str] = set()
         self.brands: set[str] = set()
+        self.named: set[str] = set()
+        self.as_released: dict[tuple[str, Version], bool] = {}
         self.counts = {"pieces": 0, "read": 0, "computed": 0, "unchecked": 0}
 
     def add(self, finding: Finding) -> None:
         self.found.append(finding)
 
-    def level(self, finding: Finding) -> str:
+    def judged(self, finding: Finding) -> tuple[Finding, str]:
+        """A finding as it reads where it lies, with its level there."""
         name, _, text = finding.library.partition("@")
         try:
-            released = self.held.released(name, Version.parse(text))
+            version = Version.parse(text)
         except ValueError:
-            released = False
-        return level_where(finding, released)
+            return as_read(finding, False)
+        return as_read(finding, self._as_released(name, version))
+
+    def _as_released(self, name: str, version: Version) -> bool:
+        """Whether the list marks a version released and its folder is still as it was
+        released. A copy that no longer matches is the project's to restore (DEC-002
+        point 7, DEC-003 point 9)."""
+        key = (name, version)
+        if key not in self.as_released:
+            self.as_released[key] = self.held.released(name, version) and not (
+                self.held.hash_changes(name, version)
+            )
+        return self.as_released[key]
 
     def summary(self, only: str | None) -> list[str]:
         c = self.counts
@@ -283,6 +302,7 @@ class _Run:
             self.counts["unchecked"] += 1
             return
         self._brand_findings(piece.brand, project.lock[piece.brand], project.brand.findings)
+        self._library_names(project)
         self.found.extend(content_findings(project))
         produced = _produced_findings(self.root, self.location, piece)
         self.found.extend(produced)
@@ -294,10 +314,33 @@ class _Run:
             self.brands.add(label)
             self.found.extend(found)
 
+    def _library_names(self, project: pl.Project) -> None:
+        """Each library the piece locks, once for each version and foundations, against the
+        top groups of the shared roles of the foundations it locks (DEC-004 points 7 and
+        11). The finding lies in the version's `library.yaml`, at its `name`."""
+        groups = project.foundations.top_groups
+        against = project.label(pl.FOUNDATIONS)
+        for name, version in sorted(project.lock.items()):
+            label = f"{name}@{version}"
+            if f"{label} {against}" in self.named:
+                continue
+            self.named.add(f"{label} {against}")
+            problem = names.library_name_problem(name, groups)
+            if problem is not None:
+                self.add(
+                    Finding(
+                        "library-name",
+                        FAILS,
+                        problem,
+                        file=f"{self.location}/{FOLDER}/{name}/{version}/library.yaml",
+                        where="name",
+                        fix="rename the library, in a version of its own, and lock that version",
+                        library=label,
+                    )
+                )
+
     def _scenes(self, project: pl.Project, unmade: set[str]) -> None:
         piece = project.piece
-        if piece.state != "draft":
-            return
         stored = read_findings_record(self.root, self.held, piece)
         if stored is not None:
             self.counts["read"] += 1
@@ -485,7 +528,8 @@ def lock_findings(held: Held, piece: pl.Piece) -> list[Finding]:
 
 def id_findings(piece: pl.Piece) -> list[Finding]:
     """The ids of a piece's content (DEC-002 point 4): each of the id shape, unique in its
-    list, and the same in every language."""
+    list, and the same in every language. A translation may order a list's items its own
+    way, so each list's ids are compared as a set with those of the source language."""
     found: list[Finding] = []
     lists: dict[str, dict[str, list[Any]]] = {}
     for language, content in piece.contents.items():
@@ -519,20 +563,31 @@ def id_findings(piece: pl.Piece) -> list[Finding]:
                 )
     source = piece.languages[0]
     for path, by_language in lists.items():
-        expected = by_language.get(source, [])
+        expected = {str(item) for item in by_language.get(source, [])}
         for language, ids in by_language.items():
-            if ids != expected:
-                found.append(
-                    Finding(
-                        "id-languages",
-                        FAILS,
-                        f"`{path}` holds the ids {ids} in `{language}` and {expected} in "
-                        f"`{source}`: an item keeps its id in every language",
-                        file=piece.file(pl.content_file(language)),
-                        where=path,
-                    )
+            held = {str(item) for item in ids}
+            if held == expected:
+                continue
+            said = []
+            if lacking := expected - held:
+                said.append(f"lacks the ids {_shown(lacking)}, which it holds in `{source}`")
+            if extra := held - expected:
+                said.append(f"holds the ids {_shown(extra)}, which it lacks in `{source}`")
+            found.append(
+                Finding(
+                    "id-languages",
+                    FAILS,
+                    f"`{path}` in `{language}` {', and '.join(said)}: an item keeps its id in "
+                    f"every language",
+                    file=piece.file(pl.content_file(language)),
+                    where=path,
                 )
+            )
     return found
+
+
+def _shown(ids: set[str]) -> str:
+    return ", ".join(f"`{item}`" for item in sorted(ids))
 
 
 def _lists(value: Any, path: str) -> Iterator[tuple[str, list[Any]]]:
@@ -836,9 +891,7 @@ def scene_findings(
     found: list[Finding] = []
     for language, result in results:
         content = pl.content_file(language)
-        found.extend(
-            _placed(finding, content, project, result.scene) for finding in result.findings
-        )
+        found.extend(_placed(finding, content, project) for finding in result.findings)
         scene = result.scene.to_dict()
         found.extend(drawn_contrast(scene, colours, project.keys))
         found.extend(_unknown_colours(scene, colours))
@@ -856,18 +909,21 @@ def scene_findings(
     return sorted(unique.values(), key=lambda f: (f.file, f.where, f.code, f.message))
 
 
-def _placed(finding: Finding, content: str, project: pl.Project, scene: Scene) -> Finding:
-    """An engine finding placed in its file: a library's component where it lies in one,
-    else the content file; a missing picture with why, and the command that makes it. The
-    component is the one the finding names, or else the one drawn at its trace."""
-    name, _, version = finding.library.partition("@")
-    if not version:
-        finding = dataclasses.replace(finding, library="", file=content)
+def _placed(finding: Finding, content: str, project: pl.Project) -> Finding:
+    """An engine finding placed in the file a person edits to mend it: the file of the
+    component it names (`component`), the piece's own in its `components/` and a library's
+    in the locked version's; with none, the content file. A missing picture gets why, and
+    the command that makes it."""
+    library, _, name = str(finding.extra.get("component") or "").partition("/")
+    versioned, _, version = finding.library.partition("@")
+    if library == names.PIECE and name:
+        finding = dataclasses.replace(finding, library="", file=f"{pl.COMPONENTS}/{name}.yaml")
+    elif library == versioned and name and version:
+        finding = dataclasses.replace(finding, file=f"{pl.COMPONENTS}/{name}.yaml")
+    elif version:
+        finding = dataclasses.replace(finding, file="")  # the version's folder
     else:
-        component = str(finding.extra.get("component") or _drawn_at(scene, finding.where))
-        library, _, part = component.partition("/")
-        file = f"{pl.COMPONENTS}/{part}.yaml" if library == name and part else ""
-        finding = dataclasses.replace(finding, file=file)
+        finding = dataclasses.replace(finding, library="", file=content)
     if finding.code == "missing-picture":
         for output, why in project.env.missing.items():
             if f"`{output}`" in finding.message:
@@ -877,14 +933,6 @@ def _placed(finding: Finding, content: str, project: pl.Project, scene: Scene) -
                     fix=f"run {pl.produce_command(project.piece.name, output)}",
                 )
     return finding
-
-
-def _drawn_at(scene: Scene, trace: str) -> str:
-    """The component drawn at `trace` in a scene; empty where no group lies there."""
-    element = scene.find(trace)
-    if element is None:
-        return ""
-    return str(element.properties.get("component") or "")
 
 
 def _walk(
@@ -1129,27 +1177,11 @@ def losses(scene: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[sea
     return found
 
 
-def accepted(loss: seam.Loss, accepting: Sequence[Mapping[str, Any]]) -> bool:
-    """Whether the piece accepts a loss: an entry of its `accept-losses` names the plugin
-    and what it loses."""
-    return any(
-        entry.get("plugin") == loss.plugin and entry.get("what") == loss.what for entry in accepting
-    )
-
-
 def loss_finding(loss: seam.Loss) -> Finding:
-    """A loss nobody accepted, which asks the piece's author for attention (DEC-005
-    point 14)."""
-    return Finding(
-        "loss",
-        ATTENTION,
-        f"the {loss.plugin} renderer {_DID[loss.did]} `{loss.what}`: {loss.why}",
-        file=pl.PIECE_FILE,
-        where=loss.what,
-        fix=f"accept it under `accept-losses` with `plugin: {loss.plugin}`, `what: {loss.what}` "
-        f"and a reason, or change what draws it",
-        who="the piece's author",
-    )
+    """A renderer's loss nobody accepted, which asks the piece's author for attention
+    (DEC-005 point 14), at the trace of what it loses. Whether the piece accepts a loss,
+    `accepted` says (`findings.accepted`)."""
+    return _loss_finding(loss, "renderer", file=pl.PIECE_FILE, where=loss.what)
 
 
 # --- the validator's document -------------------------------------------------------------------

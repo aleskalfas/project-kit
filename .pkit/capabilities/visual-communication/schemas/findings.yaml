@@ -2,9 +2,12 @@
 # (visual-communication DEC-002 point 7, DEC-005 point 13): a key over every file the
 # piece's scenes were computed from, and what computing them found, each finding at the
 # level its record sets. The check reads it while its key verifies. `pkit visual render`
-# rewrites it.
+# rewrites it. A finding's `file` is relative to the piece's folder, or, where it lies in
+# a library version, to that version's folder.
 #
-# The body below is the reference instance.
+# The body below is the reference instance: the record a render wrote for the test piece
+# `flow`, a word too wide for its card, trimmed to four of the key's inputs and two of
+# its findings, its key's `value` taken again over the inputs kept.
 
 pkit_schema: visual-communication:findings
 schema_version: 1
@@ -15,24 +18,28 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 93c29ddb073d8c11ef07a37af56cf46006d720bd0289bc1291b13c128ba43213
+  value: 3f13f5c1e2ca137c636fdbd6ee90dcf36300cdb26b0988331e7e6171960b96a1
   inputs:
     - file: content.en.yaml
-      sha256: ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73
+      sha256: 6a65d535acbac082f51d0b5c4c870e4ee7929d6a241ff36d14c5687a9729e69b
     - file: piece.yaml
-      sha256: 34235a2c502e3919d3f00af5dabb87cb58aef4566b10631f2a5db94950ebffbd
+      sha256: b768b3f1041972d4daa61305dd86f08d4e4ebb90c7194c4541acf6c54bc20446
     - library: foundations
       version: 1.0.0
       path: roles.yaml
-      sha256: 66cf5513b37462be52e7fe7b1791b7a6b704f97577680acc2f270e365a1b01e3
+      sha256: 439695a0673cb3a57d31976625bf7f90ffeb8435b8f6283a4d0f1ef1aed9e798
     - library: test-brand
       version: 1.0.0
       path: fonts/SourceSansPro-Regular.otf
-      sha256: 795ea3efa43d0872b63bf0067be97553b46983e4f075097669391e9d15388ecc
+      sha256: 6b096b47206d8f78a2c49af2f2ae46b35d93b0e3cf105a9febef59144aa2eae2
 findings:
   - code: text-overflow
     level: fails
-    message: The title is 12 px wider than its box.
-    file: visual/pieces/example/content.en.yaml
-    where: figure/caption
-    fix: Shorten the title, then run `pkit visual render example`.
+    message: "figure/body/steps[plan]/head: a word of content:body.steps[plan].head is wider than the text's width 912.0 px: 3431.04 px"
+    file: content.en.yaml
+    where: figure/body/steps[plan]/head
+  - code: component-experimental
+    level: fact
+    message: 'the piece uses `tests/steps`, which is experimental: its library may still change it in any release'
+    file: piece.yaml
+    where: figure/body

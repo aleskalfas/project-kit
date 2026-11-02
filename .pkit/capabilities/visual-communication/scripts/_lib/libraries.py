@@ -1,5 +1,5 @@
 """The library folder, the list of the project's libraries, versions, and a piece's lock
-(DEC-001 point 5, DEC-003 points 1, 4, 8 and 9).
+(DEC-001 point 5, DEC-003 points 1, 4, 8 and 9, DEC-004 point 6).
 
 - **The library folder** is `libraries/` in the location. Each version a lock may name is
   a folder of its own, `libraries/<name>/<version>/`, holding the version whole with its
@@ -10,7 +10,11 @@
   each released one (form 1, over every file of its folder). A released version whose
   folder no longer verifies has changed since its release.
 - **Versions** are `X.Y.Z` with X at least 1 in format 1, and a library's *line* is its
-  major. `builds-on` names each library a library builds on by its major, an integer.
+  major. `builds-on` names each library a library builds on by its major, an integer. A
+  brand marks at most one of them as its base, `base: true` (DEC-004 point 6); a
+  component library marks none. Whether the base is a brand is read with the brand
+  (`tokens.read_brand`). The base is one of the libraries the brand builds on, so the
+  lock names it as it names the others.
 - **The release a library needs**, `needs-release`, is a release of the capability; the
   installed capability reads no library that needs a newer one.
 - **A draft's lock** moves, at each render, to the newest combination of held versions the
@@ -98,10 +102,11 @@ def installed_release() -> tuple[int, int, int]:
 
 @dataclass(frozen=True)
 class BuildsOn:
-    """A library a library builds on, by its major."""
+    """A library a library builds on, by its major; `base` when a brand marks it its base."""
 
     name: str
     major: int
+    base: bool = False
 
 
 @dataclass(frozen=True)
@@ -118,6 +123,11 @@ class Library:
     @property
     def label(self) -> str:
         return f"{self.name}@{self.version}"
+
+    @property
+    def base(self) -> BuildsOn | None:
+        """The library of `builds-on` it marks as its base, or None."""
+        return next((need for need in self.builds_on if need.base), None)
 
 
 def read_library(folder: Path) -> Library:
@@ -144,14 +154,28 @@ def read_library(folder: Path) -> Library:
     for entry in raw:
         if (
             not isinstance(entry, Mapping)
-            or set(entry) != {"name", "major"}
+            or not {"name", "major"} <= set(entry) <= {"name", "major", "base"}
             or not is_name(entry["name"])
             or not isinstance(entry["major"], int)
             or isinstance(entry["major"], bool)
             or entry["major"] < 1
+            or entry.get("base", True) is not True
         ):
-            raise LibraryError(f"{path}: each of `builds-on` is `{{name, major}}`, a major from 1")
-        builds_on.append(BuildsOn(entry["name"], entry["major"]))
+            raise LibraryError(
+                f"{path}: each of `builds-on` is `{{name, major}}`, a major from 1, and "
+                f"`base: true` on a brand's base"
+            )
+        builds_on.append(BuildsOn(entry["name"], entry["major"], base="base" in entry))
+    bases = [need.name for need in builds_on if need.base]
+    if len(bases) > 1:
+        raise LibraryError(
+            f"{path}: `builds-on` marks {', '.join(f'`{name}`' for name in bases)} as bases; a "
+            f"brand has at most one base"
+        )
+    if bases and kind != "brand":
+        raise LibraryError(
+            f"{path}: `builds-on` marks `{bases[0]}` as a base, but only a brand has a base"
+        )
     return Library(
         name=name,
         version=version,

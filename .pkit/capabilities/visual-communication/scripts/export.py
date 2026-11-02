@@ -21,11 +21,15 @@ of every file its scenes were computed from, each file's hash, and when, in whic
 by which release and renderers it was made.
 
 It stops on a produced picture that is stale, naming what changed, unless `--use-stale`
-names it; the record keeps each picture used while stale. It stops on a picture that is
+names it; the record keeps each picture used while stale, and the version of each picture
+the export used. `--use-stale` naming an output the piece does not declare is refused; one
+that is not stale is used as it is, and the command says so. It stops on a picture that is
 missing, and on a piece with no lock yet, which `pkit visual render` writes.
 
 It writes in the location, so where the configuration records none it takes `visual/` and
-records it before its first write, or the path `--location` names.
+records it before its first write, or the path `--location` names. Every check that can
+refuse runs before that first write, so a refused export writes nothing, the location
+included.
 
 Usage:
   pkit visual export <piece> [--use-stale <output>]... [--location <path>]
@@ -93,6 +97,8 @@ def _export(root: Path, name: str, use_stale: list[str], given: str | None) -> i
         print(f"export: {exports.FOLDER}/{name}/{file}")
     for output in planned.used_stale:
         print(f"used while stale: {output}")
+    for output in planned.not_stale:
+        print(f"not stale, so used as it is: {output}")
     print(f"export: version {planned.number} recorded in {piece.file(pl.EXPORTS_FILE)}")
     return 0
 

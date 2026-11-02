@@ -374,9 +374,52 @@ def test_a_point_outside_the_pixels_is_refused(tmp_path: Path) -> None:
         ),
         ({}, "it gave no `points`"),
         ({"points": {}, "programs": ["blender"]}, "its `programs` is not a mapping"),
+        (
+            {"points": {}, "programs": {"blender": "4.2"}},
+            "it called `blender`, which its declaration does not name under `programs`",
+        ),
         ({"points": {}, "frames": {}}, "returned `frames`, which seam 1 does not read"),
+        ({"points": {}, "losses": {}}, "its `losses` is not a list"),
+        (
+            {"points": {}, "losses": [{"plugin": "square", "what": "line", "did": "lost"}]},
+            "its loss 1 is not of the seam's one form",
+        ),
+        (
+            {
+                "points": {},
+                "losses": [{"plugin": "svg", "what": "line", "did": "left-out", "why": "no edge"}],
+            },
+            "its loss 1 names the plugin `svg`, not `square`",
+        ),
+        (
+            {
+                "points": {},
+                "losses": [{"plugin": "square", "what": "line", "did": "lost", "why": "no edge"}],
+            },
+            "its loss 1 did `lost`, which is not one of approximated, picture, left-out, refused",
+        ),
+        (
+            {
+                "points": {},
+                "losses": [{"plugin": "square", "what": "the line", "did": "left-out", "why": " "}],
+            },
+            "its loss 1 names no trace id or token path under `what`, or no reason under `why`",
+        ),
     ],
-    ids=["place", "name", "number", "no-points", "programs", "unread-key"],
+    ids=[
+        "place",
+        "name",
+        "number",
+        "no-points",
+        "programs",
+        "undeclared-program",
+        "unread-key",
+        "losses",
+        "loss-keys",
+        "loss-plugin",
+        "loss-did",
+        "loss-blank",
+    ],
 )
 def test_a_result_not_of_seam_1s_form_is_refused(
     tmp_path: Path, result: dict[str, Any], why: str
@@ -389,6 +432,19 @@ def test_a_result_not_of_seam_1s_form_is_refused(
 
     replace_producer(give)
     assert why in refusal(root)
+
+
+def test_a_picture_kept_through_a_link_is_refused_before_the_location_is_recorded(
+    tmp_path: Path,
+) -> None:
+    root = producing_project(tmp_path)
+    elsewhere = root / "elsewhere"
+    elsewhere.mkdir()
+    (root / PIECE_FOLDER / "produced").symlink_to(elsewhere, target_is_directory=True)
+    with pytest.raises(framing.Refused, match="is reached through the link"):
+        produce(root)
+    assert not (root / CONFIG).exists()
+    assert list(elsewhere.iterdir()) == []
 
 
 def test_a_producer_that_fails_is_refused_naming_its_error(tmp_path: Path) -> None:
@@ -450,6 +506,138 @@ def test_a_producer_whose_declaration_breaks_seam_1_is_refused(tmp_path: Path) -
     del broken["inputs"]["properties"]["fill"]["x-pkit-role"]
     producer.register(seam, declaration=broken)
     assert "has an input `fill` not marked `x-pkit-role`" in refusal(root)
+
+
+@pytest.mark.parametrize(
+    ("needs", "why"),
+    [
+        ({"programs": "blender"}, "names its `programs` other than as a list of names"),
+        ({"services": [""]}, "names its `services` other than as a list of names"),
+        ({"programs": ["blender", "blender"]}, "names `blender` twice under `programs`"),
+    ],
+    ids=["programs", "services", "twice"],
+)
+def test_a_declaration_naming_its_needs_out_of_form_is_refused(
+    tmp_path: Path, needs: dict[str, Any], why: str
+) -> None:
+    root = producing_project(tmp_path)
+    producer.register(seam, declaration={**producer.DECLARATION, **needs})
+    assert f"the producer `square`'s declaration {why}" in refusal(root)
+
+
+def test_a_producer_that_reaches_a_service_is_refused_before_it_runs(tmp_path: Path) -> None:
+    root = producing_project(tmp_path)
+    ran: list[str] = []
+    producer.register(
+        seam,
+        declaration={**producer.DECLARATION, "services": ["whiteboard"]},
+        implementation=SimpleNamespace(produce=lambda handover, out: ran.append("ran")),
+    )
+    why = refusal(root)
+    assert why.startswith(
+        "the producer `square` 1.0.0 reaches the service `whiteboard`, and the project's "
+        "configuration turns on no plugin that reaches a service"
+    )
+    assert ran == []
+
+
+def test_a_program_the_producer_calls_that_the_machine_lacks_is_refused_before_it_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = producing_project(tmp_path)
+    monkeypatch.setattr(framing.shutil, "which", lambda name: None)
+    ran: list[str] = []
+    producer.register(
+        seam,
+        declaration={**producer.DECLARATION, "programs": ["blender"]},
+        implementation=SimpleNamespace(produce=lambda handover, out: ran.append("ran")),
+    )
+    assert refusal(root) == (
+        "the producer `square` 1.0.0 calls `blender`, which this machine lacks: install it, "
+        "then run `pkit visual produce flow marker` again"
+    )
+    assert ran == []
+
+
+def test_a_program_it_declares_and_calls_is_recorded_with_its_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = producing_project(tmp_path)
+    monkeypatch.setattr(framing.shutil, "which", lambda name: f"/usr/bin/{name}")
+
+    def calling(handover: Mapping[str, Any], out: Path) -> Any:
+        return {**producer.produce(handover, out), "programs": {"blender": "4.2"}}
+
+    producer.register(
+        seam,
+        declaration={**producer.DECLARATION, "programs": ["blender"]},
+        implementation=SimpleNamespace(produce=calling),
+    )
+    produce(root)
+    assert files.read_bound(root / RECORD, "produced-record")["recorded"]["programs"] == {
+        "blender": "4.2"
+    }
+
+
+# --- what a producer loses ----------------------------------------------------------------------
+
+#: What the square loses of a piece that names it an edge (`line`), in the seam's one form.
+EDGE_LOSS = {"plugin": "square", "what": "line", "did": "left-out", "why": producer.NO_EDGE}
+
+
+def edged(tmp_path: Path, **fields: Any) -> Path:
+    """The project, its `marker` given an edge the square leaves out."""
+    return producing_project(
+        tmp_path, produced=marker(inputs={"fill": "accent", "edge": "line"}), **fields
+    )
+
+
+def test_a_loss_the_producer_reports_is_kept_in_its_record_and_asks_for_attention(
+    tmp_path: Path,
+) -> None:
+    root = edged(tmp_path)
+    done = produce(root)
+    assert done.losses == (seam.Loss(**EDGE_LOSS),)
+    assert done.unaccepted == done.losses
+    record = files.read_bound(root / RECORD, "produced-record")
+    assert files.shape_problems(record, "produced-record") == []
+    assert record["losses"] == [EDGE_LOSS]
+    loss = coded(root)["loss"]
+    assert loss.level == findings_module.ATTENTION
+    assert loss.message == (
+        "the square producer leaves out `line`: a square of one colour draws no edge"
+    )
+    assert (loss.file, loss.where) == (f"{PIECE_FOLDER}/piece.yaml", f"produced.{OUTPUT}")
+    assert loss.who == "the piece's author"
+    assert loss.fix.startswith(
+        "accept it under `accept-losses` with `plugin: square`, `what: line`"
+    )
+
+
+def test_a_loss_the_piece_accepts_is_kept_and_reported_no_more(tmp_path: Path) -> None:
+    accepting = {"plugin": "square", "what": "line", "reason": "The marker needs no edge."}
+    root = edged(tmp_path, accept_losses=[accepting])
+    done = produce(root)
+    assert done.unaccepted == ()
+    assert files.read_bound(root / RECORD, "produced-record")["losses"] == [EDGE_LOSS]
+    assert found(root) == []
+
+
+def test_a_run_that_loses_nothing_records_no_loss(tmp_path: Path) -> None:
+    root = producing_project(tmp_path)
+    assert produce(root).losses == ()
+    assert files.read_bound(root / RECORD, "produced-record")["losses"] == []
+
+
+def test_a_loss_reported_twice_is_kept_once(tmp_path: Path) -> None:
+    root = edged(tmp_path)
+
+    def twice(handover: Mapping[str, Any], out: Path) -> Any:
+        result = producer.produce(handover, out)
+        return {**result, "losses": result["losses"] * 2}
+
+    replace_producer(twice)
+    assert produce(root).losses == (seam.Loss(**EDGE_LOSS),)
 
 
 # --- what the check reports ---------------------------------------------------------------------

@@ -23,6 +23,8 @@ SCHEMAS = CAPABILITY / "schemas"
 FOUNDATIONS = CAPABILITY / "libraries" / "foundations"
 FIXTURES = REPO / "tests" / "fixtures" / "visual-communication"
 TEST_BRAND = FIXTURES / "libraries" / "test-brand" / "1.0.0"
+#: A brand built on the test brand, its base (DEC-004 point 6).
+TEST_EDITION = FIXTURES / "libraries" / "test-edition" / "1.0.0"
 
 #: The capability's project configuration, relative to the project root.
 CONFIG = ".pkit/capabilities/visual-communication/project/config.yaml"

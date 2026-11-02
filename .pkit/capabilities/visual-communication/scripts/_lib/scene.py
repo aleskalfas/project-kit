@@ -16,7 +16,9 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
 - **Traces.** Each element's id is its trace: the path of instances, parts and items
   from the top, joined by `/`; an item is `<list>[<id>]`, or `<list>#<place>` (from 1)
   where it has no id. Each drawn property names its source: `content:<field path>`,
-  `option:<name>`, `default:<library>/<component>`, `role:<token path>` or `engine`.
+  `option:<name>`, `default:<library>/<component>`, `role:<token path>` or `engine`. A
+  value the component leaves to the engine, such as a text's `text-anchor` where it gives
+  none, is the engine's.
 - **The root** holds the piece, its lock, the language, the key over its size axes, the
   seam's version, and the trace ids of its pages in order.
 
@@ -269,11 +271,13 @@ class _Emitter:
         empty = Broken((), (), False)
         broken = self.ctx.attempt(lambda: instance.get("lines", name), empty)
         where = f"parts.{name}.text"
+        default = f"default:{instance.component.use}"
+        # Where the component gives no anchor, the engine's default, `start`, is the engine's.
         anchor_raw = props.get("text-anchor")
         _, _, chosen = instance.pick(f"{where}.text-anchor", anchor_raw)
         anchor = instance.word(f"{where}.text-anchor", anchor_raw, "start")
-        default = f"default:{instance.component.use}"
-        element.set("text-anchor", anchor, f"option:{chosen}" if chosen else default)
+        given = default if anchor_raw is not None else ENGINE
+        element.set("text-anchor", anchor, f"option:{chosen}" if chosen else given)
         self._paints(element, instance, node, ("fill",))
         _, _, chosen = instance.pick(f"{where}.style", props.get("style"))
         element.set("style", style.role, f"option:{chosen}" if chosen else default)

@@ -4,10 +4,12 @@
 **A component** is a mapping. Beside its binding (`pkit_schema`, `schema_version`) it holds:
 
 - `status` and `about`;
-- `fields`: the JSON Schema of the content it takes. The engine reads its `properties`;
+- `fields`: the JSON Schema of the content it takes. The engine reads its `properties`. A
+  field whose `type` is `array`, or a list of types holding it, is a list field;
 - `options`: each a list of words, the first the default; or `{item: <list field>}`,
   which names an item of that list by its id; or `{item: <list field>, point: true}`,
-  which names an item and one of its exposed points, `{item: <id>, point: <name>}`;
+  which names an item and one of its exposed points, `{item: <id>, point: <name>}`. Such
+  an option needs exactly one part that repeats over its list;
 - `states`: each `{colour: <family>}`, or `{}` to keep the family;
 - `colour`: the component's default colour family;
 - `values`: named formulas, read by their name alone;
@@ -16,7 +18,8 @@
 - `exposes`: the parts a component that places it may read. An exposed image part
   exposes its picture's points too, as parts of zero size of the component itself;
 - `layouts`, on a top component: one layout in format 1, `{<layout>: {slots: {<field>:
-  {pages: true}?}}}`. A top component with no slot of pages is one page itself.
+  {pages: true}?}}}`. What a slot of pages places is a page. A top component with no slot
+  of pages is a page alone, and part of the page that holds it (DEC-005 point 5).
 
 **A part** is one of:
 
@@ -39,13 +42,20 @@ size `width` and `height`, each a formula; a line has `x1 y1 x2 y2`. A text's he
 its measured text's, and its width, where none is given, its widest paragraph's. An
 image's height, where none is given, keeps its picture's proportions. Any property
 value may be a switch, `{by: <option>, <word>: <value>, ...}`, naming every word. A
-colour is a role's token path, or `:colour.<member>`, the member of the instance's
-family; content's `override: {<part>: <role>}` points a part's paint at another role.
+colour is a role's token path, or `:colour.<member>`: the role the foundations map that
+member of the instance's colour family to (DEC-004 point 10). Content's `override:
+{<part>: <role>}` points a part's paint at another role. `:index` and `:count` are an
+item's place among the items its list draws, from 1, and how many it draws.
 
 **Computed value by value.** Every value is a cell computed on first use, in the order
 the references give, as a spreadsheet computes its cells: a loop is refused naming every
 element in it. A value has one owner: a part's formula, its measured text, or its
 parent's layout. Each problem is a finding; a value that cannot be computed is zero.
+
+**Where a finding lies** is the file a person edits to mend it. A finding in a component,
+or in what a component's part gave the component it places, names that component as
+`component`, and its library's version as `library`, empty for the piece's own. A
+finding in what the content gave names neither.
 """
 
 from __future__ import annotations
@@ -59,6 +69,7 @@ from _lib import formula as fm
 from _lib import names
 from _lib.env import Env, PictureInfo
 from _lib.findings import FAILS, Finding
+from _lib.keys import key_order
 from _lib.text import Broken, Faces, Style, break_lines
 
 PRIMITIVES = ("box", "ellipse", "text", "line", "image")
@@ -130,6 +141,9 @@ SWITCH = "by"
 #: The engine's mark for a member of the instance's colour family.
 FAMILY = ":colour."
 
+#: The start of the source of a value the content gave.
+CONTENT = "content:"
+
 #: A size this much less than the size asked for is not short of it: half the scene's
 #: rounding step.
 TOLERANCE = 0.005
@@ -165,6 +179,13 @@ def _is_use(value: Any) -> bool:
 
 def _is_field(value: Any, fields: Mapping[str, Any] | set[str]) -> bool:
     return isinstance(value, str) and value in fields
+
+
+def _is_list(schema: Any) -> bool:
+    """Whether a field's schema makes it a list field: its `type` is `array`, or a list of
+    types that holds `array`, such as `[array, null]`."""
+    kind = schema.get("type") if isinstance(schema, Mapping) else None
+    return kind == "array" or (isinstance(kind, list) and "array" in kind)
 
 
 # --- components ---------------------------------------------------------------------------
@@ -227,11 +248,7 @@ class Component:
         fields = data.get("fields")
         properties = fields.get("properties") if isinstance(fields, Mapping) else None
         self.fields: Mapping[str, Any] = properties if isinstance(properties, Mapping) else {}
-        self.lists = {
-            name
-            for name, schema in self.fields.items()
-            if isinstance(schema, Mapping) and schema.get("type") == "array"
-        }
+        self.lists = {name for name, schema in self.fields.items() if _is_list(schema)}
         self.colour: str | None = data.get("colour")
         self.values = self._mapping(data, "values")
         self.preferred = self._mapping(data, "preferred")
@@ -315,6 +332,12 @@ class Component:
             self._shape(where, f"the part `{name}` is not exactly one of {', '.join(KINDS)}")
             return
         self.parts[name] = Part(name, kinds[0], spec)
+        # Every list's repeat is known before any formula is read, so a formula may read an
+        # item option whose list a later part repeats over.
+        listed = spec.get("repeat")
+        if kinds[0] == "repeat" and _is_field(listed, self.lists):
+            # Where two parts repeat over a list, no option names its items.
+            self.repeats_over[listed] = "" if listed in self.repeats_over else name
 
     def _read_part(self, part: Part) -> None:
         where = f"parts.{part.name}"
@@ -393,10 +416,6 @@ class Component:
         listed = part.spec["repeat"]
         if not _is_field(listed, self.lists):
             self._shape(f"{where}.repeat", f"repeats over `{listed}`, which is no list field")
-        elif listed in self.repeats_over:
-            self.repeats_over[listed] = ""  # two parts repeat over it: no option names its items
-        else:
-            self.repeats_over[listed] = part.name
         if "draw" in part.spec and not _is_use(part.spec["draw"]):
             self._shape(f"{where}.draw", f"`{part.spec['draw']}` is not `<library>/<component>`")
         operators = [name for name in OPERATORS if name in part.spec]
@@ -542,6 +561,11 @@ class Component:
             option = self.options.get(ref.option)
             if option is None or option.items is None:
                 return f"reads `{{{ref.option}}}`, which is no option naming an item"
+            if not self.repeats_over.get(option.items):
+                return (
+                    f"reads `{{{ref.option}}}`, an item of `{option.items}`, over which not "
+                    "exactly one part repeats"
+                )
             return (
                 f"reads below the point `{{{ref.option}}}` gives"
                 if option.point and ref.steps
@@ -626,12 +650,19 @@ class Context:
         self._seen: set[tuple[str, str, str]] = set()
         self._components: dict[str, Component | None] = {}
         self._roles: dict[str, Any] = {}
+        self._families: dict[str, Mapping[str, str] | None] = {}
 
-    def report(
-        self, code: str, message: str, *, where: str, library: str = "", **extra: str
-    ) -> None:
-        """Records a finding that fails, once."""
-        self.add(Finding(code, FAILS, message, where=where, library=library, extra=dict(extra)))
+    def finding(self, code: str, message: str, *, where: str, use: str = "") -> Finding:
+        """A finding that fails, at `where`: in the file of the component `use`, which it
+        names with its library's version; with none, in the content."""
+        if not use:
+            return Finding(code, FAILS, message, where=where)
+        library = self.library(use)
+        return Finding(code, FAILS, message, where=where, library=library, extra={"component": use})
+
+    def report(self, code: str, message: str, *, where: str, use: str = "") -> None:
+        """Records a finding that fails, once: in the component `use`, or in the content."""
+        self.add(self.finding(code, message, where=where, use=use))
 
     def add(self, finding: Finding) -> None:
         key = (finding.code, finding.where, finding.message)
@@ -649,7 +680,9 @@ class Context:
             return default
 
     def library(self, use: str) -> str:
-        """`<library>@<version>` of the library a component lies in; empty for the piece's own."""
+        """`<library>@<version>` of the library a component lies in; empty for the piece's
+        own, which lies in the piece. A finding in a component names it beside this, as
+        `component`, so the check finds the component's file in either."""
         library = use.split("/")[0]
         if library == names.PIECE:
             return ""
@@ -668,7 +701,7 @@ class Context:
             component = Component(use, data, self) if isinstance(data, Mapping) else None
             self._components[use] = component
             for code, where, message in component.issues if component else ():
-                self.report(code, message, where=where, library=self.library(use), component=use)
+                self.report(code, message, where=where, use=use)
         return self._components[use]
 
     def role(self, path: str) -> Any:
@@ -681,6 +714,16 @@ class Context:
         if self._roles[path] is KeyError:
             raise KeyError(path)
         return self._roles[path]
+
+    def family(self, name: str) -> Mapping[str, str] | None:
+        """The members of a colour family the foundations declare, each mapped to a colour
+        role (DEC-004 point 10); `None` where they declare no such family."""
+        if name not in self._families:
+            try:
+                self._families[name] = self.env.family(name)
+            except KeyError:
+                self._families[name] = None
+        return self._families[name]
 
     def role_dimension(self, path: str) -> tuple[int | None, str | None]:
         """A role's dimension in a formula, or why it has none."""
@@ -740,9 +783,9 @@ def _filled(value: Any) -> bool:
 
 
 def first_variant(picture: PictureInfo) -> str:
-    """The variant whose pixels and points a scene reads: the first key in order. Every
-    variant one scene holds shares them (DEC-005 point 5)."""
-    return min(picture.variants)
+    """The variant whose pixels and points a scene reads: the first key in key order, the
+    default first. Every variant one scene holds shares them (DEC-005 point 5)."""
+    return min(picture.variants, key=key_order)
 
 
 class Instance:
@@ -760,7 +803,7 @@ class Instance:
         sources: Mapping[str, str] | None = None,
         parent: Instance | None = None,
         part: str = "",
-        item: tuple[int, int] | None = None,
+        is_item: bool = False,
         place_colour: tuple[str, str] | None = None,
         chain: tuple[str, ...] = (),
         through_pages: bool = False,
@@ -773,8 +816,8 @@ class Instance:
         self.content_path = content_path
         self.parent = parent
         self.part_name = part
-        self.item = item  # its place in its list, from 1, and the list's count
-        self.position = 0  # its place among the items its list draws
+        self.is_item = is_item  # an item its parent's list draws
+        self.position = 0  # its place among the items its list draws, from 0
         self.chain = chain or (component.use,)
         self.cells: dict[tuple[str, ...], Any] = {}
         self.nodes: dict[str, Node] = {}
@@ -782,12 +825,14 @@ class Instance:
         self.option_sources: dict[str, str] = {}
         self.overrides: dict[str, tuple[str, str]] = {}
         self.library = ctx.library(component.use)
-        # What the content gave it lies in the piece; what a component's part gave it,
-        # in that component's library.
-        self._given_by = "" if by_content else (parent.library if parent else "")
+        # The instance whose part placed it with what it was given, where no content did.
+        self._placer = None if by_content else parent
         self._sources = dict(sources or {})
-        self.is_page = (component.top and not component.pages) or through_pages
-        if self.is_page and any(above.is_page for above in self._ancestors()):
+        # What a slot of pages places is a page. A top component with no slot of pages is
+        # a page alone, and part of the page that holds it (DEC-005 point 5).
+        inside = any(above.is_page for above in self._ancestors())
+        self.is_page = through_pages or (component.top and not component.pages and not inside)
+        if self.is_page and inside:
             self._note("page-in-page", f"{trace}: {component.use} is a page inside a page")
         self._read_options()
         self.family, self.family_source = self._colour(place_colour)
@@ -797,21 +842,21 @@ class Instance:
 
     # -- findings
 
-    def _note(self, code: str, message: str, where: str = "") -> None:
+    def _note(self, code: str, message: str, where: str = "", given: str = "") -> None:
         """Records a finding on what this instance was given, at the trace of the element
-        it concerns: `where`, else the instance's own."""
-        self.ctx.report(
-            code,
-            message,
-            where=where or self.trace,
-            library=self._given_by,
-            component=self.component.use,
-        )
+        it concerns: `where`, else the instance's own. It lies where `given`, the key of
+        what it concerns, came from: in the content, where the content placed this
+        instance, or gave that value for a part to pass on; else in the component whose
+        part placed it, and gave the value or left it out."""
+        passed_on = self._sources.get(given, "").startswith(CONTENT)
+        placer = None if passed_on else self._placer
+        use = placer.component.use if placer is not None else ""
+        self.ctx.report(code, message, where=where or self.trace, use=use)
 
     def _fail(self, code: str, message: str, where: str = "") -> Fault:
         """A fault, with its finding, in this instance's component."""
-        finding = Finding(code, FAILS, message, where=where or self.trace, library=self.library)
-        return Fault(finding)
+        where = where or self.trace
+        return Fault(self.ctx.finding(code, message, where=where, use=self.component.use))
 
     # -- what it was given
 
@@ -823,7 +868,7 @@ class Instance:
         return found
 
     def source_of_field(self, name: str) -> str:
-        return self._sources.get(name) or f"content:{_join(self.content_path, name)}"
+        return self._sources.get(name) or f"{CONTENT}{_join(self.content_path, name)}"
 
     def _read_options(self) -> None:
         use = self.component.use
@@ -838,20 +883,28 @@ class Instance:
                 if raw is not None:
                     words = ", ".join(option.words)
                     self._note(
-                        "option-word", f"{self.trace}: `{name}` of {use} takes {words}, not `{raw}`"
+                        "option-word",
+                        f"{self.trace}: `{name}` of {use} takes {words}, not `{raw}`",
+                        given=name,
                     )
                 self.options[name], self.option_sources[name] = option.words[0], f"default:{use}"
 
     def _item_option(self, name: str, option: Option, raw: Any) -> Mapping[str, str] | None:
         use = self.component.use
         if raw is None:
-            self._note("option-missing", f"{self.trace}: {use} needs the option `{name}`")
+            self._note(
+                "option-missing", f"{self.trace}: {use} needs the option `{name}`", given=name
+            )
             return None
         if not isinstance(raw, Mapping) or set(raw) != (
             {"item", "point"} if option.point else {"item"}
         ):
             shape = "{item: <id>, point: <name>}" if option.point else "{item: <id>}"
-            self._note("option-word", f"{self.trace}: the option `{name}` of {use} takes {shape}")
+            self._note(
+                "option-word",
+                f"{self.trace}: the option `{name}` of {use} takes {shape}",
+                given=name,
+            )
             return None
         listed = self.given.get(option.items or "")
         ids = (
@@ -863,6 +916,7 @@ class Instance:
             self._note(
                 "unknown-item",
                 f"{self.trace}: `{name}` names `{raw['item']}`, no item of `{option.items}`",
+                given=name,
             )
             return None
         return raw
@@ -884,6 +938,7 @@ class Instance:
                 self._note(
                     "unknown-state",
                     f"{self.trace}: {self.component.use} declares no state `{state}`",
+                    given="state",
                 )
             elif self.component.states[state]:
                 family, source = self.component.states[state], self.source_of_field("state")
@@ -894,17 +949,23 @@ class Instance:
         if raw is None:
             return
         if not isinstance(raw, Mapping):
-            self._note("override", f"{self.trace}: `override` takes {{<part>: <role>}}")
+            self._note(
+                "override", f"{self.trace}: `override` takes {{<part>: <role>}}", given="override"
+            )
             return
         for name, role in raw.items():
             part = self.component.parts.get(name)
             if part is None or part.kind not in OVERRIDDEN:
                 self._note(
-                    "override", f"{self.trace}: `override` names `{name}`, no painted part of it"
+                    "override",
+                    f"{self.trace}: `override` names `{name}`, no painted part of it",
+                    given="override",
                 )
             elif not names.is_token_path(role):
                 self._note(
-                    "override", f"{self.trace}: `override` points `{name}` at `{role}`, not a role"
+                    "override",
+                    f"{self.trace}: `override` points `{name}` at `{role}`, not a role",
+                    given="override",
                 )
             else:
                 self.overrides[name] = (role, f"{self.source_of_field('override')}.{name}")
@@ -949,14 +1010,16 @@ class Instance:
 
     def _build_text(self, node: Node, trace: str) -> None:
         props = node.part.props
-        value = self.given.get(props.get("content", ""))
+        content = props.get("content", "")
+        value = self.given.get(content)
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             value = str(value)
         if value is not None and not isinstance(value, str):
             self._note(
                 "content-shape",
-                f"{trace}: the field `{props.get('content')}` holds no text",
+                f"{trace}: the field `{content}` holds no text",
                 where=trace,
+                given=content,
             )
             value = None
         node.text = value or ""
@@ -976,11 +1039,12 @@ class Instance:
     def _lose(self, node: Node, code: str, message: str, where: str) -> None:
         """Records why the component cannot draw the part at `where`, which then has zero
         size."""
-        self.ctx.report(code, message, where=where, library=self.library)
+        self.ctx.report(code, message, where=where, use=self.component.use)
         node.present = False
 
     def _build_image(self, node: Node, trace: str) -> None:
-        output = self.given.get(node.part.props.get("produced", ""))
+        produced = node.part.props.get("produced", "")
+        output = self.given.get(produced)
         if not isinstance(output, str):
             node.present = False
             return
@@ -993,6 +1057,7 @@ class Instance:
                 "missing-picture",
                 f"{trace}: the piece has no produced output `{output}`",
                 where=trace,
+                given=produced,
             )
             node.present = False
             return
@@ -1005,16 +1070,20 @@ class Instance:
                     f"{trace}: the variants of `{output}` differ in pixels or points, and one "
                     "scene holds them all",
                     where=trace,
+                    given=produced,
                 )
                 break
         node.picture, node.output = picture, output
 
     def _component(self, node: Node, use: Any, trace: str, *, by_content: bool) -> Component | None:
+        """The component `use` names, to draw a part or an item; `None` where there is none,
+        with a finding in what named it: the content where `by_content`, else this
+        instance's component."""
         component = self.ctx.component(use) if isinstance(use, str) else None
         if component is None:
-            library = "" if by_content else self.library
+            named_in = "" if by_content else self.component.use
             self.ctx.report(
-                "unknown-component", f"{trace}: no component `{use}`", where=trace, library=library
+                "unknown-component", f"{trace}: no component `{use}`", where=trace, use=named_in
             )
             node.present = False
         return component
@@ -1028,7 +1097,7 @@ class Instance:
                 "places-itself",
                 f"{trace}: {use} places itself: {loop}",
                 where=trace,
-                library=self.library,
+                use=self.component.use,
             )
             node.present = False
             return
@@ -1061,6 +1130,7 @@ class Instance:
                 "content-shape",
                 f"{trace}: the slot `{name}` takes a component, `{{use: ...}}`",
                 where=trace,
+                given=name,
             )
             node.present = False
             return
@@ -1073,6 +1143,10 @@ class Instance:
             )  # fmt: skip
 
     def _build_items(self, node: Node, trace: str) -> None:
+        """Each item of the list the part repeats over, drawn in the content's order. An item
+        that is no mapping, repeats an id, or names no component is left out: it takes no
+        place among the items drawn, so `:index` and `:count` never count it. Its trace
+        keeps its place in the content's list."""
         spec = node.part.spec
         name = spec["repeat"]
         listed = self.given.get(name)
@@ -1088,6 +1162,7 @@ class Instance:
                     "content-shape",
                     f"{at}: an item of `{name}` is no mapping, or repeats its id",
                     where=at,
+                    given=name,
                 )
                 continue
             if key is not None:
@@ -1100,7 +1175,7 @@ class Instance:
             instance = Instance(
                 self.ctx, component, item, trace=at,
                 content_path=_join(self.content_path, f"{name}{step}"), parent=self,
-                part=node.part.name, item=(index, len(listed)), place_colour=place,
+                part=node.part.name, is_item=True, place_colour=place,
                 through_pages=name in self.component.pages,
             )  # fmt: skip
             instance.position = len(node.items)
@@ -1201,10 +1276,11 @@ class Instance:
         if isinstance(ref, fm.Engine):
             if ref.name in ("width", "height"):
                 return self.get("size", ref.name)
-            if self.item is None:
+            if not self.is_item or self.parent is None:
                 message = f"{self.trace}: {self.component.use} reads :{ref.name} but is no item"
                 raise self._fail("formula-reach", message)
-            return float(self.item[0] if ref.name == "index" else self.item[1])
+            drawn = self.parent.nodes[self.part_name].items
+            return float(self.position + 1 if ref.name == "index" else len(drawn))
         if isinstance(ref, fm.Role):
             return self.ctx.role_number(ref.path)
         if isinstance(ref, fm.Value):
@@ -1222,7 +1298,7 @@ class Instance:
         the size it asks for."""
         if self.parent is None:
             return self.get("preferred", size)
-        if self.item is not None:
+        if self.is_item:
             part = self.parent.nodes[self.part_name].part
             axis = "main" if size == part.main else "cross"
             return self.parent.get(axis, self.part_name).sizes[self.position]
@@ -1435,7 +1511,10 @@ class Instance:
     # -- what is drawn
 
     def paint(self, name: str, prop: str) -> tuple[str | None, str]:
-        """A part's paint, as a role, and where it comes from. Raises `Fault`."""
+        """A part's paint, as a role, and where it comes from. `:colour.<member>` paints
+        with the role the foundations map that member of the instance's colour family to
+        (DEC-004 point 10); an instance with no family, a family the foundations do not
+        declare, or one that lacks the member paints nothing. Raises `Fault`."""
         part = self.nodes[name].part
         if name in self.overrides and OVERRIDDEN.get(part.kind) == prop:
             return self.overrides[name]
@@ -1445,12 +1524,25 @@ class Instance:
         source = f"option:{chosen}" if chosen else f"default:{self.component.use}"
         if not value.startswith(FAMILY):
             return value, source
+        where = f"{self.trace}/{name}"
         if self.family is None:
-            where = f"{self.trace}/{name}"
-            raise self._fail(
-                "no-colour", f"{where}: paints `{value}`, and has no colour family", where
+            message = f"{where}: paints `{value}`, and has no colour family"
+            raise self._fail("no-colour", message, where)
+        members = self.ctx.family(self.family)
+        if members is None:
+            message = (
+                f"{where}: paints `{value}` of the colour family `{self.family}`, which the "
+                "foundations do not declare"
             )
-        return f"{self.family}.{value[len(FAMILY) :]}", self.family_source or source
+            raise self._fail("no-colour", message, where)
+        member = value[len(FAMILY) :]
+        if member not in members:
+            message = (
+                f"{where}: paints `{value}`, and the colour family `{self.family}` has no "
+                f"member `{member}`"
+            )
+            raise self._fail("no-colour", message, where)
+        return members[member], self.family_source or source
 
     def shortfalls(self) -> list[tuple[str, float, float]]:
         """Each size this instance gets that is less than it asks for: size, gets, asks.
@@ -1475,10 +1567,5 @@ def place_top(ctx: Context, top: str, content: Mapping[str, Any]) -> Instance | 
         ctx.report("unknown-component", f"the piece's top names no component `{top}`", where=trace)
         return None
     if not component.top:
-        ctx.report(
-            "not-top",
-            f"the piece's top `{top}` declares no layouts",
-            where=trace,
-            library=ctx.library(top),
-        )
+        ctx.report("not-top", f"the piece's top `{top}` declares no layouts", where=trace, use=top)
     return Instance(ctx, component, content, trace=trace, content_path="")

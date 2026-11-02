@@ -22,7 +22,8 @@ the writer has no form for, as a loss, unless the declaration accepts it in
 `accept-losses`.
 
 Writes `out` and its record, which may lie anywhere in the project's tree but under
-`.pkit/`, a hidden folder or the location's library folder. Needs no network.
+`.pkit/`, under a hidden folder, in the location's library folder or in its `code/` folder
+of declarations; nor may `out` be reached through a link, or be a folder. Needs no network.
 
 Usage:
   pkit visual write-code <name>

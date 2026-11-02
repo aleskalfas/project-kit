@@ -5,9 +5,22 @@
   "description": "The shapes every schema of the capability shares: names, ids, token paths, keys, versions, hashes, paths, fingerprints and records. Each schema refers here, so a shape is written once. The capability's Python reads the same patterns (`_lib/names.py`); a test holds the two equal.",
   "$defs": {
     "name": {
-      "description": "The one name shape (DEC-002 point 4, DEC-004 point 4): lower-case words of letters and digits joined by single hyphens, starting with a letter. A name holds no `.`, `/` or `#`, and YAML never reads one as a number or a yes-or-no.",
+      "description": "The one name shape (DEC-002 point 4, DEC-004 point 4): lower-case words of letters and digits joined by single hyphens, starting with a letter, and none of the words YAML reads as a yes-or-no or as nothing. A name holds no `.`, `/` or `#`, and YAML never reads one as a number, a yes-or-no or nothing.",
       "type": "string",
-      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+      "not": {
+        "enum": [
+          "y",
+          "n",
+          "yes",
+          "no",
+          "on",
+          "off",
+          "true",
+          "false",
+          "null"
+        ]
+      }
     },
     "token-path": {
       "description": "A token's place in a brand's tree of tokens: segments joined by `.`, each lower-case words of letters and digits joined by hyphens; a segment may start with a digit, as in `space.3` (DEC-004 point 4).",
@@ -20,11 +33,11 @@
       "pattern": "^\\{[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*\\}$"
     },
     "id": {
-      "description": "An id (DEC-002 point 4): a letter, then letters, digits, `-` and `_`; never a word YAML 1.1 reads as a yes-or-no, in any case.",
+      "description": "An id (DEC-002 point 4): a letter, then letters, digits, `-` and `_`; never, in any case, a word YAML reads as a yes-or-no or as nothing.",
       "type": "string",
       "pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
       "not": {
-        "pattern": "^([Yy]|[Nn]|[Yy][Ee][Ss]|[Nn][Oo]|[Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[Oo][Nn]|[Oo][Ff][Ff])$"
+        "pattern": "^([Yy]|[Nn]|[Yy][Ee][Ss]|[Nn][Oo]|[Oo][Nn]|[Oo][Ff][Ff]|[Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[Nn][Uu][Ll][Ll])$"
       }
     },
     "language": {
@@ -112,6 +125,36 @@
         "$ref": "#/$defs/version"
       }
     },
+    "loss": {
+      "description": "One loss, in the one form every plugin reports (DEC-005 point 9): the plugin, what it lost (a trace id or a token path), what it did instead (approximated it, drew it as a picture, left it out, or refused it), and why.",
+      "type": "object",
+      "required": [
+        "plugin",
+        "what",
+        "did",
+        "why"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "plugin": {
+          "$ref": "#/$defs/name"
+        },
+        "what": {
+          "$ref": "#/$defs/trace"
+        },
+        "did": {
+          "enum": [
+            "approximated",
+            "picture",
+            "left-out",
+            "refused"
+          ]
+        },
+        "why": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
     "accept-losses": {
       "description": "The losses a plugin reports that a person accepted, each with the plugin, what it lost (a trace id or a token path), and why it is accepted. An accepted loss is not reported again.",
       "type": "array",
@@ -180,7 +223,7 @@
       }
     },
     "fingerprint": {
-      "description": "A fingerprint, form 1 (DEC-006 points 5 and 6): self-describing — its form, its hash, the format number its inputs were read at, its value (the hash of the canonical text of its inputs), and each input with its identity and its hash, sorted by the identity's canonical text. The README gives each input set.",
+      "description": "A fingerprint, form 1 (DEC-006 points 5 and 6): self-describing — its form, its hash, the format number its inputs were read at, its value (the hash of the canonical text of its inputs), and each input with its identity and its hash, sorted by the identity's canonical text. `checks.md`, \"The input set of each kind\", gives each input set.",
       "type": "object",
       "required": [
         "form",

@@ -1,6 +1,7 @@
 """Brands and the foundations' declarations (DEC-004): the shipped foundations, the test
-brand resolved in every combination, and what a brand or a declarations file is refused
-for, each refusal built in the test's own folder from a copy of a valid one."""
+brand resolved in every combination, the test edition resolved over the test brand, its
+base (point 6), and what a brand or a declarations file is refused for, each refusal built
+in the test's own folder from a copy of a valid one."""
 
 from __future__ import annotations
 
@@ -14,9 +15,21 @@ from typing import Any
 import pytest
 
 from tests.in_process import load
-from tests.visual_communication_project import FOUNDATIONS, TEST_BRAND, write
+from tests.visual_communication_project import (
+    FOUNDATIONS,
+    TEST_BRAND,
+    TEST_EDITION,
+    bound,
+    copy_library,
+    project,
+    write,
+    write_piece,
+    yaml_text,
+)
 
-tokens, keys, env, findings = load("visual-communication", "tokens", "keys", "env", "findings")
+tokens, keys, env, findings, libraries, pl = load(
+    "visual-communication", "tokens", "keys", "env", "findings", "libraries", "pipeline"
+)
 
 ROLES = FOUNDATIONS / "roles.yaml"
 
@@ -291,6 +304,7 @@ def test_a_brand_whose_library_file_is_wrong_is_refused(
     with pytest.raises(tokens.TokenError) as raised:
         tokens.read_brand(folder, foundations)
     assert code in codes(raised.value.findings)
+    assert all(f.library == "test-brand@1.0.0" for f in raised.value.findings)
 
 
 # --- a brand usable with findings ---------------------------------------------------------------
@@ -376,6 +390,256 @@ def test_a_translucent_ground_asks_for_attention(tmp_path: Path, foundations: An
     found = tokens.read_brand(folder, foundations).findings
     assert codes(found) == {"pair-translucent"}
     assert {f.level for f in found} == {findings.ATTENTION}
+    assert {f.who for f in found} == {"the owner of the brand test-brand"}
+
+
+# --- a brand built on another (DEC-004 point 6) -------------------------------------------------
+
+EDITION = "tokens/edition.tokens.json"
+DARK_MODE = {"colour-scheme": "dark"}
+
+#: The edition's accent in the dark colour scheme, `palette.orange.300`.
+ORANGE = {"colorSpace": "srgb", "components": [1.0, 0.651, 0.3412], "alpha": 1}
+
+
+@pytest.fixture(scope="module")
+def edition(foundations: Any) -> Any:
+    return tokens.read_brand(TEST_EDITION, foundations, locked={"test-brand": TEST_BRAND})
+
+
+def chain_copy(tmp_path: Path) -> tuple[Path, Path]:
+    """Copies of the test brand and of the edition built on it, to change."""
+    folder = tmp_path / "test-edition" / "1.0.0"
+    shutil.copytree(TEST_EDITION, folder)
+    return brand_copy(tmp_path), folder
+
+
+def replace_in(path: Path, old: str, new: str) -> None:
+    text = path.read_text(encoding="utf-8")
+    assert old in text
+    path.write_text(text.replace(old, new), encoding="utf-8")
+
+
+def built_on_edition(tmp_path: Path, edition: Path) -> Path:
+    """A third link: a copy of the edition, named `test-third`, whose base is the edition."""
+    folder = tmp_path / "test-third" / "1.0.0"
+    shutil.copytree(edition, folder)
+    library = folder / "library.yaml"
+    replace_in(library, "name: test-edition", "name: test-third")
+    replace_in(
+        library,
+        "{name: test-brand, major: 1, base: true}",
+        "{name: test-edition, major: 1, base: true}",
+    )
+    return folder
+
+
+def test_a_brand_built_on_another_reads_over_its_base(edition: Any) -> None:
+    assert edition.label == "test-edition@1.0.0"
+    assert edition.base is not None
+    assert edition.base.label == "test-brand@1.0.0"
+    assert edition.findings == ()
+    assert edition.open == ("accent",)
+    assert edition.opened == {"accent"}
+    assert edition.base.opened == {"accent", "space.1", "space.2", "space.3", "space.4"}
+    assert edition.axes == edition.base.axes
+    assert edition.roles == edition.base.roles
+
+
+def test_an_open_roles_value_wins_where_the_brand_gives_it_and_the_bases_holds_elsewhere(
+    edition: Any, brand: Any
+) -> None:
+    assert edition.resolve("accent", DARK_MODE) == ORANGE
+    assert brand.resolve("accent", DARK_MODE) != ORANGE
+    assert edition.resolve("accent", {}) == brand.resolve("accent", {})
+    for combination in edition.combinations():
+        assert edition.resolve("space.4", combination) == {"value": 40, "unit": "px"}
+        assert brand.resolve("space.4", combination) == {"value": 32, "unit": "px"}
+        for role in ("background", "text-primary", "line", "space.1", "type.body", "font.body"):
+            assert edition.resolve(role, combination) == brand.resolve(role, combination)
+    assert edition.font_file("Source Sans Pro") == brand.font_file("Source Sans Pro")
+
+
+def test_an_alias_of_a_role_follows_its_merged_value(
+    tmp_path: Path, foundations: Any, edition: Any
+) -> None:
+    for combination in edition.combinations():
+        if combination["contrast"] == "high":
+            text = edition.resolve("text-primary", combination)
+            assert edition.resolve("accent", combination) == text
+    base, folder = chain_copy(tmp_path)
+    edit_json(base / BASE, setting("line|$value", "{accent}"))
+    read = tokens.read_brand(folder, foundations, locked={"test-brand": base})
+    assert read.findings == ()
+    assert read.resolve("line", DARK_MODE) == ORANGE
+    assert read.base is not None
+    assert read.resolve("line", {}) == read.base.resolve("accent", {})
+
+
+def test_a_brands_private_token_never_changes_its_bases(tmp_path: Path, foundations: Any) -> None:
+    base, folder = chain_copy(tmp_path)
+    black = {"colorSpace": "srgb", "components": [0, 0, 0]}
+    edit_json(folder / EDITION, setting("palette|white", {"$value": black}))
+    read = tokens.read_brand(folder, foundations, locked={"test-brand": base})
+    assert read.findings == ()
+    assert read.resolve("background", {})["components"] == [1.0, 1.0, 1.0]
+
+
+def test_a_value_for_a_role_its_base_does_not_open_fails_and_the_bases_holds(
+    tmp_path: Path, foundations: Any
+) -> None:
+    base, folder = chain_copy(tmp_path)
+    green = {"$type": "color", "$value": {"colorSpace": "srgb", "components": [0, 0.5, 0]}}
+    edit_json(folder / EDITION, setting("surface", green))
+    read = tokens.read_brand(folder, foundations, locked={"test-brand": base}, root=tmp_path)
+    (finding,) = read.findings
+    assert (finding.code, finding.level) == ("role-not-open", findings.FAILS)
+    assert finding.library == "test-edition@1.0.0"
+    assert (finding.file, finding.where) == (
+        "test-edition/1.0.0/tokens/edition.tokens.json",
+        "surface",
+    )
+    assert read.base is not None
+    assert read.resolve("surface", {}) == read.base.resolve("surface", {})
+
+
+def test_an_alias_to_a_token_its_base_keeps_private_fails(tmp_path: Path, foundations: Any) -> None:
+    base, folder = chain_copy(tmp_path)
+    edit_json(folder / DARK, setting("accent|$value", "{palette.blue.400}"))
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations, locked={"test-brand": base}, root=tmp_path)
+    (finding,) = raised.value.findings
+    assert finding.code == "alias-private"
+    assert finding.library == "test-edition@1.0.0"
+    assert finding.file == "test-edition/1.0.0/tokens/dark.tokens.json"
+    assert "which test-brand@1.0.0 keeps private" in finding.message
+
+
+@pytest.mark.parametrize(
+    ("change", "said"),
+    [
+        (
+            setting(
+                "modifiers|density", {"contexts": {"loose": [], "tight": []}, "default": "loose"}
+            ),
+            "adds an axis",
+        ),
+        (setting("modifiers|colour-scheme|contexts|sepia", []), "adds the mode `sepia`"),
+        (setting("modifiers|contrast|default", "high"), "changes the default to `high`"),
+    ],
+)
+def test_a_brand_built_on_another_adds_no_axis_or_mode_and_changes_no_default(
+    tmp_path: Path, foundations: Any, change: Callable[[dict[str, Any]], None], said: str
+) -> None:
+    base, folder = chain_copy(tmp_path)
+    edit_json(folder / "test-edition.resolver.json", change)
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations, locked={"test-brand": base})
+    found = [f for f in raised.value.findings if f.code == "base-axis"]
+    assert len(found) == 1
+    assert said in found[0].message
+    assert "test-brand@1.0.0" in found[0].message
+    assert found[0].library == "test-edition@1.0.0"
+
+
+def test_in_a_chain_each_link_opens_at_most_what_the_last_opens(
+    tmp_path: Path, foundations: Any
+) -> None:
+    base, edition = chain_copy(tmp_path)
+    third = built_on_edition(tmp_path, edition)
+    edit_json(third / EDITION, setting("space|4|$value", {"value": 48, "unit": "px"}))
+    locked = {"test-brand": base, "test-edition": edition}
+    read = tokens.read_brand(third, foundations, locked=locked)
+    assert read.base is not None and read.base.base is not None
+    assert read.base.base.label == "test-brand@1.0.0"
+    (finding,) = read.findings
+    assert (finding.code, finding.where, finding.library) == (
+        "role-not-open",
+        "space.4",
+        "test-third@1.0.0",
+    )
+    assert read.resolve("space.4", {}) == {"value": 40, "unit": "px"}
+    assert read.resolve("accent", DARK_MODE) == ORANGE
+    assert read.opened == {"accent"}
+    replace_in(edition / "library.yaml", "open: [accent]", "open: [accent, text-primary]")
+    widened = tokens.read_brand(edition, foundations, locked=locked)
+    (finding,) = widened.findings
+    assert (finding.code, finding.where) == ("open-wider", "open")
+    assert "`text-primary`" in finding.message
+    assert widened.opened == {"accent"}
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "locked", "code"),
+    [
+        ("major: 1, base: true", "major: 1, base: true", {}, "base-lock"),
+        ("major: 1, base: true", "major: 2, base: true", None, "base-lock"),
+        (
+            "{name: foundations, major: 1}",
+            "{name: foundations, major: 1, base: true}",
+            None,
+            "base-shape",
+        ),
+        (
+            "{name: test-brand, major: 1, base: true}",
+            "{name: foundations, major: 1, base: true}",
+            None,
+            "base-kind",
+        ),
+        (
+            "{name: test-brand, major: 1, base: true}",
+            "{name: test-edition, major: 1, base: true}",
+            None,
+            "base-loop",
+        ),
+    ],
+)
+def test_a_base_the_brand_cannot_build_on_is_refused(
+    tmp_path: Path,
+    foundations: Any,
+    old: str,
+    new: str,
+    locked: dict[str, Path] | None,
+    code: str,
+) -> None:
+    base, folder = chain_copy(tmp_path)
+    replace_in(folder / "library.yaml", old, new)
+    given = {"test-brand": base, "foundations": FOUNDATIONS} if locked is None else locked
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations, locked=given)
+    assert code in codes(raised.value.findings)
+    if code == "base-lock":
+        assert {f.library for f in raised.value.findings} == {""}
+
+
+def test_a_brands_findings_hold_its_bases_each_once_naming_the_base(
+    tmp_path: Path, foundations: Any
+) -> None:
+    base, folder = chain_copy(tmp_path)
+    paper = {"colorSpace": "srgb", "components": [1, 1, 1], "alpha": 0.5}
+    edit_json(base / BASE, setting("scheme|paper|$value", paper))
+    read = tokens.read_brand(folder, foundations, locked={"test-brand": base})
+    assert codes(read.findings) == {"pair-translucent"}
+    assert {f.library for f in read.findings} == {"test-brand@1.0.0"}
+    assert len(read.findings) == len(tokens.read_brand(base, foundations).findings)
+
+
+def test_a_piece_in_a_brand_built_on_another_reads_its_base_at_the_version_it_locks(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path)
+    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
+    copy_library(root, TEST_EDITION, "test-edition", "1.0.0")
+    write_piece(root, "card", brand="test-edition", modes={"colour-scheme": ["light", "dark"]})
+    write(root / "visual/pieces/card/content.en.yaml", yaml_text(bound("content", caption="x")))
+    held = libraries.Held(root, "visual", (0, 1, 0))
+    piece = pl.read_piece(root, "visual", "card")
+    lock = libraries.move_lock(held, pl.needed(piece))
+    assert lock == {"foundations": "1.0.0", "test-brand": "1.0.0", "test-edition": "1.0.0"}
+    document = pl.Project(piece, lock, held).values()
+    assert document["tokens"]["accent"]["values"]["colour-scheme.dark"] == ORANGE
+    assert document["tokens"]["space.4"]["values"]["default"] == {"value": 40, "unit": "px"}
 
 
 # --- contrast -----------------------------------------------------------------------------------

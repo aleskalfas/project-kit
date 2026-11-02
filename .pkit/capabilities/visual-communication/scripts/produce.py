@@ -18,6 +18,11 @@ declared size, exposing the same points at the same places: then it writes
 removes a variant file left from before. The hand-over and the producer's own output lie
 under the capability's local folder, never committed.
 
+What the producer lost is kept in the record, in the seam's one form of loss (DEC-005
+point 9). The command prints each loss the piece does not accept under `accept-losses`,
+as a render prints a renderer's. A producer that reaches a service, or calls an outside
+program this machine lacks, is refused before it runs.
+
 A piece with no lock yet is refused: run `pkit visual render <piece>` first. The command
 writes in the location, so where none is recorded it records the location at its first
 write (DEC-002 point 1); `--location <path>` names it.
@@ -41,6 +46,7 @@ sys.path.insert(0, str(_HERE))
 
 from _lib import framing
 from _lib import location as loc
+from _lib.findings import loss_said
 from _lib.root import project_root
 
 
@@ -77,6 +83,8 @@ def main() -> int:
     for name in done.removed:
         print(f"  removed {name}, which no variant names now")
     print(f"wrote {done.record.relative_to(root).as_posix()}")
+    for loss in done.unaccepted:
+        print(f"loss: {loss_said(loss, 'producer')}")
     return 0
 
 

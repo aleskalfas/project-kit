@@ -69,6 +69,27 @@ def test_a_second_run_records_nothing_and_names_a_variant_it_removed(tmp_path: P
     ]
 
 
+def test_it_prints_each_loss_the_piece_does_not_accept(tmp_path: Path) -> None:
+    edged = {
+        OUTPUT: {
+            "producer": producer.NAME,
+            "inputs": {"fill": "accent", "edge": "line"},
+            "pixels": {"width": 64, "height": 64},
+        }
+    }
+    root = producing_project(tmp_path, produced=edged)
+    shown = run(root, PIECE, OUTPUT)
+    assert shown.returncode == 0, shown.stderr
+    assert shown.stdout.splitlines()[-1] == (
+        "loss: the square producer leaves out `line`: a square of one colour draws no edge"
+    )
+    accepting = [{"plugin": "square", "what": "line", "reason": "The marker needs no edge."}]
+    root = producing_project(tmp_path / "accepting", produced=edged, accept_losses=accepting)
+    shown = run(root, PIECE, OUTPUT)
+    assert shown.returncode == 0, shown.stderr
+    assert not any(line.startswith("loss:") for line in shown.stdout.splitlines())
+
+
 def test_a_refusal_exits_1_and_writes_nothing(tmp_path: Path) -> None:
     root = producing_project(tmp_path, lock=None)
     shown = run(root, PIECE, OUTPUT)

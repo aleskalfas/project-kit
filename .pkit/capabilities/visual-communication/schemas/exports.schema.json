@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "exports.schema.json",
   "title": "The record of a piece's exports — visual-communication capability",
-  "description": "Formal shape of a piece's `exports.yaml` (DEC-006 point 7): each numbered export, with the fingerprint of every file its scenes were computed from and the formats it made (form 1), each file it made with its hash, and what is only recorded. `pkit visual export` rewrites it. Document-shaped schema. Companion per COR-018.",
+  "description": "Formal shape of a piece's `exports.yaml` (DEC-006 point 7): each numbered export, with the fingerprint of every file its scenes were computed from and the formats it made (form 1), each file it made with its hash, and what is only recorded, among it each produced output the version used and those used while stale. `pkit visual export` rewrites it. Document-shaped schema. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
@@ -56,6 +56,7 @@
               "state",
               "capability",
               "renderers",
+              "used",
               "used-stale"
             ],
             "additionalProperties": false,
@@ -72,7 +73,18 @@
               "renderers": {
                 "$ref": "defs.schema.json#/$defs/plugins"
               },
+              "used": {
+                "description": "Each produced output the version's scenes read, with the version used: the `value` of its record's fingerprint (DEC-006 point 7).",
+                "type": "object",
+                "propertyNames": {
+                  "$ref": "defs.schema.json#/$defs/name"
+                },
+                "additionalProperties": {
+                  "$ref": "defs.schema.json#/$defs/sha256"
+                }
+              },
               "used-stale": {
+                "description": "The produced outputs the version used while they were stale, as `--use-stale` named them.",
                 "type": "array",
                 "items": {
                   "$ref": "defs.schema.json#/$defs/name"

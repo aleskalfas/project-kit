@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from _lib.files import FORMAT, FileError, refuse_links, schema_of, write_whole
-from _lib.names import YAML11_BOOLEANS
+from _lib.names import YAML_WORDS
 from _lib.reading import ReadError, load_yaml
 from _lib.root import CONFIG
 
@@ -36,8 +36,8 @@ def with_key(existing: str | None, key: str, value: str) -> str:
     """The configuration's text with the top-level `key: value` added at its end, every
     other byte kept, its line endings and a byte-order mark included; a new file, bound to
     the configuration's schema, when `existing` is None. Unchanged when the file records
-    that value already. Raises ConfigRefused when it records another value, or would not
-    read back as it was plus the key."""
+    that value already. Raises ConfigRefused when it records another value, holds the key
+    with no value, or would not read back as it was plus the key."""
     line = f"{key}: {_scalar(value)}\n"
     binding = f"pkit_schema: {schema_of('config')}\nschema_version: {FORMAT}\n"
     if existing is None:
@@ -48,6 +48,11 @@ def with_key(existing: str | None, key: str, value: str) -> str:
     text = written.replace("\r\n", "\n") if crlf else written
     was = _load(text)
     if key in was:
+        if was[key] is None:
+            raise ConfigRefused(
+                f"{CONFIG} records an empty `{key}:`: write its value there, such as "
+                f"`{key}: {_scalar(value)}`, or remove the line"
+            )
         if was[key] == value:
             return existing
         raise ConfigRefused(
@@ -98,9 +103,10 @@ def record(root: Path, key: str, value: str) -> bool:
 
 
 def _scalar(value: str) -> str:
-    """`value` as YAML: plain where YAML reads it back as the same text and YAML 1.1 reads
-    it as no yes-or-no, so another tool reads it as the same text too; else quoted."""
-    if _PLAIN.fullmatch(value) and value.lower() not in YAML11_BOOLEANS:
+    """`value` as YAML: plain where YAML reads it back as the same text and it is no word
+    another version of YAML reads as another value, so another tool reads it as the same
+    text too; else quoted."""
+    if _PLAIN.fullmatch(value) and value.lower() not in YAML_WORDS:
         try:
             if load_yaml(f"k: {value}\n") == {"k": value}:
                 return value

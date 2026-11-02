@@ -22,7 +22,7 @@ from typing import Any
 
 import pytest
 
-from tests.visual_engine import FAMILY, FONT, draw, env, frame, text
+from tests.visual_engine import FAMILY, FONT, draw, env, frame, text, top
 
 CONTENT = {
     "body": {
@@ -174,6 +174,18 @@ def test_each_property_names_its_source() -> None:
     assert body.properties["options"] == {"spacing": "wide"}
     # A wide spacing doubles the gap: @space.2 * 2.
     assert frame(result, "figure/body/steps[build]")[0] == round((608 - 32) / 3 + 16, 2)
+
+
+def test_a_text_anchor_the_component_gives_none_of_is_the_engines_default() -> None:
+    def anchor(given: dict[str, Any]) -> tuple[str, str]:
+        props = {"content": "label", "style": "type.body", **given}
+        component = top({"t": {"text": props}}, fields={"label": {"type": "string"}})
+        element = draw({"label": "x"}, components={"lab/top": component}).scene.find("top/t")
+        assert element is not None
+        return element.properties["text-anchor"], element.sources["text-anchor"]
+
+    assert anchor({}) == ("start", "engine")
+    assert anchor({"text-anchor": "middle"}) == ("middle", "default:lab/top")
 
 
 def test_colours_stay_role_names() -> None:

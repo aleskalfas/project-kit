@@ -8,8 +8,8 @@ A *formula* is a string that starts with `=` and computes one number. It holds:
 - `@<token path>`: a role, such as `@space.2`; its value is a length or a number;
 - the engine's names, each marked with `:`, a mark no name holds, so the engine can add
   names later without taking any from authors: `:width` and `:height`, the size the
-  component gets, and `:index` and `:count`, an item's place in its list (from 1) and
-  the list's count;
+  component gets, and `:index` and `:count`, an item's place among the items its list
+  draws (from 1) and how many it draws;
 - a value of the component, by its name alone: `gap`;
 - a *path*: a part, then each exposed part below it, one name a step, then the
   measure of the frame it reads, one of `x y width height right bottom center

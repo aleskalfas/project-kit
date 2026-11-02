@@ -15,7 +15,8 @@ pieces (DEC-002 points 1 and 2).
   only where it holds the marker; with neither there is no visual work. A recorded location
   whose folder is missing fails, naming the configuration.
 - **Refused:** the repository's top itself, a path outside the repository, under `.pkit/`,
-  under a hidden folder, reached through a link, or not a folder.
+  under a hidden folder, reached through a link, or not a folder. An empty `location:` is
+  refused too, by reading and writing commands alike, rather than read as no location.
 
 The files of a folder are listed as git sees them: tracked, and untracked but not ignored.
 Outside a git repository, the folder is walked. A link is never listed.
@@ -77,7 +78,8 @@ class ForWriting:
 
 def configured(root: Path) -> str | None:
     """The location the configuration records, or None. Raises LocationRefused when the
-    configuration cannot be read, or records a location the rules refuse."""
+    configuration cannot be read, records a location the rules refuse, or holds the key
+    with no value."""
     target = root / CONFIG
     if not target.is_file():
         return None
@@ -89,9 +91,14 @@ def configured(root: Path) -> str | None:
         return None
     if not isinstance(data, dict):
         raise LocationRefused(f"{CONFIG} is not a mapping; fix it first")
-    value = data.get(KEY)
-    if value is None:
+    if KEY not in data:
         return None
+    value = data[KEY]
+    if value is None:
+        raise LocationRefused(
+            f"{CONFIG} records an empty `{KEY}:`: write the folder that holds the work there, "
+            f"such as `{KEY}: {DEFAULT}`, or remove the line"
+        )
     if not isinstance(value, str):
         raise LocationRefused(f"{CONFIG} records `{KEY}: {value!r}`, which is not a path")
     problem = shape_problem(value)

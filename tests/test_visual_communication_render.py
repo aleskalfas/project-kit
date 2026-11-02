@@ -5,6 +5,7 @@ makes when it draws, and the test producer registered."""
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess
@@ -289,6 +290,45 @@ def test_a_refusal_exits_1_and_writes_nothing(
     assert not (root / FINDINGS).exists()
     assert not (root / PREVIEWS).exists()
     assert (root / PIECE_FOLDER / "piece.yaml").read_text(encoding="utf-8") == before
+
+
+def _flow_mapping(root: Path) -> None:
+    """`piece.yaml` written as one flow mapping, which cannot take a lock as text."""
+    path = root / PIECE_FOLDER / "piece.yaml"
+    path.write_text(json.dumps(reading.read_yaml(path)) + "\n", encoding="utf-8")
+
+
+def _linked_record(root: Path) -> None:
+    """The findings record a link to a file elsewhere, which a render never writes through."""
+    elsewhere = root / "elsewhere.yaml"
+    elsewhere.write_text("", encoding="utf-8")
+    (root / FINDINGS).symlink_to(elsewhere)
+
+
+@pytest.mark.parametrize(
+    ("given", "said"),
+    [
+        pytest.param(_flow_mapping, "piece.yaml cannot take the lock as text", id="lock-text"),
+        pytest.param(
+            _linked_record,
+            f"{FINDINGS} is reached through the link {FINDINGS}",
+            id="record-linked",
+        ),
+    ],
+)
+def test_a_refusal_found_before_the_first_write_records_no_location(
+    tmp_path: Path, given: Any, said: str
+) -> None:
+    root = drawing_project(tmp_path, lock=None)
+    given(root)
+    before = (root / PIECE_FOLDER / "piece.yaml").read_text(encoding="utf-8")
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert said in shown.stderr
+    assert shown.stdout == ""
+    assert not (root / CONFIG).exists()
+    assert (root / PIECE_FOLDER / "piece.yaml").read_text(encoding="utf-8") == before
+    assert not (root / PREVIEWS).exists()
 
 
 def test_a_piece_the_location_lacks_is_refused(tmp_path: Path) -> None:

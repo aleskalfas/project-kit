@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "library.schema.json",
   "title": "A library version — visual-communication capability",
-  "description": "Formal shape of a library version's `library.yaml` (DEC-001 point 5, DEC-003 points 1 and 4, DEC-004 point 1): its name, its version, its kind, the oldest release of the capability whose tools it uses, and the libraries it builds on, each by its major. A brand also names the DTCG version of its tokens, its Resolver document, and its open roles. Format 1 reads component libraries and brands. Document-shaped schema. Companion per COR-018.",
+  "description": "Formal shape of a library version's `library.yaml` (DEC-001 point 5, DEC-003 points 1 and 4, DEC-004 points 1 and 6): its name, its version, its kind, the oldest release of the capability whose tools it uses, and the libraries it builds on, each by its major. A brand may mark one of them as its base. A brand also names the DTCG version of its tokens, its Resolver document, and its open roles. Format 1 reads component libraries and brands. Document-shaped schema. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
@@ -41,7 +41,7 @@
       "$ref": "defs.schema.json#/$defs/release"
     },
     "builds-on": {
-      "description": "The libraries it builds on, each by the major it fits.",
+      "description": "The libraries it builds on, each by the major it fits. A brand marks at most one of them, a brand, as its base (DEC-004 point 6).",
       "type": "array",
       "items": {
         "type": "object",
@@ -57,9 +57,20 @@
           "major": {
             "type": "integer",
             "minimum": 1
+          },
+          "base": {
+            "description": "Marks the brand this brand builds on as its base: it resolves first, and this brand gives values only to the roles it opens.",
+            "const": true
           }
         }
       },
+      "contains": {
+        "required": [
+          "base"
+        ]
+      },
+      "minContains": 0,
+      "maxContains": 1,
       "uniqueItems": true
     },
     "dtcg": {
@@ -71,7 +82,7 @@
       "$ref": "defs.schema.json#/$defs/version-path"
     },
     "open": {
-      "description": "The brand's open roles: roles it exports, or groups of them by whole segments, that a brand built on it may give values (DEC-004 point 6).",
+      "description": "The brand's open roles: roles it exports, or groups of them by whole segments, that a brand built on it may give values (DEC-004 point 6). A brand with a base opens only roles its base opens to it.",
       "type": "array",
       "items": {
         "$ref": "defs.schema.json#/$defs/token-path"
@@ -98,6 +109,13 @@
   },
   "else": {
     "properties": {
+      "builds-on": {
+        "items": {
+          "properties": {
+            "base": false
+          }
+        }
+      },
       "dtcg": false,
       "resolver": false,
       "open": false

@@ -1,8 +1,8 @@
 # The record of a produced output, `pieces/<piece>/produced/<output>/record.yaml`
 # (visual-communication DEC-006 points 2 to 5): the fingerprint of what the producer read,
 # each variant with its file, pixel size and hash, the variant serving each combination,
-# the points the picture exposes in each variant's pixels, and what is only recorded.
-# `pkit visual produce` writes it.
+# the points the picture exposes in each variant's pixels, what the producer lost (DEC-005
+# point 9), and what is only recorded. `pkit visual produce` writes it.
 #
 # The body below is the reference instance.
 
@@ -63,6 +63,7 @@ points:
     colour-scheme.dark:
       x: 32
       y: 0
+losses: []
 recorded:
   plugins:
     square: 1.0.0

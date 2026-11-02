@@ -55,6 +55,11 @@ class Env(Protocol):
         """A produced output of the piece. Raises `KeyError` where the piece has none."""
         ...
 
+    def family(self, name: str) -> dict[str, str]:
+        """A colour family the foundations declare: each member mapped to a colour role
+        (DEC-004 point 10). Raises `KeyError` where they declare no such family."""
+        ...
+
     def library_version(self, library: str) -> str:
         """The version of a library the piece's lock names, for traces and findings."""
         ...

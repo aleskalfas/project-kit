@@ -12,7 +12,8 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
   uses; `libraries.move_lock` adds what they build on. `write_lock` writes a lock into
   `piece.yaml` as text, every other byte kept.
 - **A project** (`Project`) is a piece under one lock: the foundations' declarations and
-  the brand read from the locked versions, the combinations the piece names, and the
+  the brand read from the locked versions, over its base at the version the lock names
+  when it builds on one (DEC-004 point 6), the combinations the piece names, and the
   `Env` over them. It computes one scene for each language and each key over the size
   axes; format 1 has no size axis, so that key is always `default`.
 - **A produced picture** is read from `produced/<output>/record.yaml`. A missing record,
@@ -307,18 +308,24 @@ def _is_lock_line(line: str) -> bool:
     return head == "lock:" or head.startswith(("lock: ", "lock:\t"))
 
 
-def write_lock(piece: Piece, lock: Mapping[str, str]) -> bool:
-    """Write `lock` into the piece's `piece.yaml` (`lock_text`); False, writing nothing,
-    when it holds that lock already. Raises Refused."""
+def locked(piece: Piece, lock: Mapping[str, str]) -> bytes | None:
+    """The bytes of the piece's `piece.yaml` with `lock` written in (`lock_text`), or None
+    when it holds that lock already. Writes nothing; raises Refused, so a command learns of
+    a lock it cannot write before its first write."""
     if piece.lock == dict(lock) and "lock" in piece.data:
-        return False
+        return None
     path = piece.folder / PIECE_FILE
-    text = path.read_bytes().decode("utf-8")
-    try:
-        refuse_links(piece.root, path)
-    except FileError as exc:
-        raise Refused(str(exc)) from exc
-    write_whole(path, lock_text(text, lock).encode("utf-8"))
+    writable(piece.root, path)
+    return lock_text(path.read_bytes().decode("utf-8"), lock).encode("utf-8")
+
+
+def write_lock(piece: Piece, lock: Mapping[str, str]) -> bool:
+    """Write `lock` into the piece's `piece.yaml` (`locked`); False, writing nothing,
+    when it holds that lock already. Raises Refused, writing nothing."""
+    data = locked(piece, lock)
+    if data is None:
+        return False
+    write_whole(piece.folder / PIECE_FILE, data)
     return True
 
 
@@ -350,6 +357,10 @@ class Project:
             self.foundations,
             fonts=self.root / self.location / FONTS,
             root=self.root,
+            locked={
+                library: self.root / self.location / FOLDER / library / version
+                for library, version in self.lock.items()
+            },
         )
         try:
             self.combinations = keys.combinations(piece.modes, self.brand.axes)
@@ -408,8 +419,8 @@ class Project:
 
 class ProjectEnv:
     """The `Env` the engine reads a project through: components from the locked versions
-    and the piece's own folder, roles and fonts from the brand, produced pictures from
-    their records, and the lock.
+    and the piece's own folder, roles and fonts from the brand, colour families from the
+    foundations' declarations, produced pictures from their records, and the lock.
 
     It keeps what the engine asked for that a check needs: why a produced picture is
     missing (`missing`), the records read (`records`), and the font files read from the
@@ -523,6 +534,9 @@ class ProjectEnv:
                 found[output] = self._project.piece.folder / PRODUCED / output / entry["file"]
         return found
 
+    def family(self, name: str) -> dict[str, str]:
+        return dict(self._project.foundations.families[name])
+
     def library_version(self, library: str) -> str:
         return self._project.lock[library]
 
@@ -628,12 +642,18 @@ def yaml_text(data: Mapping[str, Any], header: str) -> str:
     return f"{comment}\n{stream.getvalue()}"
 
 
-def write_file(root: Path, path: Path, data: bytes) -> None:
-    """Write a file a command owns whole, making its folders. Raises Refused where it is
-    reached through a link."""
+def writable(root: Path, path: Path) -> None:
+    """Raise Refused where a command could not write `path` whole: it, or a folder between
+    it and `root`, is a link. A command checks each file it writes before its first write."""
     try:
         refuse_links(root, path)
     except FileError as exc:
         raise Refused(str(exc)) from exc
+
+
+def write_file(root: Path, path: Path, data: bytes) -> None:
+    """Write a file a command owns whole, making its folders. Raises Refused where it is
+    reached through a link."""
+    writable(root, path)
     path.parent.mkdir(parents=True, exist_ok=True)
     write_whole(path, data)

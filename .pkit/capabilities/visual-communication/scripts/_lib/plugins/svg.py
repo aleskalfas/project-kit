@@ -14,7 +14,8 @@ combination of modes (visual-communication DEC-005 points 4, 5, 9 and 10).
 - **A produced picture** is embedded as the variant that serves the combination drawn;
   where the record maps the combination to none, the picture is left out, and reported.
 - **Every element carries its trace id** (`data-id`), and a group the component that drew
-  it, so a reader of the file finds where each element came from.
+  it (`data-component`) with its library's version (`data-version`), the page's own group
+  included, so a reader of the file finds where each element came from.
 
 Output is fixed for a version: lengths are written to 1/100 px, attributes in one order,
 so the same scene and values give the same bytes. A change that could give another output
@@ -163,7 +164,11 @@ class _Canvas:
             ]
         )
         group = _attributes(
-            [("data-id", element["id"]), ("data-component", element.get("component"))]
+            [
+                ("data-id", element["id"]),
+                ("data-component", element.get("component")),
+                ("data-version", element.get("version")),
+            ]
         )
         style = f"<style>{self._font_faces()}text{{white-space:pre}}</style>"
         return f"<svg {head}><defs>{style}</defs><g {group}>{body}</g></svg>\n"
