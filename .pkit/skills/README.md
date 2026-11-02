@@ -10,6 +10,7 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
         - src/project_kit/refs.py
         - src/project_kit/install.py
+        - src/project_kit/capabilities.py
       record: [COR-001, COR-003, COR-005, COR-006, COR-013, COR-015, COR-017, COR-020, "COR-066#1"]
       artefact:
         - RS-OPS-001
@@ -22,6 +23,7 @@ pkit:
         - .pkit/cli/README.md#init
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#status
+        - .pkit/cli/README.md#surface
         - .pkit/cli/README.md#validate
       source: [claude-code-skills]
 ---
@@ -100,10 +102,10 @@ What the body cites is checked against the front matter, in both directions (COR
 
 - **A path:** text in backticks that holds a `/`, and the target of a link that is no web address. A link that starts with `#` or `./`, or that leads to a decision record, needs no declaration.
 - **A record:** an id of the form `COR-`, `PRJ-` or `ADR-` and its number, in backticks or in prose. A capability's decision is cited as `[<capability>:DEC-NNN]`, and validation checks that it resolves, with no declaration.
-- **A hook:** a word with one or two dots, such as `topic.operation`, in backticks or in prose. So a domain name or a dotted key in prose reads as a hook. It warns until it is declared, or put in a code fence.
+- **A hook:** a word with one or two dots, such as `topic.operation`, in backticks or in prose. So a domain name or a dotted key in prose reads as a hook, and warns. Put it in a code fence, or reword it: declared under `needs`, it fails, since nothing answers it.
 - **Not counted:** text in a code fence, an HTML comment or a strikethrough, and a path that holds `<`, `>`, `...`, `{`, `}` or `*`.
-- **The checks.** `pkit validate` warns where the body cites a record, a file or a hook that the front matter does not declare. It also warns where the front matter declares one that the body never cites. A record under `gates` counts as declared. `pkit refs validate` gives the same findings, and fails on them ([the CLI reference, `validate`](../cli/README.md#validate)).
-- **What has gone.** `pkit refs rot` lists a skill that cites a superseded record.
+- **The checks.** `pkit validate` warns where the body cites a record, a file or a hook that the front matter does not declare. It also warns where the front matter declares a record or a hook that the body never cites, but not a file. A record under `gates` counts as declared. `pkit refs validate` gives the same findings, and fails on them ([the CLI reference, `validate`](../cli/README.md#validate)).
+- **What has gone.** `pkit refs rot` lists a skill that cites a superseded record or a dropped scratchpad note ([the CLI reference, "Surface"](../cli/README.md#surface)). It lists files it cannot find too, but reads each path from the project's root. So it may list a relative link whose file is there.
 
 ## The body
 
@@ -111,7 +113,7 @@ The body is the procedure: the steps an agent runs, in order ([COR-006](../decis
 
 - **Steps, not principles.** Each step says what to do. A principle that a record or a document holds is cited, never restated, so the skill reads its current text.
 - **The gates first.** Where the skill declares `gates`, its first section checks each record's status ("The acceptance gate a skill declares" below).
-- **The command, not the file.** Where the skill pairs with a command, a step runs it. No step writes the file by hand ("Pairing a skill with a command" below).
+- **The command, not the file.** Where the skill pairs with a command, a step runs it. No step creates the file by hand ("Pairing a skill with a command" below).
 
 ## A composite skill
 
@@ -134,17 +136,17 @@ A skill refuses to run unless each record its `gates` names is accepted (COR-013
 - **What it lists:** each record whose acceptance the procedure rests on. A proposed record binds nothing, so no work may rest on it ([the decisions README, "The acceptance gate"](../decisions/README.md#the-acceptance-gate)).
 - **What the body does:** its first section names each gate. Where one is not `accepted`, the agent stops, and reports the gate, rather than running any step.
 - **What an agent running a skill does:** it reads each gate's `status` before the skill's first step.
-- **What a check finds:** `pkit refs rot` lists a gate on a superseded record. A gate on a proposed record is found only by the skill's own check.
+- **What a check finds:** `pkit refs rot` lists a gate on a superseded record ("Front matter" above). A gate on a proposed record is found only by the skill's own check.
 - **A composite:** its gates are the union of its operations' (COR-020).
 
 ## Pairing a skill with a command
 
 Every authoring command of the methodology's command line ships with a paired skill. The command stamps the file, and the skill carries the disciplines, the slug's choice, the body's drafting and the gates ([COR-005](../decisions/core/COR-005-bundle-pattern.md)).
 
-- **A methodology artefact,** such as a decision record, is written through its paired skill or its command, never by hand (core rule 3). The skill carries the disciplines the bare command does not.
+- **A methodology artefact that a `pkit new` command stamps,** such as a decision record, is written through its paired skill or the command. It is never stamped by hand (core rule 3). The skill carries the disciplines the bare command does not.
 - **The skill runs the command.** The command gives the file what it can compute, such as its place, its front matter, and for some kinds its number. The skill does the rest.
 - **`metadata.wraps_command`** names the command, so a skill's pairing can be looked up. Nothing reads the field at run time. Find a command's skill by searching the skills' front matter for the command, `wraps_commands` included, in `.pkit/skills/` and each capability's `skills/` folder.
-- **A project's own command,** such as a script that stamps its files, may pair with a skill of the project's own in the same way. The two then land in one change.
+- **A project's own command,** such as a script that stamps its files, may pair with a skill of the project's own in the same way.
 
 ## Deployment
 
@@ -153,10 +155,13 @@ A skill runs from where its harness reads skills, never from `.pkit/`. The adapt
 - **Where Claude Code reads it:** `.claude/skills/<name>/SKILL.md`, a link to the skill's file. A folder-form skill has a link to each of its other files beside it ([the Claude Code adapter's README, `deploy-skills.sh`](../adapters/claude-code/README.md#deploy-skillssh)).
 - **Which skills:** the project's, core's, and those of each capability the manifest registers. Where two of them ship one name, the project's is deployed, then core's, then a capability's, the first by name ([the same section](../adapters/claude-code/README.md#deploy-skillssh)).
 - **Suspension.** Skills are suspendable ([COR-003](../decisions/core/COR-003-artifact-mechanisms.md)). A project skill that takes the name of core's skill, or of a capability's, replaces it in the harness by the order above. Updates of the replaced skill then reach no session. No project file disables a skill without replacing it.
-- **What warns of a suspension:** nothing. The deploy prints the link it makes, and `pkit status` lists the skill as the project's.
-- **A capability's install or upgrade** asks a person about each skill whose name the project already uses ([the lifecycle reference, "A new collision"](../lifecycle/README.md#a-new-collision)). The answers are override, skip or inspect. With nobody to answer, it refuses. A project skill made after the install is not asked about.
+- **What warns of a suspension:** only a capability's questions below. Otherwise the deploy prints the link it makes, and `pkit status` lists the skill as the project's.
+- **A capability's upgrade** asks a person about each skill it brings whose name the project already uses ([the lifecycle reference, "A new collision"](../lifecycle/README.md#a-new-collision)). The answers are override, skip or inspect. With nobody to answer, it refuses.
+- **A capability's install** asks the same, but only about a skill of the capability's in the flat form ([the lifecycle reference, "Install pre-flight checks"](../lifecycle/README.md#install-pre-flight-checks)). A project skill made after the install is not asked about.
 - **Edit the source, never the deployed link** (core rule 12). An edit to the source needs no new deploy, since the link leads to it.
-- **A new or removed skill** reaches the harness at the next `pkit sync`, which removes the deploy's own links to a skill that has gone. A file that is no link of the deploy's is left alone.
+- **A new or removed skill** reaches the harness at the next `pkit sync`, which removes the deploy's own links to a skill that has gone.
+- **A file the deploy did not make,** such as a hand-kept `.claude/skills/<name>/SKILL.md`, is left alone. No skill of that name is deployed over it, and the deploy reports it skipped.
+- **Claude Code's own skills:** a personal skill of the same name, in `~/.claude/skills/`, wins over the project's (Claude Code's skills documentation).
 - <a id="today"></a>**What is deployed:** `pkit status` lists each deployed skill under where it was deployed from. It lists the project's own files in the harness's folder apart ([the CLI reference, `status`](../cli/README.md#status)).
 - **A folder with no `<name>/<name>.md`** is skipped by the deploy, which names it, and the other skills deploy.
 
@@ -165,7 +170,7 @@ A skill runs from where its harness reads skills, never from `.pkit/`. The adapt
 
 No command stamps a skill, so the agent writes it whole. The steps:
 
-1. Take a name no deployed skill uses, unless the project means to replace that skill ("Suspension" above). `pkit status` lists the deployed ones.
+1. Take a name no deployed skill uses, unless the project means to replace that skill ("Suspension" above). `pkit status` lists the deployed ones, and the files in the harness's folder that pkit did not deploy.
 2. Write `.pkit/skills/project/<name>.md`, with the front matter above and the procedure as its body. In a capability the project authors, write it in that capability's `skills/` folder instead.
 3. Run `pkit sync`, which deploys it.
 4. Run `pkit validate`, and mend each finding it reports on the skill.
