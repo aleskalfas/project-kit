@@ -95,7 +95,7 @@ def test_each_run_takes_the_next_number_and_records_it(tmp_path: Path) -> None:
     recorded = second["recorded"]
     assert (recorded["state"], recorded["renderers"], recorded["used-stale"]) == (
         "draft",
-        {"svg": "1.0.0"},
+        {"svg": "1.0.1"},
         [],
     )
     assert "time: '" in (root / RECORD).read_text(encoding="utf-8")
