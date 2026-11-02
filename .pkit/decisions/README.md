@@ -436,7 +436,7 @@ pkit decisions check-diff [--base <ref>] [--head <rev>] [--json]
   - in a record the change converts, a point whose id differs from the bold number or label that opened it
   - a point added to a record in list form, or a new record in list form. The list may stay under the refining rule above, or the record may be converted to point headings by hand first, so every number stays.
 - **Each finding names the record and the id,** as `<file>#<id>`, or `<file>` for a record id. The command exits 1 on an error and 0 on warnings alone.
-- **It lists, and fails nothing on,** each record accepted at the branch point that the change alters or removes, for whoever judges its edits ("Refining an accepted record" above):
+- **It lists, and fails nothing on,** each record accepted at the branch point that the change alters or removes. The list is for whoever judges the edits ("Refining an accepted record" above):
   - each point the head adds, alters or retires, with its title, and each it removes, which also fails. A point is compared without its id, its whitespace folded, so a reflowed point is no change.
   - each of its title, status and supersession fields that changed
   - a change to the text its points stand on: its preamble, its Summary and the Decision's text outside the points. A record with no points is read this way, its Decision being that text.
