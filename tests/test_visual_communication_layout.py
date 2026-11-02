@@ -16,14 +16,27 @@ in memory and read through an in-memory `Env` (`tests/visual_engine.py`):
 - what is refused: a loop, naming every element in it; two owners of a value; division
   by zero; a component that places itself, except over its items; a page inside a page;
   a component that gets less than it asks for; a component, role, picture or colour
-  family member that is not there; an item option no single part repeats over.
+  family member that is not there; an item option no single part repeats over;
+- what cannot be drawn: a top that names no component, which lies in the piece; a
+  component whose file cannot be read, a finding in that file alone.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from tests.visual_engine import block, codes, draw, env, frame, layout, top
+from tests.visual_engine import (
+    VERSIONS,
+    FakeEnv,
+    block,
+    codes,
+    draw,
+    env,
+    frame,
+    layout,
+    scene,
+    top,
+)
 
 
 def box(**geometry: Any) -> dict[str, Any]:
@@ -504,7 +517,7 @@ def test_the_piece_is_drawn_from_a_top_component() -> None:
     nothing = draw(use="lab/nothing")
     block_ = draw(use="tests/card")
 
-    assert finding(nothing, "unknown-component").where == "nothing"
+    assert finding(nothing, "unknown-component").where == "top"
     assert "declares no layouts" in finding(block_, "not-top").message
 
 
@@ -723,3 +736,43 @@ def test_override_points_a_part_at_another_role_never_a_value() -> None:
     assert "not a role" in finding(raw, "override").message
     assert fill(raw)[0] == "surface"
     assert "no painted part" in finding(nowhere, "override").message
+
+
+# --- what a top or a part names that cannot be drawn ----------------------------------------
+
+
+def test_a_top_that_names_no_component_lies_in_the_piece_at_top() -> None:
+    nothing = finding(draw(use="lab/nothing"), "unknown-component")
+
+    assert nothing.message == "the piece's top names no component `lab/nothing`"
+    assert (nothing.where, nothing.library, nothing.extra) == ("top", "", {"piece": True})
+
+
+class _Unreadable(FakeEnv):
+    """An `Env` in memory in which the file of `lab/broken` is present and cannot be read."""
+
+    def component(self, use: str) -> dict:
+        if use == "lab/broken":
+            raise env.UnreadableComponent(use, "does not parse as YAML")
+        return super().component(use)
+
+
+def test_a_component_whose_file_cannot_be_read_is_a_finding_in_that_file_alone() -> None:
+    def drawn(use: str, **components: dict[str, Any]) -> Any:
+        return scene.compute_scene(
+            piece="test-piece", top=use, content={}, language="en", lock=dict(VERSIONS),
+            size_key="default", seam_version=1, env=_Unreadable(components=lab(**components)),
+        )  # fmt: skip
+
+    placed = drawn("lab/top", top=top({"p": {"use": "lab/broken"}}))
+    on_top = drawn("lab/broken")
+
+    for result in (placed, on_top):
+        unreadable = finding(result, "component-unreadable")
+        assert unreadable.message == (
+            "the component `lab/broken` cannot be read: does not parse as YAML"
+        )
+        assert (unreadable.where, unreadable.library) == ("", "lab@1.0.0")
+        assert unreadable.extra == {"component": "lab/broken"}
+        assert "unknown-component" not in codes(result)
+    assert placed.scene.find("top/p") is None
