@@ -87,7 +87,7 @@ pkit:
 6. The agent has the plan reviewed, and shows the plan to the planner, as `UC-063` steps 5 and 6 describe ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 7. The planner approves the plan (DEC-029). Where the topology declares pools, the plan names each Task's Milestone and that Milestone's pool. The approval then puts each Task into its pool ([DEC-061 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)).
 8. The agent files the issues, as `UC-063` steps 8 and 9 describe. The agent files the issues with no [owner](../../../glossary.md#term-owner--owner), so the issues join the ready Tasks that every seat shares (DEC-059 point 7). Where the topology declares pools, each Task joins the pool of the Milestone the planner gave it instead ([DEC-061 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)). The agent of each seat takes the seat's Tasks from there, as `UC-084` describes.
-9. The agent reports each [issue](../../../glossary.md#term-issue--issue) the agent filed, with the issue's number, link and workstream.
+9. The agent lists each [issue](../../../glossary.md#term-issue--issue) the agent filed, with the issue's number, link and workstream.
 
 **Variants:**
 

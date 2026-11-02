@@ -90,7 +90,7 @@ pkit:
 > **Not built yet:** filing an issue and writing its body are two calls. A body refused after its issue is filed leaves the template's body there. [DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md) decides that no issue is left half filed, and #1761 tracks it.
 
 9. The agent attaches each issue the plan schedules to its Milestone with `pkit pm promote-issue <n> --milestone <M>`. The planner's approval of the plan is the command's reason ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md), DEC-029 and `batch-plan.md`). That approval covers putting a Task into a pool only where the approved plan named the Task's Milestone and that Milestone's pool (DEC-061 point 6).
-10. The agent reports each issue it filed, with its number and its link.
+10. The agent lists each issue it filed, with its number and its link.
 
 **Variants:**
 

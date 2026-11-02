@@ -3,9 +3,9 @@ id: REQ-040
 title: project-management works on GitHub alone, through an authenticated gh
 status: active
 statement: "project-management reads and changes a project's work only on GitHub, through `gh` authenticated for the project's host."
-measure: "Each command reaches the project's issues and pull requests on GitHub alone, through `gh` or the backbone's commands for pull requests. The prerequisite check fails where `gh auth status` reports no authenticated host."
+measure: "Each command reaches the project's issues and pull requests on GitHub alone, through `gh` or the backbone's commands for pull requests. The prerequisite check fails where `gh auth status` shows no authenticated host."
 applies-to: "Every command of project-management, its skill and its agents, wherever a project runs them."
-obligation: v1:sha256:3cc79c0940dc54598871b81626ff5cc65be4e39a842dd49c87bc365f9c805617
+obligation: v1:sha256:d434597d7c5c895bdfbe61406b5f14854ecc1731dac53b5b0fdfd6bcca45c62e
 actors:
   - core:ACT-developer
   - ACT-planner
