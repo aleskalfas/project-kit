@@ -9,26 +9,32 @@ pkit:
         - src/project_kit/install.py
         - src/project_kit/refs.py
         - src/project_kit/scaffolds.py
-      record: [COR-001, COR-003, COR-005, COR-006, COR-007, COR-008, COR-013, COR-015, COR-017, COR-068]
+      record: [COR-001, COR-003, COR-005, COR-006, COR-007, COR-013, COR-015, COR-017, COR-068]
       artefact:
         - ACT-developer
         - ACT-ai-agent
+        - UC-015
         - UC-020
         - RS-OPS-003
         - .pkit/skills/README.md#layout
         - .pkit/skills/README.md#front-matter
+        - .pkit/skills/README.md#the-body
         - .pkit/skills/README.md#a-composite-skill
         - .pkit/skills/README.md#pairing-a-skill-with-a-command
+        - .pkit/skills/README.md#the-acceptance-gate-a-skill-declares
         - .pkit/skills/README.md#deployment
-        - .pkit/rules/README.md
-        - .pkit/agents/README.md
+        - .pkit/skills/README.md#adding-a-skill
+        - docs/rules/README.md#add-your-own-rules
+        - .pkit/agents/README.md#authoring-an-agent
+        - .pkit/adapters/claude-code/README.md#git-footprint-per-adr-009
         - .pkit/cli/README.md#init
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#upgrade
         - .pkit/cli/README.md#status
         - .pkit/cli/README.md#validate
         - .pkit/cli/README.md#new-decision-namespace-slug---yes
-      source: [claude-code-skills]
+        - .pkit/cli/README.md#new-agent-namespace-name---with-storyboard---dry-run
+      source: [claude-code-skills, claude-code-plugins]
 ---
 
 # Skills
@@ -50,19 +56,18 @@ A skill is a procedure that an AI agent loads when its task comes up, such as wr
 An agent keeps nothing between sessions but what the repository holds. Without skills that sessions load for their task, recurring work goes wrong in these ways:
 
 - **You explain the same task again in each session.** You told an agent yesterday how to write your release notes, and today's agent does not know it. So you type the steps again, or each session writes the notes its own way.
-- **A procedure kept in `CLAUDE.md` loads into every session, whatever its task.** A session that fixes one test reads your release steps too. Kept in a document instead, a procedure reaches no session that nobody points to it.
+- **A procedure kept in `CLAUDE.md` loads into every session, whatever its task.** A session that fixes one test reads your release steps too. Kept in a document instead, it reaches only a session that someone points to it.
 - **An agent that writes a file by hand gets its mechanical parts wrong.** One of the methodology's early decision records was written by hand, and took the wrong number ([COR-005](../../.pkit/decisions/core/COR-005-bundle-pattern.md)).
-- **An update of procedures you share with other projects overwrites your changes.** You adjust a shared skill to your project, and the next update replaces it. So you stop taking updates, or make your change again after each one.
+- **Your own procedures sit among shared ones, and an update overwrites them.** You keep your release steps beside the skills your projects share, and the next update of those skills replaces the folder. So you stop taking updates, or write your steps again after each one.
 
 ### What skills do instead
 
-Skills answer these problems with three claims, and the commands after the list prove each one:
+Skills answer these problems with two claims, and the commands after the list prove each one. Claude Code answers the second problem itself, by loading a skill only for its task ("How a skill reaches a session" below).
 
 - **A skill you write in `.pkit/skills/project/` reaches Claude Code at your next `pkit sync`, and no sync writes over it.**
-- **Each of the methodology's authoring skills names the command that writes its file, and the command numbers and places the file.**
-- **`pkit validate` warns where a skill's body cites a record that its front matter does not declare.**
+- **Each of the methodology's authoring skills runs a command that fills in what a program can work out, such as a decision record's number.**
 
-Each fence on this page starts from a fresh project where `pkit init` has run, so the methodology's skills are already deployed.
+Each fence on this page starts from a fresh project where `pkit init` has run, and its files are committed. So the methodology's skills are already deployed.
 
 Below, you write a skill for your release notes and change one of the methodology's skills. Then you sync:
 
@@ -74,6 +79,8 @@ $ pkit sync | grep -e "skills/core" -e release-notes
   created    .claude/skills/release-notes/SKILL.md -> ../../../.pkit/skills/project/release-notes.md
 $ git status --short .pkit/skills
 ?? .pkit/skills/project/release-notes.md
+$ tail -n 1 .pkit/skills/project/release-notes.md
+1. List the pull requests merged since the last tag.
 ```
 
 Below, you look for the skill that pairs with `pkit new decision`, and run the command twice. `2>/dev/null` drops its warning that the project has no remote:
@@ -87,33 +94,24 @@ $ pkit new decision project use-redis 2>/dev/null
 Stamped: .pkit/decisions/project/PRJ-002-use-redis.md
 ```
 
-Below, your skill cites a record of the methodology's, COR-008, and its front matter does not declare it:
-
-```console
-$ printf -- '---\nname: release-notes\ndescription: Write the release notes. Use when cutting a release.\n---\n\n1. Title each note as COR-008 asks of a commit.\n' > .pkit/skills/project/release-notes.md
-$ pkit validate | grep -A1 release-notes
-    warning  .pkit/skills/project/release-notes.md
-      → body cites record 'COR-008' but it is not declared in frontmatter `reads.records` or `gates`.
-```
-
 What the output proves, claim by claim:
 
-- **Deployed, and kept.** The sync links your skill where Claude Code reads skills. It puts back the methodology's skill you changed, and leaves yours untracked, as you wrote it ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
-- **Paired.** `decision-author` names `pkit new decision`, and the command gives each record the next number and the project's folder. So an agent that follows the skill takes neither from memory ([the reference, "Pairing a skill with a command"](../../.pkit/skills/README.md#pairing-a-skill-with-a-command)).
-- **Checked.** `pkit validate` names the record your skill cites and does not declare. A skill cites what its procedure rests on rather than copy it, so it reads the record's current text ([the reference, "Front matter"](../../.pkit/skills/README.md#front-matter)).
+- **Deployed, and kept.** The sync links your skill where Claude Code reads skills. It puts back the methodology's skill you changed, and leaves yours as you wrote it ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
+- **Paired.** `decision-author` names `pkit new decision`, and the command gives each record the next number and the project's folder. So an agent that follows the skill takes neither from memory ([the reference, "Pairing a skill with a command"](../../.pkit/skills/README.md#pairing-a-skill-with-a-command)). Commands for other kinds of file fill in their place and their front matter, and some number nothing ([the CLI reference, `new decision`](../../.pkit/cli/README.md#new-decision-namespace-slug---yes)).
 
 ### Compared with procedures kept by hand
 
-Without project-kit's skills, you keep your procedures in `CLAUDE.md`, or as skills in Claude Code's own folder, `.claude/skills/`. Both are better on setup, and Claude Code's own skills load as these do. **project-kit adds the methodology's skills kept up to date beside yours, checked citations, and commands that write each file, as [the commands above](#what-skills-do-instead) prove:**
+Without project-kit's skills, you keep your procedures in `CLAUDE.md`, or as skills in Claude Code's own folder, `.claude/skills/`. Both are better on setup, on changing a shared procedure, and on what each session lists. Claude Code's own skills load as these do. **project-kit adds authoring skills that run their commands, and keeps your skills through each sync of the methodology's, as [the commands above](#what-skills-do-instead) prove:**
 
 | What you need | Kept in `CLAUDE.md` | Kept in `.claude/skills/` by hand | project-kit's skills |
 | --- | --- | --- | --- |
-| A procedure loaded only for its task | ❌ Every session loads it whole | ✅ Claude Code loads a skill's body when it is used | ✅ The same, through the link the sync makes |
-| The methodology's procedures, kept up to date | ❌ You copy them in, and merge each update | ❌ The same | ✅ A sync puts them back, and never writes yours |
-| A file's number and place from a command | ❌ The agent works them out | ❌ You write the command yourself | ✅ Each authoring skill names the command that writes its file |
-| A cited record checked | ❌ Nothing reads the citation | ❌ The same | ✅ `pkit validate` warns of one the front matter misses |
-| Setup | ✅ None | ✅ None | ❌ `pkit init`, then a sync after each new skill |
-| Where you edit a skill | ✅ The file a session reads | ✅ The same | ❌ The source in `.pkit/skills/`, never the link |
+| A procedure loaded only for its task | ❌ Every session loads it whole | ✅ Claude Code loads a skill's body when it is used | ✅ The same |
+| Authoring procedures that run a command to write their file | ❌ You write both | ❌ The same | ✅ One for each kind of file the methodology keeps |
+| Your procedures kept through an update of shared ones | ❌ You merge each update by hand | ❌ You copy each update in by hand | ✅ A sync or an upgrade writes only the methodology's skills |
+| Changing a shared procedure | ✅ You edit it | ✅ The same | ❌ Your copy under its name replaces it, and takes no more updates |
+| What each session lists | ❌ Every procedure, in full | ✅ Your skills' descriptions alone | ❌ The descriptions of the methodology's skills too |
+| Setup | ✅ None | ✅ None | ❌ `pkit init` |
+| A new procedure, with no command to run | ✅ Nothing to run | ✅ Claude Code sees a skill as you save it | ❌ A new skill waits for your next `pkit sync` |
 
 ### When you do not need one
 
@@ -121,12 +119,9 @@ You do not need a skill in these cases:
 
 - **The work has come up once.** Ask the agent in the session. Give work tooling of its own once it recurs, two or three times ([COR-007](../../.pkit/decisions/core/COR-007-pattern-extraction.md)).
 - **The work is a standing remit, not a procedure,** such as reviewing each change against your conventions. Give it an agent definition ([Choose a skill or an agent definition](#choose-a-skill-or-an-agent-definition)).
-- **Every session must keep it, whatever its task,** such as running the tests before each commit. Make it an operational rule ([the rules reference](../../.pkit/rules/README.md)).
+- **Every session must keep it, whatever its task,** such as running the tests before each commit. Make it an operational rule ([the rules guide, "Add your own rules"](../rules/README.md#add-your-own-rules)).
 - **It is a fact to look up, not steps to follow,** such as the format of your release notes. Write it in a document, and have the skill cite it.
-- **You keep your procedures for Claude Code alone, with no methodology.** Keep them in `.claude/skills/` by hand, as the comparison credits.
-
-> [!WARNING]
-> A skill of yours that takes the name of one of the methodology's replaces it in Claude Code, and nothing tells you. Give your skills names the methodology does not ship ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
+- **You want one skill in many projects, with no methodology.** A Claude Code plugin gives it to your other projects and your teammates ([Claude Code's plugins docs](https://code.claude.com/docs/en/plugins)).
 
 ## How a skill reaches a session
 
@@ -150,11 +145,11 @@ flowchart TD
 - **The methodology's skills,** in `.pkit/skills/core/`. Each sync puts them back at the version your project records, and an upgrade brings newer ones ([the CLI reference, `upgrade`](../../.pkit/cli/README.md#upgrade)).
 - **A capability's skills,** in its own `skills/` folder. They arrive with its install.
 - **The deploy.** Each sync runs the adapter's deploy, which links each skill under `.claude/skills/`. Where two places ship one name, yours is linked ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
-- **Claude Code** lists each skill's description in a session, and loads a skill's body only when it is used. You can also run one yourself as `/<name>`. Claude Code sees a change to a skill's file within the session ([its skills docs](https://code.claude.com/docs/en/skills)).
+- **Claude Code** lists each skill's description in a session, and loads a skill's body only when it is used. You can also run one yourself as `/<name>`. It picks up a skill that the sync adds within the session ([its skills docs](https://code.claude.com/docs/en/skills)).
 
 ## Choose a skill or an agent definition
 
-Give recurring work a skill when it is a procedure for one kind of task. Give it an agent definition when it is a standing remit with boundaries ([COR-006](../../.pkit/decisions/core/COR-006-artifact-roles.md)). Each kind of content has one carrier:
+Give recurring work a skill when it is a procedure for one kind of task. Give it an agent definition when it is a standing remit with boundaries ([COR-006](../../.pkit/decisions/core/COR-006-artifact-roles.md)). Each kind of content has one carrier, the operational rules by [COR-068](../../.pkit/decisions/core/COR-068-loaded-rule-sets.md) and the rest by COR-006:
 
 | The content | Its carrier | An instance |
 | --- | --- | --- |
@@ -165,22 +160,25 @@ Give recurring work a skill when it is a procedure for one kind of task. Give it
 | What is, such as a format or a contract | A document | The format of your release notes |
 
 - **Cite, never copy.** A skill cites the decision, rule or document its procedure rests on, and never copies its text. An agent definition cites its skills and documents the same way. So each reads the current text ([COR-006](../../.pkit/decisions/core/COR-006-artifact-roles.md)).
-- **An agent definition** is written as the agents reference says ([the agents reference](../../.pkit/agents/README.md)).
+- **An agent definition** is stamped by `pkit new agent project <name>`, or through the `agent-author` skill. Where its dialogue with a person follows a script, `--with-storyboard` stamps a storyboard beside it. You write the storyboard first ([the agents reference, "Authoring an agent"](../../.pkit/agents/README.md#authoring-an-agent)).
 
 ## Write your project's own skill
 
-Write the skill as a file in `.pkit/skills/project/`, and run `pkit sync`. No command stamps a skill, so you write the file whole. What it holds:
+Write the skill as a file in `.pkit/skills/project/`, and run `pkit sync`. No command stamps a skill, so you write the file whole, as the reference's steps say ([its "Adding a skill"](../../.pkit/skills/README.md#adding-a-skill)). What it holds:
 
-- **Its name.** Name the file `<name>.md`, with a name in lowercase words joined by hyphens, and give the same name as `name` in its front matter. Take a name the methodology's skills do not use.
+- **Its name,** as its file's name, `<name>.md`, and as `name` in its front matter. `pkit status` lists the skills deployed, so you can take a name none of them uses.
 - **Its description,** in `description`. Say what the skill does, and when to use it. Claude Code matches a task against it to choose the skill.
-- **Its procedure,** the body. Write numbered steps the agent runs, and cite the records and files they rest on.
-- **What it cites,** declared in its front matter: a record under `reads.records`, and a file under `reads.paths`. A record the skill needs accepted before it runs goes under `gates` ([the reference, "Front matter"](../../.pkit/skills/README.md#front-matter)).
-- **Its helpers.** A skill that needs a template or a script beside it becomes a folder, `<name>/<name>.md` with the helpers beside it ([COR-015](../../.pkit/decisions/core/COR-015-artifact-file-layout.md)).
+- **Its procedure,** the body: the steps the agent runs, citing the records and documents they rest on ([the reference, "The body"](../../.pkit/skills/README.md#the-body)).
+- **What it cites,** declared in its front matter: a document under `reads.paths`, a record under `reads.records`. A record whose acceptance the procedure rests on goes under `gates`. Nothing checks a gate when the skill runs, so the body's first step checks it ([the reference, "The acceptance gate a skill declares"](../../.pkit/skills/README.md#the-acceptance-gate-a-skill-declares)).
+- **Its helpers.** A skill that needs a template or a script beside it becomes a folder, `<name>/<name>.md`, with the helpers beside it ([COR-015](../../.pkit/decisions/core/COR-015-artifact-file-layout.md)).
 
-Below, you write the skill, then sync, check where it is deployed, and validate:
+> [!WARNING]
+> A skill of yours with the name of a skill the methodology or a capability ships replaces it in Claude Code. Nothing warns you. Updates of the replaced skill then reach no session ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
+
+Below, you write a skill that cites the document holding your notes' format, then sync, check where the skill is deployed, and validate:
 
 ```console
-$ printf -- '---\nname: release-notes\ndescription: Write the release notes from the pull requests merged since the last tag. Use when cutting a release.\nreads:\n  records: [COR-008]\n---\n\n# Release notes\n\n1. List the pull requests merged since the last tag.\n2. Title each note as COR-008 asks of a commit.\n' > .pkit/skills/project/release-notes.md
+$ printf -- '---\nname: release-notes\ndescription: Write the release notes from the pull requests merged since the last tag. Use when cutting a release.\nreads:\n  paths: [docs/release-notes.md]\n---\n\n# Release notes\n\n1. List the pull requests merged since the last tag.\n2. Write each note in the format `docs/release-notes.md` gives.\n' > .pkit/skills/project/release-notes.md
 $ pkit sync | grep release-notes
   created    .claude/skills/release-notes/SKILL.md -> ../../../.pkit/skills/project/release-notes.md
 $ pkit status | grep -A1 "project namespace"
@@ -188,11 +186,17 @@ $ pkit status | grep -A1 "project namespace"
                          release-notes -> ../../../.pkit/skills/project/release-notes.md
 $ pkit validate | grep "artifact(s)"
     <any> artifact(s), 0 hook provider(s) checked; 0 error(s), 0 warning(s).
+$ git status --short .claude/skills .pkit/skills
+?? .claude/skills/release-notes/
+?? .pkit/skills/project/release-notes.md
 ```
 
-- **Edit the source, never the link.** The link leads to your file, so an edit there reaches the next use of the skill with no new sync.
+- **Commit both** your skill's file and the link the sync made under `.claude/skills/`, so a fresh clone has the skill ([the adapter's README, "Git footprint"](../../.pkit/adapters/claude-code/README.md#git-footprint-per-adr-009)).
+- **Edit the file in `.pkit/skills/project/`.** The link leads to it, so an edit needs no new sync.
+- **What validation reads.** `pkit validate` warns where the body cites a record or a file that the front matter does not declare. It also warns where the front matter declares one the body never cites ([the reference, "Front matter"](../../.pkit/skills/README.md#front-matter)).
 - **When the sync stops.** Where your `pkit` is at another version than your project records, the sync stops before it writes, and names the remedy ([the CLI reference, `sync`](../../.pkit/cli/README.md#sync)).
 - **A family of tasks.** Several operations that share their framing, such as writing, extending and renaming one kind of file, become one composite skill ([the reference, "A composite skill"](../../.pkit/skills/README.md#a-composite-skill)).
+- **Your other projects.** A skill reaches them in a capability of your own, which each project installs. The `capability-author` skill walks you through making one ([the reference, "Layout"](../../.pkit/skills/README.md#layout)).
 
 ## Pair a skill with the command that writes its file
 
@@ -201,13 +205,14 @@ Where your skill's task writes a file whose name, number or front matter a progr
 - **The command** writes what it can work out, the same way each time. It may be a script of your project.
 - **The skill** runs the command, and never writes the file itself. It does what the command cannot, such as choosing the slug and writing the body.
 - **The pairing** is named in the skill's front matter, under `metadata.wraps_command`. Nothing checks it, but it lets a person or an agent find a command's skill ([the reference, "Pairing a skill with a command"](../../.pkit/skills/README.md#pairing-a-skill-with-a-command)).
+- **A rule of yours** has your agents use the skill, such as "Write each runbook through the `runbook-author` skill". Without one, an agent may run the script alone, and skip the skill's steps ([the rules guide, "Add your own rules"](../rules/README.md#add-your-own-rules)).
 - **One change** brings a new command and its skill together.
 
-Below, your project's script writes each runbook under the next number:
+Below, your project's script writes each runbook under the next number, and refuses to write over one that exists:
 
 ```console
 $ mkdir -p scripts docs/runbooks
-$ printf '#!/bin/sh\nn=$(ls docs/runbooks | wc -l)\nf=docs/runbooks/$((n + 1))-$1.md\necho "# $1" > "$f"\necho "Stamped: $f"\n' > scripts/new-runbook.sh && chmod +x scripts/new-runbook.sh
+$ printf '#!/bin/sh\nset -eC\nn=$(ls docs/runbooks | sed "s/-.*//" | sort -n | tail -n 1)\nf=docs/runbooks/$((${n:-0} + 1))-$1.md\necho "# $1" > "$f"\necho "Stamped: $f"\n' > scripts/new-runbook.sh && chmod +x scripts/new-runbook.sh
 $ scripts/new-runbook.sh restart-the-queue
 Stamped: docs/runbooks/1-restart-the-queue.md
 $ scripts/new-runbook.sh rotate-the-keys
@@ -233,4 +238,4 @@ reads:
 3. Write the steps under the heading the script wrote.
 ```
 
-The methodology's own rules ask your agents to write each of its files through the paired skill in the same way (core rule 3).
+The methodology's own rules ask the same of its artefacts, such as a decision record. Your agents write each through its paired skill or its command, never by hand (core rule 3).

@@ -79,26 +79,31 @@ metadata:
   wraps_command: <command>         # the command it pairs with, if any
 reads:
   paths: [<file>]                  # files its body cites
-  records: [<record id>]           # records its body cites
-gates: [<record id>]               # records that must be accepted before it runs
+  records: [<record id>]           # records its body consults
+gates: [<record id>]               # records whose acceptance the procedure rests on
+needs: [<hook>]                    # hooks it runs
 answers: [<hook>]                  # hooks it provides
 composes: [<file>]                 # a composite's files beside its dispatcher
 ---
 ```
 
-- **`name` and `description`** are what the harness reads to offer the skill. Claude Code chooses a skill for a task by its `description`, so the description names the task ([Claude Code's skills docs](https://code.claude.com/docs/en/skills)).
+- **`name` and `description`** are what the harness reads to offer the skill. Claude Code chooses a skill for a task by its `description`, so the description names the task (Claude Code's skills documentation).
 - **`metadata.wraps_command`** names the command the skill pairs with ("Pairing a skill with a command" below). A skill that runs several commands lists them under `metadata.wraps_commands` instead.
-- **`reads`** lists what the body cites: files under `paths`, records under `records`. `reads.patterns`, an overlay category, is not filled in a skill, since the adapter deploys a skill's text unchanged.
-- **`gates`** lists the records the procedure rests on, which must be accepted before it runs ("The acceptance gate a skill declares" below).
-- **`answers`** lists the hooks the skill provides, each of which an agent definition may name in its `needs` (COR-013 point 4).
+- **`reads.paths` and `reads.records`** list the files and records the body cites. `reads.patterns`, an overlay category, is not filled in a skill, since the adapter deploys a skill's text unchanged.
+- **`gates`** lists only the records whose acceptance the procedure rests on, so the skill must not run while one is not accepted. A record the body only consults goes under `reads.records` ("The acceptance gate a skill declares" below).
+- **`needs` and `answers`** list the hooks the skill runs and provides. An agent definition may name a hook that a skill answers in its own `needs` (COR-013 point 4).
 - **`composes`** is a composite skill's alone ("A composite skill" below).
 - **Fields that do not apply** are left out.
+- **A harness's own fields,** such as Claude Code's `allowed-tools`, reach the harness, since the deployed link leads to the skill's own file. A skill that sets one is written for that harness, and the methodology's skills set none.
 
 What the body cites is checked against the front matter, in both directions (COR-013 point 3):
 
-- **A citation** is a path in backticks or a link that holds a `/`, or a record's id, such as `COR-005`. Text in a code fence, an HTML comment or a strikethrough is none, and neither is a path with a `<placeholder>`.
-- **The checks.** `pkit validate` warns where the body cites a record or a file that the front matter does not declare. It also warns where the front matter declares one that the body never cites. A record under `gates` counts as declared. `pkit refs validate` gives the same findings alone.
-- **What has gone.** `pkit refs rot` lists a skill that cites a superseded record, or a file that does not exist.
+- **A path:** text in backticks that holds a `/`, and the target of a link that is no web address. A link that starts with `#` or `./`, or that leads to a decision record, needs no declaration.
+- **A record:** an id of the form `COR-`, `PRJ-` or `ADR-` and its number, in backticks or in prose. A capability's decision is cited as `[<capability>:DEC-NNN]`, and validation checks that it resolves, with no declaration.
+- **A hook:** a word with one or two dots, such as `topic.operation`, in backticks or in prose. So a domain name or a dotted key in prose reads as a hook. It warns until it is declared, or put in a code fence.
+- **Not counted:** text in a code fence, an HTML comment or a strikethrough, and a path that holds `<`, `>`, `...`, `{`, `}` or `*`.
+- **The checks.** `pkit validate` warns where the body cites a record, a file or a hook that the front matter does not declare. It also warns where the front matter declares one that the body never cites. A record under `gates` counts as declared. `pkit refs validate` gives the same findings, and fails on them ([the CLI reference, `validate`](../cli/README.md#validate)).
+- **What has gone.** `pkit refs rot` lists a skill that cites a superseded record.
 
 ## The body
 
@@ -114,7 +119,8 @@ A family of operations that share their framing, such as authoring, extending an
 
 - **Its folder,** `<family>/`, holds a dispatcher, `<family>.md`, and one file per operation, `<operation>.md`. Other helpers, such as templates and scripts, sit beside them.
 - **The dispatcher** holds the family's framing and sends each operation to its file. Its front matter is the composite's only front matter.
-- **An operation's file** starts with its `# Title`, with no front matter. Its citations count as the skill's body, checked against the dispatcher's front matter.
+- **An operation's file** starts with its `# Title`, with no front matter.
+- **The body, for the checks,** is the dispatcher and every other Markdown file of the folder. A template's example ids and paths are checked too, so keep them in a code fence.
 - **The dispatcher's front matter** covers the whole family:
   - `gates` and `reads.paths`: the union of every operation's
   - `composes`: every file of the folder but the dispatcher, each a path from the folder, and `pkit validate` reports one that does not exist
@@ -123,7 +129,7 @@ A family of operations that share their framing, such as authoring, extending an
 
 ## The acceptance gate a skill declares
 
-A skill refuses to run unless each record its `gates` names is accepted (COR-013 point 2). Nothing at run time checks it for the skill, so the skill's body checks it.
+A skill refuses to run unless each record its `gates` names is accepted (COR-013 point 2). Nothing at run time checks the gates for the skill, so the skill's body checks them.
 
 - **What it lists:** each record whose acceptance the procedure rests on. A proposed record binds nothing, so no work may rest on it ([the decisions README, "The acceptance gate"](../decisions/README.md#the-acceptance-gate)).
 - **What the body does:** its first section names each gate. Where one is not `accepted`, the agent stops, and reports the gate, rather than running any step.
@@ -135,11 +141,10 @@ A skill refuses to run unless each record its `gates` names is accepted (COR-013
 
 Every authoring command of the methodology's command line ships with a paired skill. The command stamps the file, and the skill carries the disciplines, the slug's choice, the body's drafting and the gates ([COR-005](../decisions/core/COR-005-bundle-pattern.md)).
 
-- **An agent that writes a methodology file** does it through the paired skill. It never writes the file by hand, nor runs the bare command alone (core rule 3).
-- **The skill runs the command.** The command gives the file what it can compute, such as an id, a place and front matter. The skill does the rest.
-- **`metadata.wraps_command`** names the command, so a skill's pairing can be looked up. Nothing reads the field at run time. Find a command's skill by searching the skills' front matter for the command, in `.pkit/skills/` and each capability's `skills/` folder.
-- **A new authoring command** lands in the change that brings its skill.
-- **A project's own command,** such as a script that stamps the project's files, pairs with the project's own skill in the same way.
+- **A methodology artefact,** such as a decision record, is written through its paired skill or its command, never by hand (core rule 3). The skill carries the disciplines the bare command does not.
+- **The skill runs the command.** The command gives the file what it can compute, such as its place, its front matter, and for some kinds its number. The skill does the rest.
+- **`metadata.wraps_command`** names the command, so a skill's pairing can be looked up. Nothing reads the field at run time. Find a command's skill by searching the skills' front matter for the command, `wraps_commands` included, in `.pkit/skills/` and each capability's `skills/` folder.
+- **A project's own command,** such as a script that stamps its files, may pair with a skill of the project's own in the same way. The two then land in one change.
 
 ## Deployment
 
@@ -147,19 +152,20 @@ A skill runs from where its harness reads skills, never from `.pkit/`. The adapt
 
 - **Where Claude Code reads it:** `.claude/skills/<name>/SKILL.md`, a link to the skill's file. A folder-form skill has a link to each of its other files beside it ([the Claude Code adapter's README, `deploy-skills.sh`](../adapters/claude-code/README.md#deploy-skillssh)).
 - **Which skills:** the project's, core's, and those of each capability the manifest registers. Where two of them ship one name, the project's is deployed, then core's, then a capability's, the first by name ([the same section](../adapters/claude-code/README.md#deploy-skillssh)).
-- **A project skill with a core skill's name** replaces the core skill in the harness, and nothing reports it.
-- **A capability's install or upgrade** asks a person about each skill whose name the project already uses ([the lifecycle reference, "A new collision"](../lifecycle/README.md#a-new-collision)). The answers are override, skip or inspect. With nobody to answer, it refuses.
-- **Edit the source, never the deployed link** (core rule 12). An edit to the source reaches the harness with no new deploy, since the link leads to it.
+- **Suspension.** Skills are suspendable ([COR-003](../decisions/core/COR-003-artifact-mechanisms.md)). A project skill that takes the name of core's skill, or of a capability's, replaces it in the harness by the order above. Updates of the replaced skill then reach no session. No project file disables a skill without replacing it.
+- **What warns of a suspension:** nothing. The deploy prints the link it makes, and `pkit status` lists the skill as the project's.
+- **A capability's install or upgrade** asks a person about each skill whose name the project already uses ([the lifecycle reference, "A new collision"](../lifecycle/README.md#a-new-collision)). The answers are override, skip or inspect. With nobody to answer, it refuses. A project skill made after the install is not asked about.
+- **Edit the source, never the deployed link** (core rule 12). An edit to the source needs no new deploy, since the link leads to it.
 - **A new or removed skill** reaches the harness at the next `pkit sync`, which removes the deploy's own links to a skill that has gone. A file that is no link of the deploy's is left alone.
-- **What is deployed:** `pkit status` lists each deployed skill under where it was deployed from, and the project's own files in the harness's folder apart.
+- <a id="today"></a>**What is deployed:** `pkit status` lists each deployed skill under where it was deployed from. It lists the project's own files in the harness's folder apart ([the CLI reference, `status`](../cli/README.md#status)).
 - **A folder with no `<name>/<name>.md`** is skipped by the deploy, which names it, and the other skills deploy.
 
-<a id="today"></a><a id="authoring-a-new-skill"></a>
+<a id="authoring-a-new-skill"></a>
 ## Adding a skill
 
 No command stamps a skill, so the agent writes it whole. The steps:
 
-1. Take a name in lowercase words joined by hyphens, which no skill of core's, the project's or a registered capability's uses. `pkit status` lists the deployed ones.
+1. Take a name no deployed skill uses, unless the project means to replace that skill ("Suspension" above). `pkit status` lists the deployed ones.
 2. Write `.pkit/skills/project/<name>.md`, with the front matter above and the procedure as its body. In a capability the project authors, write it in that capability's `skills/` folder instead.
 3. Run `pkit sync`, which deploys it.
 4. Run `pkit validate`, and mend each finding it reports on the skill.
