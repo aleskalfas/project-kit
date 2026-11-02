@@ -146,7 +146,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no session parks its work. DEC-059 point 9 decides how a session parks the work, and #2136 tracks it.
 
-**Postconditions:** The worker's [instance](../../../glossary.md#term-instance--instance) owns the [Task](../../../glossary.md#term-task--task), which is In Progress on the Task's own branch, and the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open.
+**Postconditions:** The worker's [instance](../../../glossary.md#term-instance--instance) owns the [Task](../../../glossary.md#term-task--task), which is in Review, as step 7 leaves it. The Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open on the Task's own branch.
 
 **Minimal guarantees:**
 

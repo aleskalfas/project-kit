@@ -50,7 +50,7 @@ pkit:
 
 **Preconditions:**
 
-- **From [UC-084](UC-084-take-next-task.md):** The worker's [instance](../../../glossary.md#term-instance--instance) owns this piece's [Task](../../../glossary.md#term-task--task), which is In Progress ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
+- **From [UC-084](UC-084-take-next-task.md):** The worker's [instance](../../../glossary.md#term-instance--instance) owns this piece's [Task](../../../glossary.md#term-task--task), which is In Progress or in Review ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 - **From [UC-083](UC-083-plan-across-scopes.md):** The next piece's Task is filed in that Task's own [scope](../../../glossary.md#term-scope--scope). That Task's `## Dependencies` section names this piece's Task ([DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 
 **Assumptions:**
