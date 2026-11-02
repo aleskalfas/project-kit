@@ -32,6 +32,10 @@ pkit:
         - project-management:DEC-035#1
         - project-management:DEC-035#8
         - project-management:DEC-028
+        - COR-001
+        - COR-010
+        - COR-053#8
+        - COR-059#3
       artefact:
         - UC-082
         - UC-091

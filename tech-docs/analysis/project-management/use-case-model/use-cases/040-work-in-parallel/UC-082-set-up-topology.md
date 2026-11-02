@@ -55,6 +55,13 @@ pkit:
         - COR-021
         - COR-039
         - COR-054
+        - COR-001
+        - COR-010
+        - COR-053#8
+        - COR-059#3
+        - COR-028
+        - PRJ-004
+        - ADR-063
       artefact:
         - ACT-planning-agent
         - ACT-worker-agent

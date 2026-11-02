@@ -18,6 +18,10 @@ pkit:
         - project-management:DEC-049#2
         - project-management:DEC-003
         - project-management:DEC-059#9
+        - COR-001
+        - COR-010
+        - COR-053#8
+        - COR-059#3
 ---
 
 # UC-091 — Measure one topology against another on comparable work

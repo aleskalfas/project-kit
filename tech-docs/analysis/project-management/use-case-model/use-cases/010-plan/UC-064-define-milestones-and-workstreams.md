@@ -51,6 +51,14 @@ pkit:
         - COR-021
         - COR-039
         - ADR-034#1
+        - COR-013
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
+        - COR-028
+        - PRJ-004
+        - ADR-063
       artefact:
         - ACT-planner
         - REQ-040

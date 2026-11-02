@@ -67,6 +67,9 @@ pkit:
         - COR-021
         - COR-039
         - ADR-034#1
+        - COR-028
+        - PRJ-004
+        - ADR-063
       artefact:
         - ACT-worker-agent
         - REQ-061

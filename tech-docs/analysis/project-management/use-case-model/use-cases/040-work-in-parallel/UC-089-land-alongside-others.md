@@ -33,6 +33,17 @@ pkit:
         - COR-013
         - COR-017
         - COR-021
+        - COR-050#3
+        - COR-051#4
+        - COR-066#1
+        - COR-066#3
+        - COR-054
+        - COR-050
+        - PRJ-002
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
       artefact:
         - ACT-worker-agent
         - REQ-040

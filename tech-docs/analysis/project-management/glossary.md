@@ -71,6 +71,8 @@ TERM-audit-comment:
         record:
           - project-management:DEC-049
           - project-management:DEC-014
+          - COR-001
+          - COR-010
 TERM-authorisation:
   name: authorisation
   noun-forms: [authorisations]
@@ -163,6 +165,8 @@ TERM-classification-axis:
           - .pkit/capabilities/project-management/schemas/classification.yaml
         record:
           - project-management:DEC-012
+          - COR-001
+          - COR-010
 TERM-clone:
   name: clone
   noun-forms: [clones]
@@ -254,6 +258,8 @@ TERM-instance:
           - project-management:DEC-045#1
           - project-management:DEC-058#5
           - project-management:DEC-059#6
+          - COR-001
+          - COR-010
 TERM-issue:
   name: issue
   status: active
@@ -280,6 +286,9 @@ TERM-issue-lifecycle:
           - project-management:DEC-006
           - project-management:DEC-033
           - project-management:DEC-062#5
+          - COR-033
+          - COR-044
+          - COR-053#2
 TERM-journal:
   name: journal
   noun-forms: [journals]
@@ -329,6 +338,10 @@ TERM-merge-gate:
           - project-management:DEC-028
           - project-management:DEC-007
           - project-management:DEC-026
+          - COR-009#1
+          - COR-009#2
+          - COR-009#3
+          - COR-009#5
 TERM-milestone:
   name: Milestone
   noun-forms: [Milestones]
@@ -355,6 +368,8 @@ TERM-milestone-category:
           - .pkit/capabilities/project-management/scripts/create-milestone.py
         record:
           - project-management:DEC-016
+          - COR-001
+          - COR-010
 TERM-owner:
   name: owner
   noun-forms: [owners]
@@ -441,6 +456,17 @@ TERM-required-reviewer:
           - project-management:DEC-032#D1
           - project-management:DEC-032#D2
           - project-management:DEC-027
+          - COR-009#1
+          - COR-009#2
+          - COR-009#3
+          - COR-009#5
+          - COR-001
+          - COR-010
+          - COR-017
+          - COR-026
+          - COR-031
+          - COR-050#3
+          - COR-050#6
 TERM-scope:
   name: scope
   status: active
@@ -457,6 +483,8 @@ TERM-scope:
           - project-management:DEC-018
           - project-management:DEC-061#1
           - project-management:DEC-061#5
+          - COR-001
+          - COR-010
 TERM-seat:
   name: seat
   noun-forms: [seats]
@@ -475,6 +503,10 @@ TERM-seat:
           - project-management:DEC-059#2
           - project-management:DEC-059#4
           - project-management:DEC-029
+          - COR-006
+          - COR-013#1
+          - COR-013#2
+          - COR-013#5
 TERM-state-issue:
   name: state issue
   noun-forms: [state issues]
@@ -519,6 +551,10 @@ TERM-task:
           - .pkit/capabilities/project-management/schemas/issue-types.yaml
         record:
           - project-management:DEC-004
+          - COR-009#1
+          - COR-009#2
+          - COR-009#3
+          - COR-009#5
 TERM-topology:
   name: topology
   noun-forms: [topologies]
@@ -534,6 +570,8 @@ TERM-topology:
           - project-management:DEC-059#1
           - project-management:DEC-059#2
           - project-management:DEC-008
+          - COR-001
+          - COR-010
 TERM-umbrella:
   name: Umbrella
   status: active
@@ -558,6 +596,16 @@ TERM-use-case-entry:
           - .pkit/capabilities/project-management/scripts/_lib/use_case_citations.py
         record:
           - project-management:DEC-054#1
+          - COR-010
+          - COR-052#1
+          - COR-052#2
+          - COR-052#3
+          - COR-052#6
+          - COR-053#2
+          - COR-061#1
+          - COR-053#1
+          - COR-053#7
+          - COR-001
 TERM-verdict:
   name: verdict
   noun-forms: [verdicts]
@@ -571,6 +619,17 @@ TERM-verdict:
           - .pkit/capabilities/project-management/scripts/_lib/verdict_freshness.py
         record:
           - project-management:DEC-028
+          - COR-024
+          - COR-050#3
+          - COR-057#1
+          - COR-057#3
+          - COR-064#4
+          - COR-057#5
+          - COR-009#1
+          - COR-009#2
+          - COR-009#3
+          - COR-009#5
+          - COR-050#6
 TERM-workstream:
   name: workstream
   noun-forms: [workstreams]
@@ -585,6 +644,8 @@ TERM-workstream:
         record:
           - project-management:DEC-018
           - project-management:DEC-012
+          - COR-001
+          - COR-010
 ---
 
 # Glossary

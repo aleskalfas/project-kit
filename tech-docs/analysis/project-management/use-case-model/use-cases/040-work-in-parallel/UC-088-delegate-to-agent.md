@@ -27,6 +27,10 @@ pkit:
         - project-management:DEC-059#7
         - COR-013
         - COR-017
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
       artefact:
         - ACT-lead-agent
         - REQ-061
