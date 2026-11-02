@@ -19,6 +19,16 @@ pkit:
         - living-docs:DEC-001#4
         - living-docs:DEC-001#5
         - living-docs:DEC-001#6
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#3
+        - COR-050#6
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
       artefact:
         - UC-044
         - UC-046

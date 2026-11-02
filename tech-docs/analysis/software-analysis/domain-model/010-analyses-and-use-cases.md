@@ -93,7 +93,7 @@ Defined in [TERM-use-case](../glossary.md#term-use-case--use-case).
 
 **Why:** A use case is true of the product for as long as the product supports it. Kept apart from any one design, it persists after that design ships, and the design's review of it stays with the design ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
-A use case states one actor's goal and how the [system](../../core/glossary.md#term-system--system) fulfils it, with the other actors who take part. Its main path of steps and the variants that branch from them say what the system must do, as the accepted [decision records](../../core/glossary.md#term-decision-record--decision-record) decide it.
+A use case states one actor's goal and how the [system](../../core/glossary.md#term-system--system) fulfils it, with the other actors who take part. Its main path of steps and the variants that branch from them say what the system does. Where an accepted [decision record](../../core/glossary.md#term-decision-record--decision-record) decides a step or a variant, they say what the system must do.
 
 **Attributes:**
 
