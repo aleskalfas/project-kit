@@ -5,6 +5,7 @@ status: active
 actor: ACT-component-author
 other-actors:
   - ACT-ci-pipeline
+  - ACT-methodology-maintainer
   - ACT-operator
 after:
   - [UC-003]
@@ -44,6 +45,7 @@ pkit:
       artefact:
         - ACT-component-author
         - ACT-ci-pipeline
+        - ACT-methodology-maintainer
         - ACT-operator
         - REQ-005
         - REQ-009
@@ -57,6 +59,7 @@ pkit:
 **Other actors:**
 
 - **CI pipeline** (`ACT-ci-pipeline`): in project-kit, opens the [release](../../../glossary.md#term-release--release) [pull request](../../../glossary.md#term-pull-request--pull-request) that carries the [component](../../../glossary.md#term-component--component)'s new [version](../../../glossary.md#term-version--version). That pull request carries the new versions of the [backbone](../../../glossary.md#term-backbone--backbone) and of other components too ([UC-008](UC-008-release-backbone.md)).
+- **Methodology maintainer** (`ACT-methodology-maintainer`): in project-kit, merges the pull request the CI pipeline opens, as UC-008 says (variant 1a).
 - **Operator** (`ACT-operator`): is asked before `pkit release apply` changes a repository other than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:**

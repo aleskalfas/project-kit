@@ -4,6 +4,7 @@ title: Land my change on the default branch
 status: active
 actor: ACT-developer
 other-actors:
+  - ACT-ai-agent
   - ACT-merge-authoriser
   - ACT-operator
 after:
@@ -39,6 +40,7 @@ pkit:
         - ADR-061#8
       artefact:
         - ACT-developer
+        - ACT-ai-agent
         - ACT-merge-authoriser
         - ACT-operator
         - REQ-012
@@ -50,7 +52,8 @@ pkit:
 
 **Other actors:**
 
-- **Merge authoriser** (`ACT-merge-authoriser`): authorises the merge of one [head](../../../glossary.md#term-head--head). They read what the [change](../../../glossary.md#term-change--change) updated in the [pull request](../../../glossary.md#term-pull-request--pull-request)'s sentences, and what it leaves out of date in the [change check](../../../glossary.md#term-change-check--change-check)'s list. Where an agent commits straight to the [default branch](../../../glossary.md#term-default-branch--default-branch), the person it works for is the merge authoriser. They are told the same before the commit ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
+- **AI agent** (`ACT-ai-agent`): may commit the [change](../../../glossary.md#term-change--change) straight to the [default branch](../../../glossary.md#term-default-branch--default-branch) for the developer, as variant 1a says. Before the commit, it tells the merge authoriser what the change updated, and what the change leaves out of date (core rule 20).
+- **Merge authoriser** (`ACT-merge-authoriser`): authorises the merge of one [head](../../../glossary.md#term-head--head). They read what the change updated in the [pull request](../../../glossary.md#term-pull-request--pull-request)'s sentences, and what it leaves out of date in the [change check](../../../glossary.md#term-change-check--change-check)'s list. Where an agent commits straight to the default branch, the person it works for is the merge authoriser. They are told the same before the commit ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - **Operator** (`ACT-operator`): is asked before the landing changes the hosting service for a repository other than the session's own. So no such change happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:** **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.

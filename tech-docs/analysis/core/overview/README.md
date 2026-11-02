@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=5 fingerprint=sha256:9c4502d6722d9dd269551e4098a652d379bbc56a0c7a76253b634b29de322b5d -->
+<!-- pkit:overview reads=5 fingerprint=sha256:462ac2a655b3f615ec92176152cbdbeaee375a4f595ddc48be127fb1e31cdf1b -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
