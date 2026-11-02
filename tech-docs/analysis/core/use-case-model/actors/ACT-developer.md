@@ -26,6 +26,9 @@ pkit:
         - COR-050#3
         - COR-050#6
         - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
 ---
 
 # ACT-developer — Developer

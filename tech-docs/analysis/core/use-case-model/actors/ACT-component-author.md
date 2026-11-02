@@ -15,9 +15,13 @@ pkit:
   friction:
     anchors:
       record:
+        - COR-017
         - COR-031
+        - COR-033
         - COR-041
         - COR-047
+        - COR-053
+        - ADR-040#5
 ---
 
 # ACT-component-author — Component author

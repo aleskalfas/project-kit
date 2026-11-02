@@ -13,6 +13,9 @@ pkit:
     anchors:
       record:
         - COR-050#3
+        - COR-051#4
+        - COR-066#1
+        - COR-066#3
 ---
 
 # ACT-merge-authoriser — Merge authoriser
