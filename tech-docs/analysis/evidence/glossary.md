@@ -3,6 +3,7 @@ builds-on:
   - analysis: core
     version: 2.0.0
     terms:
+      - {id: TERM-adapter, name: adapter}
       - {id: TERM-capability, name: capability}
       - {id: TERM-component, name: component}
       - {id: TERM-decision-record, name: decision record}
@@ -37,7 +38,7 @@ TERM-evidence-record:
   name: evidence record
   noun-forms: [evidence records]
   status: active
-  definition: "entry of a scope's YAML file keeping a verbatim excerpt of an outside fact's source, where the source lies and when the excerpt was fetched"
+  definition: "entry of a directory's fixed-name YAML file keeping a verbatim excerpt of an outside fact's source, with the source's location and fetch time"
   pkit:
     friction:
       anchors:
@@ -79,6 +80,7 @@ TERM-outside-fact:
 The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
 
 - **From core at 2.0.0:** the areas up to `030-change`. No release holds the core's analysis yet, so the links name the next release, 2.0.0, rather than evidence's floor, 1.26.0.
+  - **Term:** [adapter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-adapter--adapter)
   - **Term:** [capability](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-capability--capability)
   - **Term:** [component](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-component--component)
   - **Term:** [decision record](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-decision-record--decision-record)

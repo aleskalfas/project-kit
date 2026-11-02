@@ -1,6 +1,6 @@
 ---
 id: UC-073
-title: Revalidate the analysis after a change from an agent's proposed outcomes
+title: Revalidate the analysis after a change from an agent's proposed revalidation outcomes
 status: active
 actor: core:ACT-developer
 other-actors:
@@ -25,6 +25,7 @@ pkit:
         - .pkit/capabilities/software-analysis/scripts/_lib/resolve.py
         - .pkit/capabilities/software-analysis/scripts/_lib/answers.py
         - .pkit/capabilities/software-analysis/scripts/_lib/revalidation.py
+        - .pkit/capabilities/software-analysis/scripts/_lib/stamp.py
         - .pkit/capabilities/software-analysis/package.yaml
       record:
         - software-analysis:DEC-001#1
@@ -38,6 +39,8 @@ pkit:
         - COR-013
         - COR-017
         - COR-031
+        - COR-039#1
+        - COR-039#2
         - COR-050#3
         - COR-050#4
         - COR-050#5
@@ -48,9 +51,9 @@ pkit:
         - REQ-052
 ---
 
-# UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes
+# UC-073 — Revalidate the analysis after a change from an agent's proposed revalidation outcomes
 
-**Goal:** Revalidate the analysis after a change, from an agent's proposed outcome for each flagged artefact, and never rewrite the analysis to match broken code.
+**Goal:** Revalidate the analysis after a change, from an agent's proposed revalidation outcome for each flagged artefact, and never rewrite the analysis to match broken code.
 
 **Other actors:**
 
@@ -105,7 +108,7 @@ pkit:
 - **7c.** The code regressed a step that an accepted decision record decides. The agent names the step and the record to `pkit analysis propose`, which then gives the answer `updated`, since the box changes the use case. First the developer reports the defect, then adds the step's box and its `shortfalls` entry, which name the record and the defect's issue. The step keeps its words, since the box stands below it (DEC-001 points [1](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape) and [5](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)).
 - **7d.** The agent finds a gap: behaviour nothing describes, or a description with no behaviour. `pkit analysis propose` never proposes one, so the agent finds it by reading. Where a new artefact closes the gap, the agent drafts it for the developer to write with the `analysis-author` [skill](../../../../core/glossary.md#term-skill--skill). The answer is then `unchanged`, naming the gap and the artefact, but the answer is `updated` where the artefact itself changes.
 - **7e.** On the path of 7d, the gap is a description with no behaviour. Where an accepted decision record decides it, the step keeps its words and takes its box. Otherwise the step says what the system does, under its own number ([DEC-001 point 5](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)).
-- **7f.** The developer would rather put an artefact off, such as until a fix lands. The proposal gives a deferral, `pkit friction defer`, whose reason names an open follow-up, in place of the answer. It names each deferral the artefact carries, and whether to keep it with `--keep`.
+- **7f.** The developer would rather put an artefact off, such as until a fix lands. The [revalidation proposal](../../../glossary.md#term-revalidation-proposal--revalidation-proposal) gives a deferral, `pkit friction defer`, whose reason names an open follow-up, in place of the answer. It names each deferral the artefact carries, and whether to keep it with `--keep`.
 - **8a.** In a run a command starts, the agent writes each artefact's answer as fields, with its diff and its evidence, in the brief's workspace. It writes no command ([project-management DEC-056 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)).
 - **9a.** In a run a command starts, the agent ends with a line for each artefact: proposed, held with its question, or none with its reason. What becomes of each proposal is then project-management's, and the use case ends.
 - **11a.** An `updated` answer changes an artefact's content, so the [change check](../../../../core/glossary.md#term-change-check--change-check) may flag the artefacts downstream of it. The path rejoins at step 1 for them.

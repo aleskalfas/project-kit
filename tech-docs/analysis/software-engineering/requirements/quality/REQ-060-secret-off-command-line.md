@@ -15,6 +15,7 @@ pkit:
         - .pkit/capabilities/software-engineering/agents/security-reviewer.md
         - .pkit/capabilities/software-engineering/review-contributions.yaml
       record:
+        - software-engineering:DEC-002
         - software-engineering:DEC-002#1
         - software-engineering:DEC-002#3
         - project-management:DEC-032#D1
