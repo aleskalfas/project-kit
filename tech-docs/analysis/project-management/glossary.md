@@ -3,8 +3,11 @@ builds-on:
   - analysis: core
     version: 2.0.0
     terms:
+      - {id: TERM-adapter, name: adapter}
       - {id: TERM-agent-definition, name: agent definition}
+      - {id: TERM-anchor, name: anchor}
       - {id: TERM-answer, name: answer}
+      - {id: TERM-backbone, name: backbone}
       - {id: TERM-base, name: base}
       - {id: TERM-capability, name: capability}
       - {id: TERM-change, name: change}
@@ -12,11 +15,14 @@ builds-on:
       - {id: TERM-component, name: component}
       - {id: TERM-consent, name: consent}
       - {id: TERM-data-point, name: data point}
+      - {id: TERM-decision-record, name: decision record}
       - {id: TERM-default-branch, name: default branch}
       - {id: TERM-distribution, name: distribution}
       - {id: TERM-finding, name: finding}
+      - {id: TERM-harness, name: harness}
       - {id: TERM-head, name: head}
       - {id: TERM-methodology, name: methodology}
+      - {id: TERM-package-metadata, name: package metadata}
       - {id: TERM-process, name: process}
       - {id: TERM-project, name: project}
       - {id: TERM-pull-request, name: pull request}
@@ -321,6 +327,9 @@ TERM-scope:
   pkit:
     friction:
       anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/topology.py
+          - .pkit/capabilities/project-management/scripts/_lib/task_pool.py
         record:
           - project-management:DEC-045#3
           - project-management:DEC-059#7
@@ -335,6 +344,10 @@ TERM-seat:
   pkit:
     friction:
       anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/topology.py
+          - .pkit/capabilities/project-management/scripts/take-seat.py
+          - .pkit/capabilities/project-management/scripts/release-seat.py
         record:
           - project-management:DEC-045#1
           - project-management:DEC-045#3
@@ -349,6 +362,8 @@ TERM-state-issue:
   pkit:
     friction:
       anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/state_issues.py
         record:
           - project-management:DEC-058
           - project-management:DEC-043#3
@@ -372,6 +387,8 @@ TERM-topology:
   pkit:
     friction:
       anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/topology.py
         record:
           - project-management:DEC-045
           - project-management:DEC-059#1
@@ -435,8 +452,11 @@ TERM-workstream:
 The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
 
 - **From core at 2.0.0:** the areas up to `030-change`. No release holds the core's analysis yet, so the links name the next release, 2.0.0, rather than project-management's floor, 1.144.0.
+  - **Term:** [adapter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-adapter--adapter)
   - **Term:** [agent definition](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-agent-definition--agent-definition)
+  - **Term:** [anchor](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-anchor--anchor)
   - **Term:** [answer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-answer--answer)
+  - **Term:** [backbone](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-backbone--backbone)
   - **Term:** [base](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-base--base)
   - **Term:** [capability](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-capability--capability)
   - **Term:** [change](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-change--change)
@@ -444,11 +464,14 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [component](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-component--component)
   - **Term:** [consent](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-consent--consent)
   - **Term:** [data point](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-data-point--data-point)
+  - **Term:** [decision record](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-decision-record--decision-record)
   - **Term:** [default branch](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-default-branch--default-branch)
   - **Term:** [distribution](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-distribution--distribution)
   - **Term:** [finding](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-finding--finding)
+  - **Term:** [harness](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-harness--harness)
   - **Term:** [head](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-head--head)
   - **Term:** [methodology](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-methodology--methodology)
+  - **Term:** [package metadata](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-package-metadata--package-metadata)
   - **Term:** [process](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-process--process)
   - **Term:** [project](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-project--project)
   - **Term:** [pull request](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-pull-request--pull-request)

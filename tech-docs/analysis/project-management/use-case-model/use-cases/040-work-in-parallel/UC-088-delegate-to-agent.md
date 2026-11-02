@@ -10,11 +10,7 @@ requirements:
   - REQ-062
 after:
   - [UC-092]
-  - [UC-083, UC-060]
-shortfalls:
-  - at: 1
-    issue: "#519"
-    record: project-management:DEC-035#3
+  - [UC-083, UC-060, UC-063]
 pkit:
   friction:
     anchors:
@@ -46,23 +42,19 @@ pkit:
 **Preconditions:**
 
 - **From [UC-092](UC-092-take-seat.md):** The lead's clone holds a lead agent's [seat](../../../glossary.md#term-seat--seat), whose [scope](../../../glossary.md#term-scope--scope) names what the lead takes work from (DEC-059 points [4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat) and [7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
-- **From [UC-083](UC-083-plan-across-scopes.md), or [UC-060](../020-file-and-move/UC-060-file-task.md):** The [Task](../../../glossary.md#term-task--task) is filed in the lead's scope ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
+- **From [UC-083](UC-083-plan-across-scopes.md), [UC-060](../020-file-and-move/UC-060-file-task.md) or [UC-063](../010-plan/UC-063-plan-intent.md):** The [Task](../../../glossary.md#term-task--task) is filed in the lead's scope ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
 **Assumptions:**
 
-- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the adapter deploys the helper agents the lead starts ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md) and [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
-- The harness lets a session start agents, down to a limit on how deep agents nest ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
+- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys the helper agents the lead starts ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md) and [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
+- The [harness](../../../../core/glossary.md#term-harness--harness) lets a session start agents, down to a limit on how deep agents nest ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 
 **Trigger:** The lead decides to have a helper agent build a [Task](../../../glossary.md#term-task--task) of the lead's [scope](../../../glossary.md#term-scope--scope).
 
 **Main path:**
 
 1. The lead starts the [Task](../../../glossary.md#term-task--task): `pkit pm start-work <N>`, as `UC-084` steps 4 to 6 describe. The lead's [instance](../../../glossary.md#term-instance--instance) becomes the Task's [owner](../../../glossary.md#term-owner--owner) ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)).
-
-> [!WARNING]
-> **Not built yet:** `start-work` writes no owner. DEC-035 point 3 decides that an instance that starts an [issue](../../../glossary.md#term-issue--issue) with no owner becomes the issue's owner, and #519 tracks it.
-
-2. The lead starts a helper agent for the Task through the harness, and passes the helper agent no name. The helper agent's whole result then comes back ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)). The helper agent acts as the lead's instance while the helper agent builds the Task ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
+2. The lead starts a helper agent for the Task through the [harness](../../../../core/glossary.md#term-harness--harness), and passes the helper agent no name. The helper agent's whole result then comes back ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)). The helper agent acts as the lead's instance while the helper agent builds the Task ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 3. The helper agent builds the Task on the Task's branch, then commits and pushes the work.
 4. The helper agent ends, and returns its result to the lead.
 5. The lead reviews the result, and lands the Task, as `UC-089` describes.

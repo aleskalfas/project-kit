@@ -66,4 +66,4 @@ What the adopter needs here that no accepted record decides yet:
 
 ## Sources
 
-The goal is one #2096 names, under [EPIC](../../../glossary.md#term-epic--epic) #564. No record decides the goal yet, and the maintainer reviews the goal with these use cases.
+The goal, to measure one [topology](../../../glossary.md#term-topology--topology) against another, rests on a decision Aleš Kalfas made on 26 October 2026, in #2096. Among the use cases of parallel work, he named "measuring one setup against another". #2096 calls a topology an agent setup. The figures are those GitHub holds, since project-management keeps a [project](../../../../core/glossary.md#term-project--project)'s work on GitHub ([project-management DEC-003](../../../../../../.pkit/capabilities/project-management/decisions/DEC-003-github-bound-substrate.md)).
