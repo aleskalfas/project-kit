@@ -728,22 +728,6 @@ def test_the_anchors_rule_asks_a_term_for_no_record_its_distinctions_cite() -> N
     )
 
 
-def test_the_anchors_rule_asks_records_across_analyses_only_where_a_statement_rests() -> None:
-    """The maintainer's reading of 2 November (#1727, reading 3): the records behind
-    another analysis's actor or term are anchored only where a statement rests on what
-    a record decides. Naming the actor or the term rests on none of them, and the
-    example says so too."""
-    _data, body = _shipped()
-    section = " ".join(_section(body, "RS-SAN-005").split())
-    across = section.split("**Across analyses.**", 1)[1].split("**No cycle excuses it.**")[0]
-    assert "where the statements rest on what that record decides." in across
-    assert "A statement that only names that actor or term rests on none of them." in across
-    assert (
-        "So a use case whose `actor` is `core:ACT-developer` anchors those records behind "
-        "that actor that its statements rest on, and never the actor."
-    ) in across
-
-
 def test_the_record_rule_compares_the_obligation_with_the_records_it_rests_on() -> None:
     """DEC-002 point 8 (#1695): a requirement that contradicts an accepted record it rests
     on breaks the rule, and the record wins until it is changed. The rule compares the

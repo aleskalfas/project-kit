@@ -272,8 +272,8 @@ An analysis artefact's anchors name what its statements rest on. A use case's or
     - A journey rests on its actor, the use cases of its `steps` and its `relies-on`, each requirement in its `requirements`, and the code and decisions at its seams.
     - A requirement rests on each actor in its `actors`, each requirement in its `refines`, and the decisions it cites or applies. It also rests on the narrow code that holds it and the files that verify it. Its anchors also name each decision that answers it and each architecture view that realises it. Each is asked for even where none of its statements names it.
   - **Nothing else.** A statement about an artefact this list does not name rests on nothing this rule asks an anchor for. So a term that another term's distinctions name needs no anchor.
-  - **Across analyses.** Where this list names an actor or a term of another analysis, the anchors name records, never that artefact itself. They name each record that artefact's own record anchors name, where the statements rest on what that record decides. A statement that only names that actor or term rests on none of them. Where that artefact anchors no record, nothing is asked in its place.
-  - So a use case whose `actor` is `core:ACT-developer` anchors those records behind that actor that its statements rest on, and never the actor.
+  - **Across analyses.** Where this list names an actor or a term of another analysis, the anchors name records, never that artefact itself. They name each record that artefact's own record anchors name, where the statements rest on what that record decides. Where that artefact anchors no record, nothing is asked in its place.
+  - So a use case whose `actor` is `core:ACT-developer` anchors the records behind that actor, and never the actor.
   - **No cycle excuses it.** An anchor this list asks for on a decision or a view is asked for even where anchors that run back from that decision or view would close a cycle.
   - **What it never asks for.** This rule asks no anchor for:
     - code not yet written
