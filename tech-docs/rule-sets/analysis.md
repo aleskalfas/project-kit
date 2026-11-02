@@ -1,8 +1,9 @@
 ---
 rule-set: ANA
-version: 4.1.2
+version: 4.2.0
 inherits: [WRITE@2, software-analysis:SAN@1]
 scope:
+  exclude: [tech-docs/analysis/visual-communication/**]
   types:
     - software-analysis:actor
     - software-analysis:term
@@ -69,7 +70,11 @@ rules:
 
 These are the rules project-kit's analysis follows: seven rules of its own, and the rules of the two sets it inherits.
 
-- **What it selects:** every actor, glossary term, domain-model view, use case, journey and requirement, by the eight types software-analysis declares (software-analysis DEC-001 point 2, DEC-002 point 3, DEC-004 point 4). The scope names no paths, so it selects the analysis wherever software-analysis places it.
+- **What it selects:** every actor, glossary term, domain-model view, use case, journey and requirement, by the eight types software-analysis declares (software-analysis DEC-001 point 2, DEC-002 point 3, DEC-004 point 4). The scope names no `paths`, so it selects the analysis wherever software-analysis places it. Its `exclude` leaves one analysis out for now.
+- **What it leaves out for now:** the visual-communication analysis, under `tech-docs/analysis/visual-communication/`, until its owner mends it (#2462).
+  - **Why.** Once this set re-pins to the major of `SAN` that accepts its judgement rules, every artefact it selects comes under them (#1727). An audit of 2 November found many breaks of them in that analysis, which its owner mends in a change of its own.
+  - **The way out.** A set may leave a file out of its scope until the file is mended (COR-060 point 2). The analysis is then out of `WRITE` and `SAN` alike, since both bind on it only through this set.
+  - **When it ends.** The change that mends the analysis brings it back into the scope (#2462).
 - **What it does not select:** a revalidation record. A revalidation record is a held document, never an artefact, so no scope selects it. Whoever writes one still follows `WRITE`, through project-kit's operational rules (`.pkit/rules/project.md`).
 - **What it inherits:** the accepted rules of both sets bind on the analysis through this set (COR-051 point 7).
   - `WRITE`, project-kit's general writing rules, pinned at `WRITE@2`.
