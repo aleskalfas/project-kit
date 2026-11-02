@@ -38,7 +38,7 @@ pkit:
 **Steps:**
 
 1. [UC-084](../use-cases/040-work-in-parallel/UC-084-take-next-task.md) — Take my next ready Task, and build it up to its merge
-   - **Needs from [UC-092](../use-cases/040-work-in-parallel/UC-092-take-seat.md) (outside this journey):** the worker's clone holds a worker agent's [seat](../../glossary.md#term-seat--seat), and the worker acts as that seat's agent. The seat's [scope](../../glossary.md#term-scope--scope) narrows the Tasks the worker takes ([project-management DEC-059 point 7](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
+   - **Needs from [UC-092](../use-cases/040-work-in-parallel/UC-092-take-seat.md) (outside this journey):** the worker's [clone](../../glossary.md#term-clone--clone) holds a worker agent's [seat](../../glossary.md#term-seat--seat), and the worker acts as that seat's agent. The seat's [scope](../../glossary.md#term-scope--scope) narrows the Tasks the worker takes ([project-management DEC-059 point 7](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
    - **Needs from [UC-083](../use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md) (outside this journey):** Tasks the planning agent filed, each with its [workstream](../../glossary.md#term-workstream--workstream). A [Task](../../glossary.md#term-task--task) whose `## Dependencies` section names an [issue](../../glossary.md#term-issue--issue) still open is not ready. The worker takes such a Task only once that issue closes (UC-084 step 2).
    - **Needs from [UC-060](../use-cases/020-file-and-move/UC-060-file-task.md) (outside this journey):** Tasks a developer filed, each with its workstream. Tasks either use case filed are enough.
 2. [UC-089](../use-cases/040-work-in-parallel/UC-089-land-alongside-others.md) — Land my Task while other agents land theirs
@@ -46,8 +46,8 @@ pkit:
 
 **Variants:**
 
-- **1a.** The listing holds no ready [Task](../../glossary.md#term-task--task). The worker starts nothing, and the path ends ([UC-084](../use-cases/040-work-in-parallel/UC-084-take-next-task.md) variant 1a).
-- **2a.** The Task is a piece of work that the Task of another [scope](../../glossary.md#term-scope--scope) depends on. The worker hands the next piece on as [UC-087](../use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md) describes, landing this Task through step 2, and the next piece's Task can start.
+- **1a.** The listing holds no [ready Task](../../glossary.md#term-ready-task--ready-task). The worker starts nothing, and the path ends ([UC-084](../use-cases/040-work-in-parallel/UC-084-take-next-task.md) variant 1a).
+- **2a.** The [Task](../../glossary.md#term-task--task) is a piece of work that the Task of another [scope](../../glossary.md#term-scope--scope) depends on. The worker hands the next piece on as [UC-087](../use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md) describes, landing this Task through step 2, and the next piece's Task can start.
 - **2b.** The merge of the [default branch](../../../core/glossary.md#term-default-branch--default-branch) into the Task's branch conflicts. The worker resolves the conflict, and the new [head](../../../core/glossary.md#term-head--head) needs a new [authorisation](../../glossary.md#term-authorisation--authorisation), so the path rejoins at step 2 ([UC-089](../use-cases/040-work-in-parallel/UC-089-land-alongside-others.md) variant 4a).
 
 **Postconditions:** The [Task](../../glossary.md#term-task--task)'s [pull request](../../../core/glossary.md#term-pull-request--pull-request) merged at the [head](../../../core/glossary.md#term-head--head) the [merge gate](../../glossary.md#term-merge-gate--merge-gate) judged, after the other agents' changes, and the Task is in Done.
