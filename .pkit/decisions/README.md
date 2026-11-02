@@ -283,9 +283,9 @@ Edit an accepted record in place for a clarification, a scope tweak or a refinem
 
 **One test sorts the edits made in place: does the edit change what the record decides, in either direction?**
 
-- **An edit that changes it** adds to what the record decides, narrows it or widens it, as a point added, rewritten or retired in place can (step 2 below). It is a decision of its own. Like accepting the record, it stays a person's ([COR-064](core/COR-064-answer-delegate.md) point 6).
+- **An edit that changes it** adds to what the record decides, narrows it or widens it. A point added, rewritten or retired in place can do so (step 2 below). It is a decision of its own. Like accepting the record, it stays a person's ([COR-064](core/COR-064-answer-delegate.md) point 6).
 - **An edit that does not** leaves every choice as it stood. Examples are a typo fixed, a citation updated after a rename, and a fact corrected where the decision stands.
-- **What a change edits in an accepted record** is listed by the numbering check, for whoever judges the edits ("Checking a change's numbering" below). It names each point and each other part of the record that the change edits, without quoting the words, so the judge reads the edit in the change itself.
+- **What a change edits in an accepted record** is listed by the numbering check, for whoever judges the edits ("Checking a change's numbering" below). It names each point and each other part of the record that the change edits, without quoting the words. So the judge reads the edit in the change itself.
 
 **Editing in place means editing in place.** Fold a correction into the body, so the record simply states what is true. Append no amendment section, dated correction marker or "previously we believed" passage. If a record was wrong about a fact and the decision has not changed, fix the sentence. If the decision was overturned, in whole or in part, supersede.
 
