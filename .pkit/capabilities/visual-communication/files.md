@@ -115,7 +115,7 @@ The location holds four folders: `libraries/`, the library folder; `pieces/`, on
 | `code/<name>.yaml` | `code` | a person |
 | `fonts/<file>` | none | a person, who commits the font |
 
-The code that `pkit visual write-code` writes lies where its declaration names, outside the location, with its record beside it. A component's file is described in *Components*; produced pictures, exports, declarations of code and the code itself in *What is made from a piece*; `findings.yaml` in *What the check reports*.
+The code that `pkit visual write-code` writes lies where its declaration names, with its record beside it. A component's file is described in *Components*; produced pictures, exports, declarations of code and the code itself in *What is made from a piece*; `findings.yaml` in *What the check reports*.
 
 ### The clone's local folder
 

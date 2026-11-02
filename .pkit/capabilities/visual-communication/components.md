@@ -28,6 +28,7 @@ pkit:
       artefact:
         - .pkit/capabilities/visual-communication/files.md
         - .pkit/capabilities/visual-communication/files.md#the-foundations
+        - .pkit/capabilities/visual-communication/files.md#reserved-words
 ---
 
 # Components
@@ -112,7 +113,7 @@ Every name in the file takes the capability's name shape ([files](files.md)). Th
 `fields` is the JSON Schema of the content the component takes. At every level it takes these keys only:
 
 - **`type`:** `string`, `number`, `integer`, `boolean`, `object`, `array` or `null`, or a list of them.
-- **`properties` and `required`:** the fields, by name. No field takes a reserved key's name: `id`, `use`, `concept`, `state`, `override` or `pkit` ([files](files.md)).
+- **`properties` and `required`:** the fields, by name. No field takes a reserved key's name: `id`, `use`, `concept`, `state`, `override` or `pkit` ([Reserved words](files.md#reserved-words)).
 - **`items`, `minItems` and `maxItems`:** what a list holds, and how many. **`enum` and `const`:** the values a field may hold.
 - **`description`,** and **`x-pkit-prose: true`,** which marks a field that holds prose. No command reads the mark.
 - **`$ref`:** a reference that starts with `#/`, read within the component's own `fields`.
