@@ -150,7 +150,7 @@ A body cites what its front matter declares, in forms the validator reads withou
 - **A rule id,** `RS-<SET>-NNN`, an extension point, `RS-<SET>-NNN#<point>`, or a component's rule with its component, `[<component>:RS-<SET>-NNN]` (COR-051). It is not declared in the front matter either, and must name a rule of an installed rule set.
 - **A role or point address** in brackets, such as `[pkit::documentation]` or `[pkit::documentation:readers]` (COR-053). It must name a role or point an installed capability declares. A bracketed token that holds `::` and is no address is reported as malformed.
 - **A hook name:** `<topic>.<operation>` or `<topic>.<provider>.<operation>` ([`hooks.md`](hooks.md)).
-- **An operational rule** by its layer and number, such as "core rule 16", or by the id of a rule of a loaded set, such as core's `RS-OPS-NNN` (COR-068). `pkit refs validate` warns, without failing, of one that is missing or retired.
+- **An operational rule** by its layer and number, such as "core rule 16", or by its id in a loaded set, such as `RS-OPS-NNN` (COR-068). `pkit refs validate` warns, without failing, of one that is missing or retired.
 - **A point of a record,** such as `COR-NNN point N`, `COR-NNN#N` or `[<capability>:DEC-NNN] point N` (COR-058). `pkit refs validate` warns, without failing, of a point its record neither holds nor retires ([the decisions README, "Citing"](../decisions/README.md#citing)).
 - **Not counted:** anything inside a fenced code block, an HTML comment or strikethrough.
 
