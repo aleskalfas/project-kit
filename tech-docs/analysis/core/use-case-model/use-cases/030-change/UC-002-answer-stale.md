@@ -51,6 +51,7 @@ pkit:
         - COR-062#7
         - COR-064#1
         - COR-062#10
+        - COR-062#11
         - ADR-034#1
         - ADR-068#6
       artefact:

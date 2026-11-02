@@ -5,7 +5,7 @@ status: active
 actor: ACT-component-author
 other-actors: []
 after:
-  - [UC-015]
+  - [UC-015, UC-023]
 requirements:
   - REQ-005
 pkit:
@@ -33,7 +33,7 @@ pkit:
 
 **Preconditions:**
 
-- **From [UC-015](UC-015-package-capability.md):** The [project](../../../glossary.md#term-project--project) holds the [capability](../../../glossary.md#term-capability--capability)'s subtree, with its [package metadata](../../../glossary.md#term-package-metadata--package-metadata).
+- **From [UC-015](UC-015-package-capability.md) or [UC-023](../020-set-up/UC-023-add-or-remove-capability.md):** The [project](../../../glossary.md#term-project--project) holds the [capability](../../../glossary.md#term-capability--capability)'s subtree, with its [package metadata](../../../glossary.md#term-package-metadata--package-metadata).
 
 **Assumptions:**
 

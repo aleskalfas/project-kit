@@ -19,6 +19,7 @@ pkit:
         - src/project_kit/cli.py
         - .github/workflows/checks.yml
       record:
+        - PRJ-002
         - PRJ-002#D1
         - PRJ-002#D2
         - PRJ-002#D4

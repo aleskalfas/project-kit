@@ -32,6 +32,7 @@ pkit:
         - src/project_kit/agents_overlay.py
         - src/project_kit/install.py
         - .pkit/permissions/decide.py
+        - .pkit/adapters/claude-code/merge-claude-md.sh
       record:
         - COR-001
         - COR-002
@@ -86,7 +87,7 @@ pkit:
 9. The adopter runs `pkit agents reconcile --write`, which is the [consent](../../../glossary.md#term-consent--consent). The system adds each missing category, and never writes over a value the adopter set. It fills a category whose conventional folder exists with that folder.
 10. The adopter runs `pkit sync`.
 11. The system runs each adapter's [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) into the files its harness reads ([COR-002](../../../../../../.pkit/decisions/core/COR-002-merge-delivery.md)). The methodology's baseline settings, the project's side and the entries already in the harness's file are joined, and no entry the project wrote is removed.
-12. The same merge includes `.pkit/rules/project.md` in the harness's instruction file, after the methodology's `.pkit/rules/core.md`, such as in `claude-code`'s `CLAUDE.md`.
+12. The same merge delivery includes `.pkit/rules/project.md` in the harness's instruction file, after the methodology's `.pkit/rules/core.md`, such as in `claude-code`'s `CLAUDE.md`.
 13. Each adapter deploys the agent definitions where its harness reads them, with each placeholder replaced by the paths the overlay gives it (COR-013).
 
 **Variants:**
@@ -106,11 +107,11 @@ pkit:
 - **8c.** The overlay is missing. The system says so, and step 9 creates it from the seed that first [install](../../../glossary.md#term-install--install) writes.
 - **9a.** A category carries writes, such as `process-authoring-targets`. The system fills it with an empty list, so the agent definition deploys with no path to write until the adopter names one.
 - **9b.** A missing category has no conventional folder in the project. The system appends it commented out, for the adopter to set. Until the adopter sets it, the [adapter](../../../glossary.md#term-adapter--adapter) skips each agent definition that needs it, and names `pkit agents adopt <agent>` ([UC-020](../010-develop/UC-020-own-skill-or-agent.md) variant 9a).
-- **10a.** The adopter changed only the [harness](../../../glossary.md#term-harness--harness)'s settings, and runs `pkit merge` instead. The system runs each adapter's merge of the settings alone, and prints `Merge complete.`.
-- **10b.** The adopter runs `pkit merge --dry-run`. The system prints `would run` and each adapter's merge script, and runs none of them (REQ-009).
+- **10a.** The adopter changed only the [harness](../../../glossary.md#term-harness--harness)'s settings, and runs `pkit merge` instead. The system runs each adapter's [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) of the settings alone, and prints `Merge complete.`.
+- **10b.** The adopter runs `pkit merge --dry-run`. The system prints `would run` and each adapter's script of merge delivery, and runs none of them (REQ-009).
 - **10c.** The adopter runs `pkit merge <adapter>` for an adapter the project does not hold. The system refuses with `no installed adapter matches the requested target(s): <names>`, and runs nothing.
 - **10d.** The project is not the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository). The running CLI is at another [version](../../../glossary.md#term-version--version) than the project records, or a [version transition](../../../glossary.md#term-version-transition--version-transition) is incomplete. [Sync](../../../glossary.md#term-sync--sync) stops before it writes, names the remedy, and the use case ends ([REQ-010](../../../requirements/functional/REQ-010-stop-under-another-version.md)).
-- **11a.** The adopter removed a safety entry of the methodology's baseline from the harness's settings, such as an explicit deny for a destructive operation. [Merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) adds it back, since safety wins over the project's preference ([COR-002](../../../../../../.pkit/decisions/core/COR-002-merge-delivery.md)).
+- **11a.** The adopter removed a safety entry of the methodology's baseline from the harness's settings, such as an explicit deny for a destructive operation. Merge delivery adds it back, since safety wins over the project's preference ([COR-002](../../../../../../.pkit/decisions/core/COR-002-merge-delivery.md)).
 
 **Postconditions:**
 
