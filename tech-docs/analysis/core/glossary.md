@@ -1076,6 +1076,7 @@ TERM-whole-repository-check:
         record:
           - COR-050#6
           - COR-050#9
+          - COR-050#12
 ---
 
 # Glossary
