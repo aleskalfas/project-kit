@@ -224,12 +224,13 @@ A pool is a named set of a [project](../../core/glossary.md#term-project--projec
 - A topology may declare it, and each seat that builds may serve it (DEC-061 point 1).
 - A Milestone is in at most one pool, and a Task is in the pool of its own Milestone ([DEC-061 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#4-a-task-is-in-the-pool-of-its-milestone)).
 - A seat's [scope](../glossary.md#term-scope--scope) narrows what the seat's pools hold (DEC-061 point 1).
+- Where the topology declares pools, a [batch plan](../glossary.md#term-batch-plan--batch-plan) names each Task's Milestone and its pool, so the person's approval covers them ([DEC-061 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)).
 
 **States:** None.
 
 **Always true:**
 
-- Only a person puts a Milestone or a Task into a pool, at a terminal or by `--yes` on the person's word ([DEC-061 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)).
+- Only a person puts a Milestone or a Task into a pool, at a terminal or by `--yes` on the person's word (DEC-061 point 6). A Milestone's description logs that [consent](../../core/glossary.md#term-consent--consent) to its pool.
 - A seat that builds takes of its own choosing only a ready Task in an open Milestone of its pools ([DEC-061 point 5](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#5-a-seat-that-builds-chooses-its-work-only-from-its-pools)).
 - Where the Milestones cannot be read, a seat takes nothing, never the whole Backlog ([DEC-061 point 8](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#8-without-pools-the-shared-pool-stands-and-with-them-a-failure-takes-nothing)).
 - Closing a Milestone rolls its open Tasks forward within its pool ([DEC-061 point 7](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#7-closing-a-milestone-rolls-its-open-tasks-forward-within-its-pool)).
