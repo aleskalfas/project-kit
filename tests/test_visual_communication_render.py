@@ -9,7 +9,6 @@ import json
 import re
 import shutil
 import subprocess
-import sys
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -26,7 +25,7 @@ from tests.test_visual_communication_pipeline import (
     drawing_project,
     write_picture,
 )
-from tests.visual_communication_project import CONFIG, write_list
+from tests.visual_communication_project import CONFIG, importable, write_list
 
 script, svg, seam, framing, files, reading, pl = load(
     "visual-communication",
@@ -49,10 +48,9 @@ LOCATION = (
 
 @pytest.fixture(autouse=True)
 def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """A run imports its renderer when it draws (`seam.implementation`); `load` keeps no
-    `_lib` in `sys.modules`, so the renderer it loaded stands in for that import. The test
-    producer is registered for the length of the test."""
-    monkeypatch.setitem(sys.modules, "_lib.plugins.svg", svg)
+    """The renderer stands in for the import a run makes when it draws, and the test
+    producer is registered, for the length of the test."""
+    importable(monkeypatch, svg)
     producer.register(seam)
     yield
     seam.unregister(producer.NAME)

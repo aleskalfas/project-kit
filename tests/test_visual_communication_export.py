@@ -5,7 +5,6 @@ stale or missing produced picture, unless the person names a stale one."""
 from __future__ import annotations
 
 import subprocess
-import sys
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -21,7 +20,7 @@ from tests.test_visual_communication_pipeline import (
     drawing_project,
     write_picture,
 )
-from tests.visual_communication_project import CONFIG
+from tests.visual_communication_project import CONFIG, importable
 
 script, exports, svg, seam, framing, files, reading, fingerprint, pl = load(
     "visual-communication",
@@ -44,7 +43,7 @@ RECORD = f"{PIECE_FOLDER}/exports.yaml"
 def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """The renderer stands in for the import a run makes when it draws, and the test
     producer is registered, for the length of the test."""
-    monkeypatch.setitem(sys.modules, "_lib.plugins.svg", svg)
+    importable(monkeypatch, svg)
     producer.register(seam)
     yield
     seam.unregister(producer.NAME)
