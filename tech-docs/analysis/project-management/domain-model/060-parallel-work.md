@@ -224,7 +224,7 @@ A pool is a named set of a [project](../../core/glossary.md#term-project--projec
 - A topology may declare it, and each seat that builds may serve it (DEC-061 point 1).
 - A Milestone is in at most one pool, and a Task is in the pool of its own Milestone ([DEC-061 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#4-a-task-is-in-the-pool-of-its-milestone)).
 - A seat's [scope](../glossary.md#term-scope--scope) narrows what the seat's pools hold (DEC-061 point 1).
-- Where the topology declares pools, a [batch plan](../glossary.md#term-batch-plan--batch-plan) names each Task's Milestone and that Milestone's pool, which the person's approval then covers ([DEC-061 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)).
+- Where the topology declares pools, a [batch plan](../glossary.md#term-batch-plan--batch-plan) names the pool of each [issue](../glossary.md#term-issue--issue)'s Milestone. So the person's approval covers each Task's pool ([DEC-061 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)).
 
 **States:** None.
 
