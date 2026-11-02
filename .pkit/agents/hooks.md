@@ -7,6 +7,8 @@ pkit:
       path:
         - src/project_kit/refs.py
         - src/project_kit/cli.py
+        - src/project_kit/install.py
+        - src/project_kit/sync.py
       record:
         - COR-013#4
 ---
@@ -24,6 +26,7 @@ A hook is a named operation an agent invokes, which a skill, a command or a scri
 - [Naming](#naming)
 - [Provider precedence](#provider-precedence)
 - [Unsatisfied needs](#unsatisfied-needs)
+- [Invoking a hook](#invoking-a-hook)
 - [Commands](#commands)
 <!-- /pkit:contents -->
 
@@ -73,24 +76,39 @@ project > capability > adapter > core
 ```
 
 - **The tiers:** a skill in `.pkit/skills/project/` is of the `project` tier. A capability's `provides:` is of the `capability` tier, and an adapter's of the `adapter` tier. Every other skill is of the `core` tier, a skill a capability ships among them.
-- **Two providers at one tier** fail `refs validate` and the whole validation, which name both ("Commands" below). Disambiguate them: uninstall one, or add a provider of the project's. Until then, `hooks resolve` names the first it reads.
-- **The `hooks` commands** read the same order.
+- **Two providers at one tier** refuse rather than pick (COR-013 point 4). The project disambiguates them by uninstalling one, or by adding a provider of its own. What the code does today:
+  - `pkit validate` and `pkit refs validate` fail the collision, naming both providers.
+  - Uninstalling one clears the finding. A provider of the project's binds the hook, but the finding stays.
+  - `pkit hooks resolve` names the first provider it reads, rather than refuse.
+- **The commands below** read the same order ("Commands").
 
 ## Unsatisfied needs
 
-Every `needs:` entry is required. `refs validate` and the whole validation fail a need that no skill answers and no package provides. Neither install nor sync checks it.
+Every `needs:` entry is required (COR-013 point 4). The two validations that fail a same-tier collision also fail a need that no skill answers and no package provides. COR-013 point 4 has install and sync check it too, and today neither does.
 
-- **Listed:** `hooks list` shows such a hook as `(no provider)`.
-- **Resolved:** `hooks resolve` refuses it, and says that no provider declares it.
+- **Listed:** `pkit hooks list` shows such a hook as `(no provider)`.
+- **Resolved:** `pkit hooks resolve` refuses it, and says that no provider declares it.
+
+## Invoking a hook
+
+An agent invokes a hook it needs by running the hook's provider, as the provider's value says ("Provider value syntax" above). `pkit hooks resolve` names that provider and its value. No command runs a hook for an agent.
 
 ## Commands
 
-The commands that check and query hooks, as the CLI reference lists them:
+The commands that query hooks, each reading the precedence above.
 
-```
-pkit refs validate               # fails on a same-tier collision or an unsatisfied need
-pkit hooks list                  # each hook, with the provider it binds to
-pkit hooks resolve <hook>        # one hook's provider, the first by precedence
-pkit hooks who-provides <hook>   # every provider of a hook, in precedence order
-pkit hooks who-needs <hook>      # each agent and skill that needs the hook
-```
+### `pkit hooks list`
+
+Lists every hook that is declared or needed, with the provider it binds to, or `(no provider)`.
+
+### `pkit hooks resolve <hook>`
+
+Names the provider the hook binds to, the first by precedence, and its implementation. It exits 1 where no provider declares the hook.
+
+### `pkit hooks who-provides <hook>`
+
+Lists every provider of the hook, skills and packages alike, in precedence order.
+
+### `pkit hooks who-needs <hook>`
+
+Lists each agent and skill whose `needs:` names the hook.

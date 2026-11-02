@@ -6,6 +6,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/storyboards.py
+        - src/project_kit/agents.py
         - src/project_kit/refs.py
         - .pkit/adapters/claude-code/_resolve_agent.py
       record:
@@ -15,7 +16,7 @@ pkit:
 
 # Storyboards
 
-A storyboard designs the dialogue of an agent's scripted scenario before the agent's body is written ([COR-016](../decisions/core/COR-016-scripted-scenario-storyboards.md)). It sits beside the agent's definition, which declares it and reads it at the start of each session.
+A storyboard designs the dialogue of an agent's scripted scenario before the agent's body is written ([COR-016](../decisions/core/COR-016-scripted-scenario-storyboards.md)). It sits beside the agent's definition, which declares it, and the agent reads it at the start of each session.
 
 ## Contents
 
@@ -23,7 +24,7 @@ A storyboard designs the dialogue of an agent's scripted scenario before the age
 - [When a definition takes one](#when-a-definition-takes-one)
 - [Structure](#structure)
 - [Location and lifecycle](#location-and-lifecycle)
-- [Front matter](#front-matter)
+- [Frontmatter declaration](#frontmatter-declaration)
 - [Authoring](#authoring)
 <!-- /pkit:contents -->
 
@@ -41,7 +42,7 @@ A definition takes a storyboard where its author finds themselves writing script
 A storyboard has three layers (COR-016):
 
 1. **Framing:** the scenarios the storyboard covers, the state they work on, and how a user enters them.
-2. **Tone rules:** the norms every scenario follows, such as the cadence, the length of a turn and how to confirm.
+2. **Tone,** COR-016's tone rules: the norms every scenario follows, such as the cadence, the length of a turn and how to confirm.
 3. **Scenarios,** each with its *Trigger*, *Preconditions*, *Walkthrough* of example dialogue, and *Behind the scenes*: the writes and side effects. An edge case is a scenario of its own.
 
 One `storyboard.md` may hold several scenarios that share their framing and tone. Scenarios that diverge go in files of their own beside the agent, each named `<scenario-slug>.storyboard.md`.
@@ -61,8 +62,7 @@ A storyboard is a helper beside its agent's definition, so the definition takes 
 - **The body's reference carries weight.** The definition declares the storyboard, and its body tells the agent to read and follow it.
 - **One source of truth.** No deployed copy exists to drift from the storyboard.
 
-<a id="frontmatter-declaration"></a>
-## Front matter
+## Frontmatter declaration
 
 The agent and the storyboard each declare the other (COR-016). The agent's side:
 
@@ -97,7 +97,6 @@ consumers:
 ```
 
 - **`consumers:`** is a non-empty list, each entry one artefact that drives the storyboard's scenarios. Today each is an agent, `kind: agent`, with its `name` and its `namespace`: `core`, `project`, or a capability's name.
-- **A list, not one value,** so a storyboard that two consumers share needs no new shape. Today each storyboard has one consumer.
 
 What the reference graph's check, `refs validate`, checks, failing on each finding:
 
