@@ -73,7 +73,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no command lists issues signed by their [owner](../../../glossary.md#term-owner--owner). DEC-035 point 7 decides the signed listing and its narrowing, and #521 tracks it.
 
-3. For each [Task](../../../glossary.md#term-task--task) In Progress or in Review, the worker finds the Task's branch, whose name carries the Task's number, and checks the branch out ([DEC-013](../../../../../../.pkit/capabilities/project-management/decisions/DEC-013-branch-and-pr-conventions.md)).
+3. For each [Task](../../../glossary.md#term-task--task) In Progress or in Review, the worker finds the Task's branch, named with the Task's number, and checks the branch out ([DEC-013](../../../../../../.pkit/capabilities/project-management/decisions/DEC-013-branch-and-pr-conventions.md)).
 4. The worker reads the branch's commits, and the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) where one is open, to see what was done.
 5. The worker goes on from there, and builds the rest of the Task, as `UC-084` steps 9, 7 and 8 describe.
 
