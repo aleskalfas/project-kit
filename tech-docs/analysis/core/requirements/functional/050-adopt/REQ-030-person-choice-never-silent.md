@@ -13,11 +13,15 @@ pkit:
   friction:
     anchors:
       path:
+        - src/project_kit/upgrade.py
+        - src/project_kit/capabilities.py
+        - src/project_kit/point_questions.py
         - tests/test_upgrade.py
         - tests/test_capabilities.py
         - tests/test_point_questions.py
       record:
         - COR-059#4
+        - ADR-065#4
         - ADR-065#6
       artefact:
         - ACT-adopter

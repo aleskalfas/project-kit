@@ -122,7 +122,7 @@ A capability is a [component](../glossary.md#term-component--component) that pac
 - A project installs it, or registers it where the project authors the capability itself ([COR-031 point D3](../../../../.pkit/decisions/core/COR-031-capability-origin.md#d3--registering-an-incubated-capability-does-not-copy)).
 - It may depend on other capabilities, each through a [range](../glossary.md#term-range--range) ([COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)).
 - It ships the agent definitions its discipline needs ([COR-026](../../../../.pkit/decisions/core/COR-026-agent-placement-by-discipline.md)).
-- It may ship [operational rules](../glossary.md#term-operational-rule--operational-rule) of its own, as one loaded [rule set](../glossary.md#term-rule-set--rule-set) ([COR-070 point 1](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#1-a-capability-ships-at-most-one-loaded-set-and-its-loaded-file-travels-with-it)).
+- It may ship [operational rules](../glossary.md#term-operational-rule--operational-rule) of its own ([COR-070 point 1](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#1-a-capability-ships-at-most-one-loaded-set-and-its-loaded-file-travels-with-it)).
 
 **States:** None.
 

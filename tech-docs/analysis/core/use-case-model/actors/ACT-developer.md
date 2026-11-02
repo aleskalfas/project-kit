@@ -12,7 +12,7 @@ needs:
   - Know before I push that my change passes the checks my project gates its merges on.
   - Have a substantive draft challenged before I adopt it, and have my diff checked against the methodology's conventions before I commit it.
   - Land my change on the default branch as one squash commit with a conventional title, through a pull request or directly when I work alone.
-  - Turn recurring work into my project's own skill or agent, designing its dialogue as a storyboard first.
+  - Turn recurring work into my project's own skill or agent definition, designing its dialogue as a storyboard first.
   - Declare what my change means for the next release, in changesets naming what it moves, the backbone or a component, and the segment I judge.
   - Resolve what the default branch left out of date, knowing for each debt the change it came from.
 pkit:
@@ -26,6 +26,9 @@ pkit:
         - COR-050#3
         - COR-050#6
         - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
 ---
 
 # ACT-developer — Developer

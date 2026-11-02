@@ -13,6 +13,8 @@ pkit:
   friction:
     anchors:
       path:
+        - src/project_kit/upgrade.py
+        - src/project_kit/capabilities.py
         - tests/test_upgrade.py
         - tests/test_capabilities.py
       record:
