@@ -1,0 +1,639 @@
+"""The pipeline: a piece's files joined to the engine (visual-communication DEC-002 point 5,
+DEC-003 point 8, DEC-005 points 5 to 7, DEC-006 point 5).
+
+The engine knows nothing of the working folder, pieces, the list or the configuration; it
+reads through an `Env` (`env.py`). This module builds the real one from a project's files:
+
+- **A piece** is a folder of the location's `pieces/`: its `piece.yaml`, a content file
+  `content.<language>.yaml` for each language it lists, its local components, and what
+  a producer made for it under `produced/<output>/`. `read_piece` reads it.
+- **Its lock** names the version of each library it uses. `needed` gives the libraries
+  the piece names itself: its top's library, its brand and every library its content
+  uses; `libraries.move_lock` adds what they build on. `write_lock` writes a lock into
+  `piece.yaml` as text, every other byte kept.
+- **A project** (`Project`) is a piece under one lock: the foundations' declarations and
+  the brand read from the locked versions, the combinations the piece names, and the
+  `Env` over them. It computes one scene for each language and each key over the size
+  axes; format 1 has no size axis, so that key is always `default`.
+- **A produced picture** is read from `produced/<output>/record.yaml`. A missing record,
+  or a variant file it names that is missing, makes the picture missing for the engine,
+  with the reason kept so the finding names `pkit visual produce <piece> <output>`; it
+  never crashes the computation.
+- **The findings record's key** (`findings_key_sources`) is worked out here from the
+  current files, under form 1.
+"""
+
+from __future__ import annotations
+
+import io
+from collections.abc import Iterator, Mapping, Sequence
+from pathlib import Path
+from typing import Any
+
+from ruamel.yaml import YAML
+
+from _lib import keys, tokens, values
+from _lib.env import PictureInfo
+from _lib.files import FileError, read_bound, refuse_links, without_binding, write_whole
+from _lib.libraries import FOLDER, Held, Version
+from _lib.location import files as listed_files
+from _lib.names import PIECE, is_language, is_name, split_use
+from _lib.plugins import seam
+from _lib.reading import ReadError, load_yaml, read_yaml, sha256
+from _lib.scene import SceneResult, compute_scene
+
+#: The library that owns the shared roles, axes, families and pairs (DEC-004 point 7).
+FOUNDATIONS = "foundations"
+
+#: The folder of the location that holds the pieces, one folder each.
+PIECES = "pieces"
+
+#: The folder of the location that holds fonts a brand names by their hash.
+FONTS = "fonts"
+
+#: The files and folders of a piece's folder.
+PIECE_FILE = "piece.yaml"
+COMPONENTS = "components"
+PRODUCED = "produced"
+RECORD = "record.yaml"
+FINDINGS_FILE = "findings.yaml"
+EXPORTS_FILE = "exports.yaml"
+
+#: The key over the size axes of every scene: format 1 has no size axis (DEC-004 point 2).
+SIZE_KEY = keys.DEFAULT_KEY
+
+
+#: The byte-order mark a file may open with, which a rewrite keeps.
+BOM = "\ufeff"
+
+
+class Refused(Exception):
+    """What stops a command, or the check of a piece: the message names the file and the
+    fix."""
+
+
+def content_file(language: str) -> str:
+    """The name of a piece's content file in `language`."""
+    return f"content.{language}.yaml"
+
+
+def produce_command(piece: str, output: str) -> str:
+    return f"`pkit visual produce {piece} {output}`"
+
+
+def render_command(piece: str) -> str:
+    return f"`pkit visual render {piece}`"
+
+
+# --- a piece ------------------------------------------------------------------------------------
+
+
+class Piece:
+    """A piece's own files, read: its `piece.yaml`, and its content in each language, the
+    binding fields removed."""
+
+    def __init__(
+        self,
+        root: Path,
+        location: str,
+        name: str,
+        data: Mapping[str, Any],
+        contents: Mapping[str, Mapping[str, Any]],
+    ) -> None:
+        self.root = root
+        self.location = location
+        self.name = name
+        self.data = data
+        self.contents = contents
+
+    @property
+    def rel(self) -> str:
+        """The piece's folder, relative to the project root."""
+        return f"{self.location}/{PIECES}/{self.name}"
+
+    @property
+    def folder(self) -> Path:
+        return self.root / self.rel
+
+    def file(self, name: str) -> str:
+        """A file of the piece, relative to the project root."""
+        return f"{self.rel}/{name}" if name else self.rel
+
+    @property
+    def top(self) -> str:
+        return str(self.data["top"])
+
+    @property
+    def brand(self) -> str:
+        return str(self.data["brand"])
+
+    @property
+    def languages(self) -> list[str]:
+        return list(self.data["languages"])
+
+    @property
+    def state(self) -> str:
+        return str(self.data.get("state", ""))
+
+    @property
+    def pinned(self) -> bool:
+        return self.data.get("pinned") is True
+
+    @property
+    def lock(self) -> dict[str, str]:
+        return dict(self.data.get("lock") or {})
+
+    @property
+    def modes(self) -> dict[str, list[str]]:
+        return {axis: list(named) for axis, named in (self.data.get("modes") or {}).items()}
+
+    @property
+    def produced(self) -> Mapping[str, Any]:
+        return self.data.get("produced") or {}
+
+    @property
+    def exports(self) -> list[str]:
+        return list(self.data.get("exports") or [])
+
+    @property
+    def accepted_losses(self) -> list[Mapping[str, Any]]:
+        return [
+            entry for entry in self.data.get("accept-losses") or [] if isinstance(entry, Mapping)
+        ]
+
+
+def piece_names(root: Path, location: str) -> list[str]:
+    """The pieces of the location: each folder of its `pieces/` that holds a file."""
+    prefix = f"{location}/{PIECES}/"
+    return sorted(
+        {rel[len(prefix) :].split("/")[0] for rel in listed_files(root, f"{location}/{PIECES}")}
+    )
+
+
+def read_piece(root: Path, location: str, name: str) -> Piece:
+    """The piece `name` of the location, read. Raises Refused, naming the file and what to
+    change, when it cannot be read as a piece."""
+    if not is_name(name):
+        raise Refused(f"`{name}` is not a piece's name: lower-case words joined by hyphens")
+    rel = f"{location}/{PIECES}/{name}"
+    path = root / rel / PIECE_FILE
+    if not path.is_file():
+        raise Refused(f"{rel}/{PIECE_FILE} does not exist: the location holds no piece `{name}`")
+    try:
+        data = without_binding(read_bound(path, "piece"))
+    except (ReadError, FileError) as exc:
+        raise Refused(str(exc)) from exc
+    shown = f"{rel}/{PIECE_FILE}"
+    _require(isinstance(data.get("top"), str) and _is_use(data["top"]), shown, "top", "a use")
+    _require(is_name(data.get("brand")), shown, "brand", "a library's name")
+    languages = data.get("languages")
+    _require(
+        isinstance(languages, list) and bool(languages) and all(map(is_language, languages)),
+        shown,
+        "languages",
+        "a list of language tags",
+    )
+    _require(_is_lock(data.get("lock", {})), shown, "lock", "a mapping of libraries to versions")
+    _require(_is_modes(data.get("modes", {})), shown, "modes", "a mapping of axes to modes")
+    contents = {}
+    for language in languages:
+        content = root / rel / content_file(language)
+        if not content.is_file():
+            raise Refused(
+                f"{rel}/{content_file(language)} does not exist: the piece lists the language "
+                f"`{language}`, so write its content there"
+            )
+        try:
+            contents[language] = without_binding(read_bound(content, "content"))
+        except (ReadError, FileError) as exc:
+            raise Refused(str(exc)) from exc
+    return Piece(root, location, name, data, contents)
+
+
+def _require(holds: bool, file: str, key: str, shape: str) -> None:
+    if not holds:
+        raise Refused(f"{file}: `{key}` is not {shape}")
+
+
+def _is_use(value: Any) -> bool:
+    try:
+        split_use(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _is_lock(value: Any) -> bool:
+    return isinstance(value, Mapping) and all(
+        isinstance(name, str) and isinstance(version, str) for name, version in value.items()
+    )
+
+
+def _is_modes(value: Any) -> bool:
+    return isinstance(value, Mapping) and all(
+        isinstance(named, list) and all(isinstance(mode, str) for mode in named)
+        for named in value.values()
+    )
+
+
+def uses(value: Any) -> Iterator[str]:
+    """Every component a content value places by `use`, at any depth."""
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            if key == "use" and isinstance(item, str):
+                yield item
+            else:
+                yield from uses(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from uses(item)
+
+
+def needed(piece: Piece) -> list[str]:
+    """The libraries the piece names itself: its top's, its brand, and every library its
+    content uses, in name order. What they build on the lock adds."""
+    found = {piece.brand}
+    for use in [piece.top, *(use for content in piece.contents.values() for use in uses(content))]:
+        library = use.partition("/")[0]
+        if _is_use(use) and library != PIECE:
+            found.add(library)
+    return sorted(found)
+
+
+# --- writing a lock into piece.yaml -------------------------------------------------------------
+
+
+def lock_text(piece_yaml: str, lock: Mapping[str, str]) -> str:
+    """The text of a `piece.yaml` with its top-level `lock` replaced by `lock`, or added at
+    its end, every other byte kept: its comments, its order, its line endings and a
+    byte-order mark. Raises Refused when the text would not read back as it was with that
+    lock."""
+    bom = BOM if piece_yaml.startswith(BOM) else ""
+    body = piece_yaml[len(bom) :]
+    lines = body.splitlines(keepends=True)
+    newline = "\r\n" if lines and lines[0].endswith("\r\n") else "\n"
+    block = [f"lock:{' {}' if not lock else ''}{newline}"]
+    block += [f"  {name}: {lock[name]}{newline}" for name in sorted(lock)]
+    start = next((i for i, line in enumerate(lines) if _is_lock_line(line)), None)
+    if start is None:
+        if lines and not lines[-1].endswith(("\n", "\r")):
+            lines[-1] += newline
+        updated = lines + block
+    else:
+        end = start
+        for index in range(start + 1, len(lines)):
+            line = lines[index]
+            if not line.strip():
+                continue
+            if line[0] not in " \t":
+                break
+            end = index
+        updated = lines[:start] + block + lines[end + 1 :]
+    text = bom + "".join(updated)
+    try:
+        before, after = load_yaml(body), load_yaml(text[len(bom) :])
+    except ReadError as exc:
+        raise Refused(f"{PIECE_FILE} cannot take the lock as text: {exc}") from exc
+    if not isinstance(before, Mapping) or after != {**before, "lock": dict(lock)}:
+        raise Refused(
+            f"{PIECE_FILE} cannot take the lock as text: write its top-level `lock:` as a block "
+            f"mapping, one library a line"
+        )
+    return text
+
+
+def _is_lock_line(line: str) -> bool:
+    head = line.split("#", 1)[0].rstrip()
+    return head == "lock:" or head.startswith(("lock: ", "lock:\t"))
+
+
+def write_lock(piece: Piece, lock: Mapping[str, str]) -> bool:
+    """Write `lock` into the piece's `piece.yaml` (`lock_text`); False, writing nothing,
+    when it holds that lock already. Raises Refused."""
+    if piece.lock == dict(lock) and "lock" in piece.data:
+        return False
+    path = piece.folder / PIECE_FILE
+    text = path.read_bytes().decode("utf-8")
+    try:
+        refuse_links(piece.root, path)
+    except FileError as exc:
+        raise Refused(str(exc)) from exc
+    write_whole(path, lock_text(text, lock).encode("utf-8"))
+    return True
+
+
+# --- a piece under one lock ---------------------------------------------------------------------
+
+
+class Project:
+    """A piece under one lock: the foundations' declarations and the brand read from the
+    locked versions, the combinations the piece names, and the `Env` the engine reads.
+
+    Raises Refused when the lock lacks the foundations or the brand, or the piece names a
+    mode its brand lacks; `tokens.TokenError`, carrying its findings, when the
+    declarations or the brand cannot be read."""
+
+    def __init__(self, piece: Piece, lock: Mapping[str, str], held: Held) -> None:
+        self.piece = piece
+        self.lock = dict(lock)
+        self.held = held
+        self.root = piece.root
+        self.location = piece.location
+        roles = self.version_folder(FOUNDATIONS) / "roles.yaml"
+        self.foundations = tokens.read_declarations(
+            roles,
+            library=self.label(FOUNDATIONS),
+            shown=roles.relative_to(self.root).as_posix(),
+        )
+        self.brand = tokens.read_brand(
+            self.version_folder(piece.brand),
+            self.foundations,
+            fonts=self.root / self.location / FONTS,
+            root=self.root,
+        )
+        try:
+            self.combinations = keys.combinations(piece.modes, self.brand.axes)
+        except keys.BadKey as exc:
+            raise Refused(f"{piece.file(PIECE_FILE)}: `modes`: {exc}") from exc
+        self.keys = [keys.key_of(combination, self.brand.axes) for combination in self.combinations]
+        self.env = ProjectEnv(self)
+
+    def label(self, library: str) -> str:
+        """`<library>@<version>` of a locked library."""
+        return f"{library}@{self.lock[library]}"
+
+    def version_folder(self, library: str) -> Path:
+        """The folder of the version of `library` the lock names. Raises Refused when the
+        lock names none, or the project does not hold it."""
+        version = self.lock.get(library)
+        if version is None:
+            raise Refused(
+                f"the lock of {self.piece.file(PIECE_FILE)} names no `{library}`: run "
+                f"{render_command(self.piece.name)}"
+            )
+        folder = self.root / self.location / FOLDER / library / version
+        if not (folder / "library.yaml").is_file():
+            raise Refused(
+                f"the lock of {self.piece.file(PIECE_FILE)} names {library}@{version}, which "
+                f"the project does not hold"
+            )
+        return folder
+
+    def values(self) -> dict[str, Any]:
+        """The document of the brand's resolved values in every combination the piece names
+        (DEC-005 point 7)."""
+        return values.document(self.brand, self.combinations, self.lock)
+
+    def scenes(self) -> list[tuple[str, SceneResult]]:
+        """One scene for each language, at the key over the size axes, in the piece's order
+        of languages. Raises `env.MissingFont` (and so `text.MissingGlyph`) before anything
+        is laid out."""
+        return [
+            (
+                language,
+                compute_scene(
+                    piece=self.piece.name,
+                    top=self.piece.top,
+                    content=dict(self.piece.contents[language]),
+                    language=language,
+                    lock=self.lock,
+                    size_key=SIZE_KEY,
+                    seam_version=seam.SEAM_VERSION,
+                    env=self.env,
+                ),
+            )
+            for language in self.piece.languages
+        ]
+
+
+class ProjectEnv:
+    """The `Env` the engine reads a project through: components from the locked versions
+    and the piece's own folder, roles and fonts from the brand, produced pictures from
+    their records, and the lock.
+
+    It keeps what the engine asked for that a check needs: why a produced picture is
+    missing (`missing`), the records read (`records`), and the font files read from the
+    location's `fonts/` (`fonts_read`)."""
+
+    def __init__(self, project: Project) -> None:
+        self._project = project
+        self._components: dict[str, dict[str, Any] | None] = {}
+        self.missing: dict[str, str] = {}
+        self.records: dict[str, Mapping[str, Any]] = {}
+        self.fonts_read: set[Path] = set()
+
+    def component(self, use: str) -> dict:
+        if use not in self._components:
+            self._components[use] = self._read_component(use)
+        found = self._components[use]
+        if found is None:
+            raise KeyError(use)
+        return found
+
+    def _read_component(self, use: str) -> dict[str, Any] | None:
+        path = self.component_path(use)
+        if path is None or not path.is_file():
+            return None
+        try:
+            data = read_yaml(path)
+        except ReadError:
+            return None
+        return dict(data) if isinstance(data, Mapping) else None
+
+    def component_path(self, use: str) -> Path | None:
+        """The file of a component, by its use; None where the lock names no version of its
+        library."""
+        try:
+            library, name = split_use(use)
+        except ValueError:
+            return None
+        project = self._project
+        if library == PIECE:
+            return project.piece.folder / COMPONENTS / f"{name}.yaml"
+        version = project.lock.get(library)
+        if version is None:
+            return None
+        folder = project.root / project.location / FOLDER / library / version
+        return folder / COMPONENTS / f"{name}.yaml"
+
+    def role(self, token_path: str) -> dict:
+        return self._project.brand.resolve(token_path, {})
+
+    def font_file(self, family: str) -> Path:
+        path = self._project.brand.font_file(family)
+        fonts = self._project.root / self._project.location / FONTS
+        if path.parent == fonts:
+            self.fonts_read.add(path)
+        return path
+
+    def picture(self, output: str) -> PictureInfo:
+        if output in self.missing:
+            raise KeyError(output)
+        if output not in self.records:
+            try:
+                self.records[output] = self._read_record(output)
+            except _Missing as exc:
+                self.missing[output] = str(exc)
+                raise KeyError(output) from exc
+        record = self.records[output]
+        return PictureInfo(
+            variants={
+                key: {"file": variant["file"], "pixels": dict(variant["pixels"])}
+                for key, variant in record["variants"].items()
+            },
+            points={point: dict(places) for point, places in record["points"].items()},
+        )
+
+    def _read_record(self, output: str) -> Mapping[str, Any]:
+        piece = self._project.piece
+        if not is_name(output):
+            raise _Missing(f"`{output}` is not the name of a produced output")
+        folder = piece.folder / PRODUCED / output
+        rel = piece.file(f"{PRODUCED}/{output}/{RECORD}")
+        if not (folder / RECORD).is_file():
+            raise _Missing(f"{rel} does not exist: the picture was never produced")
+        try:
+            record = read_bound(folder / RECORD, "produced-record")
+            variants, points = record["variants"], record["points"]
+            for key, variant in variants.items():
+                file, pixels = variant["file"], variant["pixels"]
+                if not isinstance(file, str) or "/" in file or not (folder / file).is_file():
+                    raise _Missing(
+                        f"{rel} names the variant `{key}` file `{file}`, which is missing"
+                    )
+                int(pixels["width"]), int(pixels["height"])
+            for places in points.values():
+                for place in places.values():
+                    float(place["x"]), float(place["y"])
+        except (ReadError, FileError) as exc:
+            raise _Missing(f"{rel} cannot be read: {exc}") from exc
+        except (KeyError, TypeError, ValueError, AttributeError) as exc:
+            raise _Missing(f"{rel} is not of the shape of a produced output's record") from exc
+        return record
+
+    def pictures_at(self, key: str) -> dict[str, Path]:
+        """The file of the variant that serves the combination `key`, of each produced output
+        the engine read; an output whose record maps `key` to no variant is left out."""
+        found = {}
+        for output, record in sorted(self.records.items()):
+            combinations = record.get("combinations")
+            variant = combinations.get(key) if isinstance(combinations, Mapping) else None
+            entry = record["variants"].get(variant)
+            if isinstance(entry, Mapping):
+                found[output] = self._project.piece.folder / PRODUCED / output / entry["file"]
+        return found
+
+    def library_version(self, library: str) -> str:
+        return self._project.lock[library]
+
+
+class _Missing(Exception):
+    """Why a produced picture is missing."""
+
+
+# --- drawing ------------------------------------------------------------------------------------
+
+
+def colours_at(document: Mapping[str, Any], key: str) -> dict[str, Any]:
+    """The value of each colour role of a values document in the combination `key`."""
+    return {
+        path: token["values"][key]
+        for path, token in document["tokens"].items()
+        if token["type"] == "color"
+    }
+
+
+def drawn(
+    project: Project, results: Sequence[tuple[str, SceneResult]], renderer: str
+) -> Iterator[tuple[str, str, Any]]:
+    """Each scene drawn by the renderer `renderer` in each combination the piece names, in
+    the order of the piece's languages and of the keys: the language, the key, and what the
+    renderer gives (`render`, the renderers' entry of the seam)."""
+    implementation = seam.implementation(renderer)
+    document = project.values()
+    for language, result in results:
+        scene = result.scene.to_dict()
+        for key in project.keys:
+            yield (
+                language,
+                key,
+                implementation.render(
+                    scene,
+                    key=key,
+                    colours=colours_at(document, key),
+                    font_file=project.brand.font_file,
+                    pictures=project.env.pictures_at(key),
+                ),
+            )
+
+
+# --- the inputs of a fingerprint, worked out from the current files -----------------------------
+
+
+def findings_key_sources(
+    root: Path,
+    held: Held,
+    piece: Piece,
+    lock: Mapping[str, str],
+    fonts: Sequence[Path],
+) -> dict[str, Any]:
+    """What `fingerprint.findings_key_inputs` and `export_inputs` read, form 1: the piece's
+    files as git sees them, every file of each locked version the project holds, and the
+    fonts of the location's `fonts/` that were read."""
+    files = [root / rel for rel in listed_files(root, piece.rel)]
+    versions = {}
+    for library, text in lock.items():
+        try:
+            version = Version.parse(text)
+        except ValueError:
+            continue
+        folder = held.folders.get(library, {}).get(version)
+        if folder is not None:
+            versions[library] = (text, folder, held.files(library, version))
+    return {"piece": piece.folder, "files": files, "versions": versions, "fonts": list(fonts)}
+
+
+def recorded_fonts(root: Path, location: str, recorded: Mapping[str, Any]) -> list[Path]:
+    """The fonts of the location's `fonts/` whose hashes a fingerprint names, as they lie
+    now: a font named and no longer held is left out, so the fingerprint no longer
+    verifies."""
+    wanted = {
+        entry["font"]
+        for entry in recorded.get("inputs") or []
+        if isinstance(entry, Mapping) and isinstance(entry.get("font"), str)
+    }
+    folder = root / location / FONTS
+    if not wanted or not folder.is_dir():
+        return []
+    return sorted(
+        path
+        for path in folder.iterdir()
+        if path.is_file() and not path.is_symlink() and sha256(path.read_bytes()) in wanted
+    )
+
+
+# --- writing a record ---------------------------------------------------------------------------
+
+
+def yaml_text(data: Mapping[str, Any], header: str) -> str:
+    """A file a command writes whole: `header`, a comment of `# ` lines, then `data` as
+    block YAML, indented as the capability's reference instances are."""
+    yaml = YAML()
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.width = 4096
+    yaml.representer.ignore_aliases = lambda *_: True
+    stream = io.StringIO()
+    yaml.dump(dict(data), stream)
+    comment = "".join(f"# {line}\n" if line else "#\n" for line in header.splitlines())
+    return f"{comment}\n{stream.getvalue()}"
+
+
+def write_file(root: Path, path: Path, data: bytes) -> None:
+    """Write a file a command owns whole, making its folders. Raises Refused where it is
+    reached through a link."""
+    try:
+        refuse_links(root, path)
+    except FileError as exc:
+        raise Refused(str(exc)) from exc
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_whole(path, data)

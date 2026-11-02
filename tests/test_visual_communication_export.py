@@ -1,0 +1,253 @@
+"""`pkit visual export <piece>` (visual-communication DEC-006 point 7): numbered exports in
+the clone's local folder, never overwriting another; their record, `exports.yaml`; and no
+stale or missing produced picture, unless the person names a stale one."""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+from collections.abc import Iterator
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from tests import visual_communication_producer as producer
+from tests.in_process import load, run_main
+from tests.test_visual_communication_pipeline import (
+    LOCK,
+    PIECE,
+    PIECE_FOLDER,
+    drawing_project,
+    write_picture,
+)
+from tests.visual_communication_project import CONFIG
+
+script, exports, svg, seam, framing, files, reading, fingerprint, pl = load(
+    "visual-communication",
+    "export.py",
+    "exports",
+    "plugins.svg",
+    "plugins.seam",
+    "framing",
+    "files",
+    "reading",
+    "fingerprint",
+    "pipeline",
+)
+
+FOLDER = ".pkit/capabilities/visual-communication/project/local/exports/flow"
+RECORD = f"{PIECE_FOLDER}/exports.yaml"
+
+
+@pytest.fixture(autouse=True)
+def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """The renderer stands in for the import a run makes when it draws, and the test
+    producer is registered, for the length of the test."""
+    monkeypatch.setitem(sys.modules, "_lib.plugins.svg", svg)
+    producer.register(seam)
+    yield
+    seam.unregister(producer.NAME)
+
+
+def run(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return run_main(script, *args, cwd=root)
+
+
+def ready(tmp_path: Path, **fields: Any) -> Path:
+    """The skeleton piece with its picture, ready to export."""
+    root = drawing_project(tmp_path, **fields)
+    write_picture(root, framing)
+    return root
+
+
+def exported(root: Path) -> list[str]:
+    return sorted(path.name for path in (root / FOLDER).iterdir())
+
+
+def test_each_run_takes_the_next_number_and_records_it(tmp_path: Path) -> None:
+    root = ready(tmp_path)
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert shown.stdout.splitlines() == [
+        f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
+        f"to move the work, move the folder and change the `location:` line there",
+        f"export: {FOLDER}/flow.v1.en.default.svg",
+        f"export: {FOLDER}/flow.v1.en.colour-scheme.dark.svg",
+        f"export: version 1 recorded in {RECORD}",
+    ]
+    assert run(root, PIECE).returncode == 0
+    assert exported(root) == [
+        "flow.v1.en.colour-scheme.dark.svg",
+        "flow.v1.en.default.svg",
+        "flow.v2.en.colour-scheme.dark.svg",
+        "flow.v2.en.default.svg",
+    ]
+    record = reading.read_yaml(root / RECORD)
+    assert files.shape_problems(record, "exports") == []
+    first, second = record["versions"]
+    assert (first["version"], second["version"]) == (1, 2)
+    assert first["fingerprint"] == second["fingerprint"]
+    assert second["files"] == {
+        name: reading.sha256((root / FOLDER / name).read_bytes())
+        for name in ("flow.v2.en.default.svg", "flow.v2.en.colour-scheme.dark.svg")
+    }
+    recorded = second["recorded"]
+    assert (recorded["state"], recorded["renderers"], recorded["used-stale"]) == (
+        "draft",
+        {"svg": "1.0.0"},
+        [],
+    )
+    assert "time: '" in (root / RECORD).read_text(encoding="utf-8")
+
+
+def test_an_export_draws_what_the_preview_draws(tmp_path: Path) -> None:
+    root = ready(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    light = (root / FOLDER / "flow.v1.en.default.svg").read_text(encoding="utf-8")
+    assert light.startswith("<svg ") and 'data-key="default"' in light
+    assert "data:image/png;base64," in light
+
+
+def test_it_uses_the_lock_as_written_and_never_moves_it(tmp_path: Path) -> None:
+    root = ready(tmp_path)
+    before = (root / PIECE_FOLDER / "piece.yaml").read_text(encoding="utf-8")
+    assert run(root, PIECE).returncode == 0
+    assert (root / PIECE_FOLDER / "piece.yaml").read_text(encoding="utf-8") == before
+    assert reading.read_yaml(root / PIECE_FOLDER / "piece.yaml")["lock"] == LOCK
+
+
+# --- stale and missing pictures -----------------------------------------------------------------
+
+
+def make_stale(root: Path) -> None:
+    """Give the picture another size than its record was made at."""
+    path = root / PIECE_FOLDER / "piece.yaml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("width: 100", "width: 120"), encoding="utf-8"
+    )
+
+
+def test_a_stale_picture_stops_the_export_naming_what_changed(tmp_path: Path) -> None:
+    root = ready(tmp_path)
+    make_stale(root)
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr.startswith("error: a produced picture is stale: `square` (")
+    assert "`piece.yaml` at `produced.square` changed; the pixel size of the variant" in (
+        shown.stderr
+    )
+    assert shown.stderr.rstrip().endswith(
+        "Run `pkit visual produce flow <output>` for each, or name it with `--use-stale "
+        "<output>` to export it as it is"
+    )
+    assert not (root / FOLDER).exists()
+    assert not (root / RECORD).exists()
+
+
+def test_a_stale_picture_named_is_used_and_recorded(tmp_path: Path) -> None:
+    root = ready(tmp_path)
+    make_stale(root)
+    shown = run(root, PIECE, "--use-stale", "square")
+    assert shown.returncode == 0, shown.stderr
+    assert "used while stale: square" in shown.stdout.splitlines()
+    [version] = reading.read_yaml(root / RECORD)["versions"]
+    assert version["recorded"]["used-stale"] == ["square"]
+
+
+def test_a_combination_the_record_does_not_map_makes_the_picture_stale(tmp_path: Path) -> None:
+    root = ready(tmp_path)
+    path = root / PIECE_FOLDER / "piece.yaml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "colour-scheme:\n", "contrast:\n    - high\n  colour-scheme:\n"
+        ),
+        encoding="utf-8",
+    )
+    piece = pl.read_piece(root, "visual", PIECE)
+    project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+    project.scenes()
+    stale = exports.stale_outputs(project)
+    assert "the combination `contrast.high` has no variant" in stale["square"]
+
+
+def test_a_missing_picture_stops_the_export_whatever_is_named(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path)
+    shown = run(root, PIECE, "--use-stale", "square")
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        "error: a produced picture the piece shows is missing: `square`: "
+        f"{PIECE_FOLDER}/produced/square/record.yaml does not exist: the picture was never "
+        "produced — run `pkit visual produce flow square`\n"
+    )
+
+
+# --- refusals -----------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("fields", "said"),
+    [
+        pytest.param(
+            {"lock": None},
+            "error: the lock of visual/pieces/flow/piece.yaml cannot be exported: the piece has "
+            "no lock yet",
+            id="no-lock",
+        ),
+        pytest.param(
+            {"exports": []},
+            "error: visual/pieces/flow/piece.yaml declares no format under `exports`: name "
+            "`svg` there",
+            id="no-format",
+        ),
+    ],
+)
+def test_a_refusal_exits_1_and_writes_nothing(
+    tmp_path: Path, fields: dict[str, Any], said: str
+) -> None:
+    root = drawing_project(tmp_path, **fields)
+    if fields.get("lock", LOCK) is not None:
+        write_picture(root, framing)
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr.startswith(said)
+    assert not (root / CONFIG).exists()
+    assert not (root / FOLDER).exists()
+    assert not (root / RECORD).exists()
+
+
+def test_a_file_of_the_next_number_left_in_the_folder_is_never_overwritten(
+    tmp_path: Path,
+) -> None:
+    root = ready(tmp_path)
+    left = root / FOLDER / "flow.v1.en.default.svg"
+    left.parent.mkdir(parents=True)
+    left.write_text("kept\n", encoding="utf-8")
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert "holds flow.v1.en.default.svg already" in shown.stderr
+    assert left.read_text(encoding="utf-8") == "kept\n"
+    assert not (root / RECORD).exists()
+
+
+def test_a_record_that_cannot_be_read_stops_the_next_export(tmp_path: Path) -> None:
+    root = ready(tmp_path)
+    (root / RECORD).write_text("pkit_schema: visual-communication:exports\n[", encoding="utf-8")
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert "mend it before the next export" in shown.stderr
+
+
+def test_the_export_fingerprint_changes_with_what_the_scenes_were_computed_from(
+    tmp_path: Path,
+) -> None:
+    root = ready(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    path = root / PIECE_FOLDER / "content.en.yaml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("Build it.", "Build it well."),
+        encoding="utf-8",
+    )
+    assert run(root, PIECE).returncode == 0
+    first, second = reading.read_yaml(root / RECORD)["versions"]
+    assert first["fingerprint"] != second["fingerprint"]
