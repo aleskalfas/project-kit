@@ -47,7 +47,7 @@ pkit:
 
 <a id="where-this-content-came-from"></a>
 
-An agent definition gives an AI agent a standing role ([COR-013](../decisions/core/COR-013-agent-architecture.md)). Its front matter declares what the agent reads, owns and needs, and its body says how the agent works. Core ships some, an installed capability ships its own, and the project writes the rest. Why they exist, and how people dispatch the reviewers and write their own, is in [the agents guide](https://github.com/aleskalfas/project-kit/blob/latest/docs/agents/README.md).
+An agent definition gives an AI agent a standing role ([COR-013](../decisions/core/COR-013-agent-architecture.md)). Its front matter declares what the agent reads, owns and needs, and its body says how the agent works. Definitions come from core, from an installed capability and from the project. Why they exist, and how people dispatch the reviewers and write their own, is in [the agents guide](https://github.com/aleskalfas/project-kit/blob/latest/docs/agents/README.md).
 
 ## Contents
 
@@ -161,7 +161,11 @@ So cite a path in backticks, a record by its id and a hook by its name.
 **Reviewers.** A reviewer is an agent that judges work and returns a verdict or findings, such as COR-024's reviewers or a capability's review panel. What its read-only means:
 
 - **It changes nothing it judges.** It never changes the work under review or the repository the work lives in. It edits no tracked file, and stages, commits and pushes nothing, since its verdict is worth only its independence. That is the whole claim.
-- **It may still write.** A reviewer with a shell among its tools may need working files to review well. Examples are a dumped diff, a script, captured output, or a reproduction that runs a payload to prove a defect.
+- **It may still write.** A reviewer with a shell among its tools may need working files to review well, such as these:
+  - a dumped diff
+  - a script
+  - captured output
+  - a reproduction that runs a payload to prove a defect
 - **Its working files** go in the agent workspace, never loose in the repository, where an author's `git add` sweeps them into a commit. They never go in `/tmp/` either. A review leaves no file of its own outside the workspace.
 - **One section for the role.** Every reviewer that can run commands carries the same section, `## What read-only covers`, word for word, just before its `## Intermediate files`. Copy it from a shipped reviewer, such as `.pkit/agents/core/methodology-reviewer.md`. State any read-only claim elsewhere in its body or its description with the same scope.
 
@@ -196,13 +200,19 @@ Any other answer is a person's decision, and so is a reason for having no anchor
   4. **It is not a reviewer.** An agent that judges work writes nothing on what it judges ("Reviewers" above), so a reviewer runs no writer.
 - **An agent named as the delegate** decides, in a person's place, the answers no change owes (COR-064 point 1). The paragraph after this list names them. Its body says when it decides as the delegate (COR-013).
   - **Where.** Only where the default branch's configuration names it, and under its definition as the default branch holds it.
-  - **Whose drafts.** Only an answer another agent drafted. Never one it proposed, one its own change found unasked, or one a component's record keeps for a person.
-  - **How.** It reads every word, as condition 3 asks of the person. It accepts the answer, declines it, or rewords its words without changing its outcome or its content. Where what the artefact rests on changed after it decided, it decides again before the answer is written.
+  - **Whose drafts.** Only an answer another agent drafted. Never one of these:
+    - one it proposed
+    - one its own change found unasked
+    - one a component's record keeps for a person
+  - **How.** It reads every word, as condition 3 asks of the person. Where what the artefact rests on changed after it decided, it decides again before the answer is written. With each answer it does one of these:
+    - accepts it
+    - declines it
+    - rewords its words without changing its outcome or its content
   - **From the files.** It judges from what the artefact and its anchors hold. An account, such as a commit message, a pull request's text or a drafter's evidence, is a lead, never a ground. It refers to a person any answer only such an account could settle, whether a change was meant among them.
   - **Never** what COR-064 point 6 leaves to a person.
   - **No reviewer.** Deciding an answer is no review: the delegate judges a draft before anything writes it, not work under review. So condition 4 does not bar it from writing an answer it decided.
   - **Only where a reviewer checks.** Where the project chose no reviewer of the answers, or chose the delegate itself, it decides nothing.
-  - **The person is told** each answer it decided, with the change that writes it, and each it declined, in its own report and with that change, as information.
+  - **The person is told** each answer it decided, with the change that writes it, and each it declined. The person is told in the delegate's own report and with that change, as information.
 
 Any agent writes any other answer, on an artefact or for a target a change was not asked about, only under the four conditions above. The same holds for every reason for having no anchors. A reviewer checks every such answer and reason a change writes, whoever decided it, from the change check's own list (COR-064 point 4). That reviewer is neither the delegate nor the answer's drafter, and blocks the merge when one does not hold.
 
@@ -223,7 +233,10 @@ Commands an agent returns are run by one of these:
 - **Forward:** each entry of `reads`, `owns`, `needs` and `answers` appears in the body. An unused declaration is reported.
 - **Backward:** each path, record id and hook the body cites is declared in the front matter. An undeclared citation is reported.
 - **How a command grades it:** `pkit refs validate` fails on a finding of either direction, and exits 1. `pkit validate` reports the same finding as a warning in its `refs` member, and passes, since the body is read by a heuristic.
-- **Every other finding** of the graph fails both commands. Examples are a path with two owners, a hook with no provider, or a storyboard one side leaves out.
+- **Every other finding** of the graph fails both commands, such as these:
+  - a path with two owners
+  - a hook with no provider
+  - a storyboard one side leaves out
 - **The exceptions** warn in both commands: a cited point its record does not hold, and a cited operational rule that is missing or retired.
 
 **What the backward check leaves out.** It is meant for reads whose place an overlay can move, so three kinds of path in a body need no declaration:
@@ -349,7 +362,10 @@ Three commands diagnose and repair the overlay, each described below (COR-013). 
 - **Where one does,** a terminal is asked once for the run. The question lists each `category = path` with the agents that reach it, and the rest of the run beside it. `--yes` consents without a prompt.
 - **Off a terminal without `--yes`,** the run refuses with exit 1. It names the command with `--yes`, and `reconcile` to see the change first.
 - **A "no" or a refusal** writes nothing at all: no folder, no overlay line and no deploy. A folder `adopt` creates, or one that holds nothing, is recorded without asking.
-- **Each recording** prints what it recorded, the root its path came from, and where to change it.
+- **Each recording** prints these:
+  - what it recorded
+  - the root its path came from
+  - where to change it
 
 **When it stops.** A second run on an adopted agent changes nothing, asks nothing, and deploys again. It errs on these:
 
@@ -399,7 +415,10 @@ The values are those of Claude Code, the one harness an adapter ships for today.
 
 - **`inherit`,** like an absent or bare key, writes no key into the deployed copy, so the harness's default applies. An override of `inherit` is how a project resets a shipped value.
 - **The shipped definitions** set neither key. This is the mechanism, not a policy.
-- **A value outside the vocabulary** is never written. The deploy drops it, the agent deploys and inherits, and the run prints a `warning` line naming the value. The reference graph's checks report it as an error in both commands ("The reference graph" above). They report it at the agent's file for a front-matter value, and at `overlay.yaml` for an override.
+- **A value outside the vocabulary** is never written:
+  - The deploy drops it, and the agent deploys and inherits.
+  - The run prints a `warning` line naming the value.
+  - The reference graph's checks report it as an error in both commands ("The reference graph" above). They report it at the agent's file for a front-matter value, and at `overlay.yaml` for an override.
 - **Reported by `pkit agents`.** Each row shows the effective value and where it came from, such as `model inherit`, `model sonnet` or `effort high (overlay)`, and a refused value as refused.
 
 ## Deploy mechanics
@@ -438,7 +457,11 @@ More on the order:
 
 - **Read the same way** by each command that names the definition that deploys. These are `pkit agents`, the ownership check of `pkit refs validate`, and `pkit new storyboard` without `--namespace` ([`storyboards.md`](storyboards.md#authoring)). So where a capability ships a core agent's name, the capability's is the one deployed.
 - **Between two capabilities** there is no precedence. A capability's install names each agent another capability ships under the same name, and asks for each: `override`, `skip` or `inspect`. `skip` keeps the installed agent.
-- **A collision that reaches the deploy** is not refused: the first capability by name wins. Resolve it by renaming an agent, skipping it at install, uninstalling a capability, or shipping a project agent of that name.
+- **A collision that reaches the deploy** is not refused: the first capability by name wins. Resolve it in one of these ways:
+  - rename an agent
+  - skip it at install
+  - uninstall a capability
+  - ship a project agent of that name
 - **Rare by design.** An agent that implies a discipline belongs in its capability, not in core (COR-026). A capability and core share a name only to override on purpose.
 
 ### Why copies, not symlinks
@@ -494,7 +517,7 @@ What the command does:
 Each part of the agent definitions is described here, or on one of the pages beside this one:
 
 - [`hooks.md`](hooks.md) — how an agent declares the operations it invokes, and how one provider is chosen for each.
-- [`storyboards.md`](storyboards.md) — when a definition takes a storyboard, what a storyboard holds, where it lives, and how both sides declare it.
+- [`storyboards.md`](storyboards.md) — storyboards: when a definition takes one, their structure, their place and their front matter.
 
 **Where each section that left this page went:**
 

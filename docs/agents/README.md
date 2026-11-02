@@ -50,7 +50,7 @@ pkit:
 
 # Agent definitions
 
-An agent definition gives an AI agent a standing role, with what it reads, which paths it owns and which tools it uses. The core ships six, among them the reviewers that challenge a draft and check a diff, and you write your own beside them. This guide says why the definitions exist and how they reach a session, and then gives your tasks with them. What an agent needs to work with them, such as each field of a definition, is in [the agents reference](../../.pkit/agents/README.md).
+An agent definition gives an AI agent a standing role: its reads, the paths it owns and the tools it uses. The core ships six, among them the reviewers that challenge a draft and check a diff, and you write your own beside them. This guide says why the definitions exist and how they reach a session, and then gives your tasks with them. What an agent needs to work with them, such as each field of a definition, is in [the agents reference](../../.pkit/agents/README.md).
 
 ## Contents
 
@@ -111,7 +111,13 @@ What the output proves:
 
 ### Compared with subagent files you write by hand
 
-Without agent definitions, you write Claude Code's subagent files in `.claude/agents/` yourself. That is better on setup, on how soon an edit reaches the harness, and on the paths an agent's instructions name. **Agent definitions add reviewers ready to dispatch, your paths apart from a shared role, and checks, as [the fence above](#what-agent-definitions-do-instead) and the tasks prove:**
+Without agent definitions, you write Claude Code's subagent files in `.claude/agents/` yourself. That is better on three points, as the table marks:
+
+- setup
+- how soon an edit reaches the harness
+- the paths an agent's instructions name
+
+**Agent definitions add reviewers ready to dispatch, your paths apart from a shared role, and checks, as [the fence above](#what-agent-definitions-do-instead) and the tasks prove:**
 
 | What you need | Subagent files written by hand | Agent definitions |
 | --- | --- | --- |
@@ -191,7 +197,7 @@ Dispatch the critic before you adopt a substantive draft. Dispatch the conventio
 | `convention-compliance-reviewer` | Before you commit, or before you push what you committed. | The diff and the branch's commits. It checks each commit's form, the branch's name, edits of a synced copy, surface changes and cited records. | Nothing it judges. |
 | `rule-set-reviewer` | Beside the convention-compliance reviewer, on the change. | What the change alters or brings under a rule, against the accepted rules that bind there. | Nothing it judges. |
 
-How to dispatch each, what it returns, and what you do with it:
+Dispatching each, its result and what you do with it:
 
 - **Dispatching one.** Ask your session, such as "Use the critic agent on the plan in `docs/plan.md`".
 - **The critic and the architect advise.** Revise the draft, or answer each point you hold wrong, then adopt it. Neither refuses a draft.
@@ -236,7 +242,10 @@ Turn recurring work into a definition of your own, and design its dialogue as a 
 2. **Choose whether it needs a storyboard.** It does where you find yourself writing its dialogue in advance: its prompts, its gates and what each answer changes (COR-016). An agent that works from judgement needs none.
 3. **Stamp it.** Run `pkit new agent project <name> --with-storyboard`, or `pkit new agent project <name>` without a storyboard. Or ask your session to, through the `agent-author` skill.
 4. **Write the storyboard first,** through the `storyboard-author` skill. The storyboard gives the framing and the tone, and for each scenario its *Trigger*, *Preconditions*, *Walkthrough* and *Behind the scenes* ([the storyboards reference](../../.pkit/agents/storyboards.md)).
-5. **Write the definition's body from it.** Say when to delegate to the agent, what it reads and which paths it owns, and declare each of them in the front matter too.
+5. **Write the definition's body from it,** and declare in the front matter too what the body names. The body says:
+   - when to delegate to the agent
+   - what it reads
+   - which paths it owns
 6. **Write your paths as they are.** The body keeps whatever it names. Name a path by a category, such as `<release-notes>`, only where another project or several agents share the definition's paths. Then name the category's paths in the overlay, and have the body send the agent there, as the architect's does.
 7. **Set its tools.** The stamp grants `Read`, `Glob`, `Grep` and `Bash`, and Claude Code gives the agent only those its `tools:` list names. Keep only the tools the role needs, and `Read` where it has a storyboard.
 8. **Deploy and check it.** Run `pkit sync`, then `pkit refs validate`.
