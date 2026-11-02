@@ -384,6 +384,18 @@ TERM-deferral:
           - src/project_kit/friction_write.py
         record:
           - COR-050#4
+TERM-deploy-mark:
+  name: deploy mark
+  noun-forms: [deploy marks]
+  status: active
+  definition: "sign an adapter leaves on each copy it places for its harness, such as a comment line, by which its later runs recognise their own"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/adapters/claude-code/deploy-agents.sh
+          - .pkit/adapters/claude-code/deploy-skills.sh
+          - .pkit/adapters/claude-code/undeploy-capability.sh
 TERM-distribution:
   name: distribution
   noun-forms: [distributions]
@@ -491,6 +503,19 @@ TERM-harness:
         record:
           - COR-006
           - COR-047
+TERM-harness-requirement:
+  name: harness requirement
+  noun-forms: [harness requirements]
+  status: active
+  definition: "behaviour the methodology needs of whatever tool hosts AI agents' sessions, stated so it can be observed, in no such tool's own vocabulary"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/schemas/harness-requirements.yaml
+        record:
+          - COR-047#1
+          - COR-047#4
 TERM-head:
   name: head
   other-senses: [head branch]
@@ -528,6 +553,19 @@ TERM-install:
           - COR-010
           - COR-017
           - COR-030
+TERM-instruction-file:
+  name: instruction file
+  noun-forms: [instruction files]
+  status: active
+  definition: "document a harness loads into each session it hosts, such as Claude Code's `CLAUDE.md`, through which every session takes in the operational rules"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/adapters/claude-code/merge-claude-md.sh
+        record:
+          - COR-070#2
+          - ADR-076#2
 TERM-link-target:
   name: link target
   noun-forms: [link targets]
@@ -1170,6 +1208,19 @@ TERM-storyboard:
           - src/project_kit/storyboards.py
         record:
           - COR-016
+TERM-support-declaration:
+  name: support declaration
+  noun-forms: [support declarations]
+  status: active
+  definition: "adapter's grading of how far its harness meets each harness requirement, bounded where its author says by the harness versions it holds for"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/harness_support.py
+          - .pkit/adapters/claude-code/harness-support.yaml
+        record:
+          - COR-047#2
 TERM-surface-change:
   name: surface change
   noun-forms: [surface changes]
@@ -1689,6 +1740,17 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **A `deferred` revisit entry:** puts off the revisit of one link target, never an anchor's friction (COR-050 point 16).
 - **A permission hook's deferral:** the hook hands a call it does not decide to the harness, which then decides or asks. It shares only the word (COR-028 point 2).
 
+## TERM-deploy-mark — deploy mark
+
+Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#deploy-mark).
+
+**Example:** `deploy-agents.sh` writes `# managed-by: project-kit (deploy-agents.sh)` into each agent definition it deploys. A later run removes a stale copy only where it finds that line.
+
+**Distinctions:**
+
+- **Deployed copy:** what an adapter regenerates for its harness. Its deploy mark is what shows it to be one.
+- **A file without it:** the project's own, which no run of the adapter writes over or removes (`.pkit/adapters/README.md`).
+
 ## TERM-distribution — distribution
 
 Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#distribution).
@@ -1785,6 +1847,18 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **AI agent:** the runtime that works in a harness's session (`ACT-ai-agent`).
 - **Harness requirement:** a behaviour the methodology needs of any harness, stated in no harness's own vocabulary ([COR-047 point 1](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#1-requirements-are-stated-as-observable-behaviour-never-in-a-harnesss-vocabulary)).
 
+## TERM-harness-requirement — harness requirement
+
+Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#harness-requirement).
+
+**Example:** `delegated-result-complete` is a harness requirement: a delegated agent's result reaches the session that delegated it whole, never cut short while reading as complete.
+
+**Distinctions:**
+
+- **Requirement:** a kind of the analysis, which states what must hold beyond one actor's goal. It shares only the word.
+- **Support declaration:** an adapter's grading of how far its harness meets each harness requirement (COR-047 point 2).
+- **Its observation point:** where the harness requirement is observed. What cannot be observed there is reported, never passed (COR-047 point 4).
+
 ## TERM-head — head
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#head).
@@ -1823,6 +1897,17 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 - **Installing the CLI:** puts the [system](#term-system--system)'s command on a machine ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)). It acts on no project ([COR-059 point 5](../../../.pkit/decisions/core/COR-059-version-transition.md#5-the-one-operation-rule-governs-operations-on-a-project)).
 - **Version transition:** moves what is installed to another [version](#term-version--version). Install adds what was not there.
 - **Registration:** how a project adds a capability it authors itself. Registration copies nothing ([COR-031 point D3](../../../.pkit/decisions/core/COR-031-capability-origin.md#d3--registering-an-incubated-capability-does-not-copy)).
+
+## TERM-instruction-file — instruction file
+
+Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#instruction-file).
+
+**Example:** project-kit's root `CLAUDE.md` is its instruction file. It includes `.pkit/rules/core.md` and the rules index, and the project's own rules follow.
+
+**Distinctions:**
+
+- **The harness's settings:** files such as `.claude/settings.json`, which hold permission entries, not instructions. Merge delivery adds to both.
+- **Skill:** a procedure an AI agent loads for a matching task. Every session loads the instruction file, whatever its task.
 
 ## TERM-link-target — link target
 
@@ -2435,6 +2520,18 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 - **Executable storyboard:** the demo-recording [capability](#term-capability--capability)'s document, which runs to record a demo of a command line and still reads as a document ([demo-recording DEC-003](../../../.pkit/capabilities/demo-recording/decisions/DEC-003-single-capability-deferred-split.md)). It shares only the word.
 - **Skill:** a procedure an AI agent loads for a matching task. A storyboard scripts one dialogue, and no [adapter](#term-adapter--adapter) deploys it ([COR-016](../../../.pkit/decisions/core/COR-016-scripted-scenario-storyboards.md)).
 - **Judgement-driven dialogue:** a dialogue an AI agent improvises from its context, which needs no storyboard (COR-016).
+
+## TERM-support-declaration — support declaration
+
+Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#support-declaration).
+
+**Example:** Claude Code's support declaration grades `delegated-result-complete` as `at-cost`. The result arrives whole only while the harness's agent teams are off.
+
+**Distinctions:**
+
+- **Enforcement declaration:** an adapter's statement of which layer enforces each dimension of the permission model (COR-028 point 3).
+- **Silence:** a harness requirement the support declaration leaves out reads as indeterminate, never as met (COR-047 point 3).
+- **Its harness version bound:** never widened automatically, only by an author who tested the claim (COR-047 point 2).
 
 ## TERM-surface-change — surface change
 
