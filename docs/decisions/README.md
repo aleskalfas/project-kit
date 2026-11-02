@@ -13,7 +13,7 @@ pkit:
         - .pkit/skills/core/decision-author.md
         - .pkit/agents/core/architect.md
         - .pkit/rules/core.md
-      record: [COR-001, COR-012, COR-025, COR-058, "COR-064#6", COR-065, COR-066, COR-067, COR-068]
+      record: [COR-001, COR-012, COR-025, "COR-049#5", COR-058, "COR-064#6", COR-065, COR-066, COR-067, COR-068]
       artefact:
         - ACT-developer
         - ACT-merge-authoriser
@@ -32,10 +32,15 @@ pkit:
         - .pkit/decisions/README.md#writing-a-record
         - .pkit/decisions/README.md#refining-an-accepted-record
         - .pkit/decisions/README.md#checking-a-changes-numbering
+        - .pkit/decisions/README.md#checking-a-records-points
+        - .pkit/decisions/README.md#finding-the-records-a-path-leads-to
         - .pkit/cli/README.md#init
         - .pkit/cli/README.md#surface
+        - .pkit/cli/README.md#configuration-file
         - .pkit/cli/README.md#new-decision-namespace-slug---yes
         - .pkit/rules/README.md#layout
+        - docs/scratchpad/README.md#
+        - docs/rules/README.md#
 ---
 
 # Decision records
@@ -70,10 +75,10 @@ Records answer these problems with the five claims below. The first claim answer
 - **Your records sit in your repository, in a folder of their own beside the methodology's, and a sync never writes them.**
 - **A record your agent stamps starts as `proposed`, and the methodology's rules tell agents to act only on accepted ones.**
 - **Run against the default branch as it stands, the numbering check fails a change whose record takes a number already landed** ([Record a decision](#record-a-decision)).
-- **The numbering check fails a change that renumbers a point, so a citation still names the point it cited** ([Refine a record, or supersede it](#refine-a-record-or-supersede-it)).
-- **Validation warns of a record that logs its own revisions** ([Refine a record, or supersede it](#refine-a-record-or-supersede-it)).
+- **Where your merges wait on it, the numbering check fails a renumbered point, so a citation keeps its point** ([Refine a record, or supersede it](#refine-a-record-or-supersede-it)).
+- **Validation warns of a record that logs its own revisions** ([Refine a record, or supersede it](#refine-a-record-or-supersede-it), and [the reference, "Refining an accepted record"](../../.pkit/decisions/README.md#refining-an-accepted-record)).
 
-Each fence on this page starts from a fresh project where `pkit init` has run, with no remote. So `pkit new decision` and `pkit decisions check-diff` warn that they read the local branch.
+Each fence on this page starts from a fresh project where `pkit init` has run, with no remote. So a command that reads the default branch warns that it reads the local branch ([the CLI reference, "Configuration file"](../../.pkit/cli/README.md#configuration-file)).
 
 Below, your agent stamps a record on a branch, and you commit it. Then a core record and yours are both edited, and a sync runs:
 
@@ -107,14 +112,14 @@ What the output proves, claim by claim:
 
 ### Compared with records kept by hand
 
-Without project-kit, many teams keep their decision records by hand: a folder of Markdown files, written from a template they choose. That costs no setup, takes any template and any status, and leaves your repository holding your records alone. **project-kit's records add rules that tell agents to wait for acceptance, checks on numbers, and a warning on revision logs, as this page's fences prove:**
+The alternative is to keep your decision records by hand: a folder of Markdown files, written from a template you choose. That costs no setup, and takes any template and any status. Your repository then holds your records alone. **project-kit's records add rules that tell agents to wait for acceptance, checks on numbers, and a warning on revision logs, as [this page's fences](#what-records-do-instead) prove:**
 
 | What you need | Records kept by hand | project-kit's records |
 | --- | --- | --- |
 | A file for each decision, beside the code | ✅ A folder of Markdown files | ✅ The same, in a folder apart from the methodology's |
 | An instruction to agents to act only on accepted records | ✅ One line you write in `CLAUDE.md` | ✅ Written for you, in the methodology's rules |
 | A record number no other change took | ❌ Two branches can take one unseen | ✅ The numbering check fails the second, where it runs |
-| A cited point that keeps its number | ❌ Nothing checks a renumbering | ✅ The numbering check fails one |
+| A cited point that keeps its number | ❌ Nothing checks a renumbering | ✅ The numbering check fails one, where it runs |
 | A record that states only the decision in force | ❌ Nothing warns of a revision log | ✅ Validation warns of one |
 | Setup | ✅ None | ❌ `pkit init`, and the numbering check wired into your merges |
 | Your own template | ✅ Any you choose | ❌ Four required sections and five required front-matter fields |
@@ -126,8 +131,8 @@ Without project-kit, many teams keep their decision records by hand: a folder of
 A record is for a choice that later work will build on, such as a library or a convention ([COR-065](../../.pkit/decisions/core/COR-065-records-and-projection.md) point 3). You do not need one in these cases:
 
 - **The choice binds nothing beyond its own change,** such as a name or an order inside one change.
-- **The answer is not clear yet.** Think it through in a scratchpad note, which retires once a record or another document holds what it found ([COR-012](../../.pkit/decisions/core/COR-012-scratchpad-notes.md)).
-- **It is an instruction for each session's work,** such as running the tests before each commit. Write it as an operational rule ([COR-068](../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
+- **The answer is not clear yet.** Think it through in a scratchpad note, which retires once a record or another document holds what it found ([the scratchpad guide](../scratchpad/README.md)).
+- **It is only an instruction for each session's work,** such as running the tests before each commit. Write it as an operational rule ([the rules guide](../rules/README.md)). A convention later work builds on can take both: its record, and a rule that cites the record.
 - **It describes what is built today,** such as the modules that carry a choice out. A record keeps the choice and its reasons, and a document holds that detail (COR-065 point 5).
 - **You want drafts to land now and be accepted later.** Keep your records by hand, as the comparison above credits.
 - **It is work to do,** such as a bug to fix. It belongs in your tracker.
@@ -149,11 +154,11 @@ stateDiagram-v2
 
 - **Proposed:** the record belongs only on the branch of the change that proposes it, and binds nothing ([COR-066](../../.pkit/decisions/core/COR-066-accepted-before-landing.md) point 1).
 - **Accepted:** a person accepts the record in that change, before work in the change rests on it. So it reaches the default branch accepted. Nothing checks this yet ("Have a person accept it" below).
-- **Refined in place:** an accepted record is edited while its decision stands. It states what is true, with no log of its revisions ("Refine a record, or supersede it" below).
+- **Refined in place:** an accepted record is edited while its decision stands. It states what is true, with no log of its revisions ([the reference, "Refining an accepted record"](../../.pkit/decisions/README.md#refining-an-accepted-record)).
 - **Superseded:** a later record replaces it whole. A record a later one overturns only in part stays accepted, and its top line says so.
-- **What an accepted record governs:** where it decides, your code, documents and skills carry its decision out. Where they disagree with it, check them first for falling short. A change to what the record decides is a person's decision (COR-065 point 4).
-- **What nothing lists yet:** the accepted points that nothing in your project carries out ([COR-067](../../.pkit/decisions/core/COR-067-decision-debt.md)).
-- **Whose records are whose:** yours are the `PRJ-` and `ADR-` records, and the `DEC-` records of a capability you author. The methodology's `COR-` records and an installed capability's `DEC-` records are synced copies. Each sync refreshes them, and you never edit them ([the reference, "Two further id-spaces"](../../.pkit/decisions/README.md#two-further-id-spaces)).
+- **What an accepted record governs:** where it decides, your code, documents and skills carry its decision out. Where they disagree with it, first ask whether they fall short of the record, and if they do, fix them. A change to what the record decides is a person's decision (COR-065 point 4).
+- **Not built yet:** [COR-067](../../.pkit/decisions/core/COR-067-decision-debt.md) decides a command that lists each accepted point nothing in your project carries out. No command lists them yet.
+- **Whose records are whose:** yours are the `PRJ-` and `ADR-` records, and the `DEC-` records of a capability you author. The methodology's `COR-` records and an installed capability's `DEC-` records are synced copies, which each sync refreshes ([the reference, "Two further id-spaces"](../../.pkit/decisions/README.md#two-further-id-spaces)).
 
 ## Record a decision
 
@@ -190,12 +195,19 @@ author: Doc Examples <doc-examples@example.invalid>
 ```
 
 - **Its number:** one past the highest that the namespace's folder holds, in the working tree or on the default branch ([the CLI reference, `new decision`](../../.pkit/cli/README.md#new-decision-namespace-slug---yes)).
-- **Your architecture records' folder:** where your project names none, the first `pkit new decision adr` derives `architecture/decisions/` under your internal documentation root, and records it (the CLI reference, `new decision`).
-- **Its body:** write the title, then the context, the decision, the rationale and the implications. The title states the decision, and a short summary in plain words opens the record ([the reference, "Writing a record"](../../.pkit/decisions/README.md#writing-a-record)).
+- **Your architecture records' folder:** where your project names none, the first `pkit new decision adr` derives `architecture/decisions/` under your internal documentation root, and records it ([the CLI reference, `new decision`](../../.pkit/cli/README.md#new-decision-namespace-slug---yes)).
+- **Its body:** a Markdown file, which people and agents read alike. Write the title, then the context, the decision, the rationale and the implications, which cover what every reader needs. The title states the decision, and a short summary in plain words opens the record ([the reference, "Writing a record"](../../.pkit/decisions/README.md#writing-a-record)).
 - **Its points:** give each part of the decision a heading of its own, `### 1. Title`, whose number it keeps for good. A decision of one part has no points, so delete the stamped heading before the record first lands ([the reference, "Adding a record"](../../.pkit/decisions/README.md#adding-a-record)).
 - **With your agent:** ask it to "use the decision-author skill to record that we squash-merge every pull request". The skill picks the namespace with you, stamps the record and drafts its body.
+- **How agents find it:** a record is cited, not loaded into each session. An agent reads it where a rule or a skill cites it, or where an anchor ties it to the files a change touches. Before a change, an agent runs `pkit refs records-for` on those files (core rule 22, and [the reference, "Finding the records a path leads to"](../../.pkit/decisions/README.md#finding-the-records-a-path-leads-to)).
 
-Before you push, fetch the default branch, then run `pkit decisions validate`, which checks each record's id and points. Then run `pkit decisions check-diff`, which compares your change with the default branch where your branch left it, and with what landed there since. Below, another change lands an accepted record on the default branch, under the number your branch took:
+Before you push, fetch the default branch:
+
+```sh
+git fetch origin
+```
+
+Then run `pkit decisions validate`, which checks each record's id and points ([the reference, "Checking a record's points"](../../.pkit/decisions/README.md#checking-a-records-points)). Then run `pkit decisions check-diff`, which compares your change with the default branch where your branch left it, and with what landed there since. Below, another change lands an accepted record on the default branch, under the number your branch took:
 
 ```console
 $ git switch -qc squash-merge
@@ -217,19 +229,19 @@ Error: 1 error(s) in the change's numbering found.
 - **The first to land keeps its number.** Move your record to the number the error names, in its file name and its `id`. Mend each citation of the old id in your change, and run the check again.
 - **It reads the default branch as your clone holds it,** and fetches nothing. So a change that lands after the check ran is found only when the check runs again.
 - **Where it binds:** only where your project runs it. Make it a line of the checks your merges wait on ([the reference, "Checking a change's numbering"](../../.pkit/decisions/README.md#checking-a-changes-numbering)). Run them against the default branch as it stands when the merge happens, such as in a merge queue.
-- **Two records that land with one number** anyway are found by `pkit decisions validate` on the default branch. Move the one that landed later to the next unused number, and mend its citations.
+- **Two records that land with one number** anyway are found by `pkit decisions validate` on the default branch. Move the one that landed later to the next unused number, and mend its citations ([the reference, "Two further id-spaces"](../../.pkit/decisions/README.md#two-further-id-spaces)).
 
 ## Have a person accept it
 
 A person accepts a record in the change that proposes it, before any work in the change rests on it (COR-066 point 1). Until then the record binds nothing. How that goes:
 
-- **Who accepts it:** a person, never an agent. Usually it is the person who authorises the change's merge. An agent writes `accepted` only once that person has accepted the record.
+- **Who accepts it:** a person, never an agent. Usually it is the person who authorises the change's merge. An agent writes `accepted` only once a person has accepted the record.
 - **What they read:** the record, and each record it cites. Check that each cited record is accepted, and accept one proposed in the same change first.
-- **How it is written:** in a commit of its own, the record's `status` becomes `accepted`. The person makes that commit, or an agent makes it on their word. It comes before the commits whose work rests on the record.
+- **How it is written:** the record's `status` becomes `accepted` in a commit of its own, made by the person or by an agent on their word. Where the person accepts the record as first written, it may be added accepted. Either commit comes before the commits whose work rests on the record.
 - **With your agent:** tell it "the squash-merge record is accepted", once you have read the record. It sets the status and commits, and only then builds on the record.
 - **Work that rests on the record:** that work follows in the same change, or in a change built on this one that lands no earlier.
 - **Before the merge:** whoever authorises the merge sees each record the change makes accepted, whether it was added accepted or set to accepted. Where no tool shows that list, the change's author shows it. An edit made after a record's acceptance is accepted only through that list (core rule 2).
-- **Refused:** close the change, so the proposal never lands. Where its reasoning is worth keeping, a scratchpad note keeps it, dropped with why the proposal was refused.
+- **Refused:** close the change, so the proposal never lands. Where its reasoning is worth keeping, a [scratchpad note](../scratchpad/README.md) keeps it, dropped with why the proposal was refused.
 - **Working alone,** you commit straight to the default branch. Accept the record before that commit.
 - **A proposed record already on the default branch,** from before this way of working: a person accepts it, or deletes it ([the reference, "Statuses"](../../.pkit/decisions/README.md#statuses)).
 
@@ -249,21 +261,21 @@ Install project-kit
 ```
 
 > [!WARNING]
-> Nothing enforces [COR-066](../../.pkit/decisions/core/COR-066-accepted-before-landing.md) yet. No check refuses a merge that lands a record still `proposed`, and none lists the records a change makes accepted. The decision-author skill and the architect agent still have a record land `proposed`. So before the merge, accept each such record in the change, and look again at any work that rested on it.
+> Nothing enforces [COR-066](../../.pkit/decisions/core/COR-066-accepted-before-landing.md) yet ([the reference, "The acceptance gate"](../../.pkit/decisions/README.md#the-acceptance-gate)). No check refuses a merge that lands a record still `proposed`, and none lists the records a change makes accepted. The decision-author skill and the architect agent still have a record land `proposed`. So before the merge, accept each such record in the change, and look again at any work that rested on it.
 
 ## Refine a record, or supersede it
 
 Edit an accepted record in place while its decision stands, narrowed or completed. Supersede it when another record will decide otherwise, overturning it in whole or in part ([the reference, "Refining an accepted record"](../../.pkit/decisions/README.md#refining-an-accepted-record)):
 
-- **Refine in place:** a new point that completes the decision, such as squash commits taking a conventional title. So does a fact corrected where the decision stands.
+- **Refine in place:** add a point that completes the decision, such as squash commits taking a conventional title, or correct a fact where the decision stands.
 - **Supersede:** a decision overturned, such as moving from squash merges to rebase merges.
 
 An edit in place may still change what the record decides. One test says who accepts it: does the edit change what the record decides, in either direction?
 
 - **An edit that changes nothing decided,** such as a typo fixed or a citation updated after a rename. Make it in your change.
 - **An edit that adds to the decision, narrows it or widens it,** such as a point added or rewritten. It is a decision of its own, which a person accepts (COR-064 point 6).
-- **How the person sees it:** `pkit decisions check-diff` lists each edit to an accepted record. Whoever authorises the merge reads that list, and judges for each edit whether it changes what the record decides.
-- **The record as it now stands:** fold each correction into the sentence it belongs to. Add no amendment heading, dated note or "previously" passage, since git history is the record's change log.
+- **How the person sees it:** `pkit decisions check-diff` lists each edit to an accepted record ([the reference, "Checking a change's numbering"](../../.pkit/decisions/README.md#checking-a-changes-numbering)). Whoever authorises the merge reads that list, and judges for each edit whether it changes what the record decides.
+- **The record as it now stands:** fold each correction into the sentence it belongs to. Add no amendment heading, dated note or "previously" passage, since git history is the record's change log ([the reference, "Refining an accepted record"](../../.pkit/decisions/README.md#refining-an-accepted-record)).
 - **A new point** takes the next unused number, wherever it sits, and no point is renumbered. So the numbers may read 4, 6, 5.
 - **A point dropped, split or merged,** so that no point continues it, is retired. Its id goes into the record's `retired-points`, and a one-line stub stays where it stood ([the reference, "Schema"](../../.pkit/decisions/README.md#schema)).
 
@@ -305,9 +317,9 @@ $ pkit decisions validate
 ```
 
 - **The renumbering fails.** The check finds point 2 gone without being retired, and its text under 3.
-- **The amendment is a warning.** Validation names its line, and the gap left at 2, and fails on neither. State the fact in the record's own text instead.
+- **The amendment is a warning.** Validation names its line, and the gap left at 2, and fails on neither ([the reference, "Refining an accepted record"](../../.pkit/decisions/README.md#refining-an-accepted-record)). State the fact in the record's own text instead.
 
-To supersede a record, and to leave the methodology's alone:
+To supersede a record, and to leave the methodology's alone ([the reference, "Refining an accepted record"](../../.pkit/decisions/README.md#refining-an-accepted-record)):
 
 - **A record replaced whole:** the new record's `supersedes:` names the old one. In the old record, set `status: superseded`, and put a *Superseded by …* line at the top of its body. Leave the rest as it stood, and in an ADR also set `superseded_by:`.
 - **A record overturned only in part** stays `accepted`, and its top line reads *Partially superseded by …*. The new record's `supersedes:` does not name it.

@@ -9,6 +9,7 @@ pkit:
         - src/project_kit/decisions.py
         - src/project_kit/decisions_check_diff.py
         - src/project_kit/decisions_validate.py
+        - src/project_kit/default_branch.py
         - src/project_kit/docs_roots.py
         - src/project_kit/document_parts.py
         - src/project_kit/path_records.py
@@ -82,12 +83,12 @@ Records also sit in two further places, each its own id-space, numbered apart:
   ```
 
 - **Validation runs it too,** among the checks of its `decisions` member, which the CLI reference lists (`validate`).
-- **One tree:** the check reads one tree, so it finds two records with one id only once both are in that tree. A gate that checks a pull request merged with the default branch finds them before the second lands. A gate that checks the branch alone finds them only after both land.
+- **One tree:** the check reads one tree, so it finds two records with one id only once both are in that tree. A gate that checks a pull request merged with the default branch finds them before the second lands. A gate that checks the branch alone finds them only after both land. The record that landed later then moves ("Checking a change's numbering" below).
 - **Against the default branch:** the numbering check compares a change with the default branch. Where the project runs it, it fails a change whose new record takes an id another change has already landed ("Checking a change's numbering" below).
 
 Validation checks the project's own records only ([COR-055](core/COR-055-validation.md) point 1). A record that arrives as a synced copy is checked where it is authored, since the next sync overwrites an edit here.
 
-- **Synced copies:** a core record, a record of a capability the methodology ships, and one of an externally-sourced capability. The project pulls the last whole, from the source it is pinned to ([COR-041](core/COR-041-external-source-distribution.md)).
+- **Synced copies:** a core record, a record of a capability the methodology ships, and one of an externally-sourced capability. The project pulls the last whole, from the source the capability is pinned to ([COR-041](core/COR-041-external-source-distribution.md)).
 - **What is left out:** neither check reports on such a copy, not its front matter, its id against its file name, or an id only copies share.
 - **What is still reported:** a record of the project's own that takes a copy's id, on the project's record, since the copy keeps its id.
 
@@ -105,18 +106,18 @@ Rules form their own identifier family, **`RS-<SET>-NNN`**: the family prefix, t
 - **The acceptance gate** applies per rule, wherever the rule set lives. That includes project-owned rule sets outside this folder, under the project's internal documentation root by default. A proposed rule binds nothing, and accepting one is a reviewed change.
 - **Origins.** Every accepted rule carries an origin: when it was decided, by whom and why, in the decider's words. Or the origin is a cited decision record, which must be accepted whenever the rule is.
 - **Where rule sets live.** A method rule set ships with its component, and is cited with the component's name. A project rule set is the project's, and is cited bare. A project never edits a method rule set: it inherits it, pinning the set's major version.
-- **Loaded rule sets.** A *loaded* set keeps operational rules ([COR-068](core/COR-068-loaded-rule-sets.md)). Its accepted rules bind on each session that loads the file generated from it, never on an artefact, and no set inherits it.
+- **Loaded rule sets.** A *loaded* set keeps operational rules ([COR-068](core/COR-068-loaded-rule-sets.md)). Its accepted rules bind on the work of each session that loads the file generated from it, never on an artefact. No set inherits it.
   - **Core's** operational rules are the backbone's loaded set `OPS`, so core rule 19 is `backbone:RS-OPS-019`.
   - **Where they live:** the rules area's README says where the set and its file are kept.
 - **Citing a rule.** `RS-CMN-003` names a rule, and `RS-CMN-003#cause-location` names an extension point it offers. A method rule set's rules are cited with the component in front, `[living-docs:RS-LDOC-003]` in prose, bracketed like a capability decision citation.
-- **Checked by validation.** Validation checks every rule set: the schema, the join between data and prose, ids, origins, successors and inheritance. The id check above reports a rule id claimed twice. Where rule-set files live, their front-matter layout and every check are in the schemas reference, "Rule-set files".
+- **Checked by validation.** Validation checks every rule set: the schema, the join between data and prose, ids, origins, successors and inheritance. The id check above reports a rule id claimed twice. The schemas reference, "Rule-set files", says where rule-set files live, and gives their front-matter layout and every check.
 
 ## The no-shared-files invariant
 
 Every file has exactly one owner, core or the project, and the two never share a path ([COR-001](core/COR-001-content-mechanisms.md)). The namespaces above rest on it, and so does every other area of `.pkit/`.
 
 - **Core's files** are refreshed by every sync. A project never edits one, since the next sync overwrites the edit.
-- **The project's files:** sync writes into one only through merge delivery's tier that asks nothing, which adds core's entries and never removes one the project wrote. What sync writes, and what it never writes, is the lifecycle reference's ([its "What sync writes"](../lifecycle/README.md#what-sync-writes)).
+- **The project's files:** sync reads from them what it needs, such as the versions the project records. It writes into one only through merge delivery's tier that asks nothing, which adds core's entries and never removes one the project wrote. What sync writes, and what it never writes, is the lifecycle reference's ([its "What sync writes"](../lifecycle/README.md#what-sync-writes)).
 - **A version transition,** such as an upgrade, creates each seed path that is missing, never over one that exists ([the lifecycle reference, "Seed paths"](../lifecycle/README.md#seed-paths)). Every migration runs inside a transition ([the lifecycle reference, "The steps of a transition"](../lifecycle/README.md#the-steps-of-a-transition)). A migration changes a project's file only within what the record that owns the file allows ([COR-059](core/COR-059-version-transition.md) point 3).
 - **Extending core's content:** the same `core/` and `project/` pattern governs other areas, such as `.pkit/agents/` and `.pkit/rules/`. To extend core's content, add sibling files in the matching `project/` folder, and never edit a core file.
 - **A file at a fixed path** that the project extends, such as `CLAUDE.md`, stays the project's. Core ships its content at a separate path, and merge delivery adds what is missing into the project's file in place. It never removes or rewrites what the project wrote ([COR-002](core/COR-002-merge-delivery.md)).
@@ -180,7 +181,10 @@ The four headings are the contract. A larger record may add sub-sections of its 
 
 **`author`** is the person responsible for the record, as `Name <email>`, matching the identity they commit with. Git history holds the rest, such as each commit's author and its `Co-Authored-By` trailers.
 
-**`supersedes`** names a record this one replaces whole, in the same namespace. The lookup from a path to its records reads it so ("Finding the records a path leads to" below). Where an anchor names a superseded record, it lists in its place each accepted record whose `supersedes` names it.
+**`supersedes`** names a record this one replaces whole, in the same namespace. The lookup from a path to its records reads the field so ("Finding the records a path leads to" below). In place of a superseded record an anchor names, the lookup lists each accepted record that replaces the superseded one:
+
+- a record whose `supersedes` names the superseded record
+- a record that the superseded record's own `superseded_by` names
 
 **Points.** A Decision of several parts writes each part as a *point*: a heading that opens with the point's id, then its title. The id names the point for good ([COR-058](core/COR-058-record-points.md) points 1 and 3). The example's retired point 2 only shows the form, and a new record retires nothing.
 
@@ -188,8 +192,12 @@ The four headings are the contract. A larger record may add sub-sections of its 
 - **The level:** one below `## Decision`, or one below the group headings that gather the points, as in `#### 11. Title`. The Decision's first heading in this form sets the level, and a heading in this form at another level is no point. A record's points all sit at one level, and their ids are unique across its groups.
 - **The text** runs from the heading to the next heading of the same or a higher level.
 - **A numbered list stays allowed** inside a point or another sub-section, for steps or an order. Once a record has point headings, every numbered list in it is a list, never points. Its items renumber when an item is inserted.
-- **`retired-points`** is optional. It maps each retired id to the list of points that took its text, one id to a line, in the order of the ids, at the top level of the front matter. A point no other point took writes an empty list, `"9": []`.
-- **A stub** stays where each retired point was: a heading with its id and the title `Retired`, then one sentence written from its entry. The sentence is "Its content is in point 7.", "Its content is in points 7 and 16.", "Its content is in points 7, 12 and 16." or "Its content is in no other point." It says nothing else, and no live point takes the title `Retired` (COR-058 point 4).
+- **`retired-points`** is optional. It maps each retired id to the list of points that took its text. It holds one id to a line, in the order of the ids, at the top level of the front matter. A point no other point took writes an empty list, `"9": []`.
+- **A stub** stays where each retired point was: a heading with its id and the title `Retired`, then one sentence written from its entry. It says nothing else, and no live point takes the title `Retired` (COR-058 point 4). The sentence takes one of these forms:
+  - "Its content is in point 7."
+  - "Its content is in points 7 and 16."
+  - "Its content is in points 7, 12 and 16."
+  - "Its content is in no other point."
 
 A record whose points are still a numbered list, or paragraphs that open with a bold number or label, is in *list form*. It keeps working. A point inserted into a numbered list moves the numbers after it (COR-058 point 9).
 
@@ -200,7 +208,7 @@ A record has one of three statuses, and moves only forward through them: `propos
 - **`proposed`:** under discussion, within the change that proposes it. It binds nothing, and no work may rest on its content ("The acceptance gate" below). It exists only on that change's branch, and reaches the default branch only once accepted ([COR-066](core/COR-066-accepted-before-landing.md) point 1).
 - **`accepted`:** in effect. Work complies with it.
 - **`superseded`:** replaced whole by a later record, whose `supersedes` names it. The superseded record adds a *Superseded by …* line at the top of its body, and is kept, never deleted ("Refining an accepted record" below).
-- **No `rejected` status.** A refused proposal never lands: its change is closed, or the record is taken out of it. A refused proposal whose reasoning is worth keeping becomes a scratchpad note, dropped with the reason it was refused ([COR-012](core/COR-012-scratchpad-notes.md)).
+- **No `rejected` status.** A refused proposal never lands, since its change is closed. A refused proposal whose reasoning is worth keeping becomes a scratchpad note, dropped with the reason it was refused ([COR-012](core/COR-012-scratchpad-notes.md)).
 - **A proposed record already on the default branch** stays until a person accepts it or it is deleted (COR-066 point 4).
 - **Within one namespace:** a record supersedes only a record of its own namespace.
 
@@ -218,13 +226,15 @@ Work depends only on accepted records: code, content, tooling, and records that 
 
 - **Documents** that describe what a record decides wait until it is accepted.
 - **Skills** name in `gates:` the records whose acceptance they rest on, and check each before they run. The skills area's README gives the field.
-- **Not enforced yet:** no check refuses a merge that lands a proposed record, and none lists the records a change makes accepted (COR-066 points 2 and 3). So check that each record a change adds or edits is accepted before the change lands.
+- **Before the merge:** the person who authorises it sees each record the change makes accepted, added accepted or set to accepted. Where no component that carries out merges shows that list, the change's author shows it. An edit made after a record's acceptance is accepted only through that list (COR-066 point 3).
+- **An edit to an accepted record** that changes what it decides is a person's to accept, from the numbering check's list ("Refining an accepted record").
+- **Not enforced yet:** no check refuses a merge that lands a proposed record, and none lists the records a change makes accepted (COR-066 points 2 and 3). The `decision-author` skill and the `architect` agent still have a record land `proposed`, and COR-066 point 1 holds over both. So accept each record a change adds before the change lands.
 
 ## Adding a record
 
 A project adds its own records in its own namespaces: `project/`, its architecture records' folder, and the `decisions/` of a capability it authors. A choice that later work will build on starts with its record, accepted before work rests on it ([COR-065](core/COR-065-records-and-projection.md) point 3).
 
-Stamp the record with the authoring command, paired with the `decision-author` skill. What it writes, where its number comes from and what it refuses are in the CLI reference, `new decision`:
+Stamp the record with the authoring command, which the `decision-author` skill pairs with. The CLI reference's `new decision` gives the command's output, how it numbers a record and its refusals:
 
 ```
 pkit new decision <namespace> <slug>
@@ -232,6 +242,8 @@ pkit new decision <namespace> <slug>
 
 - **The namespace** is `project` for a PRJ record, or `adr` for an ADR. For a DEC, it is the name of a capability the project authors ("Two further id-spaces" above).
 - **The body:** fill in the sections ("Writing a record" below). A person accepts the record in its change before it lands ("The acceptance gate" above).
+- **The index** of `project/` is its file listing, since each file name carries its slug. A project with many records may add a `README.md` inside `project/` as an index.
+- **Core records** are refreshed on every sync, so a project never edits one. To change the methodology itself, with a new core record, a refinement or a supersession, propose it where the methodology is kept.
 
 The stamped heading puts the record's points in the heading form from the start ("Schema" above):
 
@@ -239,23 +251,14 @@ The stamped heading puts the record's points in the heading form from the start 
 - **A numbered list written beside it** is a list, never points.
 - **A decision with no parts** has no points. Delete the heading before the record first lands. A point dropped after that is retired, with a stub ("Refining an accepted record" below).
 
-To author a record by hand:
-
-1. Take the next number in `project/`. Another change may have landed that number on the default branch since the branch left it. The numbering check finds that ("Checking a change's numbering" below).
-2. Create `PRJ-NNN-<slug>.md` with the front matter and the four sections above. Leave out the example's `retired-points` and its stub, and number the points from 1 with no gap.
-3. Write `status: proposed` while the record is discussed in its change. Set it to `accepted` there once a person accepts it, before it lands.
-
-- **The index** of `project/` is its file listing, since each file name carries its slug. A project with many records may add a `README.md` inside `project/` as an index.
-- **Core records** are refreshed on every sync, so a project never edits one. To change the methodology itself, with a new core record, a refinement or a supersession, propose it where the methodology is kept.
-
 ## Writing a record
 
-A record is read long after it is written, by people and agents who were not there when it was decided. Every record follows the four disciplines below, and states the present with no log of its revisions ("Refining an accepted record" below). An architecture record adds one more discipline, and a core record two more.
+Every record follows the four disciplines below, and states the present with no log of its revisions ("Refining an accepted record" below). An architecture record adds one more discipline, and a core record adds two more.
 
 ### Every record
 
 - **Lead with meaning.** The title is short and states the decision, not the mechanism behind it. A plain-language summary opens the record, so a reader grasps the decision in under a minute, before the detail, the citations and the rejected alternatives. Each point cites what it needs, about one reference a point, and says what a reference holds before its identifier. The depth stays, and no boilerplate is asked for: the summary goes in front of the depth, never in its place.
-- **Principles, not inventory.** A record captures a rule chosen among viable alternatives, with the reason that tells them apart. It lists no current state, such as paths, commands, files or the present members of a set. That state lives in a reference document the record points at, such as an area's README. So new content never forces an edit to a decision.
+- **Principles, not inventory.** A record captures a rule chosen among viable alternatives, with the reason that tells them apart. It lists no current state, such as paths, commands, files or the present members of a set. That state lives in a reference document the record points at, such as an area's README.
   - **Before drafting,** tag each piece of content as a rule or as state. Give state one cross-reference, not a list, and count an item between the two as state unless its reason is contested.
 - **Name the role, not its current holder.** Where a record means whatever plays a part, such as what owns a boundary, it names the part, not the component that plays it today. Where the name is itself what the record decides, or belongs to something outside the project, the record names it plainly. Either way it describes the part sharply enough that only one thing could play it ([COR-046](core/COR-046-records-name-roles.md)).
 - **Defined terms.** A record uses only terms that the project's accepted records or the methodology's define, generic English, and the tools it names. A term it needs that no record defines, it defines where it first uses it, or it waits for the record that decides the term. A core record holds the stricter form below, the axiom discipline.
@@ -266,7 +269,7 @@ A record is read long after it is written, by people and agents who were not the
 
 ### A core record (COR), the methodology maintainers' case
 
-Core records are written where the methodology is kept, and reach each project by sync ("Adding a record" above). Two more disciplines bind them, so that the core records read the same in every project that adopts the methodology.
+Two more disciplines bind a core record. Core records are written where the methodology is kept, and reach each project by sync ("Adding a record" above).
 
 - **Axiom discipline.** The core records form an axiom system, which a reader can follow forward from the first. A core record uses only terms an earlier core record defines, generic English, filesystem or Markdown vocabulary, and external tools it names. It may point forward to a later record for navigation, but depends on none.
   - **Nothing undecided:** nor does it depend on a command, convention or tool that no record has decided yet. So it writes "the sync operation", say, until a record decides the command's name.
@@ -363,7 +366,7 @@ pkit refs lookup <id>... --json
 - **A rule** prints its place, and `--json` gives its heading's anchor too.
 - **An address** prints where the role or point is declared, such as for `[pkit::documentation:readers]`.
 - **With `--json`,** the command takes several ids. One document answers them in the order given, each with where it lies or why it does not resolve.
-  - **Each answer** gives the file in `path`, the anchor in `anchor`, and in `received` whether the file arrives as a synced copy.
+  - **Each answer** gives the file in `path` and the anchor in `anchor`. Its `received` says whether the file arrives as a synced copy.
   - **A point's answer** gives that top line in `partial_supersession`. The key is `null` where the record has no such line, and in every answer that is not a point's.
 
 The way back, from a file to the records its anchors lead to, is in "Finding the records a path leads to" below.
@@ -385,14 +388,14 @@ It goes the other way from looking a citation up, and declares nothing new. It t
 - **What it leaves out.** Only accepted records are listed, and a superseded one by each accepted record that replaces it ("Schema" above). A path anchor of a record that is not accepted ties nothing. Neither does any anchor of an artefact that arrives by sync, since it was written where the methodology is authored. Artefact anchors, and anchors of a kind a capability registers, are not followed.
 - **The order.** The project's own records come first, then those it receives by sync.
 - **An empty answer** is no sign that no record governs a file, since only what the anchors say is found. The answer says when no artefact carries anchors at all. It also names each file in a place whose front matter could not be read, since its anchors were not read.
-- **With `--json`,** one document answers each path in the order given. It gives the records tied directly with their ties, and the artefacts with the records they rest on. Each record comes with its title, its file and whether it arrives by sync.
+- **With `--json`,** one document answers each path in the order given. It gives the records tied directly with their ties, and the artefacts with the records they rest on. Each record comes with its title and its file, and says whether it arrives by sync.
 
 ## Checking a record's points
 
 A record's points keep their ids for good ([COR-058](core/COR-058-record-points.md)). Validation and the id check ("Two further id-spaces" above) check each record's points, as COR-058 point 7 sets out. They read the records the narration warnings read, so a superseded record and a synced copy are left out.
 
 - **They fail on:**
-  - a malformed `retired-points`: one that is not a mapping of retired ids to lists of ids, or that sits in front matter that does not parse
+  - a malformed `retired-points`: one that is not a mapping of retired ids to lists of ids, or one in front matter that does not parse
   - a retired id with no stub, or a stub whose id is not retired
   - a stub whose sentence differs from the one its entry gives, such as "Its content is in points 7 and 16."
   - a live point whose heading uses a retired id
@@ -407,7 +410,7 @@ A record's points keep their ids for good ([COR-058](core/COR-058-record-points.
 
 ## Checking a change's numbering
 
-The numbering check compares each record a change touches with its state where the branch left the default branch (COR-058 point 8). A record's state alone cannot show that a number moved, and validation takes no base, so this check is a command of its own:
+The numbering check compares each record a change touches with its state where the branch left the default branch (COR-058 point 8). It is a command of its own, apart from validation:
 
 ```
 pkit decisions check-diff [--base <ref>] [--head <rev>] [--json]
@@ -417,16 +420,17 @@ pkit decisions check-diff [--base <ref>] [--head <rev>] [--json]
   - **Its base** is `--base`, else `$PKIT_CHECK_BASE`, else the default branch the configuration declares (the CLI reference, `repository base`). A pipeline that sets `PKIT_CHECK_BASE` to a pull request's target points this check there too.
   - **Its history:** it reads where the branch left the base, so a pipeline fetches enough history to find that point, such as a full clone.
   - **What it skips:** a record the project receives by sync, which is checked where it is authored, and a record the change removes.
+  - **When it runs:** it reads the base as the clone holds it, and fetches nothing. So a change that lands on the base after a run is found only by a later run, such as where the merge is decided.
   - **A record in list form** meets only the warning below, unless the change converts it to point headings. Then each point's id is held to the number or label it showed.
 - **It fails on,** for each record the change touches:
   - an id the branch point holds or retires that the head neither holds nor retires: a point dropped without being retired
   - a new id that is not past every id of its series that the branch point holds or retires
-  - a point whose text, read without its id, sits at the head only under another id: a renumbering, or a retirement whose successor kept the claim
+  - a point whose text, read without its id, sits at the head only under another id. That is a renumbering, or a retirement whose successor kept the claim.
   - a duplicate id, or a heading in a refused form, that the change added, also in a record with neither point headings nor a list
   - a retired id without its stub, or a stub without its entry
   - a new entry in `retired-points` whose successor is not a live point
   - in a record the change converts from list form, a point whose id differs from the number its numbered item showed
-  - a point id the change takes that another change took on the default branch since the branch left it, and a record id the same way
+  - a point id or a record id the change takes that another change took on the default branch since the branch left it
 - **It warns of, and never fails on:**
   - a point's title found under another id, with its text changed: likely a renumbering with an edit
   - in a record the change converts, a point whose id differs from the bold number or label that opened it
@@ -441,4 +445,6 @@ pkit decisions check-diff [--base <ref>] [--head <rev>] [--json]
   - a record the change removes, or moves where no record at the head pairs with it
   - nothing for a record proposed at the branch point, or one the change adds
 - **`--head <rev>`** reads the records of that commit from git objects, instead of the working tree's. Where the ADR folder is, and which records the project receives by sync, come from the working tree either way. **`--json`** prints the findings and the list as one document, for a command that shows the list, such as a landing command.
-- **Two changes that take one number:** the first to land keeps it. The other moves its point, or its record, to the next unused number, which the finding names. A point the default branch holds under that id with the change's very text, or a record it holds at the change's own path, is the change's own work landed, such as a parent branch's, and is no clash. A parent's point edited since fails, and merging the default branch in clears it.
+- **Two changes that take one number:** the first to land keeps it. The other moves its point, or its record, to the next unused number, which the finding names.
+  - **No clash:** a point the default branch holds under that id with the change's very text is the change's own work landed, such as a parent branch's. So is a record the default branch holds at the change's own path.
+  - **A parent's point edited since** fails, and merging the default branch in clears it.
