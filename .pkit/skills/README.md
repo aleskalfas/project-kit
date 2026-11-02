@@ -100,12 +100,12 @@ composes: [<file>]                 # a composite's files beside its dispatcher
 
 What the body cites is checked against the front matter, in both directions (COR-013 point 3):
 
-- **A path:** text in backticks that holds a `/`, and the target of a link that is no web address. A link that starts with `#` or `./`, or that leads to a decision record, needs no declaration. Nor does a relative path in a capability's skill that leads inside that capability's own folder.
+- **A path:** text in backticks that holds a `/`, and the target of a link that is no web address. A link that starts with `#` or `./`, or that leads to a decision record, needs no declaration. Nor does a path in a capability's skill that, read from the skill's folder or from the capability's, stays inside `.pkit/capabilities/<capability>/`. So of such a skill's paths, the check reads only those that start with `.pkit/` or climb out with `..`.
 - **A record:** an id of the form `COR-`, `PRJ-` or `ADR-` and its number, in backticks or in prose. A capability's decision is cited as `[<capability>:DEC-NNN]`, and validation checks that it resolves, with no declaration.
 - **A hook:** a word with one or two dots, such as `topic.operation`, in backticks or in prose. So a domain name or a dotted key in prose reads as a hook, and warns. Put it in a code fence, or reword it: declared under `needs`, it fails, since nothing answers it.
 - **Not counted:** text in a code fence, an HTML comment or a strikethrough, and a path that holds `<`, `>`, `...`, `{`, `}` or `*`.
 - **The checks.** `pkit validate` warns where the body cites a record, a file or a hook that the front matter does not declare. It also warns where the front matter declares a record or a hook that the body never cites, but not a file. A record under `gates` counts as declared. `pkit refs validate` gives the same findings, and fails on them ([the CLI reference, `validate`](../cli/README.md#validate)).
-- **What has gone.** `pkit refs rot` lists a skill that cites a superseded record or a dropped scratchpad note ([the CLI reference, "Surface"](../cli/README.md#surface)). It lists files it cannot find too, but reads each path from the project's root. So it may list a relative link whose file is there.
+- **What has gone.** `pkit refs rot` lists a skill that cites a superseded record or a dropped scratchpad note ([the CLI reference, "Surface"](../cli/README.md#surface)). It lists files it cannot find too, but reads each path from the project's root. So it may list a relative path whose file is there, such as one in a capability's skill.
 
 ## The body
 
