@@ -32,7 +32,10 @@ A storyboard designs the dialogue of an agent's scripted scenario before the age
 
 A definition takes a storyboard where its author finds themselves writing scripted dialogue in the agent's body (COR-016). A scripted scenario is a sequence of turns whose prompts, gates and writes are designed in advance.
 
-- **It fits** a review agent walking a person through accepting a methodology record, an onboarding flow, or a coordinator confirming the scope before it delegates.
+- **It fits** scripted work, such as:
+  - a review agent walking a person through accepting a methodology record
+  - an onboarding flow
+  - a coordinator confirming the scope before it delegates
 - **It does not fit** work from judgement, such as a code reviewer answering any diff, a research assistant, or an expert improvising findings. A script would make these worse.
 - **Mixed:** one agent may do both. Storyboard the scripted scenario, such as a security review of a sensitive pull request, and leave the rest to judgement.
 - **Recommended, never enforced:** no command refuses a definition without a storyboard.
