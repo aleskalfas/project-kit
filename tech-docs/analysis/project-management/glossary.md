@@ -802,7 +802,7 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#clone).
 - **Instance:** a clone with a number, typed into it or taken from its seat. A clone with no number is no [instance](#term-instance--instance) ([DEC-035 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)).
 - **Session:** one run of an AI agent in a clone. A session ends or dies, and the clone keeps its number, its key and its seat.
 - **Linked worktree:** a further working tree of a clone. Whether a linked worktree reads its clone's identity is not decided yet ([DEC-059 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) and #1140).
-- **Git's clone:** the copy git makes, which the [system](../core/glossary.md#term-system--system) marks only once it sets a number or takes a seat.
+- **Git's clone:** the same working copy, by git's name for it. The term adds what the [system](../core/glossary.md#term-system--system) keeps in the copy: a number, a key and a seat.
 
 ## TERM-close-trigger — close trigger
 
@@ -843,7 +843,7 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge.md#fixer).
 
-**Example:** software-analysis declares `analysis-resolver` the fixer of its use cases, and the [project](../core/glossary.md#term-project--project) grants it. After #1712's [pull request](../core/glossary.md#term-pull-request--pull-request) merges, `pkit pm fix-drift` starts it on [UC-084](use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md), which the merge left out of date.
+**Example:** software-analysis declares `analysis-resolver` the fixer of its use cases, and the [project](../core/glossary.md#term-project--project) grants it. After #1712's [pull request](../core/glossary.md#term-pull-request--pull-request) merges, `pkit pm fix-drift` starts `analysis-resolver` on [UC-084](use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md), which the merge left out of date.
 
 **Distinctions:**
 
@@ -896,7 +896,7 @@ Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#
 
 **Distinctions:**
 
-- **Audit comment:** a comment on GitHub that carries a reason, or the [versions](../core/glossary.md#term-version--version) of a write. Where the journal is kept, it is the canonical record, and the comments project it ([DEC-049 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md#1-where-the-canonical-audit-trail-lives-follows-the-projects-journal-setting)).
+- **Audit comment:** a comment on GitHub that carries a reason, or the [versions](../core/glossary.md#term-version--version) of a write. Where the journal is kept, the journal is the canonical record, and the comments project it ([DEC-049 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md#1-where-the-canonical-audit-trail-lives-follows-the-projects-journal-setting)).
 - **The timeline:** GitHub's own record of each label added or removed. Where no journal is kept, the timeline is the canonical record (DEC-049 point 1).
 - **A journal kept in one clone:** one the project does not commit. It records only the moves made from that [clone](#term-clone--clone), and goes with the clone (DEC-049 point 1).
 
@@ -968,7 +968,7 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#ownership).
 
 **Distinctions:**
 
-- **Owner:** the [instance](#term-instance--instance) an [issue](#term-issue--issue) belongs to. An ownership makes it the [owner](#term-owner--owner), and may lapse or stop counting while the instance goes on ([DEC-035 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#2-ownership-is-carried-by-a-marker-paired-with-the-assignee) and [DEC-059 point 9](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
+- **Owner:** the [instance](#term-instance--instance) an [issue](#term-issue--issue) belongs to. An ownership makes that instance the [owner](#term-owner--owner), and may lapse or stop counting while the instance goes on ([DEC-035 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#2-ownership-is-carried-by-a-marker-paired-with-the-assignee) and [DEC-059 point 9](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
 - **Claim:** the code's word for an ownership. The analysis writes *ownership* for the same thing.
 - **A seat's holder:** the clone that holds a seat, which the seat's [state issue](#term-state-issue--state-issue) shows. An ownership marks an issue of work instead ([DEC-058 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)).
 

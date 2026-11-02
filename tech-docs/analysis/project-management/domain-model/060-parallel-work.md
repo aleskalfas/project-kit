@@ -435,9 +435,9 @@ A builder agent is a fresh AI session that the build command starts for one of a
 **Relations:**
 
 - The build command starts one for each build of a worker agent's Task, fix rounds and merges that resolve a conflict included (DEC-063 point 1).
-- A question it ends with goes to whoever may [answer](../../core/glossary.md#term-answer--answer) it, never to the seat's own session ([DEC-063 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-063-task-builder.md#6-a-question-goes-to-whoever-may-answer-it-and-the-build-resumes)).
+- Its question goes to a person, or for advice to an agent the [project](../../core/glossary.md#term-project--project) names. It never goes to the seat's own session ([DEC-063 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-063-task-builder.md#6-a-question-goes-to-whoever-may-answer-it-and-the-build-resumes)).
 
-**States:** A builder agent runs until it ends with a result or a question. A question waits on the Task, and the build resumes once the question is answered (DEC-063 points 5 and 6).
+**States:** A builder agent runs until it ends with a result or a question. A question waits on the Task, and the build resumes once the question has its reply (DEC-063 points 5 and 6).
 
 **Always true:**
 

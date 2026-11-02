@@ -260,7 +260,7 @@ A journal is the record the [backbone](../../core/glossary.md#term-backbone--bac
 
 **Always true:**
 
-- A move that fails to go into the journal is reported, and never dropped silently (DEC-049 point 1).
+- A move that fails to go into the journal is surfaced, and never dropped silently (DEC-049 point 1).
 - Where the core's engine cannot run, a command reads where the issue stands itself, and warns that the move went into no journal ([DEC-033](../../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
 
 ## What is built on these concepts
