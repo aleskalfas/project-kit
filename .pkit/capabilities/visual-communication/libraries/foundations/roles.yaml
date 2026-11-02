@@ -1,0 +1,37 @@
+pkit_schema: visual-communication:roles
+schema_version: 1
+
+# The shared roles (DEC-004 point 7): a component paints and measures with these, and
+# every brand gives each a value, in every combination of the axes. A role carries no
+# value here, only its type.
+roles:
+  background: {type: color}
+  surface: {type: color}
+  text-primary: {type: color}
+  text-secondary: {type: color}
+  accent: {type: color}
+  line: {type: color}
+  space.1: {type: dimension}
+  space.2: {type: dimension}
+  space.3: {type: dimension}
+  space.4: {type: dimension}
+  stroke.thin: {type: dimension}
+  size.figure: {type: dimension}
+  font.body: {type: fontFamily}
+  font.heading: {type: fontFamily}
+  type.body: {type: typography}
+  type.heading: {type: typography}
+
+# The shared axes (DEC-004 point 2). Both change colours alone, so every mode of either
+# is drawn from one scene.
+axes:
+  colour-scheme: {kind: value, modes: [light, dark], default: light}
+  contrast: {kind: value, modes: [standard, high], default: standard}
+
+# The colour families a notation maps its concepts to (DEC-004 point 10): none yet.
+families: {}
+
+# The pairs of shared colour roles that must contrast in every combination (DEC-004
+# point 8), at WCAG's levels: `text` 4.5, `large-text` and `marks` 3.
+pairs:
+  - {text: text-primary, under: background, level: text}

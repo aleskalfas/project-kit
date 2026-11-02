@@ -42,6 +42,9 @@ dev = [
     "pyright[nodejs]>=1.1.380",
     "pathspec>=0.12",  # used by check-doc-mapping.py (PM script); needed to import it under pytest
     "pytest-xdist>=3.8.0",  # scripts/check.sh runs the suite in parallel workers (#1182)
+    "uharfbuzz==0.57.0",  # visual-communication shapes text with it; pinned, since one release must give one scene
+    "fonttools==4.68.0",  # visual-communication reads font metrics with it; pinned likewise
+    "uniseg==0.10.1",  # visual-communication breaks lines by Unicode's rules with it; pinned likewise
 ]
 
 [tool.hatch.version]
