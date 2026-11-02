@@ -15,7 +15,7 @@ pkit:
         - src/project_kit/agents_overlay.py
         - src/project_kit/refs.py
         - src/project_kit/storyboards.py
-      record: [COR-006, COR-007, COR-013, COR-016, COR-024, COR-026, COR-047, COR-057]
+      record: [COR-006, COR-007, COR-013, COR-016, COR-024, COR-026, COR-047, COR-057, "project-management:DEC-029"]
       artefact:
         - ACT-developer
         - ACT-ai-agent
@@ -25,7 +25,7 @@ pkit:
         - UC-029
         - UC-042
         - REQ-021
-        - .pkit/agents/README.md#front-matter
+        - .pkit/agents/README.md#frontmatter-schema
         - .pkit/agents/README.md#body-conventions
         - .pkit/agents/README.md#the-reference-graph
         - .pkit/agents/README.md#adopter-overlay
@@ -45,6 +45,7 @@ pkit:
         - .pkit/cli/README.md#new-storyboard-agent-name---namespace-ns---scenario-slug---dry-run
         - .pkit/cli/README.md#harness-report---adapter-name---json
         - .pkit/cli/README.md#rule-sets-altered---base-ref---head-rev---json
+      source: [claude-code-plugins]
 ---
 
 # Agent definitions
@@ -78,9 +79,9 @@ Agent definitions answer the first five problems with the claims below, and [the
 
 - **Four reviewers ship ready to dispatch, each defined to change nothing it judges, and the architect advises beside them.** ([Have a draft challenged and a diff checked](#have-a-draft-challenged-and-a-diff-checked) proves it.)
 - **A shared definition deploys with your project's paths in its front matter, and one whose required paths are unset is skipped.** (The fence below proves it.)
-- **`pkit new agent` stamps your definition with its storyboard, each naming the other, so recurring work gets a role in one command.** ([Write your own](#write-your-own-agent-definition-and-its-storyboard) proves it.)
+- **`pkit new agent` stamps your definition with its storyboard, each naming the other, so a role for recurring work starts from one command.** ([Write your own](#write-your-own-agent-definition-and-its-storyboard) proves it.)
 
-Each fence on this page starts from a fresh project where `pkit init` has run. Below, your project keeps its architecture in `design/`. You remove the architect's architecture folder from the overlay, and then name `design/` in its place:
+Each fence on this page starts from a fresh project where `pkit init` has run. Below, your project keeps its architecture in `design/`. You remove the architect's `architecture-docs` entry, `README.md`, from the overlay, and then name `design/` in its place:
 
 ```console
 $ perl -0pi -e 's/architecture-docs:\n  - README.md\n//' .pkit/agents/project/overlay.yaml
@@ -101,12 +102,12 @@ The placeholders resolve via `.pkit/agents/project/overlay.yaml`
 
 What the output proves:
 
-- **Skipped while unset.** With no path for `architecture-docs`, `pkit agents` lists the architect as skipped, with the category it lacks. It lists each definition with the model and effort it runs at too. The sync skips the architect rather than deploy it with the placeholder.
+- **Skipped while unset.** With no path for `architecture-docs`, `pkit agents` lists the architect as skipped, with the category it lacks. It lists each definition with the model and effort it runs at too. The sync skips the architect rather than deploy it with the placeholder, and leaves the copy an earlier sync wrote as it was.
 - **Deployed with your paths.** Once the overlay names `design/`, the sync deploys the architect again to `.claude/agents/`, where Claude Code reads it. Its front matter there owns `design/` in place of `<architecture-docs>` ([the reference, "Adopter overlay"](../../.pkit/agents/README.md#adopter-overlay)).
 - **The body sends it to the overlay.** The deploy fills the front matter alone, so the architect's body tells it where to find the paths behind its placeholders.
 
 > [!WARNING]
-> Only an agent's definition holds it to its role. Nothing at run time stops an agent from editing outside the paths it owns. A placeholder in the body stays as written, so a body that names `<architecture-docs>` must send the agent to the overlay, as the architect's does. To refuse an agent a command, deny it in the permission model ([the permissions guide, "Deny something to one agent"](../permissions/README.md#deny-something-to-one-agent)).
+> Only an agent's definition holds it to its role. Nothing at run time stops an agent from editing outside the paths it owns. To refuse an agent a command, deny it in the permission model ([the permissions guide, "Deny something to one agent"](../permissions/README.md#deny-something-to-one-agent)).
 
 ### Compared with subagent files you write by hand
 
@@ -154,17 +155,17 @@ flowchart TD
 - **The sources.** The core's definitions are in `.pkit/agents/core/`, and an installed capability's are in its `agents/` folder. Each sync refreshes both. Yours are in `.pkit/agents/project/`, which no sync writes.
 - **The core's six** are the four reviewers, the architect and the `process-author`. The `process-author` writes the checks behind a process definition, and owns nothing until you name its paths.
 - **One definition for each name.** Where two sources ship one name, the deploy takes yours, then a capability's, then the core's ([the reference, "Deploy mechanics"](../../.pkit/agents/README.md#deploy-mechanics)).
-- **The overlay,** `.pkit/agents/project/overlay.yaml`, names your paths for each category, such as `adr-records`. A definition's front matter names the category as `<adr-records>`, and the deploy writes the paths in its place. `pkit init` writes the overlay with a value for each category the core's definitions name.
-- **The deployed copy,** `.claude/agents/<name>.md`, is what Claude Code loads. Each sync writes it again from its source, so you edit the source, never the copy. A file of yours there stays: the deploy leaves a file it did not write, and reports it skipped.
-- **Skipped.** A definition whose required category the overlay leaves unset is skipped, and the others deploy. `pkit agents` lists each definition as deployable or skipped.
-- **The session** dispatches an agent by its definition's name, such as "Use the critic agent on `docs/plan.md`". Claude Code gives the agent only the tools its `tools:` list names.
+- **The overlay,** `.pkit/agents/project/overlay.yaml`, names your paths for each category, such as `adr-records`. A definition's front matter names the category as `<adr-records>`, and the deploy writes the paths in its place. `pkit init` writes the overlay with a value for each category the core's definitions name ([the reference, "Adopter overlay"](../../.pkit/agents/README.md#adopter-overlay)).
+- **The deployed copy,** `.claude/agents/<name>.md`, is what Claude Code loads. Each sync writes it again from its source, so you edit the source, never the copy. A file of yours there stays: the deploy leaves a file it did not write, and reports it skipped ([the reference, "Deploy mechanics"](../../.pkit/agents/README.md#deploy-mechanics)).
+- **Skipped.** A definition whose required category the overlay leaves unset is skipped, and the others deploy. A copy an earlier sync wrote stays as it was. `pkit agents` lists each definition as deployable or skipped ([the reference, `pkit agents`](../../.pkit/agents/README.md#pkit-agents)).
+- **The session** dispatches an agent by its definition's name, such as "Use the critic agent on `docs/plan.md`". Claude Code gives the agent only the tools its `tools:` list names ([the reference, "Frontmatter schema"](../../.pkit/agents/README.md#frontmatter-schema)).
 - **What the agent may run.** Where the permission model is turned on, the model decides each of the agent's calls under the grants you give that agent ([the permissions guide](../permissions/README.md#deny-something-to-one-agent)).
 
 ## Get a delegated agent's result back whole
 
 Dispatch each agent without a teammate name, and its whole result comes back to the session. A teammate name is one a session gives a delegated agent while Claude Code's experimental agent teams are on, apart from the definition's name. Claude Code cuts a result short only where the session gave one, and the part that arrives reads as complete. What to do:
 
-- **Leave agent teams off,** unless you need them. Every result then arrives whole.
+- **Leave agent teams off,** unless you need them. Every result then arrives whole. Where your session's tool for dispatching an agent takes a name, agent teams are on (project-management DEC-029).
 - **With agent teams on,** tell your sessions to dispatch each agent without a teammate name. A rule of your own in `project.md` says it to every session ([the rules guide, "Add your own rules"](../rules/README.md#add-your-own-rules)).
 - **What the adapter declares.** The Claude Code adapter declares the cost at which a result comes back whole, as the requirement `delegated-result-complete`. `pkit harness report` shows that cost, and marks the requirement `indeterminate`, since only an agent inside a session can see whether it holds.
 
@@ -182,7 +183,7 @@ $ pkit harness report | grep delegated-result-complete
 
 Dispatch the critic before you adopt a substantive draft. Dispatch the convention-compliance and rule-set reviewers before you commit or push. The architect and the methodology reviewer join where the draft calls for them. When to call each, in the order to call them:
 
-| Reviewer | When | What it judges | What it may change |
+| Agent | When | What it judges | What it may change |
 | --- | --- | --- | --- |
 | `critic` | Before you adopt a substantive draft: a decision record, a plan across components or an architectural rework. Skip it for trivia, such as a reply to a question or a small edit of one file. | The draft and its context. It returns red flags, gaps, weak reasoning, alternatives and agreements. | Nothing. |
 | `architect` | After the critic, where the draft touches the big picture. Examples are a new abstraction, an edit to a foundational record, or a concern across components. | Boundaries, abstractions and where each concern sits. It flags where an authorisation is needed. | The architecture documents and decision records your overlay gives it, a draft among them. |
@@ -198,7 +199,7 @@ How to dispatch each, what it returns, and what you do with it:
 - **The methodology reviewer** returns blockers, suggestions and notes. Mend each blocker before you adopt the artefact.
 - **The convention-compliance reviewer** reports each violation with the record it breaks and what to do. Mend each one and dispatch it again.
 - **The rule-set reviewer** reads the rules from `pkit rule-sets altered`, and approves only where it found no settled break ([the reference, "The rule-set reviewer"](../../.pkit/agents/README.md#the-rule-set-reviewer)). A settled break is one the rule's own text settles. A passage that needs a person's judgement withholds no approval.
-- **Its form is yours to name.** Name its verdict line and the marks of its findings when you dispatch it, such as `Verdict: APPROVED` and `[block]`. With none named, it states both in words.
+- **The rule-set reviewer's form is yours to name.** Name its verdict line and the marks of its findings when you dispatch it, such as `Verdict: APPROVED` and `[block]`. With none named, it states both in words.
 - **Advisory, unless a gate requires one.** No core gate counts a reviewer's verdict, and a merge gate may require one.
 - **Calling them each time.** A rule of your own in `project.md` tells every session when to dispatch each reviewer ([the rules guide, "Add your own rules"](../rules/README.md#add-your-own-rules)).
 
@@ -234,9 +235,9 @@ Turn recurring work into a definition of your own, and design its dialogue as a 
 1. **Choose an agent definition.** A standing role with its own boundaries is a definition, and a procedure for one kind of task is a skill (COR-006).
 2. **Choose whether it needs a storyboard.** It does where you find yourself writing its dialogue in advance: its prompts, its gates and what each answer changes (COR-016). An agent that works from judgement needs none.
 3. **Stamp it.** Run `pkit new agent project <name> --with-storyboard`, or `pkit new agent project <name>` without a storyboard. Or ask your session to, through the `agent-author` skill.
-4. **Set its tools.** The stamp grants `Read`, `Glob`, `Grep` and `Bash`, and Claude Code gives the agent only those its `tools:` list names. Keep only the tools the role needs.
-5. **Write the storyboard first,** through the `storyboard-author` skill. The storyboard gives the framing and the tone, and for each scenario its *Trigger*, *Preconditions*, *Walkthrough* and *Behind the scenes* ([the reference, "Storyboards"](../../.pkit/agents/storyboards.md)).
-6. **Write the definition's body from it.** Say when to delegate to the agent, what it reads and which paths it owns, and declare each of them in the front matter too.
+4. **Write the storyboard first,** through the `storyboard-author` skill. The storyboard gives the framing and the tone, and for each scenario its *Trigger*, *Preconditions*, *Walkthrough* and *Behind the scenes* ([the storyboards reference](../../.pkit/agents/storyboards.md)).
+5. **Write the definition's body from it.** Say when to delegate to the agent, what it reads and which paths it owns, and declare each of them in the front matter too.
+6. **Set its tools.** The stamp grants `Read`, `Glob`, `Grep` and `Bash`, and Claude Code gives the agent only those its `tools:` list names. Keep only the tools the role needs, and `Read` where it has a storyboard.
 7. **Write your paths as they are.** The body keeps whatever it names. Name a path by a category, such as `<release-notes>`, only where another project or several agents share the definition's paths. Then name the category's paths in the overlay, and have the body send the agent there, as the architect's does.
 8. **Deploy and check it.** Run `pkit sync`, then `pkit refs validate`.
 
@@ -276,7 +277,7 @@ What the output proves:
 - **Read where you wrote it.** The deployed copy names the storyboard by its path in your project, so the agent reads the file you edit. The deploy copies no storyboard.
 - **Checked against its front matter.** `pkit refs validate` fails the definition until `docs/welcome.md` is among its `reads.paths`, and exits 1. `pkit validate` reports the same finding as a warning, and passes ([the reference, "The reference graph"](../../.pkit/agents/README.md#the-reference-graph)). So run `pkit refs validate` in your checks to fail on it.
 
-A storyboard you add later is not listed for you. Below, a definition stamped without one gets its storyboard. The stamp moves the definition into a folder of its own, and `pkit refs validate` fails until the definition lists the storyboard ([the reference, "Storyboards"](../../.pkit/agents/storyboards.md#authoring)):
+A storyboard you add later is not listed for you. Below, a definition stamped without one gets its storyboard. The stamp moves the definition into a folder of its own. `pkit refs validate` then fails until the definition lists the storyboard and its body cites it ([the storyboards reference, "Authoring"](../../.pkit/agents/storyboards.md#authoring)):
 
 ```console
 $ pkit new agent project release-checker
