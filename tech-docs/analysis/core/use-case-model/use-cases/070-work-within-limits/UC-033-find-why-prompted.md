@@ -72,7 +72,7 @@ pkit:
 > **Not built yet:** none of those three commands runs such a check, and each writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 3. The system arms a diagnostic session for a bounded time, eight hours by default (PRJ-006 points [1](../../../../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md#1-opt-in-off-by-default) and [5](../../../../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md#5-mvp-cadence-and-guards), and `permissions.py`). It says that the log is local and ignored by git.
-4. The agents work as usual. The [permission hook](../../../glossary.md#term-permission-hook--permission-hook) defers some calls to the [harness](../../../glossary.md#term-harness--harness). For each, it has the [backbone](../../../glossary.md#term-backbone--backbone)'s capture code append the call to the log, its command's tail redacted ([PRJ-006 point 2](../../../../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md#2-capture-lives-in-the-adapter-not-the-core)). That code needs only the system `python3` ([REQ-016](../../../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)).
+4. The agents work as usual. The [permission hook](../../../glossary.md#term-permission-hook--permission-hook) defers some calls to the [harness](../../../glossary.md#term-harness--harness). For each, it has the [backbone](../../../glossary.md#term-backbone--backbone)'s capture code append the call to the log, its command's tail redacted ([PRJ-006 point 2](../../../../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md#2-capture-lives-in-the-adapter-not-the-core)). That code needs only the operating system's `python3` ([REQ-016](../../../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)).
 5. The operator runs `pkit permissions diagnose report`, which writes nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)).
 6. The system matches each logged call against the allow entries of the harness's settings files, and splits the calls three ways:
    - the calls an allow entry matches whole, which `diagnose report` counts as never prompted
@@ -80,7 +80,7 @@ pkit:
    - the rest, which no allow entry covers
 7. The system groups the logged calls, and ranks the groups by frequency within bands, in this order: defects, recommendations and judgement calls.
 8. For each group, the system names a remediation, such as granting a [privilege](../../../glossary.md#term-privilege--privilege) of the catalog, or narrowing a chain to single commands. It applies none of them ([PRJ-006 point 3](../../../../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md#3-classification-is-advisory-a-safe-set-gates-any-fix)).
-9. The operator applies the chosen remediations, such as with `pkit permissions grant <subject> <privilege>` ([UC-022](UC-022-add-own-additions.md)).
+9. The operator applies the chosen remediations, such as with `pkit permissions grant <subject> <privilege>` ([UC-022](../020-set-up/UC-022-add-own-additions.md)).
 10. The operator runs `pkit permissions diagnose off`, and the hook stops logging. The log stays.
 
 **Variants:**
