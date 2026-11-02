@@ -300,7 +300,7 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#docume
 
 ## TERM-onboarding — onboarding
 
-**Example:** a [project](../core/glossary.md#term-project--project) adopts living-docs with 14 [unclassified documents](#term-unclassified-document--unclassified-document). Its onboarding ends once [validation](../core/glossary.md#term-validation--validation) counts none of them, and no [page](#term-page--page) left unanchored without an accepted reason.
+**Example:** a [project](../core/glossary.md#term-project--project) adopts living-docs with 14 [unclassified documents](#term-unclassified-document--unclassified-document). Its onboarding ends once [validation](../core/glossary.md#term-validation--validation) counts none of them, and no [page](#term-page--page) is left unanchored without an accepted reason.
 
 **Distinctions:**
 
