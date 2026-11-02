@@ -53,7 +53,7 @@ A storyboard is a helper beside its agent's definition, so the definition takes 
 
 ```
 .pkit/agents/<namespace>/<agent>/            # or .pkit/capabilities/<capability>/agents/<agent>/
-├── <agent>.md                         # the definition: declares its storyboards, reads them at session start
+├── <agent>.md                         # the definition, which declares its storyboards
 ├── storyboard.md                      # one storyboard, of one or more scenarios
 └── <scenario-slug>.storyboard.md      # one scenario's own, where scenarios diverge
 ```

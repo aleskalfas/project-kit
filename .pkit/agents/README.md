@@ -10,6 +10,7 @@ pkit:
         - src/project_kit/agents_overlay.py
         - src/project_kit/agent_policy.py
         - src/project_kit/refs.py
+        - src/project_kit/friction_check.py
         - src/project_kit/docs_roots.py
         - src/project_kit/install.py
         - src/project_kit/sync.py
@@ -149,7 +150,7 @@ A body cites what its front matter declares, in forms the validator reads withou
 - **A rule id,** `RS-<SET>-NNN`, an extension point, `RS-<SET>-NNN#<point>`, or a component's rule with its component, `[<component>:RS-<SET>-NNN]` (COR-051). It is not declared in the front matter either, and must name a rule of an installed rule set.
 - **A role or point address** in brackets, such as `[pkit::documentation]` or `[pkit::documentation:readers]` (COR-053). It must name a role or point an installed capability declares. A bracketed token that holds `::` and is no address is reported as malformed.
 - **A hook name:** `<topic>.<operation>` or `<topic>.<provider>.<operation>` ([`hooks.md`](hooks.md)).
-- **An operational rule** by its layer and number, such as "core rule 16" (COR-068). `pkit refs validate` warns, without failing, of one that is missing or retired.
+- **An operational rule** by its layer and number, such as "core rule 16", or by the id of a rule of a loaded set, such as core's `RS-OPS-NNN` (COR-068). `pkit refs validate` warns, without failing, of one that is missing or retired.
 - **A point of a record,** such as `COR-NNN point N`, `COR-NNN#N` or `[<capability>:DEC-NNN] point N` (COR-058). `pkit refs validate` warns, without failing, of a point its record neither holds nor retires ([the decisions README, "Citing"](../decisions/README.md#citing)).
 - **Not counted:** anything inside a fenced code block, an HTML comment or strikethrough.
 
@@ -417,13 +418,13 @@ What it reports, a line for each definition, such as `created`, `updated`, `exis
 - **A file without the mark** at the copy's path is left as it is, and reported `skipped`. It is the project's own, or a copy from before the mark. To have the deploy write its own, delete the file and deploy again.
 - **A marked copy that no source ships any more** is removed. To keep one, delete its mark line, and it reads as the project's.
 - **A folder with no definition named after it,** such as one half written, is skipped, and the rest deploy.
-- **A skipped definition** never stops the others. A copy an earlier sync wrote stays as it was. The run ends with the count skipped, and the remedies.
+- **A skipped definition** never stops the others. A copy an earlier deploy wrote stays as it was. The run ends with the count skipped, and the remedies.
 
 Beside the deploy:
 
 - **The undeploy.** The adapter's `undeploy-capability.sh <name>` removes one capability's deployed agents and skills, where the capability is unregistered and its files stay. The lifecycle calls it by name, and knows no harness path ([the adapters README, "Primitives the lifecycle calls"](../adapters/README.md#primitives-the-lifecycle-calls)).
 - **Grants.** Where the adapter's permission hook is registered, the permission model decides each call of a dispatched agent for the subject `agent:<name>`. It applies that subject's grants and those to `all` (COR-028). The permissions reference says how a call's subject is found.
-- **Dispatching.** A session dispatches an agent by its definition's name. While Claude Code's agent teams are on, give the delegated agent no name of its own. A named one's result arrives cut at 4064 characters, as the adapter declares.
+- **Dispatching.** A session dispatches an agent by its definition's name, and gives it no name of its own. While Claude Code's agent teams are on, a named one's result arrives cut at 4064 characters, as the adapter declares.
 
 ### Name-collision precedence
 

@@ -102,7 +102,7 @@ The placeholders resolve via `.pkit/agents/project/overlay.yaml`
 
 What the output proves:
 
-- **Skipped while unset.** With no path for `architecture-docs`, `pkit agents` lists the architect as skipped, with the category it lacks. It lists each definition with the model and effort it runs at too. The sync skips the architect rather than deploy it with the placeholder, and leaves the copy an earlier sync wrote as it was.
+- **Skipped while unset.** With no path for `architecture-docs`, `pkit agents` lists the architect as skipped, with the category it lacks. It lists each definition with the model and effort it runs at too. The sync skips the architect rather than deploy it with the placeholder, and leaves the copy an earlier deploy wrote as it was.
 - **Deployed with your paths.** Once the overlay names `design/`, the sync deploys the architect again to `.claude/agents/`, where Claude Code reads it. Its front matter there owns `design/` in place of `<architecture-docs>` ([the reference, "Adopter overlay"](../../.pkit/agents/README.md#adopter-overlay)).
 - **The body sends it to the overlay.** The deploy fills the front matter alone, so the architect's body tells it where to find the paths behind its placeholders.
 
@@ -157,7 +157,7 @@ flowchart TD
 - **One definition for each name.** Where two sources ship one name, the deploy takes yours, then a capability's, then the core's ([the reference, "Deploy mechanics"](../../.pkit/agents/README.md#deploy-mechanics)).
 - **The overlay,** `.pkit/agents/project/overlay.yaml`, names your paths for each category, such as `adr-records`. A definition's front matter names the category as `<adr-records>`, and the deploy writes the paths in its place. `pkit init` writes the overlay with a value for each category the core's definitions name ([the reference, "Adopter overlay"](../../.pkit/agents/README.md#adopter-overlay)).
 - **The deployed copy,** `.claude/agents/<name>.md`, is what Claude Code loads. Each sync writes it again from its source, so you edit the source, never the copy. A file of yours there stays: the deploy leaves a file it did not write, and reports it skipped ([the reference, "Deploy mechanics"](../../.pkit/agents/README.md#deploy-mechanics)).
-- **Skipped.** A definition whose required category the overlay leaves unset is skipped, and the others deploy. A copy an earlier sync wrote stays as it was. `pkit agents` lists each definition as deployable or skipped ([the reference, `pkit agents`](../../.pkit/agents/README.md#pkit-agents)).
+- **Skipped.** A definition whose required category the overlay leaves unset is skipped, and the others deploy. A copy an earlier deploy wrote stays as it was. `pkit agents` lists each definition as deployable or skipped ([the reference, `pkit agents`](../../.pkit/agents/README.md#pkit-agents)).
 - **The session** dispatches an agent by its definition's name, such as "Use the critic agent on `docs/plan.md`". Claude Code gives the agent only the tools its `tools:` list names ([the reference, "Frontmatter schema"](../../.pkit/agents/README.md#frontmatter-schema)).
 - **What the agent may run.** Where the permission model is turned on, the model decides each of the agent's calls under the grants you give that agent ([the permissions guide](../permissions/README.md#deny-something-to-one-agent)).
 
@@ -165,7 +165,7 @@ flowchart TD
 
 Dispatch each agent without a teammate name, and its whole result comes back to the session. A teammate name is one a session gives a delegated agent while Claude Code's experimental agent teams are on, apart from the definition's name. Claude Code cuts a result short only where the session gave one, and the part that arrives reads as complete. What to do:
 
-- **Leave agent teams off,** unless you need them. Every result then arrives whole. Where your session's tool for dispatching an agent takes a name, agent teams are on (project-management DEC-029).
+- **Leave agent teams off,** unless you need them. Every result then arrives whole. Ask your session whether its tool for dispatching an agent takes a name. Where it does, agent teams are on (project-management DEC-029).
 - **With agent teams on,** tell your sessions to dispatch each agent without a teammate name. A rule of your own in `project.md` says it to every session ([the rules guide, "Add your own rules"](../rules/README.md#add-your-own-rules)).
 - **What the adapter declares.** The Claude Code adapter declares the cost at which a result comes back whole, as the requirement `delegated-result-complete`. `pkit harness report` shows that cost, and marks the requirement `indeterminate`, since only an agent inside a session can see whether it holds.
 
@@ -237,8 +237,8 @@ Turn recurring work into a definition of your own, and design its dialogue as a 
 3. **Stamp it.** Run `pkit new agent project <name> --with-storyboard`, or `pkit new agent project <name>` without a storyboard. Or ask your session to, through the `agent-author` skill.
 4. **Write the storyboard first,** through the `storyboard-author` skill. The storyboard gives the framing and the tone, and for each scenario its *Trigger*, *Preconditions*, *Walkthrough* and *Behind the scenes* ([the storyboards reference](../../.pkit/agents/storyboards.md)).
 5. **Write the definition's body from it.** Say when to delegate to the agent, what it reads and which paths it owns, and declare each of them in the front matter too.
-6. **Set its tools.** The stamp grants `Read`, `Glob`, `Grep` and `Bash`, and Claude Code gives the agent only those its `tools:` list names. Keep only the tools the role needs, and `Read` where it has a storyboard.
-7. **Write your paths as they are.** The body keeps whatever it names. Name a path by a category, such as `<release-notes>`, only where another project or several agents share the definition's paths. Then name the category's paths in the overlay, and have the body send the agent there, as the architect's does.
+6. **Write your paths as they are.** The body keeps whatever it names. Name a path by a category, such as `<release-notes>`, only where another project or several agents share the definition's paths. Then name the category's paths in the overlay, and have the body send the agent there, as the architect's does.
+7. **Set its tools.** The stamp grants `Read`, `Glob`, `Grep` and `Bash`, and Claude Code gives the agent only those its `tools:` list names. Keep only the tools the role needs, and `Read` where it has a storyboard.
 8. **Deploy and check it.** Run `pkit sync`, then `pkit refs validate`.
 
 Below, you stamp an agent that welcomes new contributors, with its storyboard. A line you add to its body then cites a file its front matter does not declare:
