@@ -245,6 +245,19 @@ TERM-changeset-guard:
         record:
           - PRJ-002#D1
           - PRJ-002#D4
+TERM-completion:
+  name: completion
+  status: active
+  definition: "state a transition of the backbone records last, once every migration has run, naming the version the transition completed"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/manifest.py
+          - src/project_kit/upgrade.py
+        record:
+          - COR-059#6
+          - ADR-065#3
 TERM-component:
   name: component
   noun-forms: [components]
@@ -370,6 +383,17 @@ TERM-decision-record:
           - COR-006
           - COR-025
           - COR-058#1
+TERM-declared-surface:
+  name: declared surface
+  status: active
+  definition: "paths a component's package metadata or the backbone configuration names as what descriptions ought to cover, reported as uncovered where no artefact anchors them"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_repository.py
+        record:
+          - COR-050#8
 TERM-default-branch:
   name: default branch
   status: active
@@ -396,6 +420,20 @@ TERM-deferral:
           - src/project_kit/friction_write.py
         record:
           - COR-050#4
+TERM-dependency-gate:
+  name: dependency gate
+  noun-forms: [dependency gates]
+  status: active
+  definition: "check, made before an install or a version transition writes, that the capabilities it would leave meet each other's ranges and mandatory connections"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/capabilities.py
+          - src/project_kit/upgrade.py
+        record:
+          - COR-030
+          - ADR-065#6
 TERM-deploy-mark:
   name: deploy mark
   noun-forms: [deploy marks]
@@ -460,6 +498,18 @@ TERM-enforcement-declaration:
           - .pkit/adapters/claude-code/permission-enforcement.yaml
         record:
           - COR-028#3
+TERM-environment-block:
+  name: environment block
+  status: active
+  definition: "part of a report's body the system builds, naming the versions, the adapter and the operating system in use, and holding no path"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/environment.py
+          - src/project_kit/report.py
+        record:
+          - PRJ-008
 TERM-finding:
   name: finding
   noun-forms: [findings]
@@ -603,6 +653,18 @@ TERM-install:
           - COR-010
           - COR-017
           - COR-030
+TERM-install-plan:
+  name: install plan
+  noun-forms: [install plans]
+  status: active
+  definition: "dry run that predicts, from a capability's package metadata, the connections its installation would make and break, exactly as the live connections are worked out"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/capability_plans.py
+        record:
+          - COR-053#8
 TERM-instruction-file:
   name: instruction file
   noun-forms: [instruction files]
@@ -746,6 +808,18 @@ TERM-overlay:
         record:
           - COR-013#5
           - ADR-052
+TERM-overlay-category:
+  name: overlay category
+  noun-forms: [overlay categories]
+  status: active
+  definition: "named kind of path, such as `adr-records`, under which a project-owned file lists the paths that fill each placeholder of that name"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/agents_overlay.py
+        record:
+          - COR-013#5
 TERM-package-metadata:
   name: package metadata
   status: active
@@ -826,6 +900,19 @@ TERM-place:
         record:
           - COR-050#1
           - COR-050#14
+TERM-placeholder:
+  name: placeholder
+  noun-forms: [placeholders]
+  status: active
+  definition: "marker `<name>` in an agent definition's source, which the deploy replaces in its front matter with the paths the overlay gives that name's overlay category"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/agents_overlay.py
+          - .pkit/adapters/claude-code/deploy-agents.sh
+        record:
+          - COR-013#5
 TERM-point:
   name: point
   other-senses: [revalidation point, deferral point, extension point, entry point]
@@ -961,6 +1048,18 @@ TERM-pull-request:
           - COR-009#2
           - COR-009#3
           - COR-009#5
+TERM-query-command:
+  name: query command
+  noun-forms: [query commands]
+  status: active
+  definition: "script a component registers for the backbone to run and read, such as a validator, declared offline, read-only and deterministic within an enforced time bound"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/command_runner.py
+        record:
+          - ADR-057#3
 TERM-range:
   name: range
   status: active
@@ -1158,6 +1257,19 @@ TERM-role:
         record:
           - COR-053#1
           - COR-053#7
+TERM-router:
+  name: router
+  noun-forms: [routers]
+  status: active
+  definition: "entry code of the system's command that picks the code each command runs: a source checkout's own, a version pin's release, or the installed one"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/router.py
+        record:
+          - ADR-039
+          - ADR-049#4
 TERM-rule:
   name: rule
   other-senses: [core rule, project rule]
@@ -1230,6 +1342,20 @@ TERM-scratchpad-note:
         record:
           - COR-012
           - COR-043
+TERM-seed-path:
+  name: seed path
+  noun-forms: [seed paths]
+  status: active
+  definition: "project-owned location the methodology declares with a template, created from it at first install and at each transition of the backbone where it is missing"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/install.py
+          - src/project_kit/upgrade.py
+        record:
+          - COR-059#8
+          - COR-001
 TERM-seeding:
   name: seeding
   status: active
@@ -1425,6 +1551,20 @@ TERM-validation:
           - COR-055#2
           - COR-055#3
           - COR-055#5
+TERM-validator:
+  name: validator
+  noun-forms: [validators]
+  status: active
+  definition: "command a component registers in its package metadata, whose findings validation reads, and whose missing result is a failing finding"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/validators.py
+        record:
+          - COR-055#3
+          - COR-055#6
+          - ADR-058#4
 TERM-version:
   name: version
   noun-forms: [versions]
@@ -1723,6 +1863,18 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 - **The `skip-changeset` label:** the escape hatch that skips the surface check. Floors, bounds and range edits are still checked (PRJ-002 D4).
 - **Cross-repository guard:** a check against writing in another repository. It shares only the word.
 
+## TERM-completion — completion
+
+Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#completion).
+
+**Example:** An upgrade to 2.0.0 stops on a failing migration. `.pkit/manifest.yaml` then holds the target 2.0.0 and the completion 1.150.0, and the project reads as incomplete.
+
+**Distinctions:**
+
+- **Target:** the version a transition of the backbone records first, before it writes anything else. A project is at a version only where both name it (COR-059 point 6).
+- **No completion:** reads as incomplete with no lower bound. So the next transition runs every backbone migration once (COR-059 point 6).
+- **Its key:** `completed_version` in `.pkit/manifest.yaml` (ADR-065 point 3).
+
 ## TERM-component — component
 
 Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#component).
@@ -1841,6 +1993,18 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **Rule:** a statement in a [rule set](#term-rule-set--rule-set) of what must hold of an [artefact](#term-artefact--artefact) ([COR-051 point 1](../../../.pkit/decisions/core/COR-051-rule-sets.md#1-what-a-rule-is)). A record chooses and says why, and a [rule](#term-rule--rule)'s origin may cite it.
 - **Status:** `proposed`, `accepted` or `superseded`. Work builds only on an accepted record, as the [acceptance gate](#term-acceptance-gate--acceptance-gate) asks.
 
+## TERM-declared-surface — declared surface
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#declared-surface).
+
+**Example:** project-kit's backbone configuration lists `src/**` under `friction.surface`. So `pkit friction check --all` counts each file there that no artefact anchors.
+
+**Distinctions:**
+
+- **Surface change:** an alteration an adopter could observe, depend on or break against. It shares only the word (PRJ-002 D1).
+- **A component's surface paths:** the paths the changeset guard reads as a component's surface. They are no declared surface.
+- **Uncovered surface:** a measure, which no check fails on (COR-050 point 8).
+
 ## TERM-default-branch — default branch
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#default-branch).
@@ -1865,6 +2029,18 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **Deferred debt:** what a deferral leaves on the default branch, dated from its deferral point (COR-050 point 9).
 - **A `deferred` revisit entry:** puts off the revisit of one link target, never an anchor's friction (COR-050 point 16).
 - **A permission hook's deferral:** the hook hands a call it does not decide to the harness, which then decides or asks. It shares only the word (COR-028 point 2).
+
+## TERM-dependency-gate — dependency gate
+
+Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#dependency-gate).
+
+**Example:** An upgrade moves `project-management` outside the range a project's own capability declares on it. The dependency gate warns, and the upgrade stops without `--force`.
+
+**Distinctions:**
+
+- **A moving capability out of range:** refused outright, since the project controls the dependency that does not move (ADR-065 point 6).
+- **A dependent left out of range:** warned of. The transition proceeds only under `pkit upgrade --force` (ADR-065 point 6).
+- **Acceptance gate:** a condition on what work builds on. It shares only the word.
 
 ## TERM-deploy-mark — deploy mark
 
@@ -1925,6 +2101,17 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 - **Support declaration:** an adapter's grading of how far its harness meets each harness requirement (COR-047 point 2).
 - **Enforcement:** the system's word for a registered permission hook. It shares only the word.
 - **A dimension with `none`:** reported as a gap to close outside the harness, such as at the operating system (COR-028 point 3).
+
+## TERM-environment-block — environment block
+
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#environment-block).
+
+**Example:** A bug report's environment block names pkit 2.0.0, backbone 2.0.0, Python 3.13 and project-management 0.55.0, with the `claude-code` adapter on macOS.
+
+**Distinctions:**
+
+- **The adopter's text:** what the adopter writes. The system checks it for nothing private beyond what it can see, and builds the environment block itself (PRJ-008).
+- **A capability the system does not ship:** counted, never named, unless the adopter asks to name it (PRJ-008).
 
 ## TERM-finding — finding
 
@@ -2059,6 +2246,18 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 - **Version transition:** moves what is installed to another [version](#term-version--version). Install adds what was not there.
 - **Registration:** how a project adds a capability it authors itself. Registration copies nothing ([COR-031 point D3](../../../.pkit/decisions/core/COR-031-capability-origin.md#d3--registering-an-incubated-capability-does-not-copy)).
 
+## TERM-install-plan — install plan
+
+Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#install-plan).
+
+**Example:** `pkit capabilities install living-docs --plan` prints an install plan of the data points living-docs would fill, and the role conflicts to resolve. It writes nothing.
+
+**Distinctions:**
+
+- **Install:** the operation that adds the capability. An install plan writes nothing (COR-053 point 8).
+- **Suggestion:** a capability `pkit status` names as able to fill an unfilled data point. It is never an action (COR-053 point 8).
+- **Release plan:** `pkit release plan`, the preview of a release step. It shares only the word.
+
 ## TERM-instruction-file — instruction file
 
 Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#instruction-file).
@@ -2188,7 +2387,18 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 - **Placeholder:** a `<category>` in an agent definition's source. The deploy replaces it in the front matter with the overlay's paths for that category ([COR-013 point 5](../../../.pkit/decisions/core/COR-013-agent-architecture.md#5-adopter-overlay-for-paths-outside-pkit)). In the body it stays as written.
 - **Override:** a value under `overrides.<agent>` in the overlay. It replaces a category's value for that agent definition alone, and is never merged with it (COR-013 point 5).
-- **Optional read:** a category an agent definition reads only through `reads.patterns`. Where the overlay lacks it, the deploy drops the item rather than skipping the agent definition ([ADR-052](../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)).
+- **Optional read:** an overlay category an agent definition reads only through `reads.patterns`. Where the overlay lacks it, the deploy drops the item rather than skipping the agent definition ([ADR-052](../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)).
+
+## TERM-overlay-category — overlay category
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#overlay-category).
+
+**Example:** project-kit's overlay gives the overlay category `adr-records` the folder of its architecture decisions, so the deployed `architect` names that folder.
+
+**Distinctions:**
+
+- **Placeholder:** the `<category>` an agent definition writes, which the deploy fills from the overlay category of that name (COR-013 point 5).
+- **Override:** a value under `overrides.<agent>` that replaces an overlay category's value for one agent definition (COR-013 point 5).
 
 ## TERM-package-metadata — package metadata
 
@@ -2199,7 +2409,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 **Distinctions:**
 
 - **Manifest:** the [project](#term-project--project)'s record of what it installed, at which [version](#term-version--version). [COR-017](../../../.pkit/decisions/core/COR-017-capability-pattern.md) uses that word for the package metadata too, and the analysis keeps it for the project's record.
-- **Plan:** a dry run that reads a [capability](#term-capability--capability)'s [connection points](#term-connection-point--connection-point) from its package metadata, before the capability is installed ([COR-053 point 8](../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
+- **Install plan:** a dry run that reads a [capability](#term-capability--capability)'s [connection points](#term-connection-point--connection-point) from its package metadata, before the capability is installed ([COR-053 point 8](../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
 
 ## TERM-passage-for-a-person — passage for a person
 
@@ -2261,6 +2471,18 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **Synced copy:** a file that [propagation](#term-propagation--propagation) writes into the project, such as a core record. A folder of [synced copies](#term-synced-copy--synced-copy) is never a place, or each [sync](#term-sync--sync) would read as [friction](#term-friction--friction) ([COR-050 point 14](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#14-project-settings)).
 - **Held folder:** a folder a [component](#term-component--component) declares for its held documents. No place reads a file in it as an [artefact](#term-artefact--artefact) ([COR-050 point 1](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)).
 - **In place:** where a file or an entry already stands, as in a record edited in place. In *in place of*, the phrase means instead of. It shares only the word.
+
+## TERM-placeholder — placeholder
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#placeholder).
+
+**Example:** The `architect`'s source names `<adr-records>` in its front matter. Its deployed copy names project-kit's folder of architecture decisions there instead.
+
+**Distinctions:**
+
+- **In the body:** a placeholder stays as written, as text the agent reads (COR-013 point 5).
+- **A stand-in in text:** something a stamp or a person leaves to be filled, such as `<why it still holds>`. It shares only the word.
+- **An unset overlay category:** an agent definition that needs it is skipped, never deployed with the placeholder in it (COR-013 point 5).
 
 ## TERM-point — point
 
@@ -2391,6 +2613,18 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 - **Change:** the unit of work a pull request carries. Where the [project](#term-project--project) allows it, a [change](#term-change--change) may land as a direct commit instead ([COR-009 point 5](../../../.pkit/decisions/core/COR-009-pr-workflow.md#5-prs-are-recommended-not-enforced)).
 - **Target:** the branch a pull request merges into, which CI names as the checks' [base](#term-base--base).
 - **Release pull request:** the pull request that carries one [release step](#term-release-step--release-step)'s writes ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
+
+## TERM-query-command — query command
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#query-command).
+
+**Example:** A capability's validator is a query command. So `pkit sync` provisions its script's dependencies, and `pkit validate` runs it offline within thirty seconds.
+
+**Distinctions:**
+
+- **Its three uses:** an anchor kind's resolver, a data point's filler, and a validator (ADR-057 point 3).
+- **No answer:** an abnormal exit, a timeout or an answer that cannot be read. It is never read as an empty answer (ADR-057 point 3).
+- **What the declaration confines:** nothing. Its obligations are trusted, and a project that needs a boundary confines the command where it runs it (ADR-057 point 4).
 
 ## TERM-range — range
 
@@ -2589,6 +2823,18 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 - **Agent definition:** what COR-006 calls a persistent role with boundaries. The analysis calls it an [agent definition](#term-agent-definition--agent-definition).
 - **Provider:** the installed capability that supplies a role's [connection points](#term-connection-point--connection-point). Where two installed capabilities provide one role, the [project](#term-project--project) selects one (COR-053 points [1](../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles) and [7](../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)).
 
+## TERM-router — router
+
+Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#router).
+
+**Example:** A project's version pin names 1.150.0, and the installed CLI is at 2.0.0. So the router runs each command there under `uvx` at 1.150.0.
+
+**Distinctions:**
+
+- **Routing switched off:** with `PKIT_NO_ROUTE` set, a command runs the installed CLI's code (ADR-049 point 5).
+- **The fallback:** where the pinned release cannot be fetched, the router runs the installed CLI and warns once (ADR-039 D2).
+- **Dispatcher:** the code that runs one command once the router has chosen whose code runs (ADR-039 point 1).
+
 ## TERM-rule — rule
 
 Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#rule).
@@ -2653,6 +2899,18 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **Decision record:** a document that states one choice, and binds once it is accepted. A scratchpad note decides nothing, and may produce [decision records](#term-decision-record--decision-record) ([COR-012](../../../.pkit/decisions/core/COR-012-scratchpad-notes.md)).
 - **Its state:** the folder it lies in, `active/`, `done/` or `dropped/`, with no status field (COR-012). A note sent with a [report](#term-report--report) moves to `reported/`, a side state of `active/` ([COR-043](../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md)).
 - **Agent workspace:** the folder of an agent's intermediate files, which no commit carries. A scratchpad note is committed, and kept once it retires.
+
+## TERM-seed-path — seed path
+
+Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#seed-path).
+
+**Example:** The agents' overlay, `.pkit/agents/project/overlay.yaml`, is a seed path. A project that deleted it gets it back at its next `pkit upgrade`.
+
+**Distinctions:**
+
+- **Seeding:** the operation that creates a missing seed path.
+- **Synced copy:** a file sync rewrites. A seed path is project-owned content from the moment it is written, and sync never creates one (COR-059 point 8).
+- **The template:** the methodology's file a seed path is created from. It is no seed path itself.
 
 ## TERM-seeding — seeding
 
@@ -2835,6 +3093,18 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 - **Change check:** compares a [change](#term-change--change) with its [base](#term-base--base). Validation reads the working tree, and takes no base ([COR-055 point 2](../../../.pkit/decisions/core/COR-055-validation.md#2-state-not-a-change)).
 - **Whole-repository check:** reports [debt](#term-debt--debt) on the [default branch](#term-default-branch--default-branch), and never fails ([COR-055 point 1](../../../.pkit/decisions/core/COR-055-validation.md#1-what-validation-owns)).
 - **Validator:** a command a [component](#term-component--component) registers, whose [findings](#term-finding--finding) validation reads. A validator that gives no result yields a failing finding (COR-055 points [3](../../../.pkit/decisions/core/COR-055-validation.md#3-a-component-joins-by-naming-a-command) and [6](../../../.pkit/decisions/core/COR-055-validation.md#6-a-validator-that-gives-no-answer-fails)).
+
+## TERM-validator — validator
+
+Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#validator).
+
+**Example:** software-analysis registers a validator that checks the analysis. `pkit validate` runs it with the backbone's own checks, and fails on its `error` findings.
+
+**Distinctions:**
+
+- **A member of validation:** one of the backbone's own checks, such as `versions` or `rule-sets`, which no component registers (ADR-058 point 3).
+- **Check of a change:** the change check and the changeset guard compare a change with its base. They are no validators (ADR-058 point 7).
+- **Query command:** a validator is one, as a resolver and a filler are (ADR-057 point 3).
 
 ## TERM-version — version
 
