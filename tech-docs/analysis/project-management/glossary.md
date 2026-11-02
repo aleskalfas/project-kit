@@ -106,7 +106,7 @@ TERM-builder-agent:
   name: builder agent
   noun-forms: [builder agents]
   status: active
-  definition: "AI session the build command starts for one worker's Task, in a sandboxed clone of its own, seeing only a brief written from that Task"
+  definition: "AI the build command starts in a fresh session for one worker's Task, in a sandboxed clone of its own, seeing only the Task's brief"
   pkit:
     friction:
       anchors:
@@ -491,7 +491,7 @@ TERM-seat:
   name: seat
   noun-forms: [seats]
   status: active
-  definition: "place in a topology, held by at most one clone, saying whether its agent plans, builds or both, and the agent definition it follows"
+  definition: "place in a topology, held by at most one clone, saying whether its agent plans, builds or both, and the agent definition that agent follows"
   pkit:
     friction:
       anchors:
