@@ -17,6 +17,8 @@ pkit:
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
         - src/project_kit/validate.py
+        - .pkit/skills/core/decision-author.md
+        - .pkit/agents/core/architect.md
       record: [COR-001, COR-002, COR-003, COR-012, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#1", "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6", COR-065, COR-066, COR-068]
       artefact:
         - RS-OPS-019
@@ -83,7 +85,7 @@ Records also sit in two further places, each its own id-space, numbered apart:
   ```
 
 - **Validation runs it too,** among the checks of its `decisions` member, which the CLI reference lists (`validate`).
-- **One tree:** the check reads one tree, so it finds two records with one id only once both are in that tree. A gate that checks a pull request merged with the default branch finds them before the second lands. A gate that checks the branch alone finds them only after both land. The record that landed later then moves ("Checking a change's numbering" below).
+- **One tree:** the check reads one tree, so it finds two records with one id only once both are in that tree. A gate that checks a pull request merged with the default branch finds them before the second lands. A gate that checks the branch alone finds them only after both land. The record that landed later then moves to the next unused number of its id-space, and its citations are mended ("Checking a change's numbering" below).
 - **Against the default branch:** the numbering check compares a change with the default branch. Where the project runs it, it fails a change whose new record takes an id another change has already landed ("Checking a change's numbering" below).
 
 Validation checks the project's own records only ([COR-055](core/COR-055-validation.md) point 1). A record that arrives as a synced copy is checked where it is authored, since the next sync overwrites an edit here.
@@ -226,15 +228,15 @@ Work depends only on accepted records: code, content, tooling, and records that 
 
 - **Documents** that describe what a record decides wait until it is accepted.
 - **Skills** name in `gates:` the records whose acceptance they rest on, and check each before they run. The skills area's README gives the field.
-- **Before the merge:** the person who authorises it sees each record the change makes accepted, added accepted or set to accepted. Where no component that carries out merges shows that list, the change's author shows it. An edit made after a record's acceptance is accepted only through that list (COR-066 point 3).
+- **Before the merge:** the person who authorises it sees each record the change makes accepted, added accepted or set to accepted. Where no component that carries out merges shows that list, the change's author shows it. An edit made to such a record after its acceptance in the change is accepted only through that list (COR-066 point 3).
 - **An edit to an accepted record** that changes what it decides is a person's to accept, from the numbering check's list ("Refining an accepted record").
-- **Not enforced yet:** no check refuses a merge that lands a proposed record, and none lists the records a change makes accepted (COR-066 points 2 and 3). The `decision-author` skill and the `architect` agent still have a record land `proposed`, and COR-066 point 1 holds over both. So accept each record a change adds before the change lands.
+- **Not enforced yet:** no check refuses a merge that lands a proposed record, and none lists the records a change makes accepted (COR-066 points 2 and 3). The `decision-author` skill and the `architect` agent still have a record land `proposed`, and COR-066 point 1 holds over both. So, before the change lands, have a person accept each record it adds.
 
 ## Adding a record
 
 A project adds its own records in its own namespaces: `project/`, its architecture records' folder, and the `decisions/` of a capability it authors. A choice that later work will build on starts with its record, accepted before work rests on it ([COR-065](core/COR-065-records-and-projection.md) point 3).
 
-Stamp the record with the authoring command, which the `decision-author` skill pairs with. The CLI reference's `new decision` gives the command's output, how it numbers a record and its refusals:
+Stamp the record with the authoring command, which the `decision-author` skill pairs with. The CLI reference's `new decision` gives the command's output, its numbering and its refusals:
 
 ```
 pkit new decision <namespace> <slug>
@@ -410,7 +412,7 @@ A record's points keep their ids for good ([COR-058](core/COR-058-record-points.
 
 ## Checking a change's numbering
 
-The numbering check compares each record a change touches with its state where the branch left the default branch (COR-058 point 8). It is a command of its own, apart from validation:
+The numbering check compares each record a change touches with its state where the branch left the default branch (COR-058 point 8). A record's state alone cannot show that a number moved, and validation takes no base. So the numbering check is a command of its own:
 
 ```
 pkit decisions check-diff [--base <ref>] [--head <rev>] [--json]

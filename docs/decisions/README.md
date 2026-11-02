@@ -153,7 +153,7 @@ stateDiagram-v2
 ```
 
 - **Proposed:** the record belongs only on the branch of the change that proposes it, and binds nothing ([COR-066](../../.pkit/decisions/core/COR-066-accepted-before-landing.md) point 1).
-- **Accepted:** a person accepts the record in that change, before work in the change rests on it. So it reaches the default branch accepted. Nothing checks this yet ("Have a person accept it" below).
+- **Accepted:** a person accepts the record in that change, before work in the change rests on it. So it reaches the default branch accepted. Nothing checks this yet ([the reference, "The acceptance gate"](../../.pkit/decisions/README.md#the-acceptance-gate), and "Have a person accept it" below).
 - **Refined in place:** an accepted record is edited while its decision stands. It states what is true, with no log of its revisions ([the reference, "Refining an accepted record"](../../.pkit/decisions/README.md#refining-an-accepted-record)).
 - **Superseded:** a later record replaces it whole. A record a later one overturns only in part stays accepted, and its top line says so.
 - **What an accepted record governs:** where it decides, your code, documents and skills carry its decision out. Where they disagree with it, first ask whether they fall short of the record, and if they do, fix them. A change to what the record decides is a person's decision (COR-065 point 4).
@@ -196,7 +196,7 @@ author: Doc Examples <doc-examples@example.invalid>
 
 - **Its number:** one past the highest that the namespace's folder holds, in the working tree or on the default branch ([the CLI reference, `new decision`](../../.pkit/cli/README.md#new-decision-namespace-slug---yes)).
 - **Your architecture records' folder:** where your project names none, the first `pkit new decision adr` derives `architecture/decisions/` under your internal documentation root, and records it ([the CLI reference, `new decision`](../../.pkit/cli/README.md#new-decision-namespace-slug---yes)).
-- **Its body:** a Markdown file, which people and agents read alike. Write the title, then the context, the decision, the rationale and the implications, which cover what every reader needs. The title states the decision, and a short summary in plain words opens the record ([the reference, "Writing a record"](../../.pkit/decisions/README.md#writing-a-record)).
+- **Its body:** write the title, then the context, the decision, the rationale and the implications. The title states the decision, and a short summary in plain words opens the record ([the reference, "Writing a record"](../../.pkit/decisions/README.md#writing-a-record)).
 - **Its points:** give each part of the decision a heading of its own, `### 1. Title`, whose number it keeps for good. A decision of one part has no points, so delete the stamped heading before the record first lands ([the reference, "Adding a record"](../../.pkit/decisions/README.md#adding-a-record)).
 - **With your agent:** ask it to "use the decision-author skill to record that we squash-merge every pull request". The skill picks the namespace with you, stamps the record and drafts its body.
 - **How agents find it:** a record is cited, not loaded into each session. An agent reads it where a rule or a skill cites it, or where an anchor ties it to the files a change touches. Before a change, an agent runs `pkit refs records-for` on those files (core rule 22, and [the reference, "Finding the records a path leads to"](../../.pkit/decisions/README.md#finding-the-records-a-path-leads-to)).
@@ -227,7 +227,7 @@ Error: 1 error(s) in the change's numbering found.
 ```
 
 - **The first to land keeps its number.** Move your record to the number the error names, in its file name and its `id`. Mend each citation of the old id in your change, and run the check again.
-- **It reads the default branch as your clone holds it,** and fetches nothing. So a change that lands after the check ran is found only when the check runs again.
+- **It reads the default branch as your clone holds it,** and fetches nothing. So a change that lands after the check ran is found only when the check runs again ([the reference, "Checking a change's numbering"](../../.pkit/decisions/README.md#checking-a-changes-numbering)).
 - **Where it binds:** only where your project runs it. Make it a line of the checks your merges wait on ([the reference, "Checking a change's numbering"](../../.pkit/decisions/README.md#checking-a-changes-numbering)). Run them against the default branch as it stands when the merge happens, such as in a merge queue.
 - **Two records that land with one number** anyway are found by `pkit decisions validate` on the default branch. Move the one that landed later to the next unused number, and mend its citations ([the reference, "Two further id-spaces"](../../.pkit/decisions/README.md#two-further-id-spaces)).
 
@@ -240,7 +240,7 @@ A person accepts a record in the change that proposes it, before any work in the
 - **How it is written:** the record's `status` becomes `accepted` in a commit of its own, made by the person or by an agent on their word. Where the person accepts the record as first written, it may be added accepted. Either commit comes before the commits whose work rests on the record.
 - **With your agent:** tell it "the squash-merge record is accepted", once you have read the record. It sets the status and commits, and only then builds on the record.
 - **Work that rests on the record:** that work follows in the same change, or in a change built on this one that lands no earlier.
-- **Before the merge:** whoever authorises the merge sees each record the change makes accepted, whether it was added accepted or set to accepted. Where no tool shows that list, the change's author shows it. An edit made after a record's acceptance is accepted only through that list (core rule 2).
+- **Before the merge:** whoever authorises the merge sees each record the change makes accepted, whether it was added accepted or set to accepted. Where no tool shows that list, the change's author shows it. An edit made to such a record after its acceptance in the change is accepted only through that list (core rule 2).
 - **Refused:** close the change, so the proposal never lands. Where its reasoning is worth keeping, a [scratchpad note](../scratchpad/README.md) keeps it, dropped with why the proposal was refused.
 - **Working alone,** you commit straight to the default branch. Accept the record before that commit.
 - **A proposed record already on the default branch,** from before this way of working: a person accepts it, or deletes it ([the reference, "Statuses"](../../.pkit/decisions/README.md#statuses)).
