@@ -31,6 +31,7 @@ pkit:
         - src/project_kit/friction_discovery.py
         - src/project_kit/package_validate.py
         - hatch_build.py
+        - .pkit/capabilities/project-management/scripts/_lib/merge_queue.py
         - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
         - .pkit/schemas/backbone/package.schema.json
         - .pkit/schemas/backbone/config.schema.json
@@ -376,6 +377,8 @@ The router's first route is what keeps the predicate's answer equal to sync's. A
 Yet none of them is a copy, because the tree is what a sync would copy from. Its self-host sync re-runs the deploy primitives and propagates nothing. In an adopter, the backbone's trees and a `kit-shipped` capability's are copies. An `externally-sourced` capability's are copies in the source too, since it is authored in another repository.
 
 An `incubated-in-repo` capability, an unregistered one and every `project/` tier are not. The verdict keys on origin and on the repository, never on the path, so the same `.pkit/` README is a place in the source and refused in an adopter.
+
+**Note:** an issue was once filed on the misreading that `pkit sync` calls `is_sync_managed`. Another turned out to be the adapter settings pair, missed because the tier rule was depth-1, which locked an adopter out of their own file.
 
 ## Worked example
 

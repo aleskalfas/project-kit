@@ -31,7 +31,7 @@ This directory holds your project's architectural-decision record: why each sign
 | Directory | Prefix | Owner | Lifecycle |
 |---|---|---|---|
 | `core/` | **COR** | project-kit | Maintained by project-kit; refreshed on sync; **do not edit** |
-| `project/` | **PRJ** | Your project | Yours. project-kit creates the folder where it is missing, as a [seed path](../lifecycle/README.md#seed-paths), and never writes your records |
+| `project/` | **PRJ** | Your project | Yours. project-kit creates the folder where it is missing, as a [seed path](../lifecycle/upgrade-flow.md#seed-paths), and never writes your records |
 
 The two namespaces have **independent numbering**. `core/COR-001` and `project/PRJ-001` are separate decisions about separate things; neither blocks the other.
 
@@ -95,9 +95,9 @@ Sync reads from your side what it needs, such as the versions your project recor
 
 Sync runs at the versions your project records, and moves none of them ([COR-059](core/COR-059-version-transition.md)). It writes the methodology's content at those versions, the state derived from your own declarations, and your project-owned paths through merge delivery only, and nothing else. It runs no migration, and writes no recorded version, no manifest and no seed path ([the lifecycle README, "What sync writes"](../lifecycle/README.md#what-sync-writes)).
 
-Under a pkit at another version than your project records, or over an unfinished upgrade, sync stops before it writes anything, and its message names the command that gets you on ([the lifecycle README, "Sync's guard"](../lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over)).
+Under a pkit at another version than your project records, or over an unfinished upgrade, sync stops before it writes anything, and its message names the command that gets you on ([the lifecycle reference's upgrade flow, "Sync's guard"](../lifecycle/upgrade-flow.md#syncs-guard-no-path-down-and-no-migration-passed-over)).
 
-`pkit upgrade` is the command that moves your project to another release. It also creates each seed path that is missing, such as the agents overlay, never over one that exists ([the lifecycle README, "Seed paths"](../lifecycle/README.md#seed-paths)). Every migration runs inside it ([the lifecycle README, "The steps of a transition"](../lifecycle/README.md#the-steps-of-a-transition)), and a migration changes a file of yours only within what the record that owns the file allows.
+`pkit upgrade` is the command that moves your project to another release. It also creates each seed path that is missing, such as the agents overlay, never over one that exists ([the lifecycle reference's upgrade flow, "Seed paths"](../lifecycle/upgrade-flow.md#seed-paths)). Every migration runs inside it ([the lifecycle reference's upgrade flow, "The steps of a transition"](../lifecycle/upgrade-flow.md#the-steps-of-a-transition)), and a migration changes a file of yours only within what the record that owns the file allows.
 
 The same `core/` / `project/` pattern (and the same invariant) governs other kit areas in your project — `.pkit/agents/`, `.pkit/rules/`, and so on. To extend kit-shipped content, add sibling files in the matching `project/` directory; never edit a kit-owned file.
 

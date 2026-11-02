@@ -1,6 +1,6 @@
 # Backbone migrations
 
-The backbone's migration scripts, one folder per version, as `<major>.<minor>.0/<NNN>-<slug>.sh`. Your project receives them by sync, and a version transition runs them. [COR-010](../../decisions/core/COR-010-resource-lifecycle.md) sets the rules, and the lifecycle README's [migration framework](../../lifecycle/migrations.md#migration-framework) is the spec.
+The backbone's migration scripts, one folder per version, as `<major>.<minor>.0/<NNN>-<slug>.sh`. Your project receives them by sync, and a version transition runs them. [COR-010](../../decisions/core/COR-010-resource-lifecycle.md) sets the rules, and the lifecycle reference's [migration framework](../../lifecycle/migrations.md#migration-framework) is the spec.
 
 - **When a folder runs:** a version transition runs each folder above the backbone version the project last completed, up to its target. Where the project records no completed transition, it runs every folder up to the target once ([the replay](../../lifecycle/upgrade-flow.md#the-replay-a-missing-completion)).
 - **The order within a folder:** the runner runs a folder's scripts in the order of their names. Each name opens with a zero-padded number, used once in its folder. The numbers follow COR-010's order of scopes: manifest-schema first, then structural, then resource-scoped.
