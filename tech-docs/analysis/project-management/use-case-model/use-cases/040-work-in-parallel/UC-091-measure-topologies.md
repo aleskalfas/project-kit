@@ -39,7 +39,7 @@ pkit:
 1. The adopter has each [topology](../../../glossary.md#term-topology--topology) work on comparable work, until all of that work has landed.
 2. The adopter reads, for each topology, when each [pull request](../../../../core/glossary.md#term-pull-request--pull-request) opened and when that pull request merged.
 3. The adopter counts the review rounds of each pull request from the pull request's [verdicts](../../../glossary.md#term-verdict--verdict), since each verdict names the [head](../../../../core/glossary.md#term-head--head) reviewed ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
-4. Where the [project](../../../../core/glossary.md#term-project--project) set its [audit comments](../../../glossary.md#term-audit-comment--audit-comment) to `full`, the adopter reads each write the agents made, with the write's versions ([DEC-049 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md#2-github-comments-are-a-configurable-provenance-stamped-projection-with-three-intensities)).
+4. Where the [project](../../../../core/glossary.md#term-project--project) set its [audit comments](../../../glossary.md#term-audit-comment--audit-comment) to `full`, the adopter reads each write the agents made, with the write's [versions](../../../../core/glossary.md#term-version--version) ([DEC-049 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md#2-github-comments-are-a-configurable-provenance-stamped-projection-with-three-intensities)).
 5. The adopter compares the topologies on these figures.
 
 **Variants:** None.

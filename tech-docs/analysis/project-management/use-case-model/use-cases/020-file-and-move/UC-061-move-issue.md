@@ -96,7 +96,7 @@ pkit:
 **Main path:**
 
 1. The developer schedules the [issue](../../../glossary.md#term-issue--issue): `pkit pm promote-issue <N> --reason "<R>"`, with `--milestone <M>` where the [project](../../../../core/glossary.md#term-project--project) uses [Milestones](../../../glossary.md#term-milestone--milestone) ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md) and [DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
-2. At its entry, the system checks the project's prerequisites, and the developer's membership where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). It then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
+2. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the project's prerequisites, and the developer's membership where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). It then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 3. The system checks that the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) declares the move from Todo to Backlog for the issue's type. It checks too that the issue's body holds no placeholder of its template (DEC-006 and [DEC-031](../../../../../../.pkit/capabilities/project-management/decisions/DEC-031-reject-unauthored-placeholder-bodies.md)).
 4. Unless the project turns [audit comments](../../../glossary.md#term-audit-comment--audit-comment) off, the system posts the reason in an audit comment that names the move, before the move ([DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)). It then moves the issue to Backlog, and attaches the Milestone. Where the project keeps a journal, the move goes into it with its reason ([DEC-049](../../../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
 
@@ -112,7 +112,7 @@ pkit:
 
 **Variants:**
 
-- **1a.** The developer passes `--dry-run` to any of these commands. The system makes its checks, names each move it would make, and writes nothing ([COR-004](../../../../../../.pkit/decisions/core/COR-004-cli-surface.md)). The use case ends.
+- **1a.** The developer passes `--dry-run` to any of these commands. The [system](../../../../core/glossary.md#term-system--system) makes its checks, names each move it would make, and writes nothing ([COR-004](../../../../../../.pkit/decisions/core/COR-004-cli-surface.md)). The use case ends.
 
 > [!WARNING]
 > **Not built yet:** the dry runs of `promote-issue`, `start-work` and `review-work` name neither the [cascade](../../../glossary.md#term-cascade--cascade)'s moves nor the hooks that would fire. That of `close-issue` lists no hook. COR-004 decides that a dry run names each edit a run would make, and #1938 tracks it.

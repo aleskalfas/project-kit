@@ -7,6 +7,7 @@ builds-on:
       - {id: TERM-agent-definition, name: agent definition}
       - {id: TERM-anchor, name: anchor}
       - {id: TERM-answer, name: answer}
+      - {id: TERM-artefact, name: artefact}
       - {id: TERM-backbone, name: backbone}
       - {id: TERM-base, name: base}
       - {id: TERM-capability, name: capability}
@@ -21,6 +22,7 @@ builds-on:
       - {id: TERM-finding, name: finding}
       - {id: TERM-harness, name: harness}
       - {id: TERM-head, name: head}
+      - {id: TERM-install, name: install}
       - {id: TERM-methodology, name: methodology}
       - {id: TERM-package-metadata, name: package metadata}
       - {id: TERM-process, name: process}
@@ -31,7 +33,9 @@ builds-on:
       - {id: TERM-role, name: role}
       - {id: TERM-rule, name: rule}
       - {id: TERM-skill, name: skill}
+      - {id: TERM-system, name: system}
       - {id: TERM-validation, name: validation}
+      - {id: TERM-version, name: version}
     actors:
       - id: ACT-adopter
         name: Adopter
@@ -456,6 +460,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [agent definition](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-agent-definition--agent-definition)
   - **Term:** [anchor](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-anchor--anchor)
   - **Term:** [answer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-answer--answer)
+  - **Term:** [artefact](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-artefact--artefact)
   - **Term:** [backbone](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-backbone--backbone)
   - **Term:** [base](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-base--base)
   - **Term:** [capability](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-capability--capability)
@@ -470,6 +475,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [finding](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-finding--finding)
   - **Term:** [harness](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-harness--harness)
   - **Term:** [head](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-head--head)
+  - **Term:** [install](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-install--install)
   - **Term:** [methodology](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-methodology--methodology)
   - **Term:** [package metadata](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-package-metadata--package-metadata)
   - **Term:** [process](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-process--process)
@@ -480,7 +486,9 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [role](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-role--role)
   - **Term:** [rule](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-rule--rule)
   - **Term:** [skill](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-skill--skill)
+  - **Term:** [system](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-system--system)
   - **Term:** [validation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-validation--validation)
+  - **Term:** [version](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-version--version)
   - **Actor:** [Adopter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-adopter.md)
     - Set up my project's topology in the project's committed configuration, so that every clone reads the same seats from the default branch.
     - Measure one topology against another on comparable work, by figures GitHub holds.
@@ -502,7 +510,7 @@ Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#
 
 **Distinctions:**
 
-- **The timeline:** GitHub's own record of each label added or removed, with who did it and when. An audit comment adds what the timeline cannot: the reason, and the version that made the edit ([DEC-049](../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
+- **The timeline:** GitHub's own record of each label added or removed, with who did it and when. An audit comment adds what the timeline cannot: the reason, and the [version](../core/glossary.md#term-version--version) that made the edit ([DEC-049](../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
 - **The journal:** the core's record of each move of a [process](../core/glossary.md#term-process--process), kept where the [project](../core/glossary.md#term-project--project) turns it on. Where it is kept, it is the canonical record, and the comments project it ([DEC-049 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md#1-where-the-canonical-audit-trail-lives-follows-the-projects-journal-setting)).
 
 ## TERM-authorisation — authorisation
@@ -606,7 +614,7 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 - **Umbrella:** an [issue](#term-issue--issue) that groups related work by a theme, and claims nothing. It may hold Features, and a Feature never holds an [Umbrella](#term-umbrella--umbrella) ([DEC-004](../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-005](../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 - **EPIC:** an issue that states an outcome spanning several quarters. A Feature sits under one or under an Umbrella, or straight under a [Milestone](#term-milestone--milestone) where the project skips the [EPIC](#term-epic--epic) (DEC-004).
-- **Capability:** the core's word for a [component](../core/glossary.md#term-component--component) a project chooses to install. project-management's records say that a Feature claims "a [capability](../core/glossary.md#term-capability--capability)", meaning a piece of functionality in any component (DEC-004).
+- **Capability:** the core's word for a [component](../core/glossary.md#term-component--component) a project chooses to [install](../core/glossary.md#term-install--install). project-management's records say that a Feature claims "a [capability](../core/glossary.md#term-capability--capability)", meaning a piece of functionality in any component (DEC-004).
 
 ## TERM-instance — instance
 
@@ -740,7 +748,7 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#scope).
 - **Pool:** a set of open [Milestones](#term-milestone--milestone) whose work only the seats that serve the pool take. A pool reserves its work for those seats, and a scope narrows what its seat's pools hold ([DEC-061 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)).
 - **Kind of work:** the value a [Task](#term-task--task) takes on the `type` [classification axis](#term-classification-axis--classification-axis), such as `test`. A scope may name kinds of work, and never changes them (DEC-059 point 7).
 - **Instance:** the clone an agent works in. The scope says which work the agent takes, and the [instance](#term-instance--instance)'s number says which clone the agent works in.
-- **The scope of a set of rules:** what selects the artefacts a [rule](../core/glossary.md#term-rule--rule) set's rules bind on ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). Such a scope is no part of a topology.
+- **The scope of a set of rules:** what selects the [artefacts](../core/glossary.md#term-artefact--artefact) a [rule](../core/glossary.md#term-rule--rule) set's rules bind on ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). Such a scope is no part of a topology.
 - **The scope of a grant:** where an entry of the permission model allows or denies a privilege ([COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). Such a scope is no part of a topology either.
 
 ## TERM-seat — seat

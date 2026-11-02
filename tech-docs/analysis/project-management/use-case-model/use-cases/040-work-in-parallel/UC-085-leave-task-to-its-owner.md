@@ -62,13 +62,13 @@ pkit:
 **Main path:**
 
 1. The worker starts a [Task](../../../glossary.md#term-task--task): `pkit pm start-work <N>`.
-2. Before changing anything, the system reads the Task's [owner](../../../glossary.md#term-owner--owner) ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)). With a [topology](../../../glossary.md#term-topology--topology), the system first confirms on the [seat](../../../glossary.md#term-seat--seat)'s [state issue](../../../glossary.md#term-state-issue--state-issue) that the worker's clone still holds the seat ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
+2. Before changing anything, the [system](../../../../core/glossary.md#term-system--system) reads the Task's [owner](../../../glossary.md#term-owner--owner) ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)). With a [topology](../../../glossary.md#term-topology--topology), the system first confirms on the [seat](../../../glossary.md#term-seat--seat)'s [state issue](../../../glossary.md#term-state-issue--state-issue) that the worker's clone still holds the seat ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 3. Another [instance](../../../glossary.md#term-instance--instance) owns the Task. The system refuses the start, names that instance, and writes nothing (DEC-035 point 6).
 4. The worker leaves the Task to the Task's owner, and takes another Task, as `UC-084` describes.
 
 **Variants:**
 
-- **1a.** The worker acts on the [Task](../../../glossary.md#term-task--task) with another ordinary command: `done-work`, `edit-issue` or `move-issue`. The system refuses as at step 3 ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
+- **1a.** The worker acts on the [Task](../../../glossary.md#term-task--task) with another ordinary command: `done-work`, `edit-issue` or `move-issue`. The [system](../../../../core/glossary.md#term-system--system) refuses as at step 3 ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
 - **2a.** No [instance](../../../glossary.md#term-instance--instance) owns the Task, and another instance starts the Task at the same instant. Each instance writes itself as the Task's [owner](../../../glossary.md#term-owner--owner), reads the Task again and finds two owners. The higher-numbered instance gives the Task up and says so, and the lower-numbered instance keeps the Task ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
 - **2b.** The Task is assigned to another person's account. `start-work` refuses, points to `handoff-issue`, and changes nothing (`start-work.py`).
 - **3a.** The developer decides that the worker takes the Task all the same, and sets the refusal aside with a reason. The worker passes that reason with the worker's start, and an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) records the reason before the start ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock) and [DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
@@ -86,7 +86,7 @@ pkit:
 
 **Minimal guarantees:**
 
-- A start the system refuses writes nothing (`start-work.py`).
+- A start the [system](../../../../core/glossary.md#term-system--system) refuses writes nothing (`start-work.py`).
 - Two [instances](../../../glossary.md#term-instance--instance) that take one [Task](../../../glossary.md#term-task--task) at the same instant end with one [owner](../../../glossary.md#term-owner--owner) ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
 - A refusal never moves the Task in the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle), since the owner is no input to a move ([DEC-035 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#8-the-instance-marker-is-a-pm-domain-side-effect-never-engine-state)).
 
