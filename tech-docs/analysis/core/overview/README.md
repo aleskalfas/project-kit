@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=5 fingerprint=sha256:9c4502d6722d9dd269551e4098a652d379bbc56a0c7a76253b634b29de322b5d -->
+<!-- pkit:overview reads=5 fingerprint=sha256:a67debea3f01b2d9f324c7351bb8101dca0ce99c87229b490c32025639c6bd77 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -65,7 +65,7 @@ Set up a project once, so its people and AI agents work with the same backbone c
 - [REQ-011 · Constraint · A suggestion of what to install never uses the network](../requirements/constraints/020-set-up/REQ-011-suggestion-offline.md)
 - [REQ-013 · Functional · Where an allow and a deny conflict, the deny wins](../requirements/functional/020-set-up/REQ-013-deny-wins.md)
 - [REQ-014 · Functional · A later edit of a documentation root moves no document](../requirements/functional/020-set-up/REQ-014-root-change-moves-nothing.md)
-- [REQ-016 · Constraint · The permission model's code needs only the system `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
+- [REQ-016 · Constraint · The permission model's code needs only the operating system's `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
 
 **Its use cases:**
 
@@ -108,8 +108,8 @@ Record a project's decisions and rules, and check, answer and land each change t
 
 - [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/030-change/REQ-001-migration-runs-again.md)
 - [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/030-change/REQ-017-backbone-migration-safe.md)
-- [REQ-018 · Quality · A reading command of the friction group prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
-- [REQ-019 · Functional · Each reading document of the friction group carries its version, and a reader refuses one it does not know](../requirements/functional/030-change/REQ-019-reading-document-versioned.md)
+- [REQ-018 · Quality · A reading command of `pkit friction` prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
+- [REQ-019 · Functional · Each reading document of `pkit friction` carries its version, and a reader refuses one it does not know](../requirements/functional/030-change/REQ-019-reading-document-versioned.md)
 - [REQ-020 · Functional · A dead anchor is an error, never silence](../requirements/functional/030-change/REQ-020-dead-anchor-error.md)
 - [REQ-021 · Functional · A reviewer agent never changes the work it judges](../requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md)
 

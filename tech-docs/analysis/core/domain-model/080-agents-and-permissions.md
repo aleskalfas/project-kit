@@ -382,14 +382,14 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/020-set-up/UC-030-work-unprompted.md)
 - [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md)
 - [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/020-set-up/UC-033-find-why-prompted.md)
-- [REQ-016 · Constraint · The permission model's code needs only the system `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
+- [REQ-016 · Constraint · The permission model's code needs only the operating system's `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
 
 **Sandbox:**
 
 - [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/020-set-up/UC-030-work-unprompted.md)
 - [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/020-set-up/UC-031-keep-per-machine-choices.md)
 - [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/020-set-up/UC-033-find-why-prompted.md)
-- [REQ-016 · Constraint · The permission model's code needs only the system `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
+- [REQ-016 · Constraint · The permission model's code needs only the operating system's `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
 
 **Agent workspace:**
 

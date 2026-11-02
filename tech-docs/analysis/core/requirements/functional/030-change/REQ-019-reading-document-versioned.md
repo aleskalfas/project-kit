@@ -1,11 +1,11 @@
 ---
 id: REQ-019
-title: Each reading document of the friction group carries its version, and a reader refuses one it does not know
+title: Each reading document of `pkit friction` carries its version, and a reader refuses one it does not know
 status: active
-statement: Each JSON document a reading command of the friction group prints carries `schema_version`, and a reader of it refuses a version it does not know.
+statement: Each JSON document a reading command of `pkit friction` prints carries `schema_version`, and a reader of it refuses a version it does not know.
 measure: "Every such document holds `schema_version` at its top level, raised only when a key a reader relies on changes its meaning or goes. A reader given a version it does not know reads nothing from the document, and names the version it found."
 applies-to: "The JSON documents of `pkit friction check`, `check --all`, `debt`, `explain`, `artefacts` and `since`. A reader of them, a component or a project's own tooling, holds to it as the documents' contract, which the core does not check."
-obligation: v1:sha256:48a7b467e89deff69c3189a4077581ca73cdb85f1d5d76991f926a43252328c7
+obligation: v1:sha256:d95d823ef69e3904cf8c1ce43ec9642684034a134df444ef6f340321ff0d6f63
 actors:
   - ACT-ci-pipeline
 refines: []
@@ -30,7 +30,7 @@ pkit:
         - ACT-ci-pipeline
 ---
 
-# REQ-019 · Functional · Each reading document of the friction group carries its version, and a reader refuses one it does not know
+# REQ-019 · Functional · Each reading document of `pkit friction` carries its version, and a reader refuses one it does not know
 
 **Verified by:** Tests of each reading command find `schema_version` in its document. A test gives project-kit's script that renders the [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check)'s [findings](../../../glossary.md#term-finding--finding) a document of schema version 2. It finds that the script refuses it, naming the schema version. Each [component](../../../glossary.md#term-component--component) tests its own readers.
 
