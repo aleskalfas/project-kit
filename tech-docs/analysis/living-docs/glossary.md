@@ -13,6 +13,7 @@ builds-on:
       - {id: TERM-backbone, name: backbone}
       - {id: TERM-backbone-configuration, name: backbone configuration}
       - {id: TERM-capability, name: capability}
+      - {id: TERM-change, name: change}
       - {id: TERM-change-check, name: change check}
       - {id: TERM-component, name: component}
       - {id: TERM-data-point, name: data point}
@@ -32,6 +33,7 @@ builds-on:
       - {id: TERM-skill, name: skill}
       - {id: TERM-source-repository, name: source repository}
       - {id: TERM-stamp, name: stamp}
+      - {id: TERM-storyboard, name: storyboard}
       - {id: TERM-system, name: system}
       - {id: TERM-validation, name: validation}
       - {id: TERM-whole-repository-check, name: whole-repository check}
@@ -45,8 +47,8 @@ builds-on:
       - id: ACT-adopter
         name: Adopter
         needs:
-          - Set up a documentation space for one audience, with its own location and a definition whose scope selects its pages.
-          - Bring my existing documents into documentation spaces, anchored and fit for their readers, through a proposed plan that I review before anything moves.
+          - Set up a documentation space for one audience, with its own location and a space definition whose scope selects its pages.
+          - Bring my existing documents into documentation spaces, anchored and fit for their readers, through a proposed onboarding plan that I review before anything moves.
       - id: ACT-ai-agent
         name: AI agent
       - id: ACT-operator
@@ -198,6 +200,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [backbone](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-backbone--backbone)
   - **Term:** [backbone configuration](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-backbone-configuration--backbone-configuration)
   - **Term:** [capability](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-capability--capability)
+  - **Term:** [change](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-change--change)
   - **Term:** [change check](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-change-check--change-check)
   - **Term:** [component](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-component--component)
   - **Term:** [data point](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-data-point--data-point)
@@ -217,6 +220,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [skill](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-skill--skill)
   - **Term:** [source repository](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-source-repository--source-repository)
   - **Term:** [stamp](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-stamp--stamp)
+  - **Term:** [storyboard](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-storyboard--storyboard)
   - **Term:** [system](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-system--system)
   - **Term:** [validation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-validation--validation)
   - **Term:** [whole-repository check](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-whole-repository-check--whole-repository-check)
@@ -225,8 +229,8 @@ The words of the domain and what each means. A term's id is stable, and its name
     - Have the fix for a stale page proposed with its evidence, and review the fix before it is applied.
     - Have a page read as its declared reader would read it, each finding citing the rule the page breaks.
   - **Actor:** [Adopter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-adopter.md)
-    - Set up a documentation space for one audience, with its own location and a definition whose scope selects its pages.
-    - Bring my existing documents into documentation spaces, anchored and fit for their readers, through a proposed plan that I review before anything moves.
+    - Set up a documentation space for one audience, with its own location and a space definition whose scope selects its pages.
+    - Bring my existing documents into documentation spaces, anchored and fit for their readers, through a proposed onboarding plan that I review before anything moves.
   - **Actor:** [AI agent](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md)
   - **Actor:** [Operator](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-operator.md)
 
@@ -238,7 +242,7 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#captur
 
 **Distinctions:**
 
-- **The text it names:** the standard, specification or other text outside the repository. Nothing fetches it, so a change to it is seen only once a person records the version they read ([DEC-001 point 4](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)).
+- **The text it names:** the standard, specification or other text outside the repository. Nothing fetches it, so a new version of it is seen only once a person records the version they read ([DEC-001 point 4](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)).
 - **Source repository:** where the [backbone](../core/glossary.md#term-backbone--backbone) or a [component](../core/glossary.md#term-component--component) is authored. A captured source names a text outside the repository, never a repository the [project](../core/glossary.md#term-project--project) syncs from.
 
 ## TERM-documentation-space — documentation space
@@ -261,13 +265,13 @@ Explained in [VIEW-proposals-and-reviews](domain-model/020-proposals-and-reviews
 **Distinctions:**
 
 - **Proposal:** a drafted edit with its evidence. The agent writes proposals only once the plan is approved, and the plan itself changes nothing ([DEC-001 point 8](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
-- **A mapping from code to documents:** a work-tracking [capability](../core/glossary.md#term-capability--capability)'s list of which documents a change of code obliges. The plan turns its rules into [page](#term-page--page) anchors, and retiring the mapping is a separate change for its owner (DEC-001 point 8).
+- **A mapping from code to documents:** a work-tracking [capability](../core/glossary.md#term-capability--capability)'s list of which documents a [change](../core/glossary.md#term-change--change) of code obliges. The plan turns its rules into [page](#term-page--page) anchors, and retiring the mapping is a separate change for its owner (DEC-001 point 8).
 
 ## TERM-page — page
 
 Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#page).
 
-**Example:** `.pkit/permissions/README.md` declares the kind `reference` and the [reader](#term-reader--reader) `act-ai-agent`, and anchors `.pkit/permissions/decide.py`, so a change to that code asks it whether it still holds.
+**Example:** `.pkit/permissions/README.md` declares the kind `reference` and the [reader](#term-reader--reader) `act-ai-agent`, and anchors `.pkit/permissions/decide.py`, so a [change](../core/glossary.md#term-change--change) to that code asks it whether it still holds.
 
 **Distinctions:**
 

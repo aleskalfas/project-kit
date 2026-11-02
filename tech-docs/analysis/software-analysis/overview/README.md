@@ -1,6 +1,6 @@
 # Overview of the analysis of software-analysis
 
-<!-- pkit:overview reads=5 fingerprint=sha256:64d17b159b3a8f73131620c3dcb4fca2af4c191a581a4e26f1277f7fd1900e96 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:1f2f16eb793d9f466093eaedcd9561c35eb83a6435b6e8f3ae066aff427c8a38 -->
 
 [Software analysis keeps actors, use cases, journeys and terms true as the software changes](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md).
 
@@ -47,7 +47,7 @@ Keep the analysis true as the project changes, revised before a change is built 
 **Its use cases:**
 
 - [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/020-revalidate/UC-072-revise-before-change.md) ([not built yet](#not-built-yet): step 7)
-- [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md) ([not built yet](#not-built-yet): step 13)
+- [UC-073 — Revalidate the analysis after a change from an agent's proposed revalidation outcomes](../use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md) ([not built yet](#not-built-yet): step 13)
 
 **Its journeys:** none.
 
@@ -77,7 +77,7 @@ Each view of the domain model explains a group of related concepts:
 - [REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it](../requirements/functional/REQ-050-agent-proposes.md)
 - [REQ-051 · Functional · An id, once settled, names one artefact for good, save a freed id](../requirements/functional/REQ-051-id-names-one-artefact.md)
 - [REQ-052 · Functional · A revalidation record is written only where its revalidation has something to say](../requirements/functional/REQ-052-record-only-with-something-to-say.md)
-- [REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and holds a record's body always](../requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md)
+- [REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and holds a revalidation record's body always](../requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md)
 
 ### Not built yet
 
@@ -89,7 +89,7 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md): variant 3c, decided by `COR-004`, tracked in `#1884`
 - [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md): variant 4b, decided by `COR-004`, tracked in `#1884`
 - [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/020-revalidate/UC-072-revise-before-change.md): step 7, decided by `ADR-034#1`, tracked in `#1765`
-- [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md): step 13, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-073 — Revalidate the analysis after a change from an agent's proposed revalidation outcomes](../use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md): step 13, decided by `ADR-034#1`, tracked in `#1765`
 
 ### Diagrams
 
