@@ -76,7 +76,7 @@ project > capability > adapter > core
 ```
 
 - **The tiers:** a skill in `.pkit/skills/project/` is of the `project` tier. A capability's `provides:` is of the `capability` tier, and an adapter's of the `adapter` tier. Every other skill is of the `core` tier, a skill a capability ships among them.
-- **Two providers at one tier:** COR-013 point 4 decides that the collision is refused, never settled by picking one. The project disambiguates them by uninstalling one, or by adding a provider of its own. What the code does today:
+- **Two providers at one tier:** COR-013 point 4 decides that the collision is refused, never settled by picking one. The record has the project disambiguate them by uninstalling one, or by adding a provider of its own. What the code does today:
   - `pkit validate` and `pkit refs validate` fail the collision, naming both providers.
   - Uninstalling one clears the finding. A provider of the project's binds the hook, but the finding stays.
   - `pkit hooks resolve` names the first provider it reads, rather than refuse.
