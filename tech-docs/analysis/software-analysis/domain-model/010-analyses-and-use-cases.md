@@ -10,6 +10,7 @@ pkit:
   friction:
     anchors:
       record:
+        - software-analysis:DEC-001
         - software-analysis:DEC-001#1
         - software-analysis:DEC-001#2
         - software-analysis:DEC-001#3
@@ -146,7 +147,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/010-describe/UC-070-choose-parts.md)
 - [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md)
 - [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/020-revalidate/UC-072-revise-before-change.md)
-- [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md)
+- [UC-073 — Revalidate the analysis after a change from an agent's proposed revalidation outcomes](../use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md)
 - [UC-074 — Free the ids of artefacts nothing cites](../use-case-model/use-cases/010-describe/UC-074-free-uncited-ids.md)
 
 **Use case:**
@@ -154,7 +155,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/010-describe/UC-070-choose-parts.md)
 - [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md)
 - [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/020-revalidate/UC-072-revise-before-change.md)
-- [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md)
+- [UC-073 — Revalidate the analysis after a change from an agent's proposed revalidation outcomes](../use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md)
 - [UC-074 — Free the ids of artefacts nothing cites](../use-case-model/use-cases/010-describe/UC-074-free-uncited-ids.md)
 
 **Freed id:**

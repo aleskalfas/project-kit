@@ -13,6 +13,7 @@ pkit:
   friction:
     anchors:
       path:
+        - src/project_kit/docs_roots.py
         - tests/test_docs_roots.py
       record:
         - COR-049#6

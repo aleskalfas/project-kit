@@ -13,12 +13,16 @@ pkit:
   friction:
     anchors:
       path:
+        - src/project_kit/friction_check.py
+        - src/project_kit/friction_repository.py
+        - src/project_kit/friction_validate.py
         - tests/test_friction_check.py
         - tests/test_friction_repository.py
         - tests/test_friction_validate.py
       record:
         - COR-050#7
         - COR-050#12
+        - COR-062#2
       artefact:
         - ACT-developer
 ---

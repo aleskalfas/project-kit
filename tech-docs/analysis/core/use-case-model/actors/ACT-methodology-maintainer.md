@@ -15,6 +15,8 @@ pkit:
       record:
         - ADR-059
         - PRJ-002
+        - PRJ-008
+        - ADR-047#3
       artefact:
         - CONTRIBUTING.md#adding-a-core-record-cor
 ---

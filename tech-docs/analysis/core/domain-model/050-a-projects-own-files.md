@@ -356,6 +356,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
 - [JRN-002 — Upgrade the system](../use-case-model/journeys/JRN-002-upgrade-system.md)
 - [JRN-006 — Start working on a project on a new machine](../use-case-model/journeys/JRN-006-start-on-new-machine.md)
+- [REQ-010 · Functional · A command that propagates content under another version than the project records stops](../requirements/functional/REQ-010-stop-under-another-version.md)
 - [REQ-026 · Quality · An interrupted version transition never reads as finished, and the next one completes it](../requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md)
 - [REQ-027 · Quality · The version pin holds the old one or the new one, never part, and an upgrade writes it last](../requirements/quality/050-adopt/REQ-027-pin-whole-written-last.md)
 - [REQ-028 · Quality · The router never fails a command over a version pin it cannot resolve](../requirements/quality/050-adopt/REQ-028-unresolved-pin-runs-installed.md)

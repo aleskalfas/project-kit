@@ -22,6 +22,7 @@ pkit:
   friction:
     anchors:
       record:
+        - COR-014
         - COR-017
         - COR-021
         - COR-030
@@ -33,6 +34,11 @@ pkit:
         - COR-056
         - COR-062
         - COR-068
+        - COR-070#1
+        - COR-070#2
+        - COR-070#4
+        - COR-070#5
+        - ADR-076#2
       artefact:
         - TERM-anchor
         - TERM-place
@@ -66,7 +72,7 @@ Some anchors matter the other way too. A requirement anchors the test that verif
 ```mermaid
 classDiagram
   accTitle: Artefacts and friction
-  accDescr: A place holds artefacts, and gives most of them their artefact type. An artefact carries its anchors. An answer is on an artefact, and lives apart from it, in a file of the change that wrote it. Friction is a finding on an artefact, and a revalidation or a deferral, which are answers, settles it. The change check finds friction. The whole-repository check reports debt, which is a finding too. Package metadata declares revisit links on places. A revisit link names trigger fields and takes link targets, which are anchors. The change check asks for a revisit of each link target, and an answer may record that revisit. A rule set holds rules, and selects artefacts by artefact type. A component ships package metadata, which declares its places and its artefact types.
+  accDescr: A place holds artefacts, and gives most of them their artefact type. An artefact carries its anchors. An answer is on an artefact, and lives apart from it, in a file of the change that wrote it. Friction is a finding on an artefact, and a revalidation or a deferral, which are answers, settles it. The change check finds friction. The whole-repository check reports debt, which is a finding too. Package metadata declares revisit links on places. A revisit link names trigger fields and takes link targets, which are anchors. The change check asks for a revisit of each link target, and an answer may record that revisit. A rule set holds rules, and selects artefacts by artefact type. A loaded rule set holds operational rules. A component ships package metadata, which declares its places and its artefact types.
   class Place["Place"]
   class Artefact["Artefact"]
   class Anchor["Anchor"]
@@ -88,6 +94,7 @@ classDiagram
   RuleSet : version
   RuleSet : scope
   class Rule["Rule"]
+  class OperationalRule["Operational rule"]
   class ArtefactType["Artefact type"]
   class PackageMetadata["Package metadata"]
   class Component["Component"]
@@ -110,6 +117,7 @@ classDiagram
   Answer ..> Revisit : records
   RuleSet *-- Rule : holds
   RuleSet ..> ArtefactType : may select by
+  RuleSet o-- OperationalRule : holds, where it is a loaded set
   Component --> PackageMetadata : ships
   PackageMetadata --> Place : declares
   PackageMetadata --> ArtefactType : declares
@@ -480,14 +488,25 @@ A rule set is a collection file of rules that artefacts must satisfy. It has its
 - Its scope selects artefacts by path or by artefact type (COR-051 point 2).
 - A rule set the [backbone](../glossary.md#term-backbone--backbone) or a [component](../glossary.md#term-component--component) ships takes no scope. Unless it is a loaded set, it binds only through a set of the project's own that inherits it (COR-051 points 6 and 7).
 - A loaded set binds on the work of the sessions that load a file generated from it, never on an artefact. It has no scope, and no set inherits it ([COR-068](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
+- A citation by number names another [rule](../glossary.md#term-rule--rule) when the rules are renumbered, and nothing says so (COR-068). So the backbone's [operational rules](../glossary.md#term-operational-rule--operational-rule), and each [capability](../glossary.md#term-capability--capability)'s, are kept as loaded rule sets of their own. Each rule there has a permanent id (COR-068 and [COR-070](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md)).
+- An operational rule's layer is the backbone's, an installed capability's or the project's ([COR-070 point 4](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#4-rules-add-up-across-layers-and-none-loosens-another)). An operational rule of the backbone's or of the project's is cited by its number in its file, such as core rule 8.
+  - **Core rules:** each is a rule of the backbone's loaded set `OPS`, so core rule 8 is `backbone:RS-OPS-008`. The file a session loads is generated from the set ([COR-068 point 3](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#3-the-loaded-file-is-generated-from-the-set-where-the-set-is-authored)).
+  - **Capability rules:** each is a rule of the one loaded set an installed capability may ship. Such a rule binds only where its capability is installed. The backbone's file would bind it everywhere, and each repository would have to write it again in its own (COR-070). It is cited by its id with the capability's name, as in `software-engineering:RS-SWE-001` ([COR-070 point 1](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#1-a-capability-ships-at-most-one-loaded-set-and-its-loaded-file-travels-with-it)).
+  - **Project rules:** a plain file, loaded as it stands, until the repository keeps them as a loaded set of its own ([COR-068 point 7](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#7-a-projects-rules-not-yet-in-a-set)).
+- In a loaded set, an operational rule's number in its file is its id's number. There it has a rule's id, origin and status ([COR-068 point 6](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#6-ids-origins-and-citations)).
+- In a loaded set, an operational rule has the states of a rule. Only an accepted one is in the file a session loads (COR-068 point 3).
+- A capability's operational rules come through the capabilities' rules index, which lists each installed capability's file ([COR-070 point 2](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#2-the-adapter-delivers-the-loaded-file-by-the-route-that-carries-cores-rules) and [ADR-076 point 2](../../../architecture/decisions/ADR-076-capability-rules-index.md#2-the-backbone-renders-an-index-and-claudemd-includes-it)).
 
 **States:** None.
 
 **Always true:**
 
 - A project never edits a rule set the backbone or a component ships, and extends one by inheriting it (COR-051 point 6).
-- A set takes every [rule](../glossary.md#term-rule--rule) of the sets it inherits unchanged (COR-051 point 7).
+- A set takes every rule of the sets it inherits unchanged (COR-051 point 7).
 - While a pin is behind its set's current major, no rule binds through it (COR-051 point 7).
+- An operational rule that fits any repository is in the backbone's file ([COR-014](../../../../.pkit/decisions/core/COR-014-universal-applicability.md)). One that binds only where a capability is installed is in that capability's file ([COR-070 point 5](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#5-a-rule-that-binds-only-with-a-capability-belongs-to-that-capability)).
+- A capability's operational rule never loosens one of the backbone's, and a project's never loosens one of the backbone's or of a capability's. The backbone's layer is above a capability's, which is above the project's. Where two operational rules of different layers cannot both be kept, the upper layer's rule binds. Where two capabilities' operational rules clash, the session stops the step and reports the clash (COR-070 point 4).
+- A citation such as core rule 19 names the same rule for as long as its loaded set stands (COR-068 point 6).
 
 ## Artefact type
 
@@ -587,7 +606,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
 - [JRN-003 — Deliver a change](../use-case-model/journeys/JRN-003-deliver-change.md)
 - [REQ-004 · Quality · A check never reads a missing result as one that found nothing](../requirements/quality/REQ-004-missing-answer-never-clean.md)
-- [REQ-018 · Quality · A reading command of the friction group prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
+- [REQ-018 · Quality · A reading command of `pkit friction` prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
 - [REQ-020 · Functional · A dead anchor is an error, never silence](../requirements/functional/030-change/REQ-020-dead-anchor-error.md)
 - [REQ-030 · Functional · A choice in a version transition that needs a person is never taken silently](../requirements/functional/050-adopt/REQ-030-person-choice-never-silent.md)
 
@@ -620,7 +639,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-003 — Deliver a change](../use-case-model/journeys/JRN-003-deliver-change.md)
 - [REQ-004 · Quality · A check never reads a missing result as one that found nothing](../requirements/quality/REQ-004-missing-answer-never-clean.md)
 - [REQ-005 · Quality · A command that only reads or validates changes nothing in the project](../requirements/quality/REQ-005-reading-writes-nothing.md)
-- [REQ-018 · Quality · A reading command of the friction group prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
+- [REQ-018 · Quality · A reading command of `pkit friction` prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
 - [REQ-020 · Functional · A dead anchor is an error, never silence](../requirements/functional/030-change/REQ-020-dead-anchor-error.md)
 
 **Whole-repository check:**
@@ -628,8 +647,8 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md)
 - [JRN-003 — Deliver a change](../use-case-model/journeys/JRN-003-deliver-change.md)
 - [REQ-004 · Quality · A check never reads a missing result as one that found nothing](../requirements/quality/REQ-004-missing-answer-never-clean.md)
-- [REQ-018 · Quality · A reading command of the friction group prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
-- [REQ-019 · Functional · Each reading document of the friction group carries its version, and a reader refuses one it does not know](../requirements/functional/030-change/REQ-019-reading-document-versioned.md)
+- [REQ-018 · Quality · A reading command of `pkit friction` prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
+- [REQ-019 · Functional · Each reading document of `pkit friction` carries its version, and a reader refuses one it does not know](../requirements/functional/030-change/REQ-019-reading-document-versioned.md)
 - [REQ-020 · Functional · A dead anchor is an error, never silence](../requirements/functional/030-change/REQ-020-dead-anchor-error.md)
 
 **Debt:**
@@ -638,7 +657,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md)
 - [UC-034 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-034-land-change.md)
 - [JRN-003 — Deliver a change](../use-case-model/journeys/JRN-003-deliver-change.md)
-- [REQ-018 · Quality · A reading command of the friction group prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
+- [REQ-018 · Quality · A reading command of `pkit friction` prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
 
 **Revisit link:** None.
 

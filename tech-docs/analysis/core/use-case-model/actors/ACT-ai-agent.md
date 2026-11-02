@@ -15,6 +15,10 @@ pkit:
     anchors:
       record:
         - COR-013
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
 ---
 
 # ACT-ai-agent — AI agent
