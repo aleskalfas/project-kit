@@ -274,7 +274,7 @@ An edit in place may still change what the record decides. One test says who acc
 
 - **An edit that changes nothing decided,** such as a typo fixed or a citation updated after a rename. Make it in your change.
 - **An edit that adds to the decision, narrows it or widens it,** such as a point added or rewritten. It is a decision of its own, which a person accepts (COR-064 point 6).
-- **How the person sees it:** `pkit decisions check-diff` lists each edit to an accepted record ([the reference, "Checking a change's numbering"](../../.pkit/decisions/README.md#checking-a-changes-numbering)). Whoever authorises the merge reads that list, and judges for each edit whether it changes what the record decides.
+- **How the person sees it:** `pkit decisions check-diff` lists each edit to a record accepted before your change ([the reference, "Checking a change's numbering"](../../.pkit/decisions/README.md#checking-a-changes-numbering)). Whoever authorises the merge reads that list, and judges for each edit whether it changes what the record decides.
 - **The record as it now stands:** fold each correction into the sentence it belongs to. Add no amendment heading, dated note or "previously" passage, since git history is the record's change log ([the reference, "Refining an accepted record"](../../.pkit/decisions/README.md#refining-an-accepted-record)).
 - **A new point** takes the next unused number, wherever it sits, and no point is renumbered. So the numbers may read 4, 6, 5.
 - **A point dropped, split or merged,** so that no point continues it, is retired. Its id goes into the record's `retired-points`, and a one-line stub stays where it stood ([the reference, "Schema"](../../.pkit/decisions/README.md#schema)).
