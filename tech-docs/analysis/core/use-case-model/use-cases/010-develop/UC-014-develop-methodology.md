@@ -110,7 +110,7 @@ pkit:
 
 - Every `pkit` command run in the checkout runs the checkout's own code, and reads its own `.pkit/`. So what the [source repository](../../../glossary.md#term-source-repository--source-repository) ships runs there before any adopter runs it.
 - No [sync](../../../glossary.md#term-sync--sync) has copied a file into the [methodology](../../../glossary.md#term-methodology--methodology)'s tree. There, sync only regenerates what derives from the tree.
-- Each [adapter](../../../glossary.md#term-adapter--adapter) the tree holds deploys the [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) as edited, where its [harness](../../../glossary.md#term-harness--harness) reads them. Its [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) also includes the [operational rules](../../../glossary.md#term-operational-rule--operational-rule) in the harness's instruction file.
+- Each [adapter](../../../glossary.md#term-adapter--adapter) the tree holds deploys the [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) as edited, where its [harness](../../../glossary.md#term-harness--harness) reads them. Its [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) also merges the [operational rules](../../../glossary.md#term-operational-rule--operational-rule) into the harness's instruction file.
 - The source repository runs the [system](../../../glossary.md#term-system--system) as written, with no [release](../../../glossary.md#term-release--release) and no [install](../../../glossary.md#term-install--install).
 
 **Minimal guarantees:**
