@@ -248,7 +248,7 @@ TERM-changeset-guard:
 TERM-completion:
   name: completion
   status: active
-  definition: "state a transition of the backbone records last, once every migration has run, naming the version the transition completed"
+  definition: "state that first install or a transition of the backbone records last, after all else it writes, naming the version it reached"
   pkit:
     friction:
       anchors:
@@ -501,7 +501,7 @@ TERM-enforcement-declaration:
 TERM-environment-block:
   name: environment block
   status: active
-  definition: "part of a report's body the system builds, naming the versions, the adapter and the operating system in use, and holding no path"
+  definition: "part of a report's body the system builds, naming the system's versions in use, the adapter and the operating system, and holding no path"
   pkit:
     friction:
       anchors:
@@ -734,7 +734,7 @@ TERM-method-rule-set:
   name: method rule set
   noun-forms: [method rule sets]
   status: active
-  definition: "collection file the backbone or a component ships and versions, which takes no scope and which a project never edits"
+  definition: "collection file the backbone or a component ships and owns, which takes no scope and which a project never edits"
   pkit:
     friction:
       anchors:
@@ -1090,7 +1090,6 @@ TERM-recorded-version:
           - ADR-065#2
 TERM-release:
   name: release
-  other-senses: [pre-release]
   status: active
   definition: "set of versions shipped together, named by its backbone version: one of the backbone, and one of each component shipped with it"
   pkit:
@@ -1568,7 +1567,7 @@ TERM-validator:
 TERM-version:
   name: version
   noun-forms: [versions]
-  other-senses: ["data point's version", schema version, schema versions]
+  other-senses: ["data point's version", schema version, schema versions, harness version, harness versions]
   status: active
   definition: "number of the form major.minor.patch that names one state of a top-level part of the system, as semantic versioning reads it"
   pkit:
@@ -1637,7 +1636,7 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 
 - **Acceptance:** a record's or a [rule](#term-rule--rule)'s status moved from `proposed` to `accepted` in a reviewed change. Where that path involves a person, the person's review accepts the record or the rule ([COR-051 point 4](../../../.pkit/decisions/core/COR-051-rule-sets.md#4-statuses-and-the-gate)).
 - **Merge gate:** the checks and approvals a [pull request](#term-pull-request--pull-request) waits for before it merges ([project-management DEC-028](../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). It judges a change, not what the change builds on.
-- **A process's gate:** a condition on one move of a process subject between states ([COR-033 P4](../../../.pkit/decisions/core/COR-033-process-substrate.md#p4--gates-must-be-checkable)).
+- **A process's gate:** a condition on one move of a [process subject](#term-process-subject--process-subject) between states ([COR-033 P4](../../../.pkit/decisions/core/COR-033-process-substrate.md#p4--gates-must-be-checkable)).
 
 ## TERM-adapter — adapter
 
@@ -1649,7 +1648,7 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 
 - **Harness:** the external tool an adapter serves. A [harness](#term-harness--harness) is no part of the [system](#term-system--system).
 - **Support declaration:** an adapter's grading of how far its harness meets each requirement the methodology states ([COR-047 point 2](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
-- **Realizer:** [COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md)'s name for an adapter as it enforces the permission model in its harness.
+- **Realizer:** [COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md)'s name for an adapter as it enforces the [permission model](#term-permission-model--permission-model) in its harness.
 
 ## TERM-agent-definition — agent definition
 
@@ -1661,7 +1660,7 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 
 - **AI agent:** the runtime that runs an agent definition, or works as the main session under none (`ACT-ai-agent`). [COR-006](../../../.pkit/decisions/core/COR-006-artifact-roles.md) and [COR-013](../../../.pkit/decisions/core/COR-013-agent-architecture.md) call the definition itself an agent.
 - **Skill:** a procedure an AI agent loads for a task. An agent definition sets the remit the agent works within (COR-006).
-- **Overlay:** the project-owned file whose paths fill each placeholder of an agent definition when the [adapter](#term-adapter--adapter) deploys it ([COR-013 point 5](../../../.pkit/decisions/core/COR-013-agent-architecture.md#5-adopter-overlay-for-paths-outside-pkit)).
+- **Overlay:** the project-owned file whose paths fill each [placeholder](#term-placeholder--placeholder) of an agent definition when the [adapter](#term-adapter--adapter) deploys it ([COR-013 point 5](../../../.pkit/decisions/core/COR-013-agent-architecture.md#5-adopter-overlay-for-paths-outside-pkit)).
 
 ## TERM-agent-workspace — agent workspace
 
@@ -1671,7 +1670,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 **Distinctions:**
 
-- **The harness's scratch directory:** a folder a [harness](#term-harness--harness) may offer for temporary files, outside the repository. It is no agent workspace, and the [methodology](#term-methodology--methodology)'s [operational rules](#term-operational-rule--operational-rule) send intermediate files to the agent workspace instead (RS-OPS-016).
+- **The harness's scratch directory:** a folder a [harness](#term-harness--harness) may offer for temporary files, outside the repository. It is no agent workspace, and the [methodology](#term-methodology--methodology)'s [operational rules](#term-operational-rule--operational-rule) send intermediate files to the agent workspace instead ([RS-OPS-016](../../../.pkit/rule-sets/ops.md#rs-ops-016--intermediate-files-stay-in-the-agent-workspace)).
 - **Held folder:** a folder a [component](#term-component--component) declares for its held documents, which a commit carries. The agent workspace holds nothing a commit carries.
 - **The harness's working directory:** the checkout's root for the main session, or a worktree's root for an agent working in a worktree. The agent workspace is one folder inside it ([ADR-060 point 3](../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#3-which-checkouts-count)).
 
@@ -1698,22 +1697,22 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **Revalidation answer:** an answer saying the [artefact](#term-artefact--artefact) was reviewed against the change. It is `updated`, its content changed with it, or `unchanged`, with why it still holds ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - **Deferral:** an answer that puts off one [anchor](#term-anchor--anchor)'s [friction](#term-friction--friction), with a reason naming the follow-up that will answer it ([COR-050 point 4](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#4-deferrals)).
 - **Revisit entry:** an answer on a [revisit link](#term-revisit-link--revisit-link)'s source, saying why a [link target](#term-link-target--link-target) still stands or which follow-up will [revisit](#term-revisit--revisit) it ([COR-050 point 16](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)).
-- **The list of answers:** the [change check](#term-change-check--change-check)'s list of every answer a change wrote, word for word, which a [reviewer](#term-reviewer--reviewer) works from (COR-050 point 3). The answers themselves live in answer files, outside the artefacts.
+- **The list of answers:** the [change check](#term-change-check--change-check)'s list of every answer a change wrote, word for word, which a [reviewer](#term-reviewer--reviewer) works from (COR-050 point 3). The answers themselves live in [answer files](#term-answer-file--answer-file), outside the artefacts.
 - **Answer file:** a file that one change adds and no other change writes ([COR-062 point 1](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)). It holds the change's answers on each artefact, and names the other answer files on that artefact each answer read.
-- **A command's answer:** what a resolver or a validator returns to the check that runs it. A missing one fails that check, and is no artefact's answer.
+- **A command's answer:** what a resolver or a [validator](#term-validator--validator) returns to the check that runs it. A missing one fails that check, and is no artefact's answer.
 - **To answer:** the plain verb, as when a command answers which rules bind on a file, or a person answers a question. It shares only the word.
 
 ## TERM-answer-file — answer file
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#answer-file).
 
-**Example:** A change revalidates two pages, so its answer file names both. It holds each page's revalidation answer and names the answer files on that page it read.
+**Example:** A [change](#term-change--change) revalidates two pages, so its answer file names both. It holds each page's [revalidation answer](#term-revalidation-answer--revalidation-answer) and names the answer files on that page it read.
 
 **Distinctions:**
 
-- **The `friction` block:** the block in an artefact's front matter that holds its anchors. It holds no answer (COR-062 point 1).
-- **The answer folder:** the one path where every answer file lies, the same in every project. It is never a place, so no answer file is an artefact (COR-062 point 2).
-- **A path anchor over the folder:** stands on no answer file. So an anchor that matches only answer files is a dead anchor (COR-062 point 2).
+- **The `friction` block:** the block in an [artefact](#term-artefact--artefact)'s front matter that holds its anchors. It holds no [answer](#term-answer--answer) ([COR-062 point 1](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)).
+- **The answer folder:** the one path where every answer file lies, the same in every [project](#term-project--project). It is never a [place](#term-place--place), so no answer file is an artefact ([COR-062 point 2](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#2-the-answer-folder)).
+- **A path anchor over the folder:** stands on no answer file. So an [anchor](#term-anchor--anchor) that matches only answer files is a [dead anchor](#term-dead-anchor--dead-anchor) (COR-062 point 2).
 
 ## TERM-area — area
 
@@ -1795,11 +1794,11 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#bump-segment).
 
-**Example:** A change adds a subcommand, so the developer declares `minor` as its changeset's bump segment. The next release step raises the component's minor number.
+**Example:** A [change](#term-change--change) adds a subcommand, so the developer declares `minor` as its [changeset](#term-changeset--changeset)'s bump segment. The next [release step](#term-release-step--release-step) raises the [component](#term-component--component)'s minor number.
 
 **Distinctions:**
 
-- **A version's segments:** its major, minor and patch numbers. A bump segment says which one the next release step raises, or `none` (PRJ-002 D2).
+- **A version's segments:** its major, minor and patch numbers. A bump segment says which one the next release step raises, or `none` (PRJ-002 [D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr) and [D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
 - **The changeset's `kind`:** the field that holds the bump segment.
 - **Commit type:** a conventional commit's prefix, such as `feat`. It never sets the bump segment (PRJ-002 D2).
 
@@ -1807,7 +1806,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#capability).
 
-**Example:** an adopter installs the `software-analysis` capability, which brings the analysis's stamps and checks and the method [rule set](#term-rule-set--rule-set) `SAN`.
+**Example:** an adopter installs the `software-analysis` capability, which brings the analysis's stamps and checks and the [method rule set](#term-method-rule-set--method-rule-set) `SAN`.
 
 **Distinctions:**
 
@@ -1836,7 +1835,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 **Distinctions:**
 
-- **Whole-repository check:** measures every [artefact](#term-artefact--artefact) from its own revalidation point at the latest commit, and never fails (COR-050 points [6](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks) and [12](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
+- **Whole-repository check:** measures every [artefact](#term-artefact--artefact) from its own [revalidation point](#term-revalidation-point--revalidation-point) at the latest commit, and never fails (COR-050 points [6](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks) and [12](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
 - **Warning or enforcing:** in warning mode the change check reports and passes, and in enforcing mode it fails. It binds once CI requires it (COR-050 point 12).
 - **The list of answers:** the answers that the change check reports a [change](#term-change--change) wrote, word for word, which a [reviewer](#term-reviewer--reviewer) works from ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 
@@ -1855,25 +1854,25 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#changeset-guard).
 
-**Example:** A change edits `src/project_kit/release.py` and adds no changeset, so `pkit release check` fails the changeset guard, naming `backbone`.
+**Example:** A [change](#term-change--change) edits `src/project_kit/release.py` and adds no [changeset](#term-changeset--changeset), so `pkit release check` fails the changeset guard, naming `backbone`.
 
 **Distinctions:**
 
-- **Surface change:** what a person judges a change makes. The changeset guard reads only paths, so it can flag a change that moves no surface (PRJ-002 D2).
-- **The `skip-changeset` label:** the escape hatch that skips the surface check. Floors, bounds and range edits are still checked (PRJ-002 D4).
+- **Surface change:** what a person judges a change makes. The changeset guard reads only paths, so it can flag a change that moves no surface ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
+- **The `skip-changeset` label:** the escape hatch that skips the surface check. Floors, bounds and [range](#term-range--range) edits are still checked ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
 - **Cross-repository guard:** a check against writing in another repository. It shares only the word.
 
 ## TERM-completion — completion
 
 Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#completion).
 
-**Example:** An upgrade to 2.0.0 stops on a failing migration. `.pkit/manifest.yaml` then holds the target 2.0.0 and the completion 1.150.0, and the project reads as incomplete.
+**Example:** An upgrade to 2.0.0 stops on a failing [migration](#term-migration--migration). `.pkit/manifest.yaml` then holds the target 2.0.0 and the completion 1.150.0, and the [project](#term-project--project) reads as incomplete.
 
 **Distinctions:**
 
-- **Target:** the version a transition of the backbone records first, before it writes anything else. A project is at a version only where both name it (COR-059 point 6).
+- **Target:** the [version](#term-version--version) a transition of the [backbone](#term-backbone--backbone) records first, before it writes anything else. A project is at a version only where both name it ([COR-059 point 6](../../../.pkit/decisions/core/COR-059-version-transition.md#6-a-transition-of-the-backbone-records-its-target-first-and-its-completion-last)).
 - **No completion:** reads as incomplete with no lower bound. So the next transition runs every backbone migration once (COR-059 point 6).
-- **Its key:** `completed_version` in `.pkit/manifest.yaml` (ADR-065 point 3).
+- **Its key:** `completed_version` in `.pkit/manifest.yaml` ([ADR-065 point 3](../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#3-the-completion-is-recorded-as-completed_version)).
 
 ## TERM-component — component
 
@@ -1931,13 +1930,13 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 
 Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#cross-repository-guard).
 
-**Example:** An agent's session is anchored in one clone, and the agent runs `pkit pull-request merge` from a clone of another project. The cross-repository guard refuses.
+**Example:** An agent's session is anchored in one clone, and the agent runs `pkit pull-request merge` from a clone of another [project](#term-project--project). The cross-repository guard refuses.
 
 **Distinctions:**
 
-- **Session anchor:** the directory the cross-repository guard compares with. It stays put when the working directory changes (ADR-034 point 1).
-- **A command outside the system:** such as `git -C <path> push`, which no guard sees. Only the system's own commands carry the cross-repository guard (ADR-034 point 5).
-- **Sync's guard:** stops a command that would propagate under another version. It shares only the word (COR-059 point 9).
+- **Session anchor:** the directory the cross-repository guard compares with. It stays put when the working directory changes ([ADR-034 point 1](../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever)).
+- **A command outside the system:** such as `git -C <path> push`, which no guard sees. Only the [system](#term-system--system)'s own commands carry the cross-repository guard ([ADR-034 point 5](../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#5-a-discipline-grade-interlock-not-a-security-boundary)).
+- **Sync's guard:** stops a command that would propagate under another [version](#term-version--version). It shares only the word ([COR-059 point 9](../../../.pkit/decisions/core/COR-059-version-transition.md#9-a-command-that-propagates-content-under-another-version-than-the-project-records-stops)).
 
 ## TERM-data-point — data point
 
@@ -1959,13 +1958,13 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#dead-anchor).
 
-**Example:** A change deletes `docs/old.md`, which a page's path anchor names. The anchor turns dead, and the change check fails until the change mends the page.
+**Example:** A [change](#term-change--change) deletes `docs/old.md`, which a page's path [anchor](#term-anchor--anchor) names. The anchor turns dead, and the [change check](#term-change-check--change-check) fails until the change mends the page.
 
 **Distinctions:**
 
-- **Unanchored artefact:** one with no anchors at all, which the backbone reports and never fails on (COR-050 point 2).
+- **Unanchored artefact:** one with no anchors at all, which the [backbone](#term-backbone--backbone) reports and never fails on ([COR-050 point 2](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#2-anchors)).
 - **An anchor with no answer:** one whose kind's resolver gave no result. It is reported apart, and never read as one that names nothing (COR-050 point 2).
-- **An anchor on a retired point:** stands on nothing, and is no dead anchor, since the record says where the point went (COR-050 point 7).
+- **An anchor on a retired point:** stands on nothing, and is no dead anchor, since the record says where the [point](#term-point--point) went ([COR-050 point 7](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#7-dead-anchors-excluded-paths-and-over-broad-anchors)).
 
 ## TERM-debt — debt
 
@@ -1976,7 +1975,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 **Distinctions:**
 
 - **Friction:** a [finding](#term-finding--finding) that a [change](#term-change--change) owes an [answer](#term-answer--answer), which the change gives before it merges. [Friction](#term-friction--friction) nobody answered stays on the [default branch](#term-default-branch--default-branch) as stale debt.
-- **Stale and deferred:** stale debt is a change nobody answered, dated from that change. Deferred debt is a deferral, dated from the commit that introduced it ([COR-050 point 9](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
+- **Stale and deferred:** stale debt is a change nobody answered, dated from that change. Deferred debt is a [deferral](#term-deferral--deferral), dated from the commit that introduced it ([COR-050 point 9](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
 - **Answered apart:** debt that two revalidations of one [artefact](#term-artefact--artefact) leave where neither read the other, dated from the first commit that holds both. Nobody has judged their combined state. It is never stale, and the next revalidation that reads both clears it ([COR-062 point 7](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#7-answers-made-apart-are-debt-not-a-conflict)).
 - **Ledger:** no file lists the debt. Each run derives it from git again (COR-050 point 9).
 
@@ -1997,13 +1996,13 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#declared-surface).
 
-**Example:** project-kit's backbone configuration lists `src/**` under `friction.surface`. So `pkit friction check --all` counts each file there that no artefact anchors.
+**Example:** project-kit's [backbone configuration](#term-backbone-configuration--backbone-configuration) lists `src/**` under `friction.surface`. So `pkit friction check --all` counts each file there that no [artefact](#term-artefact--artefact) anchors.
 
 **Distinctions:**
 
-- **Surface change:** an alteration an adopter could observe, depend on or break against. It shares only the word (PRJ-002 D1).
-- **A component's surface paths:** the paths the changeset guard reads as a component's surface. They are no declared surface.
-- **Uncovered surface:** a measure, which no check fails on (COR-050 point 8).
+- **Surface change:** an alteration an adopter could observe, depend on or break against. It shares only the word ([PRJ-002 D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr)).
+- **A component's surface paths:** the paths the [changeset guard](#term-changeset-guard--changeset-guard) reads as a [component](#term-component--component)'s surface. They are no declared surface.
+- **Uncovered surface:** a measure, which no check fails on ([COR-050 point 8](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#8-two-measures-not-failures)).
 
 ## TERM-default-branch — default branch
 
@@ -2021,24 +2020,24 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#deferral).
 
-**Example:** The developer runs `pkit friction defer` on a page's anchor on `src/project_kit/release.py`, naming the open issue that will rewrite the page.
+**Example:** The developer runs `pkit friction defer` on a page's [anchor](#term-anchor--anchor) on `src/project_kit/release.py`, naming the open issue that will rewrite the page.
 
 **Distinctions:**
 
-- **Deferral point:** the commit that first introduced a deferral. Rewording its reason does not move it (COR-050 point 4).
-- **Deferred debt:** what a deferral leaves on the default branch, dated from its deferral point (COR-050 point 9).
-- **A `deferred` revisit entry:** puts off the revisit of one link target, never an anchor's friction (COR-050 point 16).
-- **A permission hook's deferral:** the hook hands a call it does not decide to the harness, which then decides or asks. It shares only the word (COR-028 point 2).
+- **Deferral point:** the commit that first introduced a deferral. Rewording its reason does not move it ([COR-050 point 4](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#4-deferrals)).
+- **Deferred debt:** what a deferral leaves on the [default branch](#term-default-branch--default-branch), dated from its deferral point ([COR-050 point 9](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
+- **A `deferred` revisit entry:** puts off the [revisit](#term-revisit--revisit) of one [link target](#term-link-target--link-target), never an anchor's [friction](#term-friction--friction) ([COR-050 point 16](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)).
+- **A permission hook's deferral:** the hook hands a call it does not decide to the [harness](#term-harness--harness), which then decides or asks. It shares only the word ([COR-028 point 2](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
 
 ## TERM-dependency-gate — dependency gate
 
 Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#dependency-gate).
 
-**Example:** An upgrade moves `project-management` outside the range a project's own capability declares on it. The dependency gate warns, and the upgrade stops without `--force`.
+**Example:** An upgrade moves `project-management` outside the [range](#term-range--range) a [project](#term-project--project)'s own [capability](#term-capability--capability) declares on it. The dependency gate warns, and the upgrade stops without `--force`.
 
 **Distinctions:**
 
-- **A moving capability out of range:** refused outright, since the project controls the dependency that does not move (ADR-065 point 6).
+- **A moving capability out of range:** refused outright, since the project controls the dependency that does not move ([ADR-065 point 6](../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#6-a-transition-settles-its-collisions-and-its-dependency-gates-before-it-writes)).
 - **A dependent left out of range:** warned of. The transition proceeds only under `pkit upgrade --force` (ADR-065 point 6).
 - **Acceptance gate:** a condition on what work builds on. It shares only the word.
 
@@ -2046,12 +2045,12 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 
 Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#deploy-mark).
 
-**Example:** `deploy-agents.sh` writes `# managed-by: project-kit (deploy-agents.sh)` into each agent definition it deploys. A later run removes a stale copy only where it finds that line.
+**Example:** `deploy-agents.sh` writes `# managed-by: project-kit (deploy-agents.sh)` into each [agent definition](#term-agent-definition--agent-definition) it deploys. A later run removes a stale copy only where it finds that line.
 
 **Distinctions:**
 
-- **Deployed copy:** what an adapter regenerates for its harness. Its deploy mark is what shows it to be one.
-- **A file without it:** the project's own, which no run of the adapter writes over or removes (`.pkit/adapters/README.md`).
+- **Deployed copy:** what an [adapter](#term-adapter--adapter) regenerates for its [harness](#term-harness--harness). Its deploy mark is what shows it to be one.
+- **A file without it:** the [project](#term-project--project)'s own, which no run of the adapter writes over or removes (`.pkit/adapters/README.md`).
 
 ## TERM-diagnostic-session — diagnostic session
 
@@ -2061,9 +2060,9 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 **Distinctions:**
 
-- **A harness's session:** one run of an AI agent. A diagnostic session spans whichever sessions run while it is on (PRJ-006 point 1).
-- **Its log:** local and git-ignored, size-capped, with command tails redacted by default (PRJ-006 point 5).
-- **A fix:** recommended, never applied by itself (PRJ-006 point 4).
+- **A harness's session:** one run of an AI agent. A diagnostic session spans whichever sessions run while it is on ([PRJ-006 point 1](../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md#1-opt-in-off-by-default)).
+- **Its log:** local and git-ignored, size-capped, with command tails redacted by default ([PRJ-006 point 5](../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md#5-mvp-cadence-and-guards)).
+- **A fix:** recommended, never applied by itself ([PRJ-006 point 4](../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md#4-the-auto-fix-bright-line-resolved-on-paper-now)).
 
 ## TERM-distribution — distribution
 
@@ -2094,47 +2093,47 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 
 Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#enforcement-declaration).
 
-**Example:** Claude Code's enforcement declaration gives `command-deny` the layer `settings`, enforced `native`. `pkit permissions diff` reads it to name each dimension the harness cannot enforce.
+**Example:** Claude Code's enforcement declaration gives `command-deny` the layer `settings`, enforced `native`. `pkit permissions diff` reads it to name each dimension the [harness](#term-harness--harness) cannot enforce.
 
 **Distinctions:**
 
-- **Support declaration:** an adapter's grading of how far its harness meets each harness requirement (COR-047 point 2).
-- **Enforcement:** the system's word for a registered permission hook. It shares only the word.
-- **A dimension with `none`:** reported as a gap to close outside the harness, such as at the operating system (COR-028 point 3).
+- **Support declaration:** an [adapter](#term-adapter--adapter)'s grading of how far its harness meets each [harness requirement](#term-harness-requirement--harness-requirement) ([COR-047 point 2](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
+- **Enforcement:** the [system](#term-system--system)'s word for a registered [permission hook](#term-permission-hook--permission-hook). It shares only the word.
+- **A dimension with `none`:** reported as a gap to close outside the harness, such as at the operating system ([COR-028 point 3](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
 
 ## TERM-environment-block — environment block
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#environment-block).
 
-**Example:** A bug report's environment block names pkit 2.0.0, backbone 2.0.0, Python 3.13 and project-management 0.55.0, with the `claude-code` adapter on macOS.
+**Example:** A bug [report](#term-report--report)'s environment block names pkit 2.0.0, [backbone](#term-backbone--backbone) 2.0.0, Python 3.13 and project-management 0.55.0, with the `claude-code` [adapter](#term-adapter--adapter) on macOS.
 
 **Distinctions:**
 
-- **The adopter's text:** what the adopter writes. The system checks it for nothing private beyond what it can see, and builds the environment block itself (PRJ-008).
+- **The adopter's text:** what the adopter writes. The [system](#term-system--system) checks it for nothing private beyond what it can see, and builds the environment block itself ([PRJ-008](../../../.pkit/decisions/project/PRJ-008-report-command.md)).
 - **A capability the system does not ship:** counted, never named, unless the adopter asks to name it (PRJ-008).
 
 ## TERM-finding — finding
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#finding).
 
-**Example:** [validation](#term-validation--validation) fails on a [revisit](#term-revisit--revisit) entry that names no [link target](#term-link-target--link-target), and only warns of an [anchor](#term-anchor--anchor) on a retired [point](#term-point--point).
+**Example:** [validation](#term-validation--validation) fails on a [revisit entry](#term-revisit-entry--revisit-entry) that names no [link target](#term-link-target--link-target), and only warns of an [anchor](#term-anchor--anchor) on a retired [point](#term-point--point).
 
 **Distinctions:**
 
 - **Friction:** a finding of the [friction](#term-friction--friction) checks, that something an [artefact](#term-artefact--artefact) rests on changed with no [answer](#term-answer--answer) standing for it ([COR-050 point 6](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)).
 - **Debt:** a finding of the [whole-repository check](#term-whole-repository-check--whole-repository-check), dated from the commit it originates in ([COR-050 point 9](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
-- **Severity:** one of a closed set that every validator shares, of which exactly one fails validation (COR-055 points [4](../../../.pkit/decisions/core/COR-055-validation.md#4-severity-is-on-the-finding) and [5](../../../.pkit/decisions/core/COR-055-validation.md#5-exactly-one-severity-fails)).
-- **A reviewer's finding:** a settled break, a passage for a person or a finding that informs. Only a settled break withholds the [reviewer](#term-reviewer--reviewer)'s approval ([COR-057 point 3](../../../.pkit/decisions/core/COR-057-rule-set-reviewer.md#3-its-findings-and-what-binds)).
+- **Severity:** one of a closed set that every [validator](#term-validator--validator) shares, of which exactly one fails validation (COR-055 points [4](../../../.pkit/decisions/core/COR-055-validation.md#4-severity-is-on-the-finding) and [5](../../../.pkit/decisions/core/COR-055-validation.md#5-exactly-one-severity-fails)).
+- **A reviewer's finding:** a [settled break](#term-settled-break--settled-break), a [passage for a person](#term-passage-for-a-person--passage-for-a-person) or a [finding that informs](#term-finding-that-informs--finding-that-informs). Only a settled break withholds the [reviewer](#term-reviewer--reviewer)'s approval ([COR-057 point 3](../../../.pkit/decisions/core/COR-057-rule-set-reviewer.md#3-its-findings-and-what-binds)).
 
 ## TERM-finding-that-informs — finding that informs
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#finding-that-informs).
 
-**Example:** A change edits a use case beside a sentence another change made too long. The rule-set reviewer names that sentence in a finding that informs.
+**Example:** A [change](#term-change--change) edits a use case beside a sentence another change made too long. The rule-set [reviewer](#term-reviewer--reviewer) names that sentence in a finding that informs.
 
 **Distinctions:**
 
-- **Settled break:** a break the change owns, which the rule's text settles. It withholds the reviewer's approval (COR-057 point 3).
+- **Settled break:** a break the change owns, which the [rule](#term-rule--rule)'s text settles. It withholds the reviewer's approval ([COR-057 point 3](../../../.pkit/decisions/core/COR-057-rule-set-reviewer.md#3-its-findings-and-what-binds)).
 - **Its reason:** each finding that informs says why the break is not the change's (COR-057 point 3).
 
 ## TERM-friction — friction
@@ -2145,8 +2144,8 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 **Distinctions:**
 
-- **Debt:** what the [whole-repository check](#term-whole-repository-check--whole-repository-check) reports on the [default branch](#term-default-branch--default-branch). Friction nobody answered is stale [debt](#term-debt--debt), and a deferral is deferred debt ([COR-050 point 9](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
-- **The `friction` block:** the block in an [artefact](#term-artefact--artefact)'s front matter that holds its anchors ([COR-050 point 1](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)). The artefact's answers live in answer files apart from the artefact ([COR-062 point 1](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)). The block is no [finding](#term-finding--finding).
+- **Debt:** what the [whole-repository check](#term-whole-repository-check--whole-repository-check) reports on the [default branch](#term-default-branch--default-branch). Friction nobody answered is stale [debt](#term-debt--debt), and a [deferral](#term-deferral--deferral) is deferred debt ([COR-050 point 9](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
+- **The `friction` block:** the block in an [artefact](#term-artefact--artefact)'s front matter that holds its anchors ([COR-050 point 1](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)). The artefact's answers live in [answer files](#term-answer-file--answer-file) apart from the artefact ([COR-062 point 1](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)). The block is no [finding](#term-finding--finding).
 
 ## TERM-grant — grant
 
@@ -2164,12 +2163,12 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#grant-subject).
 
-**Example:** A grant to `agent:researcher` has that agent as its grant subject. The agent's effective grants are those to `all` and to `agent:researcher`.
+**Example:** A [grant](#term-grant--grant) to `agent:researcher` has that agent as its grant subject. The agent's effective grants are those to `all` and to `agent:researcher`.
 
 **Distinctions:**
 
-- **Process subject:** a thing a process moves through its states. It shares only the word.
-- **`all`:** every agent and the operator. A deny to `all` wins over an allow to one agent (COR-028 point 1).
+- **Process subject:** a thing a [process](#term-process--process) moves through its states. It shares only the word.
+- **`all`:** every agent and the operator. A deny to `all` wins over an allow to one agent ([COR-028 point 1](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth)).
 
 ## TERM-guardrail — guardrail
 
@@ -2179,8 +2178,8 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 **Distinctions:**
 
-- **Deny grant:** a [grant](#term-grant--grant) that denies one grant subject a [privilege](#term-privilege--privilege). A [project](#term-project--project) writes it, and can remove it. A guardrail comes from the catalog's `guardrail: true`, whatever the grants say.
-- **The double lock:** a guardrail's two layers. The [backbone](#term-backbone--backbone)'s permission code denies it, and the [adapter](#term-adapter--adapter)'s own deny in its [harness](#term-harness--harness) holds where the [permission hook](#term-permission-hook--permission-hook) fails ([COR-028 point 2](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
+- **Deny grant:** a [grant](#term-grant--grant) that denies one [grant subject](#term-grant-subject--grant-subject) a [privilege](#term-privilege--privilege). A [project](#term-project--project) writes it, and can remove it. A guardrail comes from the catalog's `guardrail: true`, whatever the grants say.
+- **The double lock:** a guardrail's two layers. The [backbone](#term-backbone--backbone)'s [permission code](#term-permission-code--permission-code) denies it, and the [adapter](#term-adapter--adapter)'s own deny in its [harness](#term-harness--harness) holds where the [permission hook](#term-permission-hook--permission-hook) fails ([COR-028 point 2](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
 - **A capability's privilege:** a privilege a [capability](#term-capability--capability)'s catalog fragment adds. It is never a guardrail, and the backbone refuses a fragment that marks one ([ADR-021 point 3](../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#3-a-capability-contributed-privilege-may-never-be-a-guardrail--reject-do-not-strip)).
 
 ## TERM-harness — harness
@@ -2204,8 +2203,8 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 **Distinctions:**
 
 - **Requirement:** a kind of the analysis, which states what must hold beyond one actor's goal. It shares only the word.
-- **Support declaration:** an adapter's grading of how far its harness meets each harness requirement (COR-047 point 2).
-- **Its observation point:** where the harness requirement is observed. What cannot be observed there is reported, never passed (COR-047 point 4).
+- **Support declaration:** an [adapter](#term-adapter--adapter)'s grading of how far its [harness](#term-harness--harness) meets each harness requirement ([COR-047 point 2](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
+- **Its observation point:** where the harness requirement is observed. What cannot be observed there is reported, never passed ([COR-047 point 4](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#4-every-requirement-names-its-observation-point-what-cannot-be-observed-is-reported-not-passed)).
 
 ## TERM-head — head
 
@@ -2223,14 +2222,14 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#inheritance-pin).
 
-**Example:** `ANA` inherits `WRITE@2`, so its inheritance pin on `WRITE` is 2. Once `WRITE` reaches 3, none of its rules bind through `ANA` until the project moves the pin.
+**Example:** `ANA` inherits `WRITE@2`, so its inheritance pin on `WRITE` is 2. Once `WRITE` reaches 3, none of its rules bind through `ANA` until the [project](#term-project--project) moves the pin.
 
 **Distinctions:**
 
-- **Version pin:** the release a project's commands run at. It is no inheritance pin (ADR-049 point 1).
-- **Re-pin:** the verb for moving an inheritance pin to its set's new major. The adopter edits it by hand, once the new major is reviewed (COR-051 point 7).
-- **A pin behind its set:** one naming a major its set has passed. Validation fails on the inheriting set meanwhile, so the gap is never silent (COR-051 point 7).
-- **A rule set's version:** its own `version`, apart from its component's. An inheritance pin names only its major.
+- **Version pin:** the [release](#term-release--release) a project's commands run at. It is no inheritance pin ([ADR-049 point 1](../../architecture/decisions/ADR-049-per-project-version-pin.md#1-pin-source-a-dedicated-project-owned-directive-file)).
+- **Re-pin:** the verb for moving an inheritance pin to its set's new major. The adopter edits it by hand, once the new major is reviewed ([COR-051 point 7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
+- **A pin behind its set:** one naming a major its set has passed. [Validation](#term-validation--validation) fails on the inheriting set meanwhile, so the gap is never silent (COR-051 point 7).
+- **A rule set's version:** its own `version`, apart from its [component](#term-component--component)'s. An inheritance pin names only its major.
 
 ## TERM-install — install
 
@@ -2250,23 +2249,23 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 
 Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#install-plan).
 
-**Example:** `pkit capabilities install living-docs --plan` prints an install plan of the data points living-docs would fill, and the role conflicts to resolve. It writes nothing.
+**Example:** `pkit capabilities install living-docs --plan` prints an install plan of the [data points](#term-data-point--data-point) living-docs would fill, and the [role](#term-role--role) conflicts to resolve. It writes nothing.
 
 **Distinctions:**
 
-- **Install:** the operation that adds the capability. An install plan writes nothing (COR-053 point 8).
+- **Install:** the operation that adds the [capability](#term-capability--capability). An install plan writes nothing ([COR-053 point 8](../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
 - **Suggestion:** a capability `pkit status` names as able to fill an unfilled data point. It is never an action (COR-053 point 8).
-- **Release plan:** `pkit release plan`, the preview of a release step. It shares only the word.
+- **Release plan:** `pkit release plan`, the preview of a [release step](#term-release-step--release-step). It shares only the word.
 
 ## TERM-instruction-file — instruction file
 
 Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#instruction-file).
 
-**Example:** project-kit's root `CLAUDE.md` is its instruction file. It includes `.pkit/rules/core.md` and the rules index, and the project's own rules follow.
+**Example:** project-kit's root `CLAUDE.md` is its instruction file. It includes `.pkit/rules/core.md` and the [rules index](#term-rules-index--rules-index), and the [project](#term-project--project)'s own rules follow.
 
 **Distinctions:**
 
-- **The harness's settings:** files such as `.claude/settings.json`, which hold permission entries, not instructions. Merge delivery adds to both.
+- **The harness's settings:** files such as `.claude/settings.json`, which hold permission entries, not instructions. [Merge delivery](#term-merge-delivery--merge-delivery) adds to both.
 - **Skill:** a procedure an AI agent loads for a matching task. Every session loads the instruction file, whatever its task.
 
 ## TERM-link-target — link target
@@ -2277,7 +2276,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 **Distinctions:**
 
-- **Anchor's value:** how an anchor is written, such as `COR-058#4`. A value in a revisit link's field names every anchor of the [artefact](#term-artefact--artefact) that has it. A revisit entry names its link target by the anchor's kind and value ([COR-050 point 16](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)).
+- **Anchor's value:** how an anchor is written, such as `COR-058#4`. A value in a revisit link's field names every anchor of the [artefact](#term-artefact--artefact) that has it. A [revisit entry](#term-revisit-entry--revisit-entry) names its link target by the anchor's kind and value ([COR-050 point 16](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)).
 - **An anchor's target:** what an anchor names, such as the files a path anchor matches. What the anchor stands on is what the checks compare of that target, such as those files' content and mode ([COR-050 point 5](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#5-when-an-anchor-has-changed-and-what-answers-it)). A link target is the anchor itself, and it changed where what it stands on differs (COR-050 point 16).
 - **A version transition's target and a pull request's target:** the [release](#term-release--release) or [version](#term-version--version) a transition moves to, and the branch a [pull request](#term-pull-request--pull-request) lands on. They share the word only.
 
@@ -2285,13 +2284,13 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#loaded-rule-set).
 
-**Example:** The backbone's `OPS` is a loaded rule set. `.pkit/rules/core.md` is generated from it, and every session loads that file through the harness's instruction file.
+**Example:** The [backbone](#term-backbone--backbone)'s `OPS` is a loaded rule set. `.pkit/rules/core.md` is generated from it, and every session loads that file through the [harness](#term-harness--harness)'s [instruction file](#term-instruction-file--instruction-file).
 
 **Distinctions:**
 
-- **Method rule set:** one the backbone or a component ships. A loaded rule set it ships binds where its file is loaded, never through inheritance (COR-051 point 7).
-- **Operational rule:** each rule of a loaded rule set. Only an accepted one is in the generated file (COR-068 point 3).
-- **Scope:** a loaded rule set has none, and no rule set inherits it (COR-068 point 2).
+- **Method rule set:** one the backbone or a [component](#term-component--component) ships. A loaded rule set it ships binds where its file is loaded, never through inheritance ([COR-051 point 7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
+- **Operational rule:** each [rule](#term-rule--rule) of a loaded rule set. Only an accepted one is in the generated file ([COR-068 point 3](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#3-the-loaded-file-is-generated-from-the-set-where-the-set-is-authored)).
+- **Scope:** a loaded rule set has none, and no [rule set](#term-rule-set--rule-set) inherits it ([COR-068 point 2](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#2-where-its-accepted-rules-bind)).
 
 ## TERM-manifest — manifest
 
@@ -2301,7 +2300,7 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 
 **Distinctions:**
 
-- **The backbone's:** `.pkit/manifest.yaml`. It holds the backbone's target and completion. It lists each component with its origin and the path of the component's own ([COR-010](../../../.pkit/decisions/core/COR-010-resource-lifecycle.md) and [ADR-065 point 2](../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#2-each-component-records-its-own-version-and-only-a-transition-moves-it)).
+- **The backbone's:** `.pkit/manifest.yaml`. It holds the backbone's target and [completion](#term-completion--completion). It lists each component with its origin and the path of the component's own ([COR-010](../../../.pkit/decisions/core/COR-010-resource-lifecycle.md) and [ADR-065 point 2](../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#2-each-component-records-its-own-version-and-only-a-transition-moves-it)).
 - **A shipped component's:** under the component's `project/` folder, with its [recorded version](#term-recorded-version--recorded-version) and the files its [install](#term-install--install) skipped ([COR-059 point 7](../../../.pkit/decisions/core/COR-059-version-transition.md#7-a-transition-of-the-backbone-moves-every-component-the-methodology-ships-together) and ADR-065 point 2).
 - **Package metadata:** what a component declares about itself as it ships. A manifest is what the [project](#term-project--project) recorded when it installed the component.
 - **Version pin:** a directive naming the [release](#term-release--release) whose [system](#term-system--system) runs the project's commands ([ADR-049 point 1](../../architecture/decisions/ADR-049-per-project-version-pin.md#1-pin-source-a-dedicated-project-owned-directive-file)). A manifest records what content the project holds.
@@ -2317,19 +2316,19 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 
 - **Merge:** landing a [change](#term-change--change) on the [default branch](#term-default-branch--default-branch). The analysis writes merge delivery in full for this operation.
 - **The tier that asks:** entries put to a person once, at [install](#term-install--install), by the merge command or in a [version transition](#term-version-transition--version-transition). Sync runs only the tier that asks nothing ([COR-059 point 2](../../../.pkit/decisions/core/COR-059-version-transition.md#2-reconciliation-runs-at-the-recorded-versions-and-moves-none)).
-- **Seeding:** creates a missing declared seed path from its template, never over a file that exists ([COR-059 point 8](../../../.pkit/decisions/core/COR-059-version-transition.md#8-a-transition-of-the-backbone-creates-a-missing-seed-path-and-reconciliation-creates-none)). Merge delivery revisits its file on each run.
+- **Seeding:** creates a missing declared [seed path](#term-seed-path--seed-path) from its template, never over a file that exists ([COR-059 point 8](../../../.pkit/decisions/core/COR-059-version-transition.md#8-a-transition-of-the-backbone-creates-a-missing-seed-path-and-reconciliation-creates-none)). Merge delivery revisits its file on each run.
 
 ## TERM-method-rule-set — method rule set
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#method-rule-set).
 
-**Example:** `software-analysis:SAN` is a method rule set. It binds on project-kit's analysis through `ANA`, a rule set of the project's own that inherits it.
+**Example:** `software-analysis:SAN` is a method rule set. It binds on project-kit's analysis through `ANA`, a [rule set](#term-rule-set--rule-set) of the [project](#term-project--project)'s own that inherits it.
 
 **Distinctions:**
 
-- **A rule set of the project's own:** one the project owns, which may take a scope. Sync never reads or writes it (COR-051 point 6).
-- **Loaded rule set:** a method rule set whose rules bind on the work of the sessions that load its generated file, such as the backbone's `OPS` (COR-068).
-- **Where its rules bind:** unless it is a loaded rule set, only through a set of the project's own that inherits it (COR-051 point 7).
+- **A rule set of the project's own:** one the project owns, which may take a scope. [Sync](#term-sync--sync) never reads or writes it ([COR-051 point 6](../../../.pkit/decisions/core/COR-051-rule-sets.md#6-two-kinds-two-owners)).
+- **Loaded rule set:** a method rule set whose rules bind on the work of the sessions that load its generated file, such as the [backbone](#term-backbone--backbone)'s `OPS` ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
+- **Where its rules bind:** unless it is a [loaded rule set](#term-loaded-rule-set--loaded-rule-set), only through a set of the project's own that inherits it ([COR-051 point 7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 
 ## TERM-methodology — methodology
 
@@ -2358,23 +2357,23 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 
 Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#native-deny).
 
-**Example:** Claude Code's settings hold a native deny of `git push --force`. The push stays refused even where the permission hook fails and defers the call.
+**Example:** Claude Code's settings hold a native deny of `git push --force`. The push stays refused even where the [permission hook](#term-permission-hook--permission-hook) fails and defers the call.
 
 **Distinctions:**
 
-- **Deny grant:** a grant in the permission model that denies a grant subject a privilege. An adapter writes a native deny from it where its harness can express one.
+- **Deny grant:** a [grant](#term-grant--grant) in the [permission model](#term-permission-model--permission-model) that denies a [grant subject](#term-grant-subject--grant-subject) a [privilege](#term-privilege--privilege). An [adapter](#term-adapter--adapter) writes a native deny from it where its [harness](#term-harness--harness) can express one.
 - **Native rules:** the allows and denies a harness enforces itself. A native deny is one that refuses.
 
 ## TERM-operational-rule — operational rule
 
 Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#operational-rule).
 
-**Example:** RS-OPS-008 asks an agent to pause before a destructive operation. Where the `software-engineering` [capability](#term-capability--capability) is installed, `software-engineering:RS-SWE-001` asks an agent to run the tests of what it changed. [Project](#term-project--project) rule 4 asks for signed commits in project-kit.
+**Example:** [RS-OPS-008](../../../.pkit/rule-sets/ops.md#rs-ops-008--pause-and-confirm-before-destructive-operations) asks an agent to pause before a destructive operation. Where the `software-engineering` [capability](#term-capability--capability) is installed, `software-engineering:RS-SWE-001` asks an agent to run the tests of what it changed. [Project](#term-project--project) rule 4 asks for signed commits in project-kit.
 
 **Distinctions:**
 
 - **Rule:** a statement in a [rule set](#term-rule-set--rule-set), with an id, an origin and a status ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). An operational rule in a loaded set is a [rule](#term-rule--rule) too, with an id, an origin and a status. It binds on what a session does, not on [artefacts](#term-artefact--artefact) ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
-- **Core rule and project rule:** an operational rule of the [backbone](#term-backbone--backbone)'s file and of the project's. A core rule is a rule of the backbone's loaded rule set `OPS`, cited in the analysis by its id, such as RS-OPS-002 (COR-068). A project rule is cited by its number in the project's file, as in *project rule 4*, until that file becomes a loaded rule set. A capability's operational rule is cited by its id with the capability's name ([COR-070 point 1](../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#1-a-capability-ships-at-most-one-loaded-set-and-its-loaded-file-travels-with-it)).
+- **Core rule and project rule:** an operational rule of the [backbone](#term-backbone--backbone)'s file and of the project's. A core rule is a rule of the backbone's [loaded rule set](#term-loaded-rule-set--loaded-rule-set) `OPS`, cited in the analysis by its id, such as [RS-OPS-002](../../../.pkit/rule-sets/ops.md#rs-ops-002--the-acceptance-gate) (COR-068). A project rule is cited by its number in the project's file, as in *project rule 4*, until that file becomes a loaded rule set. A capability's operational rule is cited by its id with the capability's name ([COR-070 point 1](../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#1-a-capability-ships-at-most-one-loaded-set-and-its-loaded-file-travels-with-it)).
 - **Backbone, capability or project:** the backbone's file holds what fits any project, and the project's file holds what fits only that project ([COR-014](../../../.pkit/decisions/core/COR-014-universal-applicability.md)). A capability's file holds what binds only where that capability is installed ([COR-070 point 5](../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#5-a-rule-that-binds-only-with-a-capability-belongs-to-that-capability)).
 
 ## TERM-overlay — overlay
@@ -2387,17 +2386,17 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 - **Placeholder:** a `<category>` in an agent definition's source. The deploy replaces it in the front matter with the overlay's paths for that category ([COR-013 point 5](../../../.pkit/decisions/core/COR-013-agent-architecture.md#5-adopter-overlay-for-paths-outside-pkit)). In the body it stays as written.
 - **Override:** a value under `overrides.<agent>` in the overlay. It replaces a category's value for that agent definition alone, and is never merged with it (COR-013 point 5).
-- **Optional read:** an overlay category an agent definition reads only through `reads.patterns`. Where the overlay lacks it, the deploy drops the item rather than skipping the agent definition ([ADR-052](../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)).
+- **Optional read:** an [overlay category](#term-overlay-category--overlay-category) an agent definition reads only through `reads.patterns`. Where the overlay lacks it, the deploy drops the item rather than skipping the agent definition ([ADR-052](../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)).
 
 ## TERM-overlay-category — overlay category
 
 Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#overlay-category).
 
-**Example:** project-kit's overlay gives the overlay category `adr-records` the folder of its architecture decisions, so the deployed `architect` names that folder.
+**Example:** project-kit's [overlay](#term-overlay--overlay) gives the overlay category `adr-records` the folder of its architecture decisions, so the deployed `architect` names that folder.
 
 **Distinctions:**
 
-- **Placeholder:** the `<category>` an agent definition writes, which the deploy fills from the overlay category of that name (COR-013 point 5).
+- **Placeholder:** the `<category>` an [agent definition](#term-agent-definition--agent-definition) writes, which the deploy fills from the overlay category of that name ([COR-013 point 5](../../../.pkit/decisions/core/COR-013-agent-architecture.md#5-adopter-overlay-for-paths-outside-pkit)).
 - **Override:** a value under `overrides.<agent>` that replaces an overlay category's value for one agent definition (COR-013 point 5).
 
 ## TERM-package-metadata — package metadata
@@ -2415,24 +2414,24 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#passage-for-a-person).
 
-**Example:** A rule leaves open whether a phrase names a concept. So the rule-set reviewer raises that sentence of a use case as a passage for a person.
+**Example:** A [rule](#term-rule--rule) leaves open whether a phrase names a concept. So the rule-set [reviewer](#term-reviewer--reviewer) raises that sentence of a use case as a passage for a person.
 
 **Distinctions:**
 
-- **Settled break:** a finding the rule's text settles, which withholds the reviewer's approval (COR-057 point 3).
-- **A rule the change moves:** a finding under a rule the change makes bind, or stop binding, on text it alters is a passage for a person too (COR-057 point 3).
+- **Settled break:** a [finding](#term-finding--finding) the rule's text settles, which withholds the reviewer's approval ([COR-057 point 3](../../../.pkit/decisions/core/COR-057-rule-set-reviewer.md#3-its-findings-and-what-binds)).
+- **A rule the change makes bind, or stop binding:** a finding under it, on text the [change](#term-change--change) alters, is a passage for a person too (COR-057 point 3).
 - **How it reaches a person:** the gate that invoked the reviewer says (COR-057 point 3).
 
 ## TERM-permission-code — permission code
 
 Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#permission-code).
 
-**Example:** Claude Code's permission hook hands each tool call to the permission code, which denies `git push --force` under the guardrail `vcs-history-rewrite`.
+**Example:** Claude Code's [permission hook](#term-permission-hook--permission-hook) hands each tool call to the permission code, which denies `git push --force` under the [guardrail](#term-guardrail--guardrail) `vcs-history-rewrite`.
 
 **Distinctions:**
 
-- **Permission hook:** an adapter's script that has its harness ask the permission code before each tool call.
-- **A fault in deciding:** the permission hook defers the call to the harness, whose native denies still hold each guardrail (COR-028 point 2).
+- **Permission hook:** an [adapter](#term-adapter--adapter)'s script that has its [harness](#term-harness--harness) ask the permission code before each tool call.
+- **A fault in deciding:** the permission hook defers the call to the harness, whose [native denies](#term-native-deny--native-deny) still hold each guardrail ([COR-028 point 2](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
 
 ## TERM-permission-hook — permission hook
 
@@ -2442,7 +2441,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 **Distinctions:**
 
-- **Permission code:** the backbone's code under `.pkit/permissions/` that decides each call. Every [adapter](#term-adapter--adapter)'s permission hook calls it, so a hook decides as the [system](#term-system--system)'s own commands do ([ADR-003](../../architecture/decisions/ADR-003-permission-core-code-home.md)).
+- **Permission code:** the [backbone](#term-backbone--backbone)'s code under `.pkit/permissions/` that decides each call. Every [adapter](#term-adapter--adapter)'s permission hook calls it, so a hook decides as the [system](#term-system--system)'s own commands do ([ADR-003](../../architecture/decisions/ADR-003-permission-core-code-home.md)).
 - **Hook of an agent:** a name an [agent definition](#term-agent-definition--agent-definition) invokes to run an operation, which a [skill](#term-skill--skill) or a script provides ([COR-013 point 4](../../../.pkit/decisions/core/COR-013-agent-architecture.md#4-the-hook-pattern-agents-executing-in-other-areas)). It decides no permission.
 - **Enforcement:** the system's word for a registered permission hook. `pkit permissions enable` registers the hook with the harness, and `pkit permissions disable` removes the registration. The adapter ships the script either way.
 - **Native rules:** the allows and denies a harness enforces itself. They hold the [guardrails](#term-guardrail--guardrail) even where the permission hook fails and defers the call ([COR-028 point 2](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
@@ -2451,13 +2450,13 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#permission-model).
 
-**Example:** The permission model grants `agent:researcher` the privilege `web-fetch`. The `claude-code` adapter realises that grant in `.claude/settings.json` and its permission hook.
+**Example:** The permission model grants `agent:researcher` the [privilege](#term-privilege--privilege) `web-fetch`. The `claude-code` [adapter](#term-adapter--adapter) realises that [grant](#term-grant--grant) in `.claude/settings.json` and its [permission hook](#term-permission-hook--permission-hook).
 
 **Distinctions:**
 
-- **The harness's settings:** what an adapter writes from the permission model. The model is the source of truth, and the settings follow it (COR-028 point 1).
-- **Sandbox:** the operating system's bound on what commands reach. The permission model decides what may be invoked, and confines nothing (ADR-004 point 1).
-- **Profile:** a named set of grants and a posture, which adds one layer to the permission model.
+- **The harness's settings:** what an adapter writes from the permission model. The model is the source of truth, and the settings follow it ([COR-028 point 1](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth)).
+- **Sandbox:** the operating system's bound on what commands reach. The permission model decides what may be invoked, and confines nothing ([ADR-004 point 1](../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked)).
+- **Profile:** a named set of grants and a [posture](#term-posture--posture), which adds one layer to the permission model.
 
 ## TERM-place — place
 
@@ -2480,9 +2479,9 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 **Distinctions:**
 
-- **In the body:** a placeholder stays as written, as text the agent reads (COR-013 point 5).
-- **A stand-in in text:** something a stamp or a person leaves to be filled, such as `<why it still holds>`. It shares only the word.
-- **An unset overlay category:** an agent definition that needs it is skipped, never deployed with the placeholder in it (COR-013 point 5).
+- **In the body:** a placeholder stays as written, as text the agent reads ([COR-013 point 5](../../../.pkit/decisions/core/COR-013-agent-architecture.md#5-adopter-overlay-for-paths-outside-pkit)).
+- **A stand-in in text:** something a [stamp](#term-stamp--stamp) or a person leaves to be filled, such as `<why it still holds>`. It shares only the word.
+- **An unset overlay category:** an [agent definition](#term-agent-definition--agent-definition) that needs it is skipped, never deployed with the placeholder in it ([ADR-052](../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)).
 
 ## TERM-point — point
 
@@ -2504,12 +2503,12 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 
 Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#posture).
 
-**Example:** Under the `strict` posture, an agent's `docker` command that no grant allows is denied. Under `lenient`, the harness asks the operator.
+**Example:** Under the `strict` posture, an agent's `docker` command that no [grant](#term-grant--grant) allows is denied. Under `lenient`, the [harness](#term-harness--harness) asks the operator.
 
 **Distinctions:**
 
 - **Profile:** a named set of grants and a posture, which an operator activates on one machine.
-- **A per-machine choice:** the posture is shared policy, never one machine's choice (ADR-032).
+- **A per-machine choice:** the posture is shared policy, never one machine's choice ([ADR-032](../../architecture/decisions/ADR-032-per-machine-activation-routing-axis.md)).
 
 ## TERM-privilege — privilege
 
@@ -2521,7 +2520,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 - **Path-scoped privilege:** a privilege recognised only for a file tool whose target lies in its folders, such as `workspace` ([ADR-060 point 1](../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#1-recognition-from-the-target-path-for-the-file-tools-only)).
 - **A capability's privilege:** a privilege a [capability](#term-capability--capability)'s catalog fragment defines, under an id that opens with the capability's name ([ADR-021](../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md)).
-- **Guardrail:** a privilege the catalog marks `guardrail: true`, which every grant subject is denied.
+- **Guardrail:** a privilege the catalog marks `guardrail: true`, which every [grant subject](#term-grant-subject--grant-subject) is denied.
 
 ## TERM-process — process
 
@@ -2544,7 +2543,7 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 
 **Distinctions:**
 
-- **Grant subject:** whom a grant is for. It shares only the word.
+- **Grant subject:** whom a [grant](#term-grant--grant) is for. It shares only the word.
 - **A commit's subject:** git's name for the first line of a commit's message. It shares only the word.
 
 ## TERM-profile — profile
@@ -2555,7 +2554,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 **Distinctions:**
 
-- **Posture:** what becomes of a request no [grant](#term-grant--grant) decides. `lenient` defers it to the [harness](#term-harness--harness), and `strict` denies it. A profile sets the posture, which the [project](#term-project--project) commits as shared policy ([ADR-032](../../architecture/decisions/ADR-032-per-machine-activation-routing-axis.md)).
+- **Posture:** what becomes of a request no [grant](#term-grant--grant) decides. `lenient` defers it to the [harness](#term-harness--harness), and `strict` denies it. A profile sets the [posture](#term-posture--posture), which the [project](#term-project--project) commits as shared policy ([ADR-032](../../architecture/decisions/ADR-032-per-machine-activation-routing-axis.md)).
 - **The project's grants:** those in `.pkit/permissions/project/grants.yaml`. Activating a profile never edits that file, so a grant written by hand survives a switch of profile ([ADR-005 point 2](../../architecture/decisions/ADR-005-permission-profile-surface.md#2-contents--posture-plus-a-layered-grant-source-confinement-and-native-allow-referenced-not-owned)). Where a profile's deny meets a project's allow, the deny wins ([COR-028 point 1](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth)).
 - **Autonomy settings:** the [sandbox](#term-sandbox--sandbox)'s settings that `pkit permissions setup autonomy` writes beside a profile. A profile relies on them, and never writes them (ADR-005 point 2).
 
@@ -2618,13 +2617,13 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#query-command).
 
-**Example:** A capability's validator is a query command. So `pkit sync` provisions its script's dependencies, and `pkit validate` runs it offline within thirty seconds.
+**Example:** A [capability](#term-capability--capability)'s [validator](#term-validator--validator) is a query command. So `pkit sync` provisions its script's dependencies, and `pkit validate` runs it offline within thirty seconds.
 
 **Distinctions:**
 
-- **Its three uses:** an anchor kind's resolver, a data point's filler, and a validator (ADR-057 point 3).
-- **No answer:** an abnormal exit, a timeout or an answer that cannot be read. It is never read as an empty answer (ADR-057 point 3).
-- **What the declaration confines:** nothing. Its obligations are trusted, and a project that needs a boundary confines the command where it runs it (ADR-057 point 4).
+- **Its three uses:** an [anchor](#term-anchor--anchor) kind's resolver, a [data point](#term-data-point--data-point)'s filler, and a validator ([ADR-057 point 3](../../architecture/decisions/ADR-057-backbone-engines-and-command-limits.md#3-query-commands-declare-the-query-contract-the-engine-that-runs-one-enforces-the-bound-and-reads-the-answer-failing-closed)).
+- **No answer:** an abnormal exit, a timeout or output that cannot be read. It is never read as empty output (ADR-057 point 3).
+- **What the declaration confines:** nothing. Its obligations are trusted, and a [project](#term-project--project) that needs a boundary confines the command where it runs it ([ADR-057 point 4](../../architecture/decisions/ADR-057-backbone-engines-and-command-limits.md#4-what-nothing-here-confines-stated)).
 
 ## TERM-range — range
 
@@ -2637,7 +2636,7 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 - **Floor:** the lowest [version](#term-version--version) a range admits, its `>=X.Y.Z`. At a [release step](#term-release-step--release-step), a floor rises only where a [changeset](#term-changeset--changeset) declares that the [component](#term-component--component) needs a newer version ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
 - **Upper bound:** the version a range stops below, its `<A.B.C`. A release step widens an upper bound on the backbone with no declaration. It widens an upper bound on another capability only on a changeset's declaration (PRJ-002 D4).
 - **A component's version:** the one number the component carries in its `package.yaml`, as the backbone carries its own in `.pkit/VERSION`. A range names versions of what the component depends on ([COR-010](../../../.pkit/decisions/core/COR-010-resource-lifecycle.md) and [COR-030](../../../.pkit/decisions/core/COR-030-capability-dependencies.md)).
-- **Harness version bound:** the [harness](#term-harness--harness) versions that an [adapter](#term-adapter--adapter)'s support declaration holds for. It is never widened automatically, only by an author who tested the claim ([COR-047 point 2](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
+- **Harness version bound:** the [harness](#term-harness--harness) versions that an [adapter](#term-adapter--adapter)'s [support declaration](#term-support-declaration--support-declaration) holds for. It is never widened automatically, only by an author who tested the claim ([COR-047 point 2](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
 
 ## TERM-recorded-version — recorded version
 
@@ -2658,13 +2657,13 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 
 Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#release).
 
-**Example:** the release of 24 August 2026 holds [backbone](#term-backbone--backbone) 1.149.0 and, among its [components](#term-component--component), project-management 0.54.0. The commit that landed its versions carries the tag `v1.149.0`.
+**Example:** the release of 24 August 2026 holds [backbone](#term-backbone--backbone) 1.149.0 and, among its [components](#term-component--component), project-management 0.54.0. The commit that landed its [versions](#term-version--version) carries the tag `v1.149.0`.
 
 **Distinctions:**
 
 - **Release step:** the procedure that makes a release from the pending [changesets](#term-changeset--changeset). To release a component is to run the [release step](#term-release-step--release-step) for that component's changesets.
 - **Changeset:** a [change](#term-change--change)'s declaration for the next release. The release step consumes every changeset waiting for it (PRJ-002 [D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr) and [D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
-- **A release step that moves no backbone:** writes new [versions](#term-version--version) of components and makes no release of its own. Those versions reach a CLI installed from a tag with the next release ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
+- **A release step that moves no backbone:** writes new versions of components and makes no release of its own. Those versions reach a CLI installed from a tag with the next release ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
 - **A component's release:** [PRJ-002](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md)'s and PRJ-004's name for one new version of one component ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)). The analysis calls it the component's new version.
 - **An externally-sourced component's version:** written in the component's own [source repository](#term-source-repository--source-repository), and reached by a [project](#term-project--project)'s transition of that component ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)).
 - **Release pull request:** the [pull request](#term-pull-request--pull-request) that carries one release step's writes, on a `release/` branch under a `chore(release):` title. It closes no issue, so `pkit release merge` lands it.
@@ -2680,9 +2679,9 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 **Distinctions:**
 
-- **Pull request:** a proposal to land one change. A release pull request closes no issue, so `pkit pull-request land` refuses it, and `pkit release merge` lands it.
-- **Release step:** the procedure whose writes the release pull request carries (PRJ-002 D3).
-- **Release tag:** what the commit a release pull request lands gets, where the release step moved the backbone (PRJ-004).
+- **Pull request:** a proposal to land one [change](#term-change--change). A release pull request closes no issue, so `pkit pull-request land` refuses it, and `pkit release merge` lands it.
+- **Release step:** the procedure whose writes the release pull request carries ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
+- **Release tag:** what the commit a release pull request lands gets, where the [release step](#term-release-step--release-step) moved the [backbone](#term-backbone--backbone) ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
 
 ## TERM-release-step — release step
 
@@ -2700,13 +2699,13 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#release-tag).
 
-**Example:** The release of 2.0.0 has the release tag `v2.0.0`. `uv tool install` with the distribution's URL at that tag installs its CLI.
+**Example:** The [release](#term-release--release) of 2.0.0 has the release tag `v2.0.0`. `uv tool install` with the [distribution](#term-distribution--distribution)'s URL at that tag installs its CLI.
 
 **Distinctions:**
 
-- **Release:** the set of versions a release tag names by its backbone version.
-- **A release step that moves only components:** gets no release tag (PRJ-004).
-- **The `latest` tag:** a tag that points at the highest release tag, which the install the system prints names.
+- **Release:** the set of [versions](#term-version--version) a release tag names by its [backbone](#term-backbone--backbone) version.
+- **A release step that moves only components:** gets no release tag ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
+- **The `latest` tag:** a tag that points at the highest release tag. The `uv tool install` command the [system](#term-system--system) prints names it.
 - **GitHub release:** the page the hosting service shows for a release tag. Its notes are the version's changelog section (PRJ-004).
 
 ## TERM-report — report
@@ -2721,7 +2720,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 - **Tracked fix:** an issue the maintainer lists under a report's `## Tracked by` heading. One issue may fix several reports ([PRJ-008](../../../.pkit/decisions/project/PRJ-008-report-command.md)).
 - **Reported note:** a [scratchpad note](#term-scratchpad-note--scratchpad-note) attached to a report. Once the report is posted, the note moves to `reported/` ([COR-043 point 3](../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md#3-entering-the-state-is-produced-by-an-actual-send-never-by-intent)).
 - **The whole-repository report:** what the [whole-repository check](#term-whole-repository-check--whole-repository-check) publishes for the [default branch](#term-default-branch--default-branch), such as project-kit's tracking issue. It is no report in this sense.
-- **To report:** a check's or a command's plain verb, as in "the change check reports friction". It shares only the word.
+- **To report:** a check's or a command's plain verb, as in "the [change check](#term-change-check--change-check) reports [friction](#term-friction--friction)". It shares only the word.
 - **A command's report:** what a command prints of what it found, such as `pkit permissions diagnose report`. It is no report in this sense.
 
 ## TERM-report-target — report target
@@ -2732,39 +2731,39 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 **Distinctions:**
 
-- **Distribution:** the edition that sets the report target. A fork is another distribution, with a report target of its own (PRJ-008).
+- **Distribution:** the edition that sets the report target. A fork is another [distribution](#term-distribution--distribution), with a report target of its own ([PRJ-008](../../../.pkit/decisions/project/PRJ-008-report-command.md)).
 - **`pkit report inbox`:** the maintainer's listing of reports, which runs only in a clone of the report target (PRJ-008).
 
 ## TERM-revalidation-answer — revalidation answer
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#revalidation-answer).
 
-**Example:** A change renames a flag that a page describes, so the developer updates the page and writes its revalidation answer with `pkit friction revalidate --outcome updated`.
+**Example:** A [change](#term-change--change) renames a flag that a page describes, so the developer updates the page and writes its revalidation answer with `pkit friction revalidate --outcome updated`.
 
 **Distinctions:**
 
 - **Revalidate:** the verb for writing a revalidation answer, as in "the developer revalidates the page". `pkit friction revalidate` writes one.
-- **Deferral:** an answer that puts off one anchor's friction. It changes no `at`, so it is no revalidation answer (COR-050 point 4).
-- **Revisit entry:** an answer on a link target, which moves no revalidation point (COR-050 point 16).
-- **Its outcome:** `updated` or `unchanged`, a record of what happened. No check reads it to work out friction (COR-050 point 3).
+- **Deferral:** an [answer](#term-answer--answer) that puts off one [anchor](#term-anchor--anchor)'s [friction](#term-friction--friction). It changes no `at`, so it is no revalidation answer ([COR-050 point 4](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#4-deferrals)).
+- **Revisit entry:** an answer on a [link target](#term-link-target--link-target), which moves no [revalidation point](#term-revalidation-point--revalidation-point) ([COR-050 point 16](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)).
+- **Its outcome:** `updated` or `unchanged`, a record of what happened. No check reads it to work out friction ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 
 ## TERM-revalidation-point — revalidation point
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#revalidation-point).
 
-**Example:** A page was last revalidated in commit `a1b2c3d`, which is its revalidation point. The whole-repository check compares what its anchors stand on from there.
+**Example:** A page was last revalidated in commit `a1b2c3d`, which is its revalidation point. The [whole-repository check](#term-whole-repository-check--whole-repository-check) compares what its anchors stand on from there.
 
 **Distinctions:**
 
-- **Point:** a part of a decision record's Decision. It shares only the word (COR-058 point 1).
-- **Deferral point:** the commit that first introduced a deferral. A deferral kept through a revalidation answer answers no friction (COR-050 point 4).
-- **Several revalidation points:** commits that do not descend from one another may each first carry the value. Each is then a revalidation point, and the checks measure from every one (COR-050 point 3).
+- **Point:** a part of a [decision record](#term-decision-record--decision-record)'s Decision. It shares only the word ([COR-058 point 1](../../../.pkit/decisions/core/COR-058-record-points.md#1-a-point-is-a-heading-with-its-id-and-title)).
+- **Deferral point:** the commit that first introduced a [deferral](#term-deferral--deferral). A deferral kept through a [revalidation answer](#term-revalidation-answer--revalidation-answer) answers no [friction](#term-friction--friction) ([COR-050 point 4](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#4-deferrals)).
+- **Several revalidation points:** commits that do not descend from one another may each first carry the value. Each is then a revalidation point, and the checks measure from every one ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 
 ## TERM-reviewer — reviewer
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#reviewer).
 
-**Example:** the rule-set reviewer judges a [change](#term-change--change) against the rules that bind on what the change alters, and withholds its approval for a settled break.
+**Example:** the rule-set reviewer judges a [change](#term-change--change) against the rules that bind on what the change alters, and withholds its approval for a [settled break](#term-settled-break--settled-break).
 
 **Distinctions:**
 
@@ -2781,7 +2780,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 **Distinctions:**
 
-- **Revalidation answer:** an [answer](#term-answer--answer) on the [artefact](#term-artefact--artefact) itself, saying it still holds against what changed under its anchors ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)). A revisit judges a [link target](#term-link-target--link-target) instead, and moves no revalidation point ([COR-050 point 16](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)).
+- **Revalidation answer:** an [answer](#term-answer--answer) on the [artefact](#term-artefact--artefact) itself, saying it still holds against what changed under its anchors ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)). A revisit judges a [link target](#term-link-target--link-target) instead, and moves no [revalidation point](#term-revalidation-point--revalidation-point) ([COR-050 point 16](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)).
 - **Revisit entry:** the answer that records a revisit among the source's answers ([COR-062 point 1](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)). Its outcome is `unchanged`, with why the link target still stands, or `deferred`, with the open follow-up that will revisit it (COR-050 point 16). It replaces only the entry for its own link target that it read, and its reason differs from each entry it replaces ([COR-062 point 5](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#5-what-an-answer-replaces)). A revisit met by changing what the link target stands on needs no entry.
 - **Friction:** a [finding](#term-finding--finding) that something an artefact rests on changed. A link target left unrevisited is a finding of the [change check](#term-change-check--change-check) instead, and no other check reports it (COR-050 points [12](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding) and 16).
 - **Revisiting a file:** [merge delivery](#term-merge-delivery--merge-delivery) revisits its file on each run, in the word's everyday sense. That asks nothing of a change.
@@ -2790,13 +2789,13 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#revisit-entry).
 
-**Example:** A change relaxes a requirement's `measure`, and the test that verifies it still holds. So `pkit friction revisit` records a revisit entry `unchanged` for that test.
+**Example:** A [change](#term-change--change) relaxes a requirement's `measure`, and the test that verifies it still holds. So `pkit friction revisit` records a revisit entry `unchanged` for that test.
 
 **Distinctions:**
 
-- **Revisit:** the judgement a change owes a link target. A revisit entry records one, and a change to what the link target stands on meets one with no entry (COR-050 point 16).
-- **Revalidation answer:** an answer on the artefact itself. A revisit entry changes no content, and moves no revalidation point (COR-050 point 16).
-- **What it replaces:** only the entry for its own link target that it read. Its reason differs from each entry it replaces (COR-062 point 5).
+- **Revisit:** the judgement a change owes a [link target](#term-link-target--link-target). A revisit entry records one, and a change to what the link target stands on meets one with no entry ([COR-050 point 16](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)).
+- **Revalidation answer:** an [answer](#term-answer--answer) on the [artefact](#term-artefact--artefact) itself. A revisit entry changes no content, and moves no [revalidation point](#term-revalidation-point--revalidation-point) (COR-050 point 16).
+- **What it replaces:** only the entry for its own link target that it read. Its reason differs from each entry it replaces ([COR-062 point 5](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#5-what-an-answer-replaces)).
 
 ## TERM-revisit-link — revisit link
 
@@ -2827,13 +2826,13 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 
 Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#router).
 
-**Example:** A project's version pin names 1.150.0, and the installed CLI is at 2.0.0. So the router runs each command there under `uvx` at 1.150.0.
+**Example:** A [project](#term-project--project)'s [version pin](#term-version-pin--version-pin) names 1.150.0, and the installed CLI is at 2.0.0. So the router runs each command there under `uvx` at 1.150.0.
 
 **Distinctions:**
 
-- **Routing switched off:** with `PKIT_NO_ROUTE` set, a command runs the installed CLI's code (ADR-049 point 5).
-- **The fallback:** where the pinned release cannot be fetched, the router runs the installed CLI and warns once (ADR-039 D2).
-- **Dispatcher:** the code that runs one command once the router has chosen whose code runs (ADR-039 point 1).
+- **Routing switched off:** with `PKIT_NO_ROUTE` set, a command runs the installed CLI's code ([ADR-049 point 5](../../architecture/decisions/ADR-049-per-project-version-pin.md#5-bootstrap-the-raise-via-the-existing-pkit_no_route-bypass-self-invoked-in-the-gesture)).
+- **The fallback:** where the pinned [release](#term-release--release) cannot be fetched, the router runs the installed CLI and warns once ([ADR-039 D2](../../architecture/decisions/ADR-039-pkit-entry-point-router.md#d2--graceful-degradation-is-mandatory)).
+- **Dispatcher:** the code that runs one command once the router has chosen whose code runs ([ADR-039 point 1](../../architecture/decisions/ADR-039-pkit-entry-point-router.md#1-source-checkout--exec-the-in-tree-dispatcher)).
 
 ## TERM-rule — rule
 
@@ -2846,8 +2845,8 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **Rule set:** the collection file that holds rules, each an [artefact](#term-artefact--artefact) of its own ([COR-051 point 2](../../../.pkit/decisions/core/COR-051-rule-sets.md#2-a-rule-set-is-a-collection-of-artefacts)).
 - **Operational rule:** an instruction every AI agent session loads. In a loaded set, it is a rule, with an id, an origin and a status. It binds on what a session does, never on an artefact ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
 - **Decision record:** chooses among alternatives and says why. A rule says what must hold, and its origin may cite the record ([COR-051 point 5](../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically)).
-- **Core rule and project rule:** an operational rule of the backbone's loaded rule set `OPS`, and one of the project's own file. A project rule is a rule only once a loaded rule set holds it (COR-068).
-- **Proposed rule:** one that binds nothing until it is accepted. An accepted rule binds only on the artefacts that a [rule set](#term-rule-set--rule-set) of the [project](#term-project--project)'s own reaches (COR-051 points [4](../../../.pkit/decisions/core/COR-051-rule-sets.md#4-statuses-and-the-gate) and [7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
+- **Core rule and project rule:** an [operational rule](#term-operational-rule--operational-rule) of the [backbone](#term-backbone--backbone)'s [loaded rule set](#term-loaded-rule-set--loaded-rule-set) `OPS`, and one of the [project](#term-project--project)'s own file. A project rule is a rule only once a loaded rule set holds it (COR-068).
+- **Proposed rule:** one that binds nothing until it is accepted. An accepted rule binds only on the artefacts that a [rule set](#term-rule-set--rule-set) of the project's own reaches (COR-051 points [4](../../../.pkit/decisions/core/COR-051-rule-sets.md#4-statuses-and-the-gate) and [7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 
 ## TERM-rule-set — rule set
 
@@ -2871,8 +2870,8 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 **Distinctions:**
 
-- **The backbone's file:** `.pkit/rules/core.md`, which the instruction file includes directly, not through the rules index (ADR-076 point 2).
-- **A capability's operational rules:** they reach a session only through the rules index, and only while the capability is installed (COR-070 point 2).
+- **The backbone's file:** `.pkit/rules/core.md`, which the [instruction file](#term-instruction-file--instruction-file) includes directly, not through the rules index ([ADR-076 point 2](../../architecture/decisions/ADR-076-capability-rules-index.md#2-the-backbone-renders-an-index-and-claudemd-includes-it)).
+- **A capability's operational rules:** they reach a session only through the rules index, and only while the [capability](#term-capability--capability) is installed ([COR-070 point 2](../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#2-the-adapter-delivers-the-loaded-file-by-the-route-that-carries-cores-rules)).
 
 ## TERM-sandbox — sandbox
 
@@ -2883,7 +2882,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 **Distinctions:**
 
 - **Confinement:** the bound the sandbox puts on a command's reach. The operator's need speaks of the agents' confinement, which the sandbox alone enforces ([ADR-004 point 2](../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#2-confinement-how-bounded-reach-is)).
-- **Grant:** an entry that decides what a grant subject may invoke. It spares a prompt, and confines nothing ([ADR-004 point 1](../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked)).
+- **Grant:** an entry that decides what a [grant subject](#term-grant-subject--grant-subject) may invoke. It spares a prompt, and confines nothing ([ADR-004 point 1](../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked)).
 - **Per-agent confinement:** none exists. The agents of a session share one sandbox, so no agent is confined apart from another ([ADR-004 point 5](../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#5-no-per-agent-confinement)).
 - **Exclusion:** a command carved out of the sandbox, which then runs unconfined ([ADR-008 point 4](../../architecture/decisions/ADR-008-confinement-allowances.md#4-widening-path--explicit-loud-never-persisted-always-reported)).
 - **Enforcement declaration:** an [adapter](#term-adapter--adapter)'s statement of what its [harness](#term-harness--harness) enforces. A dimension the harness cannot enforce is reported as a gap to close outside it, such as at the operating system ([COR-028 point 3](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
@@ -2904,13 +2903,13 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 
 Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#seed-path).
 
-**Example:** The agents' overlay, `.pkit/agents/project/overlay.yaml`, is a seed path. A project that deleted it gets it back at its next `pkit upgrade`.
+**Example:** The agents' [overlay](#term-overlay--overlay), `.pkit/agents/project/overlay.yaml`, is a seed path. A [project](#term-project--project) that deleted it gets it back at its next `pkit upgrade`.
 
 **Distinctions:**
 
 - **Seeding:** the operation that creates a missing seed path.
-- **Synced copy:** a file sync rewrites. A seed path is project-owned content from the moment it is written, and sync never creates one (COR-059 point 8).
-- **The template:** the methodology's file a seed path is created from. It is no seed path itself.
+- **Synced copy:** a file [sync](#term-sync--sync) rewrites. A seed path is [project-owned content](#term-project-owned-content--project-owned-content) from the moment it is written, and sync never creates one ([COR-059 point 8](../../../.pkit/decisions/core/COR-059-version-transition.md#8-a-transition-of-the-backbone-creates-a-missing-seed-path-and-reconciliation-creates-none)).
+- **The template:** the [methodology](#term-methodology--methodology)'s file a seed path is created from. It is no seed path itself.
 
 ## TERM-seeding — seeding
 
@@ -2922,14 +2921,14 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 
 - **The seeded file:** [project-owned content](#term-project-owned-content--project-owned-content) from the moment it is written ([COR-001](../../../.pkit/decisions/core/COR-001-content-mechanisms.md)).
 - **Merge delivery:** revisits its file on every run to add entries. Seeding never writes over a file that exists (COR-059 point 8).
-- **Sync:** creates no seed path (COR-059 point 8).
+- **Sync:** creates no [seed path](#term-seed-path--seed-path) (COR-059 point 8).
 - **Stamp:** writes a new file when a person or an agent asks for one.
 
 ## TERM-session-anchor — session anchor
 
 Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#session-anchor).
 
-**Example:** an agent's session starts in a clone of one repository, and the agent runs `pkit pull-request merge` from a clone of another. The session anchor still names the first clone, so the cross-repository guard refuses.
+**Example:** an agent's session starts in a clone of one repository, and the agent runs `pkit pull-request merge` from a clone of another. The session anchor still names the first clone, so the [cross-repository guard](#term-cross-repository-guard--cross-repository-guard) refuses.
 
 **Distinctions:**
 
@@ -2941,11 +2940,11 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#settled-break).
 
-**Example:** A change adds a sentence of 30 words to a use case. The rule-set reviewer reports a settled break of RS-WRITE-005, and withholds its approval.
+**Example:** A [change](#term-change--change) adds a sentence of 30 words to a use case. The rule-set [reviewer](#term-reviewer--reviewer) reports a settled break of [RS-WRITE-005](../../rule-sets/writing.md#rs-write-005--at-most-25-words-a-sentence), and withholds its approval.
 
 **Distinctions:**
 
-- **Passage for a person:** a finding whose judgement needs a reading the rule does not settle. It withholds no approval (COR-057 point 3).
+- **Passage for a person:** a [finding](#term-finding--finding) whose judgement needs a reading the [rule](#term-rule--rule) does not settle. It withholds no approval ([COR-057 point 3](../../../.pkit/decisions/core/COR-057-rule-set-reviewer.md#3-its-findings-and-what-binds)).
 - **Finding that informs:** a break the change does not own, which withholds nothing (COR-057 point 3).
 
 ## TERM-skill — skill
@@ -2982,7 +2981,7 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 
 - **Skill:** the procedure a stamp pairs with. The skill chooses the slug and fills the body, and the stamp writes what it can compute ([COR-005](../../../.pkit/decisions/core/COR-005-bundle-pattern.md)).
 - **Provenance stamp:** project-management's record of the [versions](#term-version--version) an issue or a [pull request](#term-pull-request--pull-request) was filed under ([project-management DEC-041](../../../.pkit/capabilities/project-management/decisions/DEC-041-version-provenance-stamp.md)). It is no command.
-- **Seeding:** creates a missing declared seed path from its template ([COR-059 point 8](../../../.pkit/decisions/core/COR-059-version-transition.md#8-a-transition-of-the-backbone-creates-a-missing-seed-path-and-reconciliation-creates-none)). A stamp writes a new file when a person or an AI agent asks for one.
+- **Seeding:** creates a missing declared [seed path](#term-seed-path--seed-path) from its template ([COR-059 point 8](../../../.pkit/decisions/core/COR-059-version-transition.md#8-a-transition-of-the-backbone-creates-a-missing-seed-path-and-reconciliation-creates-none)). A stamp writes a new file when a person or an AI agent asks for one.
 
 ## TERM-storyboard — storyboard
 
@@ -3000,13 +2999,13 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 
 Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#support-declaration).
 
-**Example:** Claude Code's support declaration grades `delegated-result-complete` as `at-cost`. The result arrives whole only while the harness's agent teams are off.
+**Example:** Claude Code's support declaration grades `delegated-result-complete` as `at-cost`. The result arrives whole only while the [harness](#term-harness--harness)'s agent teams are off.
 
 **Distinctions:**
 
-- **Enforcement declaration:** an adapter's statement of which layer enforces each dimension of the permission model (COR-028 point 3).
-- **Silence:** a harness requirement the support declaration leaves out reads as indeterminate, never as met (COR-047 point 3).
-- **Its harness version bound:** never widened automatically, only by an author who tested the claim (COR-047 point 2).
+- **Enforcement declaration:** an [adapter](#term-adapter--adapter)'s statement of which layer enforces each dimension of the [permission model](#term-permission-model--permission-model) ([COR-028 point 3](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
+- **Silence:** a [harness requirement](#term-harness-requirement--harness-requirement) the support declaration leaves out reads as indeterminate, never as met ([COR-047 point 3](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#3-silence-is-indeterminate-never-satisfaction)).
+- **Its harness version bound:** never widened automatically, only by an author who tested the claim ([COR-047 point 2](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
 
 ## TERM-surface-change — surface change
 
@@ -3016,7 +3015,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 **Distinctions:**
 
-- **A component's surface paths:** the paths the changeset guard reads as a [component](#term-component--component)'s surface. An edit to one only suggests a surface change, and a person judges it ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
+- **A component's surface paths:** the paths the [changeset guard](#term-changeset-guard--changeset-guard) reads as a [component](#term-component--component)'s surface. An edit to one only suggests a surface change, and a person judges it ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
 - **Declared surface:** the paths a [project](#term-project--project) or a component says its descriptions ought to cover. Those no [artefact](#term-artefact--artefact) anchors are reported as uncovered ([COR-050 point 8](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#8-two-measures-not-failures)).
 
 ## TERM-sync — sync
@@ -3030,7 +3029,7 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 - **Version transition:** moves the recorded versions and runs [migrations](#term-migration--migration). Sync does neither (COR-059 points [2](../../../.pkit/decisions/core/COR-059-version-transition.md#2-reconciliation-runs-at-the-recorded-versions-and-moves-none) and [3](../../../.pkit/decisions/core/COR-059-version-transition.md#3-a-version-transition-is-the-only-operation-of-the-core-layer-that-moves-a-recorded-version)).
 - **Sync's guard:** under a CLI at another [version](#term-version--version) than the [project](#term-project--project) records, or over an incomplete transition, sync stops and writes nothing ([COR-059 point 9](../../../.pkit/decisions/core/COR-059-version-transition.md#9-a-command-that-propagates-content-under-another-version-than-the-project-records-stops)).
 - **Reconciling against a source:** what [COR-031](../../../.pkit/decisions/core/COR-031-capability-origin.md) and [COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md) call the copying that sync and a [version transition](#term-version-transition--version-transition) both run (COR-059 point 2).
-- **Seeding:** sync creates no seed path ([COR-059 point 8](../../../.pkit/decisions/core/COR-059-version-transition.md#8-a-transition-of-the-backbone-creates-a-missing-seed-path-and-reconciliation-creates-none)).
+- **Seeding:** sync creates no [seed path](#term-seed-path--seed-path) ([COR-059 point 8](../../../.pkit/decisions/core/COR-059-version-transition.md#8-a-transition-of-the-backbone-creates-a-missing-seed-path-and-reconciliation-creates-none)).
 
 ## TERM-synced-copy — synced copy
 
@@ -3063,12 +3062,12 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#tracked-fix).
 
-**Example:** `pkit report link 1412 1398` adds `- [ ] #1398` under report 1412's `## Tracked by` heading, so issue 1398 is one of its tracked fixes.
+**Example:** `pkit report link 1412 1398` adds `- [ ] #1398` under [report](#term-report--report) 1412's `## Tracked by` heading, so issue 1398 is one of its tracked fixes.
 
 **Distinctions:**
 
 - **Report:** the issue an adopter filed. A tracked fix is the issue that resolves it.
-- **A resolved report:** a feedback or a change request whose tracked fixes are all closed. `pkit report inbox --resolved` lists it, and closes it only on a person's word (PRJ-008).
+- **A resolved report:** a feedback or a [change](#term-change--change) request whose tracked fixes are all closed. `pkit report inbox --resolved` lists it, and closes it only on a person's word ([PRJ-008](../../../.pkit/decisions/project/PRJ-008-report-command.md)).
 
 ## TERM-trigger-field — trigger field
 
@@ -3086,25 +3085,25 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#validation).
 
-**Example:** `pkit validate` fails on a dangling deferral, and warns that project-kit's user root, `docs/`, does not exist yet.
+**Example:** `pkit validate` fails on a dangling [deferral](#term-deferral--deferral), and warns that project-kit's user root, `docs/`, does not exist yet.
 
 **Distinctions:**
 
 - **Change check:** compares a [change](#term-change--change) with its [base](#term-base--base). Validation reads the working tree, and takes no base ([COR-055 point 2](../../../.pkit/decisions/core/COR-055-validation.md#2-state-not-a-change)).
 - **Whole-repository check:** reports [debt](#term-debt--debt) on the [default branch](#term-default-branch--default-branch), and never fails ([COR-055 point 1](../../../.pkit/decisions/core/COR-055-validation.md#1-what-validation-owns)).
-- **Validator:** a command a [component](#term-component--component) registers, whose [findings](#term-finding--finding) validation reads. A validator that gives no result yields a failing finding (COR-055 points [3](../../../.pkit/decisions/core/COR-055-validation.md#3-a-component-joins-by-naming-a-command) and [6](../../../.pkit/decisions/core/COR-055-validation.md#6-a-validator-that-gives-no-answer-fails)).
+- **Validator:** a command a [component](#term-component--component) registers, whose [findings](#term-finding--finding) validation reads. A [validator](#term-validator--validator) that gives no result yields a failing finding (COR-055 points [3](../../../.pkit/decisions/core/COR-055-validation.md#3-a-component-joins-by-naming-a-command) and [6](../../../.pkit/decisions/core/COR-055-validation.md#6-a-validator-that-gives-no-answer-fails)).
 
 ## TERM-validator — validator
 
 Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#validator).
 
-**Example:** software-analysis registers a validator that checks the analysis. `pkit validate` runs it with the backbone's own checks, and fails on its `error` findings.
+**Example:** software-analysis registers a validator that checks the analysis. `pkit validate` runs it with the [backbone](#term-backbone--backbone)'s own checks, and fails on its `error` [findings](#term-finding--finding).
 
 **Distinctions:**
 
-- **A member of validation:** one of the backbone's own checks, such as `versions` or `rule-sets`, which no component registers (ADR-058 point 3).
-- **Check of a change:** the change check and the changeset guard compare a change with its base. They are no validators (ADR-058 point 7).
-- **Query command:** a validator is one, as a resolver and a filler are (ADR-057 point 3).
+- **A member of validation:** one of the backbone's own checks, such as `versions` or `rule-sets`, which no [component](#term-component--component) registers ([ADR-058 point 3](../../architecture/decisions/ADR-058-validator-registry.md#3-the-backbones-members-in-dependence-order)).
+- **Check of a change:** the [change check](#term-change-check--change-check) and the [changeset guard](#term-changeset-guard--changeset-guard) compare a [change](#term-change--change) with its [base](#term-base--base). They are no validators ([ADR-058 point 7](../../architecture/decisions/ADR-058-validator-registry.md#7-checks-of-a-change-are-not-validators)).
+- **Query command:** a validator is one, as a resolver and a filler are ([ADR-057 point 3](../../architecture/decisions/ADR-057-backbone-engines-and-command-limits.md#3-query-commands-declare-the-query-contract-the-engine-that-runs-one-enforces-the-bound-and-reads-the-answer-failing-closed)).
 
 ## TERM-version — version
 
@@ -3117,6 +3116,7 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 - **A rule set's version:** its own, apart from its [component](#term-component--component)'s. An inheriting set pins its major ([COR-051 point 7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 - **A connection point's version:** an integer that rises only on an edit that breaks its counterparts ([COR-053 point 5](../../../.pkit/decisions/core/COR-053-connection-points.md#5-versions-per-point-roles-unversioned)).
 - **A schema version:** the integer a schema and the data it checks each carry ([COR-052 point 5](../../../.pkit/decisions/core/COR-052-slots.md#5-schemas-and-versions) and [COR-023](../../../.pkit/decisions/core/COR-023-schema-binds-inline.md)).
+- **A harness version:** the number another tool, such as Claude Code, gives its own builds. A [support declaration](#term-support-declaration--support-declaration) may hold only for some. It shares only the word.
 - **Recorded version:** the number or ref a [project](#term-project--project) keeps for what it installed. An externally-sourced component's ref is no version in the sense of this term.
 
 ## TERM-version-pin — version pin
@@ -3132,7 +3132,7 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 - **An external source's pin:** the ref an externally-sourced [component](#term-component--component) is pulled at, which is that component's [recorded version](#term-recorded-version--recorded-version) ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)).
 - **The installed CLI:** the command on the machine. A pinned project runs the installed CLI only where its pin cannot be fetched, and is warned ([ADR-064](../../architecture/decisions/ADR-064-upgrade-pins-by-default.md)).
 - **The source repository:** never pinned ([ADR-064 point 3](../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#3-what-the-default-does-not-reach)).
-- **To pin:** a project pins a release when its version pin names that release, as in "the version it pins". Elsewhere the verb keeps its everyday sense, as in a merge pinned to one commit.
+- **To pin:** a project pins a release when its version pin names that release, as in "the [version](#term-version--version) it pins". Elsewhere the verb keeps its everyday sense, as in a merge pinned to one commit.
 
 ## TERM-version-transition — version transition
 
