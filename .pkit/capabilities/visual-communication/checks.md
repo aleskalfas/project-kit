@@ -62,11 +62,12 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#written-code
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#validate
+        - .pkit/lifecycle/README.md#how-a-registered-command-is-run
 ---
 
 # What the check reports
 
-`pkit visual check` judges a project's visual work and draws nothing. Each problem it finds is a *finding*. `pkit validate` runs the same check as one of its members. What the command reads, prints and exits with is under *Commands* in the README. The examples come from the capability's test files: the test brand `test-brand` and the test library `tests` exist for the tests only.
+`pkit visual check` judges a project's visual work and draws nothing. Each problem it finds is a *finding*. `pkit validate` runs the same check as one of its members. What the command reads, prints and exits with is under [Commands](README.md#pkit-visual-check-piece) <!-- unanchored: names where it is described; that page anchors this one --> in the README. The examples come from the capability's test files: the test brand `test-brand` and the test library `tests` exist for the tests only.
 
 ## Contents
 
@@ -318,7 +319,7 @@ The key holds no version of the engine. A new release of the capability reaches 
 
 ### The validation's bound
 
-`pkit validate` runs each member under a fixed bound, and tells the check its deadline in `PKIT_COMMAND_DEADLINE`, in seconds since the epoch. Computing scenes takes time, so the check stops computing them one second before the deadline. Each piece left whose record is missing or does not verify fails as `not-checked`, at `<piece>/findings.yaml`. The fix: run `pkit visual render <piece>`, and commit its findings record. The summary counts the piece as not checked. Without a deadline, as when a person runs `pkit visual check`, the check computes every piece that needs it.
+`pkit validate` runs each member under a fixed bound, and tells the check its deadline in `PKIT_COMMAND_DEADLINE`, in seconds since the epoch ([the lifecycle README, "How a registered command is run"](../../lifecycle/README.md#how-a-registered-command-is-run)). Computing scenes takes time, so the check stops computing them one second before the deadline. Each piece left whose record is missing or does not verify fails as `not-checked`, at `<piece>/findings.yaml`. The fix: run `pkit visual render <piece>`, and commit its findings record. The summary counts the piece as not checked. Without a deadline, as when a person runs `pkit visual check`, the check computes every piece that needs it.
 
 ## The fingerprint
 

@@ -45,7 +45,7 @@ pkit:
 
 # What is made from a piece
 
-Plugins make what the capability gives out. A renderer draws a piece's scenes as previews and exports. A producer makes a picture a piece shows. A code writer writes a brand out as code. What each command reads, writes and refuses as a whole is under *Commands* in the README.
+Plugins make what the capability gives out. A renderer draws a piece's scenes as previews and exports. A producer makes a picture a piece shows. A code writer writes a brand out as code. What each command reads, writes and refuses as a whole is under [Commands](README.md#commands) <!-- unanchored: names where it is described; that page anchors this one --> in the README.
 
 ## Contents
 
@@ -103,7 +103,7 @@ accept-losses:
     reason: Thin.
 ```
 
-An entry matches a loss by its `plugin` and its `what` alone. The command that runs the plugin no longer prints an accepted loss, and the check no longer reports it (*Losses*).
+An entry matches a loss by its `plugin` and its `what` alone. The command that runs the plugin no longer prints an accepted loss, and the check no longer reports it ([Losses](checks.md#losses) <!-- unanchored: names where it is described; that page anchors this one -->).
 
 ## The SVG renderer
 
@@ -156,7 +156,7 @@ versions:
 | Field | What it holds |
 |---|---|
 | `version` | the version's number, from 1 |
-| `fingerprint` | the version's fingerprint, whose inputs *The fingerprint* in *What the check reports* lists |
+| `fingerprint` | the version's fingerprint, whose inputs [The input set of each kind](checks.md#the-input-set-of-each-kind) <!-- unanchored: names where it is described; that page anchors this one --> lists |
 | `files` | each file the run made, by name, with the SHA-256 of the file |
 | `recorded` | only recorded, never compared, so a new release of the capability makes no export stale: the `time` in UTC, the piece's `state` then (`draft`, the only state of format 1), the release of the `capability`, each of the `renderers` with its version, each produced output the run used with the version of its picture, the `value` of its record's fingerprint (`used`), and each of those it used while it was stale (`used-stale`) |
 
@@ -169,7 +169,7 @@ An export run is refused, and writes nothing, when:
 - the brand cannot be read, or the piece names a mode its brand lacks;
 - a font has no file, or a character has no font family that can measure it;
 - a produced picture the piece shows is missing: it has no record, or its record names a variant file that is missing;
-- a produced picture is stale (*What makes an output stale*), unless `--use-stale <output>` names it;
+- a produced picture is stale ([What makes an output stale](checks.md#what-makes-an-output-stale) <!-- unanchored: names where it is described; that page anchors this one -->), unless `--use-stale <output>` names it;
 - `--use-stale` names an output the piece does not declare under `produced`: the refusal names those it declares;
 - the piece has more than one page, since format 1 names an export file by piece, version, language and combination alone;
 - a file of the run's number already lies in the piece's exports folder, or a file the run would write, `exports.yaml` among them, is reached through a link;
@@ -181,7 +181,7 @@ Each of these is found before the first write, so a refused run records no locat
 
 A *produced picture* is a picture a producer makes for one piece while it is prepared, such as a 3D render (DEC-006 point 1). It takes every value from the brand, and holds none of the piece's words: the piece places each label as its own text (DEC-006 point 2).
 
-**No producer ships yet.** So `pkit visual produce` refuses every producer a piece names, and no piece has a produced picture. What follows is the contract every producer meets. The capability's tests run a producer kept for them alone.
+No producer ships yet ([Plugins](#plugins)), so `pkit visual produce` refuses every producer a piece names, and no piece has a produced picture. What follows is the contract every producer meets. The capability's tests run a producer kept for them alone.
 
 ### Declaring a produced output
 
@@ -251,7 +251,7 @@ The command runs the producer with the hand-over and an empty folder, `.pkit/cap
 - **Its place** in each variant is an `x` and a `y` in that variant's pixels, from the top-left corner, with `y` going down. `x` lies from 0 to the width, and `y` from 0 to the height.
 - **Every variant** exposes the same points, by name. The variants one scene holds share one pixel size, and keep each point at the same place.
 
-What `pkit visual produce` then keeps is under *Commands* in the README. Commit the `produced/<output>/` folder: the render and the check read the picture from it on a fresh clone (DEC-006 point 4).
+What `pkit visual produce` then keeps is under [Commands](README.md#pkit-visual-produce-piece-output) <!-- unanchored: names where it is described; that page anchors this one --> in the README. Commit the `produced/<output>/` folder: the render and the check read the picture from it on a fresh clone (DEC-006 point 4).
 
 ### The record of a produced output
 
@@ -276,7 +276,7 @@ recorded: {plugins: {square: 1.0.0}, programs: {}, machine: darwin arm64, time: 
 
 | Field | What it holds |
 |---|---|
-| `fingerprint` | the fingerprint of what the producer read (*The fingerprint*) |
+| `fingerprint` | the fingerprint of what the producer read ([The fingerprint](checks.md#the-fingerprint) <!-- unanchored: names where it is described; that page anchors this one -->) |
 | `variants` | each variant by its key: its `file`, its `pixels`, and the SHA-256 of the file |
 | `combinations` | each combination the piece names, by its key, with the variant that serves it |
 | `points` | each exposed point, with its place in each variant |
@@ -334,7 +334,7 @@ out: web/brand.css
 
 ### The record beside the code
 
-`pkit visual write-code` writes a record beside the code, `<out>.record.yaml`, such as `web/brand.css.record.yaml`. After its binding, it holds the `fingerprint` of what the code was written from (*The fingerprint*), the `sha256` of the code as written, and what is only `recorded`, never compared: the writer with its version (`plugins`), the outside programs (`programs`, none), the `machine`, the `time` in UTC, and the release of the `capability`.
+`pkit visual write-code` writes a record beside the code, `<out>.record.yaml`, such as `web/brand.css.record.yaml`. After its binding, it holds the `fingerprint` of what the code was written from ([The fingerprint](checks.md#the-fingerprint) <!-- unanchored: names where it is described; that page anchors this one -->), the `sha256` of the code as written, and what is only `recorded`, never compared: the writer with its version (`plugins`), the outside programs (`programs`, none), the `machine`, the `time` in UTC, and the release of the `capability`.
 
 ### The CSS code writer
 

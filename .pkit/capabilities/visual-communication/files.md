@@ -36,6 +36,7 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/foundations/library.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/roles.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
+        - .pkit/capabilities/visual-communication/libraries/**
         - tests/visual_communication_project.py
         - tests/test_visual_communication_pipeline.py
         - tests/test_visual_communication_layout.py
@@ -49,7 +50,7 @@ pkit:
 
 # The files of the visual work
 
-Where a project's visual work lies, what each of its files holds, and who writes each one. The examples come from the shipped foundations library and from the capability's test files. The test brand `test-brand` and the test library `tests` exist for the tests only: no brand ships.
+Where a project's visual work lies, what each of its files holds, and who writes each one. The examples come from the shipped foundations library and from the capability's test files. The test brand `test-brand` and the test library `tests` exist for the tests only.
 
 ## Contents
 
@@ -115,7 +116,7 @@ The location holds four folders: `libraries/`, the library folder; `pieces/`, on
 | `code/<name>.yaml` | `code` | a person |
 | `fonts/<file>` | none | a person, who commits the font |
 
-The code that `pkit visual write-code` writes lies where its declaration names, with its record beside it. A component's file is described in *Components*; produced pictures, exports, declarations of code and the code itself in *What is made from a piece*; `findings.yaml` in *What the check reports*.
+The code that `pkit visual write-code` writes lies where its declaration names, with its record beside it. A component's file is described in [Components](components.md#a-components-file) <!-- unanchored: names where it is described; that page anchors this one -->; produced pictures, exports, declarations of code and the code itself in [What is made from a piece](outputs.md) <!-- unanchored: names where it is described; that page anchors this one -->; `findings.yaml` in [What the check reports](checks.md#the-findings-record) <!-- unanchored: names where it is described; that page anchors this one -->.
 
 ### The clone's local folder
 
@@ -125,7 +126,7 @@ The code that `pkit visual write-code` writes lies where its declaration names, 
 - `exports/<piece>/`: the files `pkit visual export` makes;
 - `handover/<piece>/`: what `pkit visual produce` hands a producer, and what the producer writes, until the command keeps it in the piece's folder.
 
-*What is made from a piece* names the files in each.
+[What is made from a piece](outputs.md) <!-- unanchored: names where it is described; that page anchors this one --> names the files in each.
 
 ## Names, ids and the binding
 
@@ -161,7 +162,7 @@ schema_version: 1
 
 The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `library`, `component`, `roles`, `libraries`, `produced-record`, `code-record`, `findings`, `exports` and `code`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
 
-No path binds a file, and the capability writes no line that points an editor at a schema (DEC-002 point 3). The core's data validation checks each bound file's shape against the schema it names. The check finds the configuration, and each file of the location's table that has a schema, by its name and place. It reports one whose binding is missing or names another schema (*What the check reports*). Token files, the Resolver document, fonts and pictures carry no binding: each keeps its own format.
+No path binds a file, and the capability writes no line that points an editor at a schema (DEC-002 point 3). The core's data validation checks each bound file's shape against the schema it names. The check finds the configuration, and each file of the location's table that has a schema, by its name and place. It reports one whose binding is missing or names another schema ([What the check reports](checks.md#files-and-binding) <!-- unanchored: names where it is described; that page anchors this one -->). Token files, the Resolver document, fonts and pictures carry no binding: each keeps its own format.
 
 ### How the files are read
 
@@ -203,12 +204,12 @@ lock:
 | `audience` | yes | Who the piece is for, in words. |
 | `shown` | yes | Where the piece is shown, in words. |
 | `explains` | yes | `true` where the piece explains, rather than only shows. |
-| `exports` | yes | The formats an export makes (*What is made from a piece*). |
+| `exports` | yes | The formats an export makes ([Exports](outputs.md#exports) <!-- unanchored: names where it is described; that page anchors this one -->). |
 | `state` | yes | The piece's stage of life. Format 1 takes `draft` alone. |
 | `modes` | no | For each axis, the modes the piece is drawn in. An axis it leaves out is drawn in its default. |
 | `pinned` | no | `true` pins the lock. |
-| `produced` | no | Each picture a producer makes for the piece (*What is made from a piece*). |
-| `accept-losses` | no | The losses of a plugin a person accepted (*What is made from a piece*). |
+| `produced` | no | Each picture a producer makes for the piece ([Declaring a produced output](outputs.md#declaring-a-produced-output) <!-- unanchored: names where it is described; that page anchors this one -->). |
+| `accept-losses` | no | The losses of a plugin a person accepted ([Accepting a loss](outputs.md#accepting-a-loss) <!-- unanchored: names where it is described; that page anchors this one -->). |
 | `lock` | no | The version of each library the piece uses. A render writes it. |
 
 ### The lock
@@ -248,7 +249,7 @@ caption: The flow.
 - **`concept`** is reserved.
 - **An id** marks an item, or another component the content places, that another part of the piece names (DEC-001 point 3). It is unique in its list. Each list holds the same ids in every language as in the source language, in any order.
 
-Each key must be a field or an option of the component, or a reserved key. How a component declares its fields, options, states, slots and lists is in *Components*.
+Each key must be a field or an option of the component, or a reserved key. How a component declares its fields, options, states, slots and lists is in [Components](components.md#a-components-file) <!-- unanchored: names where it is described; that page anchors this one -->.
 
 ## The library folder
 
@@ -273,7 +274,7 @@ libraries:
 ```
 
 - **`source.kind`** is `shipped`, `project` or `repository`. A `repository` source names its `url` and `ref`; the others name neither.
-- **`versions`** maps each version to `released: true` or `false`. A released version carries `hash`, its fingerprint over every file of its folder (*What the check reports*). A version not released carries none.
+- **`versions`** maps each version to `released: true` or `false`. A released version carries `hash`, its fingerprint over every file of its folder ([The fingerprint](checks.md#the-fingerprint) <!-- unanchored: names where it is described; that page anchors this one -->). A version not released carries none.
 - **One library to a name:** a second library of one name is refused (DEC-003 point 4).
 
 ### `library.yaml`
@@ -346,6 +347,8 @@ The capability reads the `roles.yaml` of the foundations alone.
 ## Brands
 
 A *brand* is a library of kind `brand`: it holds values (DEC-001 point 5). It keeps them as design tokens in the DTCG format, version 2025.10, and its modes as one Resolver document (DEC-004 point 1). The capability reads the subset of DTCG below, and refuses the rest. The test brand's `library.yaml` is shown under [`library.yaml`](#libraryyaml).
+
+No brand ships with the capability. A project writes its own, and keeps it in its library folder as it keeps any library ([The library folder](#the-library-folder)).
 
 ### Token files
 
@@ -456,4 +459,4 @@ A *combination* takes one mode on each axis. Its *key* names it (DEC-004 point 3
 - **Adding an axis with a default** changes no key: every combination that existed takes the new axis's default, which its key leaves out.
 - **Keys are kept in one order** wherever a list of them is kept: by their count of segments, then by their spelling. `default` comes first.
 
-A key names a combination in the names of previews, exports and produced pictures, and in written code (*What is made from a piece*).
+A key names a combination in the names of previews, exports and produced pictures, and in written code ([What is made from a piece](outputs.md) <!-- unanchored: names where it is described; that page anchors this one -->).
