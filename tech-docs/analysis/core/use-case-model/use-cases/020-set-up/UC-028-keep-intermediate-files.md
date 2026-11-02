@@ -22,6 +22,7 @@ pkit:
         - .pkit/permissions/decide.py
         - .pkit/permissions/profiles/*.yaml
         - .pkit/schemas/privilege-catalog.yaml
+        - .pkit/adapters/claude-code/settings/core/settings.json
         - .pkit/rules/core.md
       record:
         - ADR-005#5

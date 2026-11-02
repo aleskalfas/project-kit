@@ -10,7 +10,7 @@ requirements:
   - REQ-021
 after:
   - [UC-014, UC-049]
-  - [UC-027]
+  - [UC-014, UC-027, UC-049, UC-050]
 pkit:
   friction:
     anchors:
@@ -50,7 +50,7 @@ pkit:
 **Preconditions:**
 
 - **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
-- **From [UC-027](../020-set-up/UC-027-find-agent-definition-deployed.md):** The [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) of the critic, the `convention-compliance-reviewer` and the `rule-set-reviewer` are deployed where the [harness](../../../glossary.md#term-harness--harness) reads them.
+- **From UC-014, [UC-027](../020-set-up/UC-027-find-agent-definition-deployed.md), UC-049 or [UC-050](../050-adopt/UC-050-ready-fresh-clone.md):** The [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) of the critic, the `convention-compliance-reviewer` and the `rule-set-reviewer` are deployed where the [harness](../../../glossary.md#term-harness--harness) reads them.
 
 **Assumptions:**
 

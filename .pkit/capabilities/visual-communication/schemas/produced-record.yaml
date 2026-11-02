@@ -1,0 +1,73 @@
+# The record of a produced output, `pieces/<piece>/produced/<output>/record.yaml`
+# (visual-communication DEC-006 points 2 to 5): the fingerprint of what the producer read,
+# each variant with its file, pixel size and hash, the variant serving each combination,
+# the points the picture exposes in each variant's pixels, what the producer lost (DEC-005
+# point 9), and what is only recorded. `pkit visual produce` writes it.
+#
+# The body below is the reference instance.
+
+pkit_schema: visual-communication:produced-record
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+fingerprint:
+  form: 1
+  hash: sha256
+  format: 1
+  value: 10b959245e41d549969b8a3619a083c45212ff88540b8bc68f69cf794401df2b
+  inputs:
+    - file: piece.yaml
+      keys:
+        - produced
+        - marker
+      sha256: 761afb180ef77d2c35b91e9da65e62fad5287b2e0d3980ceab2b69b8d9b9a4ae
+    - pixels: colour-scheme.dark
+      width: 64
+      height: 64
+      sha256: ee3c8e8b1134f48198bc8968b9712eaf2d0db859d8b67bd8ccdad12a369b91b4
+    - pixels: default
+      width: 64
+      height: 64
+      sha256: 85c1d2b9cd31e79957dd20e5497415fa0bfd81a80f3cb3402c9a476ba9dab8fb
+    - value: accent
+      key: colour-scheme.dark
+      sha256: 886972355fd046d72c9ef11301015bbfde610b46c038b327555d47b64765066e
+    - value: accent
+      key: default
+      sha256: 3b87ce26606c234e8a9027b00aec785b88b4947b0c11fe348409b864ccd3a4ea
+    - plugin: square
+      version: 1.0.0
+      sha256: 8b29c331ed9ec488baae179c6d30ed0ad4b7f57b94d5b836007caff4c9281da7
+variants:
+  default:
+    file: default.png
+    pixels:
+      width: 64
+      height: 64
+    sha256: '0000000000000000000000000000000000000000000000000000000000000001'
+  colour-scheme.dark:
+    file: colour-scheme.dark.png
+    pixels:
+      width: 64
+      height: 64
+    sha256: '0000000000000000000000000000000000000000000000000000000000000002'
+combinations:
+  default: default
+  colour-scheme.dark: colour-scheme.dark
+points:
+  tip:
+    default:
+      x: 32
+      y: 0
+    colour-scheme.dark:
+      x: 32
+      y: 0
+losses: []
+recorded:
+  plugins:
+    square: 1.0.0
+  programs: {}
+  machine: darwin arm64
+  time: '2026-11-01T10:00:00Z'
+  capability: 0.1.0
