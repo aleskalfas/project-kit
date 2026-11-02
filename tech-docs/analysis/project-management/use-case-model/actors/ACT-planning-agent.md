@@ -4,7 +4,7 @@ name: Planning agent
 status: active
 summary: "An AI agent of a topology that slices a project's work and files the work for the other agents, and builds none of the work."
 needs:
-  - Plan my planner's intent into Tasks that one agent can each finish, ordered where one Task needs another Task's work.
+  - File the Tasks of my planner's approved plan with no owner, so that the agents of the seats that build take them.
 pkit:
   friction:
     anchors:

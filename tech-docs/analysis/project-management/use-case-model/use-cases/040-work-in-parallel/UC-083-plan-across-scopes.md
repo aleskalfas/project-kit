@@ -2,9 +2,9 @@
 id: UC-083
 title: Plan an intent into Tasks that one agent can each finish
 status: active
-actor: ACT-planning-agent
+actor: ACT-planner
 other-actors:
-  - ACT-planner
+  - ACT-planning-agent
   - ACT-worker-agent
   - ACT-lead-agent
 requirements:
@@ -43,8 +43,8 @@ pkit:
         - COR-013
         - COR-017
       artefact:
-        - ACT-planning-agent
         - ACT-planner
+        - ACT-planning-agent
         - ACT-worker-agent
         - ACT-lead-agent
         - REQ-040
@@ -53,11 +53,11 @@ pkit:
 
 # UC-083 — Plan an intent into Tasks that one agent can each finish
 
-**Goal:** Plan my planner's intent into Tasks that one agent can each finish, ordered where one Task needs another Task's work.
+**Goal:** Plan my intent into Tasks that one agent can each finish, ordered where one Task needs another Task's work.
 
 **Other actors:**
 
-- **Planner** (`ACT-planner`): approves the whole plan before any [issue](../../../glossary.md#term-issue--issue) of the plan is filed ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
+- **Planning agent** (`ACT-planning-agent`): plans the intent on the planner's direction, and files nothing before the planner approves the whole plan ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 - **Worker agent** (`ACT-worker-agent`) and **Lead agent** (`ACT-lead-agent`): take the Tasks from the [ready Tasks](../../../glossary.md#term-ready-task--ready-task) that every [seat](../../../glossary.md#term-seat--seat) shares, or from their seats' [pools](../../../glossary.md#term-pool--pool). Each [Task](../../../glossary.md#term-task--task) names the Tasks that the Task waits on, so these agents never start a Task too early (`batch-plan.md`).
 
 **Preconditions:**
@@ -107,7 +107,7 @@ pkit:
 
 ## Open for the design
 
-What the planning agent needs here that no accepted record decides yet:
+What the planner needs here that no accepted record decides yet:
 
 - **How one scope gives another scope what the other scope needs,** such as an interface two scopes share. A contract between scopes is proposed only, in an unmerged note (draft PR #566). Typed `Blocked by:` lines, and the Tasks ready to start that those lines give, are [project-management DEC-025](../../../../../../.pkit/capabilities/project-management/decisions/DEC-025-parallelization-primitive.md)'s, which is proposed.
 - **Work that passes through stages,** such as design, development and testing, where each stage needs the work of the stage before. No record decides how such work is planned.
