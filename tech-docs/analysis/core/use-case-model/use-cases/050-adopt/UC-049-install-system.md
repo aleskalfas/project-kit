@@ -115,7 +115,11 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `pkit visibility` runs no such check. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-**Postconditions:** The [project](../../../glossary.md#term-project--project) holds the [system](../../../glossary.md#term-system--system) at the CLI's [release](../../../glossary.md#term-release--release). The project's `.pkit/` holds the [methodology](../../../glossary.md#term-methodology--methodology)'s content, and its [manifest](../../../glossary.md#term-manifest--manifest)'s target and completion name that release. Its [adapters](../../../glossary.md#term-adapter--adapter) are registered, with their [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) deployed. The agents' [overlay](../../../glossary.md#term-overlay--overlay) holds a value for each category the methodology's own agent definitions name, so those agent definitions deploy before the adopter names a path (`install.py`). The system is committed for the team, or it is hidden from the shared repository in this clone.
+**Postconditions:**
+
+- The [project](../../../glossary.md#term-project--project) holds the [system](../../../glossary.md#term-system--system) at the CLI's [release](../../../glossary.md#term-release--release). The project's `.pkit/` holds the [methodology](../../../glossary.md#term-methodology--methodology)'s content, and its [manifest](../../../glossary.md#term-manifest--manifest)'s target and completion name that release.
+- The project's [adapters](../../../glossary.md#term-adapter--adapter) are registered, with their [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) deployed. The agents' [overlay](../../../glossary.md#term-overlay--overlay) holds a value for each category the methodology's own agent definitions name. So those agent definitions deploy before the adopter names a path (`install.py`).
+- The system is committed for the team, or it is hidden from the shared repository in this clone.
 
 **Minimal guarantees:**
 
