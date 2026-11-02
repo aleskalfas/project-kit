@@ -49,7 +49,7 @@ pkit:
 
 **Other actors:**
 
-- **Operator** (`core:ACT-operator`): starts the agent's session in the agent's harness, in a clone on the machine or the sandbox where the clone lies. A platform that runs agents in sandboxes may start the session instead.
+- **Operator** (`core:ACT-operator`): starts the agent's session in the agent's [harness](../../../../core/glossary.md#term-harness--harness), in a clone on the machine or the sandbox where the clone lies. A platform that runs agents in sandboxes may start the session instead.
 - **Adopter** (`core:ACT-adopter`): set up the [topology](../../../glossary.md#term-topology--topology), as `UC-082` describes, so the agent must act as the adopter set the agent's [seat](../../../glossary.md#term-seat--seat) up. The adopter may also release a seat by force, from any clone ([DEC-059 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#5-in-the-first-mode-a-seat-stays-taken-until-it-is-released)).
 
 **Preconditions:** **From [UC-082](UC-082-set-up-topology.md):** The [topology](../../../glossary.md#term-topology--topology) is on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) ([DEC-059 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch)).
@@ -57,9 +57,9 @@ pkit:
 **Assumptions:**
 
 - The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and the commands of `pkit pm` ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
-- The harness hosts the agent's session in a clone of the project's repository, with the [agent definition](../../../../core/glossary.md#term-agent-definition--agent-definition) the session is started with ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
+- The [harness](../../../../core/glossary.md#term-harness--harness) hosts the agent's session in a clone of the project's repository, with the [agent definition](../../../../core/glossary.md#term-agent-definition--agent-definition) the session is started with ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
 
-**Trigger:** The operator, or a platform, starts an agent session in the agent's harness, in a clone of the [project](../../../../core/glossary.md#term-project--project).
+**Trigger:** The operator, or a platform, starts an agent session in the agent's [harness](../../../../core/glossary.md#term-harness--harness), in a clone of the [project](../../../../core/glossary.md#term-project--project).
 
 **Main path:**
 

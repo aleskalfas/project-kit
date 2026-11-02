@@ -88,7 +88,7 @@ pkit:
 **Assumptions:**
 
 - The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and the commands of `pkit pm` ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
-- The harness hosts the worker's session in the worker's own clone ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
+- The [harness](../../../../core/glossary.md#term-harness--harness) hosts the worker's session in the worker's own clone ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
 
 **Trigger:** The worker has no [Task](../../../glossary.md#term-task--task) in flight, and Tasks wait to be built.
 

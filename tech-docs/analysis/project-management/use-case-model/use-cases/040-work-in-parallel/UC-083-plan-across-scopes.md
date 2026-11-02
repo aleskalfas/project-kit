@@ -67,7 +67,7 @@ pkit:
 
 **Assumptions:**
 
-- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the adapter deploys the `project-manager` agent and the `pm` [skill](../../../../core/glossary.md#term-skill--skill) ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md) and [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
+- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys the `project-manager` agent and the `pm` [skill](../../../../core/glossary.md#term-skill--skill) ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md) and [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
 
 **Trigger:** The planner gives the planning agent an intent to plan for the [topology](../../../glossary.md#term-topology--topology)'s agents.
 

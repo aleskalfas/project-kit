@@ -78,7 +78,7 @@ pkit:
 
 - The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and the commands of `pkit pm` ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
 - Each agent of the [topology](../../../glossary.md#term-topology--topology) works in the agent's own clone of the project's repository, on one machine or on a platform's sandboxes ([DEC-059](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md)).
-- The backbone resolves the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), the project's settled state, in one way for every command ([COR-054](../../../../../../.pkit/decisions/core/COR-054-default-branch.md)).
+- The [backbone](../../../../core/glossary.md#term-backbone--backbone) resolves the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), the project's settled state, in one way for every command ([COR-054](../../../../../../.pkit/decisions/core/COR-054-default-branch.md)).
 
 **Trigger:** The adopter decides to run several AI agents on the [project](../../../../core/glossary.md#term-project--project) at once, or to alter the [seats](../../../glossary.md#term-seat--seat) of the project's [topology](../../../glossary.md#term-topology--topology).
 
