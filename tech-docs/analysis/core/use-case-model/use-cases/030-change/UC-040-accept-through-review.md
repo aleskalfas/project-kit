@@ -26,6 +26,8 @@ pkit:
         - COR-051#7
         - COR-060#1
         - COR-060#2
+        - COR-066#1
+        - COR-066#3
       artefact:
         - ACT-merge-authoriser
         - ACT-developer
@@ -47,7 +49,7 @@ pkit:
 **Assumptions:**
 
 - An agent writes `accepted` on a record or a [rule](../../../glossary.md#term-rule--rule) only on the merge authoriser's word. Nothing at run time stops it writing the status unasked ([COR-051 point 4](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#4-statuses-and-the-gate) and core rule 2).
-- Who accepts a [decision record](../../../glossary.md#term-decision-record--decision-record) is open. The [acceptance gate](../../../glossary.md#term-acceptance-gate--acceptance-gate) asks only for a reviewed status flip (core rule 2). COR-051 point 4 gives a rule's acceptance to a person's review, and #1674 tracks a record that says the same of a decision record.
+- A person accepts a [decision record](../../../glossary.md#term-decision-record--decision-record) or a rule within the [change](../../../glossary.md#term-change--change) that proposes it ([COR-066 point 1](../../../../../../.pkit/decisions/core/COR-066-accepted-before-landing.md#1-a-proposal-lives-only-in-its-change)). An agent writes `accepted` only once a person has. The merge authoriser sees the list of what the change makes accepted before authorising the merge, and no check can tell who wrote a status. Where only the change's author shows that list, only the author's word says the merge authoriser saw it ([COR-066 point 3](../../../../../../.pkit/decisions/core/COR-066-accepted-before-landing.md#3-the-person-sees-what-the-change-makes-accepted)).
 - Whoever accepts a rule gives its set the new major [COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind) asks for. No check compares a set's `version` with the rules it accepts.
 
 **Trigger:** A drafted [decision record](../../../glossary.md#term-decision-record--decision-record) or [rule](../../../glossary.md#term-rule--rule) waits for acceptance.

@@ -400,3 +400,11 @@ message naming this section, and no test reaches the developer's signing agent. 
 test that sets `GIT_CONFIG_GLOBAL` itself, or runs git with an environment of its
 own, is outside the guard; turn signing off in its repositories all the same.
 `tests/test_adopter_repo.py` pins the guard and the helpers.
+
+## Fixtures bound to a schema
+
+**The visual-communication fixtures are the first bound YAML under `tests/`**
+(#2428). A file under `tests/fixtures/visual-communication/` that names a schema
+in `pkit_schema` is checked by project-kit's own `pkit validate`, as any bound
+file of the repository is. So never commit one its schema refuses. A test of a
+refusal builds the refused file in `tmp_path`.

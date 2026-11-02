@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "libraries.schema.json",
+  "title": "The list of a project's libraries — visual-communication capability",
+  "description": "Formal shape of the location's `libraries/libraries.yaml` (DEC-003 point 4): each library's source, the versions present, which of them are released, and the fingerprint of each released one (form 1, over every file of its folder). Document-shaped schema. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "libraries"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:libraries`.",
+      "const": "visual-communication:libraries"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "libraries": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/library-name"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "source",
+          "versions"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "shipped",
+                  "project",
+                  "repository"
+                ]
+              },
+              "url": {
+                "$ref": "defs.schema.json#/$defs/text"
+              },
+              "ref": {
+                "$ref": "defs.schema.json#/$defs/text"
+              }
+            },
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "repository"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "url",
+                "ref"
+              ]
+            },
+            "else": {
+              "properties": {
+                "url": false,
+                "ref": false
+              }
+            }
+          },
+          "versions": {
+            "type": "object",
+            "propertyNames": {
+              "$ref": "defs.schema.json#/$defs/version"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "required": [
+                "released"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "released": {
+                  "type": "boolean"
+                },
+                "hash": {
+                  "$ref": "defs.schema.json#/$defs/fingerprint"
+                }
+              },
+              "if": {
+                "properties": {
+                  "released": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "hash"
+                ]
+              },
+              "else": {
+                "properties": {
+                  "hash": false
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  A figure for a documentation page, one page alone: its diagram, and its caption below
+  it. Its width comes from the brand's figure width, its height from its content.
+
+fields:
+  type: object
+  required: [body]
+  properties:
+    body:
+      type: object
+      description: The diagram, as the component the content places in it.
+    caption:
+      type: string
+      description: What the figure shows, in a sentence or two.
+      x-pkit-prose: true
+
+# One layout, whose slots are the places the content fills. It holds no slot of pages,
+# so the figure is one page itself.
+layouts:
+  frame:
+    slots:
+      body: {}
+      caption: {}
+
+parts:
+  background:
+    box: {fill: background}
+    width: "=:width"
+    height: "=:height"
+  body:
+    slot: body
+    x: "=@space.3"
+    y: "=@space.3"
+    width: "=:width - 2 * @space.3"
+  # Without a caption, its height is zero and so is the space above it.
+  caption:
+    when: caption
+    text: {content: caption, style: type.body, fill: text-secondary}
+    x: "=body.x"
+    y: "=body.bottom + min(caption.height, @space.2)"
+    width: "=body.width"
+
+preferred:
+  width: "=@size.figure"
+  height: "=caption.bottom + @space.3"

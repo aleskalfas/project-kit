@@ -469,7 +469,6 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 **Acceptance gate:**
 
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
-- [UC-040 — Have a drafted record or rule become binding only through my own review](../use-case-model/use-cases/030-change/UC-040-accept-through-review.md)
 - [JRN-003 — Deliver a change](../use-case-model/journeys/JRN-003-deliver-change.md)
 
 **Operational rule:**
