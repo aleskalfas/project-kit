@@ -11,7 +11,7 @@ requirements:
   - REQ-041
   - REQ-042
 after:
-  - [UC-060, UC-063]
+  - [UC-060, UC-063, UC-083]
 shortfalls:
   - at: 4
     issue: "#756"
@@ -83,7 +83,7 @@ pkit:
 - **AI agent** (`core:ACT-ai-agent`): moves the [issue](../../../glossary.md#term-issue--issue) for the developer, through the `pm` [skill](../../../../core/glossary.md#term-skill--skill)'s `transition-state.md`. It makes on its own only the moves the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) leaves to it ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 - **Operator** (`core:ACT-operator`): is asked before a command moves an issue of a repository other than the session's own, so no such move happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From [UC-060](UC-060-file-task.md), or [UC-063](../010-plan/UC-063-plan-intent.md):** The [issue](../../../glossary.md#term-issue--issue) is filed.
+**Preconditions:** **From [UC-060](UC-060-file-task.md), [UC-063](../010-plan/UC-063-plan-intent.md) or [UC-083](../040-work-in-parallel/UC-083-plan-across-scopes.md):** The [issue](../../../glossary.md#term-issue--issue) is filed.
 
 **Assumptions:**
 

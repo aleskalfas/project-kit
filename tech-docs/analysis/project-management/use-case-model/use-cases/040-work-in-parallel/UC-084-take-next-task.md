@@ -11,7 +11,7 @@ requirements:
   - REQ-041
 after:
   - [UC-092]
-  - [UC-083, UC-060]
+  - [UC-083, UC-060, UC-063]
 shortfalls:
   - at: 1
     issue: "#521"
@@ -83,7 +83,7 @@ pkit:
 **Preconditions:**
 
 - **From [UC-092](UC-092-take-seat.md):** The worker's clone holds a worker agent's [seat](../../../glossary.md#term-seat--seat), and the worker acts as that seat's agent (DEC-059 points [4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat) and [8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#8-the-agent-a-seat-names-runs-the-seats-role-through-the-pm-skill)).
-- **From [UC-083](UC-083-plan-across-scopes.md), or [UC-060](../020-file-and-move/UC-060-file-task.md):** Tasks are filed, each with its [workstream](../../../glossary.md#term-workstream--workstream) ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
+- **From [UC-083](UC-083-plan-across-scopes.md), [UC-060](../020-file-and-move/UC-060-file-task.md) or [UC-063](../010-plan/UC-063-plan-intent.md):** Tasks are filed, each with its [workstream](../../../glossary.md#term-workstream--workstream) ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
 **Assumptions:**
 
