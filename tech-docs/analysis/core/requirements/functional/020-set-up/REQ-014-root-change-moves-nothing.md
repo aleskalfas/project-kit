@@ -5,6 +5,7 @@ status: active
 statement: A later edit of a documentation root moves no document, and changes no documentation location already recorded.
 measure: After a root changes, every document lies where it lay, and every recorded location reads as it did. Only a location chosen afterwards derives from the new root.
 applies-to: Every write of a documentation root to the backbone configuration, by a command or by hand. It binds every component that derives a documentation location from a root.
+obligation: v1:sha256:a523b7b89bc19e0dbd24edd853b1d7af099380acbfbb96028a0576e4f3025acd
 actors:
   - ACT-adopter
 refines: []

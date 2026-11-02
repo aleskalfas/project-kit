@@ -5,6 +5,7 @@ status: active
 statement: Where one grant allows a call and another denies it, the permission model denies the call.
 measure: A call that a deny grant matches is denied, even where an allow grant matches it too. The order of the layers and their grants changes no decision.
 applies-to: Every decision of the permission model, for every subject, over the guardrails, the capabilities' grants, the active profile and the project's own grants.
+obligation: v1:sha256:cffaa74876df667a2e1176bb1211b8ebf126c55afd263bfa4743f688e1d56397
 actors:
   - ACT-adopter
   - ACT-operator

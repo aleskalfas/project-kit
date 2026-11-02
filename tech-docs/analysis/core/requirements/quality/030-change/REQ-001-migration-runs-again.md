@@ -5,6 +5,7 @@ status: active
 statement: A migration run again over the state it left changes nothing.
 measure: A second run straight after the first leaves every file of the project, and the repository's git index, as the first run left them.
 applies-to: Every migration of the backbone and of each component, whenever a version transition runs it.
+obligation: v1:sha256:dcd45645e9a6b2b11c3d5a79a973dc0a0ddf283a4a05a756b421cbcd4b31b734
 actors:
   - ACT-adopter
 refines: []

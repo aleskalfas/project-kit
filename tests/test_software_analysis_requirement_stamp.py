@@ -43,6 +43,7 @@ from tests.analysis_repo import (
     below_floor,
     field_hint,
     fill,
+    fingerprint,
     front,
     installed,
     new,
@@ -86,8 +87,9 @@ def test_each_kind_is_stamped_in_its_place_rendered_from_its_structure(
     project: AdopterRepo, kind: str
 ) -> None:
     """The file lies in its kind's folder, named `REQ-NNN-<slug>.md`. Its front matter is
-    its template's, with its id, its title, its actors and what it refines, and its
-    statement, its measure and where it holds each holding the field's declared hint. Its
+    its template's, with its id, its title, its actors and what it refines, its
+    statement, its measure and where it holds each holding the field's declared hint, and
+    its `obligation` the fingerprint of those texts, each read as empty. Its
     body is its template's, the heading reading the id, the kind and the title. In an
     area, it lies in the area's folder of its kind's place."""
     place, shown = KINDS[kind]
@@ -102,6 +104,9 @@ def test_each_kind_is_stamped_in_its_place_rendered_from_its_structure(
         "statement": field_hint(kind, "statement"),
         "measure": field_hint(kind, "measure"),
         "applies-to": field_hint(kind, "applies-to"),
+        # The fingerprint of its texts as written, each a hint, a comment, read as empty
+        # (software-analysis DEC-006 point 6).
+        "obligation": fingerprint({t: "" for t in ("statement", "measure", "applies-to")}, kind),
         "actors": ["ACT-tester"],
         "refines": [],
         "pkit": {

@@ -1,0 +1,146 @@
+answers:
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/010-describe/UC-070-choose-parts.md
+    revalidated:
+      at: 2026-11-01T14:57:23Z
+      outcome: unchanged
+      unchanged-because: It moved into 010-describe, the area whose goal its own goal is a step toward, and only its links' paths changed with the move, so it still says what the system does.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md
+    revalidated:
+      at: 2026-11-01T14:57:32Z
+      outcome: unchanged
+      unchanged-because: It moved into 010-describe, the area whose goal its own goal is a step toward, and only its links' paths changed with the move, so it still says what the system does.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/010-describe/UC-074-free-uncited-ids.md
+    revalidated:
+      at: 2026-11-01T14:57:42Z
+      outcome: unchanged
+      unchanged-because: It moved into 010-describe, the area whose goal its own goal is a step toward, and only its links' paths changed with the move, so it still says what the system does.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/020-revalidate/UC-072-revise-before-change.md
+    revalidated:
+      at: 2026-11-01T14:57:51Z
+      outcome: unchanged
+      unchanged-because: It moved into 020-revalidate, the area whose goal its own goal is a step toward, and only its links' paths changed with the move, so it still says what the system does.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md
+    revalidated:
+      at: 2026-11-01T14:58:00Z
+      outcome: unchanged
+      unchanged-because: It moved into 020-revalidate, the area whose goal its own goal is a step toward, and only its links' paths changed with the move, so it still says what the system does.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/010-set-up/UC-043-set-up-space.md
+    revalidated:
+      at: 2026-11-01T14:58:52Z
+      outcome: unchanged
+      unchanged-because: It moved into 010-set-up, the area whose goal its own goal is a step toward, and only its links' paths changed with the move, so it still says what the system does.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/010-set-up/UC-047-onboard-documents.md
+    revalidated:
+      at: 2026-11-01T14:59:01Z
+      outcome: unchanged
+      unchanged-because: It moved into 010-set-up, the area whose goal its own goal is a step toward, and only its links' paths changed with the move, so it still says what the system does.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/020-write/UC-044-write-page.md
+    revalidated:
+      at: 2026-11-01T14:59:07Z
+      outcome: unchanged
+      unchanged-because: It moved into 020-write, the area whose goal its own goal is a step toward, and only its links' paths changed with the move, so it still says what the system does.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/020-write/UC-046-review-page-as-reader.md
+    revalidated:
+      at: 2026-11-01T14:59:13Z
+      outcome: unchanged
+      unchanged-because: It moved into 020-write, the area whose goal its own goal is a step toward, and only its links' paths changed with the move, so it still says what the system does.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/030-keep-current/UC-045-propose-page-fix.md
+    revalidated:
+      at: 2026-11-01T14:59:19Z
+      outcome: unchanged
+      unchanged-because: It moved into 030-keep-current, the area whose goal its own goal is a step toward, and only its links' paths changed with the move, so it still says what the system does.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183129Z-d1c2e7b6.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023222Z-8e258fcb.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T014558Z-c26fa007.yaml
+      - 20261031T015639Z-08c9720c.yaml
+    revalidated:
+      at: 2026-11-01T14:59:24Z
+      outcome: unchanged
+      unchanged-because: It moved into 010-build, the area whose goal its own goal is a step toward, and only its links' paths changed with the move, so it still says what the system does.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-081-decide-unasked-answers.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-11-01T14:59:32Z
+      outcome: unchanged
+      unchanged-because: It moved into 010-build, the area whose goal its own goal is a step toward, and only its links' paths changed with the move, so it still says what the system does.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/020-review/UC-080-check-answers.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+    revalidated:
+      at: 2026-11-01T14:59:39Z
+      outcome: unchanged
+      unchanged-because: It moved into 020-review, the area whose goal its own goal is a step toward, and only its links' paths changed with the move, so it still says what the system does.
+  - artefact: tech-docs/analysis/evidence/use-case-model/use-cases/010-ground-claims/UC-036-ground-claim.md
+    revalidated:
+      at: 2026-11-01T14:59:46Z
+      outcome: unchanged
+      unchanged-because: It moved into 010-ground-claims, the one area of an analysis of one function, and only its links' paths changed with the move, so it still says what the system does.
+  - artefact: tech-docs/analysis/demo-recording/use-case-model/use-cases/010-record-demos/UC-035-record-demo.md
+    read:
+      - 20261030T114612Z-ece11007.yaml
+      - moved-69052de31607.yaml
+    revalidated:
+      at: 2026-11-01T14:59:54Z
+      outcome: unchanged
+      unchanged-because: It moved into 010-record-demos, the one area of an analysis of one function, and only its links' paths changed with the move, so it still says what the system does.
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-005
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+    revalidated:
+      at: 2026-11-01T14:59:59Z
+      outcome: updated

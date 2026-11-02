@@ -5,6 +5,7 @@ status: active
 statement: Each JSON document a reading command of the friction group prints carries `schema_version`, and a reader of it refuses a version it does not know.
 measure: "Every such document holds `schema_version` at its top level, raised only when a key a reader relies on changes its meaning or goes. A reader given a version it does not know reads nothing from the document, and names the version it found."
 applies-to: "The JSON documents of `pkit friction check`, `check --all`, `debt`, `explain`, `artefacts` and `since`. A reader of them, a component or a project's own tooling, holds to it as the documents' contract, which the core does not check."
+obligation: v1:sha256:48a7b467e89deff69c3189a4077581ca73cdb85f1d5d76991f926a43252328c7
 actors:
   - ACT-ci-pipeline
 refines: []

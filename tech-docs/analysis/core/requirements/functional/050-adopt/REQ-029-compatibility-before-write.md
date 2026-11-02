@@ -5,6 +5,7 @@ status: active
 statement: A version transition resolves compatibility across components before it writes anything.
 measure: Where a component's range excludes the target backbone, or a dependency gate refuses, the transition refuses and names each conflict. Every file of the project then holds what it held before, the manifests included.
 applies-to: "Every version transition: of the backbone, by `pkit upgrade` and by `pkit pin` to a newer release, and of one capability, by `pkit capabilities upgrade`."
+obligation: v1:sha256:ada28f5a9946b7d9db5f8de4d5a43a1d5705575421ca9fc2d72b7d9d4d96a988
 actors:
   - ACT-adopter
 refines: []

@@ -59,6 +59,7 @@ from tests.analysis_repo import (
     USE_CASES,
     actor_at,
     fill,
+    fingerprint,
     front,
     installed,
     load_lib,
@@ -195,20 +196,31 @@ def test_a_gap_names_each_artefact_it_affects(project: AdopterRepo) -> None:
 
 
 #: A constraint, written whole as a person fills it, as its structure asks.
-CONSTRAINT = (
-    "---\nid: REQ-004\ntitle: Run suites on the client's machines\nstatus: active\n"
-    "statement: The system runs every suite on a machine the client owns.\n"
-    "measure: None.\napplies-to: The whole system.\n"
-    "pkit:\n  friction:\n    anchors:\n      path: [src/run.py]\n---\n\n"
-    "# REQ-004 · Constraint · Run suites on the client's machines\n\n"
-    "**Verified by:** None.\n\n**Imposed by:** None.\n"
-)
+#: The texts of a constraint, written by hand.
+CONSTRAINT_TEXTS = {
+    "statement": "The system runs every suite on a machine the client owns.",
+    "measure": "None.",
+    "applies-to": "The whole system.",
+}
+
+
+def _constraint() -> str:
+    """A constraint written by hand, its `obligation` the fingerprint of its texts as
+    `pkit analysis obligation` writes it (DEC-006 point 6)."""
+    texts = "".join(f"{field}: {text}\n" for field, text in CONSTRAINT_TEXTS.items())
+    return (
+        "---\nid: REQ-004\ntitle: Run suites on the client's machines\nstatus: active\n"
+        f"{texts}obligation: {fingerprint(CONSTRAINT_TEXTS, 'constraint')}\n"
+        "pkit:\n  friction:\n    anchors:\n      path: [src/run.py]\n---\n\n"
+        "# REQ-004 · Constraint · Run suites on the client's machines\n\n"
+        "**Verified by:** None.\n\n**Imposed by:** None.\n"
+    )
 
 
 def test_a_requirement_s_regression_or_gap_is_recorded_with_its_gap(project: AdopterRepo) -> None:
     """A record's outcomes may name a requirement (DEC-002, Implications, #1691), so the
     stamp takes its id in an outcome and in the gap that names it, as any artefact's."""
-    project.write({f"{CONSTRAINTS}/REQ-004-client-machines.md": CONSTRAINT})
+    project.write({f"{CONSTRAINTS}/REQ-004-client-machines.md": _constraint()})
     completed = _record(
         project,
         "suite-abroad",

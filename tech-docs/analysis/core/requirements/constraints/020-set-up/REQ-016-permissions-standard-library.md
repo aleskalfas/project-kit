@@ -5,6 +5,7 @@ status: active
 statement: "The permission model's code under `.pkit/permissions/` needs only the system `python3` and its standard library."
 measure: "Under the system `python3`, with no package outside its standard library importable, the code loads the permission model. It decides each call as it does where `ruamel.yaml` is importable."
 applies-to: "The permission model's code under `.pkit/permissions/`, on every machine that runs it. The backbone's `pkit permissions` commands import it, and so does an adapter's permission hook."
+obligation: v1:sha256:a069dcd3ef62a0027fa05ddba05e94f5cab9273d8ffc1f0ea032ea09e4b835b1
 actors:
   - ACT-operator
 refines: []

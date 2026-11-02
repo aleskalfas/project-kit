@@ -5,6 +5,7 @@ status: active
 statement: A command that resolves an anchor, fills a data point or joins validation needs no network, changes nothing in the project and is deterministic.
 measure: Once the checkout is provisioned, the command gives a result with the network cut off, and leaves each file the project tracks as it was. Run twice over the same state of the repository, and the same anchor where it resolves one, it prints the same output.
 applies-to: Every command a component registers to resolve an anchor, fill a data point or join validation, whichever command of the backbone runs it.
+obligation: v1:sha256:32a258109510c890838e11569cfa8545701b4a4a5ca5ec56156f1a8629a2054a
 actors:
   - ACT-ci-pipeline
   - ACT-developer

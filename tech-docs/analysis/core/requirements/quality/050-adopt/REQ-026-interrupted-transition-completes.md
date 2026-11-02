@@ -5,6 +5,7 @@ status: active
 statement: A version transition that stops before its end never reads as finished, and the next transition completes it.
 measure: A transition of the backbone that stops at any step leaves `completed_version` missing, or unequal to `backbone_version`, and status shows the transition incomplete. A transition of one capability that stops leaves the capability's manifest at the version it held. The next transition runs each migration from the recorded completion or version. Where no completion is recorded, it runs every backbone migration once.
 applies-to: "Every version transition: of the backbone, by `pkit upgrade` and by `pkit pin` to a newer release, and of one capability, by `pkit capabilities upgrade`. First install records the backbone's two states in the same order (COR-059 point 6)."
+obligation: v1:sha256:1dccf79ec54ff0e74a124d9173caf5ac15fb091042861974ca16fcd1558a2dcd
 actors:
   - ACT-adopter
 refines: []

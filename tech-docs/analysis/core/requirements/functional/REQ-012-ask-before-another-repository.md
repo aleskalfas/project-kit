@@ -5,6 +5,7 @@ status: active
 statement: The system asks the operator before its command changes a repository other than the session's own, or its hosting service.
 measure: Run with the session anchor in one repository and its target in another, the command asks at a terminal before its first write. It changes something only on a yes, or on a confirmation passed with the call. With nobody to ask and no confirmation, it refuses and changes nothing.
 applies-to: "Every `pkit` command that writes, whether its write lands in files, in a repository's history or on the hosting service (ADR-034 point 1). A report is outside it, a write of another kind to the repository of the distribution (ADR-047 point 1). Where the harness gives no session anchor, such as in a pipeline, there is nothing to compare, and the check does not fire."
+obligation: v1:sha256:733ebab1206e7a12d7abd746681ba23d38fa3a226e684a4550749c84ff7c30dd
 actors:
   - ACT-operator
 refines: []

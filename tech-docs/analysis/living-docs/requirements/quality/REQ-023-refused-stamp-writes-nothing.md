@@ -5,6 +5,7 @@ status: active
 statement: A refused `pkit living-docs new` leaves the project as it was, save a consented root change, or names each file or folder it could not restore.
 measure: After a refusal, the project equals itself before the command ran, byte for byte, save what the refusal names and a consented root change.
 applies-to: "`pkit living-docs new page` and `pkit living-docs new space`, whenever either refuses, a refusal after its write included."
+obligation: v1:sha256:2d66814f7e6d216c9b3d6aa4a81b1d7390776bb89b31bb8dc8c6b595bc4d8179
 actors:
   - core:ACT-developer
   - core:ACT-adopter

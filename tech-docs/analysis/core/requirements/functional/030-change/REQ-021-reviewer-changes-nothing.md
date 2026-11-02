@@ -5,6 +5,7 @@ status: active
 statement: A reviewer agent never changes the work it judges.
 measure: "After a review, the work under review holds what it held before, and nothing was staged, committed or pushed for the review. Each working file of the review lies in the agent workspace."
 applies-to: "Every reviewer agent that judges a draft or a change, the core's and a component's. The architect's edits of the architecture documents and decision records it keeps, which COR-024 grants it, fall outside it."
+obligation: v1:sha256:9b07fd49d056d7070450db38c7d8c05428974b90d9534777fb22ab83c73caf6f
 actors:
   - ACT-developer
   - ACT-merge-authoriser

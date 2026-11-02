@@ -5,6 +5,7 @@ status: active
 statement: "The router never fails a command over a version pin it cannot resolve: it runs the command under the installed CLI, and warns."
 measure: Where `uvx` cannot fetch the pinned release, the router warns once per command on standard error. The warning names the version pin and the CLI the router runs instead, and says when that CLI is older than the version pin. The router never ends a command over its version pin, and the command keeps its own checks.
 applies-to: Every `pkit` command run in a project whose version pin names another release than the installed CLI's.
+obligation: v1:sha256:9e9808dc8bb8516b4c9cc5e73fc17325758f6344d7f50517af682fd30f60073f
 actors:
   - ACT-operator
 refines: []

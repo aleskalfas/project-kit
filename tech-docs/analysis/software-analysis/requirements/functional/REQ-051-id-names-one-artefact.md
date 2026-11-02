@@ -5,6 +5,7 @@ status: active
 statement: Once settled on the default branch, a use case's, journey's or requirement's id names one artefact for good, save a freed id.
 measure: The stamp numbers past every number the working tree, the default branch and the default branch's history hold, save a freed id. `pkit analysis check-numbers` fails on a number the default branch took since the branch left it.
 applies-to: "Every id of a use case, a journey or a requirement across the repository's analyses, as the stamp gives it and `pkit analysis check-numbers` compares it."
+obligation: v1:sha256:60119fe874d9a5a32f2ab968b233629d3cd7ad93105a07f8053dc2d9bebcb101
 actors:
   - core:ACT-developer
 refines: []

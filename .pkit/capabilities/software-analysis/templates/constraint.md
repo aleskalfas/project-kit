@@ -13,6 +13,8 @@
 # instead (`--unanchored-because`). A change to its statement, its measure or
 # where it holds asks for a revisit of each anchor outside the analysis.
 # Change each, or say on it why it still stands (`pkit friction revisit`).
+# The stamp writes `obligation`, the fingerprint of the three, after them.
+# Run `pkit analysis obligation` once you write them, and after each change.
 # Its id is one numbering across the three kinds of requirement, so a move to
 # another kind keeps it. Its heading is its id, its kind and its title. The
 # statement, the measure and where it holds are fields a tool reads. Each holds
