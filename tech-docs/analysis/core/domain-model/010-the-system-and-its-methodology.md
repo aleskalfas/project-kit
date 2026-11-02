@@ -325,7 +325,7 @@ An operational rule is an instruction that every session loads through the [harn
 
 - An operational rule that fits only one repository is in that repository's own file (COR-014).
 
-**Note:** VIEW-artefacts-and-friction states where the operational rules come from, and how each source keeps and cites them.
+**Note:** VIEW-artefacts-and-friction states the operational rules' layers, how each layer keeps and cites its rules, the [capabilities](../glossary.md#term-capability--capability)' rules index, and which layer binds.
 
 ## Methodology
 
