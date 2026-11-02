@@ -18,6 +18,7 @@ pkit:
         - .pkit/capabilities/living-docs/agents/living-docs/living-docs.md
         - tests/test_living_docs_sources.py
       record:
+        - living-docs:DEC-001
         - living-docs:DEC-001#4
         - COR-050#2
 ---

@@ -1,6 +1,6 @@
 # Overview of the analysis of living-docs
 
-<!-- pkit:overview reads=5 fingerprint=sha256:31285c622e083f8a0a5b2684b5e54a046a5e634029bb26f8c6bf4a1fb7b01ce7 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:7363f878c2c1e164ae92f282a55bd6be47fae0819481b27432e2838832c2ec9a -->
 
 [Living documentation keeps each documentation space true for its readers](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md).
 
@@ -14,7 +14,7 @@ Set up the documentation spaces a project's readers need, and bring the document
 
 **Its concepts:**
 
-- [010 — Spaces and pages](../domain-model/010-spaces-and-pages.md)
+- [010 — Documentation spaces and pages](../domain-model/010-spaces-and-pages.md)
 - [020 — Proposals and reviews](../domain-model/020-proposals-and-reviews.md)
 
 **Its requirements:** none.
@@ -36,7 +36,7 @@ Write each page so it serves the reader it names, each of its statements grounde
 
 **Its concepts:**
 
-- [010 — Spaces and pages](../domain-model/010-spaces-and-pages.md)
+- [010 — Documentation spaces and pages](../domain-model/010-spaces-and-pages.md)
 - [020 — Proposals and reviews](../domain-model/020-proposals-and-reviews.md)
 
 **Its requirements:** none.
@@ -56,7 +56,7 @@ Keep each page true as what it rests on changes, each fix proposed with its evid
 
 **Its concepts:**
 
-- [010 — Spaces and pages](../domain-model/010-spaces-and-pages.md)
+- [010 — Documentation spaces and pages](../domain-model/010-spaces-and-pages.md)
 - [020 — Proposals and reviews](../domain-model/020-proposals-and-reviews.md)
 
 **Its requirements:** none.
@@ -84,12 +84,12 @@ The [glossary](../glossary.md) defines each term.
 
 Each view of the domain model explains a group of related concepts:
 
-- [010 — Spaces and pages](../domain-model/010-spaces-and-pages.md)
+- [010 — Documentation spaces and pages](../domain-model/010-spaces-and-pages.md)
 - [020 — Proposals and reviews](../domain-model/020-proposals-and-reviews.md)
 
 ### Requirements in no area
 
-- [REQ-022 · Functional · The living-docs agent proposes each change, and applies none](../requirements/functional/REQ-022-agent-proposes-only.md)
+- [REQ-022 · Functional · The living-docs agent proposes each edit, and applies none](../requirements/functional/REQ-022-agent-proposes-only.md)
 - [REQ-023 · Quality · A refused stamp puts back what it wrote, or names what it could not](../requirements/quality/REQ-023-refused-stamp-writes-nothing.md)
 - [REQ-024 · Functional · Validation checks a part of an LDOC rule only where the rule binds](../requirements/functional/REQ-024-checks-where-rule-binds.md)
 - [REQ-025 · Constraint · Nothing in living-docs fetches the text a captured source names](../requirements/constraints/REQ-025-never-fetch-source.md)

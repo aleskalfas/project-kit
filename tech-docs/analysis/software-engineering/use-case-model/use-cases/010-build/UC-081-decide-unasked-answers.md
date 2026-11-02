@@ -27,6 +27,7 @@ pkit:
         - COR-013
         - COR-017
         - COR-031
+        - COR-047
 ---
 
 # UC-081 — Decide each answer my change was not asked for
