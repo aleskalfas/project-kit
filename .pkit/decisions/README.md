@@ -207,7 +207,7 @@ A record whose points are still a numbered list, or paragraphs that open with a 
 
 A record has one of three statuses, and moves only forward through them: `proposed`, then `accepted`, then `superseded`.
 
-- **`proposed`:** under discussion, within the change that proposes it. It binds nothing, and no work may rest on its content ("The acceptance gate" below). It exists only on that change's branch, and reaches the default branch only once accepted ([COR-066](core/COR-066-accepted-before-landing.md) point 1).
+- **`proposed`:** under discussion, within the change that proposes it. It binds nothing, and no work may rest on its content ("The acceptance gate" below). It belongs only on that change's branch, and reaches the default branch only once accepted ([COR-066](core/COR-066-accepted-before-landing.md) point 1).
 - **`accepted`:** in effect. Work complies with it.
 - **`superseded`:** replaced whole by a later record, whose `supersedes` names it. The superseded record adds a *Superseded by …* line at the top of its body, and is kept, never deleted ("Refining an accepted record" below).
 - **No `rejected` status.** A refused proposal never lands, since its change is closed. A refused proposal whose reasoning is worth keeping becomes a scratchpad note, dropped with the reason it was refused ([COR-012](core/COR-012-scratchpad-notes.md)).
@@ -227,7 +227,6 @@ Work depends only on accepted records: code, content, tooling, and records that 
   ```
 
 - **Documents** that describe what a record decides wait until it is accepted.
-- **Skills** name in `gates:` the records whose acceptance they rest on, and check each before they run. The skills area's README gives the field.
 - **Before the merge:** the person who authorises it sees each record the change makes accepted, added accepted or set to accepted. Where no component that carries out merges shows that list, the change's author shows it. An edit made to such a record after its acceptance in the change is accepted only through that list (COR-066 point 3).
 - **An edit to a record accepted where the branch left the default branch** that changes what it decides is a person's to accept. The numbering check lists it ("Refining an accepted record").
 - **Not enforced yet:** no check refuses a merge that lands a proposed record, and none lists the records a change makes accepted (COR-066 points 2 and 3). The `decision-author` skill and the `architect` agent still have a record land `proposed`, and COR-066 point 1 holds over both. So, before the change lands, have a person accept each record it adds.
