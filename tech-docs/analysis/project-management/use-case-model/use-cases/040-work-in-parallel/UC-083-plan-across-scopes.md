@@ -18,9 +18,6 @@ shortfalls:
   - at: 10
     issue: "#2136"
     record: project-management:DEC-059#7
-  - at: "1a"
-    issue: "#519"
-    record: project-management:DEC-035#3
 pkit:
   friction:
     anchors:
@@ -97,13 +94,9 @@ pkit:
 **Variants:**
 
 - **1a.** A lead agent plans the work of the lead agent's own [scope](../../../glossary.md#term-scope--scope), in place of a planning agent. The lead agent's [instance](../../../glossary.md#term-instance--instance) owns each [issue](../../../glossary.md#term-issue--issue) the lead agent files, the parents and the Tasks alike. The lead agent builds that work itself ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree) and [DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
-
-> [!WARNING]
-> **Not built yet:** `create-issue` writes no [owner](../../../glossary.md#term-owner--owner). DEC-035 point 3 decides that the instance that files an issue owns the issue, and #519 tracks it.
-
 - **3a.** The intent's Tasks would share a choice that nothing settles yet, such as a library or the layout of the code. The first plan files only the [EPIC](../../../glossary.md#term-epic--epic), with an outline of the slices, and the [Feature](../../../glossary.md#term-feature--feature) of the work's foundation. The foundation's Tasks follow one another: first the records of the shared choices, then a walking skeleton built on the records the planner accepted. Once the planner closes the foundation's Feature, the agent's second plan slices the work against the records and the skeleton's code ([DEC-060](../../../../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md) and `batch-plan.md`).
 - **7a.** The planner asks for changes, or cancels the plan, as `UC-063` variants 7a and 7c describe.
-- **8a.** The planning agent's clone holds no [seat](../../../glossary.md#term-seat--seat). The clone marks no issue, and the agent files as step 8 does, with no owner ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
+- **8a.** The planning agent's clone holds no [seat](../../../glossary.md#term-seat--seat). The clone marks no issue, and the agent files as step 8 does, with no [owner](../../../glossary.md#term-owner--owner) ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 - **8b.** The approved plan named no [pool](../../../glossary.md#term-pool--pool) for a [Task](../../../glossary.md#term-task--task)'s [Milestone](../../../glossary.md#term-milestone--milestone), which is in a pool. The command that files or schedules the Task asks the planner for [consent](../../../../core/glossary.md#term-consent--consent) to the pool, and off a terminal it refuses ([DEC-061 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). The agent never gives that consent for the planner.
 - **8c.** Several planning agents each run a line of work at once, each in a seat of its own. Each files into the Milestones the planner gives it, and only those Milestones keep the lines apart ([DEC-061 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)).
 

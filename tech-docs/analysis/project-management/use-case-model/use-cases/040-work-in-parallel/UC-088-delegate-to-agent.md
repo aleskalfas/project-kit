@@ -11,10 +11,6 @@ requirements:
 after:
   - [UC-092]
   - [UC-083, UC-060]
-shortfalls:
-  - at: 1
-    issue: "#519"
-    record: project-management:DEC-035#3
 pkit:
   friction:
     anchors:
@@ -58,10 +54,6 @@ pkit:
 **Main path:**
 
 1. The lead starts the [Task](../../../glossary.md#term-task--task): `pkit pm start-work <N>`, as `UC-084` steps 4 to 6 describe. The lead's [instance](../../../glossary.md#term-instance--instance) becomes the Task's [owner](../../../glossary.md#term-owner--owner) ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)).
-
-> [!WARNING]
-> **Not built yet:** `start-work` writes no owner. DEC-035 point 3 decides that an instance that starts an [issue](../../../glossary.md#term-issue--issue) with no owner becomes the issue's owner, and #519 tracks it.
-
 2. The lead starts a helper agent for the Task through the harness, and passes the helper agent no name. The helper agent's whole result then comes back ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)). The helper agent acts as the lead's instance while the helper agent builds the Task ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 3. The helper agent builds the Task on the Task's branch, then commits and pushes the work.
 4. The helper agent ends, and returns its result to the lead.

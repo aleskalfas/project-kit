@@ -16,15 +16,6 @@ shortfalls:
   - at: 1
     issue: "#521"
     record: project-management:DEC-035#7
-  - at: 5
-    issue: "#519"
-    record: project-management:DEC-035#3
-  - at: 5
-    issue: "#519"
-    record: project-management:DEC-059#9
-  - at: 6
-    issue: "#519"
-    record: project-management:DEC-035#6
   - at: 9
     issue: "#2136"
     record: project-management:DEC-059#9
@@ -112,17 +103,7 @@ pkit:
 3. Where the worker's seat gives the worker a [scope](../../../glossary.md#term-scope--scope), the system keeps the Tasks that fall in the scope. The system chooses the highest in priority among the Tasks in Backlog that the worker's instance owns and whose dependencies name no open issue. Where there is none, the system chooses the highest in priority among the ready Tasks (DEC-059 point 7 and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 4. The system starts the chosen Task through `pkit pm start-work <N>`. That command checks the move, cuts the Task's branch, assigns the worker's account and moves the Task to In Progress ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 5. The system makes the worker's instance the Task's owner ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)). The ownership names the worker's seat, the seat's number and the clone's key ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
-
-> [!WARNING]
-> **Not built yet:** `start-work` writes no owner. DEC-035 point 3 decides that an instance that starts an issue with no owner becomes the issue's owner, and #519 tracks it.
-
-> [!WARNING]
-> **Not built yet:** no command writes an ownership that names a seat or a clone's key. DEC-059 point 9 decides what an ownership names, and #519 tracks it.
-
 6. The system reads the Task again after writing, and finds the worker's instance the Task's only owner ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
-
-> [!WARNING]
-> **Not built yet:** `start-work` reads nothing back. DEC-035 point 6 decides that the command that takes an issue reads the issue again to catch a clash, and #519 tracks it.
 
 9. As the worker builds, the worker's work renews the ownership, each renewal by a separate ownership event. The worker renews the ownership before each push, and at least once within a part of the limit the topology sets (DEC-059 point 9). Before each push, the worker also checks that the worker's clone still holds the seat, and that the ownership still counts.
 

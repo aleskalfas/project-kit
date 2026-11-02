@@ -13,12 +13,9 @@ shortfalls:
   - at: 2
     issue: "#521"
     record: project-management:DEC-035#7
-  - at: "1a"
-    issue: "#519"
-    record: project-management:DEC-059#9
   - at: "2a"
-    issue: "#520"
-    record: project-management:DEC-035#6
+    issue: "#521"
+    record: project-management:DEC-035#4
   - at: "2b"
     issue: "#2136"
     record: project-management:DEC-059#9
@@ -81,14 +78,10 @@ pkit:
 **Variants:**
 
 - **1a.** The clone is new, such as a clone that replaced another clone lost with that other clone's sandbox. The new clone takes a [seat](../../../glossary.md#term-seat--seat) as `UC-092` describes. The new clone inherits none of the lost clone's ownerships, which name the lost clone's key ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)). The lost clone's Tasks return to the ready Tasks once the lost clone's seat is released ([DEC-059 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#5-in-the-first-mode-a-seat-stays-taken-until-it-is-released)).
+- **2a.** The clone holds a [Task](../../../glossary.md#term-task--task)'s branch, but another [instance](../../../glossary.md#term-instance--instance) owns the Task now. That instance took the Task over while the session was dead ([DEC-035 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#4-ownership-releases-when-the-work-ends-or-stops-and-transfers-on-reclaim)). The worker's ordinary commands on the Task refuse, and name that instance ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)). The worker leaves the Task to the Task's [owner](../../../glossary.md#term-owner--owner), as `UC-085` describes.
 
 > [!WARNING]
-> **Not built yet:** no command writes an ownership that names a clone's key. The read of an [issue](../../../glossary.md#term-issue--issue)'s [owner](../../../glossary.md#term-owner--owner) never asks whether the ownership's clone still holds the ownership's seat. DEC-059 point 9 decides that a clone never inherits another clone's ownership, and #519 tracks it.
-
-- **2a.** The clone holds a [Task](../../../glossary.md#term-task--task)'s branch, but another [instance](../../../glossary.md#term-instance--instance) owns the Task now. That instance took the Task over while the session was dead ([DEC-035 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#4-ownership-releases-when-the-work-ends-or-stops-and-transfers-on-reclaim)). The worker's ordinary commands on the Task refuse, and name that instance ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)). The worker leaves the Task to the Task's owner, as `UC-085` describes.
-
-> [!WARNING]
-> **Not built yet:** no ordinary command reads the owner, so the worker's commands on the Task go on. DEC-035 point 6 decides the refusal, and #520 tracks it.
+> **Not built yet:** `handoff-issue` hands an [issue](../../../glossary.md#term-issue--issue) from one person to another only. DEC-035 point 4 decides that an instance takes over another instance's issue, and #521 tracks it.
 
 - **2b.** The worker's ownership of a Task lapsed while the session was dead, since nothing renewed the ownership, and another clone took the Task over. Before writing, the worker finds that the Task is another clone's, and parks the worker's work, as `UC-084` variant 9a describes ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
 
