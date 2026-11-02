@@ -266,14 +266,14 @@ An analysis artefact's anchors name what its statements rest on. A use case's or
   - **Its statements.** They are its body and the front-matter fields a writer fills, such as an actor's `needs` or a term's `definition`. A domain-model view's closing section is none (software-analysis DEC-004 point 7).
   - **Views.** A *view* named alone in this rule is an architecture view. A domain-model view is always named in full.
   - **What its anchors name.** What its kind anchors to, where a change to it can make one of its statements false. This list is whole:
-    - An actor or a term rests on the code and the decisions that embody it. A term whose `definition` names a term the glossary's head lists also rests on that term.
+    - An actor or a term rests on the code and the decisions that embody it. A term whose `definition` names a term the glossary's head lists also rests on that term. A term rests on no record that only its distinctions or its example cite. A distinction describes the concept it tells apart, and an example only illustrates the definition.
     - A domain-model view rests on each term it explains, and the decisions its statements cite or apply. Each fact it states as always true rests on the record that decides it. Each reason its opening or a section's *Why* gives rests on the record whose Context or Rationale gives it. It rests on no code, since it describes the domain, never the software.
     - A use case rests on its `actor` and its `other-actors`, each requirement in its `requirements`, the code it exercises and the decisions it cites or applies. Its anchors also name each decision that answers it and each architecture view that realises it. Each is asked for even where none of the use case's statements names it, since a change to it can leave the use case untrue of the system.
     - A journey rests on its actor, the use cases of its `steps` and its `relies-on`, each requirement in its `requirements`, and the code and decisions at its seams.
     - A requirement rests on each actor in its `actors`, each requirement in its `refines`, and the decisions it cites or applies. It also rests on the narrow code that holds it and the files that verify it. Its anchors also name each decision that answers it and each architecture view that realises it. Each is asked for even where none of its statements names it.
   - **Nothing else.** A statement about an artefact this list does not name rests on nothing this rule asks an anchor for. So a term that another term's distinctions name needs no anchor.
-  - **Across analyses.** Where this list names an actor or a term of another analysis, the anchors name records, never that artefact itself. They name each record that artefact's own record anchors name, where the statements rest on what that record decides. Where that artefact anchors no record, nothing is asked in its place.
-  - So a use case whose `actor` is `core:ACT-developer` anchors the records behind that actor, and never the actor.
+  - **Across analyses.** Where this list names an actor or a term of another analysis, the anchors name records, never that artefact itself. They name each record that artefact's own record anchors name, where the statements rest on what that record decides. A statement that only names that actor or term rests on none of them. Where that artefact anchors no record, nothing is asked in its place.
+  - So a use case whose `actor` is `core:ACT-developer` anchors those records behind that actor that its statements rest on, and never the actor.
   - **No cycle excuses it.** An anchor this list asks for on a decision or a view is asked for even where anchors that run back from that decision or view would close a cycle.
   - **What it never asks for.** This rule asks no anchor for:
     - code not yet written
@@ -281,20 +281,25 @@ An analysis artefact's anchors name what its statements rest on. A use case's or
     - a view the project does not keep, or keeps outside its repository
   - **Where to find it.**
     - **Code** lies in the repository, within the surface the project declares for its analysis where it declares one.
-    - **The decisions an artefact rests on** are the records its statements cite or apply, such as the decision to use git, for a use case that runs on git. An actor's or a term's are also the records that embody it.
+    - **The decisions an artefact rests on** are the records its statements cite or apply, such as the decision to use git, for a use case that runs on git. An actor's or a term's are also the records that embody it. A record that only a term's distinctions or its example cite is none of them.
     - **The decisions that answer a use case or a requirement** are the records made to meet what it asks, such as one that names it by its id. So the decision to write a report as CSV answers a use case that must export the report as a file. Each may be a core record, a capability's record or the project's own.
     - **The views that realise a use case or a requirement** are the architecture views the project keeps to show how the system carries it out. Such a view may name it by its id.
     - **The files that verify a requirement** are the files of the tests and checks named in its part whose id is `verified-by`.
     - **The code that holds a requirement** is the code that keeps it, never all the code its `applies-to` reaches.
   - **Which anchor names it.** A path anchor names code, a record anchor a decision, and an artefact anchor another artefact. A view a place holds takes an artefact anchor, and any other view takes a path anchor on its file. An anchor on one part of a record or a document names only what that part stands on.
   - **Where to read the anchors.** An artefact's anchors are in its friction block. A glossary term's are in its entry.
-  - **What the check holds.** The capability's check requires a use case's anchors on its `actor` and on each of its `other-actors`. It requires a journey's on its actor, and on exactly the use cases of its `steps` and its `relies-on`. It requires the anchors of a use case and of a journey on exactly the requirements each lists in `requirements`. Once the domain-model view is built, it requires a view's anchors on exactly the terms its `explains` lists, and refuses a path anchor on one. It requires a use case's anchor on the record each entry of its `shortfalls` names. It does so whatever any rule's status, and this rule does not cover it.
+  - **What the check holds.** The capability's check requires each of these, whatever any rule's status, and this rule does not cover them:
+    - a use case's anchors on its `actor` and on each of its `other-actors`
+    - a journey's anchors on its actor, and on exactly the use cases of its `steps` and its `relies-on`
+    - the anchors of a use case and of a journey on exactly the requirements each lists in `requirements`
+    - once the domain-model view is built, a view's anchors on exactly the terms its `explains` lists, and never a path anchor on one
+    - a use case's anchor on the record each entry of its `shortfalls` names
+    - a requirement's anchors within its analysis on exactly the actors of its `actors` and the requirements of its `refines`
   - **What this rule judges.** The rest:
     - the code and the decisions a statement rests on
     - the decisions that answer a use case or a requirement, and the views that realise one
-    - a requirement's anchors on its `actors` and its `refines`
     - the records behind an actor or a term of another analysis
-  - **A break.** A statement that rests on code or a decision that no anchor of the artefact names breaks this rule, until the artefact anchors it. An anchor on another analysis's artefact breaks it too, until the artefact anchors the records behind that one instead. So a use case's minimal guarantee that cites a decision breaks it while no record anchor names the decision. A use case or a requirement also breaks it while no anchor names a decision that answers it, or a view that realises it. A requirement breaks it too while no anchor names an actor in its `actors`, or a requirement in its `refines`.
+  - **A break.** A statement that rests on code or a decision that no anchor of the artefact names breaks this rule, until the artefact anchors it. An anchor on another analysis's artefact breaks it too, until the artefact anchors the records behind that one instead. So a use case's minimal guarantee that cites a decision breaks it while no record anchor names the decision. A use case or a requirement also breaks it while no anchor names a decision that answers it, or a view that realises it.
   - **No anchors.** The core reports an artefact with no anchors, and no check fails on it. This rule still judges what its statements rest on.
   - **A reason for no anchors.** An actor or a term that gives a reason for having none is not judged under this rule. Nor is a requirement that gives one, with no `actors` and no `refines`. The reason is a person's answer, and only a person decides it.
   - **History.** This rule judges an artefact in force. A withdrawn artefact is history.
@@ -492,6 +497,7 @@ Each use case lies in a functional area whose goal it is a step toward, and no t
     - **A remedy.** A use case that only restores the other's goal makes no path toward it, where the other's main path reaches that goal alone. What later runs meet because of a state left standing is read as a standing condition.
     - **No path.** A single use case with its variants makes none. Nor do use cases the actor never takes in turn toward one goal, however many it has.
     - **Another actor's use case** on the way is no step of the path. The journey relies on it.
+    - **The actor's own use case off the path,** which the actor does not take toward the path's goal, is no step either. The journey may rely on it too.
   - **Told.** A journey in force of the path's actor tells the path where its `steps`, or the steps one of its variants takes, run through the path's use cases in their order. So a stretch of a longer path is told by the journey of that path. Its steps may lie in several areas.
   - **A break.**
     - A use case breaks this rule while it lies in no area, or while it is no step toward its area's goal.

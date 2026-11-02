@@ -1,0 +1,12 @@
+component: software-analysis
+kind: none
+body: >
+  `RS-SAN-005` and `RS-SAN-014`, both still proposed, take the maintainer's
+  readings of 2 November (#1727). `RS-SAN-005` leaves a requirement's
+  anchors on its `actors` and its `refines` to the check, which already
+  holds them. A term rests on no record that only its distinctions or its
+  example cite. The records behind another analysis's actor or term are
+  anchored only where a statement rests on what a record decides.
+  `RS-SAN-014` lets a journey rely on a use case of its own actor that the
+  path does not take. Proposed rules bind nothing, so `SAN` stays at 1.0.0,
+  and nothing an adopter's checks or reviewers meet changes.

@@ -500,10 +500,10 @@ def test_each_judgement_rule_leaves_the_checks_their_part_by_its_own_words() -> 
     The anchors rule's list of what its anchors name is whole, so it never asks for an
     anchor DEC-001 point 4 does not give."""
     _data, body = _shipped()
-    for rule_id in ("RS-SAN-003", "RS-SAN-005"):
+    for rule_id, cover in (("RS-SAN-003", "cover it."), ("RS-SAN-005", "cover them:")):
         section = " ".join(_section(body, rule_id).split())
         assert "**What the check holds.** The " in section, rule_id
-        assert "whatever any rule's status, and this rule does not cover it." in section, rule_id
+        assert f"whatever any rule's status, and this rule does not {cover}" in section, rule_id
     goal = " ".join(_section(body, "RS-SAN-004").split())
     # Found by the part's permanent id, so a project's own label never hides it.
     assert "The goal is the use case's part whose id is `goal`, whatever label" in goal
@@ -613,8 +613,8 @@ def test_the_anchors_rule_names_the_requirements_a_use_case_or_a_journey_lists()
     section = " ".join(_section(body, "RS-SAN-005").split())
     held = section.split("**What the check holds.**", 1)[1].split("**What this rule judges.**")[0]
     assert (
-        "It requires the anchors of a use case and of a journey on exactly the requirements "
-        "each lists in `requirements`."
+        "- the anchors of a use case and of a journey on exactly the requirements each lists "
+        "in `requirements`"
     ) in held
     judged = section.split("**What this rule judges.**", 1)[1].split("**A break.**")[0]
     assert "`requirements`" not in judged
@@ -633,8 +633,8 @@ def test_the_anchors_rule_asks_a_domain_model_view_for_its_terms_and_records() -
     section = " ".join(_section(body, "RS-SAN-005").split())
     held = section.split("**What the check holds.**", 1)[1].split("**What this rule judges.**")[0]
     assert (
-        "Once the domain-model view is built, it requires a view's anchors on exactly the "
-        "terms its `explains` lists, and refuses a path anchor on one."
+        "- once the domain-model view is built, a view's anchors on exactly the terms its "
+        "`explains` lists, and never a path anchor on one"
     ) in held
 
 
@@ -667,9 +667,10 @@ def test_the_anchors_rule_keeps_its_anchors_against_a_cycle_back() -> None:
 def test_the_anchors_rule_asks_a_requirement_for_what_dec_002_point_6_gives() -> None:
     """A requirement anchors each record it rests on or is answered by, each view that
     realises it, the files that verify it, the narrow code that holds it, its actors and
-    the requirements it refines (DEC-002 points 5 and 6, #1695). The rule judges its
-    anchors on its actors and the requirements it refines, and its `What the check
-    holds` names neither field, until #1727 moves them there."""
+    the requirements it refines (DEC-002 points 5 and 6, #1695). The check holds its
+    anchors within its analysis to exactly those two fields whatever any rule's status
+    (#1693), so the rule names them among what the check holds and judges neither
+    (#1727)."""
     _data, body = _shipped()
     item = _anchors_list(body)["A requirement"]
     for asked in (
@@ -693,18 +694,54 @@ def test_the_anchors_rule_asks_a_requirement_for_what_dec_002_point_6_gives() ->
     ) in section
     code = section.split("**The code that holds a requirement**", 1)[1].split("- **")[0]
     assert "command" not in code
-    # Judged until a check holds them, and a missing one is a break.
-    judged = section.split("**What this rule judges.**", 1)[1].split("**A break.**")[0]
-    assert "- a requirement's anchors on its `actors` and its `refines`" in judged
+    # Held by the check, so neither judged nor a break of this rule. The check leaves out
+    # an actor of another analysis in `actors`, and the rule judges the records behind
+    # it, as it does for any artefact of another analysis.
     held = section.split("**What the check holds.**", 1)[1].split("**What this rule judges.**")[0]
-    assert "`actors`" not in held and "`refines`" not in held
     assert (
-        "A requirement breaks it too while no anchor names an actor in its `actors`, or a "
-        "requirement in its `refines`."
-    ) in section
+        "- a requirement's anchors within its analysis on exactly the actors of its `actors` "
+        "and the requirements of its `refines`"
+    ) in held
+    judged = section.split("**What this rule judges.**", 1)[1].split("**A break.**")[0]
+    assert "`actors`" not in judged and "`refines`" not in judged
+    assert "- the records behind an actor or a term of another analysis" in judged
+    broken = section.split("**A break.**", 1)[1].split("**No anchors.**")[0]
+    assert "`actors`" not in broken and "`refines`" not in broken
     # A reason for having none means no actor and no requirement it refines (DEC-002
     # point 6), so a requirement that lists either is still judged.
     assert ("Nor is a requirement that gives one, with no `actors` and no `refines`.") in section
+
+
+def test_the_anchors_rule_asks_a_term_for_no_record_its_distinctions_cite() -> None:
+    """The maintainer's reading of 2 November (#1727, reading 2): a term anchors no record
+    that its distinctions or its example cite, since a distinction describes the concept
+    it tells apart. The whole list says so where it gives a term what it rests on, and
+    the finder of the decisions an artefact rests on agrees with it."""
+    _data, body = _shipped()
+    item = _anchors_list(body)["An actor or a term"]
+    assert "A term rests on no record that only its distinctions or its example cite." in item
+    assert "A distinction describes the concept it tells apart" in item
+    section = " ".join(_section(body, "RS-SAN-005").split())
+    finder = section.split("**The decisions an artefact rests on**", 1)[1].split("- **")[0]
+    assert "A record that only a term's distinctions or its example cite is none of them." in (
+        finder
+    )
+
+
+def test_the_anchors_rule_asks_records_across_analyses_only_where_a_statement_rests() -> None:
+    """The maintainer's reading of 2 November (#1727, reading 3): the records behind
+    another analysis's actor or term are anchored only where a statement rests on what
+    a record decides. Naming the actor or the term rests on none of them, and the
+    example says so too."""
+    _data, body = _shipped()
+    section = " ".join(_section(body, "RS-SAN-005").split())
+    across = section.split("**Across analyses.**", 1)[1].split("**No cycle excuses it.**")[0]
+    assert "where the statements rest on what that record decides." in across
+    assert "A statement that only names that actor or term rests on none of them." in across
+    assert (
+        "So a use case whose `actor` is `core:ACT-developer` anchors those records behind "
+        "that actor that its statements rest on, and never the actor."
+    ) in across
 
 
 def test_the_record_rule_compares_the_obligation_with_the_records_it_rests_on() -> None:
@@ -1058,6 +1095,23 @@ def test_the_area_rule_plans_from_content_and_leaves_a_path_to_a_reviewer() -> N
     assert "- **Examples,** from an online shop:" in area
     opening = " ".join(body.split("\n## RS-SAN-001")[0].split())
     assert "and the items labelled *Examples* only illustrate." in opening
+
+
+def test_the_area_rule_lets_a_journey_rely_on_its_actor_s_use_case_off_the_path() -> None:
+    """The maintainer's reading of 2 November (#1727, reading 6): a journey relies on
+    another actor's use case on the way, and may rely on a use case of its own actor that
+    the path does not take toward its goal. Neither is a step of the path (DEC-005 point
+    2; DEC-007 point 1)."""
+    _data, body = _shipped()
+    area = " ".join(_section(body, AREA_RULE).split())
+    assert (
+        "**Another actor's use case** on the way is no step of the path. The journey relies "
+        "on it."
+    ) in area
+    assert (
+        "**The actor's own use case off the path,** which the actor does not take toward the "
+        "path's goal, is no step either. The journey may rely on it too."
+    ) in area
 
 
 def test_accepted_each_judgement_rule_binds_with_no_check_to_leave(
