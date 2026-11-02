@@ -8,11 +8,11 @@ steps:
   - UC-002
   - UC-003
   - UC-034
-  - UC-007
 relies-on:
   - UC-049
   - UC-040
   - UC-006
+  - UC-007
 requirements: []
 pkit:
   friction:
@@ -47,10 +47,10 @@ pkit:
         - UC-002
         - UC-003
         - UC-034
-        - UC-007
         - UC-049
         - UC-040
         - UC-006
+        - UC-007
 ---
 
 # JRN-003 — Deliver a change
@@ -72,17 +72,15 @@ pkit:
 4. [UC-034](../use-cases/030-change/UC-034-land-change.md) — Land my change on the default branch
    - **Needs from step 2 (UC-002):** the change check's list of answers, at the [head](../../glossary.md#term-head--head) the merge authoriser authorises. The developer names that head to the landing. The landing merges nothing else, and derives no list and runs no check there ([ADR-061 point 5](../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#5-the-command-makes-requests-and-reports-facts-the-caller-decides)). A list read at an earlier head can pass for this one, unless the developer derives it again at that head.
    - **Needs from step 3 (UC-003):** the changesets, which the CI pipeline checks before the landing. With `--admin` on a [base](../../glossary.md#term-base--base) with no merge queue, the landing merges past every failing required check, the changeset guard included (ADR-061 point 5). The `skip-changeset` label waives the guard's surface check too (UC-003 variant 7a).
-   - **Needs from [UC-006](../use-cases/020-set-up/UC-006-gate-merges.md) (outside this journey):** the project's merges made to wait on the system's checks. Where the change check runs in `warning` mode, or the CI job is no required status, unanswered friction holds no merge ([COR-050 point 12](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)). That friction then lands as [debt](../../glossary.md#term-debt--debt) for step 5.
-5. [UC-007](../use-cases/030-change/UC-007-resolve-debt.md) — Resolve what the default branch left out of date
-   - **Needs from step 4 (UC-034):** the landed change, from which each debt it left is dated. Friction the change deferred, or left unanswered, is debt on the [default branch](../../glossary.md#term-default-branch--default-branch) ([COR-050 point 9](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)). Unless the CI pipeline runs the [whole-repository check](../../glossary.md#term-whole-repository-check--whole-repository-check), no whole-repository report brings that debt to the developer, who lists it with `pkit friction debt` ([ADR-055 point 5](../../../../architecture/decisions/ADR-055-first-adopter-analysis-and-living-docs.md#5-friction-check-enforcing-from-the-day-it-exists)).
+   - **Needs from [UC-006](../use-cases/020-set-up/UC-006-gate-merges.md) (outside this journey):** the project's merges made to wait on the system's checks. Where the change check runs in `warning` mode, or the CI job is no required status, unanswered friction holds no merge ([COR-050 point 12](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)). That friction then lands as [debt](../../glossary.md#term-debt--debt) on the [default branch](../../glossary.md#term-default-branch--default-branch).
+   - **Needs from [UC-007](../use-cases/030-change/UC-007-resolve-debt.md) (outside this journey):** each debt the landed change leaves, which stands through any number of later runs until one of them resolves it. Friction the change deferred at step 2, or left unanswered, is debt on the default branch, dated from the change ([COR-050 point 9](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)). Step 2 counts a deferral as an [answer](../../glossary.md#term-answer--answer), so the path reaches its goal at the landing. Unless the CI pipeline runs the [whole-repository check](../../glossary.md#term-whole-repository-check--whole-repository-check), no whole-repository report brings that debt to the developer, who lists it with `pkit friction debt` ([ADR-055 point 5](../../../../architecture/decisions/ADR-055-first-adopter-analysis-and-living-docs.md#5-friction-check-enforcing-from-the-day-it-exists)).
 
 **Variants:**
 
 - **1a.** The accepted records settle every choice the [change](../../glossary.md#term-change--change) needs. The developer records nothing, and the path goes on at step 2.
 - **3a.** The change touches no path of the [backbone](../../glossary.md#term-backbone--backbone) or of a [component](../../glossary.md#term-component--component). The developer declares no [changeset](../../glossary.md#term-changeset--changeset), and the path goes on at step 4 ([UC-003](../use-cases/030-change/UC-003-declare-changeset.md) variant 1a).
 - **4a.** The merge authoriser asks the developer to revise the change before authorising the merge. The developer revises it, and the path rejoins at step 2.
-- **4b.** The developer works alone, and commits the change straight to the [default branch](../../glossary.md#term-default-branch--default-branch) ([UC-034](../use-cases/030-change/UC-034-land-change.md) variant 1a). No [pull request](../../glossary.md#term-pull-request--pull-request) carries it, and the path goes on at step 5.
-- **5a.** The change left no [debt](../../glossary.md#term-debt--debt) on the default branch, and the path ends after step 4.
+- **4b.** The developer works alone, and commits the change straight to the [default branch](../../glossary.md#term-default-branch--default-branch) ([UC-034](../use-cases/030-change/UC-034-land-change.md) variant 1a). No [pull request](../../glossary.md#term-pull-request--pull-request) carries it, and the path ends there.
 
 **Postconditions:** The [change](../../glossary.md#term-change--change) is on the [default branch](../../glossary.md#term-default-branch--default-branch), built on accepted records, with its [changesets](../../glossary.md#term-changeset--changeset) waiting for the next [release step](../../glossary.md#term-release-step--release-step). Each [artefact](../../glossary.md#term-artefact--artefact) anchored to what the change altered carries an [answer](../../glossary.md#term-answer--answer) there: `updated`, `unchanged` with why, or deferred to an open follow-up.
 

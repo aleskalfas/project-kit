@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=5 fingerprint=sha256:8aa01eecbed89608abe054e093bd6e1d5074c03deb8cad4c5f5146d6b8f85f07 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:822316e86f255b3fd7bedd2e39b7aedde9344398b82473da4f22607de3ff51f9 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -340,15 +340,15 @@ flowchart LR
 ```mermaid
 flowchart LR
   accTitle: JRN-003 — Deliver a change
-  accDescr: The flow of JRN-003: ACT-developer takes 5 steps in order, UC-037, UC-002, UC-003, UC-034, UC-007. It relies on 3 use cases outside the journey, drawn apart with no arrow.
+  accDescr: The flow of JRN-003: ACT-developer takes 4 steps in order, UC-037, UC-002, UC-003, UC-034. It relies on 4 use cases outside the journey, drawn apart with no arrow.
   ACT_developer["ACT-developer — Developer"]
   step_1(["1. UC-037 — Record my decision beside the methodology's"])
   step_2(["2. UC-002 — Answer what my change made stale"])
   step_3(["3. UC-003 — Declare what my change means for the next release"])
   step_4(["4. UC-034 — Land my change on the default branch"])
-  step_5(["5. UC-007 — Resolve what the default branch left out of date"])
   subgraph relies_on["Relied on, outside the journey"]
     UC_006(["UC-006 — Make my merges wait on the system's checks"])
+    UC_007(["UC-007 — Resolve what the default branch left out of date"])
     UC_040(["UC-040 — Have a drafted record or rule become binding only through my own review"])
     UC_049(["UC-049 — Install the system into my project with one command"])
   end
@@ -356,7 +356,6 @@ flowchart LR
   step_1 --> step_2
   step_2 --> step_3
   step_3 --> step_4
-  step_4 --> step_5
 ```
 
 #### [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
