@@ -32,6 +32,7 @@ pkit:
         - src/project_kit/sync.py
         - src/project_kit/cli.py
         - .pkit/adapters/README.md
+        - .pkit/adapters/claude-code/deploy-agents.sh
         - .pkit/agents/README.md
         - .pkit/lifecycle/ownership.py
         - .pkit/permissions/decide.py
@@ -120,7 +121,7 @@ pkit:
 
 **Minimal guarantees:**
 
-- An [adapter](../../../glossary.md#term-adapter--adapter) never writes over a file without its deploy mark, as an [agent definition](../../../glossary.md#term-agent-definition--agent-definition) the adopter wrote (`.pkit/adapters/README.md`).
+- An [adapter](../../../glossary.md#term-adapter--adapter) never writes over a file without its deploy mark, as an [agent definition](../../../glossary.md#term-agent-definition--agent-definition) the adopter wrote (`.pkit/adapters/README.md` and Claude Code's `deploy-agents.sh`).
 - A placeholder resolves only from a value the [overlay](../../../glossary.md#term-overlay--overlay) holds. So an agent definition whose required category is unset is skipped, never deployed with the placeholder in it ([COR-013 point 5](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md#5-adopter-overlay-for-paths-outside-pkit) and [ADR-052](../../../../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)).
 - One skipped agent definition never stops the others deploying (ADR-052).
 - A deny granted to an agent wins over any allow it holds ([COR-028 point 1](../../../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth) and `decide.py`).

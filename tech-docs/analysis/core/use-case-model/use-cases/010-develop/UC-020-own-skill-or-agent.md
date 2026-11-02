@@ -35,6 +35,9 @@ pkit:
         - src/project_kit/install.py
         - src/project_kit/agents_overlay.py
         - .pkit/adapters/README.md
+        - .pkit/adapters/claude-code/deploy-agents.sh
+        - .pkit/adapters/claude-code/deploy-skills.sh
+        - .pkit/adapters/claude-code/undeploy-capability.sh
         - .pkit/skills/README.md
       record:
         - COR-001
@@ -125,4 +128,4 @@ pkit:
 
 - A refused name leaves nothing written (`agents.py`).
 - [Sync](../../../glossary.md#term-sync--sync) writes the [methodology](../../../glossary.md#term-methodology--methodology)'s [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) only into their `core/` folders, never over the [project](../../../glossary.md#term-project--project)'s own ([COR-001](../../../../../../.pkit/decisions/core/COR-001-content-mechanisms.md) and `install.py`).
-- An [adapter](../../../glossary.md#term-adapter--adapter)'s scripts drop only what they deployed themselves, recognised by the adapter's own deploy mark, and never the project's own content (`.pkit/adapters/README.md`).
+- An [adapter](../../../glossary.md#term-adapter--adapter)'s scripts drop only what they deployed themselves, recognised by the adapter's own deploy mark, and never the project's own content (`.pkit/adapters/README.md`). Claude Code's `deploy-agents.sh`, `deploy-skills.sh` and `undeploy-capability.sh` do so.
