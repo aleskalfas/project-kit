@@ -13,6 +13,7 @@ pkit:
   friction:
     anchors:
       path:
+        - src/project_kit/config_validate.py
         - tests/test_config_validate.py
       record:
         - COR-049#7

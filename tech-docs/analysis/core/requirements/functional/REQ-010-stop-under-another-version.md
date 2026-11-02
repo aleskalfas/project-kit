@@ -13,6 +13,8 @@ pkit:
   friction:
     anchors:
       path:
+        - src/project_kit/sync.py
+        - src/project_kit/upgrade.py
         - tests/test_capabilities_version_guard.py
         - tests/test_sync.py
         - tests/test_upgrade.py

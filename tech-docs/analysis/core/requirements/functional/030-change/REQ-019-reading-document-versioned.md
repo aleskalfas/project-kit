@@ -13,12 +13,19 @@ pkit:
   friction:
     anchors:
       path:
+        - src/project_kit/friction_check.py
+        - src/project_kit/friction_repository.py
+        - src/project_kit/friction_report.py
+        - src/project_kit/friction_discovery.py
+        - src/project_kit/friction_since.py
         - tests/test_friction_check.py
         - tests/test_friction_repository.py
         - tests/test_friction_report.py
         - tests/test_friction_artefacts.py
         - tests/test_friction_since.py
         - tests/test_friction_report_body.py
+      record:
+        - software-analysis:DEC-002#8
       artefact:
         - ACT-ci-pipeline
 ---
