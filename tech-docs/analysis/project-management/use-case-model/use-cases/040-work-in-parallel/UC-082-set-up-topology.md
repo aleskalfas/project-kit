@@ -32,6 +32,7 @@ pkit:
         - .pkit/capabilities/project-management/scripts/_lib/topology.py
         - .pkit/capabilities/project-management/scripts/create-seats.py
         - .pkit/capabilities/project-management/scripts/check-topology.py
+        - .pkit/capabilities/project-management/scripts/seats.py
       record:
         - project-management:DEC-045#1
         - project-management:DEC-045#3
@@ -52,6 +53,7 @@ pkit:
         - project-management:DEC-018
         - COR-017
         - COR-021
+        - COR-039
         - COR-054
       artefact:
         - ACT-planning-agent

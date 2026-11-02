@@ -59,6 +59,7 @@ pkit:
         - project-management:DEC-031
         - project-management:DEC-033
         - project-management:DEC-034
+        - project-management:DEC-035#4
         - project-management:DEC-046#1
         - project-management:DEC-049
         - project-management:DEC-052

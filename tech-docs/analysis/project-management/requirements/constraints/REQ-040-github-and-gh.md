@@ -17,6 +17,8 @@ pkit:
         - .pkit/capabilities/project-management/scripts/pre-check.py
       record:
         - project-management:DEC-003
+        - ADR-061#1
+        - ADR-061#3
       artefact:
         - ACT-planner
 ---

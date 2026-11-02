@@ -29,6 +29,7 @@ pkit:
         - .pkit/capabilities/project-management/scripts/set-instance.py
         - .pkit/capabilities/project-management/scripts/_lib/instance_identity.py
         - .pkit/capabilities/project-management/scripts/start-work.py
+        - .pkit/capabilities/project-management/scripts/take-seat.py
       record:
         - project-management:DEC-035#1
         - project-management:DEC-035#4
@@ -38,6 +39,7 @@ pkit:
         - project-management:DEC-058#5
         - project-management:DEC-059#4
         - project-management:DEC-059#5
+        - project-management:DEC-059#6
         - project-management:DEC-059#7
         - project-management:DEC-059#9
         - project-management:DEC-013

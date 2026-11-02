@@ -24,6 +24,7 @@ pkit:
       path:
         - .pkit/capabilities/project-management/scripts/handoff-issue.py
         - .pkit/capabilities/project-management/scripts/next-task.py
+        - .pkit/capabilities/project-management/skills/pm/batch-plan.md
       record:
         - project-management:DEC-005
         - project-management:DEC-012

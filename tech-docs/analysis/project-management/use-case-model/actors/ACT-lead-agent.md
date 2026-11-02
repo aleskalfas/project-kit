@@ -13,6 +13,8 @@ pkit:
         - project-management:DEC-029
         - project-management:DEC-035#3
         - project-management:DEC-008
+        - project-management:DEC-059#2
+        - project-management:DEC-059#6
 ---
 
 # ACT-lead-agent — Lead agent

@@ -321,6 +321,9 @@ TERM-scope:
   pkit:
     friction:
       anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/topology.py
+          - .pkit/capabilities/project-management/scripts/_lib/task_pool.py
         record:
           - project-management:DEC-045#3
           - project-management:DEC-059#7
@@ -335,6 +338,10 @@ TERM-seat:
   pkit:
     friction:
       anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/topology.py
+          - .pkit/capabilities/project-management/scripts/take-seat.py
+          - .pkit/capabilities/project-management/scripts/release-seat.py
         record:
           - project-management:DEC-045#1
           - project-management:DEC-045#3
@@ -349,6 +356,8 @@ TERM-state-issue:
   pkit:
     friction:
       anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/state_issues.py
         record:
           - project-management:DEC-058
           - project-management:DEC-043#3
@@ -372,6 +381,8 @@ TERM-topology:
   pkit:
     friction:
       anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/topology.py
         record:
           - project-management:DEC-045
           - project-management:DEC-059#1

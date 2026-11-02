@@ -23,6 +23,7 @@ pkit:
       path:
         - .pkit/capabilities/project-management/skills/pm/batch-plan.md
         - .pkit/capabilities/project-management/scripts/create-issue.py
+        - .pkit/capabilities/project-management/scripts/seats.py
       record:
         - project-management:DEC-029
         - project-management:DEC-054#5
