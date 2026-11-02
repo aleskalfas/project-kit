@@ -24,6 +24,7 @@ pkit:
         - .pkit/capabilities/software-analysis/scripts/check-pointers.py
         - .pkit/capabilities/software-analysis/scripts/check-numbers.py
         - .pkit/capabilities/software-analysis/scripts/_lib/shortfalls.py
+        - .pkit/capabilities/software-analysis/scripts/_lib/stamp.py
         - .pkit/capabilities/software-analysis/schemas/revalidation-record.schema.json
         - .pkit/capabilities/software-analysis/skills/analysis-author/revalidation-record.md
         - .pkit/capabilities/software-analysis/skills/analysis-author/use-case.md
@@ -37,6 +38,8 @@ pkit:
         - COR-013
         - COR-017
         - COR-031
+        - COR-039#1
+        - COR-039#2
         - COR-050#3
         - COR-054#5
       artefact:
@@ -50,7 +53,7 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`core:ACT-ai-agent`): may revise the [artefacts](../../../../core/glossary.md#term-artefact--artefact) and draft the [revalidation record](../../../glossary.md#term-revalidation-record--revalidation-record) for the developer, through the `analysis-author` [skill](../../../../core/glossary.md#term-skill--skill). The outcomes stay the developer's (variant 6b).
+- **AI agent** (`core:ACT-ai-agent`): may revise the [artefacts](../../../../core/glossary.md#term-artefact--artefact) and draft the [revalidation record](../../../glossary.md#term-revalidation-record--revalidation-record) for the developer, through the `analysis-author` [skill](../../../../core/glossary.md#term-skill--skill). The [revalidation outcomes](../../../glossary.md#term-revalidation-outcome--revalidation-outcome) stay the developer's (variant 6b).
 - **Operator** (`core:ACT-operator`): is asked before `pkit analysis new` or `pkit analysis link` writes in a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:** **From [UC-070](../010-describe/UC-070-choose-parts.md):** The [revalidation record](../../../glossary.md#term-revalidation-record--revalidation-record)'s kind has its parts chosen.

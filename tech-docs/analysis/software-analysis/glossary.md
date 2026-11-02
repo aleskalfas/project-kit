@@ -41,7 +41,7 @@ builds-on:
         name: Developer
         needs:
           - Revise the analysis before a proposed change is built, naming the design I reviewed and pinning the text I read.
-          - Revalidate the analysis after a change, from an agent's proposed outcome for each flagged artefact, and never rewrite the analysis to match broken code.
+          - Revalidate the analysis after a change, from an agent's proposed revalidation outcome for each flagged artefact, and never rewrite the analysis to match broken code.
           - Describe my existing project from its code, documents and decisions, with an agent deriving candidates that I confirm.
           - Free the ids of artefacts nothing cites, such as an abandoned pilot, so new artefacts may take those ids again.
       - id: ACT-adopter
@@ -270,7 +270,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [whole-repository check](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-whole-repository-check--whole-repository-check)
   - **Actor:** [Developer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-developer.md)
     - Revise the analysis before a proposed change is built, naming the design I reviewed and pinning the text I read.
-    - Revalidate the analysis after a change, from an agent's proposed outcome for each flagged artefact, and never rewrite the analysis to match broken code.
+    - Revalidate the analysis after a change, from an agent's proposed revalidation outcome for each flagged artefact, and never rewrite the analysis to match broken code.
     - Describe my existing project from its code, documents and decisions, with an agent deriving candidates that I confirm.
     - Free the ids of artefacts nothing cites, such as an abandoned pilot, so new artefacts may take those ids again.
   - **Actor:** [Adopter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-adopter.md)
