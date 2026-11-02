@@ -16,6 +16,8 @@ pkit:
         - project-management:DEC-026
         - project-management:DEC-035#3
         - project-management:DEC-008
+        - project-management:DEC-029
+        - project-management:DEC-059#2
 ---
 
 # ACT-worker-agent — Worker agent

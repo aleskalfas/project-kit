@@ -11,7 +11,7 @@ requirements:
   - REQ-041
   - REQ-042
 after:
-  - [UC-060, UC-063]
+  - [UC-060, UC-063, UC-083]
 shortfalls:
   - at: 4
     issue: "#756"
@@ -59,6 +59,7 @@ pkit:
         - project-management:DEC-031
         - project-management:DEC-033
         - project-management:DEC-034
+        - project-management:DEC-035#4
         - project-management:DEC-046#1
         - project-management:DEC-049
         - project-management:DEC-052
@@ -83,12 +84,12 @@ pkit:
 - **AI agent** (`core:ACT-ai-agent`): moves the [issue](../../../glossary.md#term-issue--issue) for the developer, through the `pm` [skill](../../../../core/glossary.md#term-skill--skill)'s `transition-state.md`. It makes on its own only the moves the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) leaves to it ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 - **Operator** (`core:ACT-operator`): is asked before a command moves an issue of a repository other than the session's own, so no such move happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From [UC-060](UC-060-file-task.md), or [UC-063](../010-plan/UC-063-plan-intent.md):** The [issue](../../../glossary.md#term-issue--issue) is filed.
+**Preconditions:** **From [UC-060](UC-060-file-task.md), [UC-063](../010-plan/UC-063-plan-intent.md) or [UC-083](../040-work-in-parallel/UC-083-plan-across-scopes.md):** The [issue](../../../glossary.md#term-issue--issue) is filed.
 
 **Assumptions:**
 
 - The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and its commands ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
-- The backbone's [process](../../../../core/glossary.md#term-process--process) engine reads where the [issue](../../../glossary.md#term-issue--issue) stands, checks each move against the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle)'s definition, and journals the move ([COR-033](../../../../../../.pkit/decisions/core/COR-033-process-substrate.md)). Where the engine cannot run, the commands read where the issue stands themselves, and warn that the move was not journaled ([DEC-033](../../../../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
+- The [backbone](../../../../core/glossary.md#term-backbone--backbone)'s [process](../../../../core/glossary.md#term-process--process) engine reads where the [issue](../../../glossary.md#term-issue--issue) stands, checks each move against the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle)'s definition, and journals the move ([COR-033](../../../../../../.pkit/decisions/core/COR-033-process-substrate.md)). Where the engine cannot run, the commands read where the issue stands themselves, and warn that the move was not journaled ([DEC-033](../../../../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
 
 **Trigger:** The developer takes up an [issue](../../../glossary.md#term-issue--issue) that is filed, or decides that it will not be done.
 

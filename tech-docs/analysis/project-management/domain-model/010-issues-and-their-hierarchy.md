@@ -23,7 +23,6 @@ pkit:
         - project-management:DEC-007
         - project-management:DEC-010
         - project-management:DEC-016
-        - project-management:DEC-061
       artefact:
         - TERM-issue
         - TERM-milestone
@@ -139,22 +138,19 @@ A Milestone is GitHub's own container, kept apart from issues. It holds the issu
 - its title, in the format of its [Milestone category](../glossary.md#term-milestone-category--milestone-category) (DEC-016)
 - its due date, which it may lack (DEC-016)
 - its [close trigger](../glossary.md#term-close-trigger--close-trigger), `date-based`, `content-based` or `either`, on the first line of its description (DEC-016)
-- its [pool](../glossary.md#term-pool--pool) of workers, by a `Pool:` line anywhere in its description, which it may lack ([DEC-061 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#2-a-milestone-joins-a-pool-by-a-line-in-its-description))
 
 **Relations:**
 
 - It holds issues, each in at most one Milestone at a time (DEC-016).
-- It is in at most one pool, and each [Task](../glossary.md#term-task--task) in it is in that pool ([DEC-061 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#4-a-task-is-in-the-pool-of-its-milestone)).
 - It holds [EPICs](../glossary.md#term-epic--epic) directly. Where the project skips the EPIC, it holds Features, Umbrellas and Tasks directly too ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md)).
 - It holds no other Milestone (DEC-016).
 - It belongs to one Milestone category (DEC-016).
 
-**States:** A Milestone is open until it closes. A date-based one closes at its due date, and its open issues roll forward to the next Milestone. Where the project declares pools of workers, they roll forward within the Milestone's pool ([DEC-061 point 7](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#7-closing-a-milestone-rolls-its-open-tasks-forward-within-its-pool)). A content-based one closes once every [issue](../glossary.md#term-issue--issue) under it has closed, and one marked `either` closes at whichever comes first (DEC-016).
+**States:** A Milestone is open until it closes. A date-based one closes at its due date, and its open issues roll forward to the next Milestone. A content-based one closes once every [issue](../glossary.md#term-issue--issue) under it has closed, and one marked `either` closes at whichever comes first (DEC-016).
 
 **Always true:**
 
 - Every Milestone can close, so a theme that never ends is no Milestone (DEC-016).
-- Only a person puts a Milestone into a pool, and its description logs that [consent](../../core/glossary.md#term-consent--consent) ([DEC-061 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)).
 
 ## Close trigger
 
@@ -369,7 +365,6 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md)
 - [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
-- [UC-088 — Delegate a Task of my scope to a helper agent](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
@@ -410,7 +405,6 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
-- [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
 - [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Feature:**

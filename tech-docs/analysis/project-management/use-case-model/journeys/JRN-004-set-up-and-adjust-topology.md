@@ -77,4 +77,6 @@ pkit:
 
 ## Sources
 
-The goal rests on [project-management DEC-059](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md), which decides the [topology](../../glossary.md#term-topology--topology), the topology's [seats](../../glossary.md#term-seat--seat) and each seat's [scope](../../glossary.md#term-scope--scope). Measuring one topology against another is a goal that #2096 names, as the sources of [UC-091](../use-cases/040-work-in-parallel/UC-091-measure-topologies.md) say. Adjusting the topology on the figures is setting the topology up again, as [UC-082](../use-cases/040-work-in-parallel/UC-082-set-up-topology.md) describes.
+The goal rests on [project-management DEC-059](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md), which decides the [topology](../../glossary.md#term-topology--topology), the topology's [seats](../../glossary.md#term-seat--seat) and each seat's [scope](../../glossary.md#term-scope--scope).
+
+Adjusting the topology on the figures of the agents' work rests on a decision Aleš Kalfas made on 26 October 2026, in #2096. Among the use cases of parallel work, he named "configuring the <!-- pkit:not-the-term -->project's agent setup" and "measuring one setup against another". #2096 calls a topology an agent setup. Adjusting the topology is setting the topology up again, as [UC-082](../use-cases/040-work-in-parallel/UC-082-set-up-topology.md) describes.

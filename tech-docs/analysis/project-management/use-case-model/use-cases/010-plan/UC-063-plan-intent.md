@@ -69,9 +69,9 @@ pkit:
 
 **Assumptions:**
 
-- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the adapter deploys the `project-manager` agent and the `pm` [skill](../../../../core/glossary.md#term-skill--skill) ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md) and [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
-- Where a [component](../../../../core/glossary.md#term-component--component) fills the use-case [data point](../../../../core/glossary.md#term-data-point--data-point), the backbone resolves it, with the [use-case entries](../../../glossary.md#term-use-case-entry--use-case-entry) settled on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) ([COR-052](../../../../../../.pkit/decisions/core/COR-052-slots.md) and [COR-053](../../../../../../.pkit/decisions/core/COR-053-connection-points.md)). Which component fills it, and how, is that component's.
-- The harness lets the agent hand the plan to the critic and the architect for review ([COR-024](../../../../../../.pkit/decisions/core/COR-024-critic-and-architect-agents.md)).
+- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys the `project-manager` agent and the `pm` [skill](../../../../core/glossary.md#term-skill--skill) ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md) and [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
+- Where a [component](../../../../core/glossary.md#term-component--component) fills the use-case [data point](../../../../core/glossary.md#term-data-point--data-point), the [backbone](../../../../core/glossary.md#term-backbone--backbone) resolves it, with the [use-case entries](../../../glossary.md#term-use-case-entry--use-case-entry) settled on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) ([COR-052](../../../../../../.pkit/decisions/core/COR-052-slots.md) and [COR-053](../../../../../../.pkit/decisions/core/COR-053-connection-points.md)). Which component fills it, and how, is that component's.
+- The [harness](../../../../core/glossary.md#term-harness--harness) lets the agent hand the plan to the critic and the architect for review ([COR-024](../../../../../../.pkit/decisions/core/COR-024-critic-and-architect-agents.md)).
 
 **Trigger:** The planner gives the agent an intent, with the reference material that frames it.
 
@@ -90,7 +90,7 @@ pkit:
 > **Not built yet:** filing an issue and writing its body are two calls. A body refused after its issue is filed leaves the template's body there. [DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md) decides that no issue is left half filed, and #1761 tracks it.
 
 9. The agent attaches each issue the plan schedules to its Milestone with `pkit pm promote-issue <n> --milestone <M>`. The planner's approval of the plan is the command's reason ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md), DEC-029 and `batch-plan.md`). That approval covers putting a Task into a pool only where the approved plan named the Task's Milestone and that Milestone's pool (DEC-061 point 6).
-10. The agent reports each issue it filed, with its number and its link.
+10. The agent lists each issue it filed, with its number and its link.
 
 **Variants:**
 

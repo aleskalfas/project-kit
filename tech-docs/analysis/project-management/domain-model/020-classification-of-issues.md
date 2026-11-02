@@ -98,7 +98,7 @@ A workstream is a long-lived area of a project's work, such as `docs` or `cli`. 
 **Relations:**
 
 - It is one value of the `workstream` [classification axis](../glossary.md#term-classification-axis--classification-axis) ([DEC-012](../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
-- An EPIC scopes one outcome within a workstream (DEC-018).
+- An EPIC covers a single outcome inside a workstream (DEC-018).
 - It groups issues, and is the parent of none ([DEC-016](../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 
 **States:** A workstream is added as active, and may be deprecated. It may be renamed, merged into another or split into several, and the issues that carry it follow. It is removed only once no [issue](../glossary.md#term-issue--issue) carries it (DEC-018).

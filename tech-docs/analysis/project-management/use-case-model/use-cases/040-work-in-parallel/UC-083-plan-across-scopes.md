@@ -12,21 +12,18 @@ requirements:
   - REQ-041
 after:
   - [UC-082]
-  - [UC-092]
   - [UC-064]
 shortfalls:
   - at: 10
     issue: "#2136"
     record: project-management:DEC-059#7
-  - at: "1a"
-    issue: "#519"
-    record: project-management:DEC-035#3
 pkit:
   friction:
     anchors:
       path:
         - .pkit/capabilities/project-management/skills/pm/batch-plan.md
         - .pkit/capabilities/project-management/scripts/create-issue.py
+        - .pkit/capabilities/project-management/scripts/seats.py
       record:
         - project-management:DEC-029
         - project-management:DEC-054#5
@@ -37,7 +34,6 @@ pkit:
         - project-management:DEC-045#4
         - project-management:DEC-059#1
         - project-management:DEC-059#2
-        - project-management:DEC-059#4
         - project-management:DEC-059#6
         - project-management:DEC-059#7
         - project-management:DEC-060
@@ -67,12 +63,11 @@ pkit:
 **Preconditions:**
 
 - **From [UC-082](UC-082-set-up-topology.md):** The [topology](../../../glossary.md#term-topology--topology) on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) declares the [seats](../../../glossary.md#term-seat--seat), and the [scope](../../../glossary.md#term-scope--scope) of each seat that has a scope (DEC-059 points [1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch) and [2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope)).
-- **From [UC-092](UC-092-take-seat.md):** The planning agent's clone holds the planning agent's seat ([DEC-059 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
 - **From [UC-064](../010-plan/UC-064-define-milestones-and-workstreams.md):** The [project](../../../../core/glossary.md#term-project--project) declares the [workstreams](../../../glossary.md#term-workstream--workstream) its work falls into ([DEC-018](../../../../../../.pkit/capabilities/project-management/decisions/DEC-018-workstream-taxonomy-and-lifecycle.md)).
 
 **Assumptions:**
 
-- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the adapter deploys the `project-manager` agent and the `pm` [skill](../../../../core/glossary.md#term-skill--skill) ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md) and [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
+- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys the `project-manager` agent and the `pm` [skill](../../../../core/glossary.md#term-skill--skill) ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md) and [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
 
 **Trigger:** The planner gives the planning agent an intent to plan for the [topology](../../../glossary.md#term-topology--topology)'s agents.
 
@@ -92,18 +87,14 @@ pkit:
 6. The agent has the plan reviewed, and shows the plan to the planner, as `UC-063` steps 5 and 6 describe ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 7. The planner approves the plan (DEC-029). Where the topology declares pools, the plan names each Task's Milestone and that Milestone's pool. The approval then puts each Task into its pool ([DEC-061 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)).
 8. The agent files the issues, as `UC-063` steps 8 and 9 describe. The agent files the issues with no [owner](../../../glossary.md#term-owner--owner), so the issues join the ready Tasks that every seat shares (DEC-059 point 7). Where the topology declares pools, each Task joins the pool of the Milestone the planner gave it instead ([DEC-061 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)). The agent of each seat takes the seat's Tasks from there, as `UC-084` describes.
-9. The agent reports each [issue](../../../glossary.md#term-issue--issue) the agent filed, with the issue's number, link and workstream.
+9. The agent lists each [issue](../../../glossary.md#term-issue--issue) the agent filed, with the issue's number, link and workstream.
 
 **Variants:**
 
 - **1a.** A lead agent plans the work of the lead agent's own [scope](../../../glossary.md#term-scope--scope), in place of a planning agent. The lead agent's [instance](../../../glossary.md#term-instance--instance) owns each [issue](../../../glossary.md#term-issue--issue) the lead agent files, the parents and the Tasks alike. The lead agent builds that work itself ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree) and [DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
-
-> [!WARNING]
-> **Not built yet:** `create-issue` writes no [owner](../../../glossary.md#term-owner--owner). DEC-035 point 3 decides that the instance that files an issue owns the issue, and #519 tracks it.
-
 - **3a.** The intent's Tasks would share a choice that nothing settles yet, such as a library or the layout of the code. The first plan files only the [EPIC](../../../glossary.md#term-epic--epic), with an outline of the slices, and the [Feature](../../../glossary.md#term-feature--feature) of the work's foundation. The foundation's Tasks follow one another: first the records of the shared choices, then a walking skeleton built on the records the planner accepted. Once the planner closes the foundation's Feature, the agent's second plan slices the work against the records and the skeleton's code ([DEC-060](../../../../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md) and `batch-plan.md`).
 - **7a.** The planner asks for changes, or cancels the plan, as `UC-063` variants 7a and 7c describe.
-- **8a.** The planning agent's clone holds no [seat](../../../glossary.md#term-seat--seat). The clone marks no issue, and the agent files as step 8 does, with no owner ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
+- **8a.** The planning agent's clone holds no [seat](../../../glossary.md#term-seat--seat). The clone marks no issue, and the agent files as step 8 does, with no [owner](../../../glossary.md#term-owner--owner) ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 - **8b.** The approved plan named no [pool](../../../glossary.md#term-pool--pool) for a [Task](../../../glossary.md#term-task--task)'s [Milestone](../../../glossary.md#term-milestone--milestone), which is in a pool. The command that files or schedules the Task asks the planner for [consent](../../../../core/glossary.md#term-consent--consent) to the pool, and off a terminal it refuses ([DEC-061 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). The agent never gives that consent for the planner.
 - **8c.** Several planning agents each run a line of work at once, each in a seat of its own. Each files into the Milestones the planner gives it, and only those Milestones keep the lines apart ([DEC-061 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)).
 

@@ -11,20 +11,11 @@ requirements:
   - REQ-041
 after:
   - [UC-092]
-  - [UC-083, UC-060]
+  - [UC-083, UC-060, UC-063]
 shortfalls:
   - at: 1
     issue: "#521"
     record: project-management:DEC-035#7
-  - at: 5
-    issue: "#519"
-    record: project-management:DEC-035#3
-  - at: 5
-    issue: "#519"
-    record: project-management:DEC-059#9
-  - at: 6
-    issue: "#519"
-    record: project-management:DEC-035#6
   - at: 9
     issue: "#2136"
     record: project-management:DEC-059#9
@@ -92,12 +83,12 @@ pkit:
 **Preconditions:**
 
 - **From [UC-092](UC-092-take-seat.md):** The worker's clone holds a worker agent's [seat](../../../glossary.md#term-seat--seat), and the worker acts as that seat's agent (DEC-059 points [4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat) and [8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#8-the-agent-a-seat-names-runs-the-seats-role-through-the-pm-skill)).
-- **From [UC-083](UC-083-plan-across-scopes.md), or [UC-060](../020-file-and-move/UC-060-file-task.md):** Tasks are filed, each with its [workstream](../../../glossary.md#term-workstream--workstream) ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
+- **From [UC-083](UC-083-plan-across-scopes.md), [UC-060](../020-file-and-move/UC-060-file-task.md) or [UC-063](../010-plan/UC-063-plan-intent.md):** Tasks are filed, each with its [workstream](../../../glossary.md#term-workstream--workstream) ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
 **Assumptions:**
 
 - The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and the commands of `pkit pm` ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
-- The harness hosts the worker's session in the worker's own clone ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
+- The [harness](../../../../core/glossary.md#term-harness--harness) hosts the worker's session in the worker's own clone ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
 
 **Trigger:** The worker has no [Task](../../../glossary.md#term-task--task) in flight, and Tasks wait to be built.
 
@@ -112,17 +103,7 @@ pkit:
 3. Where the worker's seat gives the worker a [scope](../../../glossary.md#term-scope--scope), the system keeps the Tasks that fall in the scope. The system chooses the highest in priority among the Tasks in Backlog that the worker's instance owns and whose dependencies name no open issue. Where there is none, the system chooses the highest in priority among the ready Tasks (DEC-059 point 7 and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 4. The system starts the chosen Task through `pkit pm start-work <N>`. That command checks the move, cuts the Task's branch, assigns the worker's account and moves the Task to In Progress ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 5. The system makes the worker's instance the Task's owner ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)). The ownership names the worker's seat, the seat's number and the clone's key ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
-
-> [!WARNING]
-> **Not built yet:** `start-work` writes no owner. DEC-035 point 3 decides that an instance that starts an issue with no owner becomes the issue's owner, and #519 tracks it.
-
-> [!WARNING]
-> **Not built yet:** no command writes an ownership that names a seat or a clone's key. DEC-059 point 9 decides what an ownership names, and #519 tracks it.
-
 6. The system reads the Task again after writing, and finds the worker's instance the Task's only owner ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
-
-> [!WARNING]
-> **Not built yet:** `start-work` reads nothing back. DEC-035 point 6 decides that the command that takes an issue reads the issue again to catch a clash, and #519 tracks it.
 
 9. As the worker builds, the worker's work renews the ownership, each renewal by a separate ownership event. The worker renews the ownership before each push, and at least once within a part of the limit the topology sets (DEC-059 point 9). Before each push, the worker also checks that the worker's clone still holds the seat, and that the ownership still counts.
 
@@ -165,7 +146,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no session parks its work. DEC-059 point 9 decides how a session parks the work, and #2136 tracks it.
 
-**Postconditions:** The worker's [instance](../../../glossary.md#term-instance--instance) owns the [Task](../../../glossary.md#term-task--task), which is In Progress on the Task's own branch, and the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open.
+**Postconditions:** The worker's [instance](../../../glossary.md#term-instance--instance) owns the [Task](../../../glossary.md#term-task--task), which is in Review, as step 7 leaves it. The Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open on the Task's own branch.
 
 **Minimal guarantees:**
 

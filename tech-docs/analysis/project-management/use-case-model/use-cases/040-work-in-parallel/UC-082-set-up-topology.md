@@ -32,6 +32,7 @@ pkit:
         - .pkit/capabilities/project-management/scripts/_lib/topology.py
         - .pkit/capabilities/project-management/scripts/create-seats.py
         - .pkit/capabilities/project-management/scripts/check-topology.py
+        - .pkit/capabilities/project-management/scripts/seats.py
       record:
         - project-management:DEC-045#1
         - project-management:DEC-045#3
@@ -52,6 +53,7 @@ pkit:
         - project-management:DEC-018
         - COR-017
         - COR-021
+        - COR-039
         - COR-054
       artefact:
         - ACT-planning-agent
@@ -76,7 +78,7 @@ pkit:
 
 - The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and the commands of `pkit pm` ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
 - Each agent of the [topology](../../../glossary.md#term-topology--topology) works in the agent's own clone of the project's repository, on one machine or on a platform's sandboxes ([DEC-059](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md)).
-- The backbone resolves the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), the project's settled state, in one way for every command ([COR-054](../../../../../../.pkit/decisions/core/COR-054-default-branch.md)).
+- The [backbone](../../../../core/glossary.md#term-backbone--backbone) resolves the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), the project's settled state, in one way for every command ([COR-054](../../../../../../.pkit/decisions/core/COR-054-default-branch.md)).
 
 **Trigger:** The adopter decides to run several AI agents on the [project](../../../../core/glossary.md#term-project--project) at once, or to alter the [seats](../../../glossary.md#term-seat--seat) of the project's [topology](../../../glossary.md#term-topology--topology).
 
@@ -103,7 +105,7 @@ pkit:
 
 6. The adopter runs `pkit pm create-seats`, the command that creates the [state issue](../../../glossary.md#term-state-issue--state-issue) of each new seat, on the change that adds the seats. The system creates a state issue for each new seat, keyed by the seat's name ([DEC-058 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#2-a-state-issue-holds-one-piece-of-state-named-by-its-key)). The system writes each state issue's number into the topology ([DEC-059 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)). At the command's entry, the system checks the project's prerequisites, and that the repository is the session's own ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md) and [core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-7. The adopter runs the topology's check, `pkit pm check-topology`, on the change. The check compares the change's topology with the topology of the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), and says which commit the check read. The check reports each of these (DEC-059):
+7. The adopter runs the topology's check, `pkit pm check-topology`, on the change. The check compares the change's topology with the topology of the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), and says which commit the check read. The check names each of these (DEC-059):
    - a seat's name held twice
    - more than one organizer seat
    - a seat whose state issue is not named
@@ -116,7 +118,7 @@ pkit:
 
 **Variants:**
 
-- **1a.** The adopter alters a [topology](../../../glossary.md#term-topology--topology) already in place. A new [seat](../../../glossary.md#term-seat--seat) goes at the end of the list, and a seat that leaves stays in the list, marked retired. Renaming a seat retires the seat and adds a new seat, so no seat's number moves (DEC-059 points [2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope) and [6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)). The topology's check of step 7 reports a seat deleted or moved against the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), rather than retired.
+- **1a.** The adopter alters a [topology](../../../glossary.md#term-topology--topology) already in place. A new [seat](../../../glossary.md#term-seat--seat) goes at the end of the list, and a seat that leaves stays in the list, marked retired. Renaming a seat retires the seat and adds a new seat, so no seat's number moves (DEC-059 points [2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope) and [6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)). The topology's check of step 7 names a seat deleted or moved against the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), rather than retired.
 - **1b.** The adopter declares [pools](../../../glossary.md#term-pool--pool) of workers, each by a neutral name such as `alpha`. Each seat that builds names the pools it serves, and a planner's seat names none ([DEC-061 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)). Moving workers from one pool to another is an edit of the seats' pools, a reviewed [change](../../../../core/glossary.md#term-change--change) like any other. The adopter adds pools only once every clone that may take a seat runs code that reads them (variant 8b).
 
 - **2a.** A clone holds no seat. The clone marks no [issue](../../../glossary.md#term-issue--issue) and is guarded by nothing, as a clone with no number ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
