@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "code-record.schema.json",
+  "title": "The record of written code — visual-communication capability",
+  "description": "Formal shape of `<out>.record.yaml`, beside the code a code writer wrote (DEC-005 point 7, DEC-006 point 5): the fingerprint of the declaration, the values written and the writer's version (form 1), the hash of the code written, and what is only recorded. `pkit visual write-code` writes it. Document-shaped schema. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "fingerprint",
+    "sha256",
+    "recorded"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:code-record`.",
+      "const": "visual-communication:code-record"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "fingerprint": {
+      "$ref": "defs.schema.json#/$defs/fingerprint"
+    },
+    "sha256": {
+      "description": "The hash of the code file as written.",
+      "$ref": "defs.schema.json#/$defs/sha256"
+    },
+    "recorded": {
+      "$ref": "defs.schema.json#/$defs/recorded"
+    }
+  }
+}

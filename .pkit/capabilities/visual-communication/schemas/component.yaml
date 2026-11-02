@@ -1,0 +1,51 @@
+# A component of a library (visual-communication DEC-001 points 4 and 6, DEC-005 points
+# 1 to 3): its status and purpose, the fields of content it takes (a fixed subset of JSON
+# Schema 2020-12), and how it is drawn. The engine reads its options, states, colour,
+# values, preferred size, parts, exposed parts and points, and layouts.
+#
+# The body below is the reference instance.
+
+pkit_schema: visual-communication:component
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+status: experimental
+about: A label on a raised box, its text stronger when the content asks for emphasis.
+fields:
+  type: object
+  required:
+    - text
+  properties:
+    text:
+      type: string
+      description: What the label says.
+      x-pkit-prose: true
+    tags:
+      type: array
+      items:
+        type: string
+      maxItems: 3
+options:
+  emphasis: [normal, strong]
+values:
+  pad:
+    by: emphasis
+    normal: "=@space.1"
+    strong: "=@space.2"
+parts:
+  box:
+    box: {fill: surface, stroke: line, stroke-width: "=@stroke.thin"}
+    width: "=:width"
+    height: "=:height"
+  label:
+    text:
+      content: text
+      style: type.body
+      fill: {by: emphasis, normal: text-secondary, strong: text-primary}
+    x: "=pad"
+    y: "=pad"
+    width: "=:width - 2 * pad"
+exposes: [label]
+preferred:
+  height: "=label.bottom + pad"

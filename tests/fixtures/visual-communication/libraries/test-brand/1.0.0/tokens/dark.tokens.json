@@ -1,0 +1,30 @@
+{
+  "$description": "The dark colour scheme: what each scheme paints with, redefined.",
+  "scheme": {
+    "$type": "color",
+    "paper": {
+      "$value": "{palette.night.900}"
+    },
+    "raised": {
+      "$value": "{palette.night.800}"
+    },
+    "ink": {
+      "$value": "{palette.night.50}"
+    },
+    "ink-soft": {
+      "$value": "{palette.night.400}"
+    },
+    "rule": {
+      "$value": "{palette.night.700}"
+    },
+    "accent": {
+      "$value": "{palette.blue.400}"
+    },
+    "strong-ink": {
+      "$value": "{palette.white}"
+    },
+    "strong-paper": {
+      "$value": "{palette.black}"
+    }
+  }
+}

@@ -12,7 +12,7 @@ requirements:
 after:
   - [UC-014]
   - [UC-037]
-  - [UC-027]
+  - [UC-014, UC-027, UC-050]
 pkit:
   friction:
     anchors:
@@ -49,7 +49,7 @@ pkit:
 
 - **From [UC-014](../010-develop/UC-014-develop-methodology.md):** The maintainer develops the [methodology](../../../glossary.md#term-methodology--methodology) in its [source repository](../../../glossary.md#term-source-repository--source-repository).
 - **From [UC-037](UC-037-record-decision.md):** The maintainer's [change](../../../glossary.md#term-change--change) adds a core record, stamped with the namespace `core`, or refines an accepted one in place.
-- **From [UC-027](../020-set-up/UC-027-find-agent-definition-deployed.md):** The `methodology-reviewer`'s [agent definition](../../../glossary.md#term-agent-definition--agent-definition) is deployed where the [harness](../../../glossary.md#term-harness--harness) reads it.
+- **From UC-014, [UC-027](../020-set-up/UC-027-find-agent-definition-deployed.md) or [UC-050](../050-adopt/UC-050-ready-fresh-clone.md):** The `methodology-reviewer`'s [agent definition](../../../glossary.md#term-agent-definition--agent-definition) is deployed where the [harness](../../../glossary.md#term-harness--harness) reads it.
 
 **Assumptions:**
 
