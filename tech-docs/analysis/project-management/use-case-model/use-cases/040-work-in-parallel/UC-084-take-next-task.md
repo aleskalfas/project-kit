@@ -19,6 +19,9 @@ shortfalls:
   - at: 9
     issue: "#2136"
     record: project-management:DEC-059#9
+  - at: 7
+    issue: "#2287"
+    record: project-management:DEC-063#1
   - at: "2a"
     issue: "#521"
     record: project-management:DEC-035#4
@@ -70,6 +73,7 @@ pkit:
         - COR-028
         - PRJ-004
         - ADR-063
+        - project-management:DEC-063#1
       artefact:
         - ACT-worker-agent
         - REQ-061
@@ -113,7 +117,11 @@ pkit:
 > [!WARNING]
 > **Not built yet:** nothing renews an ownership, or checks an ownership before a push. DEC-059 point 9 decides both, and #2136 tracks it.
 
-7. The worker builds the Task on the Task's branch, and opens the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request): `pkit pm review-work <N>`, as `UC-061` step 7 describes (DEC-026).
+7. The worker builds the Task on the Task's branch through the build command, which starts a [builder agent](../../../glossary.md#term-builder-agent--builder-agent) for the Task ([DEC-063 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-063-task-builder.md#1-the-build-command-is-the-only-way-a-workers-task-is-built)). The worker then checks the work, pushes it and opens the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request): `pkit pm review-work <N>`, as `UC-061` step 7 describes (DEC-026).
+
+> [!WARNING]
+> **Not built yet:** no build command exists, so the worker builds the Task in its own session. DEC-063 point 1 decides the build command, and #2287 tracks it.
+
 8. The worker lands the Task, as `UC-089` describes.
 
 **Variants:**

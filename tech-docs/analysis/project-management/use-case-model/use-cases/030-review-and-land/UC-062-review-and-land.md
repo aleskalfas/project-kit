@@ -104,7 +104,7 @@ pkit:
 - **CI pipeline** (`core:ACT-ci-pipeline`): runs the checks the merge waits for, at the [pull request](../../../../core/glossary.md#term-pull-request--pull-request)'s head.
 - **Operator** (`core:ACT-operator`): is asked before a command changes a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From [UC-061](../020-file-and-move/UC-061-move-issue.md):** The [Task](../../../glossary.md#term-task--task) is in Review, and its [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
+**Preconditions:** **From [UC-061](../020-file-and-move/UC-061-move-issue.md):** The developer's [Task](../../../glossary.md#term-task--task) is in Review, and its [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 
 **Assumptions:**
 

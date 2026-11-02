@@ -87,7 +87,7 @@ pkit:
 - Each agent of the [topology](../../../glossary.md#term-topology--topology) works in the agent's own [clone](../../../glossary.md#term-clone--clone) of the project's repository, on one machine or on a platform's sandboxes ([DEC-059](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md)).
 - The [backbone](../../../../core/glossary.md#term-backbone--backbone) resolves the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), the project's settled state, in one way for every command ([COR-054](../../../../../../.pkit/decisions/core/COR-054-default-branch.md)).
 
-**Trigger:** The adopter decides to run several AI agents on the [project](../../../../core/glossary.md#term-project--project) at once, or to alter the [seats](../../../glossary.md#term-seat--seat) of the project's [topology](../../../glossary.md#term-topology--topology).
+**Trigger:** The adopter decides to run several AI agents on the [project](../../../../core/glossary.md#term-project--project) at once, or to alter the [topology](../../../glossary.md#term-topology--topology)'s [seats](../../../glossary.md#term-seat--seat) on the figures `UC-091` gives.
 
 **Main path:**
 
@@ -118,15 +118,15 @@ pkit:
    - a seat whose state issue is not named
    - a scope that names an unknown workstream or [kind of work](../../../glossary.md#term-kind-of-work--kind-of-work)
    - a seat that names a pool the topology does not declare
-   - a seat that names pools where none are declared, or a planner's seat that names a pool ([DEC-061 point 10](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#10-the-check-refuses-an-undeclared-pool-and-the-listings-warn-of-stranded-work))
+   - a seat that names pools where none are declared, or a planning agent's seat that names a pool ([DEC-061 point 10](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#10-the-check-refuses-an-undeclared-pool-and-the-listings-warn-of-stranded-work))
    - a seat deleted or moved against the default branch, rather than retired
 
-8. A person reviews the change, and the change merges like any other. The topology binds once the topology is on the default branch. Every clone reads the topology from there, never from the clone's own branch or working tree (DEC-059 point 1).
+8. The adopter has the change reviewed and merged, as `core:UC-034` describes. The topology binds once the topology is on the default branch. Every clone reads the topology from there, never from the clone's own branch or working tree (DEC-059 point 1).
 
 **Variants:**
 
 - **1a.** The adopter alters a [topology](../../../glossary.md#term-topology--topology) already in place. A new [seat](../../../glossary.md#term-seat--seat) goes at the end of the list, and a seat that leaves stays in the list, marked retired. Renaming a seat retires the seat and adds a new seat, so no seat's number moves (DEC-059 points [2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope) and [6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)). The topology's check of step 7 names a seat deleted or moved against the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), rather than retired.
-- **1b.** The adopter declares [pools](../../../glossary.md#term-pool--pool) of workers, each by a neutral name such as `alpha`. Each seat that builds names the pools it serves, and a planner's seat names none ([DEC-061 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)). Moving workers from one pool to another is an edit of the seats' pools, a reviewed [change](../../../../core/glossary.md#term-change--change) like any other. The adopter adds pools only once every [clone](../../../glossary.md#term-clone--clone) that may take a seat runs code that reads them (variant 8b).
+- **1b.** The adopter declares [pools](../../../glossary.md#term-pool--pool) of workers, each by a neutral name such as `alpha`. Each seat that builds names the pools it serves, and a planning agent's seat names none ([DEC-061 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)). Moving workers from one pool to another is an edit of the seats' pools, a reviewed [change](../../../../core/glossary.md#term-change--change) like any other. The adopter adds pools only once every [clone](../../../glossary.md#term-clone--clone) that may take a seat runs code that reads them (variant 8b).
 
 - **2a.** A clone holds no seat. The clone marks no [issue](../../../glossary.md#term-issue--issue) and is guarded by nothing, as a clone with no number ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 - **2b.** The adopter asks a clone for the clone's number: `pkit pm set-instance --show` prints the number, or `unset` (`set-instance.py`).

@@ -48,7 +48,7 @@ An [ownership](../glossary.md#term-ownership--ownership) makes an instance the o
 
 Each seat has a [state issue](../glossary.md#term-state-issue--state-issue), which shows which clone holds the seat now ([DEC-058](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md) and [DEC-059 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)).
 
-A topology may also declare [pools](../glossary.md#term-pool--pool) of workers. Each seat that builds then takes its work only from the pools it serves. A person puts each line of work into a pool by its [Milestone](../glossary.md#term-milestone--milestone) ([DEC-061](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md)).
+A topology may also declare [pools](../glossary.md#term-pool--pool) of workers. Each seat that builds then takes its work only from the pools it serves. A person puts a [Milestone](../glossary.md#term-milestone--milestone)'s work into a pool by marking the Milestone ([DEC-061](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md)).
 
 These concepts serve the use cases in [040-work-in-parallel](../overview/README.md#040-work-in-parallel). The journey [JRN-004](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md) follows the adopter across those use cases, from setting up the topology to adjusting the topology on what the adopter measures.
 
@@ -238,9 +238,9 @@ A scope is the part of a [project](../../core/glossary.md#term-project--project)
 
 Defined in [TERM-pool](../glossary.md#term-pool--pool).
 
-**Why:** A person decides what each worker may take, and how many workers each line of work gets. Lines of work start and finish often, so a line of work changes no committed configuration ([DEC-061](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md)).
+**Why:** A person decides what each worker may take, and how many workers each [Milestone](../glossary.md#term-milestone--milestone)'s work gets. Milestones open and close often, so putting a Milestone's work into a pool changes no committed configuration ([DEC-061](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md)).
 
-A pool is a named set of a [project](../../core/glossary.md#term-project--project)'s open [Milestones](../glossary.md#term-milestone--milestone), whose work only the [seats](../glossary.md#term-seat--seat) serving the pool take of their own choosing. The [topology](../glossary.md#term-topology--topology) declares the pools, and each seat that builds names the pools it serves ([DEC-061 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)). A person puts a Milestone, with each [Task](../glossary.md#term-task--task) in it, into a pool by a `Pool:` line in its description ([DEC-061 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#2-a-milestone-joins-a-pool-by-a-line-in-its-description)). Where the topology declares no pool, every seat takes from the one shared pool of [ready Tasks](../glossary.md#term-ready-task--ready-task).
+A pool is a named set of a [project](../../core/glossary.md#term-project--project)'s open Milestones, whose work only the [seats](../glossary.md#term-seat--seat) serving the pool take of their own choosing. The [topology](../glossary.md#term-topology--topology) declares the pools, and each seat that builds names the pools it serves ([DEC-061 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)). A person puts a Milestone, with each [Task](../glossary.md#term-task--task) in it, into a pool by a `Pool:` line in its description ([DEC-061 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#2-a-milestone-joins-a-pool-by-a-line-in-its-description)). Where the topology declares no pool, every seat takes from the one shared pool of [ready Tasks](../glossary.md#term-ready-task--ready-task).
 
 **Attributes:**
 
@@ -576,4 +576,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 
-**Builder agent:** None.
+**Builder agent:**
+
+- [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
+- [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md)

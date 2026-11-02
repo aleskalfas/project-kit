@@ -12,9 +12,6 @@ shortfalls:
   - at: 1
     issue: "#521"
     record: project-management:DEC-035#7
-  - at: 1
-    issue: "#521"
-    record: project-management:DEC-059#6
 pkit:
   friction:
     anchors:
@@ -62,9 +59,6 @@ pkit:
 
 > [!WARNING]
 > **Not built yet:** no command lists issues signed by their owner. DEC-035 point 7 decides the signed listing, and #521 tracks it.
-
-> [!WARNING]
-> **Not built yet:** no owner carries a seat's name. DEC-059 point 6 decides that an instance is named by its seat, and #521 tracks it.
 
 2. For each owned [Task](../../../glossary.md#term-task--task), the planner reads the Task's state in the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle), In Progress or Review. Where the [substrate map](../../../glossary.md#term-substrate-map--substrate-map) binds the state to the board, the Task's card's Status carries that state ([DEC-062 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#5-where-the-map-puts-state-on-the-board-the-boards-status-is-the-source-of-an-open-issues-position)). Elsewhere the Task itself carries it ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 3. The planner lists the seats of the [topology](../../../glossary.md#term-topology--topology): `pkit pm seats`. The listing shows each seat and the [clone](../../../glossary.md#term-clone--clone) that holds the seat. The listing also shows whether the seat's agent plans, builds or does both ([DEC-059 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)). Each holder is read from the seat's [state issue](../../../glossary.md#term-state-issue--state-issue) ([DEC-058 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#4-the-comments-are-the-record-and-the-description-shows-the-current-state)).

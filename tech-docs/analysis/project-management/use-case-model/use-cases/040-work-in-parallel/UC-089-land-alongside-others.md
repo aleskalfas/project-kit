@@ -13,6 +13,10 @@ requirements:
   - REQ-042
 after:
   - [UC-084]
+shortfalls:
+  - at: "4a"
+    issue: "#2287"
+    record: project-management:DEC-063#1
 pkit:
   friction:
     anchors:
@@ -44,6 +48,7 @@ pkit:
         - COR-044#2
         - COR-057#5
         - COR-068
+        - project-management:DEC-063#1
       artefact:
         - ACT-worker-agent
         - REQ-040
@@ -61,7 +66,7 @@ pkit:
 - **CI pipeline** (`core:ACT-ci-pipeline`): runs the checks at each new head of the worker's [pull request](../../../../core/glossary.md#term-pull-request--pull-request).
 - **AI agent** (`core:ACT-ai-agent`): each [required reviewer](../../../glossary.md#term-required-reviewer--required-reviewer) whose verdict no longer stands on the new [base](../../../../core/glossary.md#term-base--base). Each such [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) reviews the new head again ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). It is also each agent the [project](../../../../core/glossary.md#term-project--project) granted, which `fix-drift` starts to propose answers after the merge ([DEC-056 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)).
 
-**Preconditions:** **From [UC-084](UC-084-take-next-task.md):** The [Task](../../../glossary.md#term-task--task) is in Review, and the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
+**Preconditions:** **From [UC-084](UC-084-take-next-task.md):** The worker's [Task](../../../glossary.md#term-task--task) is in Review, and the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 
 **Assumptions:**
 
@@ -83,7 +88,11 @@ pkit:
 **Variants:**
 
 - **3a.** No other [pull request](../../../../core/glossary.md#term-pull-request--pull-request) merged since the worker's [base](../../../../core/glossary.md#term-base--base). The [system](../../../../core/glossary.md#term-system--system) merges at the authorised [head](../../../../core/glossary.md#term-head--head), as `UC-062` steps 12 to 14 describe, and the path goes on at step 7.
-- **4a.** The merge of the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) conflicts. The worker resolves the conflict on the [Task](../../../glossary.md#term-task--task)'s branch. The new head holds an edit the merge authoriser has not seen, so the new head needs a new [authorisation](../../../glossary.md#term-authorisation--authorisation) ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)). The path rejoins at step 1.
+- **4a.** The merge of the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) conflicts. The worker resolves the conflict on the [Task](../../../glossary.md#term-task--task)'s branch through the build command, as `UC-084` step 7 describes ([DEC-063 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-063-task-builder.md#1-the-build-command-is-the-only-way-a-workers-task-is-built)). The new head holds an edit the merge authoriser has not seen, so the new head needs a new [authorisation](../../../glossary.md#term-authorisation--authorisation) ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)). The path rejoins at step 1.
+
+> [!WARNING]
+> **Not built yet:** no build command exists, so the worker resolves the conflict in its own session. DEC-063 point 1 decides that a [builder agent](../../../glossary.md#term-builder-agent--builder-agent) resolves it, and #2287 tracks it.
+
 - **5a.** The default branch merges through a merge queue. The [backbone](../../../../core/glossary.md#term-backbone--backbone) queues the pull request pinned to the pull request's head. The queue merges the agents' pull requests one at a time ([DEC-013](../../../../../../.pkit/capabilities/project-management/decisions/DEC-013-branch-and-pr-conventions.md) and [ADR-061](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md)).
 - **6a.** After step 4, another agent's pull request landed an [anchor](../../../../core/glossary.md#term-anchor--anchor) on what the worker's [change](../../../../core/glossary.md#term-change--change) modifies, so the [change check](../../../../core/glossary.md#term-change-check--change-check) fails on the merge. The system names each document the check fails on, and merges nothing ([DEC-055 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#6-the-merge-as-it-would-land)). The worker merges the default branch again, settles each [finding](../../../../core/glossary.md#term-finding--finding), and pushes. The path rejoins at step 5, or at step 1 where the worker edits a document itself.
 - **7a.** Another run of `fix-drift` in the same [clone](../../../glossary.md#term-clone--clone) holds the clone's lock. The command refuses, and the worker runs `fix-drift` again later ([DEC-056 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#4-the-run-is-bounded)).

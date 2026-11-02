@@ -62,7 +62,7 @@ TERM-audit-comment:
   name: audit comment
   noun-forms: [audit comments]
   status: active
-  definition: "message project-management posts to record why a person set a check aside, or, at the project's fullest setting, each write it governs"
+  definition: "message project-management posts recording why a person set a check aside or moved an issue back, or at the project's fullest setting each governed write"
   pkit:
     friction:
       anchors:
@@ -117,7 +117,7 @@ TERM-builder-agent:
 TERM-bypass:
   name: bypass
   status: active
-  definition: "override of a check that refuses by default, made by a person with an explicit reason, which an audit comment records before the write"
+  definition: "override, with a person's reason, of a check that refuses by default, the reason recorded before the write where the project keeps audit comments"
   pkit:
     friction:
       anchors:
@@ -126,6 +126,8 @@ TERM-bypass:
         record:
           - project-management:DEC-014
           - project-management:DEC-046#1
+          - COR-001
+          - COR-010
 TERM-cascade:
   name: cascade
   status: active
@@ -489,7 +491,7 @@ TERM-seat:
   name: seat
   noun-forms: [seats]
   status: active
-  definition: "place in a topology, held by one clone, saying whether the clone's agent plans, builds or does both, and which agent definition that agent follows"
+  definition: "place in a topology, held by at most one clone, saying whether its agent plans, builds or both, and the agent definition it follows"
   pkit:
     friction:
       anchors:
@@ -543,7 +545,7 @@ TERM-substrate-map:
 TERM-task:
   name: Task
   status: active
-  definition: "issue for one unit of implementation work, which one pull request delivers"
+  definition: "issue for one unit of work, which one pull request delivers or, where the work is no pull request, a completed close ends"
   pkit:
     friction:
       anchors:
@@ -587,7 +589,7 @@ TERM-use-case-entry:
   name: use-case entry
   noun-forms: [use-case entries]
   status: active
-  definition: "item a component fills into a data point of the work-tracking role, naming one goal the project's software serves, by its id, title and status"
+  definition: "item a component or the project fills into a work-tracking data point, naming one goal the project's software serves, by its id, title and status"
   pkit:
     friction:
       anchors:
@@ -991,8 +993,8 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#pool).
 
 - **Scope:** what narrows one seat's own work, and reserves nothing for that seat. A pool reserves its work for the seats that serve the pool, and a seat's [scope](#term-scope--scope) narrows what its pools hold ([DEC-061 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)).
 - **The shared pool:** the [ready Tasks](#term-ready-task--ready-task) that every seat shares where the topology declares no pool ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)). Where the topology declares pools, each seat that builds takes from its own pools instead.
-- **Milestone:** the container that holds one line of work. A Milestone joins a pool by its `Pool:` line, and a pool holds the lines of work of its open Milestones (DEC-061 point 2).
-- **Workstream:** a long-lived area that classifies issues. A pool says which seats take a line of work, and changes as a person marks new Milestones.
+- **Milestone:** the container whose work joins a pool. A Milestone joins a pool by its `Pool:` line, and a pool holds the work of its open Milestones (DEC-061 point 2).
+- **Workstream:** a long-lived area that classifies issues. A pool says which seats take a Milestone's work, and changes as a person marks new Milestones.
 
 ## TERM-ready-task — ready Task
 
@@ -1089,7 +1091,7 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#topology).
 **Distinctions:**
 
 - **DEC-045's topology file:** one person's file, kept on one machine and never committed, that lists the person's [instances](#term-instance--instance) and the workstreams each instance handles ([DEC-045 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#2-a-per-user-machine-local-topology-file--not-committed-not-team-shared)). [DEC-059 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch) overturns that file: a topology is the project's committed configuration.
-- **Seat:** one place in a topology, held by one [clone](#term-clone--clone). The topology says nothing of who holds a seat now. The seat's [state issue](#term-state-issue--state-issue) shows the holder.
+- **Seat:** one place in a topology, held by at most one [clone](#term-clone--clone) at a time. The topology says nothing of who holds a seat now. The seat's [state issue](#term-state-issue--state-issue) shows the holder.
 - **Instance:** one clone of the project. The clone takes a seat of the topology by the seat's name, or the first free seat ([DEC-059 point 4](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
 - **Batch plan:** the outline of the issues for one intent. A topology says who works, and a [batch plan](#term-batch-plan--batch-plan) says what is worked on.
 
@@ -1108,12 +1110,12 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 Explained in [VIEW-batch-planning](domain-model/050-batch-planning.md#use-case-entry).
 
-**Example:** in project-kit, software-analysis fills the [data point](../core/glossary.md#term-data-point--data-point). One of its entries is `UC-044`, titled "Write a page for the reader it names", `active`, with the path of its file.
+**Example:** in project-kit, software-analysis fills the [data point](../core/glossary.md#term-data-point--data-point). One of its entries is `UC-060`, `active`, with the path of its file. Its title is "File a [Task](#term-task--task) under its parent, its title and body checked as it is filed".
 
 **Distinctions:**
 
 - **Use case:** another [component](../core/glossary.md#term-component--component)'s description of how the software fulfils one goal, with its steps. A use-case entry names one by its id and title, and holds none of its steps ([DEC-054 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#1-the-point)).
-- **A citation in an issue's body:** a line of the body's `## Use cases` section, such as `- UC-044 — Write a page for the reader it names`. It names an entry by its id, and [validation](../core/glossary.md#term-validation--validation) warns where the data point holds no such id ([DEC-054 point 4](../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#4-the-rule)).
+- **A citation in an issue's body:** a line of the body's `## Use cases` section, such as `- UC-060 — File a Task under its parent, its title and body checked as it is filed`. It names an entry by its id, and [validation](../core/glossary.md#term-validation--validation) warns where the data point holds no such id ([DEC-054 point 4](../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#4-the-rule)).
 
 ## TERM-verdict — verdict
 
