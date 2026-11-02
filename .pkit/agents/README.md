@@ -17,7 +17,7 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
         - .pkit/agents/core/rule-set-reviewer.md
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, COR-062, COR-064, ADR-051, ADR-052, "ADR-065#11"]
-      artefact: [.pkit/lifecycle/README.md#seed-paths, .pkit/decisions/README.md#citing]
+      artefact: [.pkit/lifecycle/upgrade-flow.md#seed-paths, .pkit/decisions/README.md#citing]
 ---
 
 # Agents

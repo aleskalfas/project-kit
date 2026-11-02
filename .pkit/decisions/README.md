@@ -16,9 +16,9 @@ pkit:
         - src/project_kit/rule_sets.py
       record: [COR-001, COR-003, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#1", "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6", "COR-065", "COR-066#1", "COR-066#4", COR-068]
       artefact:
-        - .pkit/lifecycle/README.md#the-steps-of-a-transition
-        - .pkit/lifecycle/README.md#seed-paths
-        - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
+        - .pkit/lifecycle/upgrade-flow.md#the-steps-of-a-transition
+        - .pkit/lifecycle/upgrade-flow.md#seed-paths
+        - .pkit/lifecycle/upgrade-flow.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
 ---
 

@@ -25,7 +25,7 @@ pkit:
         - .pkit/adapters/claude-code/README.md#what-this-adapter-ships
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
-        - .pkit/lifecycle/README.md#how-a-registered-command-is-run
+        - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
 ---
 
 # Adapters
@@ -97,7 +97,7 @@ Some commands start an agent with nobody watching: project-management's `review-
 
 **What makes a runner.** Unlike the primitives above, the lifecycle never runs it, and the backbone never finds it by file name:
 
-- **A registered command.** The adapter registers it in its package's `commands:` tree under the one reference `run-agent`. The backbone finds it through its one lookup of that tree ([the lifecycle README, "How a registered command is run"](../lifecycle/README.md#how-a-registered-command-is-run)). A capability's command of that name is no runner.
+- **A registered command.** The adapter registers it in its package's `commands:` tree under the one reference `run-agent`. The backbone finds it through its one lookup of that tree ([the lifecycle reference's manifest schema, "How a registered command is run"](../lifecycle/manifest.md#how-a-registered-command-is-run)). A capability's command of that name is no runner.
 - **Run once for each run.** Each call starts one agent, so a runner is not idempotent. The backbone runs it under the agent-run policy of its one command runner, which the lifecycle README states: no arguments, the request on standard input, from the project root.
 - **One runner for a project.** Where no registered adapter registers one, the run is refused, and the command that asked starts no agent and says why. Where more than one does, the run is refused too, until a record says how a project names its harness.
 
@@ -128,7 +128,7 @@ A confined run's answer adds two keys: `refused_calls`, each call the harness re
 **What a runner owes:**
 
 - **No bypass.** It passes the harness only flags from a closed set, which its adapter's README lists. No member of the set approves a call, or loads configuration other than the run's own (ADR-066 point 4).
-- **The limit.** At `limit_seconds` it ends the harness and every process still descended from the harness, one the harness started in a session of its own included. A process that left that tree before the limit, as one that daemonises leaves it, is not reached, and the adapter's README says so. The backbone gives the runner thirty seconds past the limit to do this and answer. Then it asks the runner to stop with `SIGTERM`, and kills it two seconds later ([the lifecycle README, "How a registered command is run"](../lifecycle/README.md#how-a-registered-command-is-run)). Asked to stop, a runner ends the harness the same way.
+- **The limit.** At `limit_seconds` it ends the harness and every process still descended from the harness, one the harness started in a session of its own included. A process that left that tree before the limit, as one that daemonises leaves it, is not reached, and the adapter's README says so. The backbone gives the runner thirty seconds past the limit to do this and answer. Then it asks the runner to stop with `SIGTERM`, and kills it two seconds later ([the lifecycle reference's manifest schema, "How a registered command is run"](../lifecycle/manifest.md#how-a-registered-command-is-run)). Asked to stop, a runner ends the harness the same way.
 - **The environment.** It does not pass on the backbone's own variables for its run of the runner.
 - **The marker** (ADR-066 point 8). It refuses when `PKIT_AGENT_RUN` is in its own environment, even empty, and sets `PKIT_AGENT_RUN=1` in the harness's, for both forms. So no route around the backbone's run command starts an agent from a run.
 - **For a confined run, as its adapter's README states:** the harness's version within the range its author tested the confined form on, and the platform's sandbox, or a refusal (ADR-066 point 2); only its own settings and a checked definition (point 3); no flag, setting, definition field or variable that bypasses the run's rules (point 4); the run's rules in native rules, which fail closed (point 5); and the shell writing only the workspace, with no host allowed (point 6).

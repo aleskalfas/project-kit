@@ -14,8 +14,8 @@ pkit:
         - scripts/latest_tag.py
       record: [COR-010, COR-030, COR-041, PRJ-002, PRJ-004, ADR-040]
       artefact:
-        - .pkit/lifecycle/README.md#backbone-manifest-projectpkitmanifestyaml
-        - .pkit/lifecycle/README.md#the-replay-a-missing-completion
+        - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
+        - .pkit/lifecycle/upgrade-flow.md#the-replay-a-missing-completion
       source: [common-changelog, keep-a-changelog]
 ---
 
@@ -523,7 +523,7 @@ PR** a human merges — it is *not* auto-run on every merge.
 `apply` in order: writes each tier's version (`.pkit/VERSION` for the backbone,
 and with it the self-host `.pkit/manifest.yaml`'s `backbone_version:` and
 `completed_version:` lines, as
-[the lifecycle README's "Backbone manifest"](../lifecycle/README.md#backbone-manifest-projectpkitmanifestyaml)
+[the lifecycle reference's manifest schema, "Backbone manifest"](../lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml)
 and [PRJ-007](../decisions/project/PRJ-007-release-maintains-self-host-manifest.md)
 say; the `version:` line in a component's `package.yaml`); **broadens**
 `requires_backbone` (see below); **raises the declared floors**, on the
@@ -543,7 +543,7 @@ In project-kit's own source no capability has a manifest (ADR-059), so the
 
 A version transition may run every backbone migration again, over a project
 whose migration history is unknown (COR-010;
-[the lifecycle README, "The replay"](../lifecycle/README.md#the-replay-a-missing-completion)).
+[the lifecycle reference's upgrade flow, "The replay"](../lifecycle/upgrade-flow.md#the-replay-a-missing-completion)).
 A backbone migration that adds a missing default then restores one
 the project removed after the migration first ran. COR-010 has the release's
 notes say so. No command checks it: before `apply`, whoever runs the release
