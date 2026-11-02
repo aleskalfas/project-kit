@@ -31,7 +31,12 @@ pkit:
         - src/project_kit/friction_discovery.py
         - src/project_kit/package_validate.py
         - hatch_build.py
-      record: [COR-001, COR-004, COR-005, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-050#1", "COR-052#5", COR-053, "COR-059#2", "COR-059#3", COR-061, "COR-062#9", "living-docs:DEC-001", ADR-003, ADR-051, "ADR-055#3", ADR-059, "ADR-065#1"]
+        - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
+        - .pkit/schemas/backbone/package.schema.json
+        - .pkit/schemas/backbone/config.schema.json
+        - .pkit/schemas/backbone/filler.schema.json
+        - .pkit/schemas/backbone/rule-set.schema.json
+      record: [COR-001, COR-004, COR-005, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-050#1", "COR-052#5", COR-053, "COR-059#2", "COR-059#3", COR-061, "COR-062#9", "COR-062#11", "ADR-057#2", "COR-052#6", "COR-051#5", COR-019, "COR-059#9", "ADR-065#9", "ADR-065#10", "living-docs:DEC-001", ADR-003, ADR-051, "ADR-055#3", ADR-059, "ADR-065#1"]
       artefact:
         - .pkit/lifecycle/manifest.md
         - .pkit/lifecycle/component-registry.md
@@ -58,6 +63,11 @@ pkit:
         - .pkit/lifecycle/upgrade-flow.md#the-replay-a-missing-completion
         - .pkit/lifecycle/upgrade-flow.md#the-steps-of-a-transition
         - .pkit/lifecycle/upgrade-flow.md#upgrading-an-incubated-capability-cor-031-d1d4
+        - .pkit/lifecycle/upgrade-flow.md#the-capabilities-rules-index
+        - .pkit/lifecycle/upgrade-flow.md#what-a-step-newly-binds
+        - .pkit/lifecycle/manifest.md#the-methodologys-literals
+        - .pkit/lifecycle/manifest.md#package-metadata-packageyaml
+        - .pkit/lifecycle/migrations.md#directory-layout
 ---
 
 # Lifecycle
@@ -105,6 +115,8 @@ The lifecycle keeps a project's state in these places under `.pkit/`:
         └── manifest.yaml                            ← per-component manifest
 ```
 
+Where a tier's migrations lie, and how each script is named, is [`migrations.md`, "Directory layout"](migrations.md#directory-layout).
+
 **Authoring.** Nobody stamps these layouts by hand. `pkit new adapter <name>`, `pkit new capability <name>` and `pkit new migration` stamp the contract these pages define, and the CLI reference specifies them. The stamps are the CLI's own code, which ships with it. So an upgrade that changes a contract also changes what they stamp.
 
 ## The two tiers
@@ -112,11 +124,9 @@ The lifecycle keeps a project's state in these places under `.pkit/`:
 The backbone and its components each carry a version of their own, in semantic versioning, `major.minor.patch` (COR-010).
 
 - **Backbone:** the core that ships together, as one release with one version number. It holds the core decisions and the specification, the rules, and the CLI with its runtime.
-- **Components:** installable pieces, each versioned on its own, that depend on a range of backbone versions.
-  - **Capabilities** (COR-017): `demo-recording`, `doc-examples`, `evidence`, `living-docs`, `project-management`, `software-analysis`, `software-engineering` and `visual-communication` ship today.
-  - **Adapters:** `claude-code` ships today. Others may follow, such as `codex` or `cursor`.
+- **Components:** installable pieces, each versioned on its own, that depend on a range of backbone versions. Capabilities (COR-017) and adapters are components.
   - **No bundles:** alternative implementations within a capability live as the capability's own data, not as bundles in the file system (COR-027).
-- **A component's range:** each component declares the backbone versions it works with in its `package.yaml`, as `requires_backbone: ">=X.Y.Z, <W.0.0"`.
+- **A component's range:** each component declares the backbone versions it works with in its `package.yaml`, as `requires_backbone: ">=X.Y.Z, <W.0.0"` ([`manifest.md`, "Package metadata"](manifest.md#package-metadata-packageyaml)).
 - **Patch releases:** a patch release is a backward-compatible fix, and carries no migration. A migration folder is named for its full target version, with the patch always `0`, such as `2.1.0/`. It covers every patch of that minor line.
 
 ## Manifest schema
@@ -349,7 +359,7 @@ A version that cannot be read on the installed side skips the capability, so non
 
 The tier map above — which trees the kit owns, which are the project's, and how a capability's `origin` changes the answer — is also a question *other* layers need to ask. `.pkit/lifecycle/ownership.py` answers it as `is_sync_managed(target_root, path)`, and every consumer imports that one definition.
 
-It answers a **second, narrower** question beside it: `is_adopter_owned_by_tier(rel_posix)` — *does this `.pkit/`-relative path sit on the project side of the no-shared-files split, by tier alone?* The two are not interchangeable, and picking the wrong one is a real error. `is_sync_managed` additionally consults a capability's **registration** (an unregistered or `incubated-in-repo` capability is not sync-managed whatever its tier) and reads everything *outside* `.pkit/` as unmanaged — so `src/`, which legitimately ships, answers False. A caller asking "may this be distributed?" needs the tier predicate; a caller asking "is this the kit's to manage, so an agent may not claim write authority over it?" needs `is_sync_managed`. Note what that second question is **not**: `pkit sync` does not call it. Sync decides what it writes through the copy path's own ownership handling, so a wrong answer here cannot overwrite an adopter's file — it can only misplace write authority. Pass **`is_adopter_owned_by_tier`** a file path: its depth-free `project/` case reads every part except the last, so a directory path naming the tier itself (`agents/project`) answers False — though its other cases do match on a final component, so this is a rule about that case rather than about the whole predicate. `is_sync_managed` is deliberately the other way: it matches the declared tier positions by *prefix*, so the tier directory itself answers "the adopter's" — its consumer passes overlay entries, which are usually directories. "Is this *directory* the adopter's tier?" is a different question, and the packaging hook declares its own answer rather than asking this predicate.
+It answers a **second, narrower** question beside it: `is_adopter_owned_by_tier(rel_posix)` — *does this `.pkit/`-relative path sit on the project side of the no-shared-files split, by tier alone?* The two are not interchangeable, and picking the wrong one is a real error. `is_sync_managed` additionally consults a capability's **registration** (an unregistered or `incubated-in-repo` capability is not sync-managed whatever its tier) and reads everything *outside* `.pkit/` as unmanaged — so `src/`, which legitimately ships, answers False. A caller asking "may this be distributed?" needs the tier predicate; a caller asking "is this the kit's to manage, so an agent may not claim write authority over it?" needs `is_sync_managed`. Note what that second question is **not**: `pkit sync` does not call it. Sync decides what it writes through the copy path's own ownership handling, so a wrong answer here cannot overwrite an adopter's file — it can only misplace write authority. The name invites the other misreading. Pass **`is_adopter_owned_by_tier`** a file path: its depth-free `project/` case reads every part except the last, so a directory path naming the tier itself (`agents/project`) answers False — though its other cases do match on a final component, so this is a rule about that case rather than about the whole predicate. `is_sync_managed` is deliberately the other way: it matches the declared tier positions by *prefix*, so the tier directory itself answers "the adopter's" — its consumer passes overlay entries, which are usually directories. "Is this *directory* the adopter's tier?" is a different question, and the packaging hook declares its own answer rather than asking this predicate.
 
 It lives here rather than in the CLI package for the reason for the permission decision core: an adapter's deploy primitive runs **in the adopter's tree**, where the globally-installed `pkit` runtime is not importable. Propagated in-tree code is the only home both the CLI and a propagated adapter script can reach, so the area is propagated and the module ships with it. Dependency direction is inward — the CLI imports it, each adapter imports it, and it imports neither.
 
@@ -386,7 +396,7 @@ Each heading that left this page keeps its address here, as a heading that leads
 
 This section keeps the reasons behind the contract on the pages beside this one, and the tasks an adopter carries out by hand. Each item links the section it explains.
 
-### The manifests and package metadata
+### Behind the manifests and package metadata
 
 - **Capability origin (COR-031)** ([`manifest.md`](manifest.md#capability-origin-cor-031)): why origin lives in lifecycle-owned install-state, never inside the capability's own subtree. An incubated capability's subtree is adopter-owned. Writing lifecycle state into it would re-create the ownership blur the origin distinction exists to prevent (COR-031 D2).
 - **Where a capability's manifest lives** ([`manifest.md`](manifest.md#where-a-capabilitys-manifest-lives)): why there, under the capability's `project/`. Every ownership predicate treats a capability's `project/` as the project's (["The ownership predicates"](#the-ownership-predicates-ownershippy)). So no copy of the capability's tree deletes or overwrites the manifest, and the bundle ships none.
@@ -395,7 +405,7 @@ This section keeps the reasons behind the contract on the pages beside this one,
   - **The kebab-case keys:** a record that names the keys people write decides their spelling (COR-053 point 3 and its Rationale). COR-050 point 1 says the same of the friction block.
   - **`schema_version` inside the blocks (COR-052 point 5, COR-053 point 10):** it keeps its snake_case there because it is the field that carries a point's version. It carries it everywhere that version is written: a filler envelope, a role block's point block.
   - **No rename:** no record decides a casing rule for the whole file. Renaming either family would be a surface change owing a migration (COR-010) for no reader's benefit.
-- **Validation: the package schema** ([`manifest.md`](manifest.md#validation-the-package-schema)): why `pkit new capability` refuses a name a backbone command holds, and `capabilities install` and `register` do not. Refusing at install would make an upgrade break the installation of something that worked. This check names the problem instead.
+- **Validation: the package schema** ([`manifest.md`](manifest.md#validation-the-package-schema)): why `pkit new capability` refuses a name a backbone command holds, and `capabilities install` and `register` do not. Refusing at install would make an upgrade break the installation of something that worked. The check across packages names the problem instead.
 - **Validation: the package schema** ([`manifest.md`](manifest.md#validation-the-package-schema)): why none of the three type checks fails. The project cannot mend a component's package metadata.
 - **Strict on unknown keys** ([`manifest.md`](manifest.md#strict-on-unknown-keys)): why the schema turned strict now, and not from the start.
   - **Why now, and not from the start.** The schema shipped permissive: an unknown key only warned. The blocks the newer records ask for were still being added then, one change at a time. A strict schema would have refused a package ahead of the schema knowing its block.
@@ -408,7 +418,7 @@ This section keeps the reasons behind the contract on the pages beside this one,
   - No script can correct the adopter-owned files that can now fail. None can know what a misspelt key meant, or write a capability's description.
 - **The run** ([`manifest.md`, "How a registered command is run"](manifest.md#how-a-registered-command-is-run)): why a report of a run shows only a trimmed tail of standard error. Only the last lines and bytes are shown, with every terminal escape sequence and control character removed. So a command's words can neither flood nor rewrite the operator's terminal.
 - **A run inside a run** ([`manifest.md`, "How a registered command is run"](manifest.md#how-a-registered-command-is-run)): why the deadline is written on the wall clock. A monotonic clock gives two processes no reference point they can share portably.
-- **A tool the backbone runs itself** ([`manifest.md`, "How a registered command is run"](manifest.md#how-a-registered-command-is-run)): why `gh` runs in the caller's process group. A `gh` request that went on after project-management had read the pull request to decide could act on it unseen.
+- **A tool the backbone runs itself** ([`manifest.md`, "How a registered command is run"](manifest.md#how-a-registered-command-is-run)): why `gh` runs in the caller's process group. project-management runs `pkit pull-request` in a session of its own, and ends that group at its bound. A `gh` request that went on after project-management had read the pull request to decide could act on it unseen.
 - **The policies** ([`manifest.md`, "How a registered command is run"](manifest.md#how-a-registered-command-is-run)): why the report builder is bounded like every other run. The workstream only enriches a report. So waiting on it past the bound would let a hung tracker call hold the whole report back.
 - **The seams back** ([`manifest.md`, "How a registered command is run"](manifest.md#how-a-registered-command-is-run)): why a script never computes again what the backbone computes. Computing it again would be a second home for one computation.
 - **How a registered anchor kind is resolved** ([`manifest.md`](manifest.md#how-a-registered-anchor-kind-is-resolved)):
@@ -434,7 +444,7 @@ This section keeps the reasons behind the contract on the pages beside this one,
   - **What a command filler reads.** A filler never reads a base named for one run, because such a base belongs to a comparison. A value that followed it would be answered per run, a parameter by another route. Nor does a filler compare the branch at hand with settled state. That comparison answers about a change: a process point's question or the consumer's work.
   - **Which policy a point declares.** The point's definer chooses the inert policy, because the backbone cannot tell how a value is read.
 
-### The migration framework
+### Behind the migration framework
 
 - **Naming** ([`migrations.md`](migrations.md#naming)): why each number is used once in a folder. Two scripts of one number would run in the order their slugs give, which nobody chose.
 - **Which version a migration targets** ([`migrations.md`](migrations.md#which-version-a-migration-targets)): why the stamp and the check read as they do.
@@ -443,7 +453,7 @@ This section keeps the reasons behind the contract on the pages beside this one,
 - **Three scopes (per tier)** ([`migrations.md`](migrations.md#three-scopes-per-tier)): why manifest-schema migrations run first in any upgrade flow that touches them. The runtime needs to read the manifest correctly before tracking subsequent migrations.
 - **Script contract, "What it never runs"** ([`migrations.md`](migrations.md#script-contract)): why a migration script runs none of those commands. COR-004 makes a transition one operation, with propagation, migrations, seeding and merge as its parts. Such a command would repeat a part, or add another operation, inside the transition (COR-059 point 3).
 
-### The upgrade flow
+### Behind the upgrade flow
 
 - **The steps of a transition** ([`upgrade-flow.md`](upgrade-flow.md#the-steps-of-a-transition)): why step 1 refuses a component its bundle ships older. Copying it would move its recorded version down, under migrations that run forward only.
 - **The dependency gates** ([`upgrade-flow.md`](upgrade-flow.md#the-dependency-gates)): why no flag overrides a moving capability's refusal. The project controls that dependency.
@@ -454,7 +464,6 @@ This section keeps the reasons behind the contract on the pages beside this one,
   - **Why it is safe:** every backbone migration acts only on a positive sign that its change is needed. It never deletes by a path's name or position alone ([`migrations.md`, "Script contract"](migrations.md#script-contract)).
 - **Sync's guard: no path down, and no migration passed over** ([`upgrade-flow.md`](upgrade-flow.md#syncs-guard-no-path-down-and-no-migration-passed-over)):
   - **Why sync stops in both directions:** a sync at another version would copy another release's content. An older release's content would land over newer content. A newer release's would land without the migrations between the two.
-  - **Why stopping keeps a migration from being passed over:** sync runs no migration.
   - **Why `upgrade` checks the older direction only:** upgrade moves the project to the running version, so a newer pkit is what it is for.
   - **Why `upgrade` refuses under the router's fallback:** an installed pkit older than the pin or the content would take the project back. A newer one would move the project and its pin to its own version, not to a release the upgrade resolved.
 - **Per-component upgrade** ([`upgrade-flow.md`](upgrade-flow.md#per-component-upgrade)): why its checks refuse a capability bundled older. Copying it would move its recorded version down.

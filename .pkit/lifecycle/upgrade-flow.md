@@ -30,6 +30,7 @@ pkit:
         - .pkit/lifecycle/manifest.md#an-adapters-manifest
         - .pkit/lifecycle/manifest.md#a-data-points-question
         - .pkit/lifecycle/manifest.md#how-the-wiring-is-resolved
+        - .pkit/lifecycle/manifest.md#the-connection-documentation-and-friction-blocks
         - .pkit/lifecycle/migrations.md#three-scopes-per-tier
         - .pkit/lifecycle/migrations.md#script-contract
         - .pkit/lifecycle/component-registry.md#install-pre-flight-checks
@@ -138,7 +139,7 @@ A name the capability's installed copy holds, or its manifest records as skipped
 
 ## The capabilities' rules index
 
-This section keeps what counts as the capabilities' rules index at its path, `.pkit/rules/capabilities.md`, and when each step renders it. What the index is, and how a session reaches it, is [the rules reference's](../rules/README.md#the-capabilities-rules-index).
+The backbone renders the capabilities' rules index, `.pkit/rules/capabilities.md`, at each step below, and refuses a file at that path that is not the index. What the index is, and how a session reaches it, is [the rules reference's](../rules/README.md#the-capabilities-rules-index).
 
 - **Rendered whole,** each time after the manifest is written:
   - at first install, sync, the self-host branch and a transition's step 8
@@ -243,7 +244,7 @@ The content a sync writes, and the target of a backbone upgrade, is the running 
 
 The comparison vouches for content only under a tagged install, the one the CLI README recommends ("Installing pkit on PATH"). The development install, from main, carries the last release's version over files that may be newer. So no version vouches for its content.
 
-- **`sync` calls it in both directions,** at its entry, before anything is written. It stops when any of these holds:
+- **`sync` calls it in both directions,** at its entry, before anything is written. Sync runs no migration, so stopping is what keeps a migration from being passed over. It stops when any of these holds:
   - the manifest is missing, or its `backbone_version` is no version
   - the running pkit is not `backbone_version`
   - `completed_version` differs from `backbone_version`, or is missing
@@ -294,7 +295,7 @@ The command moves the capability to the version the running pkit's bundle ships.
 
 `pkit capabilities upgrade <name>` is **origin-aware**. For an `incubated-in-repo` capability there is no kit source to resolve against: the working tree *is* the source. So the command **must not** route through the kit-source resolution path.
 
-Instead, "upgrade" for an incubated capability **re-applies deploy from the in-repo tree**, mirroring sync's skip-branch (the lifecycle README, "The incubated-origin skip-branch"). Any newly-authored skills/agents re-materialise in the harness, and source-reconciliation stays suppressed. If the in-repo subtree has gone missing, the command reports that plainly — never as a kit-source orphan, and never suggesting uninstall.
+Instead, "upgrade" for an incubated capability **re-applies deploy from the in-repo tree**, mirroring sync's skip-branch (the lifecycle README, "The incubated-origin skip-branch (COR-031 D1)"). Any newly-authored skills/agents re-materialise in the harness, and source-reconciliation stays suppressed. If the in-repo subtree has gone missing, the command reports that plainly — never as a kit-source orphan, and never suggesting uninstall.
 
 Sync's guard runs at the command's entry, before the origin is read. So this re-deploy stops under another pkit too, as `pkit sync`'s re-deploy of it does. A `kit-shipped` capability's upgrade path is the transition of one capability above.
 
@@ -309,7 +310,7 @@ Both entry points run the same direction split, and compare a range through one 
 
 ### Mandatory process connections (COR-053 point 6)
 
-A capability's generated `depends-on` entries may carry a mandatory mark (the process area README, "depends_on"). The mark means the upstream process definition must exist, offered at an equal interface version when the entry names one. The lifecycle is the mark's **one reader**, and it reads the mark from package metadata only, never by parsing process definitions.
+A capability's generated `depends-on` entries may carry a mandatory mark (the process area README, "depends_on"). The mark means the upstream process definition must exist, offered at an equal interface version when the entry names one. The lifecycle is the mark's **one reader**, and it reads the mark from package metadata only, never by parsing process definitions. Validation keeps the list fresh against them ([`manifest.md`, "The connection, documentation and friction blocks"](manifest.md#the-connection-documentation-and-friction-blocks)).
 
 It judges through the wiring resolver ([`manifest.md`, "How the wiring is resolved"](manifest.md#how-the-wiring-is-resolved)), over the wiring the operation would leave. That wiring is the installed set with the capability in place of any installed copy, or without it. So a mark refuses exactly when `pkit validate` would then report it unmet.
 

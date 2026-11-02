@@ -15,7 +15,7 @@ pkit:
         - src/project_kit/capability_plans.py
         - src/project_kit/point_questions.py
         - src/project_kit/connections.py
-      record: [COR-001, COR-005, COR-007, COR-010, COR-017, COR-030, COR-031, "COR-051#3", "COR-053#6", COR-061, "ADR-059", "ADR-065#7", "ADR-065#11"]
+      record: [COR-001, COR-005, COR-007, COR-010, COR-017, COR-030, COR-031, COR-041, "COR-051#3", "COR-053#6", COR-061, "ADR-059", "ADR-065#7", "ADR-065#11"]
       artefact:
         - .pkit/lifecycle/manifest.md#discovery-what-a-capability-would-connect-to
         - .pkit/lifecycle/manifest.md#a-data-points-question
@@ -26,7 +26,7 @@ pkit:
 
 # The component registry
 
-The backbone manifest's `components` list is the canonical install record. Each operation below reads or writes it, after the checks it runs first.
+The backbone manifest's `components` list is the canonical install record. The operations below read or write it. The sections after them give the checks that install, register and uninstall run first.
 
 **Install** a component → run the pre-flight checks (below), create its per-component manifest at the designated path, then append a `{kind, name, manifest}` entry to `components`.
 
@@ -35,7 +35,7 @@ The backbone manifest's `components` list is the canonical install record. Each 
 - **Its checks:** install's pre-flight checks, but those it skips ("Register pre-flight checks" below). It skips "exists in kit source", since the tree in the repository *is* the source. It skips "Rule-set names", which only install runs.
 - **Its entry:** it appends a `{kind, name, origin: incubated-in-repo, manifest}` entry.
 - **No copy:** it copies no subtree, and writes no per-component manifest, since the tree is the adopter's (COR-031 D2 and D3).
-- **The same as install otherwise:** deploy primitives and dependency gating run as for install (COR-031 D1). Only source reconciliation differs (the lifecycle README, "The incubated-origin skip-branch (COR-031 D1)").
+- **Deploy and dependency gating:** deploy primitives and dependency gating run as for install (COR-031 D1). Only source reconciliation differs (the lifecycle README, "The incubated-origin skip-branch (COR-031 D1)").
 
 **Remove** a component → run refusal checks (see below), delete the registry entry, then delete the per-component manifest file. Adopter-owned content authored on top of the component (project-side records, customisations) is left untouched per COR-005 and the no-shared-files invariant. For a **capability**, whether the capability's *subtree* is also deleted is origin-dependent. A kit-shipped copy is deleted, an incubated (adopter-authored) subtree is kept unless explicitly purged (COR-031 D4, see "Uninstall: origin-aware removal" below).
 
@@ -141,8 +141,8 @@ Once those pass, **what gets deleted depends on origin** — origin-blind deleti
   - **The order:** the undeploy runs before the registry entry is removed. So a failing adapter leaves the capability registered, and the uninstall can run again.
   - **`--purge`:** deleting an incubated capability's files is a separate, explicit opt-in. `--purge` confirms first, honouring the pause-before-destructive-ops discipline, and `--yes` skips the prompt for non-interactive use. The default never deletes incubated files.
 - **The methodology's source repository, run by its own code:** whatever the origin, the subtree is never deleted. It is unregistered in place as an incubated one is, the adapters' undeploy primitives included.
-  - **Its source, never a copy:** a kit-shipped or incubated capability's subtree is its source there. Uninstall keeps an externally-sourced one too, since it reads every subtree in the source as authored.
+  - **Its source, never a copy:** a kit-shipped or incubated capability's subtree is its source there. Uninstall keeps an externally-sourced one too, though it is a copy there, since uninstall reads every subtree in the source as authored.
   - **A `kit-shipped` registration,** whose uninstall would otherwise delete the subtree: the CLI first says which subtree it would have deleted, and that it unregisters instead. It then asks: `--yes` answers, and `--dry-run` asks nothing.
   - **`--purge`** is refused there. A capability leaves the source through git.
-  - **No caller deletes the source:** the guard resolves the running code's tree itself.
+  - **No caller deletes the source:** the guard sits in the uninstall function every caller goes through, which resolves the running code's tree itself.
   - **Run by other code,** uninstall refuses there before anything else, as install, upgrade and register do.
