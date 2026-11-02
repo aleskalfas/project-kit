@@ -117,7 +117,7 @@ Without project-kit's skills, you keep your procedures in `CLAUDE.md`, or as ski
 | --- | --- | --- | --- |
 | A procedure loaded only for its task | ❌ Every session loads it whole | ✅ Claude Code loads a skill's body when it is used | ✅ The same |
 | Authoring procedures that run a command to write their file | ❌ You write both | ❌ The same | ✅ One for each kind of file a `pkit new` command stamps |
-| Shared procedures updated, with yours kept | ❌ You merge each update by hand | ❌ You copy each update in by hand | ✅ An upgrade brings the methodology's, and writes none of yours |
+| Shared procedures updated, with yours kept | ❌ You merge each update by hand | ❌ You copy each update in by hand | ✅ An upgrade brings the methodology's, and writes none of yours without asking |
 | Changing a shared procedure | ✅ You edit it | ✅ The same | ❌ Your copy under its name replaces it, and takes no more updates |
 | What each session lists | ❌ Every procedure, in full | ✅ Your skills' descriptions alone | ❌ The descriptions of the methodology's skills too |
 | Setup | ✅ None | ✅ None | ❌ `pkit init` |
@@ -206,7 +206,7 @@ $ git status --short .claude/skills .pkit/skills
 - **What validation reads.** `pkit validate` warns where the body cites a record or a file that the front matter does not declare. It also warns where the front matter declares a record the body never cites ([the reference, "Front matter"](../../.pkit/skills/README.md#front-matter)).
 - **When the sync stops.** Where your `pkit` is at another version than your project records, the sync stops before it writes, and names the remedy ([the CLI reference, `sync`](../../.pkit/cli/README.md#sync)).
 - **A family of tasks.** Several operations that share their framing, such as writing, extending and renaming one kind of file, become one composite skill ([the reference, "A composite skill"](../../.pkit/skills/README.md#a-composite-skill)).
-- **A skill you keep in `.claude/skills/` already.** Move its file into `.pkit/skills/project/`, delete its folder under `.claude/skills/`, and sync. The deploy leaves a file it did not make in place, and validation reads only the skills under `.pkit/` ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
+- **A skill you keep in `.claude/skills/<name>/` already.** Move its `SKILL.md` to `.pkit/skills/project/<name>.md`. Where files sit beside it, move the folder to `.pkit/skills/project/<name>/` instead, and rename `SKILL.md` to `<name>.md`. Then delete what is left under `.claude/skills/<name>/`, and sync. The deploy leaves a file it did not make in place, and validation reads only the skills under `.pkit/` ([the reference, "Deployment"](../../.pkit/skills/README.md#deployment)).
 - **A skill of a discipline.** Package it with the discipline's records and agent definitions in a capability of your own, through the `capability-author` skill. The capability keeps its skills in its own `skills/` folder ([the reference, "Layout"](../../.pkit/skills/README.md#layout)).
 
 ## Pair a skill with the command that writes its file

@@ -156,14 +156,14 @@ A skill runs from where its harness reads skills, never from `.pkit/`. The adapt
 - **Which skills:** the project's, core's, and those of each capability the manifest registers. Where two of them ship one name, the project's is deployed, then core's, then a capability's, the first by name ([the same section](../adapters/claude-code/README.md#deploy-skillssh)).
 - **Suspension.** Skills are suspendable ([COR-003](../decisions/core/COR-003-artifact-mechanisms.md)). A project skill that takes the name of core's skill, or of a capability's, replaces it in the harness by the order above. Updates of the replaced skill then reach no session. No project file disables a skill without replacing it.
 - **What warns of a suspension:** only a capability's questions below. Otherwise the deploy prints the link it makes, and `pkit status` lists the skill as the project's.
-- **A capability's upgrade** asks a person about each skill it brings whose name the project already uses ([the lifecycle reference, "A new collision"](../lifecycle/README.md#a-new-collision)). The answers are override, skip or inspect. With nobody to answer, it refuses.
-- **A capability's install** asks the same, but only about a skill of the capability's in the flat form ([the lifecycle reference, "Install pre-flight checks"](../lifecycle/README.md#install-pre-flight-checks)). A project skill made after the install is not asked about.
+- **A capability's upgrade** asks a person about each skill new in its version whose name the project already uses ([the lifecycle reference, "A new collision"](../lifecycle/README.md#a-new-collision)). A skill its installed copy holds, or one the project skipped, is not new. The answers are override, skip or inspect. With nobody to answer, it refuses.
+- **A capability's install** asks the same, but only about a skill of the capability's in the flat form ([the lifecycle reference, "Install pre-flight checks"](../lifecycle/README.md#install-pre-flight-checks)). A project skill that takes the name of a skill the capability already holds is asked about by neither.
 - **Edit the source, never the deployed link** (core rule 12). An edit to the source needs no new deploy, since the link leads to it.
-- **A new or removed skill** reaches the harness at the next `pkit sync`, which removes the deploy's own links to a skill that has gone.
-- **A file the deploy did not make,** such as a hand-kept `.claude/skills/<name>/SKILL.md`, is left alone. No skill of that name is deployed over it, and the deploy reports it skipped.
+- **A new or removed skill** reaches the harness at the next `pkit sync`. The sync removes the deploy's own links to a skill that has gone ([the adapter's README](../adapters/claude-code/README.md#deploy-skillssh)).
+- **A file the deploy did not make,** such as a hand-kept `.claude/skills/<name>/SKILL.md`, is left alone ([the adapter's README](../adapters/claude-code/README.md#deploy-skillssh)). No skill of that name is deployed over it, and the deploy reports it skipped.
 - **Claude Code's own skills:** a personal skill of the same name, in `~/.claude/skills/`, wins over the project's (Claude Code's skills documentation).
 - <a id="today"></a>**What is deployed:** `pkit status` lists each deployed skill under where it was deployed from. It lists the project's own files in the harness's folder apart ([the CLI reference, `status`](../cli/README.md#status)).
-- **A folder with no `<name>/<name>.md`** is skipped by the deploy, which names it, and the other skills deploy.
+- **A folder with no `<name>/<name>.md`** is skipped by the deploy, which names it, and the other skills deploy ([the adapter's README](../adapters/claude-code/README.md#deploy-skillssh)).
 
 <a id="authoring-a-new-skill"></a>
 ## Adding a skill
