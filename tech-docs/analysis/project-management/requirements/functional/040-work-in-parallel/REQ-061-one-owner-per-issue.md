@@ -5,6 +5,7 @@ status: active
 statement: "No instance starts, moves, edits or lands an issue that another of the same person's instances owns, and a same-instant clash ends with one owner."
 measure: "An ordinary command on another instance's issue refuses, unless a person sets the refusal aside with a reason. After a clash at the same instant, the higher-numbered instance gives the issue up and says so."
 applies-to: "The ordinary commands that act on an issue as its owner, `start-work`, `done-work`, `edit-issue` and `move-issue`, wherever the issue's assignee has set instances."
+obligation: v1:sha256:80996212daaba50b8e1c7a5c958fc50c42f32279fff2a6eff039a23aaf8b48ad
 actors:
   - ACT-worker-agent
   - ACT-lead-agent

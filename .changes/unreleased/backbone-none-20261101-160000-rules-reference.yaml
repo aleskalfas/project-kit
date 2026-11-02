@@ -1,0 +1,11 @@
+component: backbone
+kind: none
+body: >
+  The rules area's README, `.pkit/rules/README.md`, becomes a reference for
+  the AI agent, linking its new guide at `latest` (#2434). It keeps what an
+  agent acts on: where each file is kept, how the layers stand, core's
+  loaded set, a capability's rules, the capabilities' rules index, each
+  rules file's budget, which file a rule goes in and how a project converts
+  its `project.md`. It links the lifecycle reference for what counts as the
+  index at its path, rather than stating it. Each renamed heading keeps its
+  old address, and no command, path or format changes, so no surface moves.

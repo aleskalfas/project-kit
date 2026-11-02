@@ -5,6 +5,7 @@ status: active
 statement: A backbone migration acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone.
 measure: Run over any state a project may hold, its migration history unknown included, the migration changes only what such a sign shows is needed. The migration leaves a project's own file as it was, where only a path the migration names marks the file for change.
 applies-to: Every backbone migration, whenever a version transition runs it, over a project whose migration history may be unknown.
+obligation: v1:sha256:d612e84fad78924a71e7b1ac85a8a14d7b90cfcb2e8233112d298a976cbc4f34
 actors:
   - ACT-adopter
 refines:

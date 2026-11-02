@@ -1,0 +1,6 @@
+component: software-analysis
+kind: none
+body: >
+  project-kit's own software-analysis configuration lists the analysis of
+  the visual-communication capability, with its purpose and areas (#2429).
+  Nothing software-analysis ships to an adopter changes.

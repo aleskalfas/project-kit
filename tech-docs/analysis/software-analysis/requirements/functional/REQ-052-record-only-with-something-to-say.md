@@ -5,6 +5,7 @@ status: active
 statement: A revalidation record is written only for a planned revalidation, one that found a regression or a gap, or a stale artefact a person confirmed.
 measure: "`pkit analysis new revalidation` refuses any other record, and a record whose regression or gap no gap names, and writes nothing."
 applies-to: "Every revalidation record of each analysis, whatever its trigger, and the stamp that writes it."
+obligation: v1:sha256:af181b73495b78833b436651853dfae277a03ba7d97fdef6d6db065b9f76f9bc
 actors:
   - core:ACT-developer
 refines: []

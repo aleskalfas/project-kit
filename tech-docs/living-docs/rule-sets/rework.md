@@ -1,6 +1,6 @@
 ---
 rule-set: REWORK
-version: 3.2.0
+version: 3.4.0
 inherits: [living-docs:LDOC@1, WRITE@2]
 scope:
   paths:
@@ -20,6 +20,10 @@ scope:
     - docs/capabilities/living-docs/030-write-a-page.md
     - docs/capabilities/living-docs/040-have-a-page-read-as-its-reader.md
     - docs/capabilities/living-docs/050-fix-a-stale-page.md
+    - .pkit/capabilities/software-engineering/README.md
+    - docs/capabilities/software-engineering/README.md
+    - .pkit/rules/README.md
+    - docs/rules/README.md
   types: [living-docs:page]
 rules:
   RS-REWORK-001:

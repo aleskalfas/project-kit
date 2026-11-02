@@ -5,6 +5,7 @@ status: active
 statement: "Before a command of project-management writes, it checks the project's prerequisites for the capability, and that whoever runs it is a team member."
 measure: "Where the project does not meet the prerequisites, or a list of members leaves out the person, the command refuses before its first write. It names the cause, and changes nothing."
 applies-to: "Every command of project-management that writes, whether a person runs it or an agent runs it for them. Where the team keeps no list of members, or an empty one, every person passes the second check."
+obligation: v1:sha256:39fa16af1be49e1428e1b202b3f3cdae7d2bc66a26d432f182a6f00dfaed2bef
 actors:
   - core:ACT-developer
   - ACT-planner

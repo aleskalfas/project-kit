@@ -5,6 +5,7 @@ status: active
 statement: "`pkit living-docs validate` checks a page's reader, its structure and its diagrams' `accTitle` and `accDescr` only where the rule each part belongs to binds on the page."
 measure: "On a page where `RS-LDOC-003`, `RS-LDOC-004` or `RS-LDOC-008` does not bind, as `pkit rule-sets reach` gives it, validation reads no part of that rule. Its summary counts the page among those that check left out."
 applies-to: "The capability's validator, `pkit living-docs validate`, wherever it runs: as the `living-docs:spaces` member of `pkit validate`, and inside each stamp of `pkit living-docs new`."
+obligation: v1:sha256:96b6ba85b42a43310bb1a995a199655eb6bc78b49a0df83c252aabcb1777b714
 actors:
   - core:ACT-developer
   - core:ACT-adopter
