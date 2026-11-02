@@ -61,6 +61,25 @@ pkit:
         - COR-050#7
         - COR-051#7
         - COR-052
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#3
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
+        - COR-028
+        - COR-039
+        - PRJ-004
+        - ADR-063
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
+        - COR-039#1
+        - COR-048#5
       artefact:
         - REQ-023
         - REQ-024
@@ -115,11 +134,11 @@ pkit:
 **Variants:**
 
 - **1a.** The [page kind](../../../glossary.md#term-page-kind--page-kind) is one the [project](../../../../core/glossary.md#term-project--project) adds, with a template of its own. The [stamp](../../../../core/glossary.md#term-stamp--stamp) takes only a page kind living-docs declares, so the developer writes the [page](../../../glossary.md#term-page--page) by hand from that template (`stamp.py`). The path goes on at step 10.
-- **2a.** The developer puts the page in a [place](../../../../core/glossary.md#term-place--place) assigned to the [documentation space](../../../glossary.md#term-documentation-space--documentation-space) outside every root, as DEC-001 point 1 allows. The `docs-author` [skill](../../../../core/glossary.md#term-skill--skill)'s page operation offers that place. The stamp writes the page there, as it writes one under the root.
+- **2a.** The developer puts the page in a [place](../../../../core/glossary.md#term-place--place) assigned to the [documentation space](../../../glossary.md#term-documentation-space--documentation-space) outside every root, as [living-docs DEC-001 point 1](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces) allows. The `docs-author` [skill](../../../../core/glossary.md#term-skill--skill)'s page operation offers that place. The stamp writes the page there, as it writes one under the root.
 - **3a.** The page rests on a text outside the repository, such as a standard. The developer captures it in `.pkit/capabilities/living-docs/project/sources/<name>.yaml`, holding its `title`, its `version` and, where it has one, its `url`. The page anchors it with `--source <name>`, and nothing fetches the text ([DEC-001 point 4](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated) and [REQ-025](../../../requirements/constraints/REQ-025-never-fetch-source.md)).
-- **3b.** The page has nothing to [anchor](../../../../core/glossary.md#term-anchor--anchor) yet. The stamp writes an empty [friction](../../../../core/glossary.md#term-friction--friction) block, and [validation](../../../../core/glossary.md#term-validation--validation) counts the page as unanchored for onboarding, never failing it ([DEC-001 point 8](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)). A reason for having no anchors is a person's decision, accepted word for word before it is written ([COR-050 point 1](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)).
+- **3b.** The page has nothing to [anchor](../../../../core/glossary.md#term-anchor--anchor) yet. The stamp writes an empty [friction](../../../../core/glossary.md#term-friction--friction) block, and [validation](../../../../core/glossary.md#term-validation--validation) counts the page as unanchored for [onboarding](../../../glossary.md#term-onboarding--onboarding), never failing it ([DEC-001 point 8](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)). A reason for having no anchors is a person's decision, accepted word for word before it is written ([COR-050 point 1](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)).
 - **4a.** The developer passes `--dry-run`. The [system](../../../../core/glossary.md#term-system--system) makes the checks before the write, prints the page it would write, and writes nothing. Whether the file would be a page of the space shows only once it is written, and the use case ends.
-- **4b.** The two [documentation roots](../../../../core/glossary.md#term-documentation-root--documentation-root) are one folder, as they are by default, and the space is the user or technical space. Before its checks, the system offers to set the internal root apart, at `tech-docs` or a folder the developer names ([DEC-001 point 2](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content)). `pkit config set docs.internal` writes the new internal root, asking once, or off a terminal with the stamp's `--yes`. Declined, nothing is written and the use case ends, and accepted, the path goes on at step 5.
+- **4b.** The two [documentation roots](../../../../core/glossary.md#term-documentation-root--documentation-root) are one folder, as they are by default, and the space is the user or technical space. Before its checks, the system offers to set the internal root apart, at `tech-docs` or a folder the developer names ([DEC-001 point 2](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content)). `pkit config set docs.internal` writes the new internal root, asking once, or off a terminal with the stamp's `--yes` ([COR-048 point 5](../../../../../../.pkit/decisions/core/COR-048-backbone-configuration.md#5-written-only-with-consent)). Declined, nothing is written and the use case ends, and accepted, the path goes on at step 5.
 - **6a.** The request does not hold, in one of these ways, and the system refuses and writes nothing:
   - a space that is no space of the project, or a page kind living-docs does not declare
   - a file that exists, a path that is no Markdown file of the repository, or one reached through a link

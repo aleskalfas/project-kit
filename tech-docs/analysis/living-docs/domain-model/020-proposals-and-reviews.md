@@ -60,7 +60,7 @@ Defined in [TERM-proposal](../glossary.md#term-proposal--proposal).
 
 **Why:** An agent that rewrites pages directly will eventually rewrite them wrongly, such as by fixing a [page](../glossary.md#term-page--page) to match a regression. Proposals that cite their evidence, reviewed by a person, keep the agent's speed without giving up a person's judgement ([DEC-001](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)).
 
-A proposal is an edit the living-docs agent drafts, and leaves for a person to apply or refuse. It changes a page's text or its anchors, or in onboarding the [documentation spaces](../glossary.md#term-documentation-space--documentation-space)' declarations too. It cites what it rests on: the [change](../../core/glossary.md#term-change--change) that caused it and the anchors behind each statement it changes.
+A proposal is an edit the living-docs agent drafts, and leaves for a person to apply or refuse. It changes a page's text or its anchors, or in [onboarding](../glossary.md#term-onboarding--onboarding) the [documentation spaces](../glossary.md#term-documentation-space--documentation-space)' declarations too. It cites what it rests on: the [change](../../core/glossary.md#term-change--change) that caused it and the anchors behind each statement it changes.
 
 **Attributes:**
 
@@ -111,7 +111,7 @@ Defined in [TERM-onboarding-plan](../glossary.md#term-onboarding-plan--onboardin
 
 **Why:** An agent that moves a [project](../../core/glossary.md#term-project--project)'s documents itself will misjudge an ambiguous file's audience. A plan that cites its evidence, reviewed by a person, keeps the agent's speed without giving up judgement ([DEC-001](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)).
 
-An onboarding plan says how a project's existing documents come into its [documentation spaces](../glossary.md#term-documentation-space--documentation-space). On such a project nothing is anchored yet, so onboarding is [friction](../../core/glossary.md#term-friction--friction) work on that starting point. A person reviews the plan before anything moves.
+An onboarding plan says how a project's existing documents come into its [documentation spaces](../glossary.md#term-documentation-space--documentation-space). On such a project nothing is anchored yet, so [onboarding](../glossary.md#term-onboarding--onboarding) is [friction](../../core/glossary.md#term-friction--friction) work on that starting point. A person reviews the plan before anything moves.
 
 **Attributes:**
 
