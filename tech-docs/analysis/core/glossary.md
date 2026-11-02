@@ -78,6 +78,20 @@ TERM-answer:
           - COR-050#3
           - COR-050#4
           - COR-062#1
+TERM-answer-file:
+  name: answer file
+  noun-forms: [answer files]
+  status: active
+  definition: "document that one change adds to the backbone's fixed folder and no other change writes, holding what the change settled on each artefact"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/answer_files.py
+        record:
+          - COR-062#1
+          - COR-062#2
+          - COR-062#3
 TERM-area:
   name: area
   noun-forms: [areas]
@@ -278,10 +292,24 @@ TERM-data-point:
           - COR-052#6
           - COR-053#2
           - COR-061#1
+TERM-dead-anchor:
+  name: dead anchor
+  noun-forms: [dead anchors]
+  status: active
+  definition: "declared link of an artefact that resolves to nothing, such as a path matching no file, or only excluded paths or answer files"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_check.py
+          - src/project_kit/friction_repository.py
+        record:
+          - COR-050#7
+          - COR-062#2
 TERM-debt:
   name: debt
   status: active
-  definition: "stale, deferred or answered-apart finding of the whole-repository check, dated from its originating commit: an unanswered change, a deferral, or revalidations answered apart"
+  definition: "stale, deferred or answered-apart finding of the whole-repository check, dated from its originating commit: an unanswered change, a deferral, or revalidation answers made apart"
   pkit:
     friction:
       anchors:
@@ -319,6 +347,18 @@ TERM-default-branch:
           - COR-054#1
           - COR-054#2
           - COR-054#4
+TERM-deferral:
+  name: deferral
+  noun-forms: [deferrals]
+  status: active
+  definition: "answer putting off one anchor's friction as the anchor stood when it was written, with a reason naming the follow-up that answers it"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_write.py
+        record:
+          - COR-050#4
 TERM-distribution:
   name: distribution
   noun-forms: [distributions]
@@ -749,6 +789,32 @@ TERM-report:
           - PRJ-008
           - ADR-047#3
           - COR-043#3
+TERM-revalidation-answer:
+  name: revalidation answer
+  noun-forms: [revalidation answers]
+  status: active
+  definition: "statement in a change's file that records an artefact's review against what changed under its anchors, `updated` or `unchanged` with why it holds"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_write.py
+        record:
+          - COR-050#3
+          - COR-062#1
+TERM-revalidation-point:
+  name: revalidation point
+  noun-forms: [revalidation points]
+  status: active
+  definition: "commit where an artefact's answers first carried the timestamp `at` they carry now, from which the checks measure what its anchors stand on"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_history.py
+        record:
+          - COR-050#3
+          - COR-062#6
 TERM-reviewer:
   name: reviewer
   noun-forms: [reviewers]
@@ -777,6 +843,19 @@ TERM-revisit:
         record:
           - COR-050#16
           - COR-062#1
+          - COR-062#5
+TERM-revisit-entry:
+  name: revisit entry
+  noun-forms: [revisit entries]
+  status: active
+  definition: "answer recording, for one link target a change was asked about, `unchanged` with why it still stands or `deferred` naming an open follow-up"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_write.py
+        record:
+          - COR-050#16
           - COR-062#5
 TERM-revisit-link:
   name: revisit link
@@ -1151,12 +1230,25 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 **Distinctions:**
 
-- **Revalidation:** an answer saying the [artefact](#term-artefact--artefact) was reviewed against the change. It is `updated`, its content changed with it, or `unchanged`, with why it still holds ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
+- **Revalidation answer:** an answer saying the [artefact](#term-artefact--artefact) was reviewed against the change. It is `updated`, its content changed with it, or `unchanged`, with why it still holds ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - **Deferral:** an answer that puts off one [anchor](#term-anchor--anchor)'s [friction](#term-friction--friction), with a reason naming the follow-up that will answer it ([COR-050 point 4](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#4-deferrals)).
 - **Revisit entry:** an answer on a [revisit link](#term-revisit-link--revisit-link)'s source, saying why a [link target](#term-link-target--link-target) still stands or which follow-up will [revisit](#term-revisit--revisit) it ([COR-050 point 16](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)).
 - **The list of answers:** the [change check](#term-change-check--change-check)'s list of every answer a change wrote, word for word, which a [reviewer](#term-reviewer--reviewer) works from (COR-050 point 3). The answers themselves live in answer files, outside the artefacts.
 - **Answer file:** a file that one change adds and no other change writes ([COR-062 point 1](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)). It holds the change's answers on each artefact, and names the other answer files on that artefact each answer read.
 - **A command's answer:** what a resolver or a validator returns to the check that runs it. A missing one fails that check, and is no artefact's answer.
+- **To answer:** the plain verb, as when a command answers which rules bind on a file, or a person answers a question. It shares only the word.
+
+## TERM-answer-file — answer file
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#answer-file).
+
+**Example:** A change revalidates two pages, so its answer file names both. It holds each page's revalidation answer and names the answer files on that page it read.
+
+**Distinctions:**
+
+- **The `friction` block:** the block in an artefact's front matter that holds its anchors. It holds no answer (COR-062 point 1).
+- **The answer folder:** the one path where every answer file lies, the same in every project. It is never a place, so no answer file is an artefact (COR-062 point 2).
+- **A path anchor over the folder:** stands on no answer file. So an anchor that matches only answer files is a dead anchor (COR-062 point 2).
 
 ## TERM-area — area
 
@@ -1350,6 +1442,18 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 - **Inert filler:** a filler that cannot give a result, such as one out of step with the data point's version. Its failure is never read as an empty result ([COR-052 point 6](../../../.pkit/decisions/core/COR-052-slots.md#6-command-fillers-and-failure)).
 - **Question:** a command of the data point's definer that asks the person about the data point, and records each reply. It runs after an [install](#term-install--install), an upgrade or a [backbone](#term-backbone--backbone) transition (COR-061 points [1](../../../.pkit/decisions/core/COR-061-point-questions.md#1-a-data-point-may-declare-a-question) and [2](../../../.pkit/decisions/core/COR-061-point-questions.md#2-it-runs-after-an-install-and-after-a-transition)).
 
+## TERM-dead-anchor — dead anchor
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#dead-anchor).
+
+**Example:** A change deletes `docs/old.md`, which a page's path anchor names. The anchor turns dead, and the change check fails until the change mends the page.
+
+**Distinctions:**
+
+- **Unanchored artefact:** one with no anchors at all, which the backbone reports and never fails on (COR-050 point 2).
+- **An anchor with no answer:** one whose kind's resolver gave no result. It is reported apart, and never read as one that names nothing (COR-050 point 2).
+- **An anchor on a retired point:** stands on nothing, and is no dead anchor, since the record says where the point went (COR-050 point 7).
+
 ## TERM-debt — debt
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#debt).
@@ -1387,6 +1491,19 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 - **Base:** what a check compares a [change](#term-change--change) with. The default branch is every check's [base](#term-base--base) unless a run names another ([COR-054 point 3](../../../.pkit/decisions/core/COR-054-default-branch.md#3-the-override-is-a-base-not-a-declaration)).
 - **Settled state:** what the default branch holds. A [data point](#term-data-point--data-point)'s filler reads it, and never a base named for one run ([COR-052 point 6](../../../.pkit/decisions/core/COR-052-slots.md#6-command-fillers-and-failure)).
 - **The local branch:** read only where the [project](#term-project--project) has no remote, and the reader says so ([COR-054 point 2](../../../.pkit/decisions/core/COR-054-default-branch.md#2-resolved-one-way)).
+
+## TERM-deferral — deferral
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#deferral).
+
+**Example:** The developer runs `pkit friction defer` on a page's anchor on `src/project_kit/release.py`, naming the open issue that will rewrite the page.
+
+**Distinctions:**
+
+- **Deferral point:** the commit that first introduced a deferral. Rewording its reason does not move it (COR-050 point 4).
+- **Deferred debt:** what a deferral leaves on the default branch, dated from its deferral point (COR-050 point 9).
+- **A `deferred` revisit entry:** puts off the revisit of one link target, never an anchor's friction (COR-050 point 16).
+- **A permission hook's deferral:** the hook hands a call it does not decide to the harness, which then decides or asks. It shares only the word (COR-028 point 2).
 
 ## TERM-distribution — distribution
 
@@ -1635,6 +1752,7 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **Extension point:** a part of a [rule](#term-rule--rule) that an inheriting [rule set](#term-rule-set--rule-set) may fill ([COR-051 point 3](../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers)). It shares only the word.
 - **Entry point:** what a hook names, which an [agent definition](#term-agent-definition--agent-definition) needs and a [skill](#term-skill--skill) or a command provides ([COR-013 point 4](../../../.pkit/decisions/core/COR-013-agent-architecture.md#4-the-hook-pattern-agents-executing-in-other-areas)). It shares only the word.
 - **Connection point:** a [component](#term-component--component)'s declared interface under a [role](#term-role--role) ([COR-053 point 2](../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds)). It shares only the word.
+- **To point at:** to lead to something, as a tag points at a commit. It shares only the word.
 
 ## TERM-privilege — privilege
 
@@ -1797,6 +1915,33 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 - **Tracked fix:** an issue the maintainer lists under a report's `## Tracked by` heading. One issue may fix several reports ([PRJ-008](../../../.pkit/decisions/project/PRJ-008-report-command.md)).
 - **Reported note:** a [scratchpad note](#term-scratchpad-note--scratchpad-note) attached to a report. Once the report is posted, the note moves to `reported/` ([COR-043 point 3](../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md#3-entering-the-state-is-produced-by-an-actual-send-never-by-intent)).
 - **The whole-repository report:** what the [whole-repository check](#term-whole-repository-check--whole-repository-check) publishes for the [default branch](#term-default-branch--default-branch), such as project-kit's tracking issue. It is no report in this sense.
+- **To report:** a check's or a command's plain verb, as in "the change check reports friction". It shares only the word.
+- **A command's report:** what a command prints of what it found, such as `pkit permissions diagnose report`. It is no report in this sense.
+
+## TERM-revalidation-answer — revalidation answer
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#revalidation-answer).
+
+**Example:** A change renames a flag that a page describes, so the developer updates the page and writes its revalidation answer with `pkit friction revalidate --outcome updated`.
+
+**Distinctions:**
+
+- **Revalidate:** the verb for writing a revalidation answer, as in "the developer revalidates the page". `pkit friction revalidate` writes one.
+- **Deferral:** an answer that puts off one anchor's friction. It changes no `at`, so it is no revalidation answer (COR-050 point 4).
+- **Revisit entry:** an answer on a link target, which moves no revalidation point (COR-050 point 16).
+- **Its outcome:** `updated` or `unchanged`, a record of what happened. No check reads it to work out friction (COR-050 point 3).
+
+## TERM-revalidation-point — revalidation point
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#revalidation-point).
+
+**Example:** A page was last revalidated in commit `a1b2c3d`, which is its revalidation point. The whole-repository check compares what its anchors stand on from there.
+
+**Distinctions:**
+
+- **Point:** a part of a decision record's Decision. It shares only the word (COR-058 point 1).
+- **Deferral point:** the commit that first introduced a deferral. A deferral kept through a revalidation answer answers no friction (COR-050 point 4).
+- **Several revalidation points:** commits that do not descend from one another may each first carry the value. Each is then a revalidation point, and the checks measure from every one (COR-050 point 3).
 
 ## TERM-reviewer — reviewer
 
@@ -1819,10 +1964,22 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 **Distinctions:**
 
-- **Revalidation:** an [answer](#term-answer--answer) on the [artefact](#term-artefact--artefact) itself, saying it still holds against what changed under its anchors ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)). A revisit judges a [link target](#term-link-target--link-target) instead, and moves no revalidation point ([COR-050 point 16](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)).
+- **Revalidation answer:** an [answer](#term-answer--answer) on the [artefact](#term-artefact--artefact) itself, saying it still holds against what changed under its anchors ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)). A revisit judges a [link target](#term-link-target--link-target) instead, and moves no revalidation point ([COR-050 point 16](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)).
 - **Revisit entry:** the answer that records a revisit among the source's answers ([COR-062 point 1](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)). Its outcome is `unchanged`, with why the link target still stands, or `deferred`, with the open follow-up that will revisit it (COR-050 point 16). It replaces only the entry for its own link target that it read, and its reason differs from each entry it replaces ([COR-062 point 5](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#5-what-an-answer-replaces)). A revisit met by changing what the link target stands on needs no entry.
 - **Friction:** a [finding](#term-finding--finding) that something an artefact rests on changed. A link target left unrevisited is a finding of the [change check](#term-change-check--change-check) instead, and no other check reports it (COR-050 points [12](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding) and 16).
 - **Revisiting a file:** [merge delivery](#term-merge-delivery--merge-delivery) revisits its file on each run, in the word's everyday sense. That asks nothing of a change.
+
+## TERM-revisit-entry — revisit entry
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#revisit-entry).
+
+**Example:** A change relaxes a requirement's `measure`, and the test that verifies it still holds. So `pkit friction revisit` records a revisit entry `unchanged` for that test.
+
+**Distinctions:**
+
+- **Revisit:** the judgement a change owes a link target. A revisit entry records one, and a change to what the link target stands on meets one with no entry (COR-050 point 16).
+- **Revalidation answer:** an answer on the artefact itself. A revisit entry changes no content, and moves no revalidation point (COR-050 point 16).
+- **What it replaces:** only the entry for its own link target that it read. Its reason differs from each entry it replaces (COR-062 point 5).
 
 ## TERM-revisit-link — revisit link
 
