@@ -167,6 +167,18 @@ TERM-base:
         record:
           - COR-054#2
           - COR-054#3
+TERM-bump-segment:
+  name: bump segment
+  noun-forms: [bump segments]
+  status: active
+  definition: "measure of a change's surface that a changeset declares, `patch`, `minor`, `major` or `none`, judged by a person and never read from the commit type"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/changesets.py
+        record:
+          - PRJ-002#D2
 TERM-capability:
   name: capability
   noun-forms: [capabilities]
@@ -211,7 +223,7 @@ TERM-changeset:
   name: changeset
   noun-forms: [changesets]
   status: active
-  definition: file naming the backbone or a component, the version segment a change moves it by, and a note for the changelog
+  definition: "file naming the backbone or a component, the bump segment a change moves it by, and a note for the changelog"
   pkit:
     friction:
       anchors:
@@ -220,6 +232,19 @@ TERM-changeset:
         record:
           - PRJ-002#D1
           - PRJ-002#D2
+TERM-changeset-guard:
+  name: changeset guard
+  status: active
+  definition: "check that a change adds or edits a declaration for the release step naming the backbone and each component whose paths the change touches"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/release.py
+          - src/project_kit/changesets.py
+        record:
+          - PRJ-002#D1
+          - PRJ-002#D4
 TERM-component:
   name: component
   noun-forms: [components]
@@ -465,6 +490,18 @@ TERM-head:
         record:
           - COR-050#5
           - COR-050#6
+TERM-inheritance-pin:
+  name: inheritance pin
+  noun-forms: [inheritance pins]
+  status: active
+  definition: "major version a rule set names for each set it inherits, as `@2` in `WRITE@2`, through which no inherited rule binds while it is behind"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/rule_sets.py
+        record:
+          - COR-051#7
 TERM-install:
   name: install
   status: active
@@ -752,6 +789,7 @@ TERM-recorded-version:
           - ADR-065#2
 TERM-release:
   name: release
+  other-senses: [pre-release]
   status: active
   definition: "set of versions shipped together, named by its backbone version: one of the backbone, and one of each component shipped with it"
   pkit:
@@ -761,6 +799,18 @@ TERM-release:
           - COR-059#1
           - COR-059#7
           - PRJ-004
+TERM-release-pull-request:
+  name: release pull request
+  noun-forms: [release pull requests]
+  status: active
+  definition: "proposal on the hosting service that carries onto the default branch what one run of the step consuming pending changesets writes"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/release.py
+        record:
+          - PRJ-002#D3
 TERM-release-step:
   name: release step
   noun-forms: [release steps]
@@ -774,6 +824,18 @@ TERM-release-step:
         record:
           - PRJ-002#D3
           - PRJ-002#D4
+          - PRJ-004
+TERM-release-tag:
+  name: release tag
+  noun-forms: [release tags]
+  status: active
+  definition: "annotated git reference `v<version>` on the commit that lands a new backbone version, from which a machine installs that version's CLI"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/versioning.py
+        record:
           - PRJ-004
 TERM-report:
   name: report
@@ -1326,6 +1388,18 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 - **Where the branch left it:** the commit a check measures the change from, git's merge-base of the branch and the base. The base itself may have moved on since.
 - **A pull request's base:** the hosting service's name for the branch a pull request targets. The analysis calls that branch the pull request's target, and CI names it as the checks' base.
 
+## TERM-bump-segment — bump segment
+
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#bump-segment).
+
+**Example:** A change adds a subcommand, so the developer declares `minor` as its changeset's bump segment. The next release step raises the component's minor number.
+
+**Distinctions:**
+
+- **A version's segments:** its major, minor and patch numbers. A bump segment says which one the next release step raises, or `none` (PRJ-002 D2).
+- **The changeset's `kind`:** the field that holds the bump segment.
+- **Commit type:** a conventional commit's prefix, such as `feat`. It never sets the bump segment (PRJ-002 D2).
+
 ## TERM-capability — capability
 
 Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#capability).
@@ -1372,7 +1446,19 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 **Distinctions:**
 
 - **Version:** a branch never edits a [version](#term-version--version) number, and declares its change in a changeset instead ([PRJ-002 D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr)).
-- **Segment:** the changeset's `kind`, one of `patch`, `minor`, `major` and `none`. It is a person's judgement of the change's surface, never read from the commit type ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
+- **Bump segment:** the changeset's `kind`, one of `patch`, `minor`, `major` and `none`. It is a person's judgement of the change's surface, never read from the commit type ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
+
+## TERM-changeset-guard — changeset guard
+
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#changeset-guard).
+
+**Example:** A change edits `src/project_kit/release.py` and adds no changeset, so `pkit release check` fails the changeset guard, naming `backbone`.
+
+**Distinctions:**
+
+- **Surface change:** what a person judges a change makes. The changeset guard reads only paths, so it can flag a change that moves no surface (PRJ-002 D2).
+- **The `skip-changeset` label:** the escape hatch that skips the surface check. Floors, bounds and range edits are still checked (PRJ-002 D4).
+- **Cross-repository guard:** a check against writing in another repository. It shares only the word.
 
 ## TERM-component — component
 
@@ -1601,6 +1687,19 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 - **Base:** what a [change](#term-change--change) is compared with, from the commit where its branch left it.
 - **Head branch:** the hosting service's name for the branch a pull request merges from.
 - **A collection's file head:** the glossary's heading and opening ([software-analysis DEC-001 point 1](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)). It shares only the word.
+
+## TERM-inheritance-pin — inheritance pin
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#inheritance-pin).
+
+**Example:** `ANA` inherits `WRITE@2`, so its inheritance pin on `WRITE` is 2. Once `WRITE` reaches 3, none of its rules bind through `ANA` until the project moves the pin.
+
+**Distinctions:**
+
+- **Version pin:** the release a project's commands run at. It is no inheritance pin (ADR-049 point 1).
+- **Re-pin:** the verb for moving an inheritance pin to its set's new major. The adopter edits it by hand, once the new major is reviewed (COR-051 point 7).
+- **A pin behind its set:** one naming a major its set has passed. Validation fails on the inheriting set meanwhile, so the gap is never silent (COR-051 point 7).
+- **A rule set's version:** its own `version`, apart from its component's. An inheritance pin names only its major.
 
 ## TERM-install — install
 
@@ -1878,7 +1977,7 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 
 Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#release).
 
-**Example:** the release of 24 August 2026 holds [backbone](#term-backbone--backbone) 1.149.0 and, among its [components](#term-component--component), project-management 0.54.0. Its release commit carries the tag `v1.149.0`.
+**Example:** the release of 24 August 2026 holds [backbone](#term-backbone--backbone) 1.149.0 and, among its [components](#term-component--component), project-management 0.54.0. The commit that landed its versions carries the tag `v1.149.0`.
 
 **Distinctions:**
 
@@ -1888,8 +1987,21 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 - **A component's release:** [PRJ-002](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md)'s and PRJ-004's name for one new version of one component ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)). The analysis calls it the component's new version.
 - **An externally-sourced component's version:** written in the component's own [source repository](#term-source-repository--source-repository), and reached by a [project](#term-project--project)'s transition of that component ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)).
 - **Release pull request:** the [pull request](#term-pull-request--pull-request) that carries one release step's writes, on a `release/` branch under a `chore(release):` title. It closes no issue, so `pkit release merge` lands it.
-- **Release tag:** the annotated tag `v<version>` on the release commit. Each release gets one, and a release step that moves only components gets none (PRJ-004).
+- **Release tag:** the annotated tag `v<version>` on the commit that lands a release's versions. Each release gets one, and a release step that moves only components gets none (PRJ-004).
+- **Pre-release:** a version with a suffix after its patch number, such as `1.150.0rc1`. It is no release, and `pkit pin` refuses one.
 - **GitHub release:** the page the hosting service shows for a tag. Its notes are the version's changelog section, and it carries no file (PRJ-004).
+
+## TERM-release-pull-request — release pull request
+
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#release-pull-request).
+
+**Example:** The CI pipeline opens a release pull request from `release/v2.0.0`, titled `chore(release): v2.0.0`. `pkit release merge` lands it.
+
+**Distinctions:**
+
+- **Pull request:** a proposal to land one change. A release pull request closes no issue, so `pkit pull-request land` refuses it, and `pkit release merge` lands it.
+- **Release step:** the procedure whose writes the release pull request carries (PRJ-002 D3).
+- **Release tag:** what the commit a release pull request lands gets, where the release step moved the backbone (PRJ-004).
 
 ## TERM-release-step — release step
 
@@ -1902,6 +2014,19 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 - **Release:** the set of [versions](#term-version--version) a release step makes when it moves the [backbone](#term-backbone--backbone). A release step that moves only [components](#term-component--component) makes none of its own ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
 - **Changeset:** what a branch writes instead of a version number, declaring its [change](#term-change--change) for the release step ([PRJ-002 D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr)).
 - **Release pull request:** the [pull request](#term-pull-request--pull-request) that carries one release step's writes onto the [default branch](#term-default-branch--default-branch) ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
+
+## TERM-release-tag — release tag
+
+Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#release-tag).
+
+**Example:** The release of 2.0.0 has the release tag `v2.0.0`. `uv tool install` with the distribution's URL at that tag installs its CLI.
+
+**Distinctions:**
+
+- **Release:** the set of versions a release tag names by its backbone version.
+- **A release step that moves only components:** gets no release tag (PRJ-004).
+- **The `latest` tag:** a tag that points at the highest release tag, which the install the system prints names.
+- **GitHub release:** the page the hosting service shows for a release tag. Its notes are the version's changelog section (PRJ-004).
 
 ## TERM-report — report
 
@@ -2030,7 +2155,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **Rule:** one entry of a rule set, an [artefact](#term-artefact--artefact) of its own ([COR-051 point 2](../../../.pkit/decisions/core/COR-051-rule-sets.md#2-a-rule-set-is-a-collection-of-artefacts)).
 - **Method rule set:** one that the [backbone](#term-backbone--backbone) or a [component](#term-component--component) ships. It takes no scope. Unless it is a loaded set, its rules bind only through a set of the [project](#term-project--project)'s own that inherits it (COR-051 points [6](../../../.pkit/decisions/core/COR-051-rule-sets.md#6-two-kinds-two-owners) and [7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 - **Loaded rule set:** one whose rules bind on the work of the sessions that load a file generated from it, such as the backbone's `OPS`. It has no scope and no inheritance ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
-- **Pin:** the major number an inheriting set names for each set it inherits, as in `WRITE@2`. No [rule](#term-rule--rule) binds through a pin behind its set until the project reviews the new major (COR-051 point 7).
+- **Inheritance pin:** the major number an inheriting set names for each set it inherits, as in `WRITE@2`. No [rule](#term-rule--rule) binds through a pin behind its set until the project reviews the new major (COR-051 point 7).
 - **Version pin:** the [release](#term-release--release) a project's commands run at ([ADR-049 point 1](../../architecture/decisions/ADR-049-per-project-version-pin.md#1-pin-source-a-dedicated-project-owned-directive-file)). It is no rule set's pin.
 
 ## TERM-sandbox — sandbox
@@ -2229,10 +2354,11 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 **Distinctions:**
 
 - **Recorded version:** a record of the content a project holds. A version pin is a directive the project owns ([ADR-049 point 1](../../architecture/decisions/ADR-049-per-project-version-pin.md#1-pin-source-a-dedicated-project-owned-directive-file)).
-- **A rule set's pin:** the major number an inheriting [rule set](#term-rule-set--rule-set) names for a set it inherits ([COR-051 point 7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)). The analysis writes *version pin* in full for this term.
+- **Inheritance pin:** the major number an inheriting [rule set](#term-rule-set--rule-set) names for a set it inherits ([COR-051 point 7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)). The analysis writes *version pin* in full for this term.
 - **An external source's pin:** the ref an externally-sourced [component](#term-component--component) is pulled at, which is that component's [recorded version](#term-recorded-version--recorded-version) ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)).
 - **The installed CLI:** the command on the machine. A pinned project runs the installed CLI only where its pin cannot be fetched, and is warned ([ADR-064](../../architecture/decisions/ADR-064-upgrade-pins-by-default.md)).
 - **The source repository:** never pinned ([ADR-064 point 3](../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#3-what-the-default-does-not-reach)).
+- **To pin:** a project pins a release when its version pin names that release, as in "the version it pins". Elsewhere the verb keeps its everyday sense, as in a merge pinned to one commit.
 
 ## TERM-version-transition — version transition
 
