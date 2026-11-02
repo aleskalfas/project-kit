@@ -21,6 +21,7 @@ pkit:
       record:
         - demo-recording:DEC-001
         - demo-recording:DEC-002
+        - demo-recording:DEC-004
         - demo-recording:DEC-004#1
         - demo-recording:DEC-004#2
         - COR-004

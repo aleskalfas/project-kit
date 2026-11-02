@@ -1,6 +1,6 @@
 ---
 id: REQ-053
-title: The check holds a body to its declared structure only where the format rule binds, and holds a record's body always
+title: The check holds a body to its declared structure only where the format rule binds, and holds a revalidation record's body always
 status: active
 statement: The check holds an artefact's body to its declared structure only where the accepted format rule binds, and holds a revalidation record's body always.
 measure: Where the format rule does not bind on an artefact, the check fails nothing in its body, and its summary counts the artefact. A revalidation record's body is held to its declared structure in every project. A preview reports what a proposed rule would find as `preview:`, and never changes the exit status.
@@ -21,8 +21,8 @@ pkit:
         - COR-051#7
 ---
 
-# REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and holds a record's body always
+# REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and holds a revalidation record's body always
 
-**Verified by:** Tests find that an [artefact](../../../core/glossary.md#term-artefact--artefact) outside every scope is not held to its structure, and that the check reports where no [rule](../../../core/glossary.md#term-rule--rule) of `SAN` binds. They find that a record is held to its structure while the format rule is proposed, and that a preview never changes the exit status.
+**Verified by:** Tests find that the check holds no [artefact](../../../core/glossary.md#term-artefact--artefact) outside every scope to its [declared structure](../../glossary.md#term-declared-structure--declared-structure), and reports where no [rule](../../../core/glossary.md#term-rule--rule) of `SAN` binds. They find that a [revalidation record](../../glossary.md#term-revalidation-record--revalidation-record) is held to its structure while the format rule is proposed. They also find that a preview never changes the exit status.
 
-**Rationale:** A shipped [rule](../../../core/glossary.md#term-rule--rule) binds only through a [rule set](../../../core/glossary.md#term-rule-set--rule-set) of the [project](../../../core/glossary.md#term-project--project)'s own, which decides where it binds ([DEC-001 point 1](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape) and [COR-051 point 7](../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)). No route leads from a held document, so the [capability](../../../core/glossary.md#term-capability--capability) checks a record's structure itself (DEC-001 point 1).
+**Rationale:** A shipped [rule](../../../core/glossary.md#term-rule--rule) binds only through a [rule set](../../../core/glossary.md#term-rule-set--rule-set) of the [project](../../../core/glossary.md#term-project--project)'s own, which decides where it binds ([DEC-001 point 1](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape) and [COR-051 point 7](../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)). No route leads from a held document, so the [capability](../../../core/glossary.md#term-capability--capability) checks a [revalidation record](../../glossary.md#term-revalidation-record--revalidation-record)'s structure itself (DEC-001 point 1).
