@@ -17,6 +17,7 @@ pkit:
         - tests/test_router.py
       record:
         - ADR-039#D2
+        - ADR-065#9
       artefact:
         - ACT-operator
 ---

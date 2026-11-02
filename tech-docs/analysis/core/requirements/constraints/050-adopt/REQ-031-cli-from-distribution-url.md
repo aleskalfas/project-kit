@@ -19,6 +19,9 @@ pkit:
         - tests/test_upgrade.py
       record:
         - PRJ-004
+        - ADR-033
+        - ADR-039
+        - ADR-063
 ---
 
 # REQ-031 · Constraint · The CLI is installed with uv from the distribution's git URL

@@ -105,7 +105,7 @@ TERM-artefact-type:
   name: artefact type
   noun-forms: [artefact types]
   status: active
-  definition: "declared name of what a document or collection entry is, given by the place holding its file, which a rule set's scope may select by"
+  definition: "declared name of what a document or collection entry is, from its file's place or the backbone, for a rule set's scope to select by"
   pkit:
     friction:
       anchors:
@@ -1076,6 +1076,7 @@ TERM-whole-repository-check:
         record:
           - COR-050#6
           - COR-050#9
+          - COR-050#12
 ---
 
 # Glossary

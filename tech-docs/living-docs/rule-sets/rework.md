@@ -1,6 +1,6 @@
 ---
 rule-set: REWORK
-version: 3.5.0
+version: 3.6.0
 inherits: [living-docs:LDOC@1, WRITE@2]
 scope:
   paths:
@@ -24,6 +24,8 @@ scope:
     - docs/capabilities/software-engineering/README.md
     - .pkit/rules/README.md
     - docs/rules/README.md
+    - .pkit/skills/README.md
+    - docs/skills/README.md
     - .pkit/decisions/README.md
     - docs/decisions/README.md
   types: [living-docs:page]

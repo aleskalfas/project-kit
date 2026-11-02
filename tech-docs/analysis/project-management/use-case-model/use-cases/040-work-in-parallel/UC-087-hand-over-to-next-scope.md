@@ -16,14 +16,15 @@ shortfalls:
     issue: "#521"
     record: project-management:DEC-035#4
   - at: "4a"
-    issue: "#519"
-    record: project-management:DEC-035#3
+    issue: "#521"
+    record: project-management:DEC-035#4
 pkit:
   friction:
     anchors:
       path:
         - .pkit/capabilities/project-management/scripts/handoff-issue.py
         - .pkit/capabilities/project-management/scripts/next-task.py
+        - .pkit/capabilities/project-management/skills/pm/batch-plan.md
       record:
         - project-management:DEC-005
         - project-management:DEC-012
@@ -50,7 +51,7 @@ pkit:
 
 **Preconditions:**
 
-- **From [UC-084](UC-084-take-next-task.md):** The worker's [instance](../../../glossary.md#term-instance--instance) owns this piece's [Task](../../../glossary.md#term-task--task), which is In Progress ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
+- **From [UC-084](UC-084-take-next-task.md):** The worker's [instance](../../../glossary.md#term-instance--instance) owns this piece's [Task](../../../glossary.md#term-task--task), which is In Progress or in Review ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 - **From [UC-083](UC-083-plan-across-scopes.md):** The next piece's Task is filed in that Task's own [scope](../../../glossary.md#term-scope--scope). That Task's `## Dependencies` section names this piece's Task ([DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 
 **Assumptions:**
@@ -76,7 +77,7 @@ pkit:
 - **4a.** The next piece's agent finds a defect in this piece. That agent files a Task in this piece's scope, as `UC-060` describes, and that agent's instance owns the Task ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)). This scope's agent takes the Task over, as `UC-084` variant 2a describes.
 
 > [!WARNING]
-> **Not built yet:** `create-issue` writes no owner. DEC-035 point 3 decides that the instance that files an issue owns the issue, and #519 tracks it.
+> **Not built yet:** `handoff-issue` hands an issue from one person to another only. [DEC-035 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#4-ownership-releases-when-the-work-ends-or-stops-and-transfers-on-reclaim) decides that an instance takes over another instance's issue, and #521 tracks it.
 
 - **4b.** The next piece is a Task of the kind `test`, and a testing [seat](../../../glossary.md#term-seat--seat)'s scope names that kind of work. That seat's agent may take the Task with `pkit pm next-task`, and so may the agent of every seat that builds with no scope. The command hands the Task to no seat whose scope leaves the Task out ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)). Where the topology declares [pools](../../../glossary.md#term-pool--pool), only the seats that serve the pool of the Task's [Milestone](../../../glossary.md#term-milestone--milestone) may take the Task ([DEC-061 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#5-a-seat-that-builds-chooses-its-work-only-from-its-pools)).
 
