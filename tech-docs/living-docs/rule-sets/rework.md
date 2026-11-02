@@ -1,6 +1,6 @@
 ---
 rule-set: REWORK
-version: 3.4.0
+version: 3.5.0
 inherits: [living-docs:LDOC@1, WRITE@2]
 scope:
   paths:
@@ -24,6 +24,11 @@ scope:
     - docs/capabilities/software-engineering/README.md
     - .pkit/rules/README.md
     - docs/rules/README.md
+    - .pkit/lifecycle/README.md
+    - .pkit/lifecycle/manifest.md
+    - .pkit/lifecycle/component-registry.md
+    - .pkit/lifecycle/migrations.md
+    - .pkit/lifecycle/upgrade-flow.md
   types: [living-docs:page]
 rules:
   RS-REWORK-001:

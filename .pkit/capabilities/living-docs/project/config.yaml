@@ -44,6 +44,10 @@ places:
   .pkit/cli/README.md: user
   .pkit/decisions/README.md: user
   .pkit/lifecycle/README.md: user
+  .pkit/lifecycle/manifest.md: user
+  .pkit/lifecycle/component-registry.md: user
+  .pkit/lifecycle/migrations.md: user
+  .pkit/lifecycle/upgrade-flow.md: user
   .pkit/permissions/README.md: user
   .pkit/process/README.md: user
   .pkit/rules/README.md: user
