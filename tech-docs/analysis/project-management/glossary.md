@@ -106,7 +106,7 @@ TERM-builder-agent:
   name: builder agent
   noun-forms: [builder agents]
   status: active
-  definition: "AI the build command starts in a fresh session for one worker's Task, in a sandboxed clone of its own, seeing only the Task's brief"
+  definition: "helper the build command starts in a fresh session for one worker's Task, in a sandboxed clone of its own, seeing only the Task's brief"
   pkit:
     friction:
       anchors:
@@ -117,7 +117,7 @@ TERM-builder-agent:
 TERM-bypass:
   name: bypass
   status: active
-  definition: "override, with a person's explicit reason, of a check that refuses by default, the reason recorded before the write where the project keeps audit comments"
+  definition: "override of a check that refuses by default, made with a person's explicit reason, recorded before the write where the project keeps audit comments"
   pkit:
     friction:
       anchors:

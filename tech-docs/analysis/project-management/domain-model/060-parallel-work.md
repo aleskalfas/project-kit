@@ -375,7 +375,7 @@ Defined in [TERM-ownership](../glossary.md#term-ownership--ownership).
 
 **Why:** In a [project](../../core/glossary.md#term-project--project) with a [topology](../glossary.md#term-topology--topology), a [clone](../glossary.md#term-clone--clone) may die or lose its [seat](../glossary.md#term-seat--seat) while it owns work. Its ownership must then stop counting, so that another agent can take the work over ([DEC-059 point 9](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
 
-An ownership is the mark that makes an [instance](../glossary.md#term-instance--instance) the [owner](../glossary.md#term-owner--owner) of an [issue](../glossary.md#term-issue--issue). In a project with a topology, an ownership names the seat, the seat's number and the clone's key. It counts only while that clone holds that seat, and the owner's work renews it (DEC-059 point 9).
+An ownership is the mark that makes an [instance](../glossary.md#term-instance--instance) the [owner](../glossary.md#term-owner--owner) of an [issue](../glossary.md#term-issue--issue). In a project with a topology, an ownership names the seat, the seat's number and the clone's key. It counts only while that clone holds that seat. The owner's work renews it (DEC-059 point 9).
 
 **Attributes:**
 
