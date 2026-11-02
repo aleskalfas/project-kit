@@ -45,6 +45,9 @@ from _lib.root import SHIPPED
 #: The library folder, within the location.
 FOLDER = "libraries"
 
+#: The library that owns the shared roles, axes, families and pairs (DEC-004 point 7).
+FOUNDATIONS = "foundations"
+
 #: The list of the project's libraries, within the location.
 LIST = f"{FOLDER}/libraries.yaml"
 

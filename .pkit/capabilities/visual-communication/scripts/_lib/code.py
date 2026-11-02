@@ -54,6 +54,7 @@ from _lib.files import (
     write_whole,
 )
 from _lib.findings import ATTENTION, FACT, FAILS, Finding
+from _lib.libraries import FOUNDATIONS
 from _lib.names import is_name
 from _lib.plugins import seam
 from _lib.reading import ReadError, load_yaml, read_yaml, sha256
@@ -63,9 +64,6 @@ FOLDER = "code"
 
 #: What follows `out` in the name of the record beside the code.
 RECORD_SUFFIX = ".record.yaml"
-
-#: The library whose `roles.yaml` declares the shared roles and axes a brand gives values.
-FOUNDATIONS = "foundations"
 
 #: Who acts on a finding that asks for attention.
 WHO = "the project, which keeps the declaration"

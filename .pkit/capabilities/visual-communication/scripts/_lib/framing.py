@@ -91,6 +91,7 @@ from _lib import fingerprint, keys, libraries, records, tokens, values
 from _lib import location as loc
 from _lib.files import FORMAT, FileError, nearest, read_bound, refuse_links, schema_of, write_whole
 from _lib.findings import ATTENTION, FAILS, Finding, accepted, loss_finding
+from _lib.libraries import FOUNDATIONS
 from _lib.names import is_name, is_token_path
 from _lib.plugins import seam
 from _lib.reading import ReadError, load_yaml, sha256
@@ -108,8 +109,7 @@ RECORD = "record.yaml"
 #: Where a producer's hand-over and its run's output lie, local to each clone.
 HANDOVER = f"{LOCAL}/handover"
 
-#: The library that declares the shared roles, and the location's folder of fonts.
-FOUNDATIONS = "foundations"
+#: The location's folder of fonts.
 FONTS = "fonts"
 
 #: The keyword that marks a producer's input as a role, with the DTCG type it takes.

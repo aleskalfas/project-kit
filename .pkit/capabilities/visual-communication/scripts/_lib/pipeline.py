@@ -33,15 +33,12 @@ from typing import Any
 from _lib import keys, records, tokens, values
 from _lib.env import PictureInfo
 from _lib.files import FileError, read_bound, refuse_links, without_binding, write_whole
-from _lib.libraries import FOLDER, Held, Version
+from _lib.libraries import FOLDER, FOUNDATIONS, Held, Version
 from _lib.location import files as listed_files
 from _lib.names import PIECE, is_language, is_name, split_use
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml, sha256
 from _lib.scene import SceneResult, compute_scene
-
-#: The library that owns the shared roles, axes, families and pairs (DEC-004 point 7).
-FOUNDATIONS = "foundations"
 
 #: The folder of the location that holds the pieces, one folder each.
 PIECES = "pieces"
