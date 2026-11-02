@@ -117,7 +117,7 @@ TERM-builder-agent:
 TERM-bypass:
   name: bypass
   status: active
-  definition: "override, with a person's reason, of a check that refuses by default, the reason recorded before the write where the project keeps audit comments"
+  definition: "override, with a person's explicit reason, of a check that refuses by default, the reason recorded before the write where the project keeps audit comments"
   pkit:
     friction:
       anchors:
@@ -491,7 +491,7 @@ TERM-seat:
   name: seat
   noun-forms: [seats]
   status: active
-  definition: "place in a topology, held by at most one clone, saying whether its agent plans, builds or both, and the agent definition that agent follows"
+  definition: "topology's place, held by at most one clone, saying whether that clone's agent plans, builds or does both, and which agent definition the agent follows"
   pkit:
     friction:
       anchors:

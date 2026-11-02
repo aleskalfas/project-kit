@@ -41,7 +41,7 @@ Where the project keeps a [journal](../glossary.md#term-journal--journal), each 
 ```mermaid
 classDiagram
   accTitle: The issue lifecycle
-  accDescr: An issue moves through the issue lifecycle's states. A move the lifecycle leaves to a person needs an authorisation, given for that issue, and a bypass gives one for a move refused by default. An audit comment records a bypass's reason. Each move of an issue brings about the cascade on the issues above it. Where the project keeps a journal, the journal records each move.
+  accDescr: An issue moves through the issue lifecycle's states. A move the lifecycle leaves to a person needs an authorisation, given for that issue, and a bypass gives one for a move refused by default. Where the project keeps audit comments, an audit comment records a bypass's reason. Each move of an issue brings about the cascade on the issues above it. Where the project keeps a journal, the journal records each move.
   class IssueLifecycle["Issue lifecycle"] {
     states
     moves
