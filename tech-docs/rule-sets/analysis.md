@@ -1,6 +1,6 @@
 ---
 rule-set: ANA
-version: 4.1.1
+version: 4.1.2
 inherits: [WRITE@2, software-analysis:SAN@1]
 scope:
   types:
