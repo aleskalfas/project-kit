@@ -308,7 +308,7 @@ Defined in [TERM-operational-rule](../glossary.md#term-operational-rule--operati
 
 **Why:** An instruction shipped to every repository must fit any of them, since one that fits a single repository cannot apply elsewhere ([COR-014](../../../../.pkit/decisions/core/COR-014-universal-applicability.md)). So a repository keeps its own instructions in a file of its own (COR-014).
 
-An operational rule is an instruction that every session loads through the [harness](../glossary.md#term-harness--harness)'s include. [VIEW-artefacts-and-friction](070-artefacts-and-friction.md) states where the operational rules come from, and how each source keeps and cites them.
+An operational rule is an instruction that every session loads through the [harness](../glossary.md#term-harness--harness)'s include.
 
 **Attributes:**
 
@@ -319,11 +319,13 @@ An operational rule is an instruction that every session loads through the [harn
 
 - The harness's include loads it into each session.
 
-**States:** In a plain file, none. Elsewhere, those that VIEW-artefacts-and-friction states.
+**States:** In a plain file, none. Elsewhere, those that [VIEW-artefacts-and-friction](070-artefacts-and-friction.md) states.
 
 **Always true:**
 
 - An operational rule that fits only one repository is in that repository's own file (COR-014).
+
+**Note:** VIEW-artefacts-and-friction states where the operational rules come from, and how each source keeps and cites them.
 
 ## Methodology
 
