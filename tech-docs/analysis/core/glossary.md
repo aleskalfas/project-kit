@@ -425,6 +425,18 @@ TERM-finding:
           - COR-055#4
           - COR-055#5
           - COR-057#3
+TERM-finding-that-informs:
+  name: finding that informs
+  noun-forms: [findings that inform]
+  status: active
+  definition: "reviewer's note of a break the change does not own, or under a rule an inheritance pin holds back, which withholds nothing"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/agents/core/rule-set-reviewer.md
+        record:
+          - COR-057#3
 TERM-friction:
   name: friction
   status: active
@@ -528,6 +540,20 @@ TERM-link-target:
           - src/project_kit/friction_discovery.py
         record:
           - COR-050#16
+TERM-loaded-rule-set:
+  name: loaded rule set
+  noun-forms: [loaded rule sets]
+  status: active
+  definition: "collection file whose statements bind on the work of the sessions that load a file generated from it, never on an artefact"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/loaded_rules.py
+        record:
+          - COR-068#1
+          - COR-068#2
+          - COR-068#3
 TERM-manifest:
   name: manifest
   status: active
@@ -554,6 +580,18 @@ TERM-merge-delivery:
         record:
           - COR-002
           - COR-059#2
+TERM-method-rule-set:
+  name: method rule set
+  noun-forms: [method rule sets]
+  status: active
+  definition: "collection file the backbone or a component ships and versions, which takes no scope and which a project never edits"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/rule_sets.py
+        record:
+          - COR-051#6
 TERM-methodology:
   name: methodology
   status: active
@@ -578,7 +616,7 @@ TERM-operational-rule:
   name: operational rule
   noun-forms: [operational rules]
   status: active
-  definition: "instruction every AI agent session loads through the harness's include, from the backbone's file, each installed capability's through an index, or the repository's own"
+  definition: "instruction every AI agent session loads through the harness's include, from the backbone's file, each installed capability's through the rules index, or the repository's own"
   pkit:
     friction:
       anchors:
@@ -622,6 +660,18 @@ TERM-package-metadata:
           - COR-021
           - COR-053#3
           - COR-056#2
+TERM-passage-for-a-person:
+  name: passage for a person
+  noun-forms: [passages for a person]
+  status: active
+  definition: "reviewer's finding on text the change owns under some binding rule, whose judgement needs readings or facts that rule's text leaves open, withholding no approval"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/agents/core/rule-set-reviewer.md
+        record:
+          - COR-057#3
 TERM-permission-hook:
   name: permission hook
   noun-forms: [permission hooks]
@@ -987,6 +1037,18 @@ TERM-rule-set:
           - COR-051#6
           - COR-051#7
           - COR-068#1
+TERM-rules-index:
+  name: rules index
+  status: active
+  definition: "generated file listing the loaded file of each installed capability, which the harness's instruction file includes beside the backbone's"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/loaded_rules.py
+        record:
+          - COR-070#2
+          - ADR-076#2
 TERM-sandbox:
   name: sandbox
   status: active
@@ -1043,6 +1105,18 @@ TERM-session-anchor:
         record:
           - COR-039
           - ADR-034#1
+TERM-settled-break:
+  name: settled break
+  noun-forms: [settled breaks]
+  status: active
+  definition: "reviewer's finding of a passage the change owns that an accepted rule's text rules out, with no reading left to choose, withholding its approval"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/agents/core/rule-set-reviewer.md
+        record:
+          - COR-057#3
 TERM-skill:
   name: skill
   noun-forms: [skills]
@@ -1292,7 +1366,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 **Distinctions:**
 
-- **The harness's scratch directory:** a folder a [harness](#term-harness--harness) may offer for temporary files, outside the repository. It is no agent workspace, and the [methodology](#term-methodology--methodology)'s [operational rules](#term-operational-rule--operational-rule) send intermediate files to the agent workspace instead (core rule 16).
+- **The harness's scratch directory:** a folder a [harness](#term-harness--harness) may offer for temporary files, outside the repository. It is no agent workspace, and the [methodology](#term-methodology--methodology)'s [operational rules](#term-operational-rule--operational-rule) send intermediate files to the agent workspace instead (RS-OPS-016).
 - **Held folder:** a folder a [component](#term-component--component) declares for its held documents, which a commit carries. The agent workspace holds nothing a commit carries.
 - **The harness's working directory:** the checkout's root for the main session, or a worktree's root for an agent working in a worktree. The agent workspace is one folder inside it ([ADR-060 point 3](../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#3-which-checkouts-count)).
 
@@ -1653,6 +1727,17 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 - **Severity:** one of a closed set that every validator shares, of which exactly one fails validation (COR-055 points [4](../../../.pkit/decisions/core/COR-055-validation.md#4-severity-is-on-the-finding) and [5](../../../.pkit/decisions/core/COR-055-validation.md#5-exactly-one-severity-fails)).
 - **A reviewer's finding:** a settled break, a passage for a person or a finding that informs. Only a settled break withholds the [reviewer](#term-reviewer--reviewer)'s approval ([COR-057 point 3](../../../.pkit/decisions/core/COR-057-rule-set-reviewer.md#3-its-findings-and-what-binds)).
 
+## TERM-finding-that-informs — finding that informs
+
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#finding-that-informs).
+
+**Example:** A change edits a use case beside a sentence another change made too long. The rule-set reviewer names that sentence in a finding that informs.
+
+**Distinctions:**
+
+- **Settled break:** a break the change owns, which the rule's text settles. It withholds the reviewer's approval (COR-057 point 3).
+- **Its reason:** each finding that informs says why the break is not the change's (COR-057 point 3).
+
 ## TERM-friction — friction
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#friction).
@@ -1751,6 +1836,18 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **An anchor's target:** what an anchor names, such as the files a path anchor matches. What the anchor stands on is what the checks compare of that target, such as those files' content and mode ([COR-050 point 5](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#5-when-an-anchor-has-changed-and-what-answers-it)). A link target is the anchor itself, and it changed where what it stands on differs (COR-050 point 16).
 - **A version transition's target and a pull request's target:** the [release](#term-release--release) or [version](#term-version--version) a transition moves to, and the branch a [pull request](#term-pull-request--pull-request) lands on. They share the word only.
 
+## TERM-loaded-rule-set — loaded rule set
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#loaded-rule-set).
+
+**Example:** The backbone's `OPS` is a loaded rule set. `.pkit/rules/core.md` is generated from it, and every session loads that file through the harness's instruction file.
+
+**Distinctions:**
+
+- **Method rule set:** one the backbone or a component ships. A loaded rule set it ships binds where its file is loaded, never through inheritance (COR-051 point 7).
+- **Operational rule:** each rule of a loaded rule set. Only an accepted one is in the generated file (COR-068 point 3).
+- **Scope:** a loaded rule set has none, and no rule set inherits it (COR-068 point 2).
+
 ## TERM-manifest — manifest
 
 Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#manifest).
@@ -1776,6 +1873,18 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 - **Merge:** landing a [change](#term-change--change) on the [default branch](#term-default-branch--default-branch). The analysis writes merge delivery in full for this operation.
 - **The tier that asks:** entries put to a person once, at [install](#term-install--install), by the merge command or in a [version transition](#term-version-transition--version-transition). Sync runs only the tier that asks nothing ([COR-059 point 2](../../../.pkit/decisions/core/COR-059-version-transition.md#2-reconciliation-runs-at-the-recorded-versions-and-moves-none)).
 - **Seeding:** creates a missing declared seed path from its template, never over a file that exists ([COR-059 point 8](../../../.pkit/decisions/core/COR-059-version-transition.md#8-a-transition-of-the-backbone-creates-a-missing-seed-path-and-reconciliation-creates-none)). Merge delivery revisits its file on each run.
+
+## TERM-method-rule-set — method rule set
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#method-rule-set).
+
+**Example:** `software-analysis:SAN` is a method rule set. It binds on project-kit's analysis through `ANA`, a rule set of the project's own that inherits it.
+
+**Distinctions:**
+
+- **A rule set of the project's own:** one the project owns, which may take a scope. Sync never reads or writes it (COR-051 point 6).
+- **Loaded rule set:** a method rule set whose rules bind on the work of the sessions that load its generated file, such as the backbone's `OPS` (COR-068).
+- **Where its rules bind:** unless it is a loaded rule set, only through a set of the project's own that inherits it (COR-051 point 7).
 
 ## TERM-methodology — methodology
 
@@ -1804,12 +1913,12 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 
 Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#operational-rule).
 
-**Example:** core rule 8 asks an agent to pause before a destructive operation. Where the `software-engineering` [capability](#term-capability--capability) is installed, `software-engineering:RS-SWE-001` asks an agent to run the tests of what it changed. [Project](#term-project--project) rule 4 asks for signed commits in project-kit.
+**Example:** RS-OPS-008 asks an agent to pause before a destructive operation. Where the `software-engineering` [capability](#term-capability--capability) is installed, `software-engineering:RS-SWE-001` asks an agent to run the tests of what it changed. [Project](#term-project--project) rule 4 asks for signed commits in project-kit.
 
 **Distinctions:**
 
 - **Rule:** a statement in a [rule set](#term-rule-set--rule-set), with an id, an origin and a status ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). An operational rule in a loaded set is a [rule](#term-rule--rule) too, with an id, an origin and a status. It binds on what a session does, not on [artefacts](#term-artefact--artefact) ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
-- **Core rule and project rule:** the analysis's names for an operational rule of the [backbone](#term-backbone--backbone)'s file and of the project's, cited by number, as in *core rule 2*. A core rule is a rule of the backbone's loaded set `OPS`, so core rule 2 is `backbone:RS-OPS-002` (COR-068). A project rule is a rule of a loaded set only where the project keeps its rules as a loaded set. A capability's operational rule takes no such name, and is cited by its id with the capability's name ([COR-070 point 1](../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#1-a-capability-ships-at-most-one-loaded-set-and-its-loaded-file-travels-with-it)).
+- **Core rule and project rule:** an operational rule of the [backbone](#term-backbone--backbone)'s file and of the project's. A core rule is a rule of the backbone's loaded rule set `OPS`, cited in the analysis by its id, such as RS-OPS-002 (COR-068). A project rule is cited by its number in the project's file, as in *project rule 4*, until that file becomes a loaded rule set. A capability's operational rule is cited by its id with the capability's name ([COR-070 point 1](../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#1-a-capability-ships-at-most-one-loaded-set-and-its-loaded-file-travels-with-it)).
 - **Backbone, capability or project:** the backbone's file holds what fits any project, and the project's file holds what fits only that project ([COR-014](../../../.pkit/decisions/core/COR-014-universal-applicability.md)). A capability's file holds what binds only where that capability is installed ([COR-070 point 5](../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#5-a-rule-that-binds-only-with-a-capability-belongs-to-that-capability)).
 
 ## TERM-overlay — overlay
@@ -1834,6 +1943,18 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 - **Manifest:** the [project](#term-project--project)'s record of what it installed, at which [version](#term-version--version). [COR-017](../../../.pkit/decisions/core/COR-017-capability-pattern.md) uses that word for the package metadata too, and the analysis keeps it for the project's record.
 - **Plan:** a dry run that reads a [capability](#term-capability--capability)'s [connection points](#term-connection-point--connection-point) from its package metadata, before the capability is installed ([COR-053 point 8](../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
+
+## TERM-passage-for-a-person — passage for a person
+
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#passage-for-a-person).
+
+**Example:** A rule leaves open whether a phrase names a concept. So the rule-set reviewer raises that sentence of a use case as a passage for a person.
+
+**Distinctions:**
+
+- **Settled break:** a finding the rule's text settles, which withholds the reviewer's approval (COR-057 point 3).
+- **A rule the change moves:** a finding under a rule the change makes bind, or stop binding, on text it alters is a passage for a person too (COR-057 point 3).
+- **How it reaches a person:** the gate that invoked the reviewer says (COR-057 point 3).
 
 ## TERM-permission-hook — permission hook
 
@@ -2177,6 +2298,7 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **Rule set:** the collection file that holds rules, each an [artefact](#term-artefact--artefact) of its own ([COR-051 point 2](../../../.pkit/decisions/core/COR-051-rule-sets.md#2-a-rule-set-is-a-collection-of-artefacts)).
 - **Operational rule:** an instruction every AI agent session loads. In a loaded set, it is a rule, with an id, an origin and a status. It binds on what a session does, never on an artefact ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
 - **Decision record:** chooses among alternatives and says why. A rule says what must hold, and its origin may cite the record ([COR-051 point 5](../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically)).
+- **Core rule and project rule:** an operational rule of the backbone's loaded rule set `OPS`, and one of the project's own file. A project rule is a rule only once a loaded rule set holds it (COR-068).
 - **Proposed rule:** one that binds nothing until it is accepted. An accepted rule binds only on the artefacts that a [rule set](#term-rule-set--rule-set) of the [project](#term-project--project)'s own reaches (COR-051 points [4](../../../.pkit/decisions/core/COR-051-rule-sets.md#4-statuses-and-the-gate) and [7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 
 ## TERM-rule-set — rule set
@@ -2192,6 +2314,17 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **Loaded rule set:** one whose rules bind on the work of the sessions that load a file generated from it, such as the backbone's `OPS`. It has no scope and no inheritance ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
 - **Inheritance pin:** the major number an inheriting set names for each set it inherits, as in `WRITE@2`. No [rule](#term-rule--rule) binds through a pin behind its set until the project reviews the new major (COR-051 point 7).
 - **Version pin:** the [release](#term-release--release) a project's commands run at ([ADR-049 point 1](../../architecture/decisions/ADR-049-per-project-version-pin.md#1-pin-source-a-dedicated-project-owned-directive-file)). It is no rule set's pin.
+
+## TERM-rules-index — rules index
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#rules-index).
+
+**Example:** project-kit's rules index is `.pkit/rules/capabilities.md`. It includes project-management's and software-engineering's loaded files, and `CLAUDE.md` includes it.
+
+**Distinctions:**
+
+- **The backbone's file:** `.pkit/rules/core.md`, which the instruction file includes directly, not through the rules index (ADR-076 point 2).
+- **A capability's operational rules:** they reach a session only through the rules index, and only while the capability is installed (COR-070 point 2).
 
 ## TERM-sandbox — sandbox
 
@@ -2243,6 +2376,17 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 - **Target:** the repository a command would write in, read from the working directory. The cross-repository guard compares it with the session anchor's repository ([ADR-034 point 1](../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever)).
 - **Project root:** the folder the [system](#term-system--system)'s commands find the [project](#term-project--project) in, from their working directory. For those commands, the session anchor is only the other side of the cross-repository guard's comparison (ADR-034 point 1).
 - **Anchor:** an [artefact](#term-artefact--artefact)'s link to what makes it true (`TERM-anchor`). It shares the word, and nothing else.
+
+## TERM-settled-break — settled break
+
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#settled-break).
+
+**Example:** A change adds a sentence of 30 words to a use case. The rule-set reviewer reports a settled break of RS-WRITE-005, and withholds its approval.
+
+**Distinctions:**
+
+- **Passage for a person:** a finding whose judgement needs a reading the rule does not settle. It withholds no approval (COR-057 point 3).
+- **Finding that informs:** a break the change does not own, which withholds nothing (COR-057 point 3).
 
 ## TERM-skill — skill
 
