@@ -15,6 +15,8 @@ pkit:
         - project-management:DEC-008
         - project-management:DEC-059#7
         - project-management:DEC-061#1
+        - project-management:DEC-054
+        - project-management:DEC-059#2
 ---
 
 # ACT-planning-agent — Planning agent
