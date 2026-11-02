@@ -100,7 +100,7 @@ composes: [<file>]                 # a composite's files beside its dispatcher
 
 What the body cites is checked against the front matter, in both directions (COR-013 point 3):
 
-- **A path:** text in backticks that holds a `/`, and the target of a link that is no web address. A link that starts with `#` or `./`, or that leads to a decision record, needs no declaration.
+- **A path:** text in backticks that holds a `/`, and the target of a link that is no web address. A link that starts with `#` or `./`, or that leads to a decision record, needs no declaration. Nor does a relative path in a capability's skill that leads inside that capability's own folder.
 - **A record:** an id of the form `COR-`, `PRJ-` or `ADR-` and its number, in backticks or in prose. A capability's decision is cited as `[<capability>:DEC-NNN]`, and validation checks that it resolves, with no declaration.
 - **A hook:** a word with one or two dots, such as `topic.operation`, in backticks or in prose. So a domain name or a dotted key in prose reads as a hook, and warns. Put it in a code fence, or reword it: declared under `needs`, it fails, since nothing answers it.
 - **Not counted:** text in a code fence, an HTML comment or a strikethrough, and a path that holds `<`, `>`, `...`, `{`, `}` or `*`.
