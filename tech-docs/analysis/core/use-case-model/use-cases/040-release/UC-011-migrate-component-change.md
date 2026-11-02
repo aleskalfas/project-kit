@@ -51,7 +51,7 @@ pkit:
 
 **Other actors:**
 
-- **CI pipeline** (`ACT-ci-pipeline`): runs the [migration](../../../glossary.md#term-migration--migration) check on every [pull request](../../../glossary.md#term-pull-request--pull-request), with no person to reply. It does so where the [component](../../../glossary.md#term-component--component)'s repository wires the check in, as project-kit's does ([UC-006](UC-006-gate-merges.md)).
+- **CI pipeline** (`ACT-ci-pipeline`): runs the [migration](../../../glossary.md#term-migration--migration) check on every [pull request](../../../glossary.md#term-pull-request--pull-request), with no person to reply. It does so where the [component](../../../glossary.md#term-component--component)'s repository wires the check in, as project-kit's does ([UC-006](../020-set-up/UC-006-gate-merges.md)).
 - **AI agent** (`ACT-ai-agent`): writes the migration for the author through the `migration-author` [skill](../../../glossary.md#term-skill--skill), which pairs with the [stamp](../../../glossary.md#term-stamp--stamp) of step 2.
 - **Operator** (`ACT-operator`): is asked before the stamp writes in a repository other than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
@@ -73,12 +73,12 @@ pkit:
 > **Not built yet:** `pkit new migration` runs no such check, and writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 2. The system takes the next minor past the [version](../../../glossary.md#term-version--version) that the [component](../../../glossary.md#term-component--component)'s `package.yaml` records on the [default branch](../../../glossary.md#term-default-branch--default-branch). The system prints `Version: <X.Y.0>, the next minor past capability <name> <version>, which the default branch 'main' records.` and stamps `<NNN>-<slug>.sh` in the component's `migrations/<X.Y.0>/` folder.
-3. The author writes the script to carry the projects across. The script is safe to run twice ([COR-010](../../../../../../.pkit/decisions/core/COR-010-resource-lifecycle.md) and [REQ-001](../../../requirements/quality/030-change/REQ-001-migration-runs-again.md)).
+3. The author writes the script to carry the projects across. The script is safe to run twice ([COR-010](../../../../../../.pkit/decisions/core/COR-010-resource-lifecycle.md) and [REQ-001](../../../requirements/quality/040-release/REQ-001-migration-runs-again.md)).
 4. The author runs `pkit migrations check-diff --include-working-tree` before committing.
 5. The system matches each rename and removal in the component's folder with a [migration](../../../glossary.md#term-migration--migration) of the same tier and component. It ends with `Verdict: COVERED (every tier:component with triggers has a matching migration).`
-6. The author commits the [change](../../../glossary.md#term-change--change) with its migration and the component's [changeset](../../../glossary.md#term-changeset--changeset) ([UC-003](UC-003-declare-changeset.md)).
+6. The author commits the [change](../../../glossary.md#term-change--change) with its migration and the component's [changeset](../../../glossary.md#term-changeset--changeset) ([UC-003](../030-change/UC-003-declare-changeset.md)).
 7. The CI pipeline runs `pkit migrations check-diff` on the [pull request](../../../glossary.md#term-pull-request--pull-request), and the check passes.
-8. The [release step](../../../glossary.md#term-release-step--release-step) that moves the component writes the version the migration's folder names ([UC-009](../040-release/UC-009-release-component.md)).
+8. The [release step](../../../glossary.md#term-release-step--release-step) that moves the component writes the version the migration's folder names ([UC-009](UC-009-release-component.md)).
 
 **Variants:**
 

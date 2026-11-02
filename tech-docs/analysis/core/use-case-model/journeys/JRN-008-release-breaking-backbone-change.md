@@ -35,7 +35,7 @@ pkit:
 
 **Steps:**
 
-1. [UC-010](../use-cases/030-change/UC-010-migrate-backbone-change.md) — Never ship a backbone change that breaks installed projects without the migration that carries them across
+1. [UC-010](../use-cases/040-release/UC-010-migrate-backbone-change.md) — Never ship a backbone change that breaks installed projects without the migration that carries them across
    - **Needs from [UC-014](../use-cases/010-develop/UC-014-develop-methodology.md) (outside this journey):** the [backbone](../../glossary.md#term-backbone--backbone), developed in the [methodology](../../glossary.md#term-methodology--methodology)'s [source repository](../../glossary.md#term-source-repository--source-repository). There `pkit` runs the checkout's code as edited, so the [migration](../../glossary.md#term-migration--migration) check and the [release step](../../glossary.md#term-release-step--release-step) run the code the [release](../../glossary.md#term-release--release) ships. A command started with routing switched off runs the installed CLI's code instead, with no warning (UC-014 variant 3b).
    - **Needs from [UC-003](../use-cases/030-change/UC-003-declare-changeset.md) (outside this journey):** the backbone's [changeset](../../glossary.md#term-changeset--changeset), committed with the migration. It declares `minor` or above, so the release step that ships the [change](../../glossary.md#term-change--change) raises the backbone's minor or major.
 2. [UC-008](../use-cases/040-release/UC-008-release-backbone.md) — Release the backbone so adopters can upgrade and pin to it
@@ -45,7 +45,7 @@ pkit:
 
 **Variants:**
 
-- **1a.** The [change](../../glossary.md#term-change--change) needs no [migration](../../glossary.md#term-migration--migration), as when it only adds a [skill](../../glossary.md#term-skill--skill) or refines a document ([UC-010](../use-cases/030-change/UC-010-migrate-backbone-change.md) variant 1a). The path ends after step 1.
+- **1a.** The [change](../../glossary.md#term-change--change) needs no [migration](../../glossary.md#term-migration--migration), as when it only adds a [skill](../../glossary.md#term-skill--skill) or refines a document ([UC-010](../use-cases/040-release/UC-010-migrate-backbone-change.md) variant 1a). The path ends after step 1.
 
 **Postconditions:** The [release](../../glossary.md#term-release--release) tagged `v<version>` carries the breaking [change](../../glossary.md#term-change--change), with its [migration](../../glossary.md#term-migration--migration) in that [version](../../glossary.md#term-version--version)'s folder. A [project](../../glossary.md#term-project--project)'s upgrade across that version runs the migration. The release's changelog entry says what the change means for adopters.
 
