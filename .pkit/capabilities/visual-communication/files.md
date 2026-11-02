@@ -203,12 +203,12 @@ lock:
 | `audience` | yes | Who the piece is for, in words. |
 | `shown` | yes | Where the piece is shown, in words. |
 | `explains` | yes | `true` where the piece explains, rather than only shows. |
-| `exports` | yes | The formats an export makes: `svg`, or none (*What is made from a piece*). |
+| `exports` | yes | The formats an export makes (*What is made from a piece*). |
 | `state` | yes | The piece's stage of life. Format 1 takes `draft` alone. |
 | `modes` | no | For each axis, the modes the piece is drawn in. An axis it leaves out is drawn in its default. |
 | `pinned` | no | `true` pins the lock. |
 | `produced` | no | Each picture a producer makes for the piece (*What is made from a piece*). |
-| `accept-losses` | no | The losses of a plugin a person accepted, each with `plugin`, `what` and `reason` (*What is made from a piece*). |
+| `accept-losses` | no | The losses of a plugin a person accepted (*What is made from a piece*). |
 | `lock` | no | The version of each library the piece uses. A render writes it. |
 
 ### The lock
