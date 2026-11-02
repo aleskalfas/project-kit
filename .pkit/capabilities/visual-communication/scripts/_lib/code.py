@@ -35,7 +35,6 @@ Reads the location's files; imports a code writer only when it runs.
 
 from __future__ import annotations
 
-import io
 import platform
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -43,7 +42,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from _lib import fingerprint, libraries, tokens, values
+from _lib import fingerprint, libraries, records, tokens, values
 from _lib import location as loc
 from _lib.files import (
     FORMAT,
@@ -457,13 +456,11 @@ def _up_to_date(code: Path, record: Path, taken: Mapping[str, Any], data: bytes)
     if not (code.is_file() and record.is_file()):
         return False
     try:
-        kept = read_yaml(record)
-    except ReadError:
+        kept = records.read(record, "code-record")
+    except records.RecordError:
         return False
     return (
-        isinstance(kept, Mapping)
-        and binding_problem(kept, "code-record") is None
-        and kept.get("fingerprint") == taken
+        kept.get("fingerprint") == taken
         and kept.get("sha256") == sha256(data)
         and as_written(code) == data
     )
@@ -472,25 +469,11 @@ def _up_to_date(code: Path, record: Path, taken: Mapping[str, Any], data: bytes)
 def _record_text(declaration: Declaration, record: Mapping[str, Any]) -> str:
     """The record as YAML, its time quoted, read back to be sure it holds what was meant.
     Raises CodeRefused otherwise."""
-    from ruamel.yaml import YAML
-    from ruamel.yaml.scalarstring import SingleQuotedScalarString
-
-    shown = {
-        **record,
-        "recorded": {
-            **record["recorded"],
-            "time": SingleQuotedScalarString(record["recorded"]["time"]),
-        },
-    }
-    dumper = YAML()
-    dumper.indent(mapping=2, sequence=4, offset=2)
-    dumper.width = 4096
-    stream = io.StringIO()
-    dumper.dump(shown, stream)
-    text = (
-        f"# The record of the code `{declaration.command}` writes to {declaration.out}: "
-        f"write it again, never edit it.\n{stream.getvalue()}"
+    comment = (
+        f"The record of the code `{declaration.command}` writes to {declaration.out}: "
+        f"write it again, never edit it."
     )
+    text = records.text(records.quoted_time(record), [comment], apart=False)
     if load_yaml(text, declaration.record) != record:
         raise CodeRefused(f"the record {declaration.record} does not read back as it was meant")
     return text
