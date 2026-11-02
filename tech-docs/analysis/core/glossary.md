@@ -851,6 +851,18 @@ TERM-report:
           - PRJ-008
           - ADR-047#3
           - COR-043#3
+TERM-report-target:
+  name: report target
+  status: active
+  definition: "one repository a distribution sets, in its own configuration, for the issues its adopters file through the system, which no adopter can change"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/report.py
+        record:
+          - PRJ-008
+          - ADR-047#3
 TERM-revalidation-answer:
   name: revalidation answer
   noun-forms: [revalidation answers]
@@ -1136,6 +1148,18 @@ TERM-system:
   pkit:
     friction:
       unanchored-because: It names the whole of pkit, so an anchor on its code would match every change. No record defines it.
+TERM-tracked-fix:
+  name: tracked fix
+  noun-forms: [tracked fixes]
+  status: active
+  definition: "issue the methodology maintainer links to a report as the work that resolves it, which may serve several reports"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/report.py
+        record:
+          - PRJ-008
 TERM-trigger-field:
   name: trigger field
   noun-forms: [trigger fields]
@@ -2043,6 +2067,17 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 - **To report:** a check's or a command's plain verb, as in "the change check reports friction". It shares only the word.
 - **A command's report:** what a command prints of what it found, such as `pkit permissions diagnose report`. It is no report in this sense.
 
+## TERM-report-target — report target
+
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#report-target).
+
+**Example:** project-kit's report target is its own repository, so an adopter's `pkit report bug` files there. A fork that sets its own receives its adopters' reports.
+
+**Distinctions:**
+
+- **Distribution:** the edition that sets the report target. A fork is another distribution, with a report target of its own (PRJ-008).
+- **`pkit report inbox`:** the maintainer's listing of reports, which runs only in a clone of the report target (PRJ-008).
+
 ## TERM-revalidation-answer — revalidation answer
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#revalidation-answer).
@@ -2307,6 +2342,17 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **A platform:** in [COR-009](../../../.pkit/decisions/core/COR-009-pr-workflow.md), the hosting service a [project](#term-project--project)'s remote lives on. It is other software, never the system.
 - **Operating system:** the software a machine runs, beneath the harness and the system. It is other software, and its [sandbox](#term-sandbox--sandbox) bounds the commands the harness runs.
 - **The methodology:** the body of [decision records](#term-decision-record--decision-record), rules, [operational rules](#term-operational-rule--operational-rule) and conventions the system ships and enforces. It is a term of its own, whose *Distinctions* refer back here.
+
+## TERM-tracked-fix — tracked fix
+
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#tracked-fix).
+
+**Example:** `pkit report link 1412 1398` adds `- [ ] #1398` under report 1412's `## Tracked by` heading, so issue 1398 is one of its tracked fixes.
+
+**Distinctions:**
+
+- **Report:** the issue an adopter filed. A tracked fix is the issue that resolves it.
+- **A resolved report:** a feedback or a change request whose tracked fixes are all closed. `pkit report inbox --resolved` lists it, and closes it only on a person's word (PRJ-008).
 
 ## TERM-trigger-field — trigger field
 
