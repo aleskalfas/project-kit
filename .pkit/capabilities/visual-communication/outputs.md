@@ -134,7 +134,7 @@ An *export* is a set of files a piece is handed out as. Each export run is one *
 
 - **Formats.** A piece names its formats under `exports` in its `piece.yaml`. Format 1 knows one, `svg`, which the SVG renderer draws.
 - **What a run makes:** one file for each format, each page, each language and each combination of modes the piece names, drawn from the scenes under the lock `piece.yaml` holds.
-- **The number.** A run takes the number one higher than the highest version in the piece's `exports.yaml`, or 1 where there is none. Every file of the run carries it, so version 3 in English matches version 3 in Czech.
+- **The number.** A run takes the number one higher than the highest version the piece's `exports.yaml` records or any file of its exports folder carries, or 1 where there is none. Every file of the run carries it, so version 3 in English matches version 3 in Czech. A file the record does not name, such as one a failed run could not remove, is never overwritten, and refuses no later run.
 - **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. A piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.<format>`, such as `deck.v1.en.default.2.svg`.
 - **Where:** `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the clone and never committed. No export overwrites another. What is committed is the record of exports, in the piece's folder.
 
@@ -172,7 +172,7 @@ An export run is refused, and writes nothing, when:
 - a produced picture is stale (*What makes an output stale*), unless `--use-stale <output>` names it;
 - `--use-stale` names an output the piece does not declare under `produced`: the refusal names those it declares;
 - the piece has no page in one of its languages, so the version would hold no file in it;
-- a file of the run's number already lies in the piece's exports folder, or a file the run would write, `exports.yaml` among them, is reached through a link;
+- a file the run would write, `exports.yaml` among them, is reached through a link;
 - `exports.yaml` cannot be read, or holds no list of numbered versions.
 
 Each of these is found before the first write, so a refused run records no location either. `--use-stale` naming a declared output that is not stale refuses nothing: the run uses the picture as it is, and says it was not stale.

@@ -671,11 +671,3 @@ def writable(root: Path, path: Path) -> None:
         refuse_links(root, path)
     except FileError as exc:
         raise Refused(str(exc)) from exc
-
-
-def write_file(root: Path, path: Path, data: bytes) -> None:
-    """Write a file a command owns whole, making its folders. Raises Refused where it is
-    reached through a link."""
-    writable(root, path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    write_whole(path, data)

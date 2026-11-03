@@ -30,6 +30,7 @@ from tests.visual_communication_project import (
     write,
     write_list,
 )
+from tests.visual_communication_writes import FULL, failing
 
 script, libraries, reading = load("visual-communication", "add.py", "libraries", "reading")
 
@@ -274,18 +275,32 @@ def test_a_library_the_capability_does_not_ship_is_refused_naming_the_ones_it_sh
     assert not (root / "visual").exists()
 
 
-def test_a_failed_write_of_the_list_leaves_no_copy(
+@pytest.mark.parametrize(("file", "failed"), [("libraries.yaml", LIST), ("1.0.0", COPY)])
+def test_a_write_that_fails_leaves_no_copy_no_list_and_no_location(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, file: str, failed: str
+) -> None:
+    root = project(tmp_path)
+    with monkeypatch.context() as patch:
+        failing(patch, write={file})
+        added = run(root, "foundations")
+    assert added.returncode == 1
+    assert added.stdout == ""
+    assert added.stderr == f"error: {failed} could not be written: {FULL}\n"
+    assert not (root / "visual").exists()
+    assert not (root / CONFIG).exists()
+
+
+def test_a_write_that_fails_leaves_the_list_as_it_was(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def refused(_target: Path, _data: bytes) -> None:
-        raise OSError("disk full")
-
-    monkeypatch.setattr(libraries, "write_whole", refused)
     root = project(tmp_path)
-    added = run(root, "foundations")
-    assert added.returncode == 1
-    assert "OSError: disk full" in added.stderr
-    assert tree(root / "visual") == {}
+    write_list(root, {})
+    listed = (root / LIST).read_bytes()
+    with monkeypatch.context() as patch:
+        failing(patch, write={"libraries.yaml"})
+        assert run(root, "foundations").returncode == 1
+    assert tree(root / "visual") == {"libraries/libraries.yaml": listed}
+    assert not (root / CONFIG).exists()
 
 
 # --- the location -----------------------------------------------------------------------------
