@@ -33,7 +33,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf_declaration.py
         - .pkit/capabilities/visual-communication/schemas/findings.schema.json
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
-      record: ["visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012"]
+      record: ["visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012", "visual-communication:DEC-013"]
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
         - .pkit/capabilities/visual-communication/components.md#breaking-lines
@@ -57,6 +57,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#reserved-words
         - .pkit/capabilities/visual-communication/files.md#the-binding
         - .pkit/capabilities/visual-communication/files.md#the-library-folder
+        - .pkit/capabilities/visual-communication/files.md#the-libraries-the-capability-ships
         - .pkit/capabilities/visual-communication/files.md#the-location
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#notations
@@ -429,7 +430,7 @@ A file is read once, one way, so the same file gives the same hash on every mach
 | A produced picture | the output's `record.yaml` ([its record](outputs.md#the-record-of-a-produced-output)) | The part of `piece.yaml` at `produced.<output>`. Each value its inputs name, in each combination the piece names. Each variant's pixel size. The producer's version. |
 | Written code | `<out>.record.yaml` ([its record](outputs.md#the-record-beside-the-code)) | The declaration's file. Each value written, in each combination of the brand's axes. The code writer's version. |
 | An export | each version of `exports.yaml` ([the record of exports](outputs.md#the-record-of-exports)) | As a piece's findings, and the part of `piece.yaml` at `exports`. |
-| A released library version | its entry in the list, as `hash` ([files](files.md#the-library-folder)) | Every file of the version's folder. |
+| A released library version | its entry in the list, as `hash` ([files](files.md#the-library-folder)); for a version the capability ships, its entry in the library's record too ([files](files.md#the-libraries-the-capability-ships)) | Every file of the version's folder, its `library.yaml` with the release it needs included. |
 
 A piece's *own files* are the files of its folder as git lists them, tracked or untracked but not ignored. They leave out `findings.yaml` and `exports.yaml`. Under `produced/`, only each output's `record.yaml` is one of them, since it holds the hash of each of its pictures. A library version's files are listed the same way.
 

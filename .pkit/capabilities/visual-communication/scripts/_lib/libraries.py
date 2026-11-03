@@ -1,7 +1,7 @@
 """The library folder, the list of the project's libraries, versions, the libraries the
 capability ships, a piece's lock, and the versions a library is checked alone with
 (DEC-001 point 5, DEC-002 point 3, DEC-003 points 1, 4, 5, 8 and 9, DEC-004 point 6,
-DEC-005 point 7, DEC-008 point 1).
+DEC-005 point 7, DEC-008 point 1, DEC-013 point 2).
 
 - **The library folder** is `libraries/` in the location. Each version a lock may name is
   a folder of its own, `libraries/<name>/<version>/`, holding the version whole with its
@@ -11,13 +11,15 @@ DEC-005 point 7, DEC-008 point 1).
   source and the versions present, which of them are released, and the fingerprint of
   each released one (form 1, over every file of its folder). A released version whose
   folder no longer verifies has changed since its release.
-- **A shipped library** is one the capability ships: one version of each, in a folder of
-  its own under `SHIPPED_LIBRARIES`. A person brings it in by a command, which copies the
-  version whole into the library folder and lists it with the source `shipped`, every
-  other byte of the list kept (`plan_copy`, then `copy_shipped`). A shipped version is not
-  released yet, so the list marks it `released: false`. The copy never overwrites a
-  version the folder holds, and is refused where a file of the capability's format in the
-  version lacks its binding.
+- **A shipped library** is one the capability ships. Its version being built lies in a
+  folder of its own under `SHIPPED_LIBRARIES`, named for the library and for no version,
+  and the capability ships one for each library (`shipped_names`). Its released versions
+  and its record lie apart from it (`shipped`, DEC-013 point 2). A person brings the
+  version being built in by a command, which copies the version whole into the library
+  folder and lists it with the source `shipped`, every other byte of the list kept
+  (`plan_copy`, then `copy_shipped`). A version being built is not released, so the list
+  marks it `released: false`. The copy never overwrites a version the folder holds, and
+  is refused where a file of the capability's format in the version lacks its binding.
 - **Versions** are `X.Y.Z` with X at least 1 in format 1, and a library's *line* is its
   major. `builds-on` names each library a library builds on by its major, an integer. A
   brand marks at most one of them as its base, `base: true` (DEC-004 point 6); a
@@ -77,7 +79,9 @@ FOUNDATIONS = "foundations"
 #: The list of the project's libraries, within the location.
 LIST = f"{FOLDER}/libraries.yaml"
 
-#: The libraries the capability ships, one version of each, in its own folder.
+#: The version being built of each library the capability ships, each in a folder of its
+#: own named for the library, under a name that names no version (DEC-013 point 2). Its
+#: released versions and its record lie apart, under `shipped.RELEASES`.
 SHIPPED_LIBRARIES = SHIPPED / "libraries"
 
 #: The comment that opens a list a command writes whole, a line each.
@@ -497,14 +501,14 @@ class ShippedCopy:
     list_text: str
 
 
-def shipped_names() -> list[str]:
-    """The libraries the capability ships, in name order: each folder of
-    `SHIPPED_LIBRARIES` that holds a `library.yaml`."""
-    if not SHIPPED_LIBRARIES.is_dir():
+def shipped_names(folder: Path | None = None) -> list[str]:
+    """The libraries the capability ships, in name order, read from their versions being
+    built alone: each folder of `folder`, `SHIPPED_LIBRARIES` unless given, that holds a
+    `library.yaml`."""
+    folder = SHIPPED_LIBRARIES if folder is None else folder
+    if not folder.is_dir():
         return []
-    return sorted(
-        path.name for path in SHIPPED_LIBRARIES.iterdir() if (path / "library.yaml").is_file()
-    )
+    return sorted(path.name for path in folder.iterdir() if (path / "library.yaml").is_file())
 
 
 def plan_copy(root: Path, location: str, name: str) -> ShippedCopy:
