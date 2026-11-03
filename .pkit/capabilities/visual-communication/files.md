@@ -44,6 +44,7 @@ pkit:
         - tests/visual_communication_project.py
         - tests/test_visual_communication_pipeline.py
         - tests/test_visual_communication_layout.py
+        - tests/test_visual_communication_tokens.py
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/steps.yaml
         - tests/fixtures/visual-communication/libraries/test-brand/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/test-brand/1.0.0/test-brand.resolver.json
@@ -470,7 +471,7 @@ A brand reaches the own roles of a library, to give one a value, open it or alia
 - **Where it names none,** the library is at its defaults under the brand ([`roles.yaml`](#rolesyaml)). A token the brand holds under the library's name stays private, and gives the library nothing. An alias to one of the library's roles fails.
 - **What it exports:** beside the shared roles, each role of a library it names that it, or its base, gives a value (DEC-008 point 5). A role it leaves at its default is not exported: its name is the library's, kept by the library's major.
 
-A brand that names `test-parts`, by the test brand's `builds-on` and its tokens:
+The test brand itself builds on `foundations` alone. The capability's tests build a copy of it that names `test-parts`, with this `builds-on` and these tokens:
 
 ```yaml
 builds-on:

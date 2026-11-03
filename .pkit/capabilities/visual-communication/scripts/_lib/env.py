@@ -45,6 +45,21 @@ class UnknownConcept(KeyError):
         return self.why
 
 
+class UnvaluedRole(KeyError):
+    """A library's own role that has no value under the brand: its chain of defaults reaches
+    none, and the brand gives it none (DEC-008 point 1). `library` names the library whose
+    role it is, and `named` says whether the brand, or a brand it builds on, names that
+    library (point 4). Where one does, it owes the role a value, and that is its finding.
+    Where none does, neither the brand nor the library alone is at fault, so a part that
+    reads the role is found at the lock that combines them (point 9)."""
+
+    def __init__(self, role: str, library: str, *, named: bool) -> None:
+        super().__init__(role)
+        self.role = role
+        self.library = library
+        self.named = named
+
+
 @dataclass(frozen=True)
 class PictureInfo:
     """A produced output of the piece, as its record keeps it (DEC-006 points 2-3).
@@ -71,7 +86,8 @@ class Env(Protocol):
         """A role's resolved DTCG value in the scene's size combination, aliases resolved:
         a dimension `{value, unit}`, a number, a font family list, a typography mapping.
         The engine never asks for a colour's: colours stay roles in the scene. Raises
-        `KeyError` for a role the brand gives no value."""
+        `UnvaluedRole`, a `KeyError`, for a library's own role that has no value under the
+        brand, and `KeyError` for a path that holds no role."""
         ...
 
     def font_file(self, family: str) -> Path:
