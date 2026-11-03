@@ -831,7 +831,8 @@ class Instance:
         given: Mapping[str, Any],
         *,
         trace: str,
-        content_path: str,
+        content_path: str | None,
+        paths: Mapping[str, str] | None = None,
         sources: Mapping[str, str] | None = None,
         parent: Instance | None = None,
         part: str = "",
@@ -845,7 +846,11 @@ class Instance:
         self.component = component
         self.given = given
         self.trace = trace
+        # The key path of the mapping in the content file that holds what it was given; None
+        # where no mapping does, as where a `use` part placed it: `paths` then holds the key
+        # path of each field the part passes on.
         self.content_path = content_path
+        self._paths = dict(paths or {})
         self.parent = parent
         self.part_name = part
         self.is_item = is_item  # an item its parent's list draws
@@ -899,8 +904,27 @@ class Instance:
             above = above.parent
         return found
 
+    def field_path(self, name: str) -> str | None:
+        """The key path of the field `name` in the content file, by the keys the file
+        writes: below the mapping that holds what this instance was given, or, where a
+        `use` part placed it, the path of the field the part passes on under that name.
+        None where no key of the content file gives the field."""
+        if self.content_path is not None:
+            return _join(self.content_path, name)
+        return self._paths.get(name)
+
     def source_of_field(self, name: str) -> str:
-        return self._sources.get(name) or f"{CONTENT}{_join(self.content_path, name)}"
+        """Where the field or option `name` comes from: the source the part that placed
+        this instance gave it, else the field's key path in the content file. A field no key
+        of the content file gives, such as one a `use` part does not pass on, is the
+        component whose part placed the instance's to give, and it gives none."""
+        if name in self._sources:
+            return self._sources[name]
+        path = self.field_path(name)
+        if path is not None:
+            return f"{CONTENT}{path}"
+        placer = self.parent if self.parent is not None else self
+        return f"default:{placer.component.use}"
 
     def _read_options(self) -> None:
         use = self.component.use
@@ -1165,7 +1189,12 @@ class Instance:
             return
         given: dict[str, Any] = {}
         sources: dict[str, str] = {}
+        # Each field it passes on keeps the key path the content file writes for it.
+        paths: dict[str, str] = {}
         for theirs, ours in (spec.get("fields") or {}).items():
+            path = self.field_path(ours)
+            if path is not None:
+                paths[theirs] = path
             if ours in self.given:
                 given[theirs], sources[theirs] = self.given[ours], self.source_of_field(ours)
         for theirs, raw in (spec.get("options") or {}).items():
@@ -1173,7 +1202,7 @@ class Instance:
             given[theirs] = word
             sources[theirs] = f"option:{chosen}" if chosen else f"default:{self.component.use}"
         node.child = Instance(
-            self.ctx, component, given, trace=trace, content_path=self.content_path,
+            self.ctx, component, given, trace=trace, content_path=None, paths=paths,
             sources=sources, parent=self, part=node.part.name, chain=(*self.chain, use),
             by_content=False,
         )  # fmt: skip
@@ -1196,21 +1225,22 @@ class Instance:
         component = self._component(node, placed["use"], trace, by_content=True)
         if component is not None:
             node.child = Instance(
-                self.ctx, component, placed, trace=trace,
-                content_path=_join(self.content_path, name), parent=self, part=node.part.name,
-                through_pages=name in self.component.pages,
+                self.ctx, component, placed, trace=trace, content_path=self.field_path(name),
+                parent=self, part=node.part.name, through_pages=name in self.component.pages,
             )  # fmt: skip
 
     def _build_items(self, node: Node, trace: str) -> None:
         """Each item of the list the part repeats over, drawn in the content's order. An item
         that is no mapping, repeats an id, or names no component is left out: it takes no
         place among the items drawn, so `:index` and `:count` never count it. Its trace
-        keeps its place in the content's list."""
+        keeps its place in the content's list, and so does its key path, which names the
+        list as the content file writes it."""
         spec = node.part.spec
         name = spec["repeat"]
         listed = self.given.get(name)
         listed = listed if isinstance(listed, list) else []
         place = (spec["colour"], f"default:{self.component.use}") if spec.get("colour") else None
+        path = self.field_path(name)
         seen: set[str] = set()
         for index, item in enumerate(listed, start=1):
             key = item.get("id") if isinstance(item, Mapping) else None
@@ -1233,7 +1263,7 @@ class Instance:
                 continue
             instance = Instance(
                 self.ctx, component, item, trace=at,
-                content_path=_join(self.content_path, f"{name}{step}"), parent=self,
+                content_path=None if path is None else f"{path}{step}", parent=self,
                 part=node.part.name, is_item=True, place_colour=place,
                 through_pages=name in self.component.pages,
             )  # fmt: skip

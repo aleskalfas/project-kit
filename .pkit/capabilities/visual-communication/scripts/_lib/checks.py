@@ -680,11 +680,7 @@ class _Fields:
             return  # the scene reports a component that does not exist, or cannot be read
         fields = component.get("fields") if isinstance(component.get("fields"), Mapping) else {}
         options = component.get("options") if isinstance(component.get("options"), Mapping) else {}
-        repeats = {
-            spec["repeat"]: spec.get("draw")
-            for spec in (component.get("parts") or {}).values()
-            if isinstance(spec, Mapping) and isinstance(spec.get("repeat"), str)
-        }
+        repeats = self._repeats(component, (use,))
         known = {*(fields.get("properties") or {}), *options, *names.RESERVED_PLACING_KEYS}
         self._keys(value, known, path, f"`{use}` takes no field or option")
         for name, option in options.items():
@@ -698,6 +694,31 @@ class _Fields:
                     f"({', '.join(map(str, option))}){hint}",
                 )
         self._object(fields, value, path, fields, repeats, keys_checked=True)
+
+    def _repeats(self, component: Mapping[str, Any], chain: tuple[str, ...]) -> dict[str, Any]:
+        """Each list field of `component` that a part draws, with the component its `draw`
+        names: a `repeat` part of its own, else, at any depth, one of a component a `use`
+        part places, which the part passes the list on to under another name. `chain`
+        holds the components on the way, so one that places itself ends the search."""
+        parts = component.get("parts") or {}
+        repeats = {
+            spec["repeat"]: spec.get("draw")
+            for spec in parts.values()
+            if isinstance(spec, Mapping) and isinstance(spec.get("repeat"), str)
+        }
+        for spec in parts.values():
+            use = spec.get("use") if isinstance(spec, Mapping) else None
+            bound = spec.get("fields") if isinstance(spec, Mapping) else None
+            if not isinstance(use, str) or use in chain or not isinstance(bound, Mapping):
+                continue
+            try:
+                placed = self._repeats(self.env.component(use), (*chain, use))
+            except KeyError:
+                continue  # the scene reports a component that does not exist, or cannot be read
+            for theirs, ours in bound.items():
+                if theirs in placed and isinstance(ours, str):
+                    repeats.setdefault(ours, placed[theirs])
+        return repeats
 
     def _keys(self, value: Mapping[str, Any], known: set[str], path: str, lead: str) -> None:
         for key in value:
