@@ -103,7 +103,7 @@ accept-losses:
     reason: Thin.
 ```
 
-An entry matches a loss by its `plugin` and its `what` alone. The command that runs the plugin no longer prints an accepted loss, and the check no longer reports it (*Losses*).
+An entry matches a loss by its `plugin` and its `what` alone. The command that runs the plugin no longer prints an accepted loss, and the check no longer reports it (*Losses* in *What the check reports*).
 
 ## The SVG renderer
 
@@ -114,7 +114,7 @@ The `svg` renderer draws a scene as SVG files: one for each page, each language 
 - **Colours.** A colour stays a role in the scene. The renderer takes its value from the brand's resolved values in the combination it draws, as `#rrggbb`, with a `fill-opacity` or `stroke-opacity` where the colour is translucent.
 - **Shapes and text.** A box's stroke lies inside its frame. Each line of a text is drawn as the engine broke it, at its baseline, anchored at the start, the middle or the end of the text's width.
 - **Pictures.** A produced picture is embedded as PNG data: the variant that serves the combination drawn ([Variants](#variants)).
-- **Fonts.** Each font the page draws in is embedded as an `@font-face` rule, from the brand's committed font file, never from the machine's fonts, cut down to the characters drawn in it. The renderer draws in the brand's default font profile.
+- **Fonts.** Each font the page draws in is embedded as an `@font-face` rule, from the brand's committed font file, never from the machine's fonts, cut down to the characters drawn in it. The renderer draws in the brand's default font profile. A family's name is written as a CSS string in double quotes, in its `@font-face` rule and in each text's `font-family`. A `"` or a `\` takes a `\` before it. Each `<`, `>` and `&`, each control character and each character XML 1.0 does not allow is written as the escape of its code point: a `\`, the code point in hexadecimal, and a space. So no name a brand gives can end the drawing's `<style>` element, or leave the file malformed XML.
 - **The same bytes.** Lengths are written to 1/100 px, and attributes in one order, so the same scene and values give the same file.
 
 ### Previews
@@ -169,7 +169,7 @@ An export run is refused, and writes nothing, when:
 - the brand cannot be read, or the piece names a mode its brand lacks;
 - a font has no file, or a character has no font family that can measure it;
 - a produced picture the piece shows is missing: it has no record, or its record names a variant file that is missing;
-- a produced picture is stale (*What makes an output stale*), unless `--use-stale <output>` names it;
+- a produced picture is stale (*What makes an output stale* in *What the check reports*), unless `--use-stale <output>` names it;
 - `--use-stale` names an output the piece does not declare under `produced`: the refusal names those it declares;
 - the piece has no page in one of its languages, so the version would hold no file in it;
 - a file the run would write, `exports.yaml` among them, is reached through a link;
@@ -276,7 +276,7 @@ recorded: {plugins: {square: 1.0.0}, programs: {}, machine: darwin arm64, time: 
 
 | Field | What it holds |
 |---|---|
-| `fingerprint` | the fingerprint of what the producer read (*The fingerprint*) |
+| `fingerprint` | the fingerprint of what the producer read (*The fingerprint* in *What the check reports*) |
 | `variants` | each variant by its key: its `file`, its `pixels`, and the SHA-256 of the file |
 | `combinations` | each combination the piece names, by its key, with the variant that serves it |
 | `points` | each exposed point, with its place in each variant |
@@ -334,7 +334,7 @@ out: web/brand.css
 
 ### The record beside the code
 
-`pkit visual write-code` writes a record beside the code, `<out>.record.yaml`, such as `web/brand.css.record.yaml`. After its binding, it holds the `fingerprint` of what the code was written from (*The fingerprint*), the `sha256` of the code as written, and what is only `recorded`, never compared: the writer with its version (`plugins`), the outside programs (`programs`, none), the `machine`, the `time` in UTC, and the release of the `capability`.
+`pkit visual write-code` writes a record beside the code, `<out>.record.yaml`, such as `web/brand.css.record.yaml`. After its binding, it holds the `fingerprint` of what the code was written from (*The fingerprint* in *What the check reports*), the `sha256` of the code as written, and what is only `recorded`, never compared: the writer with its version (`plugins`), the outside programs (`programs`, none), the `machine`, the `time` in UTC, and the release of the `capability`.
 
 ### The CSS code writer
 

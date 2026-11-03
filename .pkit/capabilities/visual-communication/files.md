@@ -287,7 +287,7 @@ libraries:
 - **`versions`** maps each version to `released: true` or `false`. A released version carries `hash`, its fingerprint over every file of its folder (*The fingerprint* in *What the check reports*). A version not released carries none.
 - **One library to a name:** a second library of one name is refused (DEC-003 point 4).
 
-`pkit visual add` lists each shipped version it copies, `released: false`. Where the location holds no list, it writes one whole, under a comment that says what the file is. Otherwise it adds the version as text: a library the list does not name yet goes last under `libraries`, and a new version of a shipped library last under its `versions`. Where that mapping's entries lie on the lines below its key, the command writes the new entry as block lines at their indent. Where the mapping is written in flow on its key's line, such as `versions: {}`, it writes the entry in flow before the closing brace. Every other byte of the file stays: comments, order, line endings and a byte-order mark. Where the result would not read back as the list with that version added, the command refuses: write `libraries`, and the library's `versions`, as block mappings.
+`pkit visual add` lists each shipped version it copies, `released: false`. Where the location holds no list, it writes one whole, under a comment that says what the file is. Otherwise it adds the version as text: a library the list does not name yet goes last under `libraries`, and a new version of a shipped library last under its `versions`. Where that mapping's entries lie on the lines below its key, the command writes the new entry as block lines at their indent. Where the mapping is written in flow on its key's line, such as `versions: {}`, it writes the entry in flow before the closing brace. Every other byte of the file stays: comments, order, line endings and a byte-order mark. Where the result would not read back as the list with that version added, the command refuses: write `libraries`, and the library's `versions`, as block mappings. Where a key on the way, `libraries`, the library's name or `versions`, is written in quotes, the refusal names it instead, to be written without them.
 
 ### `library.yaml`
 
@@ -487,8 +487,8 @@ concepts:
 ```
 
 - **`concepts`** maps each concept, by its name, to `{colour: <family>}`, one of the colour families of the foundations the piece locks ([The foundations](#the-foundations)). It holds at least one concept. A concept that maps to a value, to a role or to a family the foundations do not declare is refused (*What the check reports*).
-- **A piece names the notations it uses** under `notations` in its `piece.yaml`, and its lock names a version of each ([The lock](#the-lock)).
-- **Content names a concept** read with its notation's name, `<notation>/<concept>`, as a use names a component read with its library's ([Content files](#content-files)). Content names concepts only from the notations its piece names.
+
+How a piece names the notations it uses is under [`piece.yaml`](#pieceyaml), how its lock takes them under [The lock](#the-lock), and how its content names a concept under [Content files](#content-files) and [Shapes](#shapes).
 
 ## Keys of combinations
 

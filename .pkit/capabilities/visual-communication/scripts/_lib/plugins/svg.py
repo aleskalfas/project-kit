@@ -108,6 +108,9 @@ def css_string(name: str) -> str:
     escape of its code point each character that could end the style element or start
     another (`<`, `>`, `&`), each control character, and each character XML 1.0 does not
     allow. So any name reaches the file as one name, and the file stays well-formed XML."""
+    # The CSS code writer's `_quoted` (`plugins/css.py`) writes a family name the same way,
+    # escaping less. It is kept apart so that the CSS writer's output and version do not
+    # move: a change to how either writes a CSS string is weighed for the other too.
     out = []
     for char in name:
         if char in ('"', "\\"):

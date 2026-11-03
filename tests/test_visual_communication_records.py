@@ -105,6 +105,31 @@ def test_an_entry_where_the_text_does_not_show_the_mapping_is_refused() -> None:
     with pytest.raises(records.RecordError, match=f"^{refusal}$"):
         records.with_entry("a: {\n  x: 1}\n", ["a"], "b", 2, each="item")
     with pytest.raises(records.RecordError, match=f"^{refusal}$"):
-        records.with_entry("'a':\n  x: 1\n", ["a"], "b", 2, each="item")
-    with pytest.raises(records.RecordError, match=f"^{refusal}$"):
         records.with_entry("a:\n  {x: 1}\n", ["a"], "b", 2, each="item")
+
+
+@pytest.mark.parametrize(
+    ("original", "path", "said"),
+    [
+        pytest.param("'a':\n  x: 1\n", ["a"], "write the key `a` without quotes", id="single"),
+        pytest.param(
+            'a:\n  "c":\n    x: 1\n', ["a", "c"], "write the key `c` without quotes", id="double"
+        ),
+        pytest.param(
+            "'a':\n  c:\n    'd': {}\n",
+            ["a", "c", "d"],
+            "write the keys `a`, `d` without quotes",
+            id="several",
+        ),
+    ],
+)
+def test_a_key_on_the_way_written_in_quotes_is_refused_naming_it(
+    original: str, path: list[str], said: str
+) -> None:
+    with pytest.raises(records.RecordError, match=f"^{said}$"):
+        records.with_entry(original, path, "b", 2, each="item")
+    unquoted = original.replace("'", "").replace('"', "")
+    mapping = reading.load_yaml(records.with_entry(unquoted, path, "b", 2, each="item"))
+    for key in path:
+        mapping = mapping[key]
+    assert mapping["b"] == 2

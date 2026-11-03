@@ -276,6 +276,27 @@ def test_a_file_the_record_does_not_name_is_never_overwritten_and_refuses_nothin
     assert [entry["version"] for entry in reading.read_yaml(root / RECORD)["versions"]] == [2]
 
 
+def test_a_file_of_a_number_under_another_name_moves_the_run_past_that_number(
+    tmp_path: Path,
+) -> None:
+    root = ready(tmp_path)
+    folder = root / FOLDER
+    folder.mkdir(parents=True)
+    left = folder / "flow.v1.en.default.1.svg"
+    left.write_text("kept\n", encoding="utf-8")
+    (folder / "notes.txt").write_text("mine\n", encoding="utf-8")
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert left.read_text(encoding="utf-8") == "kept\n"
+    assert exported(root) == [
+        "flow.v1.en.default.1.svg",
+        "flow.v2.en.colour-scheme.dark.svg",
+        "flow.v2.en.default.svg",
+        "notes.txt",
+    ]
+    assert [entry["version"] for entry in reading.read_yaml(root / RECORD)["versions"]] == [2]
+
+
 def test_a_record_that_cannot_be_read_stops_the_next_export(tmp_path: Path) -> None:
     root = ready(tmp_path)
     (root / RECORD).write_text("pkit_schema: visual-communication:exports\n[", encoding="utf-8")

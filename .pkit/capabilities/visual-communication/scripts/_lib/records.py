@@ -124,7 +124,9 @@ def with_entry(original: str, path: Sequence[str], name: str, value: Any, *, eac
     flow before the closing brace. Every other byte is kept: its comments, its order, its
     line endings and a byte-order mark. Raises RecordError where `original` cannot be
     read, the mapping holds `name` already, or the text would not read back as it was with
-    the entry added; `each` names what one entry of the mapping holds, in the refusal."""
+    the entry added; `each` names what one entry of the mapping holds, in the refusal. A
+    key on the way that the text writes in quotes is found by no line, and the refusal
+    names it, to be written without them."""
     bom, lines, newline = _lines(original)
     before = _loaded(original[len(bom) :])
     dotted = ".".join(path)
@@ -136,6 +138,12 @@ def with_entry(original: str, path: Sequence[str], name: str, value: Any, *, eac
         raise RecordError(f"`{dotted}` holds `{name}` already")
     entered = _entered(lines, path, name, value, newline)
     if entered is None:
+        quoted = _quoted(lines, path)
+        if quoted:
+            keys = ", ".join(f"`{key}`" for key in quoted)
+            raise RecordError(
+                f"write the key{'s' if len(quoted) > 1 else ''} {keys} without quotes"
+            )
         raise RecordError(refusal)
     written = bom + "".join(entered)
     try:
@@ -184,26 +192,13 @@ def _entered(
 ) -> list[str] | None:
     """`lines` with `name: value` added last to the mapping the keys of `path` lead to, or
     None where the lines do not show where its entries lie."""
-    low, high, indent = 0, len(lines), 0
-    start = end = 0
-    inner: int | None = None
-    for depth, key in enumerate(path):
-        start = next(
-            (
-                index
-                for index in range(low, high)
-                if _indent(lines[index]) == indent and _opens(lines[index][indent:], key)
-            ),
-            -1,
-        )
-        if start < 0:
-            return None
-        end = _block_end(lines, start, indent)
-        inner = _entries_indent(lines, start, end)
-        if depth < len(path) - 1:
-            if inner is None:
-                return None
-            low, high, indent = start + 1, end + 1, inner
+    found = _key_lines(lines, path)
+    if found is None:
+        return None
+    start = found[-1]
+    indent = _indent(lines[start])
+    end = _block_end(lines, start, indent)
+    inner = _entries_indent(lines, start, end)
     line = lines[start]
     head = line.split("#", 1)[0].rstrip()
     flow = head[indent + len(path[-1]) + 1 :].strip()
@@ -219,6 +214,48 @@ def _entered(
     block = [" " * inner + text + newline for text in _dumped({name: value}).splitlines()]
     last = lines[end] if lines[end].endswith(("\n", "\r")) else lines[end] + newline
     return [*lines[:end], last, *block, *lines[end + 1 :]]
+
+
+def _key_lines(lines: list[str], path: Sequence[str], *, quoted: bool = False) -> list[int] | None:
+    """The line that opens each key of `path`, from the top of `lines` down: each at the
+    indent of the entries of the key before it, among the lines that key holds. None where
+    the lines do not show the way. A key is found written plain, or in quotes too where
+    `quoted` is true."""
+    found: list[int] = []
+    low, high, indent = 0, len(lines), 0
+    for key in path:
+        start = next(
+            (
+                index
+                for index in range(low, high)
+                if _indent(lines[index]) == indent
+                and _opens(lines[index][indent:], key, quoted=quoted)
+            ),
+            None,
+        )
+        if start is None:
+            return None
+        found.append(start)
+        if len(found) < len(path):
+            end = _block_end(lines, start, indent)
+            inner = _entries_indent(lines, start, end)
+            if inner is None:
+                return None
+            low, high, indent = start + 1, end + 1, inner
+    return found
+
+
+def _quoted(lines: list[str], path: Sequence[str]) -> list[str]:
+    """The keys of `path` that `lines` write in quotes on the way to the mapping it leads
+    to; none where every key is written plain, or the way is not shown even in quotes."""
+    found = _key_lines(lines, path, quoted=True)
+    if found is None:
+        return []
+    return [
+        key
+        for key, index in zip(path, found, strict=True)
+        if not _opens(lines[index][_indent(lines[index]) :], key)
+    ]
 
 
 def _indent(line: str) -> int:
@@ -249,7 +286,9 @@ def _entries_indent(lines: list[str], start: int, end: int) -> int | None:
     return None
 
 
-def _opens(line: str, key: str) -> bool:
-    """Whether `line`, from its indent on, opens `key`."""
+def _opens(line: str, key: str, *, quoted: bool = False) -> bool:
+    """Whether `line`, from its indent on, opens `key`: written plain, or also in single or
+    double quotes where `quoted` is true."""
     head = line.split("#", 1)[0].rstrip()
-    return head == f"{key}:" or head.startswith((f"{key}: ", f"{key}:\t"))
+    forms = (key, f"'{key}'", f'"{key}"') if quoted else (key,)
+    return any(head == f"{form}:" or head.startswith((f"{form}: ", f"{form}:\t")) for form in forms)
