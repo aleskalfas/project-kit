@@ -543,7 +543,37 @@ def test_what_a_component_that_takes_ends_may_not_declare() -> None:
         "width": "=@space.1",
         "height": "=@space.1",
     }
-    assert ("formula-reach", "parts.dot.x") in issues(below) or issues(below)
+    assert issues(below) == [("formula-reach", "parts.dot.x")]
+
+
+def test_a_component_field_that_names_a_field_of_runs_is_refused() -> None:
+    """A component field holds a mapping that places a component, never runs, in a pattern
+    and in a top's layout (DEC-012 point 1). An end field names a key on a tie, no field of
+    the pattern's, so no end field can name one."""
+    said = {"type": "string", "x-pkit-runs": ["plain"]}
+    pattern = tied(
+        fields={"steps": LISTED, "links": LISTED, "say": said},
+        lists={"links": {"ends": ["from", "to"]}, "steps": {"component": "say"}},
+    )
+    assert issues(pattern) == [(SHAPE, "lists.steps.component")]
+    board = {
+        "slots": {"steps": LISTED, "say": said},
+        "lists": {"steps": {"component": "say"}},
+        "parts": {"steps": {"repeat": "steps", "draw": "lab/card", "row": {}}},
+    }
+    deck = {
+        "status": "experimental",
+        "about": "A deck whose layout names a field of runs as a component field.",
+        "fields": {
+            "type": "object",
+            "properties": {
+                "pages": {"type": "array", "items": {"type": "object"}, "x-pkit-pages": True}
+            },
+        },
+        "layouts": {"board": board},
+        "preferred": {"width": "=@size.figure", "height": "=@space.4"},
+    }
+    assert issues(deck) == [(SHAPE, "layouts.board.lists.steps.component")]
 
 
 def test_a_part_that_passes_a_field_on_to_a_list_of_ties_is_refused() -> None:
