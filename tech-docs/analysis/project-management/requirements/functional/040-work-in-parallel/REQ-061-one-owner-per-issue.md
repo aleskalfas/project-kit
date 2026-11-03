@@ -13,7 +13,11 @@ refines: []
 pkit:
   friction:
     anchors:
+      path:
+        - .pkit/capabilities/project-management/scripts/_lib/instance_claims.py
+        - .pkit/capabilities/project-management/scripts/_lib/instance_ownership.py
       record:
+        - project-management:DEC-035
         - project-management:DEC-035#3
         - project-management:DEC-035#6
         - project-management:DEC-043#3

@@ -23,6 +23,7 @@ pkit:
         - .pkit/capabilities/project-management/skills/pm/work-loop.md
         - .pkit/capabilities/project-management/scripts/take-seat.py
         - .pkit/capabilities/project-management/scripts/release-seat.py
+        - .pkit/capabilities/project-management/scripts/_lib/instance_claims.py
       record:
         - project-management:DEC-035#1
         - project-management:DEC-045#1

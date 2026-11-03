@@ -30,6 +30,7 @@ pkit:
         - project-management:DEC-005
         - project-management:DEC-012
         - project-management:DEC-018
+        - project-management:DEC-025
         - project-management:DEC-035#3
         - project-management:DEC-045#4
         - project-management:DEC-059#1
@@ -109,5 +110,5 @@ pkit:
 
 What the planner needs here that no accepted record decides yet:
 
-- **How one scope gives another scope what the other scope needs,** such as an interface two scopes share. A contract between scopes is proposed only, in an unmerged note (draft PR #566). Typed `Blocked by:` lines, and the Tasks ready to start that those lines give, are [project-management DEC-025](../../../../../../.pkit/capabilities/project-management/decisions/DEC-025-parallelization-primitive.md)'s, which is proposed.
+- **How one scope gives another scope what the other scope needs,** such as an interface two scopes share. A contract between scopes is proposed only, in an unmerged note (draft PR #566). Typed `Blocked by:` lines, and the Tasks ready to start that those lines give, are [project-management DEC-025](../../../../../../.pkit/capabilities/project-management/decisions/DEC-025-parallelization-primitive.md)'s. That record names them, to be built once lived evidence answers its open questions.
 - **Work that passes through stages,** such as design, development and testing, where each stage needs the work of the stage before. No record decides how such work is planned.

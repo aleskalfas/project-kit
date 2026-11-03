@@ -18,6 +18,7 @@ pkit:
       path:
         - .pkit/capabilities/project-management/scripts/_lib/instance_ownership.py
         - .pkit/capabilities/project-management/scripts/seats.py
+        - .pkit/capabilities/project-management/scripts/land-work.py
       record:
         - project-management:DEC-006
         - project-management:DEC-035#1

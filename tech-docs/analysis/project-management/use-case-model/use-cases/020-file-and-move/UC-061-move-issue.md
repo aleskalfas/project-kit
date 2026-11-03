@@ -41,6 +41,7 @@ pkit:
         - .pkit/capabilities/project-management/scripts/_lib/move_journal.py
         - .pkit/capabilities/project-management/scripts/_lib/audit.py
         - .pkit/capabilities/project-management/scripts/_lib/hooks.py
+        - .pkit/capabilities/project-management/scripts/_lib/instance_claims.py
         - .pkit/capabilities/project-management/schemas/workflow.yaml
         - .pkit/capabilities/project-management/skills/pm/transition-state.md
       record:

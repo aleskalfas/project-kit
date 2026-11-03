@@ -45,17 +45,20 @@ pkit:
         - .pkit/capabilities/project-management/scripts/review-work.py
         - .pkit/capabilities/project-management/scripts/handoff-issue.py
         - .pkit/capabilities/project-management/scripts/_lib/instance_ownership.py
+        - .pkit/capabilities/project-management/scripts/_lib/instance_claims.py
       record:
         - project-management:DEC-026
         - project-management:DEC-029
         - project-management:DEC-005
         - project-management:DEC-012
+        - project-management:DEC-025
         - project-management:DEC-035#3
         - project-management:DEC-035#4
         - project-management:DEC-035#6
         - project-management:DEC-035#7
         - project-management:DEC-035#8
         - project-management:DEC-045#5
+        - project-management:DEC-059
         - project-management:DEC-059#4
         - project-management:DEC-059#7
         - project-management:DEC-059#8
