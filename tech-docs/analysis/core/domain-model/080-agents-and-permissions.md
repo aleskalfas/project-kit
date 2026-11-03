@@ -465,7 +465,13 @@ A native deny is an entry in a harness's own settings that refuses a call, such 
 
 Defined in [TERM-diagnostic-session](../glossary.md#term-diagnostic-session--diagnostic-session).
 
-**Why:** Prompts still recur under autonomy, and nobody can see which recur, why, or what would stop them ([PRJ-006](../../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md)). Logging every call always would cost time on each, add noise and keep arguments that may be private ([PRJ-006 point 1](../../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md#1-opt-in-off-by-default)). So the logging runs only for a while.
+**Why:** Prompts still recur under autonomy, and nobody can see which recur, why, or what would stop them ([PRJ-006](../../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md)). Logging every call always would ([PRJ-006 point 1](../../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md#1-opt-in-off-by-default)):
+
+- cost time on each call
+- add noise
+- keep arguments that may be private
+
+So the logging runs only for a while.
 
 A diagnostic session is a period during which the [permission hook](../glossary.md#term-permission-hook--permission-hook) logs each call it defers. The operator turns one on with `pkit permissions diagnose on`, and it expires by itself. `pkit permissions diagnose report` then groups the logged calls, and recommends a remediation for each group.
 

@@ -34,6 +34,7 @@ pkit:
         - COR-054
         - COR-055
         - COR-057
+        - COR-060#1
         - PRJ-002
         - PRJ-004
         - PRJ-008
@@ -446,7 +447,8 @@ A passage for a person is a reviewer's [finding](../glossary.md#term-finding--fi
 
 **Relations:**
 
-- A finding under a rule the change makes bind, or stop binding, on text it alters is one too (COR-057 point 3).
+- A finding under a rule the change stops from binding, on a passage the change owns, is one too (COR-057 point 3).
+- A break in text the change brings under a rule takes its kind as any other break ([COR-060 point 1](../../../../.pkit/decisions/core/COR-060-brought-under-breaks.md#1-one-kind-whatever-brings-the-text-under-the-rule)).
 - Whoever invokes the reviewer, such as a gate, says how it reaches a person (COR-057 point 3).
 
 **States:** None.

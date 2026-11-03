@@ -10,7 +10,7 @@ needs:
   - Release my component on its own version, and say which backbone versions it works with.
   - Carry the projects that installed my component across a breaking change of it.
   - Know my capability is ready to share before other repositories pull it.
-  - Adapt the system to another harness, and say how far that harness meets each harness requirement and what of the permission model it cannot enforce.
+  - Adapt the system to another harness, saying how far that harness meets each harness requirement and what of the permission model the harness cannot enforce.
 pkit:
   friction:
     anchors:

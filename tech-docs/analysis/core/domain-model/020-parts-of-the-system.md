@@ -313,7 +313,7 @@ An adapter is a [component](../glossary.md#term-component--component) that carri
 
 **Always true:**
 
-- It enforces in its harness what the methodology says each agent may do. That statement, never the harness's settings, is the source of truth ([COR-028 point 2](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
+- It enforces the [permission model](../glossary.md#term-permission-model--permission-model) in its harness, and the model, never the harness's settings, is the source of truth ([COR-028 point 2](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
 
 ## Support declaration
 

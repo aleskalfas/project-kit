@@ -318,7 +318,7 @@ The declared surface is the paths that a [component](../glossary.md#term-compone
 
 **Relations:**
 
-- A component declares its surface in its package metadata, and the project in its backbone configuration (COR-050 point 8).
+- A component declares its surface in its package metadata, and the project declares it in its backbone configuration (COR-050 point 8).
 - It leaves out the folder the [backbone](../glossary.md#term-backbone--backbone) keeps for answers ([COR-062 point 2](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#2-the-answer-folder)).
 
 **States:** None.
@@ -772,7 +772,7 @@ A loaded rule set is a collection file of rules that bind on the work of session
 
 - Its rules are operational rules. Each has a rule's permanent id, origin and status, and its number in the generated file is its id's number (COR-068 point 6).
 - The file a session loads is generated from it where it is authored, and holds only its accepted rules ([COR-068 point 3](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#3-the-loaded-file-is-generated-from-the-set-where-the-set-is-authored)).
-- The backbone's binds in every project, a capability's in each project that installs the capability, and a project's in that project (COR-068 point 4).
+- The backbone's binds in every project. A capability's binds in each project that installs the capability, and a project's binds in that project (COR-068 point 4).
 
 **States:** None.
 
@@ -781,7 +781,7 @@ A loaded rule set is a collection file of rules that bind on the work of session
 - Its accepted rules bind wherever its file is loaded, with no rule set inheriting it ([COR-068 point 2](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#2-where-its-accepted-rules-bind)).
 - An operational rule that fits any project is in the backbone's loaded rule set ([COR-014](../../../../.pkit/decisions/core/COR-014-universal-applicability.md)). One that binds only where a capability is installed is in that capability's ([COR-070 point 5](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#5-a-rule-that-binds-only-with-a-capability-belongs-to-that-capability)).
 - A capability's operational rule never loosens one of the backbone's, and a project's never loosens one of the backbone's or of a capability's. The backbone's layer is above a capability's, which is above the project's. Where two operational rules of different layers cannot both be kept, the upper layer's rule binds. Where two capabilities' operational rules clash, the session stops the step and reports the clash (COR-070 point 4).
-- A citation by layer and number, such as "core rule 19", names one rule while its loaded rule set stands (COR-068 point 6).
+- A citation by layer and number, such as "core rule 19", names the same rule while its loaded rule set stands (COR-068 point 6).
 
 ## Rules index
 
@@ -910,7 +910,10 @@ A query command is a script a [component](../glossary.md#term-component--compone
 
 **Attributes:**
 
-- its declaration, on its own entry among its component's commands ([ADR-057 point 3](../../../architecture/decisions/ADR-057-backbone-engines-and-command-limits.md#3-query-commands-declare-the-query-contract-the-engine-that-runs-one-enforces-the-bound-and-reads-the-answer-failing-closed)). It says that the command needs no network, changes nothing in the [project](../glossary.md#term-project--project) and gives the same output for the same inputs.
+- its declaration, on its own entry among its component's commands ([ADR-057 point 3](../../../architecture/decisions/ADR-057-backbone-engines-and-command-limits.md#3-query-commands-declare-the-query-contract-the-engine-that-runs-one-enforces-the-bound-and-reads-the-answer-failing-closed)). It says that the command:
+  - needs no network
+  - changes nothing in the [project](../glossary.md#term-project--project)
+  - gives the same output for the same inputs
 
 **Relations:**
 

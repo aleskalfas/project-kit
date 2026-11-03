@@ -279,7 +279,13 @@ Defined in [TERM-router](../glossary.md#term-router--router).
 
 **Why:** One installed CLI ran every [project](../glossary.md#term-project--project) at its own [release](../glossary.md#term-release--release), so nothing honoured a [version pin](../glossary.md#term-version-pin--version-pin) naming another ([ADR-039](../../../architecture/decisions/ADR-039-pkit-entry-point-router.md)). Commands that read are the most sensitive to a [version](../glossary.md#term-version--version) that does not match its content, so every command is routed alike ([ADR-049 point 4](../../../architecture/decisions/ADR-049-per-project-version-pin.md#4-route-all-commands)).
 
-The router is the entry code of the [system](../glossary.md#term-system--system)'s command. Before any command runs, it picks whose code runs it. That is the checkout's own code in the [methodology](../glossary.md#term-methodology--methodology)'s [source repository](../glossary.md#term-source-repository--source-repository), the release a version pin names, or else the installed CLI. A project whose version pin names 1.150.0 runs each command under `uvx` at 1.150.0, whatever the installed CLI's version.
+The router is the entry code of the [system](../glossary.md#term-system--system)'s command. Before any command runs, it picks whose code runs it:
+
+- in the [methodology](../glossary.md#term-methodology--methodology)'s [source repository](../glossary.md#term-source-repository--source-repository), the checkout's own code
+- the release a version pin names
+- or else the installed CLI
+
+A project whose version pin names 1.150.0 runs each command under `uvx` at 1.150.0, whatever the installed CLI's version.
 
 **Attributes:** None.
 
@@ -344,7 +350,11 @@ A validator is a command an installed component registers for [validation](../gl
 
 **Always true:**
 
-- A validator that cannot be run, ends abnormally, overruns its time or prints anything but its results fails validation, never passes it ([COR-055 point 6](../../../../.pkit/decisions/core/COR-055-validation.md#6-a-validator-that-gives-no-answer-fails)).
+- A validator fails validation, never passes it, in each of these cases ([COR-055 point 6](../../../../.pkit/decisions/core/COR-055-validation.md#6-a-validator-that-gives-no-answer-fails)):
+  - it cannot be run
+  - it ends abnormally
+  - it overruns its time
+  - it prints anything but its results
 - No setting turns a validator's missing result into a warning (COR-055 point 6).
 
 ## Backbone configuration

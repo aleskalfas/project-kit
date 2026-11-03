@@ -53,7 +53,7 @@ pkit:
 
 # UC-019 — Adapt the system to another harness
 
-**Goal:** Adapt the system to another harness, and say how far that harness meets each harness requirement and what of the permission model it cannot enforce.
+**Goal:** Adapt the system to another harness, saying how far that harness meets each harness requirement and what of the permission model the harness cannot enforce.
 
 **Other actors:**
 

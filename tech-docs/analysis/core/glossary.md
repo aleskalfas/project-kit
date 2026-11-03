@@ -846,6 +846,7 @@ TERM-passage-for-a-person:
           - .pkit/agents/core/rule-set-reviewer.md
         record:
           - COR-057#3
+          - COR-060#1
 TERM-permission-code:
   name: permission code
   status: active
@@ -2419,7 +2420,8 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 **Distinctions:**
 
 - **Settled break:** a [finding](#term-finding--finding) the rule's text settles, which withholds the reviewer's approval ([COR-057 point 3](../../../.pkit/decisions/core/COR-057-rule-set-reviewer.md#3-its-findings-and-what-binds)).
-- **A rule the change makes bind, or stop binding:** a finding under it, on text the [change](#term-change--change) alters, is a passage for a person too (COR-057 point 3).
+- **A rule the change stops from binding:** a finding under it, on a passage the [change](#term-change--change) owns, is a passage for a person too (COR-057 point 3).
+- **A rule the change brings text under:** a break of that rule there takes its kind as any other break. It is settled where the rule's text settles it ([COR-060 point 1](../../../.pkit/decisions/core/COR-060-brought-under-breaks.md#1-one-kind-whatever-brings-the-text-under-the-rule)).
 - **How it reaches a person:** the gate that invoked the reviewer says (COR-057 point 3).
 
 ## TERM-permission-code — permission code
@@ -3085,7 +3087,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#validation).
 
-**Example:** `pkit validate` fails on a dangling [deferral](#term-deferral--deferral), and warns that project-kit's user root, `docs/`, does not exist yet.
+**Example:** `pkit validate` fails on an unknown key of the [backbone configuration](#term-backbone-configuration--backbone-configuration), and only warns that a [documentation root](#term-documentation-root--documentation-root) does not exist yet.
 
 **Distinctions:**
 
