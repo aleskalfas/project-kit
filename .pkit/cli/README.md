@@ -37,6 +37,9 @@ pkit:
         - src/project_kit/storyboards.py
         - src/project_kit/schemas_authoring.py
         - src/project_kit/process_authoring.py
+        - src/project_kit/process.py
+        - src/project_kit/process_health.py
+        - src/project_kit/command_runner.py
         - src/project_kit/schemas_validate.py
         - src/project_kit/lifecycle_ownership.py
         - .pkit/lifecycle/ownership.py
@@ -117,6 +120,8 @@ pkit:
         - .pkit/process/engine.md
         - .pkit/process/engine.md#the-operations
         - .pkit/process/connections.md#cascade--fold-one-child-processs-member-outcomes-core
+        - .pkit/process/connections.md#dependson--inert-cross-process-connection-metadata-core-cor-038
+        - .pkit/process/shape.md#detection-modes-core
         - .pkit/release/README.md#release-notes--pkit-release-publish-notes-version
 ---
 

@@ -302,9 +302,12 @@ The capability's package metadata carries the same connections as one list, `con
 - **Why a copy:** a reader, and a plan for a capability not yet installed, sees the connections without opening a definition. The lifecycle reads the marks without parsing definitions.
 - **Its single source** is the definitions. The refresh regenerates the list, and marks it `generated: true`:
   - one entry for each distinct upstream and targeted version, sorted
-  - each carrying `process`, `schema_version` (the entry's `version`), and the `mandatory` mark when any declaring entry carries one
+  - each entry carrying `process` and `schema_version`, the entry's `version`
+  - an entry carrying the `mandatory` mark too where any declaring entry carries one
 - **Never write it by hand.** Validation fails a copy that differs from what the definitions generate, and names the refresh as the fix. The definition always wins.
-- **When to refresh:** where the capability is authored, after a coupling, or whenever a definition's `depends_on` changes.
+- **Where and when to refresh:** where the capability is authored, at two times:
+  - after a coupling
+  - whenever a definition's `depends_on` changes
 - **In an adopting project,** a methodology-shipped capability's package file is owned by core. The refresh refuses there, and a stale copy is the capability author's to fix.
 
 ```

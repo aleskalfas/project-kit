@@ -13,7 +13,7 @@ pkit:
 
 # The engine
 
-The operations an agent asks of the process engine, and what each answers or does ([COR-033](../decisions/core/COR-033-process-substrate.md)). The engine's contract with each predicate, the order a capability's commands follow around a move, and the journal are in the process area's README.
+The operations an agent asks of the process engine, and what each answers or does ([COR-033](../decisions/core/COR-033-process-substrate.md)). The predicate runner, the seam-ordering contract and the journal are in the process area's README.
 
 ## The operations
 

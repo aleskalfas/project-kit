@@ -47,7 +47,10 @@ pkit:
 The process substrate is a content-free state machine that a capability binds its own staged, gated process to ([COR-033](../decisions/core/COR-033-process-substrate.md)). This README and the three pages beside it are the substrate's specification. Why a capability binds a process, and how people author one and connect it, is in [the process guide](https://github.com/aleskalfas/project-kit/blob/latest/docs/process/README.md).
 
 - **Who owns what.** The backbone owns the shape contract and the engine. Each capability ships its own process definition, an instance that conforms to the shape.
-- **What every process gets:** a deterministic validator of each move, and a memory of where each subject stands that explains itself ("The two guarantees" below). So an agent can rely on it for "where am I, may I move, am I valid". A person with no manual can read the same answers.
+- **What every process gets:** a deterministic validator of each move, and a memory of where each subject stands that explains itself ("The two guarantees" below). So an agent can rely on the substrate for three answers, and a person with no manual can read the same ones:
+  - where am I
+  - may I move
+  - am I valid
 - **Core and deferred.** Each part of the shape is core, shipped now, or deferred. A deferred part is named in the shape, and built only when a binding needs it ([the shape page, "Core and deferred"](shape.md#core-and-deferred)). It then gains a decision of its own.
 - <a id="grounding--status"></a>**Its grounding:** [COR-033](../decisions/core/COR-033-process-substrate.md)'s implications record the bindings that proved the substrate before it shipped.
 
@@ -68,7 +71,7 @@ The process substrate is a content-free state machine that a capability binds it
 
 The substrate's terms come at two altitudes ([COR-033](../decisions/core/COR-033-process-substrate.md) point 1).
 
-- **State machine:** the content-free substrate. It holds states, guarded transitions and a position, and a journal where the project keeps one. It knows nothing about issues, screens, documents or trips.
+- **State machine:** the content-free substrate. It holds states, guarded transitions and a position. Where the project keeps one, it also holds a journal. It knows nothing about issues, screens, documents or trips.
 - **Process,** the depth altitude: one discipline's journey over its own subjects, bound to the substrate. A capability authors it.
 - **Orchestration,** the breadth altitude, deferred: a system of interacting processes, where one process embeds or hands off to another. It is the same substrate, one altitude up.
 - **A discipline's own lifecycle artefact,** such as an issue lifecycle's `workflow.yaml`, is a process definition under this vocabulary, and keeps its own name.
@@ -77,13 +80,16 @@ The substrate's terms come at two altitudes ([COR-033](../decisions/core/COR-033
 
 The substrate gives every process two guarantees ([COR-033](../decisions/core/COR-033-process-substrate.md) point 3).
 
-- **A deterministic validator.** Given a definition and observable reality, three answers are definite: "where is this subject", "may it move from here to there" and "is it valid". This holds even for dynamic structure ([the shape page, "Determinism across dynamic structure"](shape.md#determinism-across-dynamic-structure)).
+- **A deterministic validator.** Given a definition and observable reality, three answers are definite. This holds even for dynamic structure ([the shape page, "Determinism across dynamic structure"](shape.md#determinism-across-dynamic-structure)). The answers are these:
+  - where is this subject
+  - may it move from here to there
+  - is it valid
 - **A memory that explains itself.** The status view shows four things, each with a live precheck that wins over any label in prose:
   - where the subject is
   - why it is there
   - how it got there
   - what it may do next
-- **Its two renderings:** a narrative for people, and a structured form for agents and machines.
+- **The status view's two renderings:** a narrative for people, and a structured form for agents and machines.
 
 ## Gate-checkability (the load-bearing rule)
 
@@ -177,7 +183,7 @@ Authoring a definition goes through three tiers, so it does not mean knowing the
 
 ## The engine
 
-The engine's contract with each predicate, the order a capability's commands follow around a move, and its optional journal stand below ([COR-033](../decisions/core/COR-033-process-substrate.md)). The engine's operations, and what each answers, are on [`engine.md`](engine.md#the-operations).
+Three parts of the engine's contract stand below ([COR-033](../decisions/core/COR-033-process-substrate.md)): the predicate runner, the seam-ordering contract and the optional journal. The engine's operations, and what each answers, are on [`engine.md`](engine.md#the-operations).
 
 ### The predicate runner (engine contract)
 
@@ -343,7 +349,10 @@ Each line of a journal is one JSON object: a move's entry, or a wait's.
   - **`severity`:** where the transition names one.
   - **`version`:** the pkit version that governed the move.
   - **`reason`:** the one place an entry says why its move was taken, written only where the caller gave `move` a `--reason` ([the engine page, "The operations"](engine.md#the-operations)).
-- **A wait's entry** holds `ts`, `subject` and `event`, `blocked-enter` or `blocked-resume`. It adds `blocked_on`, and `at` and `assignee` where the wait has them.
+- **A wait's entry** holds `ts`, `subject` and `event`, and adds the wait's keys:
+  - **`event`:** `blocked-enter` or `blocked-resume`.
+  - **`blocked_on`:** the wait's reason.
+  - **`at` and `assignee`:** where the wait has them.
 
 #### Journaling a wait
 
