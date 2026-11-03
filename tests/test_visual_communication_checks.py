@@ -1,10 +1,12 @@
 """The check's findings (visual-communication DEC-002 point 4, DEC-003 point 9, DEC-004
 points 8, 9 and 11, DEC-005 points 9 and 14): the lock, the ids and fields of the content,
-contrast as drawn, the losses a renderer's declaration predicts, and the document the
-validator reads. The command around it is `test_visual_communication_check.py`."""
+contrast as drawn, the losses a renderer's declaration predicts, the document the validator
+reads, a component it cannot read, a top that names no component, and an error it does not
+expect on one piece. The command around it is `test_visual_communication_check.py`."""
 
 from __future__ import annotations
 
+import shutil
 import time
 from pathlib import Path
 from typing import Any
@@ -586,3 +588,78 @@ def test_the_deadline_is_read_from_the_environment(value: str, deadline: float |
 )
 def test_a_files_kind_is_read_from_its_name_and_place(inside: str, kind: str | None) -> None:
     assert checks.kind_of(inside) == kind
+
+
+# --- what the check cannot read, and what it does not expect ------------------------------------
+
+#: A component's file the reader refuses: a flow sequence that never closes.
+UNPARSED = "parts: [\n"
+
+
+def test_an_error_on_one_piece_of_two_fails_it_and_the_next_is_checked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    shutil.copytree(root / PIECE_FOLDER, root / "visual/pieces/also")
+    engine = pl.compute_scene
+
+    def failing(**given: Any) -> Any:
+        if given["piece"] == "also":
+            raise ValueError("a value the engine does not guard against")
+        return engine(**given)
+
+    monkeypatch.setattr(pl, "compute_scene", failing)
+    report = checks.check(root)
+
+    [(unexpected, level)] = [(f, lv) for f, lv in report.judged if f.code == "unexpected-error"]
+    assert level == "fails"
+    assert checks.place(unexpected) == "visual/pieces/also/piece.yaml"
+    assert unexpected.message == (
+        "the check of `also` stopped on an error it does not expect: ValueError: a value the "
+        "engine does not guard against"
+    )
+    assert ("component-experimental", f"{PIECE_FOLDER}/piece.yaml") in {
+        (f.code, f.file) for f, _ in report.judged
+    }
+    assert report.summary == [
+        "2 piece(s) in `visual`: the scenes of 0 read from their findings record, of 1 "
+        "computed now, of 1 not checked."
+    ]
+    labels = [(f["severity"], f["label"]) for f in checks.document(report)["findings"]]
+    assert ("error", "unexpected-error") in labels and ("info", "component-experimental") in labels
+
+
+def test_a_component_whose_file_cannot_be_read_is_reported_at_that_file(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    broken = "visual/libraries/tests/1.0.0/components/broken.yaml"
+    write(root / broken, UNPARSED)
+    write_content(root, body={"use": "tests/broken"})
+
+    alone = checks.check(root, only=PIECE)
+    whole = checks.check(root)
+
+    [(unreadable, level)] = [(f, lv) for f, lv in alone.judged if f.file == broken]
+    assert (unreadable.code, level, checks.place(unreadable)) == (
+        "component-unreadable",
+        "fails",
+        broken,
+    )
+    assert unreadable.message.startswith(
+        "the component `tests/broken` cannot be read: does not parse as YAML: "
+    )
+    assert str(tmp_path) not in unreadable.message
+    # The whole check reads the file in its binding pass, which reports it once.
+    assert [f.code for f, _ in whole.judged if f.file == broken] == ["file-unreadable"]
+    for report in (alone, whole):
+        assert "unknown-component" not in [f.code for f, _ in report.judged]
+
+
+def test_a_top_that_names_no_component_is_reported_at_its_place_in_the_piece(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, picture=False, top="tests/nothing")
+    [(unknown, level)] = [
+        (f, lv) for f, lv in checks.check(root, only=PIECE).judged if f.code == "unknown-component"
+    ]
+    assert (level, checks.place(unknown)) == ("fails", f"{PIECE_FILE}#top")
+    assert unknown.message == "the piece's top names no component `tests/nothing`"

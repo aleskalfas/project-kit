@@ -18,6 +18,20 @@ class MissingFont(Exception):
     anything is laid out (DEC-004 point 9). The message names the font."""
 
 
+class UnreadableComponent(KeyError):
+    """A component whose file is present and cannot be read as one: the reader refuses it,
+    or it holds no mapping. It is a `KeyError`, so a reader that asks only whether there is
+    a component finds none. The message names the component and the reader's error."""
+
+    def __init__(self, use: str, why: str) -> None:
+        super().__init__(use)
+        self.use = use
+        self.why = why
+
+    def __str__(self) -> str:
+        return f"the component `{self.use}` cannot be read: {self.why}"
+
+
 @dataclass(frozen=True)
 class PictureInfo:
     """A produced output of the piece, as its record keeps it (DEC-006 points 2-3).
@@ -36,7 +50,8 @@ class Env(Protocol):
 
     def component(self, use: str) -> dict:
         """A component as data, by its use (`<library>/<component>`, or `piece/<component>`
-        for a local one). Raises `KeyError` where there is none."""
+        for a local one). Raises `KeyError` where there is none, and `UnreadableComponent`,
+        which is a `KeyError`, where its file is present and cannot be read."""
         ...
 
     def role(self, token_path: str) -> dict:

@@ -1,0 +1,27 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    revalidated:
+      at: 2026-11-02T23:42:28Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    revalidated:
+      at: 2026-11-02T23:42:37Z
+      outcome: unchanged
+      unchanged-because: The page describes the files, their binding and the one way each is read. The change reads a component's file that way still, and only reports the reader's error as a finding, whose row is in checks.md. A piece's top is still a use in piece.yaml, and the new layout tests leave the files the page shows as they were.
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    revalidated:
+      at: 2026-11-02T23:42:49Z
+      outcome: unchanged
+      unchanged-because: "The page describes a component's data and the engine's rules for laying it out. The change keeps them: it only tells a component whose file cannot be read from one that does not exist, and places the finding on an unknown top in piece.yaml. Where each finding points is checks.md's, and an item whose component is not drawn is still left out, as the page says."
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    revalidated:
+      at: 2026-11-02T23:42:58Z
+      outcome: unchanged
+      unchanged-because: "The page describes plugins, the SVG renderer, exports, produced pictures and written code. The change touches none of them: it reports an unreadable component, an unknown top and an unexpected error of the check as findings, which checks.md lists. A missing picture is still placed and explained as before."
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:43:06Z
+      outcome: unchanged
+      unchanged-because: "The README's commands still hold: render prints each finding, now with an unreadable component among them, and the check exits as it says, with --json always 0, which an unexpected error on one piece no longer breaks. The findings themselves are checks.md's, whose sections the README links keep their names."
