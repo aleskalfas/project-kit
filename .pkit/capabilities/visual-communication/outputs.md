@@ -113,7 +113,7 @@ An entry matches a loss by its `plugin` and its `what` alone. The command that r
 
 ## The SVG renderer
 
-The `svg` renderer draws a scene as SVG files: one for each page, each language and each combination of modes the piece names. The previews and the exports are its files.
+The `svg` renderer draws a scene as SVG files: one for each page, each language and each combination of modes the piece names. The previews and the SVG exports are its files.
 
 - **Elements.** A group is drawn as `<g>`, a box as `<rect>`, an ellipse as `<ellipse>`, a line as `<line>`, a text as `<text>` and an image as `<image>`. A tie's connector whose route turns is drawn as `<polyline>`, through each of its points. Every element carries its trace id as `data-id`. A connector names the elements its ends meet, `data-start` and `data-end`. A group a component drew names it as `data-component`, and its library's version, if any, as `data-version`, the page's own group included.
 - **The file.** The `<svg>` element names the piece, the page's trace id, the language, the combination's key, and the renderer with its version: `data-piece`, `data-page`, `data-language`, `data-key`, `data-renderer`.
@@ -144,18 +144,13 @@ The `pdf` renderer draws a scene as one PDF file for each language and each comb
 - **Shapes and lines.** A box's stroke lies inside its frame, as in the SVG renderer. Rounded corners and ellipses are cubic Bézier curves. A line, or a tie's connector through each of its points, is stroked with SVG's miter limit. An arrowhead is the SVG renderer's triangle: five strokes long, its tip at the line's end, in the line's stroke.
 - **Colours.** A colour stays a role in the scene. The renderer takes its value from the brand's resolved values in the combination it draws, as DeviceRGB. A translucent colour takes an opacity of its own.
 - **Text.** Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. Each run is drawn in its own font, size and paint. The renderer shapes each span again with HarfBuzz from the committed font file, as the engine shaped it (DEC-005 point 4). It places each glyph at the advance shaped, so kerning is kept.
-- **Fonts.** Each family a run draws in is embedded once in the file, from the brand's committed font file, never from the machine's fonts. It is cut down to the glyphs the file draws in it. Each is a CID-keyed font with a map from each glyph back to its characters, so the text can be searched and copied. A CFF font is embedded as CFF, and a TrueType font as TrueType. A font of other outlines is not embedded ([What the PDF renderer loses](#what-the-pdf-renderer-loses)).
-- **A family's name** is written as a PDF name, in the font's dictionaries. Each byte of its UTF-8 that is no regular character, and each `#`, is written as `#` and two hexadecimal digits. A name cannot hold the byte 0, so U+0000 is written as U+FFFD. So no name a brand gives can end the dictionary that holds it.
+- **Fonts.** Each family a run draws in is embedded once in the file, from the brand's committed font file, never from the machine's fonts. It is cut down to the glyphs the file draws in it. Each keeps a map from each glyph back to its characters, so the text can be searched and copied. A CFF font is embedded as CFF, and a TrueType font as TrueType. A font of other outlines is not embedded ([What the PDF renderer loses](#what-the-pdf-renderer-loses)).
 - **The file** names its language, `/Lang`, and the renderer with its version, `/Producer`.
-- **The same bytes.** Lengths are written to 1/100 px, colours to 1/10 000, and objects in one order. The streams are not compressed, so no compression library moves a byte. The file holds no date, and its `/ID` is taken from its own bytes. So the same scene and values give the same file on every machine.
+- **The same bytes.** The file holds no date, and its streams are not compressed. So the same scene and values give the same file on every machine.
 
 ### What the PDF renderer does not carry yet
 
-The PDF is not tagged. It carries no alternative text, no reading order and no structure such as headings (DEC-005 point 5). Its declaration says so under `not-carried`, and a later version adds them ([project-kit#2570](https://github.com/aleskalfas/project-kit/issues/2570)). The reasons below hold for that change too:
-
-- **The capability's own code writes the PDF, on fontTools.** The capability already pins fontTools to measure and subset fonts, and HarfBuzz to shape text. A library pinned for exports alone would be fetched at the first export, yet drawing to a file needs no network (DEC-002 point 8). Each of its updates would also raise the renderer's version.
-- **Glyphs are placed from the shapes.** A renderer draws the lines the engine measured, so the PDF places each glyph by its id at the advance shaped. Each font carries a map back to Unicode, so the text is read without its shapes.
-- **The same scene gives the same file.** The `/ID` comes from the file's bytes, so a tagged PDF keeps it as stable as its content.
+The PDF is not tagged. It carries no alternative text, no reading order and no structure such as headings (DEC-005 point 5). Its declaration says so under `not-carried`, and a later version adds them ([project-kit#2570](https://github.com/aleskalfas/project-kit/issues/2570)).
 
 ### What the PDF renderer loses
 
