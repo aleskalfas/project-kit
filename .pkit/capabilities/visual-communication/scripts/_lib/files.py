@@ -223,18 +223,21 @@ class WriteFailed(Exception):
 
 
 class Change:
-    """The files a command writes, folders it adds and files it removes, as one change: a
-    write that fails leaves every file as it was before the run, or names each it could not
-    put back.
+    """The files a command writes, folders it adds or replaces and files it removes, as one
+    change: a write that fails leaves every file as it was before the run, or names each it
+    could not put back.
 
     `commit` stages every step beside its place first: a file is written to a temporary
     file beside it, a folder is copied to a temporary folder beside it, and a file to remove
     is read. Then it moves each into place, or removes it, in the order the steps were
-    given, so a command gives its records last. Where a step fails, each step taken is taken
+    given, so a command gives its records last. A folder it replaces is moved aside, beside
+    its place, before its copy is moved in. Where a step fails, each step taken is taken
     back, the last first: a file the change made is removed, a file it replaced or removed
-    is written again with its bytes from before, a folder it added is removed. Every
-    temporary file and folder is removed, and every folder the change made that is empty
-    again."""
+    is written again with its bytes from before, a folder it added is removed, and a folder
+    it replaced is moved back. Every temporary file and folder is removed, and every folder
+    the change made that is empty again. Once every step is taken, each folder moved aside
+    is removed; one that cannot be stays beside its place, hidden, as a temporary file
+    whose removal fails does."""
 
     def __init__(self, root: Path) -> None:
         self.root = root
@@ -249,6 +252,11 @@ class Change:
         """Add the folder `target`, which does not exist, holding a copy of each file of
         `sources` at its path within the folder."""
         self._steps.append(_Folder(target, sources))
+
+    def replace_folder(self, target: Path, sources: Mapping[str, Path]) -> None:
+        """Replace the folder `target`, which exists, whole, by a folder holding a copy of
+        each file of `sources` at its path within the folder."""
+        self._steps.append(_Replacement(target, sources))
 
     def remove(self, target: Path) -> None:
         """Remove the file `target`."""
@@ -275,6 +283,8 @@ class Change:
             # then goes on as it came.
             self._take_back(taken)
             raise
+        for step in self._steps:
+            step.finish()
 
     def _make_folders(self, folder: Path) -> None:
         """Make `folder`, and each folder above it that is missing, keeping each one made."""
@@ -333,6 +343,9 @@ class _Step:
             self.staged.unlink(missing_ok=True)
             self.staged = None
 
+    def finish(self) -> None:
+        """Once every step is taken, remove what was kept to take this one back."""
+
 
 class _Write(_Step):
     def __init__(self, target: Path, data: bytes) -> None:
@@ -361,8 +374,7 @@ class _Folder(_Step):
         self.sources = sources
 
     def stage(self) -> None:
-        parent, name = self.target.parent, self.target.name
-        self.staged = Path(tempfile.mkdtemp(dir=parent, prefix=f".{name}.", suffix=".tmp"))
+        self.staged = _free_folder(self.target, ".tmp")
         for rel, source in self.sources.items():
             copied = self.staged / rel
             copied.parent.mkdir(parents=True, exist_ok=True)
@@ -380,6 +392,58 @@ class _Folder(_Step):
         if self.staged is not None:
             shutil.rmtree(self.staged)
             self.staged = None
+
+
+class _Replacement(_Folder):
+    """A folder replaced whole: its copy staged beside it, the folder moved aside, beside
+    its place, and the copy moved in. Taken back, the copy is removed and the folder moved
+    back; once every step is taken, the folder moved aside is removed."""
+
+    done = "replaced"
+
+    def __init__(self, target: Path, sources: Mapping[str, Path]) -> None:
+        super().__init__(target, sources)
+        self.aside: Path | None = None
+
+    def take(self) -> None:
+        assert self.staged is not None
+        aside = _free_folder(self.target, ".old")
+        aside.rmdir()
+        os.rename(self.target, aside)
+        self.aside = aside
+        try:
+            os.rename(self.staged, self.target)
+        except BaseException:
+            # Moved back at once; where that fails too, `discard` moves it back, or names it.
+            with contextlib.suppress(OSError):
+                os.rename(aside, self.target)
+                self.aside = None
+            raise
+        self.staged = None
+
+    def take_back(self) -> None:
+        assert self.aside is not None
+        shutil.rmtree(self.target)
+        os.rename(self.aside, self.target)
+        self.aside = None
+
+    def discard(self) -> None:
+        super().discard()
+        if self.aside is not None and not self.target.exists():
+            os.rename(self.aside, self.target)
+            self.aside = None
+
+    def finish(self) -> None:
+        if self.aside is not None:
+            with contextlib.suppress(OSError):
+                shutil.rmtree(self.aside)
+            self.aside = None
+
+
+def _free_folder(target: Path, suffix: str) -> Path:
+    """A new, empty folder beside `target`, hidden, under a name no other file has."""
+    parent, name = target.parent, target.name
+    return Path(tempfile.mkdtemp(dir=parent, prefix=f".{name}.", suffix=suffix))
 
 
 class _Removal(_Step):

@@ -16,12 +16,17 @@ written code, a piece's lock and the list of libraries (DEC-002 points 3 and 5).
   entry last in the mapping that a path of keys leads to, such as a library in the list,
   written in the style of that mapping, every other byte kept. The text must read back as
   it was with that entry, or it is refused.
+- **One entry's value replaced** (`with_value`): the file's text with the value of an
+  entry that a path of keys leads to written again in its place, such as a version of the
+  list, in the style it was written in, every other byte kept. The text must read back as
+  it was with that value, or it is refused.
 """
 
 from __future__ import annotations
 
 import io
-from collections.abc import Mapping, Sequence
+import re
+from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +38,9 @@ from _lib.reading import ReadError, load_yaml
 
 #: The byte-order mark a file may open with, which a rewrite keeps.
 BOM = "\ufeff"
+
+#: The width past which a line of flow would be folded: past any line a record writes.
+_FLOW_WIDTH = 1 << 24
 
 
 class RecordError(Exception):
@@ -63,7 +71,8 @@ def _dumped(data: Mapping[str, Any], *, flow: bool = False) -> str:
     flow where `flow` is true; no line folded and no value written as an alias."""
     writer = YAML()
     writer.indent(mapping=2, sequence=4, offset=2)
-    writer.width = 4096
+    # One line of flow holds a whole value, such as a released version's hash, however long.
+    writer.width = _FLOW_WIDTH if flow else 4096
     writer.default_flow_style = flow
     writer.representer.ignore_aliases = lambda *_: True
     stream = io.StringIO()
@@ -153,6 +162,126 @@ def with_entry(original: str, path: Sequence[str], name: str, value: Any, *, eac
     if after != _added(before, path, name, value):
         raise RecordError(refusal)
     return written
+
+
+def with_value(
+    original: str, path: Sequence[str], name: str, value: Mapping[str, Any], *, each: str
+) -> str:
+    """`original`, the text of a YAML file, with the value of the entry `name` of the
+    mapping the keys of `path` lead to replaced by `value`, in its place. Where the entry
+    opens a line of its own, it is written again there, at its indent: in flow on that line
+    where its value was written on it, else as block YAML on the lines below. Where the
+    mapping is written in flow on one line, such as `versions: {1.0.0: {released: false}}`,
+    the value is written again in flow in its place on that line. Every other byte is kept:
+    its comments, its order, its line endings and a byte-order mark. Raises RecordError
+    where `original` cannot be read, the mapping does not hold `name`, or the text would not
+    read back as it was with the value replaced; `each` names what one entry of the mapping
+    holds, in the refusal."""
+    bom, lines, newline = _lines(original)
+    before = _loaded(original[len(bom) :])
+    dotted = ".".join(path)
+    held = _at(before, path)
+    if not isinstance(held, Mapping) or name not in held:
+        raise RecordError(f"`{dotted}` holds no `{name}`")
+    wanted = _with_value(before, [*path, name], value)
+    for candidate in _replacements(lines, path, name, value, newline):
+        written = bom + "".join(candidate)
+        try:
+            after = load_yaml(written[len(bom) :])
+        except ReadError:
+            continue
+        if after == wanted:
+            return written
+    quoted = _quoted(lines, [*path, name])
+    if quoted:
+        keys = ", ".join(f"`{key}`" for key in quoted)
+        raise RecordError(f"write the key{'s' if len(quoted) > 1 else ''} {keys} without quotes")
+    raise RecordError(f"write `{dotted}` as a block mapping, one {each} an entry")
+
+
+def _with_value(data: Mapping[str, Any], keys: Sequence[str], value: Any) -> dict[str, Any]:
+    """`data` with the value the keys of `keys` lead to replaced by `value`."""
+    head, *rest = keys
+    return {**data, head: _with_value(data[head], rest, value) if rest else value}
+
+
+def _replacements(
+    lines: list[str], path: Sequence[str], name: str, value: Mapping[str, Any], newline: str
+) -> Iterator[list[str]]:
+    """Each way of writing `lines` with the value of the entry `name` of the mapping the
+    keys of `path` lead to replaced by `value`: where the entry opens a line of its own,
+    that line and what it holds written again; else, on the line that writes in flow the
+    mapping or one that holds it, each place where `name` opens an entry, its value written
+    again there. A way that does not read back as wanted is passed over."""
+    found = _key_lines(lines, [*path, name])
+    if found is not None:
+        start = found[-1]
+        indent = _indent(lines[start])
+        end = _block_end(lines, start, indent)
+        line = lines[start]
+        head = line.split("#", 1)[0].rstrip()
+        rest = line[len(head) :]
+        if head[indent + len(name) + 1 :].strip():
+            entry = _dumped({name: value}, flow=True).strip()[1:-1]
+            yield [*lines[:start], " " * indent + entry + rest, *lines[end + 1 :]]
+            return
+        block = [" " * indent + text + newline for text in _dumped({name: value}).splitlines()]
+        block[0] = block[0][: -len(newline)] + rest
+        if not lines[end].endswith(("\n", "\r")):
+            block[-1] = block[-1][: -len(newline)]
+        yield [*lines[:start], *block, *lines[end + 1 :]]
+        return
+    shown = None
+    for depth in range(len(path), 0, -1):
+        shown = _key_lines(lines, path[:depth])
+        if shown is not None:
+            break
+    if shown is None:
+        return
+    index = shown[-1]
+    line = lines[index]
+    text = _dumped(value, flow=True).strip()
+    for match in re.finditer(rf"(?<=[{{,\s]){re.escape(name)}\s*:", line):
+        span = _flow_span(line, match.end())
+        if span is not None:
+            start, end = span
+            yield [*lines[:index], line[:start] + text + line[end:], *lines[index + 1 :]]
+
+
+def _flow_span(line: str, start: int) -> tuple[int, int] | None:
+    """Where the value of flow that starts at `start` of `line`, past its spaces, lies: a
+    mapping or a sequence to its closing bracket, or a plain value to the comma or bracket
+    that ends it. None where the line holds no value there."""
+    begin = start
+    while begin < len(line) and line[begin] == " ":
+        begin += 1
+    depth, quote = 0, ""
+    for at in range(begin, len(line)):
+        char = line[at]
+        if quote:
+            if char == quote:
+                quote = ""
+        elif char in "'\"":
+            quote = char
+        elif char in "{[":
+            depth += 1
+        elif char in "}]":
+            if depth == 0:
+                return _plain(line, begin, at)
+            depth -= 1
+            if depth == 0:
+                return begin, at + 1
+        elif depth == 0 and (char == "," or (char == "#" and line[at - 1] == " ")):
+            return _plain(line, begin, at)
+    return None
+
+
+def _plain(line: str, begin: int, end: int) -> tuple[int, int] | None:
+    """A plain value of flow from `begin` up to `end`, its trailing spaces left out; None
+    where it is empty."""
+    while end > begin and line[end - 1] == " ":
+        end -= 1
+    return (begin, end) if end > begin else None
 
 
 def _lines(original: str) -> tuple[str, list[str], str]:

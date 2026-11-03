@@ -1,10 +1,12 @@
-"""The library folder, its list, versions, and a piece's lock (DEC-001 point 5, DEC-003
-points 1, 4, 8 and 9, DEC-004 point 6). Each project is laid in the test's own folder,
-outside git, so its files are listed by walking."""
+"""The library folder, its list, versions, a piece's lock, and what the command that brings
+a shipped library in reads of the locks and of the capability's folder (DEC-001 point 5,
+DEC-003 points 1, 4, 8 and 9, DEC-004 point 6, DEC-013 point 5). Each project is laid in
+the test's own folder, outside git, so its files are listed by walking."""
 
 from __future__ import annotations
 
 import re
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -27,8 +29,16 @@ from tests.visual_communication_project import (
     yaml_text,
 )
 
-libraries, fingerprint, files, reading, checks, pl = load(
-    "visual-communication", "libraries", "fingerprint", "files", "reading", "checks", "pipeline"
+libraries, fingerprint, files, reading, checks, pl, copies, shipped = load(
+    "visual-communication",
+    "libraries",
+    "fingerprint",
+    "files",
+    "reading",
+    "checks",
+    "pipeline",
+    "copies",
+    "shipped",
 )
 
 V = libraries.Version.parse
@@ -530,3 +540,89 @@ def test_a_major_the_project_holds_no_version_of_is_refused_naming_why(tmp_path:
     with pytest.raises(libraries.LockRefused, match=r"needs release 9\.0\.0") as refused:
         libraries.newest_of_majors(held(root), held(root).library("parts", V("1.0.0")))
     assert not isinstance(refused.value, libraries.MajorsConflict)
+
+
+# --- a shipped library's copies, and the locks that name them (DEC-013 point 5) ------------------
+
+
+def test_each_lock_is_read_from_its_piece_yaml_alone_and_says_whether_it_follows(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path)
+    write_piece(root, "draft", lock={"foundations": "1.0.0"})
+    write(root / "visual" / "pieces" / "draft" / "content.en.yaml", "not: [content\n")
+    write_piece(root, "pinned", lock={"foundations": "1.0.0"}, pinned=True)
+    write_piece(root, "new")
+    write(root / "visual" / "pieces" / "loose" / "notes.md", "No piece.yaml.\n")
+    write_piece(root, "odd", lock={"foundations": "latest"})
+    write_piece(root, "unpinned", pinned="no")
+    write(
+        root / "visual" / "code" / "css.yaml",
+        yaml_text(bound("code", lock={"foundations": "1.0.0"})),
+    )
+    write(root / "visual" / "code" / "broken.yaml", "lock: {foundations: 1.0.0}\n")
+    found = {
+        Path(lock.file).parent.name if lock.kind == "piece" else Path(lock.file).name: lock
+        for lock in copies.locks(root, "visual", "foundations")
+    }
+    assert [(name, lock.follows, lock.versions is None) for name, lock in found.items()] == [
+        ("draft", True, False),
+        ("loose", False, True),
+        ("new", True, False),
+        ("odd", False, True),
+        ("pinned", False, False),
+        ("unpinned", False, True),
+        ("broken.yaml", False, True),
+        ("css.yaml", False, False),
+    ]
+    one = V("1.0.0")
+    assert [name for name, lock in found.items() if lock.names("foundations", one)] == [
+        "draft",
+        "loose",
+        "odd",
+        "pinned",
+        "unpinned",
+        "broken.yaml",
+        "css.yaml",
+    ]
+    assert [lock.described for lock in copies.holding(found.values(), "foundations", one)] == [
+        "visual/pieces/loose/piece.yaml, whose lock cannot be read: the file does not exist",
+        "visual/pieces/odd/piece.yaml, whose lock cannot be read: its lock names `foundations: "
+        "latest`, which is no version",
+        "the pinned draft `pinned`",
+        "visual/pieces/unpinned/piece.yaml, whose lock cannot be read: its `pinned` is not true "
+        "or false",
+        "visual/code/broken.yaml, whose lock cannot be read: the file names no schema: add "
+        "`pkit_schema: visual-communication:code` and `schema_version: 1` at its top",
+        "the declaration `css` of written code",
+    ]
+
+
+def test_what_the_capability_ships_under_a_number_is_its_release_before_its_version_being_built(
+    tmp_path: Path,
+) -> None:
+    folder = tmp_path / "capability"
+    built = folder / "libraries" / "foundations"
+    shutil.copytree(FOUNDATIONS, built)
+    [library] = shipped.read(folder)
+    being_built = copies.under(library, V("1.0.0"))
+    assert (being_built.folder, being_built.entry, being_built.released) == (
+        built,
+        UNRELEASED,
+        None,
+    )
+    assert sorted(being_built.files) == sorted(
+        path.relative_to(FOUNDATIONS).as_posix() for path in FOUNDATIONS.rglob("*.yaml")
+    )
+    assert copies.under(library, V("1.1.0")) is None
+    place = shipped.place_of(folder, "foundations", V("1.0.0"))
+    shutil.copytree(built, place)
+    entry = shipped.entry_of(folder, "foundations", V("1.0.0"))
+    listed = {"source": {"kind": "shipped"}, "versions": {"1.0.0": entry}}
+    write(
+        folder / "releases" / "foundations" / "releases.yaml",
+        yaml_text(bound("libraries", libraries={"foundations": listed})),
+    )
+    [library] = shipped.read(folder)
+    taken = copies.under(library, V("1.0.0"))
+    assert (taken.folder, taken.entry, taken.released.version) == (place, entry, V("1.0.0"))
