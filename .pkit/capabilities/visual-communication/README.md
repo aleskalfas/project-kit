@@ -8,6 +8,7 @@ pkit:
         - .pkit/capabilities/visual-communication/package.yaml
         - .pkit/capabilities/visual-communication/scripts/status.py
         - .pkit/capabilities/visual-communication/scripts/check.py
+        - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/produce.py
         - .pkit/capabilities/visual-communication/scripts/export.py
@@ -30,8 +31,10 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#the-library-folder
+        - .pkit/capabilities/visual-communication/files.md#the-list-librariesyaml
         - .pkit/capabilities/visual-communication/files.md#the-location
         - .pkit/capabilities/visual-communication/files.md#the-lock
+        - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/outputs.md
         - .pkit/capabilities/visual-communication/outputs.md#exports
         - .pkit/capabilities/visual-communication/outputs.md#plugins
@@ -78,9 +81,17 @@ pkit sync
 
 The visual work lies in one folder of the repository, the *location*: `visual/` at the top of the repository, unless the project names another. Nothing needs configuring before the first command: the first command that writes there records the location in the capability's configuration. [The location](files.md#the-location) says how it is found and recorded.
 
+Every piece uses the foundations, so bring them into the location first:
+
+```
+pkit visual add foundations
+```
+
+A library the capability ships reaches the location only through [`pkit visual add`](#pkit-visual-add-library). No install, sync or upgrade of the capability writes there, so an upgrade changes no piece's look ([What the location holds](files.md#what-the-location-holds)).
+
 ## Drawing a piece
 
-1. **Bring the libraries.** Put each library version a piece uses in the location's library folder, and list it in `libraries/libraries.yaml` ([The library folder](files.md#the-library-folder)). A piece needs a brand, and none ships, so the project writes its own ([Brands](files.md#brands)).
+1. **Bring the libraries.** `pkit visual add <library>` copies a library the capability ships, such as the foundations, into the location's library folder, and lists it in `libraries/libraries.yaml`. Put each other library version a piece uses there yourself, and list it ([The library folder](files.md#the-library-folder)). A piece needs a brand, and none ships, so the project writes its own ([Brands](files.md#brands)).
 2. **Write the piece.** A piece is a folder under `pieces/`: its `piece.yaml` names its libraries, languages, modes and exports, and its content names the components that draw it ([A piece](files.md#a-piece)).
 3. **Draw it.** `pkit visual render <piece>` writes the piece's lock, computes its scenes, keeps their findings in `findings.yaml`, and draws an SVG preview of each scene. Open the previews under `.pkit/capabilities/visual-communication/project/local/previews/<piece>/` ([The clone's local folder](files.md#the-clones-local-folder)).
 4. **Check it.** `pkit visual check <piece>`, or `pkit validate`, reports what the piece breaks ([What the check reports](checks.md)).
@@ -91,7 +102,7 @@ A brand's values reach code the same way: a declaration under the location's `co
 
 ## Commands
 
-Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names. A command prints `error: …` and exits 1 when it refuses; then it has written nothing.
+Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names. A command prints `error: …` and exits 1 when it refuses; then it has written nothing.
 
 ### `pkit visual status`
 
@@ -100,6 +111,17 @@ Shows where the visual work lies, and each piece with its state and its lock.
 - **Prints** the location, and whether the configuration records it or it is the default, not recorded yet. Then each piece under `pieces/`, with its state, whether it is pinned, and the version of each library its lock names. A piece with no lock yet says that its first render writes one.
 - **Writes** nothing.
 - **Exits** 1 when the configuration cannot be read, or records a location that is refused or missing; 0 otherwise.
+
+### `pkit visual add <library>`
+
+Copies a library the capability ships into the location's library folder, and lists it.
+
+- **Copies** the version the capability ships, whole, to `libraries/<library>/<version>/`, and never over a version the library folder holds ([What the location holds](files.md#what-the-location-holds)). `pkit visual add foundations` makes `libraries/foundations/1.0.0/`.
+- **Lists it** in `libraries/libraries.yaml` with the source `shipped`, `released: false`, since no shipped library is released yet. Every other byte of the list stays ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)).
+- **Refuses** a library the capability does not ship, naming the ones it ships; a version whose files of the capability's format lack their binding ([The binding](files.md#the-binding)); a version the list names already; and a library the list names from another source, since one name ties one library to its source.
+- **Exits** 0 when it copied and listed the version; 1 when it refused, with nothing written.
+
+Running it is the consent for the copy.
 
 ### `pkit visual render <piece>`
 
