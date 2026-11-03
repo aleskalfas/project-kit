@@ -1,0 +1,68 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: straight
+    layout: slide
+    title: Ein gerader Verbinder, seine Pfeilspitze am Ende oder am Anfang
+    visual:
+      use: starter/layers
+      levels:
+        - id: decisions
+          head: Entscheidungen
+          text: Getroffene Entscheidungen.
+        - id: rules
+          head: Arbeitsregeln
+          text: Genau, was zu tun ist.
+        - id: work
+          head: Quellcode
+          text: Die Arbeit selbst.
+      notes:
+        - id: ideas
+          head: Ideenfindung
+          text: Im Gespräch oder in einer Notiz.
+        - id: review
+          head: Überprüfung
+          text: Jede Änderung wird erneut gelesen.
+      ties:
+        - id: ideas-decisions
+          from: {item: "notes[ideas]"}
+          to: {item: "levels[decisions]"}
+        - id: rules-decisions
+          from: {item: "levels[rules]"}
+          to: {item: "levels[decisions]"}
+          arrow: start
+
+  - id: corners
+    layout: slide
+    title: Ein Verbinder mit Ecken, Pfeilspitzen an beiden Enden oder an keinem
+    visual:
+      use: starter/layers
+      tie: {use: starter/connector, route: corners}
+      levels:
+        - id: decisions
+          head: Entscheidungen
+          text: Getroffene Entscheidungen.
+        - id: rules
+          head: Arbeitsregeln
+          text: Genau, was zu tun ist.
+        - id: work
+          head: Quellcode
+          text: Die Arbeit selbst.
+      notes:
+        - id: ideas
+          head: Ideenfindung
+          text: Im Gespräch oder in einer Notiz.
+        - id: review
+          head: Überprüfung
+          text: Jede Änderung wird erneut gelesen.
+      ties:
+        - id: ideas-decisions
+          from: {item: "notes[ideas]"}
+          to: {item: "levels[decisions]"}
+          arrow: both
+          concept: test-notation/service
+        - id: review-work
+          from: {item: "notes[review]"}
+          to: {item: "levels[work]"}
+          arrow: none

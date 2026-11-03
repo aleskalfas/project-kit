@@ -1,0 +1,80 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: fill
+    layout: slide
+    title: A card lies on the surface, or on its family's fill
+    visual:
+      use: starter/list
+      items:
+        - id: plain
+          head: Plain
+          text: On the surface, its head and its text in the shared colours of text.
+        - id: tint
+          fill: tint
+          concept: test-notation/service
+          head: Tinted
+          text: On its family's fill, its head and its text in the family's text.
+
+  - id: bar
+    layout: slide
+    title: A bar marks one side, or none
+    visual:
+      use: starter/list
+      item: {use: starter/card, fill: tint}
+      items:
+        - id: none
+          concept: test-notation/store
+          head: No bar
+          text: The card's edge alone.
+        - id: top
+          bar: top
+          concept: test-notation/store
+          head: A bar on top
+          text: Along its top edge, in the family's line.
+        - id: left
+          bar: left
+          concept: test-notation/store
+          head: A bar on the left
+          text: Along its left edge, in the family's line.
+
+  - id: parts
+    layout: slide
+    title: It holds a head, a tag and a text, each where given
+    visual:
+      use: starter/list
+      items:
+        - id: head
+          head: A head alone
+        - id: all
+          head: All three
+          tag: documentation
+          text: The tag stands under the head, and the text under both.
+        - id: tag-text
+          tag: analysis
+          text: A tag and a text, with no head above them.
+        - id: text
+          text: A text alone, with nothing above it.
+
+  - id: runs
+    layout: slide
+    title: Its text runs plain, or strong
+    visual:
+      use: starter/list
+      items:
+        - id: surface
+          head: On the surface
+          text:
+            - {text: Strong, style: strong}
+            - " where it matters, and plain for the rest."
+        - id: family
+          fill: tint
+          concept: test-notation/person
+          bar: top
+          head: On the fill
+          tag: person
+          text:
+            - "Plain at first, then "
+            - {text: strong, style: strong}
+            - ", both in the family's text."

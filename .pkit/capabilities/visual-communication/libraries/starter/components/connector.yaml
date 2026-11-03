@@ -1,0 +1,27 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  A line from where a tie starts to where it ends, in its colour family's line, straight
+  or with corners, and an arrowhead at its end, at its start, at both or at neither. It
+  takes the two ends a pattern's list of ties gives it, and routes around nothing.
+
+options:
+  # The connector tool's route between the two ends.
+  route: [straight, corners]
+  # Where an arrowhead points away from the line.
+  arrow: [end, start, both, none]
+
+colour: neutral
+
+ends: true
+
+parts:
+  line:
+    line:
+      stroke: ":colour.line"
+      stroke-width: "=@starter.connector"
+      marker-start: {by: arrow, end: none, start: arrow, both: arrow, none: none}
+      marker-end: {by: arrow, end: arrow, start: none, both: arrow, none: none}
+    connect: {by: route, straight: straight, corners: corners}

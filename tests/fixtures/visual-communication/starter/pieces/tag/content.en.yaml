@@ -1,0 +1,33 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: families
+    layout: slide
+    title: A tag takes its colour from its family
+    visual:
+      use: starter/list
+      widths: own
+      item: {use: starter/tag}
+      items:
+        - {id: neutral, label: neutral}
+        - {id: service, concept: test-notation/service, label: a service}
+        - {id: store, concept: test-notation/store, label: a store}
+        - {id: person, concept: test-notation/person, label: a person}
+
+  - id: in-cards
+    layout: slide
+    title: A card shows a tag under its head
+    visual:
+      use: starter/list
+      items:
+        - id: plain
+          head: living-docs
+          tag: documentation
+          text: The documentation for each reader.
+        - id: tint
+          fill: tint
+          concept: test-notation/service
+          head: software-analysis
+          tag: analysis
+          text: What the software must do.

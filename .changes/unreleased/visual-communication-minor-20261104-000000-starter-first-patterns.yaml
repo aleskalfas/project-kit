@@ -1,0 +1,17 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The capability ships the starter, the component library to start from
+  (#2563, DEC-007), at version 1.0.0, not released, every component
+  experimental. Its patterns are `layers`, levels stacked one on another with
+  notes beside them and ties between them, and `list`, items of equal standing
+  in a row. Its blocks are `card`, `tag` and `connector`. `pkit visual add
+  starter` copies it into the location and lists it with the source
+  `shipped`. Each of its own roles, under `starter.`, defaults along a chain
+  that ends at a shared role, so a brand that does not name the starter draws
+  it in its own values. It holds no raw value, and declares no colour role.
+  Its README lists each pattern by the question it answers, with its
+  boundaries, and names each component's options, component fields, end
+  fields and fields of runs, with their words.

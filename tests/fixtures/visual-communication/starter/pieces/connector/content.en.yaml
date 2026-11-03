@@ -1,0 +1,68 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: straight
+    layout: slide
+    title: A straight connector, its arrowhead at its end or at its start
+    visual:
+      use: starter/layers
+      levels:
+        - id: decisions
+          head: Decisions
+          text: Choices you accepted.
+        - id: rules
+          head: Working rules
+          text: Exactly what to do.
+        - id: work
+          head: Your code
+          text: The work itself.
+      notes:
+        - id: ideas
+          head: Where ideas start
+          text: In a conversation, or a note.
+        - id: review
+          head: Review
+          text: Each change is read again.
+      ties:
+        - id: ideas-decisions
+          from: {item: "notes[ideas]"}
+          to: {item: "levels[decisions]"}
+        - id: rules-decisions
+          from: {item: "levels[rules]"}
+          to: {item: "levels[decisions]"}
+          arrow: start
+
+  - id: corners
+    layout: slide
+    title: A connector with corners, its arrowheads at both ends or at neither
+    visual:
+      use: starter/layers
+      tie: {use: starter/connector, route: corners}
+      levels:
+        - id: decisions
+          head: Decisions
+          text: Choices you accepted.
+        - id: rules
+          head: Working rules
+          text: Exactly what to do.
+        - id: work
+          head: Your code
+          text: The work itself.
+      notes:
+        - id: ideas
+          head: Where ideas start
+          text: In a conversation, or a note.
+        - id: review
+          head: Review
+          text: Each change is read again.
+      ties:
+        - id: ideas-decisions
+          from: {item: "notes[ideas]"}
+          to: {item: "levels[decisions]"}
+          arrow: both
+          concept: test-notation/service
+        - id: review-work
+          from: {item: "notes[review]"}
+          to: {item: "levels[work]"}
+          arrow: none

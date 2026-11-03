@@ -45,6 +45,7 @@ places:
   .pkit/capabilities/visual-communication/components.md: user
   .pkit/capabilities/visual-communication/outputs.md: user
   .pkit/capabilities/visual-communication/checks.md: user
+  .pkit/capabilities/visual-communication/libraries/starter/README.md: user
   .pkit/cli/README.md: user
   .pkit/decisions/README.md: user
   .pkit/lifecycle/README.md: user
