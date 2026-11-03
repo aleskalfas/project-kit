@@ -241,7 +241,7 @@ def _block_end(lines: list[str], start: int, indent: int) -> int:
 
 def _entries_indent(lines: list[str], start: int, end: int) -> int | None:
     """The indent of the first entry on the lines after `start`, up to `end`, or None
-    where they hold none: the key's value is on its own line."""
+    where they hold none, as when the key's value is written on the key's own line."""
     for line in lines[start + 1 : end + 1]:
         stripped = line.strip()
         if stripped and not stripped.startswith("#"):
