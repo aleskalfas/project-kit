@@ -29,7 +29,6 @@ pkit:
         - COR-016
         - COR-017
         - COR-025
-        - COR-028#2
         - COR-047
         - COR-047#2
         - COR-047#3
@@ -311,9 +310,7 @@ An adapter is a [component](../glossary.md#term-component--component) that carri
 
 **States:** None.
 
-**Always true:**
-
-- It enforces the [permission model](../glossary.md#term-permission-model--permission-model) in its harness, and the model, never the harness's settings, is the source of truth ([COR-028 point 2](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
+**Always true:** None.
 
 ## Support declaration
 
