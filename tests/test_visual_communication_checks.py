@@ -8,6 +8,7 @@ not expect on one piece. The command around it is `test_visual_communication_che
 
 from __future__ import annotations
 
+import json
 import shutil
 import time
 from pathlib import Path
@@ -22,11 +23,19 @@ from tests.test_visual_communication_pipeline import (
     PIECE,
     PIECE_FOLDER,
     drawing_project,
+    parts_project,
     system_project,
     write_content,
     write_picture,
 )
-from tests.visual_communication_project import bound, write, write_list, yaml_text
+from tests.visual_communication_project import (
+    TEST_PARTS,
+    bound,
+    copy_library,
+    write,
+    write_list,
+    yaml_text,
+)
 
 checks, pl, framing, seam, findings_, svg_declaration, fingerprint = load(
     "visual-communication",
@@ -862,3 +871,175 @@ def test_an_item_of_a_list_passed_on_is_read_against_the_component_that_draws_it
     ]
     assert found[0].message == "`tests/card` takes no field or option `haed`; did you mean `head`?"
     assert {f.file for f in found} == {CONTENT}
+
+
+# --- a library's own roles, and the versions checked alone (DEC-008 points 1 and 9) ----------
+
+BRAND_FOLDER = "visual/libraries/test-brand/1.0.0"
+PARTS_FOLDER = "visual/libraries/test-parts"
+TAGS_FILE = "visual/pieces/tags/piece.yaml"
+
+#: The test library's warning, which has no default, at the brand's ink.
+WARNING = {"warning": {"$type": "color", "$value": "{scheme.ink}"}}
+
+
+def add_tokens(root: Path, given: dict[str, Any]) -> None:
+    """`given` under `test-parts` in the project's test brand's base tokens."""
+    path = root / BRAND_FOLDER / "tokens" / "base.tokens.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["test-parts"] = given
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def name_parts(root: Path, given: dict[str, Any] | None = None) -> None:
+    """The project's test brand names `test-parts` 1, and gives it `given`, by default its
+    warning a value."""
+    library = root / BRAND_FOLDER / "library.yaml"
+    library.write_text(
+        library.read_text(encoding="utf-8").replace(
+            "  - {name: foundations, major: 1}\n",
+            "  - {name: foundations, major: 1}\n  - {name: test-parts, major: 1}\n",
+        ),
+        encoding="utf-8",
+    )
+    add_tokens(root, WARNING if given is None else given)
+
+
+def parts_minor(root: Path, roles: dict[str, str]) -> None:
+    """test-parts 1.1.0 beside 1.0.0, its `roles.yaml` changed by `roles` (old: new), both
+    listed unreleased."""
+    folder = copy_library(root, TEST_PARTS, "test-parts", "1.1.0")
+    library = folder / "library.yaml"
+    library.write_text(
+        library.read_text(encoding="utf-8").replace("version: 1.0.0", "version: 1.1.0"),
+        encoding="utf-8",
+    )
+    text = (folder / "roles.yaml").read_text(encoding="utf-8")
+    for old, new in roles.items():
+        assert old in text
+        text = text.replace(old, new)
+    (folder / "roles.yaml").write_text(text, encoding="utf-8")
+    unreleased = {"released": False}
+    write_list(
+        root,
+        {
+            "foundations": {"source": {"kind": "shipped"}, "versions": {"1.0.0": unreleased}},
+            "test-brand": {"source": {"kind": "project"}, "versions": {"1.0.0": unreleased}},
+            "test-parts": {
+                "source": {"kind": "project"},
+                "versions": {"1.0.0": unreleased, "1.1.0": unreleased},
+            },
+        },
+    )
+
+
+def judged(report: Any, code: str) -> list[tuple[Any, str]]:
+    return [(finding, level) for finding, level in report.judged if finding.code == code]
+
+
+def test_a_librarys_own_roles_are_checked_alone_their_findings_in_its_version(
+    tmp_path: Path,
+) -> None:
+    report = checks.check(parts_project(tmp_path))
+    assert not report.failed()
+    [(finding, level)] = judged(report, "role-brand-only")
+    assert level == "fact"
+    assert checks.place(finding) == f"{PARTS_FOLDER}/1.0.0/roles.yaml#roles.test-parts.warning"
+    assert finding.library == "test-parts@1.0.0"
+
+
+def test_a_brands_finding_against_a_library_it_names_lies_in_its_version_once(
+    tmp_path: Path,
+) -> None:
+    root = parts_project(tmp_path)
+    name_parts(root, {})
+    other = root / "visual/pieces/other"
+    shutil.copytree(root / "visual/pieces/tags", other)
+    report = checks.check(root)
+    [(finding, level)] = judged(report, "library-role-missing")
+    assert level == "fails"
+    assert finding.library == "test-brand@1.0.0"
+    assert (finding.where, finding.file) == ("test-parts.warning", f"{BRAND_FOLDER}/")
+
+
+def test_a_brand_checked_alone_is_resolved_with_the_newest_minor_of_each_major_it_names(
+    tmp_path: Path,
+) -> None:
+    root = parts_project(tmp_path)
+    name_parts(root)
+    parts_minor(
+        root,
+        {
+            "  test-parts.warning: {type: color}\n": (
+                "  test-parts.warning: {type: color}\n  test-parts.mark: {type: color}\n"
+            )
+        },
+    )
+    report = checks.check(root)
+    [(finding, level)] = judged(report, "library-role-missing")
+    assert (finding.library, finding.where, level) == (
+        "test-brand@1.0.0",
+        "test-parts.mark",
+        "fails",
+    )
+    assert {f.library for f, _ in judged(report, "role-brand-only")} == {
+        "test-parts@1.0.0",
+        "test-parts@1.1.0",
+    }
+    assert judged(checks.check(root, only="tags"), "library-role-missing") == []
+
+
+def test_a_fault_only_a_lock_shows_lies_at_that_lock_and_fails(tmp_path: Path) -> None:
+    root = parts_project(tmp_path)
+    name_parts(root, {})
+    parts_minor(
+        root,
+        {
+            "  test-parts.warning: {type: color}\n": (
+                "  test-parts.warning: {type: color, default: '{accent}'}\n"
+            )
+        },
+    )
+    for report in (checks.check(root), checks.check(root, only="tags")):
+        [(finding, level)] = judged(report, "library-role-missing")
+        assert level == "fails"
+        assert (finding.file, finding.where, finding.library) == (TAGS_FILE, "lock", "")
+        assert finding.message.startswith(
+            f"under this lock, test-brand@1.0.0 shows what it does not alone ({BRAND_FOLDER}/, "
+            "`test-parts.warning`): the brand names `test-parts`"
+        )
+
+
+def test_a_token_under_a_library_a_piece_locks_that_the_brand_does_not_name_asks_attention(
+    tmp_path: Path,
+) -> None:
+    root = parts_project(tmp_path)
+    add_tokens(root, {"ink": {"$type": "color", "$value": "{scheme.ink}"}})
+    report = checks.check(root)
+    assert not report.failed()
+    [(finding, level)] = judged(report, "library-token-private")
+    assert level == "attention"
+    assert (finding.file, finding.where, finding.library) == (TAGS_FILE, "lock", "")
+    assert finding.who == "the owner of the brand test-brand"
+
+
+def test_a_version_that_names_majors_no_versions_fit_cannot_be_checked_alone(
+    tmp_path: Path,
+) -> None:
+    root = parts_project(tmp_path)
+    name_parts(root)
+    library = root / PARTS_FOLDER / "1.0.0" / "library.yaml"
+    library.write_text(
+        library.read_text(encoding="utf-8").replace(
+            "{name: foundations, major: 1}", "{name: foundations, major: 2}"
+        ),
+        encoding="utf-8",
+    )
+    report = checks.check(root)
+    [(majors, level)] = judged(report, "alone-majors")
+    assert level == "fails"
+    assert checks.place(majors) == f"{BRAND_FOLDER}/library.yaml#builds-on"
+    assert "test-parts@1.0.0 builds on `foundations` 2" in majors.message
+    [(missing, level)] = judged(report, "alone-missing")
+    assert (level, missing.library) == ("fails", "")
+    assert checks.place(missing) == "visual/libraries/libraries.yaml#libraries.test-parts"
