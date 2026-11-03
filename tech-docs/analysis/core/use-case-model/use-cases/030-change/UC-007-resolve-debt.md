@@ -136,6 +136,6 @@ pkit:
 
 **Minimal guarantees:**
 
-- The [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check) reports what it finds, and never fails on it, whatever the [friction](../../../glossary.md#term-friction--friction) mode ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
+- The [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check) reports what it finds, and never fails on it, whatever the [friction mode](../../../glossary.md#term-friction-mode--friction-mode) ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
 - [Debt](../../../glossary.md#term-debt--debt) is derived from git at each run, never kept in a ledger, so it never drifts from the history ([COR-050 point 9](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
 - An [artefact](../../../glossary.md#term-artefact--artefact) the check could not judge is never reported `current` ([COR-050 point 2](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#2-anchors)).

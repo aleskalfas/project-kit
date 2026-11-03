@@ -106,7 +106,7 @@ pkit:
 
 **Variants:**
 
-- **1a.** The value is no [friction](../../../glossary.md#term-friction--friction) mode, such as `loud`. The [system](../../../glossary.md#term-system--system) refuses it with the schema's message, and writes nothing.
+- **1a.** The value is no [friction mode](../../../glossary.md#term-friction-mode--friction-mode), such as `loud`. The [system](../../../glossary.md#term-system--system) refuses it with the schema's message, and writes nothing.
 - **1b.** The adopter keeps the default friction mode, `warning`. The [change check](../../../glossary.md#term-change-check--change-check) reports what it finds and passes, so only [validation](../../../glossary.md#term-validation--validation)'s errors and the other checks fail the job.
 - **1c.** The adopter writes `friction.mode` by hand, with a value that is no friction mode. The change check reads it as `warning`, with a warning line, and `pkit validate` fails on it ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
 - **1d.** The adopter passes `--dry-run`, to see first each edit the command would make. The system names each edit, and writes nothing ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)).
