@@ -59,7 +59,7 @@ pkit:
 
 **Assumptions:**
 
-- A fresh clone holds what the [project](../../../glossary.md#term-project--project) committed, and none of what each clone regenerates. That is the deployed [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition), the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace) and each query command's environment ([ADR-065 point 11](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#11-each-writer-of-a-project-owned-path-is-named-and-each-owner-of-derivable-state)).
+- A fresh clone holds what the [project](../../../glossary.md#term-project--project) committed, and none of what each clone regenerates. That is the deployed [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition), the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace) and each [query command](../../../glossary.md#term-query-command--query-command)'s environment ([ADR-065 point 11](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#11-each-writer-of-a-project-owned-path-is-named-and-each-owner-of-derivable-state)).
 
 **Trigger:** The operator clones the [project](../../../glossary.md#term-project--project)'s repository on a machine, or opens a clone whose regenerated state is missing.
 
@@ -78,7 +78,7 @@ pkit:
    - the deployed [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition)
    - `.pkit/.gitignore`, rendered from the [components](../../../glossary.md#term-component--component)' declarations
    - the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace), with its line in `.git/info/exclude`
-   - each registered query command's environment
+   - each registered [query command](../../../glossary.md#term-query-command--query-command)'s environment
 6. The system prints `Sync complete.`.
 
 **Variants:**
@@ -86,7 +86,7 @@ pkit:
 - **1a.** The operator passes `--dry-run`. The [system](../../../glossary.md#term-system--system) runs every check, says what it would copy and regenerate, and writes nothing ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)).
 - **1b.** The clone holds no `.pkit/`, as where the adopter kept the system private ([ADR-009 point 3](../../../../../architecture/decisions/ADR-009-git-footprint-visibility.md#3-private--make-the-whole-footprint-git-invisible-via-gitinfoexclude)). The system refuses with `<root>/.pkit/ does not exist. Run 'pkit init' first.`, and the use case ends.
 - **1c.** The operator passes `--force`. The system says that it ignores the flag, and goes on ([ADR-065 point 10](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#10-sync---force-is-ignored-for-one-release-then-removed)).
-- **1d.** The [project](../../../glossary.md#term-project--project) pins a [release](../../../glossary.md#term-release--release) other than the installed CLI's. The router runs the command at the [version pin](../../../glossary.md#term-version-pin--version-pin) ([UC-052](UC-052-run-at-pin.md)).
+- **1d.** The [project](../../../glossary.md#term-project--project) pins a [release](../../../glossary.md#term-release--release) other than the installed CLI's. The [router](../../../glossary.md#term-router--router) runs the command at the [version pin](../../../glossary.md#term-version-pin--version-pin) ([UC-052](UC-052-run-at-pin.md)).
 - **3a.** The project is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), run by its own code. The system copies nothing, regenerates the derived state, and prints `Self-host sync complete (deploy primitives re-run).` ([ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)).
 - **3b.** The running CLI is newer than the project's [recorded version](../../../glossary.md#term-recorded-version--recorded-version), and the project pins no [version](../../../glossary.md#term-version--version). The system stops and writes nothing ([REQ-010](../../../requirements/functional/REQ-010-stop-under-another-version.md)). Its message names `pkit upgrade` to move, `pkit pin` to stay, and in a pipeline a committed version pin or the project's version installed.
 - **3c.** The running CLI is older than the project's content or its version pin. The system stops, writes nothing, and names the remedies for that state (REQ-010).
@@ -99,10 +99,10 @@ pkit:
 
 - the [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) are deployed where the [harness](../../../glossary.md#term-harness--harness) reads them
 - the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace) exists
-- each query command answers offline
+- each [query command](../../../glossary.md#term-query-command--query-command) answers offline
 
 **Minimal guarantees:**
 
-- [Sync](../../../glossary.md#term-sync--sync) moves no [recorded version](../../../glossary.md#term-recorded-version--recorded-version), runs no [migration](../../../glossary.md#term-migration--migration), and creates no seed path ([COR-059 point 2](../../../../../../.pkit/decisions/core/COR-059-version-transition.md#2-reconciliation-runs-at-the-recorded-versions-and-moves-none)).
+- [Sync](../../../glossary.md#term-sync--sync) moves no [recorded version](../../../glossary.md#term-recorded-version--recorded-version), runs no [migration](../../../glossary.md#term-migration--migration), and creates no [seed path](../../../glossary.md#term-seed-path--seed-path) ([COR-059 point 2](../../../../../../.pkit/decisions/core/COR-059-version-transition.md#2-reconciliation-runs-at-the-recorded-versions-and-moves-none)).
 - Sync writes [project-owned content](../../../glossary.md#term-project-owned-content--project-owned-content) only through [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery), and removes no entry the [project](../../../glossary.md#term-project--project) wrote (COR-059 point 2 and [REQ-002](../../../requirements/functional/REQ-002-project-owned-writers.md)).
 - Under another CLI [version](../../../glossary.md#term-version--version) than the project records, or over an incomplete transition, sync writes nothing, under `--dry-run` too ([REQ-010](../../../requirements/functional/REQ-010-stop-under-another-version.md)).

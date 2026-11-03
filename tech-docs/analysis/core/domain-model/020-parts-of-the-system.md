@@ -11,6 +11,8 @@ explains:
   - TERM-storyboard
   - TERM-stamp
   - TERM-adapter
+  - TERM-support-declaration
+  - TERM-deploy-mark
   - TERM-install
   - TERM-project
 pkit:
@@ -27,10 +29,9 @@ pkit:
         - COR-016
         - COR-017
         - COR-025
-        - COR-028#2
+        - COR-047
         - COR-047#2
         - COR-047#3
-        - PRJ-002#D2
       artefact:
         - TERM-version
         - TERM-backbone
@@ -40,6 +41,8 @@ pkit:
         - TERM-storyboard
         - TERM-stamp
         - TERM-adapter
+        - TERM-support-declaration
+        - TERM-deploy-mark
         - TERM-install
         - TERM-project
 ---
@@ -53,7 +56,7 @@ The [backbone](../glossary.md#term-backbone--backbone) ships whole, at one versi
 ```mermaid
 classDiagram
   accTitle: Parts of the system, and projects
-  accDescr: The system is made of the backbone and components, each with a version of its own. A component declares which backbone versions it works with. An adapter is a component that serves one harness and deploys skills and agent definitions there. A storyboard scripts the dialogue an agent definition follows. A stamp pairs with a skill. Install adds the backbone or a component to a repository. A project is a repository the system is installed into, holding the methodology's files.
+  accDescr: The system is made of the backbone and components, each with a version of its own. A component declares which backbone versions it works with. An adapter is a component that serves one harness and deploys skills and agent definitions there, leaving its deploy mark on each copy. Its support declaration grades how far that harness meets each harness requirement. A storyboard scripts the dialogue an agent definition follows. A stamp pairs with a skill. Install adds the backbone or a component to a repository. A project is a repository the system is installed into, holding the methodology's files.
   class System["System"]
   class Harness["Harness"]
   class Methodology["Methodology"]
@@ -70,6 +73,11 @@ classDiagram
   Storyboard : scenarios
   class Stamp["Stamp"]
   class Adapter["Adapter"]
+  class SupportDeclaration["Support declaration"]
+  SupportDeclaration : grades
+  SupportDeclaration : harness version bound
+  class HarnessRequirement["Harness requirement"]
+  class DeployMark["Deploy mark"]
   class Install["Install"]
   class Project["Project"]
   System *-- Backbone
@@ -81,6 +89,9 @@ classDiagram
   Adapter --> Harness : serves one
   Adapter ..> Skill : deploys
   Adapter ..> AgentDefinition : deploys
+  Adapter --> SupportDeclaration : makes for its harness
+  SupportDeclaration ..> HarnessRequirement : grades each
+  Adapter ..> DeployMark : leaves on each copy
   Storyboard ..> AgentDefinition : scripts the dialogue of
   Stamp -- Skill : pairs with
   Install ..> Backbone : adds
@@ -123,7 +134,6 @@ A version is a number of the form major.minor.patch that names one state of a to
 **Always true:**
 
 - The backbone and every component use semantic versioning (COR-010).
-- Which segment moves is a person's judgement of the effect, never read from a commit's type ([PRJ-002 D2](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
 
 ## Backbone
 
@@ -291,20 +301,60 @@ An adapter is a [component](../glossary.md#term-component--component) that carri
 **Attributes:**
 
 - its [version](../glossary.md#term-version--version), and the [backbone](../glossary.md#term-backbone--backbone) versions it works with, as any component has
-- a support declaration: for each need the methodology states of a harness, how far its harness meets it ([COR-047 point 2](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version))
+- its [support declaration](../glossary.md#term-support-declaration--support-declaration) for its harness ([COR-047 point 2](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version))
 
 **Relations:**
 
 - It is a kind of component, and serves one harness ([COR-005](../../../../.pkit/decisions/core/COR-005-bundle-pattern.md)).
-- It deploys skills and agent definitions where its harness looks for them (COR-006).
+- It deploys skills and agent definitions where its harness looks for them (COR-006). It leaves its [deploy mark](../glossary.md#term-deploy-mark--deploy-mark) on each copy it places.
+
+**States:** None.
+
+**Always true:** None.
+
+## Support declaration
+
+Defined in [TERM-support-declaration](../glossary.md#term-support-declaration--support-declaration).
+
+**Why:** With no list of what a [harness](../glossary.md#term-harness--harness) must supply, adapting the [methodology](../glossary.md#term-methodology--methodology) to another one left gaps unseen ([COR-047](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)). What was missing was an obligation on each [adapter](../glossary.md#term-adapter--adapter) to grade its harness honestly, where "I cannot tell" differs from "all is well" (COR-047).
+
+A support declaration is an adapter's grading of how far its harness meets each [harness requirement](../glossary.md#term-harness-requirement--harness-requirement). Its author may bound it by the harness versions it holds for. Claude Code's grades `delegated-result-complete` as `at-cost`.
+
+**Attributes:**
+
+- a grade for each harness requirement, telling apart a harness that cannot meet it from one meeting it at a cost ([COR-047 point 2](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version))
+- where its author sets one, a bound on the harness versions a grade holds for (COR-047 point 2)
+
+**Relations:**
+
+- An adapter makes it for its own harness (COR-047 point 2).
+- It grades the harness requirements the methodology states (COR-047 point 2).
 
 **States:** None.
 
 **Always true:**
 
-- A need its support declaration does not cover is unknown, never met ([COR-047 point 3](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#3-silence-is-indeterminate-never-satisfaction)).
-- A bound on the harness versions its declaration holds for is never widened by itself, only by an author who tested it (COR-047 point 2).
-- It enforces the permission model in its harness, and the model, never the harness's settings, is the source of truth ([COR-028 point 2](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
+- Every adapter grades with the same labels, so the grades stay comparable across harnesses (COR-047 point 2).
+- A harness requirement it leaves out is indeterminate, never met ([COR-047 point 3](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#3-silence-is-indeterminate-never-satisfaction)).
+- A bound on the harness versions is never widened by itself, only by an author who tested the claim (COR-047 point 2).
+
+## Deploy mark
+
+Defined in [TERM-deploy-mark](../glossary.md#term-deploy-mark--deploy-mark).
+
+**Why:** None.
+
+A deploy mark is the sign an [adapter](../glossary.md#term-adapter--adapter) leaves on each copy it places for its [harness](../glossary.md#term-harness--harness), such as a comment line. By it, the adapter's later runs recognise their own copies. A later run removes or rewrites only a copy that carries it, so the [project](../glossary.md#term-project--project)'s own files stay (`.pkit/adapters/README.md`).
+
+**Attributes:** None.
+
+**Relations:**
+
+- An adapter leaves it on each copy of a [skill](../glossary.md#term-skill--skill) or an [agent definition](../glossary.md#term-agent-definition--agent-definition) it places for its harness.
+
+**States:** None.
+
+**Always true:** None.
 
 ## Install
 
@@ -578,7 +628,18 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
 - [JRN-009 — Release a breaking change of my component with its migration](../use-case-model/journeys/JRN-009-release-breaking-component-change.md)
 - [REQ-008 · Constraint · Until #1600 is done, the only area or adapter a change may add is `rule-sets`, and none may be removed](../requirements/constraints/010-develop/REQ-008-areas-held.md)
-- [REQ-016 · Constraint · The permission model's code needs only the operating system's `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
+- [REQ-016 · Constraint · The permission code needs only the operating system's `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
+
+**Support declaration:**
+
+- [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
+- [UC-029 — Get a delegated agent's result back whole](../use-case-model/use-cases/070-work-within-limits/UC-029-get-result-whole.md)
+- [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
+
+**Deploy mark:**
+
+- [UC-020 — Turn recurring work into my project's own skill or agent definition](../use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md)
+- [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md)
 
 **Install:**
 

@@ -1,0 +1,160 @@
+---
+id: DEC-009
+title: A top component draws each of its layouts, as a default that a brand may replace
+status: accepted
+date: 2026-11-03
+author: Aleš Kalfas <kalfas.ales@gmail.com>
+---
+
+**In plain terms:** a top component, such as a deck or a figure, declares its layouts and draws each of them, as the figure draws its frame today. That drawing is the layout's default. A brand may hold a drawing of its own for a layout, as a component of the brand, and that drawing wins. It may do so only for a top whose library it names, and a brand built on a base keeps the base's form for each top the base has drawings for. So every page of a top draws under a brand that has never heard of it, in that brand's values. Content never names a brand's drawing, so switching the brand changes no content. Where a brand has no drawing of a layout, or its drawing cannot take what the content gives, the top's own drawing draws, and the check states it. Every file format 1 accepted draws as before.
+
+## Context
+
+The founding record makes a piece's top component, such as a deck or a figure, a component in a library like any other. It declares its *layouts*, the forms its pages take, and each layout's *slots*, the places content fills ([visual-communication:DEC-001-visual-communication-discipline] point 4). The foundations declare the layouts and slots of the top components the capability ships. A brand may hold the form that is its own: how it draws the layouts of the kinds of work it serves. Switching the brand leaves content and components as they are, and what the new brand lacks, such as a layout it does not draw, is reported (DEC-001 point 5).
+
+The record of brands and notations makes a brand's own form, its layouts included, of components read with the brand's name. A brand built on a base keeps its base's layouts, and adds only the layouts of a kind of work its base does not serve. Elsewhere a brand reaches a component only through the roles it names and the component tokens it declares, and the component's parts, their arrangement and its options stay its own ([visual-communication:DEC-004-brands-and-notations] points 1, 6 and 7).
+
+The format as built holds one layout to a top, with its slots, and the top's own parts draw it. The foundations' figure, the one top the capability ships, is a page alone, and draws its frame, its body and its caption. A top may also hold a slot of pages, as the capability's tests build a deck: its parts place each page as an item, drawn by the item component they name or by one the item names (DEC-001 point 6). A brand may hold components, and no brand holds a drawing of a layout: the format has no way for one to say that it does. So the records give layouts to brands, while every top that exists draws its own. Nothing decides which of the two draws, or what is drawn under a brand that has no drawing.
+
+The capability's next slice ships a deck whose pages each take one of its layouts, and draws it under the test brand and a neutral brand ([project-kit#2501](https://github.com/aleskalfas/project-kit/issues/2501)). If brands alone drew layouts, both would have to draw the deck's. The record of a library's own roles has just answered the like question for roles: a library's role may default to another role, and a brand that names the library may give it a value of its own ([visual-communication:DEC-008-library-role-defaults] points 1 and 4). Until validation accepts files at an older format number, the format grows only by additions that every file written before still meets ([visual-communication:DEC-003-change-over-time] point 3).
+
+## Decision
+
+**A top component draws each layout it declares, and that drawing is the layout's default. A brand may hold a drawing of its own for a layout of a top whose library it names, and its drawing wins. A brand built on a base keeps the base's form for each top the base serves. Content never names a brand's drawing. Where a brand has no drawing of a layout, or its drawing does not fit what the top is given, the top's own drawing draws, and the check states it.**
+
+### 1. A top component draws each layout it declares, and that drawing is the default
+
+- **Declared and drawn by the top.** A top component declares its layouts and their slots (DEC-001 point 4), and holds its own drawing of each. A layout's *drawing* is what draws the top in that layout: the parts that place each of its slots, and what they draw around them.
+- **What one drawing draws.** A drawing draws an *instance* of its layout. Where a top's layouts are the forms its pages take, as a deck's cover and slide, an instance is one page. Where a top declares one layout that is a page alone, as the figure's, or that holds its slot of pages, as the tests' deck, an instance is the whole top. The top's parts are then that layout's drawing, and they place each page as an item, drawn by the item component they name or by one the item names (DEC-001 point 6).
+- **The default.** The top's own drawing of a layout is the layout's *default*. It draws each instance of the layout wherever the piece's brand holds no drawing of the layout that fits it (points 2 and 6).
+- **Every layout has one.** A top declares no layout it does not draw. A top that declares one layout draws it with its own parts, so this holds by structure. The change that gives a top several layouts gives each layout its own drawing, so it holds by structure there too.
+- **A default follows the brand.** The top's drawing names roles, never values (DEC-001 point 5), so it is drawn in the values of the piece's brand, as a library at its defaults follows the brand (DEC-008 point 1).
+
+### 2. A brand may hold a drawing of a layout, and its drawing wins
+
+- **A component of the brand.** A brand's drawing of a layout is a component of the brand, read with the brand's name (DEC-004 point 1). It says which top, and which of its layouts, it draws. A brand *draws* a layout when it holds a drawing of it, and it holds at most one drawing of each. Where it holds two, neither draws, and the top's own drawing does.
+- **It wins.** Where the piece's brand draws a layout, and its drawing fits an instance (point 6), the brand's drawing draws that instance in place of the top's own. It does so wherever the top is drawn: as the piece's top, or placed in another component's slot, as a figure in a slide.
+- **A component content names stays.** Content may name the component that draws an item, a page among them (DEC-001 point 6). That component draws the item under every brand. A brand's drawing stands in for the top's drawing of a layout, never for a component that content names. So what draws an item is the content's choice first, then the brand's drawing, then the top's own.
+- **The one exception to how far a brand reaches.** A brand reaches every other component only through roles and component tokens, and the component's parts, their arrangement and its options stay its own (DEC-004 point 7). A layout is where the records place a brand's own form (DEC-001 point 5, DEC-004 point 1), so a top's layouts are the one exception to that rule. A drawing replaces no component: the top keeps its name, its fields, its options, its layouts and their slots, and the content still names the top.
+- **What a fix to the top reaches.** A change of the top's own drawing of a layout reaches every piece whose brand does not draw that layout, and no piece whose brand does. A brand that draws a layout owns its form there, as a brand that gives a role a value owns that value (DEC-008 point 1). A change of what the top takes, its slots, fields and options, reaches every drawing, since each is written against them (point 5).
+- **Traced.** Every element a drawing draws traces back to that drawing (DEC-001 point 3).
+
+### 3. A brand draws a top's layouts only where it names the top's library
+
+- **Named by major.** A brand draws a layout only of a top whose library it names among those it builds on, by the major it fits (DEC-001 point 5). It is the rule by which a brand reaches a library's own roles (DEC-008 point 4). So a drawing never meets a major of the top whose layouts it was not written for.
+- **An experimental top** may still change its layouts, slots and fields in any release (DEC-003 point 7). A drawing that no longer fits it leaves it to its own drawing (point 6).
+- **Where it names none,** every top of that library draws itself under the brand.
+- **A local top always draws itself.** A local component is the piece's alone, and lies in no library a brand names.
+- **What naming costs** is what DEC-008 point 4 counts for roles. Every project that uses the brand holds the library, and every piece that uses the brand locks it. Moving to a new major of it is a breaking change of the brand.
+- **The foundations' tops.** The top components the capability ships are the foundations' ([visual-communication:DEC-007-starter-library] point 1). A brand names the foundations whose shared roles it gives values, since it uses their names (DEC-001 point 5). So drawing one of their tops asks nothing more of it.
+
+### 4. Along a chain of brands, the brand nearest the root that serves a top keeps its form
+
+- **Serving.** A brand *serves* a top when it draws one of the top's layouts. The kinds of work a brand serves, in the founding record's words (DEC-001 point 5), are the tops it serves.
+- **Built on a base that serves a top,** a brand keeps the base's form for it: the layouts the base draws, and the top's own drawing of the rest. It draws none of that top's layouts itself. A brand keeps its base's layouts, and adds only the layouts of a kind of work its base does not serve (DEC-004 point 6).
+- **Built on a base that serves no layout of a top,** a brand may draw the top's layouts, where it names the top's library itself (point 3).
+- **No base opens a layout.** The record of a library's own roles offers its stance to layouts: a brand reaches a library only where it names it, and built on a base only where the base opens what it reaches (DEC-008, Implications). This record takes the first half (point 3). The second is already decided for layouts: a brand adds the layouts of a kind of work its base does not serve, with no list a base opens (DEC-004 point 6). A base that leaves a top to the brands built on it serves none of its layouts.
+- **So one link draws a top.** Along a chain, the drawings of the brand nearest the root that serves a top are the ones that win. A lock may pair a base that serves a top with a brand built on it that draws that top too, as when the base began to serve it in a later version. The base's drawings win there, and the brand's draw nothing (point 9).
+
+### 5. Content never names a brand's drawing
+
+- **Written for the top.** Content gives a top what the top declares, never what a brand's drawing declares. So switching the brand changes how the top looks, and leaves its content as it is (DEC-001 point 5). Content is checked against the top, whichever drawing draws it.
+- **A drawing is written against the top.** A drawing of a layout takes what content gives the top in that layout: the layout's slots, the top's other fields, its options with their words, and its states. It exposes, by the same name, each part the top exposes, so a component that places the top reads it the same under every drawing (DEC-005 point 3). Where it does not, point 6 holds.
+- **No content places a drawing.** A component that a brand declares as a drawing draws only in place of the top's own. Content, or a component, that places it by `use` is a finding (point 9).
+- **A page that names its own component** is drawn by that component under every brand (point 2). So a page whose form a brand may draw leaves the component to the drawing of its layout. How a page names its layout among a top's several is decided with how content names a list's item component ([project-kit#2498](https://github.com/aleskalfas/project-kit/issues/2498)).
+
+### 6. What a brand lacks, the top's own drawing draws
+
+- **A layout the brand does not draw.** The top's own drawing draws it (point 1). No page lacks a drawing, so no piece fails for what its brand lacks.
+- **A drawing that does not fit.** A brand's drawing *fits* an instance of its layout when it takes all the content gives that instance, and exposes every part a component that places the top reads, in the versions the piece's lock names. The content's choice of a word, a state, or a part it points at another role counts. Where the brand's drawing does not fit, the top's own drawing draws that instance whole.
+- **One instance, one drawing.** An instance is drawn by one drawing, never by parts of two. Where an instance is a page, that page alone is drawn by the top's own drawing, and the other pages keep the brand's. A top placed inside another is an instance of its own.
+- **So no change of a top breaks a brand's drawing.** An optional slot or field, an option, a word or an exposed part a top adds reaches content at once, and so does what an experimental top changes. What uses it is drawn by the top's own drawing until the brand's drawing takes it. A lock that pairs a drawing with an older version of its top is drawn the same way where the two do not fit.
+- **What a brand lacks, read.** The founding record reports what a brand lacks, such as a layout it does not draw (DEC-001 point 5). A brand lacks a layout where it serves the top and does not draw that layout. Its drawing lacks a part of a layout where it does not fit what the top offers. A brand that serves no layout of a top lacks none of them: it leaves the top at its defaults, as a brand that does not name a library leaves that library's roles at theirs (DEC-008 point 4). Point 9 reports each case.
+
+### 7. What breaks
+
+The record of change over time already counts a removed or renamed layout or slot as a breaking change of the top's library ([visual-communication:DEC-003-change-over-time] point 6). Beyond it:
+
+- **Not breaking, for a top's library:** a new layout, an optional slot or field, an option, a word or an exposed part, which a brand's drawing meets through point 6. Nor is a change of the top's own drawing, which changes how pages look where it draws (point 2).
+- **Not breaking, for a brand:** drawing a layout, or ceasing to draw one. Either changes how pages look, and a piece meets it only when a person moves its lock (DEC-001 point 7).
+- **Breaking, for a brand:** declaring as a drawing a component it held before, since content may already place it (point 5).
+- **Breaking, for a base:** drawing a layout of a top it did not serve before. A brand built on it that draws that top's layouts may then draw none of them (point 4). No comparison catches it at release yet, since the release's comparison reads stable components (DEC-003 point 7). The brand built on the base meets it as a finding, once it is checked with the base's new version (point 9).
+
+### 8. What this adds to format 1, and what still holds
+
+- **Added by this record:** a reading, and no field. The top's own drawing of its layout is the layout's default, as the figure's drawing of its frame is. No schema changes.
+- **Added later, as an addition.** The change that builds a brand's own form adds the declaration by which a brand says, for each layout it draws, the top, the layout and the component that draws it. The declaration is optional, so no field becomes required, and no value a schema accepted is refused (DEC-003 point 3).
+- **Each layout comes with its drawing.** The change that gives a top several layouts gives each layout the top's own drawing of it, so point 1 holds of every top. A top that declares one layout keeps drawing it with its own parts, as before.
+- **What still holds.** Every file format 1 accepted is read and drawn as before. Format 1's schemas refuse a key they do not know, so no file they accepted declares a brand's drawing. Every top is drawn by its own parts, and every item by the component they or the content name, as before. None of point 9's findings arises from such a file.
+
+### 9. What the checks report, and how severely
+
+Each finding below fails validation where it lies in a file the project can correct, as the record of files and validation decides ([visual-communication:DEC-002-files-and-validation] point 7). Elsewhere, as in a released library version, it asks for attention and names who can correct it.
+
+- **Where each lies.** A finding on a brand's drawing lies in the brand's version. It is judged when the brand is checked alone, against the newest version the project holds of each major the brand names (DEC-008 point 1). A drawing that does not fit an instance, or a brand's drawing that a lock's base keeps from drawing, lies at the piece. So does content that places a drawing, in the file that places it.
+- **Fails validation:**
+  - a drawing of a layout of a top whose library the brand does not name, or of a layout the top does not declare
+  - two drawings of one layout in one brand
+  - a drawing of a layout of a top that the brand's base serves (point 4)
+  - a drawing that takes a field, an option, a word or a state the top does not declare
+  - content, or a component, that places by `use` a component that a brand declares as a drawing
+- **Asks for attention, never failing:** a drawing that does not take a field, an option, a word or a state the top declares, or does not expose a part the top exposes. It names the brand's owner. What uses it is drawn by the top's own drawing (point 6).
+- **Stated as a fact:**
+  - at a piece, each instance drawn by the top's own drawing because the brand's drawing does not fit it, naming what does not fit
+  - at a piece, a brand's drawing that draws nothing because the lock's base serves the top (point 4)
+  - in a brand's version, each top it serves, with the layouts it leaves to the top's own drawing
+
+## Rationale
+
+**Why the top draws a default.** A top component serves every brand, and anyone may publish one (DEC-001 point 5). A brand cannot know the tops published after it. If brands alone drew layouts, every brand would draw every top its pieces use, and a brand released before a top could never draw it. The test brand and the neutral brand would each draw the deck before one slide could be drawn. With the top's drawing as the default, a brand draws only the layouts it has a form of its own for, as a library's roles ask nothing of a brand that does not care (DEC-008 point 1).
+
+**Why every layout has a default.** The record of a library's own roles lets a role go without a default where every stand-in would mislead, as a colour of another meaning does (DEC-008 point 2). A layout that its top draws plainly misleads no one: it shows every slot in the brand's values. A layout no top drew would draw nowhere under a brand written before it, and nothing would show that its slots fit until some brand drew it. A brand whose every page must carry a mark of its own, such as a legal line, draws each layout of the tops it serves, and point 9 names each it leaves.
+
+**Why a brand may draw a layout, though it reaches no other component's form.** A company's deck is its cover and its slide, not only its colours, and the founding record gives a brand that form (DEC-001 point 5). With values alone, a brand's form could come only from a top of the brand's own, which content would then name, and switching the brand would rewrite the content. The founding record rejects ordered layers, where a later library may replace any part of an earlier one, since a fix to the replaced part would no longer reach the pieces (DEC-001, Alternatives considered). A drawing replaces no part of another component. It stands in for the top's drawing of a whole layout, the one place the records give a brand's form. A fix to the top's drawing still reaches every piece whose brand leaves that layout to the top. Where the brand draws the layout, the fix does not reach it, by the brand's choice, as a brand's value for a role is not moved by a change of the role's default.
+
+**Why a brand's drawing wins, and content's choice wins over it.** A drawing is the brand's own form, and the top's drawing is the stand-in, so the brand wins, as its value wins over a role's default (DEC-008 point 1). A component that content names is the content's choice, which the founding record lets an item make (DEC-001 point 6). No library replaces another library's component (DEC-001 point 5), so a brand never draws in its place.
+
+**Why a brand names the top's library.** A drawing is written against one major's layouts, slots and fields. Named by major, it never meets a major that renamed or reshaped them, as a brand's values for a library's roles never meet a major they were not tuned for (DEC-008 point 4). A library already names those whose names it uses (DEC-001 point 5), so this adds no mechanism. The tops the capability ships lie in the foundations, so the cost falls only on a brand that draws a top of another library.
+
+**Why the brand nearest the root that serves a top keeps its form.** A replaced layout could hide a fix in the base, so a brand keeps its base's layouts (DEC-004 point 6). A base that serves a top made its form for it, the layouts it leaves to the top's drawing included. Judged layout by layout, a brand could add its cover to its base's slides: the forms of two owners in one piece, and a base that does not control what the brands built on it change in a form it made (DEC-008, Alternatives considered). A base that drew one more layout of a top it serves would also break each brand built on it that drew that layout.
+
+**Why layouts differ from roles along a chain.** Built on a base that does not name a library, a brand leaves the library's roles at their defaults (DEC-008 point 4). Built on a base that does not serve a top, a brand may draw the top. A role's default may carry a fix the base made, which a brand's value would hide. A top the base does not serve holds no form of the base's, so a brand that draws it hides nothing of the base's. The cost is the base's: one that wants its brands to keep a top at its defaults stops them only by serving the top, drawing at least one of its layouts.
+
+**Why content never names a brand's drawing.** The founding record has switching the brand leave the content as it is (DEC-001 point 5). Content written against a brand's drawing would change with the brand. Written against the top, it is checked once, and every drawing is written against the same top.
+
+**Why the top's drawing takes what the brand's drawing cannot.** Otherwise every optional slot or word a top adds would break each brand that draws its layout, so that it would wait for a major release. The deck is the foundations', and a major release of the foundations moves every library and brand (DEC-008, Rationale). Drawn by the top, the instance shows all its content, in the brand's values. Not drawing what the brand's drawing lacks would drop content unseen. Failing would hold a project's own brand to each top's newest addition before anything passed.
+
+**Why a whole instance, not a part.** A drawing places the slots in relation to one another and to what it draws around them. Mixing the parts of two drawings in one instance would place one owner's slot inside another owner's arrangement, which neither was drawn for. Where an instance is a page, the rest of the piece keeps its brand's form, so one slide that uses a new word does not turn a whole deck back.
+
+**Why what a brand lacks is stated, and read so.** Every page still draws, so nothing is broken that the project must mend. The founding record asks that what a brand lacks be reported (DEC-001 point 5), and a fact reports it. A brand that serves none of a top is at its defaults by design. A fact on each piece under such a brand would fire on every piece drawn under the neutral brand, and tell no one anything to act on. The brand's owner is asked to act only where a drawing lags behind its top, since only that owner can add what it lacks.
+
+### Alternatives considered
+
+- **The top alone draws its layouts, and a brand gives values only.** Rejected. It takes back the form the founding record gives a brand (DEC-001 point 5, DEC-004 point 1).
+- **Brands alone draw layouts, and a top only declares them.** Rejected. Every brand would draw every top its pieces use, and a brand released before a top could never draw it. The figure's drawing, which format 1 accepted, would have to move into every brand.
+- **A layout a top may leave without a drawing, as a role may have no default.** Rejected. A plain drawing misleads no one, so the reason a role may have none does not hold. Every brand would owe a drawing of such a layout before any piece could use it.
+- **The default held by a designated brand, such as the neutral one.** Rejected, as the record of a library's own roles rejects it for roles: one piece would mix the forms of two brands, and lock two brands (DEC-008, Alternatives considered).
+- **A brand's frame around the top's own drawing, as a slide master wraps a slide.** Rejected as the rule. A brand's form often sets where the slots lie, such as a cover whose title sits low on a picture, which a frame cannot. The change that builds a brand's own form may still offer a frame as one kind of drawing.
+- **Content that names a brand's drawing, or a page whose form a brand draws named by its component.** Rejected. The content would change with its brand, or one library's component would be drawn by another's.
+- **A drawing that keeps the top's part names, so content that points a part at another role fits every drawing.** Rejected. The top's unexposed parts would become a promise, which they are not (DEC-005 point 3).
+- **A base that opens a layout to the brands built on it, as it opens a role.** Rejected. A base keeps its layouts for every brand built on it (DEC-004 point 6), and a base that wants its brands to draw a top can leave it unserved.
+- **A top that the brands built on a base may draw only where the base opens it.** Rejected. The record of brands and notations already lets a brand add the layouts of a kind of work its base does not serve (DEC-004 point 6). An open list would narrow that rule, and no known case needs it.
+- **A brand built on a base draws any layout the base leaves to the top.** Rejected. One piece would mix the forms of two owners, and a base that drew one more layout would break its brands.
+- **A drawing that does not fit fails, or leaves undrawn what it lacks.** Rejected. The first makes every addition to a top a breaking change, and the second drops content unseen.
+- **The whole top drawn by its own drawing where one page does not fit.** Rejected. One new word on one slide would turn a whole deck back to the top's form.
+- **A fact at each piece that its brand does not draw a layout.** Rejected. It would fire on every piece under a brand that serves no top, by design.
+- **A brand that draws a top's layouts without naming its library.** Rejected. Its drawing could meet a major whose slots it was not written for.
+
+## Implications
+
+- **The capability's pages** describe a top's own drawing as its layouts' default with the change that gives the deck its layouts. They describe a brand's drawing, what it lacks and point 9's findings with the change that builds a brand's own form.
+- **Slice 1 draws no layout in a brand.** The deck draws each of its layouts itself. The test brand and the neutral brand draw none of them ([project-kit#2501](https://github.com/aleskalfas/project-kit/issues/2501)). Where the deck names each part that places a slot after that slot, as the figure does, a later change can keep what a slot places at one trace id under every drawing.
+- **The record of a list's item component** ([project-kit#2498](https://github.com/aleskalfas/project-kit/issues/2498)) decides how a page names its layout among a top's several, and how a page relates to its item component. It decides within points 1, 2 and 5: each layout has the top's drawing, a page's content is what its top declares for the page's layout, and a page that names its own component is drawn by it under every brand.
+- **A brand's own form is built later,** in its own slice of the capability's plan ([project-kit#2423](https://github.com/aleskalfas/project-kit/issues/2423)): the declaration of point 8, the checks of point 9, and the parts no shared component has. That change also decides:
+  - whether a drawing may give a page another physical size than its top declares, which would refine DEC-005 point 5
+  - how a top component that a brand holds, which the format reads already, relates to drawings
+  - whether what a slot places keeps its trace id under every drawing, since a trace id comes from the parts that place it (DEC-005 point 5)
+  - how a drawing written for a page alone draws where its top is placed inside another page
+  - the status a drawing carries, and whether the release's comparison reads a base that begins to serve a top
+- **The release's comparison** of a library's stable components with its previous version (DEC-003 point 7) reads a top's new layouts, optional slots and fields, options, words and exposed parts as additions, under point 7.
+- **Two accepted records take a pointer to this one once it is accepted.** The record of brands and notations' point 7 names a top's layouts as the exception to how far a brand reaches into a component, with a forward refinement pointer. The record of a library's own roles' Implications cite this record for layouts, in place of the issue. A person accepts each edit (the decisions README, "Refining an accepted record").
