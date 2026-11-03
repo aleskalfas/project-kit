@@ -8,6 +8,8 @@ pkit:
         - src/project_kit/process.py
         - src/project_kit/validators.py
         - .pkit/schemas/_defs/process.schema.json
+      artefact:
+        - .pkit/process/engine.md#the-operations
       record: [COR-032, COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-053, "ADR-023#1", ADR-036, ADR-062]
 ---
 
@@ -77,7 +79,7 @@ process:
     - from: <state> | "*"          # core      back-edges + self-loops expressible
       to:   <state>                # core: static target  |  deferred: a resolver(data) over a known block set
       trigger:       <command>     # core      the named action
-      authorisation: user | agent-autonomous | script   # core   WHO may move — the CALLER enforces it; the engine reads it only for an awaiting-human wait
+      authorisation: user | agent-autonomous | script   # core   WHO may move
       gate:                        # core      WHAT must hold — must be checkable (the README, "Gate-checkability")
         kind: deterministic | authorisation-artifact | subprocess-outcome | cascade-outcome   # core: subprocess-outcome (COR-036) — engine-computed from an embedded inner outcome; cascade-outcome (COR-037) — engine-computed from the process's `cascade` fold
         predicate: <predicate>     # core      REQUIRED for deterministic and authorisation-artifact; FORBIDDEN for the two engine-computed kinds
@@ -118,8 +120,9 @@ What a definition must hold, and how its parts are written:
   - a state's `id`, `meaning` and `detection`, and a detection's `mode` and `predicate`
   - a transition's `from`, `to`, `trigger` and `authorisation`, and a gate's `kind`
 - **Every other field is optional,** but a block that is declared carries required fields of its own (below).
-- **A transition with no `gate`** has no check, and the engine lets any caller take it.
-- **A predicate** is `{run: <command>, with: {...}}`. `run` names a command the owning capability registers, and `with`, optional, maps static arguments, which the runner does not pass yet.
+- **A transition with no `gate`** has no check.
+- **`authorisation`** names who may take a move, and the caller, not the engine, enforces it ([the engine page, "The operations"](engine.md#the-operations)).
+- **A predicate** is `{run: <command>, with: {...}}`. The process README's predicate runner says what `run` names. `with`, optional, maps static arguments, which the runner does not pass yet.
 - **An entry** is `true`, an unconditional start, or `{when: <predicate>}`, a start guarded by a predicate.
 
 A block that is declared requires these fields:
@@ -265,7 +268,7 @@ The states of a classifier that gives no answer carry the one cause, and the one
 
 - **An unreadable answer** is shown the same way. Its reason names the predicate and quotes what it answered, bounded and with control characters removed, as a standard-error tail is.
 - **`status --json`** keeps one `position.unevaluated` entry for each state.
-- **The narrative views and a refusal** print the cause, and what the predicate said, once for each classifier. The states it leaves indeterminate are listed beside it. A definition that mixes modes is shown the same way.
+- **The narrative views and a refusal** print the cause, and what the predicate said, once for each classifier. The states the classifier leaves indeterminate are listed beside it. A definition that mixes modes is shown the same way.
 - **When no state is true,** the narrative `status` shows, under "no position", the reason of each classifier that answered `null`.
 - **`status --json`** carries the same as `position.placed_nowhere`: one `{predicate, reason}` entry for each such classifier, with `predicate` naming its command. It is empty when a state is true, and always under `inferred`.
 
@@ -369,7 +372,7 @@ process:
 - **Fail-closed.** An indeterminate `check`, one that errors, times out, answers unparseable output or does not resolve, is reported as not holding. A check that cannot be confirmed counts as a violation, as an indeterminate `resume_when` keeps a wait.
 - **Shown on every status read, and enforced by report only:**
   - A violation is shown on the status view. An agent reading status sees it on every read, and a binding's wrapper declines what follows.
-  - The engine's `validate` operation reports it too, narrative or `--json`, and exits non-zero on any violation.
+  - The engine's `validate` operation reports it too ([the engine page, "The operations"](engine.md#the-operations)).
   - A violation does not block moves, fail transitions or remediate. A binding that wants a hard gate everywhere writes it as a gate predicate.
   - The status narrative shows only violations, to stay short. `status --json` and `validate` carry the full set.
 - **Determinism kept.** An invariant is a predicate over reality, like a detection predicate, so the engine stays a deterministic validator.

@@ -238,7 +238,7 @@ What the predicate wrote on standard error is shown beside that reason, attribut
 - **In `health`:** it is said of each indeterminate finding that a predicate is behind.
   - Such a finding is a `candidates` or `resolve` seam that gave no answer, or an answer without its list, which the reason names as such.
   - It is also an upstream position no detection could place, named by its first state left unevaluated.
-  - Each entry of an `indeterminate` list in `health --json` carries `stderr_tail` beside `reason`.
+  - Each entry of `contracts[].indeterminate[]` in `health --json` carries `stderr_tail` beside `reason`.
 - **In `status --json`:** the detections behind an indeterminate position are listed under `position.unevaluated`, as `{state, reason, stderr_tail}`. There is one entry for each state, even where one classifier's failure is behind several.
 - **In the narrative views and a refusal,** one cause is printed once, with the states it leaves indeterminate listed beside it.
 
@@ -360,7 +360,7 @@ Each line of a journal is one JSON object: a move's entry, or a wait's.
 With logging on, a subject's wait is journaled as it starts and as it ends ([COR-034](../decisions/core/COR-034-human-pause-gate.md)). With logging off, the wait is as live and as blocking. Nothing records it, so it has no `since`.
 
 - **The entries.** Entering a blocked position appends a `blocked-enter` entry, and leaving it appends a `blocked-resume` entry. Each is a journal entry, and no other channel emits them. The deferred `hooks` slot will react to these entries once it ships.
-- **`since`:** the wait's age, read from the open `blocked-enter` entry. `assignee` is carried from the declaration.
+- **`since`:** the wait's age, `blocked.since` in `status --json`, read from the open `blocked-enter` entry. `assignee` is carried from the declaration.
 - **Only a move journals a wait.** `status` runs predicates live and writes nothing. A `move` compares the wait at the target state it was given with the wait the journal shows open:
   - A move that parks a subject the journal shows unblocked journals `blocked-enter` as it parks. So `since` counts from then, not from when the person finally acts.
   - A move that leaves a wait the journal shows open, onto a position with no wait, journals `blocked-resume`.

@@ -29,7 +29,7 @@ The backbone exposes the engine as the `process` command group of `pkit`. Each c
 | `health` | Walks every declared hand-off contract ([COR-042](../decisions/core/COR-042-process-health.md)), and reports missed hand-offs: upstream subjects at their trigger with no downstream counterpart |
 
 - **`--subject <id>`** names the subject of a keyed process ([COR-032](../decisions/core/COR-032-keyed-process-subjects.md)). A singleton process takes none.
-- **`move`'s `--from`** names the state the subject held before the caller applied the move's domain side-effect. The move is validated and journaled from there (the process README's "Seam-ordering contract").
+- **`move`'s `--from`:** what it names, and when to give it, is the process README's "Seam-ordering contract".
 - **`move`'s `--reason`** says why the caller took the move. An instance is the justification for overriding a gate the binding lets it bypass, or a move that one subject's move caused in another. It is recorded on the entry's `reason` as given, and no verdict reads it.
 - **`health`** takes no subject. It runs outside the engine's runtime, reports only, and is deterministic. It prints narrative or `--json`, and exits non-zero on any miss or any indeterminate finding.
   - Its flags, `--process` and `--interpretation-only`, are the CLI reference's.
@@ -39,6 +39,6 @@ The backbone exposes the engine as the `process` command group of `pkit`. Each c
 
 **The engine is content-free.** It reads any capability's process definition and the subject's reality, and resolves and validates against them.
 
-- **A capability's commands,** the discipline's wrappers named by a verb and a subject, supply the definition, the subject and any domain side-effects. They leave the mechanics of the state machine to the engine.
+- **A capability's commands,** its wrappers, supply the definition, the subject and any domain side-effects. They leave the mechanics of the state machine to the engine.
 - **Where the engine's code lives:** in the `pkit` binary, `src/project_kit/process.py`, run only as `pkit`'s `process` commands. Its code does not reach a project. Only the process area's pages, the shape contract and the journal's home do.
 - **How a wrapper calls it:** by subprocess, never by import.

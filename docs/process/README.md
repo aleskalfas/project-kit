@@ -180,10 +180,10 @@ flowchart LR
 
 ## Give your capability a process
 
-Give your capability a process by having your agent run the `process` skill. It asks what you track, and stamps the answers with `pkit process new`, as [the first fence](#what-processes-do-instead) shows ([COR-044](../../.pkit/decisions/core/COR-044-process-authoring-layer.md)). Before you start:
+Give your capability a process by having your agent run the `process` skill. The skill asks what you track, and stamps the answers with `pkit process new`, as [the first fence](#what-processes-do-instead) shows ([COR-044](../../.pkit/decisions/core/COR-044-process-authoring-layer.md)). Before you start:
 
-- **Have a capability of your own, registered with your project.** Make one through the `capability-author` skill, and register it with `pkit capabilities register` ([COR-031](../../.pkit/decisions/core/COR-031-capability-origin.md)). The stamp refuses a capability your project does not register, and names the command.
-- **Not a capability you receive from elsewhere.** The stamp refuses one whose files your project receives as copies, such as one the methodology ships, and writes nothing. A sync would overwrite what it wrote there.
+- **Have a capability of your own, registered with your project.** Make one through the `capability-author` skill, and register it with `pkit capabilities register` ([COR-031](../../.pkit/decisions/core/COR-031-capability-origin.md)). The stamp refuses a capability your project does not register, and names the command ([the CLI reference, `process new`](../../.pkit/cli/README.md#process-new-capabilityprocess-id-flags)).
+- **Not a capability you receive from elsewhere.** The stamp refuses one whose files your project receives as copies, such as one the methodology ships, and writes nothing ([the CLI reference, `process new`](../../.pkit/cli/README.md#process-new-capabilityprocess-id-flags)). A sync would overwrite what it wrote there.
 
 What the skill asks, and what each answer stamps ([the CLI reference, `process new`](../../.pkit/cli/README.md#process-new-capabilityprocess-id-flags)):
 
@@ -193,10 +193,10 @@ What the skill asks, and what each answer stamps ([the CLI reference, `process n
   - its states
   - its trigger
   - who may make it, `user` unless you name another
-- **Which moves need a gate?** Each `--gate` adds a check that must pass before that move. A sign-off is the kind `authorisation-artifact`, and any other check is `deterministic`. A move with no gate has no check at all.
+- **Which moves need a gate?** Each `--gate` adds a check that must pass before that move. A sign-off is the kind `authorisation-artifact`, and any other check is `deterministic`. A move with no gate has no check at all ([the shape page, "The fields"](../../.pkit/process/shape.md#the-fields)).
 - **Does a subject wait on something, or must something always hold?** `--blocked` declares a wait, and `--invariant` declares a check that must hold wherever the subject is.
 
-Each check the stamp declares gets a script that fails until it is written ([Write the checks behind it](#write-the-checks-behind-it)). The stamp writes a process only once. It refuses an id the capability already has, and changing a definition's states later is not a command yet ([the reference, "The authoring layer"](../../.pkit/process/README.md#the-authoring-layer)).
+Each check the stamp declares gets a script that fails until it is written ([Write the checks behind it](#write-the-checks-behind-it)). The stamp writes a process only once, and refuses an id the capability already has ([the CLI reference, `process new`](../../.pkit/cli/README.md#process-new-capabilityprocess-id-flags)). Changing a definition's states later is not a command yet ([the reference, "The authoring layer"](../../.pkit/process/README.md#the-authoring-layer)).
 
 ## Connect it to another process
 
