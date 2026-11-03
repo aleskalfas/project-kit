@@ -165,7 +165,7 @@ flowchart TD
 
 ## Declare your backbone configuration
 
-Your project's backbone configuration is one file, `.pkit/project/config.yaml`, which you write and no sync touches. It holds such settings as your default branch, your documentation roots and where your documents lie. The CLI reference lists every key ([its "Configuration file"](../../.pkit/cli/README.md#configuration-file)). How you write each kind of key, and how it is checked:
+Your project's backbone configuration is one file, `.pkit/project/config.yaml`, which you write and no sync touches. It holds such settings as your default branch, your documentation roots and your places. The CLI reference lists every key ([its "Configuration file"](../../.pkit/cli/README.md#configuration-file)). How you write each kind of key, and how it is checked:
 
 - **A key that holds one value:** set it with `pkit config set`. The command checks the whole result against the schema first, then asks before it writes. Off a terminal it needs `--yes`.
 - **A key that holds a list,** such as your places, `friction.places`: write it in the file by hand. `pkit config set` refuses it, and names the file.
@@ -234,7 +234,7 @@ Where your capability's users write files of their own, the same schema checks t
 - **Declare the fields** in the companion's `properties`. Declare `pkit_schema` there too, where your users' files carry that field, and `binds_to`, where your schema's YAML lists globs. The stamped companion refuses any key it does not declare.
 - **Check the pair:** `pkit schemas validate` checks every pair against its companion, and every reference between them ([the CLI reference, "schemas validate"](../../.pkit/cli/README.md#schemas-validate-path)).
 - **Bind your users' files:** a user's file names your schema in its `pkit_schema:` field ([the reference's page on binding](../../.pkit/schemas/data-binding.md#1-the-pkit_schema-field-recommended-authoritative)). Or your schema's YAML lists globs of the files it judges, under `binds_to:`. A glob binds only once the project has installed or registered the capability ([the same page](../../.pkit/schemas/data-binding.md#2-per-schema-binds_to-fallback)).
-- **What each user's file carries:** `schema_version`, at your schema's version. A file at another version is refused, with a hint to migrate it ([the same page](../../.pkit/schemas/data-binding.md#schema-version-cross-check)). The editor's line is recommended too. Whoever writes the file writes it: the user, or a command your capability ships.
+- **What each user's file carries:** `schema_version`, at your schema's version. A file at another version is refused, with a hint to migrate it ([the same page](../../.pkit/schemas/data-binding.md#schema-version-cross-check)). The editor's line is recommended too. Whoever writes the file writes the line: the user, or a command your capability ships.
 - **Check their files:** `pkit data validate <path>` checks each `.yaml` file under the path against its bound schema ([the same page](../../.pkit/schemas/data-binding.md#pkit-data-validate-path)).
 
 Below, a trip-planning capability gets a schema for a trip. A wrong type in the capability's own data fails `pkit schemas validate`. Then a user's trip file, with one key misspelt, fails `pkit data validate`:

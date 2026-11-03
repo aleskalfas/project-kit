@@ -88,7 +88,7 @@ binds_to:
 The resolver binds one adopter data file in this order:
 
 1. **Field first.** Where the file carries `pkit_schema: <capability>:<schema>`, the resolver resolves the field, which is authoritative.
-2. **Capability fallback.** Otherwise, the resolver walks the installed capabilities in the order of the backbone's manifest. It matches the file's path from the repository root against each `binds_to:` glob of each capability's `schemas/*.yaml`.
+2. **Capability fallback.** Otherwise, the resolver walks the installed capabilities in the order of their names. It matches the file's path from the repository root against each `binds_to:` glob of each capability's `schemas/*.yaml`.
 3. **Refuse.** With no field and no matching glob, the resolver reports that the file has no schema binding. The finding names the two ways to declare one.
 
 ## Schema-version cross-check

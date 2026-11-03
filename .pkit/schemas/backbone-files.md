@@ -96,7 +96,7 @@ Three things hold for all of them, each decided by the record named.
 **They are strict at validation.** An unknown key is an error that names the nearest known key. COR-048 point 4 decides it for the configuration file, and each owning record decides it for the rest.
 
 - **Where a version is written:** only where a capability owns the shape. The filler envelope and a role block's point blocks carry the point's `schema_version` (COR-052 point 5).
-- **The backbone's own shapes** carry no version, and are migrated when they change ([COR-010](../decisions/core/COR-010-resource-lifecycle.md)).
+- **The backbone's own shapes** carry no version, but for package metadata's ("`package.schema.json`" below), and are migrated when they change ([COR-010](../decisions/core/COR-010-resource-lifecycle.md)).
 
 **`pkit validate` runs them,** each as a member of its one registry of validators. The backbone's functionalities join validation by registering validators ([COR-055](../decisions/core/COR-055-validation.md)). Each member renders its findings through one renderer, and the unknown-key message of every member comes from one shared renderer ([the CLI reference, "validate"](../cli/README.md#validate)).
 
@@ -105,7 +105,11 @@ Three things hold for all of them, each decided by the record named.
 
 ## The schemas that ship
 
-`backbone/` holds six schemas. Each is named below with what it covers, what binds a file to it, and what applies it.
+`backbone/` holds six schemas. Each is named below, with:
+
+- what it covers
+- what binds a file to it
+- what applies it
 
 ### `container.schema.json`
 
@@ -137,7 +141,7 @@ It refuses unknown keys at every level the backbone owns, and takes no version k
 A component's `package.yaml`: every field in use, and the `connections`, `docs` and `friction` blocks. Its required fields are those COR-017 asks of every component.
 
 - **Unknown keys** are refused at every level, as for the rest of the class, each with the nearest known key. The lifecycle reference's "Strict on unknown keys" records when and why the schema, first shipped permissive, became strict.
-- **What binds a file to it:** its place, as the `package.yaml` at the root of a component the project registers. Unlike the backbone's other shapes, it carries a `schema_version` of its own.
+- **What binds a file to it:** its place, as the `package.yaml` at the root of a component the project registers. Unlike the other schemas here, it binds by no location rule, and its file carries a `schema_version` of its own.
 - **What applies it:** `project_kit.package_validate`, with its repository checks. `pkit validate`'s `packages` pass runs it, and so does the pre-flight of `register` ([the lifecycle reference, "Validation: the package schema"](../lifecycle/README.md#validation-the-package-schema)).
 
 ### `rule-set.schema.json`
@@ -255,6 +259,8 @@ pkit:                                     RS-CMN-001:
 ```
 
 ### Fields
+
+The block holds three keys, of which an artefact writes `anchors` or `unanchored-because`, never both:
 
 | Key | Meaning |
 |---|---|
@@ -575,6 +581,8 @@ answers:
 
 ### The fields of an answer file
 
+An answer file holds one list, `answers`, with one entry for each artefact it answers on:
+
 | Key | Meaning |
 |---|---|
 | `answers` | One entry for each artefact the file answers on. An empty list is refused. |
@@ -634,9 +642,15 @@ An answer on what is gone is reported, never failed ("What the pass warns of and
 
 A rule set (COR-051) is one Markdown file. Its front matter holds the data, and its body one section for each rule. `backbone/rule-set.schema.json` fixes the data's shape. `pkit validate` applies it in its `rule-sets` pass, `project_kit.rule_sets`.
 
-This section gives the file's shape: its front matter, its body and its ids. Where rule-set files lie, the checks of their pass, and how their rules bind, are in this area's README, under "Rule-set files".
+This section gives the file's shape: its front matter, its body and its ids. This area's README holds the rest, under "Rule-set files":
+
+- where rule-set files lie
+- the checks of their pass
+- how their rules bind
 
 ### The front matter
+
+A rule-set file's front matter holds the set's data and each rule's machine fields, as in this example:
 
 ```yaml
 ---

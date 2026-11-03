@@ -423,7 +423,7 @@ A loaded set keeps operational rules, the rules every session loads (COR-068, [C
 
 **The loaded file** is generated from the set by `pkit rule-sets generate`.
 
-- **Where it goes:** the backbone's to `.pkit/rules/core.md`, a capability's to `.pkit/capabilities/<name>/rules.md`, and a project's own to `.pkit/rules/project.md`. The set's owner fixes where it goes, never a key.
+- **Where it goes:** the backbone's goes to `.pkit/rules/core.md`, a capability's goes to `.pkit/capabilities/<name>/rules.md`, and a project's own goes to `.pkit/rules/project.md`. The set's owner fixes where it goes, never a key.
 - **What it holds:** the set's body, with each accepted rule's section under the heading `N. Title (RS-<SET>-NNN)`, at the level the set writes it. It leaves out the front matter, and each other rule's section.
 
 **Kept in step** (`loaded-file-stale`, an error). Where the set is authored, the pass compares the loaded file with the generator's output, byte for byte, once line endings are read as `\n`. A file that differs, or is missing, fails.
@@ -605,6 +605,8 @@ A schema is worth what the tools that read its companion make of it. A project t
 
 ## Layout
 
+This folder holds the reference's pages, the shared library, the backbone file schemas and the pairs the core owns:
+
 ```
 .pkit/schemas/
 ├── README.md                  # this file — the mechanism, its conventions, the references, rule sets
@@ -639,6 +641,7 @@ This area is a home of schemas in its own right: the core's, whose owner name is
 This area defines the schemas mechanism, and decides nothing about which context uses it.
 
 - **Who adopts it, and why:** a context that uses schemas declares that in a record of its own. Such a context is a capability, a project or a later part of the core. Capabilities adopt it in COR-018. The record says why the context uses schemas, and what data they will hold.
+- **Which record:** a core record for a context the methodology ships, and a record of the project's own for a context the project ships.
 - **What the record leaves to this area:** the mechanics, such as the YAML format, the companion convention and the patterns. The record refers to this area, rather than state them again.
 
 ## The pages beside this one

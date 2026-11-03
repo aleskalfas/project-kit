@@ -72,7 +72,7 @@ pkit:
 
 A page that rests on one part of a record or of another document may anchor that part. A change to another point or section of it then asks the page nothing (COR-050 point 5, [the CLI reference, "friction check"](../../cli/README.md#friction-check---base-ref---head-rev---json)).
 
-- **How an anchor names a part** is in [the schemas reference, "The friction block"](../../schemas/README.md#the-friction-block):
+- **How an anchor names a part** is in the schemas reference's page on backbone files, "The friction block". [The README's heading of that name](../../schemas/README.md#the-friction-block) leads there. The parts:
   - a record's point, as `COR-050#2`
   - a document's section, by its heading's slug, as `docs/cli.md#output`
   - a document's lead, as `docs/cli.md#`
