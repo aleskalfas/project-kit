@@ -15,14 +15,18 @@ builds-on:
       - {id: TERM-debt, name: debt}
       - {id: TERM-decision-record, name: decision record}
       - {id: TERM-default-branch, name: default branch}
+      - {id: TERM-deferral, name: deferral}
       - {id: TERM-finding, name: finding}
       - {id: TERM-head, name: head}
       - {id: TERM-link-target, name: link target}
       - {id: TERM-methodology, name: methodology}
+      - {id: TERM-permission-model, name: permission model}
       - {id: TERM-project, name: project}
       - {id: TERM-pull-request, name: pull request}
+      - {id: TERM-revalidation-answer, name: revalidation answer}
       - {id: TERM-reviewer, name: reviewer}
       - {id: TERM-revisit, name: revisit}
+      - {id: TERM-revisit-entry, name: revisit entry}
       - {id: TERM-rule, name: rule}
       - {id: TERM-rule-set, name: rule set}
       - {id: TERM-trigger-field, name: trigger field}
@@ -126,14 +130,18 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [debt](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-debt--debt)
   - **Term:** [decision record](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-decision-record--decision-record)
   - **Term:** [default branch](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-default-branch--default-branch)
+  - **Term:** [deferral](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-deferral--deferral)
   - **Term:** [finding](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-finding--finding)
   - **Term:** [head](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-head--head)
   - **Term:** [link target](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-link-target--link-target)
   - **Term:** [methodology](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-methodology--methodology)
+  - **Term:** [permission model](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-permission-model--permission-model)
   - **Term:** [project](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-project--project)
   - **Term:** [pull request](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-pull-request--pull-request)
+  - **Term:** [revalidation answer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-revalidation-answer--revalidation-answer)
   - **Term:** [reviewer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-reviewer--reviewer)
   - **Term:** [revisit](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-revisit--revisit)
+  - **Term:** [revisit entry](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-revisit-entry--revisit-entry)
   - **Term:** [rule](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-rule--rule)
   - **Term:** [rule set](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-rule-set--rule-set)
   - **Term:** [trigger field](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-trigger-field--trigger-field)

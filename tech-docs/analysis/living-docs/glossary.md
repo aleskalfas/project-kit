@@ -17,12 +17,16 @@ builds-on:
       - {id: TERM-change-check, name: change check}
       - {id: TERM-component, name: component}
       - {id: TERM-data-point, name: data point}
+      - {id: TERM-dead-anchor, name: dead anchor}
       - {id: TERM-debt, name: debt}
       - {id: TERM-decision-record, name: decision record}
+      - {id: TERM-declared-surface, name: declared surface}
       - {id: TERM-default-branch, name: default branch}
+      - {id: TERM-deferral, name: deferral}
       - {id: TERM-documentation-root, name: documentation root}
       - {id: TERM-finding, name: finding}
       - {id: TERM-friction, name: friction}
+      - {id: TERM-inheritance-pin, name: inheritance pin}
       - {id: TERM-install, name: install}
       - {id: TERM-package-metadata, name: package metadata}
       - {id: TERM-place, name: place}
@@ -36,6 +40,7 @@ builds-on:
       - {id: TERM-storyboard, name: storyboard}
       - {id: TERM-system, name: system}
       - {id: TERM-validation, name: validation}
+      - {id: TERM-validator, name: validator}
       - {id: TERM-whole-repository-check, name: whole-repository check}
     actors:
       - id: ACT-developer
@@ -237,12 +242,16 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [change check](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-change-check--change-check)
   - **Term:** [component](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-component--component)
   - **Term:** [data point](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-data-point--data-point)
+  - **Term:** [dead anchor](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-dead-anchor--dead-anchor)
   - **Term:** [debt](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-debt--debt)
   - **Term:** [decision record](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-decision-record--decision-record)
+  - **Term:** [declared surface](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-declared-surface--declared-surface)
   - **Term:** [default branch](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-default-branch--default-branch)
+  - **Term:** [deferral](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-deferral--deferral)
   - **Term:** [documentation root](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-documentation-root--documentation-root)
   - **Term:** [finding](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-finding--finding)
   - **Term:** [friction](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-friction--friction)
+  - **Term:** [inheritance pin](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-inheritance-pin--inheritance-pin)
   - **Term:** [install](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-install--install)
   - **Term:** [package metadata](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-package-metadata--package-metadata)
   - **Term:** [place](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-place--place)
@@ -256,6 +265,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [storyboard](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-storyboard--storyboard)
   - **Term:** [system](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-system--system)
   - **Term:** [validation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-validation--validation)
+  - **Term:** [validator](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-validator--validator)
   - **Term:** [whole-repository check](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-whole-repository-check--whole-repository-check)
   - **Actor:** [Developer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-developer.md)
     - Write a page for the reader it names, with anchors that ground each statement it makes.
