@@ -14,17 +14,18 @@
   run alike (`as_written`), so a run leaves such code as it is.
 - **The lock is the declaration's,** which a person moves on purpose (DEC-005 point 7).
   The command reads the brand at the versions it names, and never moves it.
-- **A run** resolves every token the brand exports in every combination of its axes
-  (the values document, version 1), and knows its losses before the writer runs: each
-  token of a type the writer's declaration has no form for is left out, and reported
-  unless the declaration accepts it. The writer gets the rest. The command writes the
-  code, then its record: the fingerprint, form 1, over the declaration file, each value
-  written in each combination, and the writer's version (`fingerprint.code_record_inputs`);
-  the hash of the code; and what is only recorded. It writes the two as one change: where
-  a write fails, both are as they were before the run, or each file the run could not put
-  back is named, so the check never reads new code beside its old record as code edited
-  by hand. Where the record verifies and the code is what it would write, nothing is
-  written.
+- **A run** resolves every token the brand exports, and every other role of the
+  component libraries the lock names at the brand's value or its default (DEC-008 point
+  5), in every combination of its axes (the values document, version 1), and knows its
+  losses before the writer runs: each token of a type the writer's declaration has no
+  form for is left out, and reported unless the declaration accepts it. The writer gets
+  the rest. The command writes the code, then its record: the fingerprint, form 1, over
+  the declaration file, each value written in each combination, and the writer's version
+  (`fingerprint.code_record_inputs`); the hash of the code; and what is only recorded. It
+  writes the two as one change: where a write fails, both are as they were before the
+  run, or each file the run could not put back is named, so the check never reads new
+  code beside its old record as code edited by hand. Where the record verifies and the
+  code is what it would write, nothing is written.
 - **The findings** (DEC-006 points 4 and 8): a record missing beside the code, or naming
   code that is missing, fails; code stale by a value or by its declaration fails, and so
   does code that differs from what was written; code stale only by its writer's version
@@ -369,8 +370,11 @@ def write(root: Path, location: str, name: str, *, now: datetime | None = None) 
 
 
 def _brand(root: Path, location: str, declaration: Declaration) -> tokens.Brand:
-    """The declaration's brand, read at the versions its lock names, against the shared
-    roles of the foundations it locks. Raises CodeRefused."""
+    """The declaration's brand, read at the versions its lock names, over its base when it
+    builds on one, against the roles of the libraries the lock names: the shared roles of
+    the foundations it locks, and the own roles of each component library it locks, which
+    the code then holds at the brand's values or their defaults (DEC-008 point 5). Raises
+    CodeRefused."""
     held = libraries.Held(root, location)
     reached = _check_lock(held, declaration)
     brand_version = libraries.Version.parse(declaration.lock[declaration.brand])
@@ -383,19 +387,18 @@ def _brand(root: Path, location: str, declaration: Declaration) -> tokens.Brand:
             f"{declaration.file}: the brand {declaration.brand} builds on no `{FOUNDATIONS}`, "
             f"which declares the roles it gives values"
         )
-    version = libraries.Version.parse(declaration.lock[FOUNDATIONS])
-    folder = held.folders[FOUNDATIONS][version]
+    folders = {
+        name: held.folders[name][libraries.Version.parse(version)]
+        for name, version in declaration.lock.items()
+    }
     try:
-        shared = tokens.read_declarations(
-            folder / "roles.yaml",
-            library=f"{FOUNDATIONS}@{version}",
-            shown=(folder / "roles.yaml").relative_to(root).as_posix(),
-        )
+        scope = tokens.read_scope(folders, root=root)
         return tokens.read_brand(
-            held.folders[declaration.brand][brand_version],
-            shared,
+            folders[declaration.brand],
+            scope,
             fonts=root / location / "fonts",
             root=root,
+            locked=folders,
         )
     except tokens.TokenError as exc:
         raise CodeRefused(
@@ -405,10 +408,13 @@ def _brand(root: Path, location: str, declaration: Declaration) -> tokens.Brand:
 
 def _check_lock(held: libraries.Held, declaration: Declaration) -> set[str]:
     """The libraries the code needs, the brand and every library it builds on, once the
-    lock is checked to name each at a version the project holds and the capability reads,
-    fitting together. Raises CodeRefused, naming the first fault."""
+    lock is checked to name each, and every other library it names, at a version the
+    project holds and the capability reads, fitting together: the code holds the roles of
+    each library the lock names (DEC-008 point 5). Raises CodeRefused, naming the first
+    fault."""
     lock, file = declaration.lock, declaration.file
-    pending, seen = [declaration.brand], set()
+    pending, seen = [declaration.brand, *sorted(lock)], set()
+    found: dict[str, libraries.Library] = {}
     needs: list[tuple[libraries.Library, libraries.BuildsOn]] = []
     while pending:
         name = pending.pop(0)
@@ -434,7 +440,7 @@ def _check_lock(held: libraries.Held, declaration: Declaration) -> set[str]:
             raise CodeRefused(
                 f"{file}: the lock names {name}@{version}, which cannot be read: {why}"
             )
-        library = held.library(name, version)
+        library = found[name] = held.library(name, version)
         for need in library.builds_on:
             needs.append((library, need))
             pending.append(need.name)
@@ -445,7 +451,13 @@ def _check_lock(held: libraries.Held, declaration: Declaration) -> set[str]:
                 f"{file}: the lock does not fit: {library.label} builds on `{need.name}` "
                 f"{need.major}, but the lock names {need.name}@{locked}"
             )
-    return seen
+    reached, todo = set(), [declaration.brand]
+    while todo:
+        name = todo.pop()
+        if name not in reached:
+            reached.add(name)
+            todo.extend(need.name for need in found[name].builds_on)
+    return reached
 
 
 def as_written(code: Path) -> bytes:

@@ -32,7 +32,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/svg_declaration.py
         - .pkit/capabilities/visual-communication/schemas/findings.schema.json
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
-      record: ["visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006"]
+      record: ["visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008"]
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
         - .pkit/capabilities/visual-communication/components.md#breaking-lines
@@ -46,6 +46,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#values-states-and-colour
         - .pkit/capabilities/visual-communication/components.md#what-an-element-asks-for-and-what-it-gets
         - .pkit/capabilities/visual-communication/files.md#brands
+        - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#content-files
         - .pkit/capabilities/visual-communication/files.md#how-the-files-are-read
         - .pkit/capabilities/visual-communication/files.md#reserved-words
@@ -112,9 +113,13 @@ A few findings that lie in a library folder name no version, and always fail: `l
 
 ## What each run judges
 
-Without a piece named, each run judges, in order: the configuration, the location, the binding of each file of the capability's format in the location, the library folder and its list, then each piece, then each declaration of written code. For each piece it judges, in order, the ids of its content, its lock, its brand, the names of the libraries its lock names, its notations, its content against the components it fills, its produced pictures and its scenes.
+Without a piece named, each run judges, in order: the configuration, the location, the binding of each file of the capability's format in the location, the library folder and its list, then each library version checked alone, then each piece, then each declaration of written code. For each piece it judges, in order, the ids of its content, its lock, the libraries its lock names read under it (its brand and the own roles of each library of components), the names of those libraries, its notations, its content against the components it fills, its produced pictures and its scenes.
 
-`pkit visual check <piece>` judges that piece alone: the binding of its own files, and all of the above for it. It judges neither the library folder, nor its list, nor written code.
+**A version checked alone.** The newest version the project holds of each major of each library is checked alone, once (DEC-005 point 7, DEC-008 point 1). It is resolved with the newest version the project holds of each major it names, and of each major those name. A brand is read over its base, a library's own roles are judged against the libraries it builds on, and the foundations' declarations are read. What a version shows alone lies in that version. A version that names majors no versions fit, or one of which the project holds no version, cannot be checked alone: that is its finding (`alone-majors`, `alone-missing`). An older version of a major is checked only under the locks that name it.
+
+**Under a lock.** A piece's lock combines versions, so each version it names is judged at that lock too (DEC-008 point 9). A fault the version shows alone as well lies in the version, and is reported once. A fault only the lock's combination of versions shows lies at the lock, `<piece>/piece.yaml#lock`. It names no version, so its level stands, and its message names the version and the place it was seen in. A fault of the lock itself, such as a base the lock names at another major, names no version either.
+
+`pkit visual check <piece>` judges that piece alone: the binding of its own files, and all of the above for it. It judges neither the library folder, nor its list, nor written code. It runs no pass of versions checked alone: it checks alone only the versions its lock names, to tell where each finding under the lock lies, and reports only what the lock shows.
 
 Some findings stop a piece. A piece that cannot be read is judged no further. A lock with a finding stops it before its brand. A brand that cannot be read, or a mode the brand lacks, stops it before its notations, its content, its produced pictures and its scenes. A notation's findings stop nothing. An error the check does not expect stops the piece where it arises (`unexpected-error`), and the check goes on to the next piece. The summary counts such a piece as not checked.
 
@@ -151,6 +156,8 @@ These follow DEC-003 point 9, and `library-name` DEC-004 point 7. A lock finding
 | `library-changed` | A released version's folder no longer matches the fingerprint the list keeps of it. The message names each file that changed. | fails: the project restores its own copy | `<version>/` | Restore the folder as it was released. |
 | `library-name` | A library a piece's lock names takes a reserved word, or the name of a top group of the shared roles of the foundations that lock names (DEC-004 points 7 and 11). Reported once for each version. | fails, or asks the library's owner for attention in a released version | `<version>/library.yaml#name` | Rename the library, in a version of its own, and lock that version ([reserved words](files.md#reserved-words)). |
 | `lock-missing` | The piece has no lock yet. | fails | `<piece>/piece.yaml#lock` | Run `pkit visual render <piece>`. |
+| `alone-majors` | A version cannot be checked alone: two of the versions it is resolved with build on two majors of one library, or one builds on it at another major. The message names both. | fails, or asks the library's owner for attention in a released version | `<version>/library.yaml#builds-on` | Name majors that fit together, in a version of its own. |
+| `alone-missing` | A version cannot be checked alone: the project holds no version the capability reads of a major that it, or a library it is resolved with, builds on. | fails | the list, `#libraries.<library>` | Bring in a version of that major, or take the version out. |
 | `lock-version`, `lock-not-held`, `lock-unreadable`, `lock-incomplete`, `lock-majors` | A lock entry is no version; or the lock names a version the project does not hold, or one the installed capability cannot read; or it leaves out a library the piece uses, or one a locked library builds on; or a locked library builds on another major of a library than the lock names. | fails | `<piece>/piece.yaml#lock` | Run `pkit visual render <piece>`, which moves a draft's lock. For a pinned piece, change the lock by hand, or unpin it and render it ([the lock](files.md#the-lock)). |
 
 ### Content against components
@@ -172,23 +179,32 @@ Each content file is read against the `fields` and `options` of each component i
 
 ### Brands, tokens and contrast
 
-The check reads the brand each piece locks, once for each brand version, against the foundations' `roles.yaml` ([brands](files.md#brands)). Each of these findings names the version it lies in, so it asks for attention in a released one. A finding marked *stops the brand* leaves the brand unread: no piece that locks it is judged further. A finding points at the file at fault, or at `<version>/` where no one file is, with the key path or token path after `#`.
+The check reads each brand, checked alone and under each piece's lock, against the roles of the libraries it is resolved with: the foundations' `roles.yaml`, and the own roles of each library of components ([`roles.yaml`](files.md#rolesyaml), [brands](files.md#brands)). It judges a library's own roles with it. Each of these findings names the version it lies in, so it asks for attention in a released one, unless only a lock shows it: it then lies at the lock, and its level stands ([What each run judges](#what-each-run-judges)). A finding marked *stops the brand* leaves the brand unread: no piece that locks it is judged further. A finding points at the file at fault, or at `<version>/` where no one file is, with the key path or token path after `#`.
 
 | Label | What it means | Level |
 |---|---|---|
-| `roles-unreadable`, `roles-shape`, `role-name`, `role-type`, `role-default`, `axes-shape`, `axis-shape`, `families-shape`, `family-shape`, `pairs-shape`, `pair-shape` | The foundations' `roles.yaml` cannot be read, or one of its roles, axes, families or pairs is not of its shape. Stops the brand. | fails |
+| `roles-unreadable`, `roles-shape`, `role-name`, `role-type`, `role-default`, `axes-shape`, `axis-shape`, `families-shape`, `family-shape`, `pairs-shape`, `pair-shape` | The foundations' `roles.yaml` cannot be read, or one of its roles, axes, families or pairs is not of its shape. Stops the brand. In a library's own `roles.yaml`, the same labels say that the file cannot be read, or that one of its roles or pairs is not of its shape: a role outside the group of the library's name, or under `component`; a pair that names none of its own roles, or a role that is no colour role it may reach. They stop nothing: what cannot be read is left out. | fails |
+| `roles-declaration` | A library other than the foundations declares `axes` or `families`, which are the foundations' alone. It is not read. | fails |
+| `role-default`, `default-dangling`, `default-loop` | A library's own role has a default that is no alias, or that aliases a component token, a role of another type, or a role of a library its library does not build on; or one that leads to no role; or defaults that make a loop, found at each role in it (DEC-008 point 3). The role takes no default. | fails |
+| `pair-defaults` | A library's pair, at its defaults, falls on no pair the foundations, the library or a library it builds on declares at a level as strict (DEC-008 point 6). | fails |
+| `role-brand-only` | A library's own role whose chain of defaults does not end at a shared role, so only a brand that gives it a value draws it. States a fact. | states a fact |
+| `base-loop`, `base-kind` | The brands build on each other in a loop, or the base a brand marks is no brand. Stops the brand. | fails |
+| `role-not-open` | The brand gives a value to a role its base does not open, or to a library's role where its base does not name the library. The base's value, or the role's default, holds. | fails |
 | `brand-unreadable` | The brand's `library.yaml` cannot be read. Stops the brand. It names the version its folder holds, `<version>/`, since the file cannot give it, so it asks for attention in a released one, as the others do. | fails |
 | `brand-kind`, `brand-dtcg` | The library is not a brand, or names a DTCG version other than `2025.10`. Stops the brand. | fails |
 | `resolver-unreadable`, `resolver-shape`, `brand-file` | The Resolver document cannot be read, holds what format 1 does not read, or names a file the version folder does not hold. Stops the brand. | fails |
 | `brand-axis` | A modifier is no shared axis, lacks a context for one of the axis's modes, or has another default than the axis. Stops the brand. | fails |
 | `tokens-unreadable`, `tokens-shape`, `token-name`, `token-type`, `token-value`, `token-shared-group` | A token file cannot be read, or holds a key, a name, a type or a value format 1 does not read, or a brand's own token in a group of the shared roles. Stops the brand. | fails |
 | `role-missing`, `role-type` | The brand gives a shared role no value, or a value of another type, in some combination. Stops the brand. | fails |
-| `alias-loop`, `alias-dangling`, `alias-type` | Aliases make a loop, lead to a token the brand does not hold, or lead to a token of another type. Stops the brand. | fails |
+| `alias-loop`, `alias-dangling`, `alias-type` | Aliases make a loop, lead to a token the brand does not hold, to a role of a library the brand does not name or to one with no value under it, or lead to a token of another type. Stops the brand. | fails |
 | `value-axis-changes-size` | A mode of a value axis changes something other than a colour. Stops the brand. | fails |
-| `open-shape`, `open-unknown` | `open` in the brand's `library.yaml` is not a list, or names no role the brand exports, nor a group of them. | fails |
+| `open-shape`, `open-unknown` | `open` in the brand's `library.yaml` is not a list, or names no role the brand exports, nor a group of them, or names roles of a library the brand does not name. | fails |
+| `library-role-missing` | The brand names a library and gives one of its roles that has no default no value in some combination (DEC-008 point 4). | fails |
+| `library-token` | A token under the name of a library the brand names gives none of its roles a value: it names none of them, or is of another type. | fails |
+| `library-token-private` | A token under the name of a library a piece locks with the brand, which the brand does not name. It stays private, and gives the library nothing. A lock shows it, so it lies at the lock. | asks the brand's owner for attention |
 | `font-shape` | The capability's extension on a font token is not of its shape, or gives one family two files. | fails |
 | `font-missing` | A font family the brand names has no file, or names a file the version folder or the location's `fonts/` does not hold. | fails |
-| `pair-contrast` | A declared pair is below the contrast its level needs, in some combination of the brand's axes (DEC-004 points 8 and 11). | fails |
+| `pair-contrast` | A declared pair is below the contrast its level needs, in some combination of the brand's axes (DEC-004 points 8 and 11). A library's pair is measured only where the brand's values reach it ([`roles.yaml`](files.md#rolesyaml)). | fails |
 | `pair-translucent` | The colour under a declared pair is translucent in some combination, so its contrast depends on what lies under it. | asks for attention |
 
 ### Notations
@@ -215,7 +231,7 @@ Each fails, unless its row says otherwise.
 |---|---|---|
 | `component-shape` | A component holds a key, a part, an option or an exposed name its format does not allow ([a component's file](components.md#a-components-file)). Or a top whose layouts are its pages' forms breaks their shape, such as marking no field as holding its pages, or two, naming a slot `layout`, or leaving a layout without its own drawing ([layouts](components.md#layouts)). | the component, `#<key path>` |
 | `two-owners` | A text part gives a `height`, which its measured text sets ([primitives](components.md#primitives)). | the component |
-| `formula-unreadable`, `formula-reach`, `formula-dimension`, `unknown-role` | A formula cannot be read, reads what it may not reach, has dimensions that disagree, or reads a role the brand gives no value ([errors](components.md#errors)). | the component |
+| `formula-unreadable`, `formula-reach`, `formula-dimension`, `unknown-role` | A formula cannot be read, reads what it may not reach, has dimensions that disagree, or reads a role that has no value under the brand ([errors](components.md#errors)). | the component |
 | `unknown-component` | The piece's top, a part or an item names no component. A component whose file is present and cannot be read is `component-unreadable`, and what names it takes no finding. | the top's, `<piece>/piece.yaml#top`; a part's or an item's, the content or the component that names it, `#<trace>` |
 | `component-unreadable` | A component's file is present and cannot be read: the message gives the reader's error, or says the file is not a mapping ([how the files are read](files.md#how-the-files-are-read)). Nothing is drawn where it is placed. The check leaves it out where a `file-unreadable` or `binding` finding names the file. | the component's file |
 | `not-top` | The piece's top declares no layouts, neither one for the whole top nor its pages' forms ([layouts](components.md#layouts)). | the top's component |
@@ -228,14 +244,14 @@ Each fails, unless its row says otherwise.
 | `missing-exposed` | A formula reads an exposed part, point or item that is missing. | the component |
 | `no-colour` | A part paints `:colour.<member>`, and the instance has no colour family, from its concept or by default, or has one the foundations do not declare, or one with no such member ([values, states and colour](components.md#values-states-and-colour)). | the component, `#<trace>` |
 | `unknown-concept` | The content names a concept that is not `<notation>/<concept>`, that comes from a notation the piece does not name under `notations`, or that its notation does not hold ([values, states and colour](components.md#values-states-and-colour)). | the content, or the component whose part gave it, `#<trace>` |
-| `unknown-role`, `role-type` | A text's style role has no value, or is no typography. | the component, `#<trace>` |
+| `unknown-role`, `role-type` | A text's typography role has no value under the brand, or is no typography. | the component, `#<trace>` |
 | `gets-less` | A component gets less width or height than it asks for ([what an element asks for](components.md#what-an-element-asks-for-and-what-it-gets)). | the content, `#<trace>` |
 | `text-overflow` | A word is wider than its text's width. Text never shrinks to fit ([breaking lines](components.md#breaking-lines)). | the content, `#<trace>` |
 | `missing-picture` | The piece has no produced output the content names. Left out where a produced-picture finding already reports that output. The fix is `pkit visual produce <piece> <output>`. | the content, or the component whose part gave it, `#<trace>` |
 | `picture-variants` | The variants of a picture differ in pixel size or in the places of their points, and one scene holds them all. | as above |
 | `font-missing` | A font family has no committed file, or no family measures a character. Nothing is laid out (DEC-004 point 9). The check reports it where it computes the scenes. `pkit visual render` refuses instead, and writes no record. | `<piece>/piece.yaml#brand` |
 | `contrast-drawn` | A text is below WCAG's contrast against the fill under it, in a combination the piece names (DEC-004 point 8). A text of 24 px or more, or of 18.66 px or more with a weight of 700 or more, needs 3; any other text needs 4.5. The fill under each line is the last box or ellipse drawn before the text that holds the line's middle, a translucent fill laid over the one under it. A text over a picture, or over nothing, is not measured. | `<piece>/piece.yaml#<trace>` |
-| `unknown-colour` | An element paints its fill or stroke with a role that is no colour role of the brand. | `<piece>/piece.yaml#<trace>` |
+| `unknown-colour` | An element paints its fill or stroke with a role that is no colour role with a value under the brand, such as a library's role the brand leaves with none. | `<piece>/piece.yaml#<trace>` |
 | `component-experimental` | The piece uses an experimental component, which its library may change in any release (DEC-003 point 9). States a fact. | `<piece>/piece.yaml#<trace>` |
 | `component-deprecated` | The piece uses a deprecated component. Asks the piece's author for attention: replace it with the component its library names in its place. | `<piece>/piece.yaml#<trace>` |
 

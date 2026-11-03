@@ -26,6 +26,7 @@ from tests.visual_communication_project import (
     FOUNDATIONS,
     TEST_BRAND,
     TEST_NOTATION,
+    TEST_PARTS,
     bound,
     copy_library,
     project,
@@ -546,3 +547,102 @@ def test_yaml_text_writes_a_header_and_no_alias() -> None:
     text = pl.yaml_text({"a": shared, "b": shared}, "One.\nTwo.")
     assert text == "# One.\n# Two.\n\na:\n  x: 1\nb:\n  x: 1\n"
     assert reading.load_yaml(text) == {"a": {"x": 1}, "b": {"x": 1}}
+
+
+# --- a library's own roles (DEC-008) -----------------------------------------------------------
+
+
+def parts_project(tmp_path: Path, warning: bool = False) -> Path:
+    """The foundations, the test brand and the test library with roles of its own, listed
+    unreleased, and the draft `tags`: a figure of the library's tag, under a lock of the
+    three; with `warning`, the tag paints its label with the library's warning, which has
+    no default and which the test brand, naming no library, leaves with no value."""
+    root = project(tmp_path)
+    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
+    parts = copy_library(root, TEST_PARTS, "test-parts", "1.0.0")
+    if warning:
+        tag = parts / "components" / "tag.yaml"
+        tag.write_text(
+            tag.read_text(encoding="utf-8").replace(
+                "fill: test-parts.note", "fill: test-parts.warning"
+            ),
+            encoding="utf-8",
+        )
+    unreleased = {"1.0.0": {"released": False}}
+    write_list(
+        root,
+        {
+            "foundations": {"source": {"kind": "shipped"}, "versions": unreleased},
+            "test-brand": {"source": {"kind": "project"}, "versions": unreleased},
+            "test-parts": {"source": {"kind": "project"}, "versions": unreleased},
+        },
+    )
+    write_piece(
+        root,
+        "tags",
+        modes={"colour-scheme": ["light", "dark"]},
+        lock={"foundations": "1.0.0", "test-brand": "1.0.0", "test-parts": "1.0.0"},
+    )
+    body = {"use": "test-parts/tag", "label": "Ready"}
+    content = bound("content", body=body, caption="A tag.")
+    write(root / "visual" / "pieces" / "tags" / "content.en.yaml", yaml_text(content))
+    return root
+
+
+def tags_project(root: Path) -> Any:
+    piece = pl.read_piece(root, "visual", "tags")
+    return pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+
+
+def test_a_project_reads_the_own_roles_of_each_library_it_locks(tmp_path: Path) -> None:
+    project = tags_project(parts_project(tmp_path))
+    assert set(project.scope.libraries) == {"test-parts"}
+    assert project.foundations is project.scope.foundations
+    assert project.brand.scope is project.scope
+    assert [finding.code for finding in project.scope.findings] == ["role-brand-only"]
+
+
+def test_a_part_reading_a_librarys_roles_draws_them_at_their_defaults(tmp_path: Path) -> None:
+    project = tags_project(parts_project(tmp_path))
+    [(_, result)] = project.scenes()
+    assert result.findings == []
+    box = result.scene.find("figure/body/box")
+    label = result.scene.find("figure/body/label")
+    assert box is not None and label is not None
+    assert box.properties["fill"] == "test-parts.paper"
+    assert label.properties["fill"] == "test-parts.note"
+    assert project.env.role("test-parts.gap") == project.env.role("space.2")
+
+
+def test_the_values_document_holds_each_role_of_a_locked_library_at_its_default(
+    tmp_path: Path,
+) -> None:
+    project = tags_project(parts_project(tmp_path))
+    document = project.values()
+    held = document["tokens"]
+    assert held["test-parts.note"] == {**held["text-primary"]}
+    assert held["test-parts.gap"]["type"] == "dimension"
+    assert "test-parts.warning" not in held
+    assert document["lock"]["test-parts"] == "1.0.0"
+    assert (
+        pl.colours_at(document, "colour-scheme.dark")["test-parts.paper"]
+        == (pl.colours_at(document, "colour-scheme.dark")["background"])
+    )
+
+
+def test_a_role_with_no_value_under_the_brand_is_none_to_the_engine_or_the_document(
+    tmp_path: Path,
+) -> None:
+    project = tags_project(parts_project(tmp_path, warning=True))
+    with pytest.raises(KeyError) as raised:
+        project.env.role("test-parts.warning")
+    assert type(raised.value).__name__ == "RoleWithoutValue"
+    with pytest.raises(KeyError) as raised:
+        project.env.role("test-parts.nothing")
+    assert type(raised.value).__name__ == "UnknownRole"
+    [(_, result)] = project.scenes()
+    label = result.scene.find("figure/body/label")
+    assert label is not None
+    assert label.properties["fill"] == "test-parts.warning"
+    assert "test-parts.warning" not in project.values()["tokens"]

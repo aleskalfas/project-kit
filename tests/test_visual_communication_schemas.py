@@ -18,6 +18,7 @@ from tests.visual_communication_project import (
     TEST_BRAND,
     TEST_EDITION,
     TEST_NOTATION,
+    TEST_PARTS,
 )
 
 files, reading = load("visual-communication", "files", "reading")
@@ -73,6 +74,8 @@ def test_each_reference_instance_holds_its_schema(kind: str) -> None:
         (TEST_EDITION / "library.yaml", "library"),
         (TEST_NOTATION / "library.yaml", "library"),
         (TEST_NOTATION / "notation.yaml", "notation"),
+        (TEST_PARTS / "library.yaml", "library"),
+        (TEST_PARTS / "roles.yaml", "roles"),
     ],
     ids=[
         "foundations-library",
@@ -81,6 +84,8 @@ def test_each_reference_instance_holds_its_schema(kind: str) -> None:
         "test-edition-library",
         "test-notation-library",
         "test-notation-concepts",
+        "test-parts-library",
+        "test-parts-roles",
     ],
 )
 def test_the_shipped_libraries_and_the_fixtures_hold_their_schemas(path: Path, kind: str) -> None:

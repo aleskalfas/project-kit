@@ -1,0 +1,565 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061953Z-d4a5779f.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T085416Z-1ab88b8b.yaml
+    revalidated:
+      at: 2026-11-03T09:33:02Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    read:
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T000900Z-bed893e8.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T061953Z-d4a5779f.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T085416Z-1ab88b8b.yaml
+    revalidated:
+      at: 2026-11-03T09:33:08Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261102T233447Z-d3a48320.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061953Z-d4a5779f.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T085416Z-1ab88b8b.yaml
+    revalidated:
+      at: 2026-11-03T09:33:13Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T233447Z-d3a48320.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T001520Z-23bfebf3.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T011639Z-18e1793b.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+      - 20261103T020650Z-937df1c9.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T061953Z-d4a5779f.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T085416Z-1ab88b8b.yaml
+    revalidated:
+      at: 2026-11-03T09:33:19Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T233447Z-d3a48320.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T001520Z-23bfebf3.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T011639Z-18e1793b.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+      - 20261103T020650Z-937df1c9.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T061953Z-d4a5779f.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T085416Z-1ab88b8b.yaml
+    revalidated:
+      at: 2026-11-03T09:33:25Z
+      outcome: updated
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-axis
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:34:05Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; an axis, a brand's switch its modes lie along, and which of its kinds lays a piece out again, are not what the check reads, so the term holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-brand
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:34:12Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a brand still holds the values pieces are drawn in; that it now also gives values to a library's own roles where it names the library keeps it a library of values, and its distinctions from a theme and a mode stand.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T073153Z-01c32629.yaml
+    revalidated:
+      at: 2026-11-03T09:34:17Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; content, what a piece says apart from where it goes and how it looks, is not touched by which library versions the check reads.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content-slot
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:34:24Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a content slot, the place in a layout that content fills, and its distinctions from the core's data point and PowerPoint's placeholder, do not touch what the check reads.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-draft
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:37:51Z
+      outcome: unchanged
+      unchanged-because: "Judged on the combined state: the README as pkit visual add's change left it (add copies a shipped library into the location and lists it), the DEC-003 point 8 edits stating DEC-010 and DEC-011 (versions that clash on an item's key, or lose a tie's end, do not fit together), the link from step 1 of Drawing a piece to add's own section, and this change's edit (the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and with a piece named checks a version alone only to place a finding). The definition says a draft's lock moves at each drawing to the newest library versions present within its major numbers, unless a person pinned it; add only brings versions to be present, the link changes no step, the two edits only narrow which versions fit, and checking versions alone moves no lock, so what a draft is and who moves its lock stay as the definition says."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-experimental
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:34:39Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a library component marked experimental is still drawn with a note that it may change; the change to what the check reads says nothing of that mark.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-export
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:34:46Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; an export, a numbered run that writes the piece's PDFs, is not what the check reads, and the check still writes nothing.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-final
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:37:58Z
+      outcome: unchanged
+      unchanged-because: "Judged on the combined state: the README as pkit visual add's change left it (add copies a shipped library into the location and lists it), the DEC-003 point 8 edits stating DEC-010 and DEC-011 (versions that clash on an item's key, or lose a tie's end, do not fit together), the link from step 1 of Drawing a piece to add's own section, and this change's edit (the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and with a piece named checks a version alone only to place a finding). The definition says a final piece was handed out, its lock never moves again, and its exports are kept as handed out; add and the link move no lock, which versions fit governs only a lock that moves, and checking versions alone reads them without changing any lock, so nothing of a final piece changes."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-helper-script
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:34:59Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a helper script runs only while a piece is prepared, and the check, which runs no program of the project's, reads what it wrote as before.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-layout
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:35:06Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a layout, where and how a brand draws content, and its distinctions from a library component and a template, are untouched by which versions the check reads.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:35:13Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a library is still data the capability reads, never a capability; the check now reading each of its versions alone confirms that, and the distinction stands.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-component
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:35:19Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a library component and its distinctions from the core's component and a local component stand; the change concerns a library's own roles and its versions read alone, not its components.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-owner
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:35:25Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a library owner, who gives a library its versions, is not what the check reads; a version checked alone is still one its owner gave.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-version
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:35:31Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a library version and its major number mean what they did; the check now reads the newest version of each major alone, which relies on the major number the term already describes.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-local-component
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:35:37Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a local component, a part made inside one piece for that piece, is not touched by the check reading library versions alone.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-lock
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:35:44Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a lock still names one library version for each library a piece uses; the check now reads the libraries it names and places at the lock a fault only that combination shows, which leaves the term's meaning as it was.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-mode
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:35:51Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a mode, the values that differ on one axis, and its distinctions from a theme and a reader's mode, are not what the change to the check's reading concerns.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-model
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T073153Z-01c32629.yaml
+    revalidated:
+      at: 2026-11-03T09:35:58Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a model and its distinctions from the permission model and from content do not concern which library versions the check reads.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-notation
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:36:05Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a notation still names colour families and marks, never values; the check reading library versions alone leaves that and its distinctions from a legend and a brand unchanged.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-option
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T073153Z-01c32629.yaml
+    revalidated:
+      at: 2026-11-03T09:36:12Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; an option a library component declares, and its distinctions from a variant and a local component, are not what the change to the check's reading touches.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-piece
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T073153Z-01c32629.yaml
+    revalidated:
+      at: 2026-11-03T09:36:20Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a piece, one work in all its languages, is not redefined by the check reading each piece's lock and the libraries it locks.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-pinned
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:38:05Z
+      outcome: unchanged
+      unchanged-because: "Judged on the combined state: the README as pkit visual add's change left it (add copies a shipped library into the location and lists it), the DEC-003 point 8 edits stating DEC-010 and DEC-011 (versions that clash on an item's key, or lose a tie's end, do not fit together), the link from step 1 of Drawing a piece to add's own section, and this change's edit (the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and with a piece named checks a version alone only to place a finding). The definition says a pinned lock moves only when a person moves it, never at each drawing; add and the link move no lock, the two edits only say which versions a moving draft takes, and checking versions alone moves no lock, so nothing of a pin changes."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-published
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:38:12Z
+      outcome: unchanged
+      unchanged-because: "Judged on the combined state: the README as pkit visual add's change left it (add copies a shipped library into the location and lists it), the DEC-003 point 8 edits stating DEC-010 and DEC-011 (versions that clash on an item's key, or lose a tie's end, do not fit together), the link from step 1 of Drawing a piece to add's own section, and this change's edit (the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and with a piece named checks a version alone only to place a finding). The definition says a published piece's lock moves only through a reviewed change that shows the piece before and after; add and the link move no lock, the two edits only say which versions a moving draft takes, and checking versions alone changes no lock, so who moves a published lock is unchanged."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-renderer
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:36:40Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a renderer draws a piece in a medium, and the check draws nothing; the change to what the check reads leaves the term as it was.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-stable
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:36:46Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; a stable library component still breaks only in a version whose major number rose; the check reading the newest version of each major alone does not change that rule.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-starter-library
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T09:36:53Z
+      outcome: unchanged
+      unchanged-because: The README now says the check reads the newest version of each major of each library alone and each piece's lock with the libraries it locks, and links where each run judges; the starter library still holds no values; a library's own roles take their values from a brand or a default, so its distinction from a brand stands.

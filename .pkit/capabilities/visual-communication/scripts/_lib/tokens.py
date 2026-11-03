@@ -1,11 +1,31 @@
-"""Brands: their design tokens and Resolver document in the DTCG format 2025.10, and the
-foundations' declarations of the shared roles, axes, colour families and pairs (DEC-004).
+"""Brands: their design tokens and Resolver document in the DTCG format 2025.10, the
+foundations' declarations of the shared roles, axes, colour families and pairs (DEC-004),
+and the own roles of the component libraries resolved with a brand (DEC-008).
 
 **The foundations' declarations** (`roles.yaml`, format `roles`) name each shared role with
 its type, and a default that aliases an older role where it has one; each shared axis with
 its kind, its modes and its default; the colour families, each a mapping of its members to
 colour roles; and the pairs of colour roles that must contrast, at WCAG's levels. A shared
 role carries no value, so it is no DTCG token.
+
+**A component library's own roles** (`roles.yaml` of a library of kind `components` other
+than the foundations, `read_own_roles`) lie under a group of its name, none under the group
+of component tokens (DEC-004 point 7). Each has a type, and may carry a default: an alias
+to another of its own roles, or to a role of a library it builds on, the shared roles
+included, of the same type, never to a value or a component token (DEC-008 point 3). Its
+pairs each name one of its own roles. It declares no axes and no colour families, which
+the foundations' alone are. What is wrong in it never refuses it: it is kept as its
+findings, each naming its version, and a role or a pair that cannot be read is left out.
+
+**A scope** (`Scope`) is the roles one resolution reads: the foundations' and the own roles
+of each component library resolved with them, one version of each, under a lock or as a
+version is checked alone (DEC-008 point 1). It judges each library's defaults and pairs
+against the libraries it builds on there: a default that aliases a component token, a
+role of another type or of a library it does not build on, a default that leads nowhere
+or a loop of defaults, each fails; a pair that, its own roles replaced by their defaults,
+falls on no pair the foundations, the library or a library it builds on declares at a
+level as strict fails; a role whose chain of defaults does not end at a shared role is
+stated as a fact. A role's type reads from the scope with no brand.
 
 **A brand** is one library version of kind `brand`. Its `library.yaml` names the DTCG
 version, its Resolver document, its open roles, and the brand it builds on as its base, if
@@ -30,10 +50,31 @@ format may add:
   how it is measured, `file` alone in format 1.
 
 **Resolution** merges the brand's sources in resolution order for a combination, over the
-shared roles' defaults, then resolves aliases. Every shared role must resolve in every
+roles' defaults, then resolves aliases. Every shared role must resolve in every
 combination, to its declared type; a loop or a dangling alias fails; a value axis that
-changes anything but a colour fails. Open roles name roles the brand exports, or groups of
-them by whole segments.
+changes anything but a colour fails. Open roles name roles the brand may give values, or
+groups of them by whole segments.
+
+**A brand and a library's own roles** (DEC-008 points 1 and 4 to 6):
+
+- *reached only where named:* a brand reaches a library's roles, to give one a value, open
+  it or alias it, only where its `builds-on` names that library by the major the scope's
+  version fits (`named`). A token it holds under the name of a library it names gives one
+  of its roles a value; one that names none of them, or is of another type, is a finding.
+  Under the name of a library it does not name, a token stays private, and where the scope
+  holds that library, as under a lock, it asks for attention;
+- *defaults below every brand:* a default lies under the base's tokens and the brand's own
+  sources, and is resolved after the merge, so it follows the value the brand gives the
+  role it aliases. A role whose chain of defaults reaches no value has none under the
+  brand; a brand that names its library gives each of its roles with no default a value
+  in every combination, or that is a finding;
+- *exports:* a brand exports, beside the shared roles, each role of a library it names
+  that it or its base gives a value (`roles`). Every role with a value under it, a role
+  left at its default included, is `valued`, which the document of values holds;
+- *pairs:* a library's pair is judged at a brand only where the brand's values reach it,
+  through a value the brand or its base gives a library's role along either role's chain
+  of defaults, and then in every combination; at its defaults it is its library's to
+  judge.
 
 **A brand built on another** (DEC-004 point 6) marks one entry of its `builds-on`, a
 brand, `base: true`. The caller gives the version folder of each library the lock names
@@ -52,11 +93,16 @@ its major is the one the entry names. In each combination:
   A modifier for another axis, a context for another mode, or another default fails;
 - *chains narrow:* the brand's open roles name only roles its base opens to it (format 1
   has no brand's own roles), so each link of a chain opens at most what the last opens.
+  A base opens a role of a library only where it names that library, and a brand built on
+  it gives the role a value only where it names the library too (DEC-008 point 4).
 
 A brand that cannot be resolved raises TokenError, carrying its findings. One that can is
 a Brand, whose `findings` hold what is wrong but leaves it usable: an open role it does
 not have, a value for a role its base does not open, a font file nothing holds, a declared
-pair below its contrast. Every finding of a brand names the brand's version as where it
+pair below its contrast, a token under a library's name that gives none of its roles a
+value, a role of a library it names that it leaves with no value. A library's own
+`roles.yaml` is no brand's: its findings are the scope's (`Scope.findings`), each naming
+the library's version. Every finding of a brand names the brand's version as where it
 lies, so its level is read where it lies (DEC-002 point 7); a fault of the lock, a base it
 names at another major or not at all, names none, and always fails. A brand's findings
 hold its base's too, each naming the base's version; a pair or a font family is judged at
@@ -70,14 +116,15 @@ from __future__ import annotations
 import hashlib
 import re
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any
 
 from _lib import keys
 from _lib.env import MissingFont
 from _lib.files import FileError, read_bound
-from _lib.findings import ATTENTION, FAILS, Finding
+from _lib.findings import ATTENTION, FACT, FAILS, Finding
+from _lib.libraries import FOUNDATIONS, LibraryError, read_library
 from _lib.names import COMPONENT, is_name, is_segment, is_token_path
 from _lib.reading import ReadError, read_json
 
@@ -127,7 +174,12 @@ class TokenError(Exception):
 
 
 class UnknownRole(KeyError):
-    """A token path the brand exports no role at."""
+    """A token path the brand gives no value at: no role, or a role it leaves with none."""
+
+
+class RoleWithoutValue(UnknownRole):
+    """A role the scope declares that has no value under the brand: a library's own role
+    whose chain of defaults reaches none, which no brand of its chain gives one."""
 
 
 @dataclass(frozen=True)
@@ -142,7 +194,8 @@ class Axis:
 
 @dataclass(frozen=True)
 class Role:
-    """A shared role: its token path, its type, and the role its default aliases, if any."""
+    """A role, shared or a library's own: its token path, its type, and the role its default
+    aliases, if any."""
 
     path: str
     type: str
@@ -151,11 +204,13 @@ class Role:
 
 @dataclass(frozen=True)
 class Pair:
-    """Two colour roles that must contrast: `text` drawn on `under`, at `level`."""
+    """Two colour roles that must contrast: `text` drawn on `under`, at `level`; `index`, its
+    place in its file's `pairs`, from 0."""
 
     text: str
     under: str
     level: str
+    index: int = field(default=0, compare=False)
 
     @property
     def minimum(self) -> float:
@@ -164,26 +219,48 @@ class Pair:
 
 @dataclass(frozen=True)
 class Declarations:
-    """The foundations' declarations (`roles.yaml`)."""
+    """A library's declarations, its `roles.yaml`: the foundations' shared roles, axes,
+    colour families and pairs (DEC-004), or a component library's own roles and pairs
+    (DEC-008 point 8).
+
+    - `label`: `<name>@<version>` of the library they lie in, and `file` the file as
+      findings name it.
+    - `own`: for a library other than the foundations, its name, the group its own roles
+      lie under; "" for the foundations, whose roles are shared.
+    - `builds_on`: the libraries it builds on, by name.
+    - `findings`: what is wrong in a library's own roles that leaves the rest usable. The
+      foundations' declarations hold none: what is wrong in them refuses them.
+    """
 
     roles: dict[str, Role]
     axes: dict[str, Axis]
     families: dict[str, dict[str, str]]
     pairs: tuple[Pair, ...]
+    label: str = ""
+    file: str = ""
+    own: str = ""
+    builds_on: tuple[str, ...] = ()
+    findings: tuple[Finding, ...] = ()
 
     @property
     def top_groups(self) -> tuple[str, ...]:
         """The first segments of the shared roles, which no library takes as its name."""
         return tuple(sorted({path.split(".")[0] for path in self.roles}))
 
+    @property
+    def major(self) -> int | None:
+        """The major of the version they lie in, as `label` gives it, or None."""
+        major = self.label.partition("@")[2].partition(".")[0]
+        return int(major) if major.isdigit() else None
+
 
 # --- the foundations' declarations --------------------------------------------------------------
 
 
 def read_declarations(path: Path, *, library: str = "", shown: str = "") -> Declarations:
-    """The declarations in the `roles.yaml` at `path`. `library` is `<name>@<version>` of
-    the library they lie in, and `shown` the file's path as findings name it. Raises
-    TokenError."""
+    """The foundations' declarations in the `roles.yaml` at `path`. `library` is
+    `<name>@<version>` of the library they lie in, and `shown` the file's path as findings
+    name it. Raises TokenError."""
     file = shown or path.as_posix()
     problems = _Problems(file, library)
     try:
@@ -196,10 +273,68 @@ def read_declarations(path: Path, *, library: str = "", shown: str = "") -> Decl
     pairs = _read_pairs(data.get("pairs", []), roles, problems)
     if problems.found:
         raise TokenError(problems.found)
-    return Declarations(roles=roles, axes=axes, families=families, pairs=pairs)
+    return Declarations(
+        roles=roles, axes=axes, families=families, pairs=pairs, label=library, file=file
+    )
 
 
-def _read_roles(raw: Any, problems: _Problems) -> dict[str, Role]:
+#: What a library other than the foundations does not declare, with what it is for.
+_FOUNDATIONS_ONLY = {"axes": "the shared axes", "families": "the colour families"}
+
+
+def read_own_roles(
+    path: Path,
+    *,
+    name: str,
+    library: str = "",
+    shown: str = "",
+    builds_on: Iterable[str] = (),
+) -> Declarations:
+    """The own roles and pairs of the component library `name`, in the `roles.yaml` at
+    `path` (DEC-004 point 7, DEC-008 point 8): each role under the group of its name, none
+    under the group of component tokens, and each pair naming one of them. It declares no
+    axes and no colour families: the foundations' alone are. `library` and `shown` are as
+    for `read_declarations`, and `builds_on` names the libraries it builds on.
+
+    Never raises: what is wrong is kept as the declarations' `findings`, and a role or a
+    pair that cannot be read is left out. A default is kept as its alias says; whether it
+    holds the `Scope` judges, with the libraries the role may reach."""
+    file = shown or path.as_posix()
+    problems = _Problems(file, library)
+    roles: dict[str, Role] = {}
+    pairs: tuple[Pair, ...] = ()
+    try:
+        data = read_bound(path, "roles")
+    except (ReadError, FileError) as exc:
+        problems.add("roles-unreadable", str(exc))
+    else:
+        for key, what in _FOUNDATIONS_ONLY.items():
+            if data.get(key):
+                problems.add(
+                    "roles-declaration",
+                    f"`{key}` lies in the `roles.yaml` of `{name}`, and only the foundations "
+                    f"declare {what}: another library declares its own roles and their pairs "
+                    f"alone, so the capability does not read it",
+                    key,
+                )
+        roles = _read_roles(data.get("roles"), problems, own=name)
+        pairs = _read_pairs(data.get("pairs", []), roles, problems, own=name)
+    return Declarations(
+        roles=roles,
+        axes={},
+        families={},
+        pairs=pairs,
+        label=library,
+        file=file,
+        own=name,
+        builds_on=tuple(builds_on),
+        findings=tuple(problems.found),
+    )
+
+
+def _read_roles(raw: Any, problems: _Problems, own: str = "") -> dict[str, Role]:
+    """The roles `raw` maps; `own` names the library whose own roles they are, or is ""
+    for the shared roles."""
     if not isinstance(raw, Mapping) or not raw:
         problems.add("roles-shape", "`roles` is not a mapping of token paths to roles", "roles")
         return {}
@@ -213,6 +348,13 @@ def _read_roles(raw: Any, problems: _Problems) -> dict[str, Role]:
             problems.add(
                 "role-name",
                 f"`{path}` lies under `{COMPONENT}`, the group of component tokens",
+                where,
+            )
+            continue
+        if own and not path.startswith(f"{own}."):
+            problems.add(
+                "role-name",
+                f"`{path}` lies outside `{own}`, the group of the library's own roles",
                 where,
             )
             continue
@@ -233,8 +375,8 @@ def _read_roles(raw: Any, problems: _Problems) -> dict[str, Role]:
             target = match.group(1)
         roles[path] = Role(path=path, type=spec["type"], default=target)
     for role in roles.values():
-        if role.default is None:
-            continue
+        if role.default is None or own:
+            continue  # an own role's default is the scope's to judge (`Scope`)
         aliased = roles.get(role.default)
         if aliased is None or aliased.default is not None or aliased.type != role.type:
             problems.add(
@@ -318,7 +460,12 @@ def _read_families(
     return families
 
 
-def _read_pairs(raw: Any, roles: Mapping[str, Role], problems: _Problems) -> tuple[Pair, ...]:
+def _read_pairs(
+    raw: Any, roles: Mapping[str, Role], problems: _Problems, own: str = ""
+) -> tuple[Pair, ...]:
+    """The pairs `raw` lists. Of the shared roles, each names two colour roles; of a
+    library's own (`own`), each names one of its own roles, and whether the other is a
+    colour role it may reach the `Scope` judges."""
     if not isinstance(raw, list):
         problems.add("pairs-shape", "`pairs` is not a list of pairs", "pairs")
         return ()
@@ -329,11 +476,312 @@ def _read_pairs(raw: Any, roles: Mapping[str, Role], problems: _Problems) -> tup
             problems.add("pair-shape", f"pair {index} names no level of {', '.join(LEVELS)}", where)
             continue
         text, under = spec.get("text"), spec.get("under")
-        if any(roles.get(r) is None or roles[r].type != "color" for r in (text, under)):
+        named = [r for r in (text, under) if r in roles] if own else [text, under]
+        if own and is_token_path(text) and is_token_path(under) and not named:
+            problems.add("pair-shape", f"pair {index} names none of the library's own roles", where)
+            continue
+        if not (is_token_path(text) and is_token_path(under)) or any(
+            roles.get(r) is None or roles[r].type != "color" for r in named
+        ):
             problems.add("pair-shape", f"pair {index} does not name two colour roles", where)
             continue
-        pairs.append(Pair(text=text, under=under, level=spec["level"]))
+        pairs.append(Pair(text=text, under=under, level=spec["level"], index=index))
     return tuple(pairs)
+
+
+# --- a scope: the roles one resolution reads ----------------------------------------------------
+
+
+class Scope:
+    """The roles one resolution reads (DEC-008 point 1): the foundations' shared roles, and
+    the own roles of each component library resolved with them, one version of each, as
+    their declarations give them. A role's type reads from it with no brand.
+
+    - `foundations`: the foundations' declarations; `axes`, `families` and `top_groups`
+      are theirs.
+    - `libraries`: each component library's declarations of its own roles, by its name.
+    - `roles`: every role, by its token path; `owner`, the library whose own role each is,
+      or "" for a shared role.
+    - `defaults`: the default of each own role that holds (DEC-008 point 3): an alias to a
+      role its library may reach, its own or one of a library it builds on, the shared
+      roles included where it builds on the foundations, of its type, never a component
+      token, in no loop. A default that does not hold is its library's finding, and
+      gives the role no value.
+    - `pairs`: the foundations' pairs, then each library's that names colour roles it may
+      reach.
+
+    Its findings (`findings_of`) are each library's: those its file holds, then those its
+    defaults and pairs show here. Each names the library's version."""
+
+    def __init__(self, foundations: Declarations, libraries: Iterable[Declarations] = ()) -> None:
+        self.foundations = foundations
+        self.libraries = {declared.own: declared for declared in libraries if declared.own}
+        self.roles: dict[str, Role] = dict(foundations.roles)
+        self.owner: dict[str, str] = dict.fromkeys(foundations.roles, "")
+        for name, declared in sorted(self.libraries.items()):
+            for path, role in declared.roles.items():
+                if path not in self.roles:
+                    self.roles[path] = role
+                    self.owner[path] = name
+        self.defaults: dict[str, str] = {}
+        self._found: dict[str, list[Finding]] = {
+            name: list(declared.findings) for name, declared in self.libraries.items()
+        }
+        for name in sorted(self.libraries):
+            self._check_defaults(name)
+        self._check_loops()
+        library_pairs: list[Pair] = []
+        for name in sorted(self.libraries):
+            library_pairs.extend(self._check_pairs(name))
+            self._state_ends(name)
+        self.pairs: tuple[Pair, ...] = (*foundations.pairs, *library_pairs)
+
+    @property
+    def axes(self) -> dict[str, Axis]:
+        return self.foundations.axes
+
+    @property
+    def families(self) -> dict[str, dict[str, str]]:
+        return self.foundations.families
+
+    @property
+    def top_groups(self) -> tuple[str, ...]:
+        return self.foundations.top_groups
+
+    def type_of(self, token_path: str) -> str:
+        """The type of the role at `token_path`, shared or a library's own. Raises
+        UnknownRole for a path no declaration of the scope holds."""
+        if token_path not in self.roles:
+            raise UnknownRole(token_path)
+        return self.roles[token_path].type
+
+    def default_of(self, token_path: str) -> str | None:
+        """The role the default of the role at `token_path` aliases: a shared role's as the
+        foundations declare it, an own role's where it holds; None for none."""
+        if self.owner.get(token_path):
+            return self.defaults.get(token_path)
+        role = self.roles.get(token_path)
+        return role.default if role is not None else None
+
+    def findings_of(self, name: str) -> list[Finding]:
+        """The findings of the library `name`'s own roles in this scope."""
+        return list(self._found.get(name, []))
+
+    @property
+    def findings(self) -> list[Finding]:
+        """The findings of every library's own roles in this scope, by the libraries'
+        names."""
+        return [finding for name in sorted(self._found) for finding in self._found[name]]
+
+    def reach(self, name: str) -> set[str]:
+        """The roles the library `name` may alias or pair with: its own, and those of each
+        library it builds on that the scope holds, the shared roles where it builds on the
+        foundations (DEC-008 point 3)."""
+        declared = self.libraries[name]
+        reached = set(declared.roles)
+        for other in declared.builds_on:
+            if other == FOUNDATIONS:
+                reached.update(self.foundations.roles)
+            elif other in self.libraries:
+                reached.update(self.libraries[other].roles)
+        return reached
+
+    def _add(self, name: str, code: str, message: str, where: str, level: str = FAILS) -> None:
+        declared = self.libraries[name]
+        self._found[name].append(
+            Finding(code, level, message, file=declared.file, where=where, library=declared.label)
+        )
+
+    def _check_defaults(self, name: str) -> None:
+        """Each default of the library's own roles, against the roles it may reach."""
+        reach = self.reach(name)
+        for path, role in sorted(self.libraries[name].roles.items()):
+            target = role.default
+            if target is None:
+                continue
+            where = f"roles.{path}"
+            if target == COMPONENT or target.startswith(f"{COMPONENT}."):
+                self._add(
+                    name,
+                    "role-default",
+                    f"the default of `{path}` aliases `{target}`, a component token: a role "
+                    f"defaults to a role, never to the token of one part",
+                    where,
+                )
+            elif target in reach and self.roles[target].type != role.type:
+                self._add(
+                    name,
+                    "role-default",
+                    f"the default of `{path}` aliases `{target}`, of type "
+                    f"`{self.roles[target].type}`, not `{role.type}`",
+                    where,
+                )
+            elif target in reach:
+                self.defaults[path] = target
+            elif target in self.roles:
+                holder = self.owner[target] or FOUNDATIONS
+                self._add(
+                    name,
+                    "role-default",
+                    f"the default of `{path}` aliases `{target}`, a role of `{holder}`, which "
+                    f"`{name}` does not build on",
+                    where,
+                )
+            else:
+                self._add(
+                    name,
+                    "default-dangling",
+                    f"the default of `{path}` aliases `{target}`, which neither `{name}` nor a "
+                    f"library it builds on declares",
+                    where,
+                )
+
+    def _check_loops(self) -> None:
+        """Each loop of defaults, at each own role in it; its defaults then give no value."""
+        looped: set[str] = set()
+        for start in sorted(self.defaults):
+            chain = [start]
+            current = start
+            while current in self.defaults and current not in looped:
+                current = self.defaults[current]
+                if current in chain:
+                    loop = chain[chain.index(current) :]
+                    shown = " → ".join((*loop, current))
+                    for path in loop:
+                        looped.add(path)
+                        self._add(
+                            self.owner[path],
+                            "default-loop",
+                            f"the defaults make a loop: {shown}",
+                            f"roles.{path}",
+                        )
+                    break
+                chain.append(current)
+        for path in looped:
+            del self.defaults[path]
+
+    def _check_pairs(self, name: str) -> list[Pair]:
+        """The library's pairs that name colour roles it may reach; each one, at its
+        defaults, rests on a pair the foundations, the library or a library it builds on
+        declares, in either order, at a level that needs as much contrast or more (DEC-008
+        point 6). A pair with an own role that has no default is judged only at the brands
+        that give that role a value."""
+        declared = self.libraries[name]
+        reach = self.reach(name)
+        declaring = [self.foundations, declared] + [
+            self.libraries[other] for other in declared.builds_on if other in self.libraries
+        ]
+        rests = [pair for each in declaring for pair in each.pairs]
+        kept = []
+        for pair in declared.pairs:
+            where = f"pairs.{pair.index}"
+            stray = next(
+                (
+                    r
+                    for r in (pair.text, pair.under)
+                    if r not in reach or self.roles[r].type != "color"
+                ),
+                None,
+            )
+            if stray is not None:
+                self._add(
+                    name,
+                    "pair-shape",
+                    f"pair {pair.index} names `{stray}`, which is no colour role of `{name}` or "
+                    f"of a library it builds on",
+                    where,
+                )
+                continue
+            kept.append(pair)
+            own = [r for r in (pair.text, pair.under) if self.owner.get(r) == name]
+            if any(r not in self.defaults for r in own):
+                continue
+            text, under = (
+                self.defaults.get(r, r) if r in own else r for r in (pair.text, pair.under)
+            )
+            if not any(
+                {rest.text, rest.under} == {text, under} and rest.minimum >= pair.minimum
+                for rest in rests
+            ):
+                self._add(
+                    name,
+                    "pair-defaults",
+                    f"pair {pair.index}, `{pair.text}` on `{pair.under}`, falls at its defaults "
+                    f"on `{text}` on `{under}`, which neither the foundations, `{name}` nor a "
+                    f"library it builds on declares as a pair at a level as strict as "
+                    f"`{pair.level}`",
+                    where,
+                )
+        return kept
+
+    def _state_ends(self, name: str) -> None:
+        """A fact for each own role whose chain of defaults ends at no shared role, so only
+        a brand that gives a value along it draws it (DEC-008 point 9). A role whose own
+        default does not hold has its failing finding instead."""
+        declared = self.libraries[name]
+        for path, role in sorted(declared.roles.items()):
+            if role.default is not None and path not in self.defaults:
+                continue
+            end, seen = path, {path}
+            while end in self.defaults and self.defaults[end] not in seen:
+                end = self.defaults[end]
+                seen.add(end)
+            if self.owner.get(end) == "":
+                continue
+            said = (
+                f"`{path}` has no default"
+                if end == path
+                else f"the chain of defaults of `{path}` ends at `{end}`, which has none that holds"
+            )
+            self._add(
+                name,
+                "role-brand-only",
+                f"{said}, so it ends at no shared role: only a brand that gives it a value "
+                f"draws it",
+                f"roles.{path}",
+                level=FACT,
+            )
+
+
+def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scope:
+    """The scope of the library versions whose folders `folders` gives, by name: the
+    foundations' declarations, and the own roles of each other library of kind `components`
+    whose folder holds a `roles.yaml` (DEC-008 point 8). A library whose `library.yaml`
+    cannot be read adds nothing, its own check reporting it. Where `folders` holds no
+    foundations, as for a library that builds on none, the scope holds no shared role.
+    Findings name files relative to `root` when given. Raises TokenError for the
+    foundations' declarations."""
+
+    def shown(path: Path) -> str:
+        return path.relative_to(root).as_posix() if root is not None else path.as_posix()
+
+    foundations = Declarations(roles={}, axes={}, families={}, pairs=())
+    if FOUNDATIONS in folders:
+        roles = folders[FOUNDATIONS] / "roles.yaml"
+        foundations = read_declarations(
+            roles, library=f"{FOUNDATIONS}@{roles.parent.name}", shown=shown(roles)
+        )
+    own = []
+    for name, folder in sorted(folders.items()):
+        path = folder / "roles.yaml"
+        if name == FOUNDATIONS or not path.is_file():
+            continue
+        try:
+            library = read_library(folder)
+        except LibraryError:
+            continue
+        if library.kind != "components":
+            continue
+        own.append(
+            read_own_roles(
+                path,
+                name=library.name,
+                library=library.label,
+                shown=shown(path),
+                builds_on=[need.name for need in library.builds_on],
+            )
+        )
+    return Scope(foundations, own)
 
 
 # --- a brand ------------------------------------------------------------------------------------
@@ -362,12 +810,16 @@ class _Token:
 
 @dataclass(frozen=True)
 class _View:
-    """The tokens of one combination before aliases are resolved (DEC-004 point 6): the
-    token that gives each exported role its value, whichever library of the chain writes
-    it, and each library's private tokens, by its label."""
+    """The tokens of one combination before aliases are resolved (DEC-004 point 6, DEC-008
+    point 1): the token that gives each role its value, whichever library of the chain
+    writes it or the role's default; `merged`, the same before each own role's default that
+    reaches no value is left out; each library's private tokens, by its label; and the
+    libraries each brand of the chain names, by its label."""
 
     roles: dict[str, _Token]
+    merged: dict[str, _Token]
     private: dict[str, dict[str, _Token]]
+    named: dict[str, frozenset[str]]
 
 
 @dataclass(frozen=True)
@@ -385,12 +837,19 @@ class _Problem(Exception):
 
 
 class Brand:
-    """One brand version, read and checked against the foundations' declarations, over its
+    """One brand version, read and checked against the roles of a scope (`Scope`), over its
     base when it builds on one.
 
     - `name`, `version`, `label` (`<name>@<version>`): as its `library.yaml` gives them.
+    - `scope`: the roles it is resolved against.
     - `axes`: the shared axes, each a key's axis, whether the brand varies it or not.
-    - `roles`: the token paths it exports, the shared roles, in path order.
+    - `named`: the libraries of the scope it names among those it builds on, by the major
+      their version fits, whose roles it reaches (DEC-008 point 4).
+    - `roles`: the token paths it exports, in path order: the shared roles, and each role
+      of a library it names that it or its base gives a value (DEC-008 point 5).
+    - `valued`: every role with a value in every combination, in path order: its exports,
+      and each other role of the scope's libraries, at its default. The document of values
+      holds these (DEC-005 point 7).
     - `open`: its open roles, as its `library.yaml` lists them.
     - `opened`: the roles a brand built on it may give values: those its open roles name,
       narrowed to those its base opens to it.
@@ -404,27 +863,34 @@ class Brand:
         name: str,
         version: str,
         folder: Path,
-        foundations: Declarations,
+        scope: Scope,
+        named: frozenset[str],
+        roles: tuple[str, ...],
+        valued: tuple[str, ...],
         open_roles: tuple[str, ...],
         opened: frozenset[str],
         base: Brand | None,
         views: dict[str, _View],
         resolved: dict[str, dict[str, _Resolved]],
+        hidden: dict[str, dict[str, _Resolved]],
         fonts: dict[str, Path | None],
         findings: tuple[Finding, ...],
     ) -> None:
         self.name = name
         self.version = version
         self.folder = folder
-        self.axes = dict(foundations.axes)
-        self.roles = tuple(sorted(foundations.roles))
+        self.scope = scope
+        self.axes = dict(scope.axes)
+        self.named = named
+        self.roles = roles
+        self.valued = valued
         self.open = open_roles
         self.opened = opened
         self.base = base
         self.findings = findings
-        self._foundations = foundations
         self._views = views
         self._resolved = resolved
+        self._hidden = hidden
         self._fonts = fonts
 
     @property
@@ -435,18 +901,20 @@ class Brand:
         """The value of the role at `token_path` in `combination` (an axis left out takes
         its default), aliases resolved, in canonical form: a colour `{colorSpace,
         components, alpha}`, a dimension `{value, unit}`, a font family a list of names, a
-        typography its five members so, a number. Raises UnknownRole for a path the brand
-        exports no role at, and keys.BadKey for a combination the axes do not hold."""
-        if token_path not in self._foundations.roles:
+        typography its five members so, a number. Raises RoleWithoutValue for a role the
+        scope declares that has no value under the brand, UnknownRole for a path it holds
+        no role at, and keys.BadKey for a combination the axes do not hold."""
+        if token_path not in self.valued:
+            if token_path in self.scope.roles:
+                raise RoleWithoutValue(token_path)
             raise UnknownRole(token_path)
         key = keys.key_of(combination, self.axes)
         return self._resolved[key][token_path].value
 
     def type_of(self, token_path: str) -> str:
-        """The DTCG type of the role at `token_path`. Raises UnknownRole."""
-        if token_path not in self._foundations.roles:
-            raise UnknownRole(token_path)
-        return self._foundations.roles[token_path].type
+        """The DTCG type of the role at `token_path`, as its declaration gives it, whether
+        the brand gives it a value or not (`Scope.type_of`). Raises UnknownRole."""
+        return self.scope.type_of(token_path)
 
     def font_file(self, family: str) -> Path:
         """The committed font file that measures and draws `family` in the default font
@@ -475,23 +943,26 @@ class Brand:
 
 def read_brand(
     folder: Path,
-    foundations: Declarations,
+    scope: Scope | Declarations,
     *,
     fonts: Path | None = None,
     root: Path | None = None,
     locked: Mapping[str, Path] | None = None,
 ) -> Brand:
-    """The brand whose version folder is `folder`, read and checked against
-    `foundations`, over its base when it marks one. `fonts` is the location's folder of
-    fonts a brand names by hash. `locked` gives the version folder of each library the lock
-    names, by its name; a base is read from it. Findings name files relative to `root`
-    when given, else to the version folder they lie in. Raises TokenError."""
+    """The brand whose version folder is `folder`, read and checked against `scope`, or
+    against the foundations' declarations alone, over its base when it marks one. `fonts`
+    is the location's folder of fonts a brand names by hash. `locked` gives the version
+    folder of each library the lock names, by its name; a base is read from it. Findings
+    name files relative to `root` when given, else to the version folder they lie in.
+    Raises TokenError."""
     shown = _shown(folder, root)
     try:
         library = read_bound(folder / "library.yaml", "library")
     except (ReadError, FileError) as exc:
         raise TokenError([_unreadable(exc, folder, shown)]) from exc
-    reader = _BrandReader(folder, foundations, library, shown, fonts, root, locked or {}, ())
+    if isinstance(scope, Declarations):
+        scope = Scope(scope)
+    reader = _BrandReader(folder, scope, library, shown, fonts, root, locked or {}, ())
     return reader.read()
 
 
@@ -512,6 +983,20 @@ def _unreadable(exc: Exception, folder: Path, shown: str) -> Finding:
     )
 
 
+def _named(raw: Any, scope: Scope) -> frozenset[str]:
+    """The libraries of `scope` that a `builds-on`, `raw`, names by the major their version
+    there fits (DEC-008 point 4)."""
+    return frozenset(
+        entry["name"]
+        for entry in (raw if isinstance(raw, list) else [])
+        if isinstance(entry, Mapping)
+        and entry.get("name") in scope.libraries
+        and isinstance(entry.get("major"), int)
+        and not isinstance(entry.get("major"), bool)
+        and entry["major"] == scope.libraries[entry["name"]].major
+    )
+
+
 class _BrandReader:
     """Reads one brand version; collects what it finds as findings. `chain` names the
     brands built on it that are being read, the last built on it directly."""
@@ -519,7 +1004,7 @@ class _BrandReader:
     def __init__(
         self,
         folder: Path,
-        foundations: Declarations,
+        scope: Scope,
         library: Mapping[str, Any],
         shown: str,
         fonts: Path | None,
@@ -528,10 +1013,11 @@ class _BrandReader:
         chain: tuple[str, ...],
     ) -> None:
         self.folder = folder
-        self.foundations = foundations
+        self.scope = scope
         self.library = library
         self.name = str(library.get("name"))
         self.label = f"{library.get('name')}@{library.get('version')}"
+        self.named = _named(library.get("builds-on"), scope)
         self.shown = shown
         self.fonts_folder = fonts
         self.root = root
@@ -617,35 +1103,49 @@ class _BrandReader:
         if self.fatal or resolver is None:
             raise TokenError(self._unique(self.fatal))
         order, sets, modifiers = resolver
+        axes = self.scope.axes
         views: dict[str, _View] = {}
         resolved: dict[str, dict[str, _Resolved]] = {}
-        everything = keys.combinations(
-            {axis.name: axis.modes for axis in self.foundations.axes.values()},
-            self.foundations.axes,
-        )
+        hidden: dict[str, dict[str, _Resolved]] = {}
+        everything = keys.combinations({axis.name: axis.modes for axis in axes.values()}, axes)
         for combination in everything:
-            key = keys.key_of(combination, self.foundations.axes)
+            key = keys.key_of(combination, axes)
             sources = self._sources(order, sets, modifiers, combination)
             views[key] = self._view(sources, base, key)
-            resolved[key] = self._resolve_combination(views[key], key)
+            resolved[key], hidden[key] = self._resolve_combination(views[key], key)
         if self.fatal:
             raise TokenError(self._unique(self.fatal))
-        self._check_value_axes(resolved)
+        self._check_value_axes(views, resolved, hidden)
         if self.fatal:
             raise TokenError(self._unique(self.fatal))
+        self._check_library_tokens()
+        self._check_library_roles(resolved, base)
         open_roles, opened = self._check_open(library.get("open", []), base)
-        fonts = self._read_fonts(resolved, base)
-        self._check_pairs(resolved, base)
+        fonts = self._read_fonts(resolved, hidden, base)
+        self._check_pairs(views, resolved, base)
+        valued = tuple(
+            path for path in sorted(self.scope.roles) if all(path in r for r in resolved.values())
+        )
+        exported = tuple(
+            path
+            for path in valued
+            if not self.scope.owner[path]
+            or any(path in view.roles and view.roles[path].owner for view in views.values())
+        )
         return Brand(
             name=self.name,
             version=str(library.get("version")),
             folder=self.folder,
-            foundations=self.foundations,
+            scope=self.scope,
+            named=self.named,
+            roles=exported,
+            valued=valued,
             open_roles=open_roles,
             opened=opened,
             base=base,
             views=views,
             resolved=resolved,
+            hidden=hidden,
             fonts=fonts,
             findings=(*self._unique(self.kept), *(base.findings if base is not None else ())),
         )
@@ -729,7 +1229,7 @@ class _BrandReader:
             return None
         reader = _BrandReader(
             folder,
-            self.foundations,
+            self.scope,
             data,
             shown,
             self.fonts_folder,
@@ -834,7 +1334,7 @@ class _BrandReader:
         if not isinstance(raw, Mapping):
             self._fail("resolver-shape", "`modifiers` is not an object", rel, "modifiers")
             return {}
-        axes = base.axes if base is not None else self.foundations.axes
+        axes = base.axes if base is not None else self.scope.axes
         modifiers = {}
         for name, spec in raw.items():
             where = f"modifiers.{name}"
@@ -852,7 +1352,7 @@ class _BrandReader:
                 self._fail(
                     "brand-axis",
                     f"the modifier `{name}` is no shared axis; format 1 reads no axis of a "
-                    f"brand's own (the shared axes: {', '.join(sorted(self.foundations.axes))})",
+                    f"brand's own (the shared axes: {', '.join(sorted(self.scope.axes))})",
                     rel,
                     where,
                 )
@@ -1119,54 +1619,99 @@ class _BrandReader:
 
     def _view(self, sources: list[str], base: Brand | None, key: str) -> _View:
         """The tokens of the combination `key` before aliases are resolved: the base's, or
-        the shared roles' defaults without a base, then the brand's own sources in order,
-        later winning. A role its base does not open keeps the base's token, a finding."""
+        the roles' defaults without a base, then the brand's own sources in order, later
+        winning (DEC-008 point 1). A role its base does not open keeps the base's token, a
+        finding. A token at a role of a library the brand does not name, or of another type
+        than the role, stays private (DEC-008 point 4)."""
         if base is None:
-            roles = {
-                role.path: _Token(
-                    role.path, role.type, f"{{{role.default}}}", {}, "", prefix=self.shown
-                )
-                for role in self.foundations.roles.values()
-                if role.default is not None
+            merged = {
+                path: _Token(path, role.type, f"{{{default}}}", {}, "", prefix=self.shown)
+                for path, role in self.scope.roles.items()
+                if (default := self.scope.default_of(path)) is not None
             }
             below: dict[str, dict[str, _Token]] = {}
+            named: dict[str, frozenset[str]] = {}
         else:
-            roles = dict(base._views[key].roles)
-            below = base._views[key].private
+            under = base._views[key]
+            merged, below, named = dict(under.merged), under.private, under.named
         own: dict[str, _Token] = {}
         for file in sources:
             for path, token in self.flat.get(file, {}).items():
-                if path not in self.foundations.roles:
+                library = self.scope.owner.get(path)
+                if (
+                    library is None
+                    or (library and library not in self.named)
+                    or (library and token.type not in (None, self.scope.roles[path].type))
+                ):
                     own[path] = token
                 elif base is None or path in base.opened:
-                    roles[path] = token
+                    merged[path] = token
                 else:
+                    why = (
+                        f"does not name `{library}`, so it opens none of its roles"
+                        if library and library not in base.named
+                        else "does not open it to the brand"
+                    )
+                    holds = (
+                        "the base's value or the role's default" if library else "the base's value"
+                    )
                     self._keep(
                         "role-not-open",
-                        f"the brand gives `{path}` a value, but its base {base.label} does not "
-                        f"open it to the brand, so the base's value holds; it opens: "
-                        f"{', '.join(sorted(base.opened)) or 'nothing'}",
+                        f"the brand gives `{path}` a value, but its base {base.label} {why}, so "
+                        f"{holds} holds; it opens: {', '.join(sorted(base.opened)) or 'nothing'}",
                         where=path,
                         shown=token.shown,
                         fix=f"take `{path}` out of {token.file}",
                     )
-        return _View(roles, {**below, self.label: own})
+        return _View(
+            self._pruned(merged),
+            merged,
+            {**below, self.label: own},
+            {**named, self.label: self.named},
+        )
 
-    def _resolve_combination(self, view: _View, key: str) -> dict[str, _Resolved]:
-        """Every exported role and every private token of this brand, resolved in the
-        combination `key`; a base's private tokens are resolved only where an alias leads."""
+    def _pruned(self, merged: Mapping[str, _Token]) -> dict[str, _Token]:
+        """`merged` without each library role's default whose chain reaches no value: such
+        a role has none under the brand (DEC-008 point 1)."""
+        roles = dict(merged)
+        while True:
+            gone = [
+                path
+                for path, token in roles.items()
+                if self._is_default(path, token) and self._alias(token.value) not in roles
+            ]
+            if not gone:
+                return roles
+            for path in gone:
+                del roles[path]
+
+    def _is_default(self, path: str, token: _Token) -> bool:
+        """Whether `token` is the default of a library's own role, which no brand writes."""
+        return token.owner == "" and bool(self.scope.owner.get(path))
+
+    def _resolve_combination(
+        self, view: _View, key: str
+    ) -> tuple[dict[str, _Resolved], dict[str, _Resolved]]:
+        """Every role with a value in the combination `key`, resolved, and every private
+        token of this brand; a base's private tokens are resolved only where an alias leads.
+        A library role's default that leads to no value of its type leaves the role with
+        none; a brand's value for it of another type is a finding, and gives it none."""
         self._check_paths(view)
         done: dict[tuple[str, str], _Resolved] = {}
         resolved: dict[str, _Resolved] = {}
-        refs = [("", path) for path in view.roles] + [
-            (self.label, path) for path in view.private[self.label]
-        ]
-        for ref in refs:
+        hidden: dict[str, _Resolved] = {}
+        for path, token in view.roles.items():
             try:
-                resolved[ref[1]] = self._resolve(ref, view, done, ())
+                resolved[path] = self._resolve(("", path), view, done, ())
+            except _Problem as problem:
+                if not self._is_default(path, token):
+                    self._fail_problem(problem)
+        for path in view.private[self.label]:
+            try:
+                hidden[path] = self._resolve((self.label, path), view, done, ())
             except _Problem as problem:
                 self._fail_problem(problem)
-        for role in self.foundations.roles.values():
+        for role in self.scope.foundations.roles.values():
             found = resolved.get(role.path)
             if role.path not in view.roles:
                 self._fail(
@@ -1185,16 +1730,34 @@ class _BrandReader:
                         shown=view.roles[role.path].shown,
                     )
                 )
-        return resolved
+        for path, found in list(resolved.items()):
+            role = self.scope.roles.get(path)
+            if role is None or not self.scope.owner[path] or found.type == role.type:
+                continue
+            del resolved[path]
+            token = view.roles[path]
+            if token.owner == self.label:
+                self._keep(
+                    "library-token",
+                    f"`{path}`, a role of `{self.scope.owner[path]}` of type `{role.type}`, is "
+                    f"given a `{found.type}` in the combination `{key}`, so it gives the role "
+                    f"no value",
+                    where=path,
+                    shown=token.shown,
+                )
+        return resolved, hidden
 
     def _check_paths(self, view: _View) -> None:
-        shared_groups = set(self.foundations.top_groups)
-        tokens = {**view.roles, **view.private[self.label]}
+        shared_groups = set(self.scope.top_groups)
+        tokens = {
+            path: token for path, token in view.roles.items() if not self._is_default(path, token)
+        }
+        tokens.update(view.private[self.label])
         for path, token in tokens.items():
             if (
                 token.owner == self.label
                 and path.split(".")[0] in shared_groups
-                and path not in self.foundations.roles
+                and path not in self.scope.foundations.roles
             ):
                 self._fail(
                     "token-shared-group",
@@ -1261,13 +1824,32 @@ class _BrandReader:
         return found
 
     def _target(self, token: _Token, target: str, where: str, view: _View) -> tuple[str, str]:
-        """Where an alias in `token`, at `where`, leads: an exported role, or a private token
-        of the library that writes `token` (DEC-004 point 6). Raises _Problem for an alias
-        into another library's private token, or one that leads nowhere."""
-        if target in view.roles:
-            return ("", target)
-        if target in view.private.get(token.owner, {}):
+        """Where an alias in `token`, at `where`, leads: a role, or a private token of the
+        library that writes `token` (DEC-004 point 6). A brand's token reaches a library's
+        role only where that brand names the library; a default reaches any role (DEC-008
+        point 4). Raises _Problem for an alias into another library's private token, or one
+        that leads nowhere."""
+        library = self.scope.owner.get(target)
+        if target in view.private.get(token.owner, {}) and (
+            target not in view.roles or (library and library not in view.named[token.owner])
+        ):
             return (token.owner, target)
+        if target in view.roles and (
+            not library or token.owner == "" or library in view.named[token.owner]
+        ):
+            return ("", target)
+        if library and token.owner:
+            why = (
+                "which has no value under the brand"
+                if library in view.named[token.owner]
+                else f"which {token.owner} does not name among the libraries it builds on"
+            )
+            raise _Problem(
+                "alias-dangling",
+                f"`{where}` aliases `{target}`, a role of `{library}`, {why}",
+                token.shown,
+                token.path,
+            )
         holder = next(
             (owner for owner, held in view.private.items() if target in held),
             None,
@@ -1327,50 +1909,178 @@ class _BrandReader:
 
     # checks across combinations
 
-    def _check_value_axes(self, resolved: Mapping[str, Mapping[str, _Resolved]]) -> None:
-        axes = self.foundations.axes
-        for key, values in resolved.items():
+    def _check_value_axes(
+        self,
+        views: Mapping[str, _View],
+        resolved: Mapping[str, Mapping[str, _Resolved]],
+        hidden: Mapping[str, Mapping[str, _Resolved]],
+    ) -> None:
+        """A value axis changes only colours. A library's role its library leaves at its
+        defaults changes only as the roles they alias do, which are judged themselves."""
+        axes = self.scope.axes
+        for key in resolved:
             combination = keys.parse_key(key, axes)
             for axis in axes.values():
                 if axis.kind != "value" or combination[axis.name] == axis.default:
                     continue
                 at_default = keys.key_of({**combination, axis.name: axis.default}, axes)
-                before = resolved[at_default]
-                for path in sorted(set(values) | set(before)):
-                    one, other = values.get(path), before.get(path)
-                    if one == other:
-                        continue
-                    type_ = one.type if one is not None else other.type if other is not None else ""
-                    if type_ in VALUE_AXIS_TYPES:
-                        continue
-                    self._fail(
-                        "value-axis-changes-size",
-                        f"the value axis `{axis.name}` may change only colours, but its mode "
-                        f"`{combination[axis.name]}` changes `{path}`, a `{type_}`, in the "
-                        f"combination `{key}`",
-                        "",
+                for values, before in (
+                    (resolved[key], resolved[at_default]),
+                    (hidden[key], hidden[at_default]),
+                ):
+                    for path in sorted(set(values) | set(before)):
+                        one, other = values.get(path), before.get(path)
+                        if one == other:
+                            continue
+                        if (
+                            values is resolved[key]
+                            and self.scope.owner.get(path)
+                            and not self._reached(path, views[key])
+                            and not self._reached(path, views[at_default])
+                        ):
+                            continue
+                        type_ = (
+                            one.type if one is not None else other.type if other is not None else ""
+                        )
+                        if type_ in VALUE_AXIS_TYPES:
+                            continue
+                        self._fail(
+                            "value-axis-changes-size",
+                            f"the value axis `{axis.name}` may change only colours, but its mode "
+                            f"`{combination[axis.name]}` changes `{path}`, a `{type_}`, in the "
+                            f"combination `{key}`",
+                            "",
+                            path,
+                        )
+
+    def _reached(self, path: str, view: _View) -> bool:
+        """Whether a value a brand of the chain gives a library's own role reaches the role
+        at `path` in `view`: it or a library role along its chain of defaults (DEC-008
+        point 6). A role that follows its defaults to a shared role is its library's."""
+        seen: set[str] = set()
+        while self.scope.owner.get(path) and path not in seen:
+            seen.add(path)
+            token = view.roles.get(path)
+            if token is None:
+                return False
+            if not self._is_default(path, token):
+                return True
+            path = self._alias(token.value) or ""
+        return False
+
+    def _check_library_tokens(self) -> None:
+        """Each of the brand's tokens under the name of a library of the scope (DEC-008
+        point 4): where the brand names the library, one that is none of its roles, or is
+        of another type, is a finding; where it does not, the token stays private and asks
+        for attention."""
+        for file, tokens in sorted(self.flat.items()):
+            for path, token in tokens.items():
+                library = path.split(".")[0]
+                declared = self.scope.libraries.get(library)
+                if declared is None:
+                    continue
+                role = declared.roles.get(path)
+                if library not in self.named:
+                    self._keep(
+                        "library-token-private",
+                        f"`{path}` lies under `{library}`, which the brand does not name, by the "
+                        f"major of {declared.label}, among the libraries it builds on, so it stays "
+                        f"private and gives `{library}` nothing",
+                        file,
+                        path,
+                        ATTENTION,
+                        fix=f"name `{library}` in `builds-on` to give its roles values, or move "
+                        f"`{path}` to a group of the brand's own",
+                        who=f"the owner of the brand {self.name}",
+                    )
+                elif role is None:
+                    self._keep(
+                        "library-token",
+                        f"`{path}` lies under `{library}`, which the brand names, but is none of "
+                        f"its roles: a token under a library the brand names gives one of its "
+                        f"roles a value, and the brand's private tokens lie in groups of its own",
+                        file,
+                        path,
+                    )
+                elif token.type is not None and token.type != role.type:
+                    self._keep(
+                        "library-token",
+                        f"`{path}` is of type `{token.type}`, but the role `{path}` of `{library}` "
+                        f"is of type `{role.type}`, so it gives the role no value",
+                        file,
                         path,
                     )
 
+    def _check_library_roles(
+        self, resolved: Mapping[str, Mapping[str, _Resolved]], base: Brand | None
+    ) -> None:
+        """A brand that names a library gives each of its roles without a default a value
+        in every combination (DEC-008 point 4). Where its base names the library and leaves
+        the role with none too, the finding is the base's."""
+        for path, role in sorted(self.scope.roles.items()):
+            library = self.scope.owner[path]
+            if not library or library not in self.named or role.default is not None:
+                continue
+            missing = [key for key, values in resolved.items() if path not in values]
+            if base is not None and library in base.named:
+                missing = [key for key in missing if path in base._resolved[key]]
+            if not missing:
+                continue
+            where = (
+                "in any combination"
+                if len(missing) == len(resolved)
+                else "in the combination"
+                + ("s " if len(missing) > 1 else " ")
+                + ", ".join(f"`{key}`" for key in missing)
+            )
+            self._keep(
+                "library-role-missing",
+                f"the brand names `{library}`, and gives its role `{path}`, which has no default, "
+                f"no value {where}",
+                "",
+                path,
+                fix=f"give `{path}` a value in every combination",
+            )
+
     def _check_open(self, raw: Any, base: Brand | None) -> tuple[tuple[str, ...], frozenset[str]]:
         """The open roles as `open` lists them, and the roles they open: those each entry
-        names, narrowed to those its base opens to it (DEC-004 point 6)."""
+        names of the shared roles and the roles of the libraries the brand names, narrowed
+        to those its base opens to it (DEC-004 point 6, DEC-008 point 4)."""
         if not isinstance(raw, list):
             self._keep("open-shape", "`open` is not a list of roles", "library.yaml", "open")
             return (), frozenset()
-        exported = self.foundations.roles
-        open_to_it = base.opened if base is not None else frozenset(exported)
+        openable = {
+            path
+            for path, library in self.scope.owner.items()
+            if not library or library in self.named
+        }
+        open_to_it = base.opened if base is not None else frozenset(openable)
         opened: set[str] = set()
         for entry in raw:
             named = {
                 path
-                for path in exported
+                for path in openable
                 if is_token_path(entry) and (path == entry or path.startswith(f"{entry}."))
             }
             if not named:
+                library = self.scope.owner.get(
+                    next(
+                        (
+                            path
+                            for path in sorted(self.scope.roles)
+                            if is_token_path(entry)
+                            and (path == entry or path.startswith(f"{entry}."))
+                        ),
+                        "",
+                    )
+                )
                 self._keep(
                     "open-unknown",
-                    f"the open role `{entry}` names no role the brand exports, nor a group of them",
+                    f"the open role `{entry}` names roles of `{library}`, which the brand does not "
+                    f"name among the libraries it builds on, so it opens none of them"
+                    if library
+                    else f"the open role `{entry}` names no role the brand exports, nor a group "
+                    f"of them",
                     "library.yaml",
                     "open",
                 )
@@ -1390,7 +2100,10 @@ class _BrandReader:
         return tuple(entry for entry in raw if isinstance(entry, str)), frozenset(opened)
 
     def _read_fonts(
-        self, resolved: Mapping[str, Mapping[str, _Resolved]], base: Brand | None
+        self,
+        resolved: Mapping[str, Mapping[str, _Resolved]],
+        hidden: Mapping[str, Mapping[str, _Resolved]],
+        base: Brand | None,
     ) -> dict[str, Path | None]:
         """The file of each font family, the base's first, then the brand's own; a family
         a value names with no file is a finding, unless the base names it too, whose
@@ -1425,9 +2138,9 @@ class _BrandReader:
                     declared[family] = (where, file, path)
         for family, (where, file, path) in declared.items():
             fonts[family] = self._font_path(family, where, file, path)
-        named = _families(resolved)
+        named = _families(resolved, hidden)
         if base is not None:
-            named -= _families(base._resolved)
+            named -= _families(base._resolved, base._hidden)
         for family in sorted(named - set(fonts)):
             self._keep(
                 "font-missing",
@@ -1486,16 +2199,30 @@ class _BrandReader:
         return None
 
     def _check_pairs(
-        self, resolved: Mapping[str, Mapping[str, _Resolved]], base: Brand | None
+        self,
+        views: Mapping[str, _View],
+        resolved: Mapping[str, Mapping[str, _Resolved]],
+        base: Brand | None,
     ) -> None:
-        """Each declared pair in every combination; a combination where the pair is as its
-        base gives it is the base's to report."""
-        for pair in self.foundations.pairs:
+        """Each pair of the scope in every combination; a combination where the pair is as
+        its base gives it is the base's to report. A library's pair is judged only where
+        the brand's values reach it, and then in every combination where both its roles
+        have a value; at its defaults it is its library's (DEC-008 point 6)."""
+        for pair in self.scope.pairs:
+            roles = (pair.text, pair.under)
+            if any(self.scope.owner.get(r) for r in roles) and not any(
+                self._reached(r, view) for r in roles for view in views.values()
+            ):
+                continue
             for key, values in resolved.items():
+                if pair.text not in values or pair.under not in values:
+                    continue
                 text, under = values[pair.text].value, values[pair.under].value
-                if base is not None and (text, under) == (
-                    base._resolved[key][pair.text].value,
-                    base._resolved[key][pair.under].value,
+                below = base._resolved[key] if base is not None else {}
+                if (
+                    pair.text in below
+                    and pair.under in below
+                    and (text, under) == (below[pair.text].value, below[pair.under].value)
                 ):
                     continue
                 if under["alpha"] < 1:
@@ -1523,15 +2250,16 @@ class _BrandReader:
                     )
 
 
-def _families(resolved: Mapping[str, Mapping[str, _Resolved]]) -> set[str]:
+def _families(*maps: Mapping[str, Mapping[str, _Resolved]]) -> set[str]:
     """The font families the resolved values name, in any combination."""
     named: set[str] = set()
-    for values in resolved.values():
-        for found in values.values():
-            if found.type == "fontFamily":
-                named.update(found.value)
-            elif found.type == "typography":
-                named.update(found.value["fontFamily"])
+    for resolved in maps:
+        for values in resolved.values():
+            for found in values.values():
+                if found.type == "fontFamily":
+                    named.update(found.value)
+                elif found.type == "typography":
+                    named.update(found.value["fontFamily"])
     return named
 
 

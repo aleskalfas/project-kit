@@ -1,6 +1,6 @@
 """The check: what the project's visual work breaks, within the project's validation
 (visual-communication DEC-002 points 3, 4, 6 and 7, DEC-003 point 9, DEC-004 points 8, 9
-and 11, DEC-005 points 9, 13 and 14, DEC-006 point 8).
+and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9).
 
 **File-level findings, every run:**
 
@@ -12,7 +12,16 @@ and 11, DEC-005 points 9, 13 and 14, DEC-006 point 8).
 - each piece's lock: a version the project does not hold or the capability cannot read,
   a library the piece uses that the lock does not name, libraries that build on another
   major than the one locked; a piece with no lock yet;
-- the brand each piece locks, and its findings: open roles, fonts, declared pairs;
+- each library version checked alone, once: the newest version the project holds of
+  each major of each library, resolved with the newest version the project holds of each
+  major it names. A brand is read over its base, a component library's own roles are
+  judged, the foundations' declarations are read. What it shows lies in the version; a
+  version that names majors no versions fit, or one the project holds no version of,
+  cannot be checked alone, which is a finding. A check of one piece runs no such pass;
+- the libraries each piece locks, read under its lock: the own roles of each component
+  library, and the brand, with its open roles, fonts and declared pairs. A fault the
+  version shows alone too lies in the version, reported once; one only the lock's
+  combination of versions shows lies at the piece's lock, and its level stands;
 - the name of each library a piece locks, against the top groups of the shared roles of
   the foundations it locks (DEC-004 points 7 and 11);
 - each notation a piece names, against the colour families of the foundations it locks:
@@ -74,7 +83,18 @@ from _lib.findings import (
 )
 from _lib.findings import loss_finding as _loss_finding
 from _lib.layout import LAYOUT, PageForms, page_forms
-from _lib.libraries import FOLDER, Held, Version, kind_within
+from _lib.libraries import (
+    FOLDER,
+    FOUNDATIONS,
+    Held,
+    LibraryError,
+    LockRefused,
+    MajorsConflict,
+    Version,
+    kind_within,
+    newest_of_majors,
+    readable,
+)
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml
 from _lib.root import CONFIG
@@ -189,7 +209,8 @@ class _Run:
         self.found: list[Finding] = []
         self.held = Held(root, location_path)
         self.unbound: set[str] = set()
-        self.brands: set[str] = set()
+        self.alone: dict[str, list[Finding]] = {}
+        self.reported: set[tuple[str, str, str, str, str]] = set()
         self.named: set[str] = set()
         self.notations: set[str] = set()
         self.as_released: dict[tuple[str, Version], bool] = {}
@@ -231,6 +252,7 @@ class _Run:
         if only is None:
             self._bindings(files)
             self.found.extend(self.held.findings())
+            self._alone_pass()
         names_ = pl.piece_names(self.root, self.location)
         if only is not None:
             if only not in names_:
@@ -330,10 +352,10 @@ class _Run:
             self.counts["unchecked"] += 1
             return
         except tokens.TokenError as exc:
-            self._brand_findings(piece.brand, piece.lock.get(piece.brand, ""), exc.findings)
+            self._lock_found(piece, exc.findings)
             self.counts["unchecked"] += 1
             return
-        self._brand_findings(piece.brand, project.lock[piece.brand], project.brand.findings)
+        self._lock_found(piece, [*project.scope.findings, *project.brand.findings])
         self._library_names(project)
         self._notation_findings(project)
         self.found.extend(content_findings(project))
@@ -341,11 +363,131 @@ class _Run:
         self.found.extend(produced)
         self._scenes(project, _unmade(produced))
 
-    def _brand_findings(self, brand: str, version: str, found: Sequence[Finding]) -> None:
-        label = f"{brand}@{version}"
-        if label not in self.brands:
-            self.brands.add(label)
-            self.found.extend(found)
+    def _lock_found(self, piece: pl.Piece, found: Sequence[Finding]) -> None:
+        """What the libraries a piece locks show under its lock: the own roles of each
+        component library, and the brand, over its base (DEC-008 point 9). A fault the
+        version shows alone too lies in the version, reported once; one only the lock's
+        combination of versions shows lies at the piece's lock, which the project chose. A
+        fault of the lock itself, which names no version, is reported once."""
+        for finding in found:
+            name, _, text = finding.library.partition("@")
+            if finding.library:
+                try:
+                    alone = self._alone(name, Version.parse(text))
+                except ValueError:
+                    alone = []
+                if _mark(finding) not in {_mark(seen) for seen in alone}:
+                    self.add(_at_lock(finding, piece))
+                    continue
+            self._once(finding)
+
+    def _once(self, finding: Finding) -> None:
+        """Adds a finding the run has not reported yet."""
+        if _mark(finding) not in self.reported:
+            self.reported.add(_mark(finding))
+            self.add(finding)
+
+    # -- versions checked alone
+
+    def _alone_pass(self) -> None:
+        """The newest version the project holds of each major of each library, checked
+        alone, once (`_alone`), what it shows reported in the version. A version a lock
+        names is judged at that lock too (`_lock_found`)."""
+        for name in self.held.names():
+            for major in sorted({version.major for version in self.held.versions(name)}):
+                newest, _ = readable(self.held, name, major)
+                if not newest:
+                    continue  # a version the capability cannot read: `Held.findings`
+                version = newest[0].version
+                try:
+                    shown = self._alone(name, version)
+                except Exception as exc:
+                    # The last resort, as for a piece: an error no finding reports stops
+                    # this version's check alone, and the run goes on.
+                    said = f"{type(exc).__name__}: {exc}" if str(exc) else type(exc).__name__
+                    shown = [
+                        Finding(
+                            "unexpected-error",
+                            FAILS,
+                            f"the check of {name}@{version} alone stopped on an error it does "
+                            f"not expect: {said}",
+                            file=f"{self.location}/{FOLDER}/{name}/{version}/library.yaml",
+                            library=f"{name}@{version}",
+                        )
+                    ]
+                for finding in shown:
+                    self._once(finding)
+
+    def _alone(self, name: str, version: Version) -> list[Finding]:
+        """What the library version shows checked alone, worked out once: resolved with the
+        newest version the project holds of each major it names (DEC-005 point 7, DEC-008
+        point 1). A brand is read over its base, a component library's own roles are
+        judged, the foundations' declarations are read; a notation is checked under each
+        lock alone. Each finding lies in the version. A version that names majors no
+        versions fit, or one of which the project holds no version, cannot be checked
+        alone, which is the finding it shows.
+
+        The pass is one each kind of library version joins: what a later record judges of
+        a version alone joins its kind's branch here."""
+        label = f"{name}@{version}"
+        if label in self.alone:
+            return self.alone[label]
+        self.alone[label] = []
+        try:
+            library = self.held.library(name, version)
+        except LibraryError:
+            return []
+        if self.held.unreadable(name, version) is not None:
+            return []
+        file = f"{self.location}/{FOLDER}/{name}/{version}/library.yaml"
+        try:
+            chosen = newest_of_majors(self.held, library)
+        except MajorsConflict as exc:
+            self.alone[label] = [
+                Finding(
+                    "alone-majors",
+                    FAILS,
+                    f"{label} cannot be checked alone: {exc}",
+                    file=file,
+                    where="builds-on",
+                    fix="name in `builds-on`, in a version of its own, majors that fit together",
+                    library=label,
+                )
+            ]
+            return self.alone[label]
+        except LockRefused as exc:
+            self.alone[label] = [
+                Finding(
+                    "alone-missing",
+                    FAILS,
+                    f"{label} cannot be checked alone: {exc}",
+                    file=self.held.list_path,
+                    where=f"libraries.{name}",
+                    fix=f"bring in a version of each major {label} names, or take {label} out",
+                )
+            ]
+            return self.alone[label]
+        folders = {other.name: other.folder for other in chosen.values()}
+        try:
+            if name == FOUNDATIONS:
+                tokens.read_scope(folders, root=self.root)
+                found: Sequence[Finding] = []
+            elif library.kind == "components":
+                found = tokens.read_scope(folders, root=self.root).findings_of(name)
+            elif library.kind == "brand" and FOUNDATIONS in folders:
+                found = tokens.read_brand(
+                    library.folder,
+                    tokens.read_scope(folders, root=self.root),
+                    fonts=self.root / self.location / pl.FONTS,
+                    root=self.root,
+                    locked=folders,
+                ).findings
+            else:
+                found = []
+        except tokens.TokenError as exc:
+            found = exc.findings
+        self.alone[label] = [finding for finding in found if finding.library == label]
+        return self.alone[label]
 
     def _library_names(self, project: pl.Project) -> None:
         """Each library the piece locks, once for each version and foundations, against the
@@ -413,6 +555,28 @@ class _Run:
             placed = rooted(finding, piece)
             if not _said(placed, unmade, self.unbound):
                 self.add(placed)
+
+
+def _mark(finding: Finding) -> tuple[str, str, str, str, str]:
+    """What tells one finding of a library version from another."""
+    return (finding.code, finding.file, finding.where, finding.message, finding.library)
+
+
+def _at_lock(finding: Finding, piece: pl.Piece) -> Finding:
+    """A finding of a library version that only the piece's lock shows, as it combines the
+    versions: it lies at the lock, which the project chose, so it names no version and its
+    level stands (DEC-002 point 7, DEC-008 point 9). It says where the version shows it."""
+    at = f"{finding.file}, `{finding.where}`" if finding.where else finding.file
+    return dataclasses.replace(
+        finding,
+        message=f"under this lock, {finding.library} shows what it does not alone ({at}): "
+        f"{finding.message}",
+        file=piece.file(pl.PIECE_FILE),
+        where="lock",
+        fix=finding.fix
+        or f"move the lock to versions that fit together, or mend {finding.library}",
+        library="",
+    )
 
 
 def kind_of(inside: str) -> str | None:

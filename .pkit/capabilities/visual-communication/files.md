@@ -51,12 +51,13 @@ pkit:
         - tests/fixtures/visual-communication/libraries/test-brand/1.0.0/tokens/palette.tokens.json
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/notation.yaml
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007", "visual-communication:DEC-010"]
+        - tests/fixtures/visual-communication/libraries/test-parts/1.0.0/roles.yaml
+      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-010"]
 ---
 
 # The files of the visual work
 
-Where a project's visual work lies, what each of its files holds, and who writes each one. The examples come from the shipped foundations library and from the capability's test files. The test brand `test-brand`, the test library `tests` and the test notation `test-notation` exist for the tests only.
+Where a project's visual work lies, what each of its files holds, and who writes each one. The examples come from the shipped foundations library and from the capability's test files. The test brand `test-brand`, the test libraries `tests` and `test-parts` and the test notation `test-notation` exist for the tests only.
 
 ## Contents
 
@@ -338,7 +339,7 @@ They declare six colour families: `neutral`, `blue`, `green`, `orange`, `purple`
 
 ### `roles.yaml`
 
-From the foundations, trimmed:
+A library's `roles.yaml` declares its roles. The foundations declare the *shared roles*, which every library shares, with the axes, the colour families and the pairs. Another library of components may declare roles of its own. From the foundations, trimmed:
 
 ```yaml
 pkit_schema: visual-communication:roles
@@ -360,12 +361,33 @@ pairs:
   - {text: family.blue.text, under: family.blue.fill, level: text}
 ```
 
-- **`roles`** maps each role's token path to its `type`: `color`, `dimension`, `fontFamily`, `fontWeight`, `number` or `typography`. A role carries no value: a brand gives it one. A role's `default`, `{<role>}`, aliases an older role of the same type that has no default of its own (DEC-004 point 7). A role is never also a group of other roles.
-- **`axes`** maps each axis to its `kind`, `value` or `size`; its `modes`, two or more, each once; and its `default`, one of them.
-- **`families`** maps each colour family to its members, each naming a colour role. A notation maps a concept to a family by its name ([Notations](#notations)).
-- **`pairs`** lists the colour roles that must contrast (DEC-004 point 8): `text` drawn on `under`, at a WCAG `level`. `text` needs 4.5, `large-text` and `marks` need 3. The capability measures each pair, under each brand, in every combination of the axes, and the check reports a pair below its level (*What the check reports*).
+- **`roles`** maps each role's token path to its `type`: `color`, `dimension`, `fontFamily`, `fontWeight`, `number` or `typography`. A role carries no value: a brand gives it one. A role may carry a `default`, `{<role>}`, which it takes wherever no brand gives it a value. A shared role's default aliases an older role of the same type that has no default of its own (DEC-004 point 7). A role is never also a group of other roles.
+- **`axes`** maps each axis to its `kind`, `value` or `size`; its `modes`, two or more, each once; and its `default`, one of them. The foundations alone declare axes.
+- **`families`** maps each colour family to its members, each naming a colour role. A notation maps a concept to a family by its name ([Notations](#notations)). The foundations alone declare families.
+- **`pairs`** lists the colour roles that must contrast (DEC-004 point 8): `text` drawn on `under`, at a WCAG `level`. `text` needs 4.5, `large-text` and `marks` need 3. The capability measures each pair, under each brand, in every combination of the axes, and the check reports a pair below its level (*Brands, tokens and contrast* in *What the check reports*).
 
-The capability reads the `roles.yaml` of the foundations alone.
+The capability reads the `roles.yaml` of the foundations, and of each other library of kind `components` it resolves with them: each library a piece's lock or a declaration of written code names, and each library a version checked alone is resolved with (*What each run judges* in *What the check reports*). A brand's `roles.yaml` is not read: format 1 has no brand's own roles.
+
+**A library's own roles.** A library other than the foundations declares its *own roles* and their pairs alone (DEC-004 point 7, DEC-008 point 1). The capability's test library `test-parts`:
+
+```yaml
+roles:
+  test-parts.ink: {type: color, default: '{text-primary}'}
+  test-parts.paper: {type: color, default: '{background}'}
+  test-parts.note: {type: color, default: '{test-parts.ink}'}
+  test-parts.gap: {type: dimension, default: '{space.2}'}
+  test-parts.warning: {type: color}
+pairs:
+  - {text: test-parts.ink, under: test-parts.paper, level: text}
+  - {text: test-parts.warning, under: test-parts.paper, level: large-text}
+```
+
+- **Its roles lie under its name,** as `test-parts.ink` does, never under `component`, the group of component tokens.
+- **A default aliases a role the library names** (DEC-008 point 3): another of its own roles, or a role of a library it builds on, the shared roles included where it builds on `foundations`. It is of the role's type, and is never a value or a component token. A chain of defaults ends, never in a loop.
+- **A default lies below every brand's value** (DEC-008 point 1). The capability merges a brand's sources over the defaults, then resolves the aliases, so a default follows the value the brand gives the role it aliases. `test-parts.note` takes the brand's `text-primary` through `test-parts.ink`, wherever the brand gives neither its own value.
+- **A role with no default** takes a value only from a brand, as `test-parts.warning` does. A role whose chain of defaults ends at one, rather than at a shared role, has no value under a brand that gives none along it. Only a role whose chain ends at a shared role draws under every brand.
+- **Each pair names one of its own roles.** At its defaults, each of the library's own roles replaced by the role its default aliases, a pair falls on one that the foundations, the library or a library it builds on declares, in either order, at a level that needs as much contrast or more (DEC-008 point 6). `test-parts.ink` on `test-parts.paper` falls on the foundations' `text-primary` on `background`. Under a brand, a library's pair is measured only where the brand's values reach it: a value the brand gives a library's role along either role's chain of defaults. It is then measured in every combination where both roles have a value.
+- **It declares no `axes` and no `families`,** which are the foundations' alone. What is wrong in the file stops nothing: a role or a pair that cannot be read is left out, and reported.
 
 ## Brands
 
@@ -433,11 +455,39 @@ The Resolver document holds `version` (`2025.10`), `sets`, `modifiers` and `reso
 - **A modifier** is a shared axis. Its `contexts` hold one list of sources for each mode of the axis. Its `default` is the axis's default.
 - **`resolutionOrder`** names each set and each modifier once, as `{"$ref": "#/sets/<name>"}` or `{"$ref": "#/modifiers/<name>"}`. A later source wins.
 
-For each combination of modes, the capability merges the brand's sources in resolution order, over the shared roles' defaults, then resolves the aliases. A brand built on another merges its sources over its base's tokens instead ([Open roles](#open-roles)). Every shared role must have a value of its declared type in every combination. The brand *exports* the shared roles. Its other tokens, such as a palette its roles alias, are private. They lie in groups of their own, outside the top groups of the shared roles.
+For each combination of modes, the capability merges the brand's sources in resolution order, over the roles' defaults, then resolves the aliases. A brand built on another merges its sources over its base's tokens instead ([Open roles](#open-roles)). Every shared role must have a value of its declared type in every combination. The brand *exports* the shared roles, and each role of a library it names that it gives a value ([A library's roles](#a-librarys-roles)). Its other tokens, such as a palette its roles alias, are private. They lie in groups of their own, outside the top groups of the shared roles.
 
 ### Fonts
 
 A `fontFamily` token names each family's font file in the capability's extension key, `pkit.visual-communication`, as `font.body` does above. `files` maps each family to a file of the brand's version folder, or to `{"hash": "sha256:<hex>"}`. A family named by its hash is a font the brand may not ship. The project commits it in the location's `fonts/`, where the capability finds it by the hash of its bytes (DEC-004 point 9). `measure` is `file`: the font is measured from its file. A font file is committed unchanged with its licence, where its licence allows (DEC-004 point 9).
+
+### A library's roles
+
+A brand reaches the own roles of a library, to give one a value, open it or alias it, only where it names that library in its `builds-on`, by the major of the version it is resolved with (DEC-008 point 4). So every piece that uses the brand locks that library too ([The lock](#the-lock)).
+
+- **What it owes a library it names:** a value, in every combination, to each of the library's roles that has no default. Each token it holds under the library's name gives one of the library's roles a value of its type. A token there that names none of its roles, or is of another type, gives nothing, and is a finding.
+- **Where it names none,** the library is at its defaults under the brand ([`roles.yaml`](#rolesyaml)). A token the brand holds under the library's name stays private, and gives the library nothing. An alias to one of the library's roles fails.
+- **What it exports:** beside the shared roles, each role of a library it names that it, or its base, gives a value (DEC-008 point 5). A role it leaves at its default is not exported: its name is the library's, kept by the library's major.
+
+A brand that names `test-parts`, by the test brand's `builds-on` and its tokens:
+
+```yaml
+builds-on:
+  - {name: foundations, major: 1}
+  - {name: test-parts, major: 1}
+```
+
+```json
+{
+  "test-parts": {
+    "$type": "color",
+    "ink": {"$value": "{scheme.strong-ink}"},
+    "warning": {"$value": "{scheme.ink}"}
+  }
+}
+```
+
+It gives `test-parts.warning`, which has no default, a value, and changes `test-parts.ink`. `test-parts.note` follows the brand's ink through its default, and `test-parts.paper` stays at its default, the brand's `background`.
 
 ### Open roles
 
@@ -450,14 +500,15 @@ builds-on:
 open: [accent]
 ```
 
-A brand's `open` lists the roles that a brand built on it may give values: roles it exports, or groups of them by whole segments of their paths. Each entry names a shared role, or a group of them, such as `space`. The test brand opens `accent` and `space`.
+A brand's `open` lists the roles that a brand built on it may give values: roles it exports, or groups of them by whole segments of their paths. Each entry names a shared role, a role of a library the brand names, or a group of them, such as `space`. The test brand opens `accent` and `space`.
 
 The capability reads the base first, at the version the lock names, and its own base before it. In each combination of modes:
 
 - **The base's tokens come first,** then the brand's own sources, in its resolution order. The aliases are resolved after the merge.
 - **A value the brand gives an open role wins** in the combinations its sources cover, and the base's value holds elsewhere. Every token that aliases the role follows the merged value, the base's tokens included. The test edition gives `accent` a value in the dark colour scheme and at high contrast, so the test brand's accent holds in the light scheme at standard contrast.
 - **A value for a role the base does not open** fails, and the base's value holds.
-- **An alias reaches only the shared roles and the brand's own tokens.** An alias to a token the base keeps private fails. Each brand's private tokens are its own, so a palette of one name in the base and in the brand never meets.
+- **A library's role** takes the brand's value only where both the brand and its base name the library, and the base opens the role (DEC-008 point 4). A base opens a role of a library it names, whether it gives the role a value or not. A base that names no library leaves the library at its defaults for every brand built on it.
+- **An alias reaches only the shared roles, the roles of the libraries the brand names, and the brand's own tokens.** An alias to a token the base keeps private fails. Each brand's private tokens are its own, so a palette of one name in the base and in the brand never meets.
 - **The brand varies values on its base's axes,** by their names and modes, in its own Resolver document. A modifier for another axis, a context for another mode, or another default fails.
 - **Each link of a chain narrows.** A base may build on a brand in turn. A brand's `open` names only roles its base opens to it. An entry that names more fails, and opens only what the base opens.
 

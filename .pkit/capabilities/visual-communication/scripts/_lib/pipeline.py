@@ -11,12 +11,13 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
   the piece names itself: its top's library, its brand, its notations and every library
   its content uses; `libraries.move_lock` adds what they build on. `write_lock` writes a
   lock into `piece.yaml` as text, every other byte kept.
-- **A project** (`Project`) is a piece under one lock: the foundations' declarations and
-  the brand read from the locked versions, over its base at the version the lock names
-  when it builds on one (DEC-004 point 6), the notations the piece names (DEC-004 point
-  10), the combinations the piece names, and the `Env` over them. It computes one scene
-  for each language and each key over the size axes; format 1 has no size axis, so that
-  key is always `default`.
+- **A project** (`Project`) is a piece under one lock: the scope of the locked versions,
+  the foundations' declarations and the own roles of each component library the lock
+  names (DEC-008 point 1), and the brand read against it, over its base at the version
+  the lock names when it builds on one (DEC-004 point 6), the notations the piece names
+  (DEC-004 point 10), the combinations the piece names, and the `Env` over them. It
+  computes one scene for each language and each key over the size axes; format 1 has no
+  size axis, so that key is always `default`.
 - **A produced picture** is read from `produced/<output>/record.yaml`. A missing record,
   or a variant file it names that is missing, makes the picture missing for the engine,
   with the reason kept so the finding names `pkit visual produce <piece> <output>`; it
@@ -317,14 +318,15 @@ def write_lock(piece: Piece, lock: Mapping[str, str]) -> bool:
 
 
 class Project:
-    """A piece under one lock: the foundations' declarations, the brand and the notations
-    the piece names, read from the locked versions, the combinations the piece names, and
-    the `Env` the engine reads. A notation that cannot be read, wholly or in part, keeps
-    its findings (`notations.Notation`), and stops nothing.
+    """A piece under one lock: the scope of the locked versions (`tokens.Scope`), the
+    brand and the notations the piece names, read from the locked versions, the
+    combinations the piece names, and the `Env` the engine reads. A notation that cannot
+    be read, wholly or in part, keeps its findings (`notations.Notation`), and stops
+    nothing; so does a library's own roles, whose findings the scope keeps.
 
     Raises Refused when the lock lacks the foundations, the brand or a notation, or the
     piece names a mode its brand lacks; `tokens.TokenError`, carrying its findings, when
-    the declarations or the brand cannot be read."""
+    the foundations' declarations or the brand cannot be read."""
 
     def __init__(self, piece: Piece, lock: Mapping[str, str], held: Held) -> None:
         # Each name and version of the lock becomes a segment of a path below the library
@@ -341,21 +343,24 @@ class Project:
         self.held = held
         self.root = piece.root
         self.location = piece.location
-        roles = self.version_folder(FOUNDATIONS) / "roles.yaml"
-        self.foundations = tokens.read_declarations(
-            roles,
-            library=self.label(FOUNDATIONS),
-            shown=roles.relative_to(self.root).as_posix(),
+        locked = {
+            library: self.root / self.location / FOLDER / library / version
+            for library, version in self.lock.items()
+        }
+        self.scope = tokens.read_scope(
+            {
+                **{name: folder for name, folder in locked.items() if folder.is_dir()},
+                FOUNDATIONS: self.version_folder(FOUNDATIONS),
+            },
+            root=self.root,
         )
+        self.foundations = self.scope.foundations
         self.brand = tokens.read_brand(
             self.version_folder(piece.brand),
-            self.foundations,
+            self.scope,
             fonts=self.root / self.location / FONTS,
             root=self.root,
-            locked={
-                library: self.root / self.location / FOLDER / library / version
-                for library, version in self.lock.items()
-            },
+            locked=locked,
         )
         self.notations = {
             name: notations.read_notation(
@@ -481,6 +486,9 @@ class ProjectEnv:
         return folder / COMPONENTS / f"{name}.yaml"
 
     def role(self, token_path: str) -> dict:
+        """The role's value under the brand. Raises tokens.RoleWithoutValue for a role of the
+        scope the brand leaves with none, and tokens.UnknownRole for a path no role holds;
+        both are KeyErrors, as the engine reads them."""
         return self._project.brand.resolve(token_path, {})
 
     def font_file(self, family: str) -> Path:
