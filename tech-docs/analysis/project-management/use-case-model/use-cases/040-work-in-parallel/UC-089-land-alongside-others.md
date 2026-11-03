@@ -101,7 +101,7 @@ pkit:
 
 **Minimal guarantees:**
 
-- Nothing merges at a [head](../../../../core/glossary.md#term-head--head) nobody authorised ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)). The one exception is a later head whose every edit lies in [answer](../../../../core/glossary.md#term-answer--answer) files or a clean merge of the [base](../../../../core/glossary.md#term-base--base).
+- Nothing merges at a [head](../../../../core/glossary.md#term-head--head) nobody authorised ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)). The one exception is a later head whose every edit lies in [answer files](../../../../core/glossary.md#term-answer-file--answer-file) or a clean merge of the [base](../../../../core/glossary.md#term-base--base).
 - Nothing merges that the [change check](../../../../core/glossary.md#term-change-check--change-check) fails on, merged with the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) as it stands just before the merge ([DEC-055 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#6-the-merge-as-it-would-land)).
 - A [verdict](../../../glossary.md#term-verdict--verdict) given on an older base no longer stands at the merge ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 - No two runs of the [fixers](../../../glossary.md#term-fixer--fixer) start at once in one [clone](../../../glossary.md#term-clone--clone), since the clone's lock holds back a second run (`fix-drift.py`).

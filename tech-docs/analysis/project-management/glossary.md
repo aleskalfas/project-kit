@@ -7,6 +7,7 @@ builds-on:
       - {id: TERM-agent-definition, name: agent definition}
       - {id: TERM-anchor, name: anchor}
       - {id: TERM-answer, name: answer}
+      - {id: TERM-answer-file, name: answer file}
       - {id: TERM-artefact, name: artefact}
       - {id: TERM-backbone, name: backbone}
       - {id: TERM-base, name: base}
@@ -29,9 +30,11 @@ builds-on:
       - {id: TERM-project, name: project}
       - {id: TERM-pull-request, name: pull request}
       - {id: TERM-report, name: report}
+      - {id: TERM-revalidation-answer, name: revalidation answer}
       - {id: TERM-reviewer, name: reviewer}
       - {id: TERM-role, name: role}
       - {id: TERM-rule, name: rule}
+      - {id: TERM-scratchpad-note, name: scratchpad note}
       - {id: TERM-skill, name: skill}
       - {id: TERM-system, name: system}
       - {id: TERM-validation, name: validation}
@@ -654,11 +657,12 @@ TERM-workstream:
 
 The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
 
-- **From core at 2.0.0:** the areas up to `030-change`. No release holds the core's analysis yet, so the links name the next release, 2.0.0, rather than project-management's floor, 1.144.0.
+- **From core at 2.0.0:** the areas up to `030-change`, at project-management's floor. The core's glossary at 2.0.0 holds no answer file and no revalidation answer, which the core defined after that release.
   - **Term:** [adapter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-adapter--adapter)
   - **Term:** [agent definition](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-agent-definition--agent-definition)
   - **Term:** [anchor](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-anchor--anchor)
   - **Term:** [answer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-answer--answer)
+  - **Term:** [answer file](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-answer-file--answer-file)
   - **Term:** [artefact](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-artefact--artefact)
   - **Term:** [backbone](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-backbone--backbone)
   - **Term:** [base](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-base--base)
@@ -681,9 +685,11 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [project](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-project--project)
   - **Term:** [pull request](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-pull-request--pull-request)
   - **Term:** [report](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-report--report)
+  - **Term:** [revalidation answer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-revalidation-answer--revalidation-answer)
   - **Term:** [reviewer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-reviewer--reviewer)
   - **Term:** [role](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-role--role)
   - **Term:** [rule](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-rule--rule)
+  - **Term:** [scratchpad note](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-scratchpad-note--scratchpad-note)
   - **Term:** [skill](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-skill--skill)
   - **Term:** [system](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-system--system)
   - **Term:** [validation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-validation--validation)
