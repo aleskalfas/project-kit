@@ -4,7 +4,9 @@ what it draws, and what it reports it lost.
 The reference outputs below are pinned to the renderer's version, 1.0.1. A change that
 gives another output for the same scene and values raises the version, and changes them
 with it (DEC-005 point 9). The font a text embeds is pinned by the characters its subset
-holds, not by its bytes, which are fontTools'.
+holds, not by its bytes, which are fontTools'. A text of one run is drawn as it was
+before runs (DEC-012 point 7), so runs left the version as it was; a text of several runs
+draws each run that looks otherwise than its first in a span of its own.
 """
 
 from __future__ import annotations
@@ -27,6 +29,7 @@ svg, svg_declaration, seam = load(
 )
 
 FONT = TEST_BRAND / "fonts" / "SourceSansPro-Regular.otf"
+SEMIBOLD = TEST_BRAND / "fonts" / "SourceSansPro-Semibold.otf"
 
 COLOURS = {
     "surface": {"components": [1, 1, 1], "alpha": 1},
@@ -60,7 +63,7 @@ def scene(*children: dict[str, Any], width: float = 200, height: float = 100) ->
         "lock": {"foundations": "1.0.0"},
         "language": "en",
         "size-key": "default",
-        "seam": 1,
+        "seam": 2,
         "pages": ["figure"],
         "children": [page],
     }
@@ -140,6 +143,32 @@ def test_shapes_are_drawn_as_pinned_for_version_1_0_1() -> None:
     )
 
 
+def run(words: str, **look: Any) -> dict[str, Any]:
+    """A run of `words` in the look `look` gives, Source Sans Pro by default."""
+    families = look.pop("font-family", ["Source Sans Pro"])
+    return {
+        "text": words,
+        "style": "type.body",
+        "font-family": families,
+        "font-size": 16,
+        **look,
+        "fonts": [{"family": family, "file": FONT.name, "sha256": "pinned"} for family in families],
+        "measured": "file",
+        "sources": {},
+    }
+
+
+def line(paragraph: int, baseline: float, *spans: tuple[int, str, float]) -> dict[str, Any]:
+    """A line of `paragraph`, of `spans`, each a run's place, its text and its width."""
+    return {
+        "text": "".join(text for _, text, _ in spans),
+        "width": sum(width for _, _, width in spans),
+        "baseline": baseline,
+        "paragraph": paragraph,
+        "spans": [{"run": at, "text": text, "width": width} for at, text, width in spans],
+    }
+
+
 TITLE = element(
     "text",
     "figure/title",
@@ -147,21 +176,10 @@ TITLE = element(
     y=5,
     width=100,
     height=40,
-    fill="ink",
-    style="type.heading",
     text="Plan & <do> it",
-    lines=[{"text": "Plan & <do>", "width": 80}, {"text": "it", "width": 9}],
-    fonts=[{"family": "Source Sans Pro", "file": FONT.name, "sha256": "pinned-by-the-scene"}],
-    baseline=15.2,
-    measured="file",
-    **{
-        "text-anchor": "middle",
-        "font-family": ["Source Sans Pro"],
-        "font-size": 16,
-        "font-weight": 600,
-        "line-height": 20,
-        "measured-height": 40,
-    },
+    paragraphs=[[run("Plan & <do> it", fill="ink", style="type.heading", **{"font-weight": 600})]],
+    lines=[line(0, 15.2, (0, "Plan & <do>", 80)), line(0, 15.2, (0, "it", 9))],
+    **{"text-anchor": "middle", "line-height": 20, "measured-height": 40},
 )
 
 
@@ -324,14 +342,10 @@ def named(families: list[str]) -> dict[str, Any]:
         y=0,
         width=100,
         height=20,
-        fill="ink",
-        style="type.body",
         text="Aa",
-        lines=[{"text": "Aa", "width": 20}],
-        fonts=[{"family": family, "file": FONT.name, "sha256": "pinned"} for family in families],
-        baseline=15,
-        measured="file",
-        **{"font-family": families, "font-size": 16, "line-height": 20, "measured-height": 20},
+        paragraphs=[[run("Aa", fill="ink", **{"font-family": families})]],
+        lines=[line(0, 15, (0, "Aa", 20))],
+        **{"line-height": 20, "measured-height": 20},
     )
 
 
@@ -377,3 +391,106 @@ def test_every_name_a_brand_may_give_draws_as_itself() -> None:
     assert style.text is not None
     assert css_strings(style.text) == [every]
     assert css_strings(text.get("font-family", "")) == [every]
+
+
+# --- runs ---------------------------------------------------------------------------------------
+
+#: A line of three runs: the middle one in the semibold family, larger and in the accent.
+SAID = element(
+    "text",
+    "figure/said",
+    x=0,
+    y=0,
+    width=200,
+    height=30,
+    text="Say <it> now",
+    paragraphs=[
+        [
+            run("Say ", fill="ink"),
+            run(
+                "<it>",
+                fill="accent",
+                style="type.heading",
+                **{
+                    "font-family": ["Source Sans Pro Semibold"],
+                    "font-size": 24,
+                    "font-weight": 600,
+                },
+            ),
+            run(" now", fill="ink"),
+        ]
+    ],
+    lines=[line(0, 21.5, (0, "Say ", 30), (1, "<it>", 40), (2, " now", 30))],
+    **{"line-height": 30, "measured-height": 30},
+)
+
+
+def drawn_runs(*children: dict[str, Any]) -> Any:
+    files = {"Source Sans Pro": FONT, "Source Sans Pro Semibold": SEMIBOLD}
+    return svg.render(
+        scene(*children), key="default", colours=COLOURS, font_file=files.__getitem__, pictures={}
+    )
+
+
+def test_a_run_that_looks_otherwise_is_drawn_in_a_span_of_its_own_as_pinned() -> None:
+    drawn = drawn_runs(SAID)
+    assert drawn.losses == []
+    [page] = drawn.pages
+    shown = re.sub(r"base64,[A-Za-z0-9+/=]+\)", "base64,…)", page.svg)
+    assert shown == (
+        HEAD + "<defs><style>"
+        '@font-face{font-family:"Source Sans Pro";font-weight:400;'
+        "src:url(data:font/otf;base64,…) format('opentype');}"
+        '@font-face{font-family:"Source Sans Pro Semibold";font-weight:600;'
+        "src:url(data:font/otf;base64,…) format('opentype');}"
+        "text{white-space:pre}</style></defs>"
+        '<g data-id="figure" data-component="foundations/figure" data-version="1.0.0">'
+        '<text data-id="figure/said" xml:space="preserve" '
+        'font-family="&quot;Source Sans Pro&quot;" font-size="16" fill="#000000">'
+        '<tspan x="0" y="21.5">Say '
+        '<tspan font-family="&quot;Source Sans Pro Semibold&quot;" font-size="24" '
+        'font-weight="600" fill="#4080bf" fill-opacity="1">&lt;it&gt;</tspan> now</tspan>'
+        "</text></g></svg>\n"
+    )
+    assert drawn_runs(SAID).pages == drawn.pages
+
+
+def test_each_font_a_run_draws_in_is_embedded_with_the_characters_drawn_in_it() -> None:
+    [page] = drawn_runs(SAID).pages
+    held = []
+    for data in re.findall(r"base64,([A-Za-z0-9+/=]+)\)", page.svg):
+        cmap = TTFont(io.BytesIO(base64.b64decode(data))).getBestCmap()
+        assert cmap is not None
+        held.append({chr(code) for code in cmap})
+    regular, semibold = held
+    # Each subset holds a space too, as every subset the renderer makes does.
+    assert regular == set("Say now")
+    assert semibold == set("<it> ")
+
+
+def test_a_run_painted_with_a_role_the_brand_gives_no_colour_is_a_loss() -> None:
+    lost = element(
+        "text",
+        "figure/lost",
+        x=0,
+        y=0,
+        width=200,
+        height=20,
+        text="ab",
+        paragraphs=[[run("a", fill="ink"), run("b", fill="no-such-role")]],
+        lines=[line(0, 15, (0, "a", 10), (1, "b", 10))],
+        **{"line-height": 20, "measured-height": 20},
+    )
+    drawn = drawn_runs(lost)
+    assert [loss.as_dict() for loss in drawn.losses] == [
+        {
+            "plugin": "svg",
+            "what": "figure/lost",
+            "did": "left-out",
+            "why": "the brand gives the role `no-such-role` of its fill no colour in `default`",
+        }
+    ]
+    assert (
+        '<tspan font-family="&quot;Source Sans Pro&quot;" font-size="16" font-weight="400" '
+        'fill="none">b</tspan>' in drawn.pages[0].svg
+    )

@@ -11,8 +11,11 @@ combination of modes (visual-communication DEC-005 points 4, 5, 9 and 10).
   machine's: each family's file subset to the characters the page draws in it. A family's
   name is written as a CSS string (`css_string`), so no name a brand gives can end the
   style element, start another element, or leave the file malformed XML.
-- **Text** is drawn as the engine measured it: each of its lines as given, at its
-  baseline, anchored at the start, the middle or the end of the text's width.
+- **Text** is drawn as the engine measured it: each of its lines as given, at its own
+  baseline, anchored at the start, the middle or the end of the text's width. The
+  `<text>` takes the font and the paint of the text's first run; each span of a run that
+  looks otherwise is a `<tspan>` with its own (DEC-012). A text of one run is drawn as
+  format 1 drew it.
 - **A produced picture** is embedded as the variant that serves the combination drawn;
   where the record maps the combination to none, the picture is left out, and reported.
 - **Every element carries its trace id** (`data-id`), and a group the component that drew
@@ -139,6 +142,11 @@ def _find(elements: list[Mapping[str, Any]], trace: str) -> Mapping[str, Any] | 
             return element
         stack.extend(reversed(element.get("children", [])))
     return None
+
+
+def _families(run: Mapping[str, Any]) -> str:
+    """A run's font families, as the value of `font-family`."""
+    return ", ".join(css_string(family) for family in run.get("font-family", []))
 
 
 def _attributes(pairs: list[tuple[str, Any]]) -> str:
@@ -297,31 +305,64 @@ class _Canvas:
         x, width = float(element["x"]), float(element["width"])
         anchor = element.get("text-anchor", "start")
         at = {"start": x, "middle": x + width / 2, "end": x + width}.get(anchor, x)
-        top = float(element["y"]) + float(element["baseline"])
+        y = float(element["y"])
         step = float(element["line-height"])
-        weight = element.get("font-weight")
-        families = list(element.get("font-family", []))
-        drawn = "".join(line["text"] for line in element.get("lines", []))
-        for face in element.get("fonts", []):
-            mark = (face["family"], int(weight) if isinstance(weight, (int, float)) else NORMAL)
-            self._faces.setdefault(mark, set()).update(drawn)
-        spans = "".join(
-            f"<tspan {_attributes([('x', number(at)), ('y', number(top + index * step))])}>"
-            f"{escape(line['text'], quote=False)}</tspan>"
-            for index, line in enumerate(element.get("lines", []))
-        )
+        paragraphs = element.get("paragraphs") or [[{}]]
+        first = paragraphs[0][0] if paragraphs[0] else {}
+        for runs in paragraphs:
+            for run in runs:
+                for face in run.get("fonts", []):
+                    self._faces.setdefault(self._face(face, run), set())
+        lines = []
+        for index, line in enumerate(element.get("lines", [])):
+            runs = paragraphs[line.get("paragraph", 0)]
+            drawn = []
+            for span in line.get("spans", []):
+                run = runs[span["run"]]
+                for face in run.get("fonts", []):
+                    self._faces[self._face(face, run)].update(span["text"])
+                shown = escape(span["text"], quote=False)
+                look = self._look(element, run, first)
+                drawn.append(f"<tspan {_attributes(look)}>{shown}</tspan>" if look else shown)
+            place = [("x", number(at)), ("y", number(y + float(line["baseline"]) + index * step))]
+            lines.append(f"<tspan {_attributes(place)}>{''.join(drawn)}</tspan>")
+        weight = first.get("font-weight")
         attributes = _attributes(
             [
                 ("data-id", element["id"]),
                 ("xml:space", "preserve"),
-                ("font-family", ", ".join(css_string(family) for family in families)),
-                ("font-size", number(element["font-size"])),
+                ("font-family", _families(first)),
+                ("font-size", number(first.get("font-size", 0))),
                 ("font-weight", weight if weight not in (None, NORMAL) else None),
                 ("text-anchor", anchor if anchor != "start" else None),
-                *self._paint(element, "fill"),
+                *self._paint({"id": element["id"], "fill": first.get("fill")}, "fill"),
             ]
         )
-        return f"<text {attributes}>{spans}</text>"
+        return f"<text {attributes}>{''.join(lines)}</text>"
+
+    def _face(self, face: Mapping[str, Any], run: Mapping[str, Any]) -> tuple[str, int]:
+        """The `@font-face` a run draws a font in: its family, at the run's weight."""
+        weight = run.get("font-weight")
+        return face["family"], int(weight) if isinstance(weight, (int, float)) else NORMAL
+
+    def _look(
+        self, element: Mapping[str, Any], run: Mapping[str, Any], first: Mapping[str, Any]
+    ) -> list[tuple[str, Any]]:
+        """The font and the paint of a run that looks otherwise than the text's first run,
+        each written whole; none where it looks the same."""
+        keys = ("font-family", "font-size", "font-weight", "fill")
+        if all(run.get(key) == first.get(key) for key in keys):
+            return []
+        weight = run.get("font-weight")
+        paint = self._paint({"id": element["id"], "fill": run.get("fill")}, "fill")
+        if len(paint) == 2 and paint[1][1] is None:
+            paint[1] = ("fill-opacity", "1")  # the text's own opacity is not the run's
+        return [
+            ("font-family", _families(run)),
+            ("font-size", number(run.get("font-size", 0))),
+            ("font-weight", weight if weight is not None else NORMAL),
+            *paint,
+        ]
 
     def _image(self, element: Mapping[str, Any]) -> str:
         output = element.get("output")

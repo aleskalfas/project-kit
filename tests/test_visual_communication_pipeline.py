@@ -490,7 +490,8 @@ def test_a_node_takes_its_concept_s_family_else_its_list_s_and_its_state_changes
         trace = f"figure/body/items[{node['id']}]"
         box, name = result.scene.find(f"{trace}/box"), result.scene.find(f"{trace}/name")
         assert box is not None and name is not None
-        assert box.sources["fill"] == box.sources["stroke"] == name.sources["fill"]
+        [[run]] = name.properties["paragraphs"]
+        assert box.sources["fill"] == box.sources["stroke"] == run["sources"]["fill"]
         painted[node["id"]] = (box.properties["fill"], box.sources["fill"])
     assert painted == {
         "user": ("family.purple.fill", "content:body.items[user].concept"),
