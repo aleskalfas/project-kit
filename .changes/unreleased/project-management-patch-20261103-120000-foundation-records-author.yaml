@@ -3,14 +3,14 @@ kind: patch
 custom:
   category: Changed
 body: >
-  Whoever builds a foundation's records Task authors every one of its
-  records, whatever kind each is, and the critic, then the architect agent
-  where the project deploys it, review each before the person accepts it
-  (DEC-064, #2513). For a planner, batch planning's first plan no longer
-  hands the records to the architect, and gives the records Task one more
+  The person builds a foundation's records Task, or a session they direct,
+  and authors every one of its records, whatever kind each is. The critic,
+  then the architect agent where the project deploys it, review each before
+  the person accepts it (DEC-064, #2513). For a planner, batch planning's
+  first plan no longer hands the records to the architect. It says at its
+  gate that the person builds the records Task, and gives that Task one more
   acceptance criterion: each record reviewed, and each review, its findings
   and how each was settled, listed in the pull request's description. For a
-  worker, the loop has it author the records itself, start the critic and
-  the architect on them, settle each finding, and list the reviews in the
-  pull request's description. DEC-060 carries a top line saying what
-  DEC-064 decides.
+  worker, the loop builds no records Task: it says so on the Task and leaves
+  it to the person. DEC-060 carries a top line saying what DEC-064 decides,
+  and DEC-059 point 2 and DEC-063 point 1 each point to it.
