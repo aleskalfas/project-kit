@@ -53,7 +53,7 @@ pkit:
 5. The system finds the capability in the local catalogue: installed, authored in the project, or shipped with the running CLI. It reads the capability's [package metadata](../../../glossary.md#term-package-metadata--package-metadata) alone.
 6. The system prints the roles the capability provides, the [connection points](../../../glossary.md#term-connection-point--connection-point) it accepts and offers, and what it contributes to, subscribes to and depends on. Under `What connects here`, it gives the wiring the project would have with the capability installed.
 7. The adopter runs `pkit capabilities install <name> --plan`.
-8. The system computes the [install plan](../../../glossary.md#term-install-plan--install-plan) over the project with the capability installed, exactly as it works out the live wiring (COR-053 point 8). It prints `Install plan — capability '<name>' v<version> (<origin>)`, and that nothing is written.
+8. The system computes the [install plan](../../../glossary.md#term-install-plan--install-plan) over the project with the capability installed, by the computation that works out the live wiring (COR-053 point 8). It prints `Install plan — capability '<name>' v<version> (<origin>)`, and that nothing is written.
 9. The plan lists the [connections](../../../glossary.md#term-connection--connection) the [install](../../../glossary.md#term-install--install) would make and break, the role conflicts to resolve and what the capability needs. It also lists the [findings](../../../glossary.md#term-finding--finding) the install would add, and those it would resolve.
 10. The system writes nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)).
 
