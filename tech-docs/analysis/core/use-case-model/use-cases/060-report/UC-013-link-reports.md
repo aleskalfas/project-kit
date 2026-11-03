@@ -39,7 +39,7 @@ pkit:
 
 # UC-013 — Receive adopters' reports, and link each to its fix
 
-**Goal:** Receive adopters' reports with their versions attached, and link each one to the issue that fixes it.
+**Goal:** Receive adopters' reports with their versions attached, and link each one to its tracked fix.
 
 **Other actors:**
 
