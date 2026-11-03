@@ -370,6 +370,28 @@ def test_what_it_cannot_draw_is_a_loss_in_the_seams_form() -> None:
     assert "figure/missing" not in page
 
 
+def test_a_line_that_holds_neither_its_ends_nor_its_points_is_refused() -> None:
+    # As a connector the engine could not route once was: its frame, its paint, no ends.
+    endless = element(
+        "line", "figure/links[ab]/l", x=0, y=0, width=0, height=0, stroke="ink",
+        **{"marker-end": "arrow"},
+    )  # fmt: skip
+    halved = element("line", "figure/half", x=0, y=0, width=10, height=0, x1=0, y1=0)
+
+    drawn = draw(scene(endless, halved, element("box", "figure/b", x=0, y=0, width=5, height=5)))
+
+    why = "the line holds neither its ends, `x1 y1 x2 y2`, nor its points"
+    assert [loss.as_dict() for loss in drawn.losses] == [
+        {"plugin": "svg", "what": "figure/links[ab]/l", "did": "refused", "why": why},
+        {"plugin": "svg", "what": "figure/half", "did": "refused", "why": why},
+    ]
+    page = drawn.pages[0].svg
+    assert "figure/links[ab]/l" not in page and "figure/half" not in page
+    assert "<marker" not in page  # an arrowhead of a line left out is not defined
+    assert '<rect data-id="figure/b"' in page
+    ElementTree.fromstring(page)
+
+
 def test_a_colour_rounds_half_up_and_keeps_its_alpha() -> None:
     assert svg.colour_text({"components": [0.5, 1 / 255 / 2, 1], "alpha": 0.5}) == (
         "#8001ff",

@@ -16,9 +16,10 @@ combination of modes (visual-communication DEC-005 points 4, 5, 9 and 10).
   `<text>` takes the font and the paint of the text's first run; each span of a run that
   looks otherwise is a `<tspan>` with its own (DEC-012). A text of one run is drawn as
   format 1 drew it.
-- **A line** with corners, a tie's connector, is a `<polyline>` through its points, and
-  names the elements its ends meet (`data-start`, `data-end`). An arrowhead is a marker
-  the page defines once for each colour a line draws one in.
+- **A line** whose route turns, a tie's connector, is a `<polyline>` through its points,
+  and names the elements its ends meet (`data-start`, `data-end`). An arrowhead is a
+  marker the page defines once for each colour a line draws one in. A line that holds
+  neither its ends nor its points is refused, and left out.
 - **A produced picture** is embedded as the variant that serves the combination drawn;
   where the record maps the combination to none, the picture is left out, and reported.
 - **Every element carries its trace id** (`data-id`), and a group the component that drew
@@ -50,6 +51,9 @@ from _lib.plugins.svg_declaration import DECLARATION
 
 #: A line's two ends, each of which may carry an arrowhead.
 ENDS = ("start", "end")
+
+#: Where a line's two ends lie, as a scene holds them.
+ENDS_OF_LINE = ("x1", "y1", "x2", "y2")
 
 NAME: str = DECLARATION["name"]
 VERSION: str = DECLARATION["version"]
@@ -302,16 +306,24 @@ class _Canvas:
         return f"<ellipse {attributes}/>"
 
     def _line(self, element: Mapping[str, Any]) -> str:
-        """A line, or a tie's connector: a `<polyline>` through its points where it has
-        corners, which names the elements its ends meet (`data-start`, `data-end`). An
-        arrowhead is a marker in the line's stroke colour."""
+        """A line, or a tie's connector: a `<polyline>` through its points where its route
+        turns, which names the elements its ends meet (`data-start`, `data-end`). An
+        arrowhead is a marker in the line's stroke colour. A line that holds neither its
+        ends nor its points is refused, as an element the renderer does not draw is."""
+        points = element.get("points")
+        if not points and any(end not in element for end in ENDS_OF_LINE):
+            self._lose(
+                element["id"],
+                seam.REFUSED,
+                f"the line holds neither its ends, `{' '.join(ENDS_OF_LINE)}`, nor its points",
+            )
+            return ""
         attached = element.get("attached") or {}
         stroke = self._stroke(element)
-        points = element.get("points")
         shape = (
             [("points", " ".join(f"{number(p['x'])},{number(p['y'])}" for p in points))]
             if points
-            else [(end, number(element[end])) for end in ("x1", "y1", "x2", "y2")]
+            else [(end, number(element[end])) for end in ENDS_OF_LINE]
         )
         attributes = _attributes(
             [

@@ -18,12 +18,15 @@ body: >
   the tie is left out and reported (`end-not-found`, `end-point`,
   `tie-page`), and the rest of its list is drawn. The ties that meet one side
   of an item spread evenly along it, and the frames of the ends are computed
-  in reference order, a loop through them refused. The scene's line holds
+  in reference order, a loop through them refused; a connector whose ends
+  cannot be computed is left out of the scene. The scene's line holds
   its arrowheads, and a connector its points and the elements its ends meet,
   so the seam's version rises to 3, and every plugin declares seam 3. No
   plugin's own version rose: a scene of seam 2 holds none of these, and the
-  SVG renderer, which draws a connector as a polyline and an arrowhead as a
-  marker, stays 1.0.1, and the CSS code writer 1.0.0. The check reads each
+  SVG renderer, which draws a connector whose route turns as a polyline and
+  an arrowhead as a marker, stays 1.0.1, and the CSS code writer 1.0.0. The
+  SVG renderer refuses a line that holds neither its ends nor its points, a
+  loss, where it used to stop with an error. The check reads each
   tie in the content (`tie-component`, `tie-shape`, `tie-path`, `tie-ends`),
   and, checking a library version alone, a list of ties whose default
   component takes no ends or declares an end field (`tie-default`,

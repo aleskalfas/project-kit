@@ -10,11 +10,13 @@ in-memory `Env` (`tests/visual_engine.py`):
   sources of its ends;
 - a tie into a list that a nested component draws, two levels deep, through a component
   that renames the list: the key path keeps the content file's keys;
-- an end at a picture's point, and a point the item does not expose;
+- an end at a picture's point, a point the item does not expose, and one whose place
+  cannot be read;
 - an end drawn twice, drawn nowhere, and on another page: each tie left out and reported,
   the rest of its list drawn;
 - three ends on one side of an item, spread evenly;
-- a loop through the frames of the ends, refused;
+- a loop through the frames of the ends, refused; a connector whose route cannot be
+  computed is left out, and its page drawn;
 - a top whose layout holds a list of ties beside a list whose component field and
   weights it declares;
 - what a component that takes ends, a connector and a list of ties may not declare;
@@ -27,19 +29,29 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
+from tests.in_process import load
 from tests.visual_engine import (
     FakeEnv,
     block,
     codes,
     draw,
+    env,
     frame,
     layout,
     square,
     top,
 )
 
+(svg,) = load("visual-communication", "plugins.svg")
+
 LISTED = {"type": "array", "items": {"type": "object"}}
 SHAPE = "component-shape"
+
+#: The colours the roles the tests draw with take, where a test renders its scene.
+BLACK = {"components": [0, 0, 0], "alpha": 1}
+COLOURS = {"surface": BLACK, "line": BLACK}
 
 
 def lab(**components: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -104,6 +116,17 @@ def finding(result: Any, code: str) -> Any:
     found = [f for f in result.findings if f.code == code]
     assert found, f"no finding {code} in {codes(result)}"
     return found[0]
+
+
+def rendered(result: Any) -> Any:
+    """The scene of `result` drawn by the SVG renderer: its pages and its losses."""
+    return svg.render(
+        result.scene.to_dict(),
+        key="default",
+        colours=COLOURS,
+        font_file=lambda family: pytest.fail(f"no text is drawn, and {family} is asked for"),
+        pictures={},
+    )
 
 
 # --- ties between items of the pattern's own lists ---------------------------------------------
@@ -313,8 +336,10 @@ def test_a_key_path_through_a_part_s_own_name_reaches_nothing() -> None:
 # --- an end at a picture's point ----------------------------------------------------------------
 
 
-def test_a_tie_ends_at_a_point_the_items_picture_exposes() -> None:
-    pictured = block(
+def pictured() -> dict[str, dict[str, Any]]:
+    """A top that lays out its `steps` and, 200 px across, its `pics`, each a 100 px square
+    that exposes its picture, and ties them with `lab/arrow`."""
+    picture = block(
         {"pic": {"image": {"produced": "art"}, "width": "=:width", "height": "=:height"}},
         fields={"art": {"type": "string"}},
         exposes=["pic"],
@@ -326,25 +351,33 @@ def test_a_tie_ends_at_a_point_the_items_picture_exposes() -> None:
         "links": {"repeat": "links", "draw": "lab/arrow"},
     }
     fields = {"steps": LISTED, "pics": LISTED, "links": LISTED}
-    found = lab(
+    return lab(
         top=tied(
             parts=parts,
             fields=fields,
             preferred={"width": "=@size.figure", "height": "=@space.1 * 25"},
         ),
-        pictured=pictured,
+        pictured=picture,
         card=card(),
         arrow=arrow(),
     )
-    content = {
+
+
+def to_a_point(point: str = "tip") -> dict[str, Any]:
+    """Content that ties the step `a` to the point `point` of the picture `p`."""
+    return {
         "steps": [{"id": "a"}],
         "pics": [{"id": "p", "art": "square"}],
         "links": [
-            {"id": "ap", "from": {"item": "steps[a]"}, "to": {"item": "pics[p]", "point": "tip"}}
+            {"id": "ap", "from": {"item": "steps[a]"}, "to": {"item": "pics[p]", "point": point}}
         ],
     }
 
-    result = draw(content, components=found, pictures={"square": square()})
+
+def test_a_tie_ends_at_a_point_the_items_picture_exposes() -> None:
+    found = pictured()
+
+    result = draw(to_a_point(), components=found, pictures={"square": square()})
 
     assert result.findings == []
     # The picture's tip lies at 75, 25 of its 100 px square, which lies at 200 across.
@@ -354,13 +387,33 @@ def test_a_tie_ends_at_a_point_the_items_picture_exposes() -> None:
         "point": "tip",
     }
 
-    content["links"][0]["to"]["point"] = "heel"
-    lost = draw(content, components=found, pictures={"square": square()})
+    lost = draw(to_a_point("heel"), components=found, pictures={"square": square()})
 
     assert lost.scene.find("top/links[ap]") is None
     point = finding(lost, "end-point")
     assert point.where == "links[ap].to.point"
     assert "`heel`" in point.message
+
+
+def test_a_point_that_cannot_be_read_leaves_the_connector_out_and_the_page_drawn() -> None:
+    # The picture's record places `tip` in its dark variant alone, and the scene reads the
+    # default's: the tie names a point the picture exposes, whose place cannot be read.
+    held = square()
+    dark = {"colour-scheme.dark": held.points["tip"]["colour-scheme.dark"]}
+    unread = env.PictureInfo(variants=held.variants, points={"tip": dark})
+
+    result = draw(to_a_point(), components=pictured(), pictures={"square": unread})
+
+    assert finding(result, "missing-exposed").message == (
+        "top/links[ap]: the picture of `pic` exposes no point `tip`"
+    )
+    assert result.scene.find("top/links[ap]/l") is None
+    assert result.scene.find("top/pics[p]/pic") is not None
+    # The page is drawn; the one loss is the picture, which the test gives no file.
+    drawn = rendered(result)
+    assert [loss.what for loss in drawn.losses] == ["top/pics[p]/pic"]
+    [page] = drawn.pages
+    assert "top/links[ap]/l" not in page.svg
 
 
 # --- an end not found -------------------------------------------------------------------------
@@ -460,6 +513,15 @@ def test_a_loop_through_the_frames_of_the_ends_is_refused() -> None:
 
     loop = finding(result, "loop")
     assert "top ties → top/links[ac] {start} → top/steps.x" in loop.message
+    # Its connector is left out, never drawn to a guessed place; the tie's group stays.
+    assert result.scene.find("top/links[ac]/l") is None
+    assert result.scene.find("top/links[ac]") is not None
+    # The page is drawn, the cards in it, and nothing is lost.
+    drawn = rendered(result)
+    assert drawn.losses == []
+    [page] = drawn.pages
+    assert 'data-id="top/steps[a]/b"' in page.svg
+    assert "top/links[ac]/l" not in page.svg
 
 
 def test_a_component_that_takes_ends_reads_its_ends_frames_by_start_and_end() -> None:

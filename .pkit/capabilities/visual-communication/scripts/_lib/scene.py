@@ -18,10 +18,12 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
 - **An image of a produced output** holds the output's variants by key and its exposed
   points, mapped into the image's frame.
 - **A line** holds its two ends, `x1 y1 x2 y2`, and an arrowhead at either, `marker-start`
-  and `marker-end`, where it draws one. A tie's connector also holds every point of its
-  route, `points`, where it has corners, and `attached`: for each end, the trace id of
-  the element it meets with the side it meets, or the image part and the point it ends
-  at (DEC-011 point 1). Its ends' sources are the end fields that name them.
+  and `marker-end`, where it draws one. A tie's connector also holds, where its route
+  turns, every point of it, `points`, its ends first and last, and `attached`: for each
+  end, the trace id of the element it meets with the side it meets, or the image part
+  and the point it ends at (DEC-011 point 1). Its ends' sources are the end fields that
+  name them. A connector whose route cannot be computed, such as one through a loop, is
+  left out, its finding recorded.
 - **Traces.** Each element's id is its trace: the path of instances, parts and items
   from the top, joined by `/`; an item is `<list>[<id>]`, or `<list>#<place>` (from 1)
   where it has no id. A page of a top whose layouts are its pages' forms is traced as an
@@ -204,8 +206,9 @@ class _Emitter:
             element.set("page", True)
             self.pages.append(instance.trace)
         for name, node in instance.nodes.items():
-            if node.present:
-                element.children.append(self.part(instance, name, node))
+            drawn = self.part(instance, name, node) if node.present else None
+            if drawn is not None:
+                element.children.append(drawn)
         # The pages of a top whose layouts are its pages' forms, each at the top's origin.
         for page in instance.pages:
             element.children.append(
@@ -235,8 +238,14 @@ class _Emitter:
             value = self.ctx.attempt(lambda k=key: instance.get("part", node.part.name, k), 0.0)
             element.set(key, length(value), self._source(instance, node, key))
 
-    def part(self, instance: Instance, name: str, node: Node) -> Element:
+    def part(self, instance: Instance, name: str, node: Node) -> Element | None:
+        """The element a part draws. None for a tie's connector whose route cannot be
+        computed, such as one through a loop: it is left out, so no line is drawn to a
+        guessed place, and its finding was recorded where its ends were computed."""
         kind = node.part.kind
+        if kind == "line" and "connect" in node.part.spec:
+            if not self.ctx.attempt(lambda: instance.get("route", name), []):
+                return None
         if node.child is not None:
             attempt = self.ctx.attempt
             place = tuple(
@@ -305,12 +314,11 @@ class _Emitter:
 
     def _connector(self, element: Element, instance: Instance, node: Node) -> None:
         """A tie's connector (DEC-011 point 1): its ends, each from the end field that names
-        it, the points of its route where it has corners, and which element each end meets,
-        and where (DEC-005 points 2 and 5)."""
+        it, every point of its route where it turns, and which element each end meets,
+        and where (DEC-005 points 2 and 5). Its route is computed: `part` leaves out a
+        connector whose route is not."""
         name = node.part.name
-        route = self.ctx.attempt(lambda: instance.get("route", name), [])
-        if not route:
-            return
+        route = instance.get("route", name)
         sources = {which: instance.ends[which].source for which in ENDS}
         for end, (x, y) in (("1", route[0]), ("2", route[-1])):
             which = "start" if end == "1" else "end"

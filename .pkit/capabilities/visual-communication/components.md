@@ -415,7 +415,7 @@ A *tie* is an item that its pattern draws as a connector between two other items
 - **With corners,** the connector leaves and meets each end square to its side, and turns twice, halfway between them. Where the two ends lie in one line, it is straight.
 - **Found once.** An end is the element drawn for its item, wherever a component below the pattern draws it. It is found where that item is drawn exactly once, on the tie's page.
 - **Left out.** A tie whose end is not found, or that does not lie on one page with both its ends, is left out and reported. The rest of its list is drawn.
-- **Computed like any value.** The frames of the ends are computed in the order the references give, and a loop through them is refused ([How the engine computes a scene](#how-the-engine-computes-a-scene)).
+- **Computed like any value.** The frames of the ends are computed in the order the references give, and a loop through them is refused ([How the engine computes a scene](#how-the-engine-computes-a-scene)). Where they cannot be computed, as in a loop, the scene holds no connector for the tie, and the finding says why.
 - **Items that overlap.** Two ends whose items overlap in the drawing are drawn as they lie, and are no finding. The connector routes around nothing, so the drawing shows the overlap as it is.
 
 A pattern that ties its steps, and an arrow that draws each tie:
@@ -461,7 +461,7 @@ The *scene* is every element's final frame, values and source, for one language.
 - **Built from the content.** The engine places the top component with the content, then builds each part, item and placed component below it.
 - **Fonts first.** Before it computes any place or size, a font family with no file, or a character no family measures, refuses the scene ([Text](#text)).
 - **Value by value.** Each size, place, value, list arrangement and text's lines is computed on first use, in the order the references give, as a spreadsheet computes its cells. So a parent's width and a child's measured height form no loop.
-- **A loop** is refused, naming every element in it. Each problem is a finding, and a value that cannot be computed is zero.
+- **A loop** is refused, naming every element in it. Each problem is a finding, and a value that cannot be computed is zero. A tie's connector whose ends cannot be computed is left out instead ([Ties and connectors](#ties-and-connectors)).
 
 ### What a scene holds
 
@@ -469,7 +469,7 @@ The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, `sea
 
 A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. A line adds `marker-start` and `marker-end` where it draws an arrowhead there. A tie's connector adds these:
 
-- **`points`:** every point of its route, where it turns. Its ends are its first and last points.
+- **`points`:** where its route turns, every point of it, its ends first and last. A connector whose route does not turn holds no `points`, and keeps its ends as `x1 y1 x2 y2`.
 - **`attached`:** for each end, `start` and `end`, the trace id of the element it meets, with the `side` it meets, or the image part with the `point` it ends at.
 - **Its ends' sources:** the end fields that name them, such as `content:body.links[plan-build].from`.
 

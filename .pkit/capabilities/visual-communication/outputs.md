@@ -112,7 +112,7 @@ An entry matches a loss by its `plugin` and its `what` alone. The command that r
 
 The `svg` renderer draws a scene as SVG files: one for each page, each language and each combination of modes the piece names. The previews and the exports are its files.
 
-- **Elements.** A group is drawn as `<g>`, a box as `<rect>`, an ellipse as `<ellipse>`, a line as `<line>`, a text as `<text>` and an image as `<image>`. A tie's connector with corners is drawn as `<polyline>`, through each of its points. Every element carries its trace id as `data-id`. A connector names the elements its ends meet, `data-start` and `data-end`. A group a component drew names it as `data-component`, and its library's version, if any, as `data-version`, the page's own group included.
+- **Elements.** A group is drawn as `<g>`, a box as `<rect>`, an ellipse as `<ellipse>`, a line as `<line>`, a text as `<text>` and an image as `<image>`. A tie's connector whose route turns is drawn as `<polyline>`, through each of its points. Every element carries its trace id as `data-id`. A connector names the elements its ends meet, `data-start` and `data-end`. A group a component drew names it as `data-component`, and its library's version, if any, as `data-version`, the page's own group included.
 - **The file.** The `<svg>` element names the piece, the page's trace id, the language, the combination's key, and the renderer with its version: `data-piece`, `data-page`, `data-language`, `data-key`, `data-renderer`.
 - **Colours.** A colour stays a role in the scene. The renderer takes its value from the brand's resolved values in the combination it draws, as `#rrggbb`, with a `fill-opacity` or `stroke-opacity` where the colour is translucent.
 - **Shapes and text.** A box's stroke lies inside its frame. An arrowhead is a `<marker>` that the page's `<defs>` holds once for each colour it is drawn in. It is a triangle five strokes long, its tip at the line's end, in the line's stroke. Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. The `<text>` takes the font and the paint of the text's first run. Each run that looks otherwise, in its family, size, weight or paint, is drawn in a `<tspan>` of its own that names all four. So a text of one run is drawn as it was before runs.
@@ -126,10 +126,12 @@ A *preview* is a render for a person to look at, which `pkit visual render` draw
 
 ### What the SVG renderer loses
 
-Before it draws, the capability compares each scene with the renderer's declaration. An element of a type the declaration does not name is `refused`, and left out of the file. A property the declaration does not name for its type is `left-out`. The declaration names every primitive and property a scene of format 1 holds, so this finds no loss in format 1. While it draws, the renderer reports two losses of its own, both `left-out`:
+Before it draws, the capability compares each scene with the renderer's declaration. An element of a type the declaration does not name is `refused`, and left out of the file. A property the declaration does not name for its type is `left-out`. The declaration names every primitive and property a scene of format 1 holds, so this finds no loss in format 1. While it draws, the renderer reports three losses of its own. Two are `left-out`:
 
 - **a fill or a stroke** whose role has no colour under the brand in the combination drawn, a run's fill included. A fill is then `none`. A library's role the brand gives no value is drawn at its default ([`roles.yaml`](files.md#rolesyaml)), so it is lost only where its chain of defaults reaches no colour.
 - **an image** whose produced picture has no variant for the combination drawn.
+
+The third is `refused`: a line that holds neither its ends nor its points, which is left out of the file. Every line of a scene the engine computes holds its ends ([What a scene holds](components.md#what-a-scene-holds)).
 
 ## Exports
 
