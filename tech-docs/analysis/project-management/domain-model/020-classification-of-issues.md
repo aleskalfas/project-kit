@@ -82,7 +82,7 @@ A classification axis is one dimension along which every issue is classified. Th
 **Attributes:**
 
 - its values: a fixed set for `type` and `priority`, and the project's own for `workstream` (DEC-012)
-- where it is carried: where the substrate map puts it, such as a board's field, and a label with no map ([DEC-036](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md))
+- where it is carried: where the substrate map puts it, such as a board's field, and on a label where there is no map ([DEC-036](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md))
 
 **Relations:**
 
