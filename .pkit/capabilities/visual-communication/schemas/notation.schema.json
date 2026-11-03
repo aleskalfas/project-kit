@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "notation.schema.json",
+  "title": "A notation's concepts — visual-communication capability",
+  "description": "Formal shape of a notation's `notation.yaml` (DEC-001 point 5, DEC-004 point 10): the concepts of one subject, each mapped to a colour family the foundations declare, never to a value, so each brand colours a concept its own way. Content names a concept read with the notation's name, `<notation>/<concept>`. Format 1 maps a concept to its colour family alone. Document-shaped schema. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "concepts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:notation`.",
+      "const": "visual-communication:notation"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "concepts": {
+      "description": "Each concept of the notation's subject, by its name, mapped to the colour family that paints it.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "colour"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "colour": {
+            "description": "A colour family the foundations declare, by its name; never a value.",
+            "$ref": "defs.schema.json#/$defs/name"
+          }
+        }
+      },
+      "minProperties": 1
+    }
+  }
+}

@@ -111,6 +111,11 @@ def test_a_run_writes_the_code_and_its_record_beside_it(root: Path) -> None:
     assert "  time: '2026-11-02T10:30:00Z'\n" in text
 
 
+#: The tokens the CSS writer writes of the test brand: the shared roles but the typographies,
+#: the colours of the foundations' six colour families among them.
+WRITTEN = 32
+
+
 def test_the_record_fingerprints_the_declaration_each_value_written_and_the_writer(
     root: Path,
 ) -> None:
@@ -122,7 +127,7 @@ def test_the_record_fingerprints_the_declaration_each_value_written_and_the_writ
     read = {(i["value"], i["key"]) for i in identities if "value" in i}
     tokens_written = {path for path, _ in read}
     assert not tokens_written & set(TYPOGRAPHY)
-    assert len(tokens_written) == 14
+    assert len(tokens_written) == WRITTEN
     assert read == {
         (path, key)
         for path in tokens_written
@@ -133,7 +138,7 @@ def test_the_record_fingerprints_the_declaration_each_value_written_and_the_writ
             "colour-scheme.dark+contrast.high",
         )
     }
-    assert len(entries) == 2 + 14 * 4
+    assert len(entries) == 2 + WRITTEN * 4
 
 
 def test_a_prefix_opens_every_name(root: Path) -> None:

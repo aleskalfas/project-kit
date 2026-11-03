@@ -19,6 +19,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/notations.py
         - .pkit/capabilities/visual-communication/scripts/_lib/values.py
         - .pkit/capabilities/visual-communication/scripts/_lib/env.py
         - .pkit/capabilities/visual-communication/scripts/_lib/text.py
@@ -51,6 +52,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-library-folder
         - .pkit/capabilities/visual-communication/files.md#the-location
         - .pkit/capabilities/visual-communication/files.md#the-lock
+        - .pkit/capabilities/visual-communication/files.md#notations
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/outputs.md#accepting-a-loss
         - .pkit/capabilities/visual-communication/outputs.md#produced-pictures
@@ -109,11 +111,11 @@ A few findings that lie in a library folder name no version, and always fail: `l
 
 ## What each run judges
 
-Without a piece named, each run judges, in order: the configuration, the location, the binding of each file of the capability's format in the location, the library folder and its list, then each piece, then each declaration of written code. For each piece it judges, in order, the ids of its content, its lock, its brand, the names of the libraries its lock names, its content against the components it fills, its produced pictures and its scenes.
+Without a piece named, each run judges, in order: the configuration, the location, the binding of each file of the capability's format in the location, the library folder and its list, then each piece, then each declaration of written code. For each piece it judges, in order, the ids of its content, its lock, its brand, the names of the libraries its lock names, its notations, its content against the components it fills, its produced pictures and its scenes.
 
 `pkit visual check <piece>` judges that piece alone: the binding of its own files, and all of the above for it. It judges neither the library folder, nor its list, nor written code.
 
-Some findings stop a piece. A piece that cannot be read is judged no further. A lock with a finding stops it before its brand. A brand that cannot be read, or a mode the brand lacks, stops it before its content, its produced pictures and its scenes. An error the check does not expect stops the piece where it arises (`unexpected-error`), and the check goes on to the next piece. The summary counts such a piece as not checked.
+Some findings stop a piece. A piece that cannot be read is judged no further. A lock with a finding stops it before its brand. A brand that cannot be read, or a mode the brand lacks, stops it before its notations, its content, its produced pictures and its scenes. A notation's findings stop nothing. An error the check does not expect stops the piece where it arises (`unexpected-error`), and the check goes on to the next piece. The summary counts such a piece as not checked.
 
 Where the configuration records no location and the default folder holds no visual work, the summary says so, and only the configuration is judged. Where the configuration records a location that is refused or missing, or an empty `location:`, the check reports `location`, and judges nothing but the configuration.
 
@@ -187,6 +189,16 @@ The check reads the brand each piece locks, once for each brand version, against
 | `pair-contrast` | A declared pair is below the contrast its level needs, in some combination of the brand's axes (DEC-004 points 8 and 11). | fails |
 | `pair-translucent` | The colour under a declared pair is translucent in some combination, so its contrast depends on what lies under it. | asks for attention |
 
+### Notations
+
+The check reads each notation a piece names, once for each notation version and foundations version, against the colour families of the foundations the piece locks ([notations](files.md#notations)). Each of these findings names the version it lies in, so it asks the notation's owner for attention in a released one, and fails otherwise. None stops the piece, and content that names a concept the notation cannot read takes no finding of its own.
+
+| Label | What it means | Where it points |
+|---|---|---|
+| `notation-kind` | A library the piece names under `notations` is not of kind `notation`. | `<version>/library.yaml#kind` |
+| `notation-unreadable` | The notation's `library.yaml` or `notation.yaml` cannot be read, or is missing, or its `concepts` is not a mapping. The check leaves it out where a `file-unreadable` or `binding` finding names the file. | the file, or `<version>/notation.yaml#concepts` |
+| `concept-shape` | A concept's name is not a name, or the concept does not map to `{colour: <family>}` with a family the foundations declare: it maps to a value, to a role, or to a family they do not declare. | `<version>/notation.yaml#concepts.<concept>` |
+
 ### Scenes
 
 Computing a piece's scenes, one for each language, finds these (DEC-005 point 14). `pkit visual render` keeps them in the findings record, and the check reads them from it or computes them ([the findings record](#the-findings-record)). Each points at the file a person edits to mend it:
@@ -212,7 +224,8 @@ Each fails, unless its row says otherwise.
 | `no-size` | A component asks for no size and is given none, or a list shares its size equally and is given none. | the component |
 | `division-by-zero` | A formula divides by zero. | the component |
 | `missing-exposed` | A formula reads an exposed part, point or item that is missing. | the component |
-| `no-colour` | A part paints `:colour.<member>`, and the instance has no colour family, one the foundations do not declare, or one with no such member ([values, states and colour](components.md#values-states-and-colour)). | the component, `#<trace>` |
+| `no-colour` | A part paints `:colour.<member>`, and the instance has no colour family, from its concept or by default, or has one the foundations do not declare, or one with no such member ([values, states and colour](components.md#values-states-and-colour)). | the component, `#<trace>` |
+| `unknown-concept` | The content names a concept that is not `<notation>/<concept>`, that comes from a notation the piece does not name under `notations`, or that its notation does not hold ([values, states and colour](components.md#values-states-and-colour)). | the content, or the component whose part gave it, `#<trace>` |
 | `unknown-role`, `role-type` | A text's style role has no value, or is no typography. | the component, `#<trace>` |
 | `gets-less` | A component gets less width or height than it asks for ([what an element asks for](components.md#what-an-element-asks-for-and-what-it-gets)). | the content, `#<trace>` |
 | `text-overflow` | A word is wider than its text's width. Text never shrinks to fit ([breaking lines](components.md#breaking-lines)). | the content, `#<trace>` |
@@ -275,7 +288,7 @@ The check reports no finding on exports. It checks the binding of a piece's `exp
 
 `findings.yaml` in the piece's folder keeps what computing the piece's scenes found (DEC-005 point 13). `pkit visual render` writes it at each render, replacing the one before. A refused render writes none. Commit it, so the check reads it on a fresh clone.
 
-It holds the scene findings, the losses among them. The findings on files, libraries, locks, brands, content, produced pictures and written code are not in it: the check works them out at every run. Its fields:
+It holds the scene findings, the losses among them. The findings on files, libraries, locks, brands, notations, content, produced pictures and written code are not in it: the check works them out at every run. Its fields:
 
 - `pkit_schema: visual-communication:findings` and `schema_version: 1`.
 - `key`: a fingerprint of every file the scenes were computed from ([input sets](#the-input-set-of-each-kind)).

@@ -45,7 +45,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any
 
-from _lib import fingerprint, records
+from _lib import fingerprint, notations, records
 from _lib.files import (
     FORMAT,
     FileError,
@@ -81,7 +81,7 @@ LIST_HEADER = (
 )
 
 #: The kinds of library format 1 reads.
-KINDS = ("components", "brand")
+KINDS = ("components", "brand", "notation")
 
 _SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 
@@ -223,6 +223,8 @@ def kind_within(within: Sequence[str]) -> str | None:
         return "library"
     if parts == ("roles.yaml",):
         return "roles"
+    if parts == (notations.FILE,):
+        return "notation"
     if len(parts) == 2 and parts[0] == "components" and parts[1].endswith(".yaml"):
         return "component"
     return None

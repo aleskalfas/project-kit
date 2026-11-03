@@ -26,6 +26,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md
         - .pkit/capabilities/visual-communication/files.md#a-piece
         - .pkit/capabilities/visual-communication/files.md#brands
+        - .pkit/capabilities/visual-communication/files.md#notations
         - .pkit/capabilities/visual-communication/files.md#the-binding
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-foundations
@@ -55,16 +56,16 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 
 - **The commands** `pkit visual …`, also reachable as `pkit visual-communication …`. Each is described under [Commands](#commands).
 - **The file formats,** format 1: a schema for each kind of file a piece, a library or a command writes, under `schemas/`. Each file names its schema in its first lines ([The binding](files.md#the-binding)), so `pkit validate` checks its shape.
-- **The foundations library,** under `libraries/foundations/`: a few shared roles, two axes and the `figure` component ([The foundations](files.md#the-foundations)). Its version is not released yet, so it may change in any release of the capability.
+- **The foundations library,** under `libraries/foundations/`: a few shared roles, two axes, six colour families and the `figure` component ([The foundations](files.md#the-foundations)). Its version is not released yet, so it may change in any release of the capability.
 - **Two plugins:** the SVG renderer, which draws the previews and the exports, and the CSS code writer, which writes a brand out as CSS variables ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [Written code](outputs.md#written-code)).
 - **The check,** the `visual-communication:check` member of `pkit validate`.
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
 
-No brand ships, so a project writes its own ([Brands](files.md#brands)). No producer ships either ([Plugins](outputs.md#plugins)), so `pkit visual produce` has none to run yet, and a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)).
+No brand, notation or producer ships ([Brands](files.md#brands), [Notations](files.md#notations), [Plugins](outputs.md#plugins)). A project writes its own brand and notations, and `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)).
 
 The pages beside this README are the reference:
 
-- [The files of the visual work](files.md): the working folder, the piece, its content, libraries, brands and keys.
+- [The files of the visual work](files.md): the working folder, the piece, its content, libraries, brands, notations and keys.
 - [Components](components.md): a component's file, formulas, layouts and how text is measured.
 - [What is made from a piece](outputs.md): renderers, exports, produced pictures and written code.
 - [What the check reports](checks.md): every finding, its severity, the findings record and the fingerprint.

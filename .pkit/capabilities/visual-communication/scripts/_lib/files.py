@@ -37,6 +37,7 @@ KINDS = (
     "library",
     "component",
     "roles",
+    "notation",
     "libraries",
     "produced-record",
     "code-record",
