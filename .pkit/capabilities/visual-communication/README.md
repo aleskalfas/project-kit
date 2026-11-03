@@ -23,6 +23,7 @@ pkit:
         - .pkit/capabilities/visual-communication/checks.md
         - .pkit/capabilities/visual-communication/checks.md#the-findings-record
         - .pkit/capabilities/visual-communication/checks.md#when-the-check-reads-it
+        - .pkit/capabilities/visual-communication/checks.md#what-each-run-judges
         - .pkit/capabilities/visual-communication/components.md
         - .pkit/capabilities/visual-communication/files.md
         - .pkit/capabilities/visual-communication/files.md#a-piece
@@ -139,7 +140,7 @@ Draws a piece in each of its languages and each combination of modes it names.
 
 Checks every piece of the location, or the one named, without drawing anything.
 
-- **Reads** every file of the capability's format in the location, the library folder and its list, each piece's lock and brand, its content against the components it fills, and its scenes. A piece's scenes are read from its `findings.yaml` while the record's key still verifies; otherwise they are computed now ([When the check reads it](checks.md#when-the-check-reads-it)).
+- **Reads** every file of the capability's format in the location, the library folder and its list, the newest version of each major of each library checked alone, each piece's lock and the libraries it locks, its content against the components it fills, and its scenes. With a piece named, it checks no version alone but to tell where a finding under the piece's lock lies ([What each run judges](checks.md#what-each-run-judges)). A piece's scenes are read from its `findings.yaml` while the record's key still verifies; otherwise they are computed now ([When the check reads it](checks.md#when-the-check-reads-it)).
 - **Prints** a summary, then each finding with its severity, where it points and what it says. `--json` prints the findings document `pkit validate` reads.
 - **Writes** nothing, runs no program of the project's, and needs no network.
 - **Exits** 1 when a finding fails; 0 otherwise. With `--json` it always exits 0, as `pkit validate` requires.

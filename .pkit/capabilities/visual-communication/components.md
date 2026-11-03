@@ -24,10 +24,11 @@ pkit:
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/picture.yaml
         - tests/visual_engine.py
         - tests/test_visual_communication_scene.py
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-007"]
+      record: ["visual-communication:DEC-001", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-007", "visual-communication:DEC-008"]
       artefact:
         - .pkit/capabilities/visual-communication/files.md
         - .pkit/capabilities/visual-communication/files.md#the-foundations
+        - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#reserved-words
         - .pkit/capabilities/visual-communication/files.md#content-files
 ---
@@ -221,7 +222,7 @@ A *path* reads one measure of a frame. A *frame* is an element's place and size.
 - **A step into a list** names the `repeat` part, then the item: `<list>:first`, `<list>:last`, or `<list>[<id>]` by the item's id. `steps:first.x` reads the first item's place. A step below a list names an item first. Without one, `steps.height` reads the whole list's frame.
 - **What a step may not reach.** Nothing lies below a `box`, an `ellipse`, a `text` or a `line`. Below an `image` lies only a point of its picture, and nothing lies below a point.
 - **`{<option>}`** starts a path with what an option gives: its item, as `<list>[<id>]`, or its item's point. Only the measure follows a point. `tests/callout` places its label beside the point: `x: "={at}.x + @space.1"`.
-- **A role** reads its value in the brand the piece locks. A dimension in `px` is a length, and a number is a number with no unit. Format 1 measures in `px` alone.
+- **A role,** shared or a library's own, reads its value in the brand the piece locks: the brand's value, or, for a library's role the brand gives none, its default ([`roles.yaml`](files.md#rolesyaml)). A dimension in `px` is a length, and a number is a number with no unit. Format 1 measures in `px` alone.
 
 ### Dimensions
 
@@ -238,7 +239,7 @@ A formula is refused with a message that names it and says why, such as "the for
 - **It cannot be read:** it does not start with `=`, is empty, ends too early, or holds a sign or a term where none belongs. Or it breaks a rule of the grammar: a binary minus without its spaces, an engine name that does not exist, `min` or `max` with fewer than two arguments, `round` with other than one, or a path that ends in no measure.
 - **It reads what it may not:** a value, a part or an option the component lacks, an option that names an item of a list over which not exactly one part repeats, or below where a step may reach.
 - **Its dimensions disagree,** or it gives another dimension than its key needs.
-- **It reads a role** the brand gives no value, a length in a unit other than `px`, or a role that is neither a length nor a number.
+- **It reads a role** that has no value under the brand, a length in a unit other than `px`, or a role that is neither a length nor a number. A role has none where no library the piece locks declares it, or where it is a library's role that neither the brand nor its chain of defaults gives a value ([`roles.yaml`](files.md#rolesyaml)).
 
 It finds these when it computes the scene: a division by zero, `:index` or `:count` in a component that is no item, a path to an exposed part, a point or an item that is missing, and a loop. A value that cannot be computed is zero. The check reports each problem as a finding (*checks*).
 
