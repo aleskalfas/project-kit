@@ -1,7 +1,7 @@
 """The SVG renderer (visual-communication DEC-005 points 4, 5, 9 and 10): what it declares,
 what it draws, and what it reports it lost.
 
-The reference outputs below are pinned to the renderer's version, 1.0.0. A change that
+The reference outputs below are pinned to the renderer's version, 1.0.1. A change that
 gives another output for the same scene and values raises the version, and changes them
 with it (DEC-005 point 9). The font a text embeds is pinned by the characters its subset
 holds, not by its bytes, which are fontTools'.
@@ -14,6 +14,7 @@ import io
 import re
 from pathlib import Path
 from typing import Any
+from xml.etree import ElementTree
 
 from fontTools.ttLib import TTFont
 
@@ -74,7 +75,7 @@ def draw(drawn: dict[str, Any], *, key: str = "default", pictures: Any = None) -
 HEAD = (
     '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" '
     'data-piece="flow" data-page="figure" data-language="en" data-key="default" '
-    'data-renderer="svg 1.0.0">'
+    'data-renderer="svg 1.0.1">'
 )
 
 SHAPES = scene(
@@ -120,7 +121,7 @@ SHAPES = scene(
 )
 
 
-def test_shapes_are_drawn_as_pinned_for_version_1_0_0() -> None:
+def test_shapes_are_drawn_as_pinned_for_version_1_0_1() -> None:
     drawn = draw(SHAPES)
     assert drawn.losses == []
     [page] = drawn.pages
@@ -171,11 +172,12 @@ def test_text_is_drawn_as_its_measured_lines_with_its_font_embedded() -> None:
     shown = re.sub(r"base64,[A-Za-z0-9+/=]+\)", "base64,…)", page.svg)
     assert shown == (
         HEAD + "<defs><style>"
-        "@font-face{font-family:'Source Sans Pro';font-weight:600;"
+        '@font-face{font-family:"Source Sans Pro";font-weight:600;'
         "src:url(data:font/otf;base64,…) format('opentype');}"
         "text{white-space:pre}</style></defs>"
         '<g data-id="figure" data-component="foundations/figure" data-version="1.0.0">'
-        '<text data-id="figure/title" xml:space="preserve" font-family="\'Source Sans Pro\'" '
+        '<text data-id="figure/title" xml:space="preserve" '
+        'font-family="&quot;Source Sans Pro&quot;" '
         'font-size="16" font-weight="600" text-anchor="middle" fill="#000000">'
         '<tspan x="60" y="20.2">Plan &amp; &lt;do&gt;</tspan><tspan x="60" y="40.2">it</tspan>'
         "</text></g></svg>\n"
@@ -282,4 +284,96 @@ def test_it_draws_every_primitive_it_declares_and_declares_every_one_it_draws() 
 def test_it_is_shipped_through_the_seam_as_plain_data() -> None:
     assert seam.declaration("svg", seam.RENDERER) == svg_declaration.DECLARATION
     assert svg.NAME == "svg"
-    assert svg.VERSION == "1.0.0"
+    assert svg.VERSION == "1.0.1"
+
+
+# --- a family's name ----------------------------------------------------------------------------
+
+#: Family names a brand may give, each holding what could end the style element, break the
+#: CSS around it, or leave the file malformed XML.
+HOSTILE = [
+    "</style><script>alert(1)</script>",
+    "Joe's Sans",
+    'The "Sans"',
+    "Back\\slash",
+    "Line\nbreak",
+    "Not￿a character",
+]
+
+SVG = "{http://www.w3.org/2000/svg}"
+
+#: A CSS string between double quotes, and an escape inside one.
+CSS_STRING = re.compile(r'"(?:[^"\\]|\\.)*"', re.DOTALL)
+CSS_ESCAPE = re.compile(r"\\([0-9a-fA-F]{1,6})[ \t\n]?|\\(.)", re.DOTALL)
+
+
+def css_strings(text: str) -> list[str]:
+    """Each CSS string in `text`, read back to the code points its escapes name."""
+    return [
+        CSS_ESCAPE.sub(lambda m: chr(int(m[1], 16)) if m[1] else m[2], quoted[1:-1])
+        for quoted in CSS_STRING.findall(text)
+    ]
+
+
+def named(families: list[str]) -> dict[str, Any]:
+    """A text drawn in `families`, each of them embedded."""
+    return element(
+        "text",
+        "figure/named",
+        x=0,
+        y=0,
+        width=100,
+        height=20,
+        fill="ink",
+        style="type.body",
+        text="Aa",
+        lines=[{"text": "Aa", "width": 20}],
+        fonts=[{"family": family, "file": FONT.name, "sha256": "pinned"} for family in families],
+        baseline=15,
+        measured="file",
+        **{"font-family": families, "font-size": 16, "line-height": 20, "measured-height": 20},
+    )
+
+
+def test_a_familys_name_is_written_as_a_css_string_as_pinned() -> None:
+    assert svg.css_string('A "b" \\ <&>\x07\n￿\ud800\x85 é') == (
+        '"A \\"b\\" \\\\ \\3c \\26 \\3e \\7 \\a \\ffff \\d800 \\85  é"'
+    )
+
+
+def test_a_familys_name_reaches_the_file_whole_and_as_nothing_else() -> None:
+    drawn = draw(scene(named(HOSTILE)))
+    assert drawn.losses == []
+    root = ElementTree.fromstring(drawn.pages[0].svg)
+    assert {node.tag.removeprefix(SVG) for node in root.iter()} == {
+        "svg",
+        "defs",
+        "style",
+        "g",
+        "text",
+        "tspan",
+    }
+    [style] = root.iter(f"{SVG}style")
+    assert style.text is not None and not set(style.text) & set("<>&")
+    assert sorted(css_strings(style.text)) == sorted(HOSTILE)
+    rest = re.sub(r"base64,[A-Za-z0-9+/=]+\)", "base64,…)", CSS_STRING.sub("…", style.text))
+    face = (
+        "@font-face{font-family:…;font-weight:400;"
+        "src:url(data:font/otf;base64,…) format('opentype');}"
+    )
+    assert rest == face * len(HOSTILE) + "text{white-space:pre}"
+    [text] = root.iter(f"{SVG}text")
+    listed = text.get("font-family", "")
+    assert css_strings(listed) == HOSTILE
+    assert CSS_STRING.sub("…", listed) == ", ".join(["…"] * len(HOSTILE))
+
+
+def test_every_name_a_brand_may_give_draws_as_itself() -> None:
+    every = "".join(chr(code) for code in range(0x10000)) + "\U0001f600\U0010ffff"
+    drawn = draw(scene(named([every])))
+    root = ElementTree.fromstring(drawn.pages[0].svg)
+    [style] = root.iter(f"{SVG}style")
+    [text] = root.iter(f"{SVG}text")
+    assert style.text is not None
+    assert css_strings(style.text) == [every]
+    assert css_strings(text.get("font-family", "")) == [every]
