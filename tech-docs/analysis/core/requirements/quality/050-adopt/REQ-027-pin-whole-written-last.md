@@ -14,11 +14,13 @@ pkit:
     anchors:
       path:
         - src/project_kit/router.py
+        - src/project_kit/upgrade.py
         - tests/test_router.py
         - tests/test_upgrade.py
         - tests/test_pin_cli.py
       record:
         - ADR-049#1
+        - ADR-049#4
         - ADR-064#1
       artefact:
         - ACT-operator

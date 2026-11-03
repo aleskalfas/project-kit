@@ -69,7 +69,7 @@ classDiagram
   class Role["Role"]
   Role : qualified name
   class DataPoint["Data point"]
-  DataPoint : combination policy
+  DataPoint : how its fillers combine
   class Process["Process"]
   Process : states
   Process : moves and their conditions
@@ -261,7 +261,7 @@ A data point is a declared interface through which the [capability](../glossary.
 **Attributes:**
 
 - its address, its schema version and the schema of its data (COR-052 points [1](../../../../.pkit/decisions/core/COR-052-slots.md#1-the-slot-belongs-to-its-consumer) and [5](../../../../.pkit/decisions/core/COR-052-slots.md#5-schemas-and-versions))
-- a combination policy, one of these ([COR-052 point 3](../../../../.pkit/decisions/core/COR-052-slots.md#3-combination-policy-declared-per-slot)):
+- how its fillers combine, one of these ([COR-052 point 3](../../../../.pkit/decisions/core/COR-052-slots.md#3-combination-policy-declared-per-slot)):
   - one filler alone fills it
   - entries merge by id
   - entries merge and any collision fails

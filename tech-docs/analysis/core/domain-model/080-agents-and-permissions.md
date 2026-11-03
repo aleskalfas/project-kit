@@ -8,6 +8,7 @@ explains:
   - TERM-placeholder
   - TERM-permission-model
   - TERM-privilege
+  - TERM-permission-catalog
   - TERM-grant
   - TERM-grant-subject
   - TERM-guardrail
@@ -46,6 +47,7 @@ pkit:
         - TERM-placeholder
         - TERM-permission-model
         - TERM-privilege
+        - TERM-permission-catalog
         - TERM-grant
         - TERM-grant-subject
         - TERM-guardrail
@@ -75,8 +77,9 @@ An [overlay](../glossary.md#term-overlay--overlay) gives agent definitions the p
 ```mermaid
 classDiagram
   accTitle: Agents and permissions
-  accDescr: The permission model holds the privileges, the grants and the guardrails. A grant allows or denies one or more privileges to one grant subject, within a scope where it names one. A guardrail is a privilege denied to every grant subject. A profile holds grants and sets a posture, and grants the privilege of the agent workspace. An adapter has its harness run the permission hook, which has the permission code decide each tool call from the model. An adapter writes native denies into its harness's settings, which hold each guardrail, and ships an enforcement declaration for the model. The permission hook logs each call it defers while a diagnostic session is on. The harness runs shell commands in the sandbox, and records the session anchor, which the cross-repository guard compares with. An adapter reads the overlay as it deploys an agent definition. The overlay holds overlay categories, and each placeholder of an agent definition names one.
+  accDescr: The permission model holds the permission catalog, the grants and the guardrails. The permission catalog names the privileges, and a capability may add a fragment to it. A grant allows or denies one or more privileges to one grant subject, within a scope where it names one. A guardrail is a privilege denied to every grant subject. A profile holds grants and sets a posture, and grants the privilege of the agent workspace. An adapter has its harness run the permission hook, which has the permission code decide each tool call from the model. The permission code reads the permission catalog. An adapter writes native denies into its harness's settings, which hold each guardrail, and ships an enforcement declaration for the model. The permission hook logs each call it defers while a diagnostic session is on. The harness runs shell commands in the sandbox, and records the session anchor, which the cross-repository guard compares with. An adapter reads the overlay as it deploys an agent definition. The overlay holds overlay categories, and each placeholder of an agent definition names one.
   class PermissionModel["Permission model"]
+  class PermissionCatalog["Permission catalog"]
   class Privilege {
     id
     recognition
@@ -109,7 +112,10 @@ classDiagram
   class AgentDefinition["Agent definition"]
   class Adapter
   class Harness
-  PermissionModel o-- Privilege : holds
+  class Capability
+  PermissionModel *-- PermissionCatalog : holds
+  PermissionCatalog o-- Privilege : names
+  Capability ..> PermissionCatalog : may add a fragment to
   PermissionModel o-- Grant : holds
   Grant "*" --> "1..*" Privilege : allows or denies
   Grant "*" --> "1" GrantSubject : is for
@@ -120,6 +126,7 @@ classDiagram
   Adapter "1" --> "0..1" PermissionHook : has its harness run
   PermissionHook --> PermissionCode : has decide each call
   PermissionCode ..> PermissionModel : decides from
+  PermissionCode ..> PermissionCatalog : reads
   Adapter --> NativeDeny : writes into its harness's settings
   NativeDeny ..> Guardrail : holds
   Adapter "1" --> "1" EnforcementDeclaration : ships
@@ -196,7 +203,7 @@ An overlay category is a named kind of path, such as `code-paths` or `adr-record
 
 **Always true:**
 
-- A command may fill a missing overlay category of documents. It derives the location from the internal [documentation root](../glossary.md#term-documentation-root--documentation-root), and records it in the overlay (COR-013 point 5).
+- A command may fill a missing overlay category of documents. It derives the category's folder from the internal [documentation root](../glossary.md#term-documentation-root--documentation-root), and records it in the overlay (COR-013 point 5).
 
 ## Placeholder
 
@@ -229,11 +236,11 @@ Defined in [TERM-permission-model](../glossary.md#term-permission-model--permiss
 
 **Why:** Each [harness](../glossary.md#term-harness--harness) gates what agents may do in its own settings and words, so nobody sees in one file what an agent may do ([COR-028](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). Nor can anyone tell whether a call wrongly blocked comes from a wrong [grant](../glossary.md#term-grant--grant), the wrong layer or a harness that cannot enforce it (COR-028).
 
-The permission model states, in the [methodology](../glossary.md#term-methodology--methodology)'s own words, what each [grant subject](../glossary.md#term-grant-subject--grant-subject) may do. It holds the catalog of privileges, the grants and the [guardrails](../glossary.md#term-guardrail--guardrail). Each [adapter](../glossary.md#term-adapter--adapter) realises it in its harness, and reads back what the harness holds, so the two can be compared.
+The permission model states, in the [methodology](../glossary.md#term-methodology--methodology)'s own words, what each [grant subject](../glossary.md#term-grant-subject--grant-subject) may do. It holds the [permission catalog](../glossary.md#term-permission-catalog--permission-catalog), the grants and the [guardrails](../glossary.md#term-guardrail--guardrail). Each [adapter](../glossary.md#term-adapter--adapter) realises it in its harness, and reads back what the harness holds, so the two can be compared.
 
 **Attributes:**
 
-- its catalog of privileges, which the layers that own the tools may extend ([COR-028 point 1](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth))
+- its permission catalog, which the layers that own the tools may extend ([COR-028 point 1](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth))
 - its grants, in layers: the guardrails' denies, the active [profile](../glossary.md#term-profile--profile)'s grants, and the [project](../glossary.md#term-project--project)'s own, which come last ([ADR-005 point 2](../../../architecture/decisions/ADR-005-permission-profile-surface.md#2-contents--posture-plus-a-layered-grant-source-confinement-and-native-allow-referenced-not-owned))
 
 **Relations:**
@@ -255,7 +262,7 @@ Defined in [TERM-privilege](../glossary.md#term-privilege--privilege).
 
 **Why:** What an agent may do was spread across a [harness](../glossary.md#term-harness--harness)'s own settings, in that harness's words, so nobody could see it all at once ([COR-028](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). A privilege names a kind of action once, in the [methodology](../glossary.md#term-methodology--methodology)'s own words, for every harness ([COR-028 point 1](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth)).
 
-A privilege is a named kind of action, such as `vcs` for any `git` command. The permission catalog says how the [system](../glossary.md#term-system--system) recognises each one, from a tool call or from a command's words. A [grant](../glossary.md#term-grant--grant) then allows or denies it.
+A privilege is a named kind of action, such as `vcs` for any `git` command. The [permission catalog](../glossary.md#term-permission-catalog--permission-catalog) says how the [system](../glossary.md#term-system--system) recognises each one, from a tool call or from a command's words. A [grant](../glossary.md#term-grant--grant) then allows or denies it.
 
 **Attributes:**
 
@@ -267,14 +274,40 @@ A privilege is a named kind of action, such as `vcs` for any `git` command. The 
 **Relations:**
 
 - A grant allows or denies one or more privileges (COR-028 point 1).
-- A capability may add privileges in a catalog fragment of its own, beside the [backbone](../glossary.md#term-backbone--backbone)'s catalog (ADR-021).
+- A capability may add privileges to the permission catalog, in a fragment of its own beside the [backbone](../glossary.md#term-backbone--backbone)'s file (ADR-021).
 
 **States:** None.
 
 **Always true:**
 
-- A capability's privilege never takes an id the catalog holds already ([ADR-021 point 2](../../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#2-additive-only-and-collision-rejecting--the-catalog-is-a-map-so-the-merge-rule-is-load-bearing)).
+- A capability's privilege never takes an id the permission catalog holds already ([ADR-021 point 2](../../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#2-additive-only-and-collision-rejecting--the-catalog-is-a-map-so-the-merge-rule-is-load-bearing)).
 - A path-scoped privilege is recognised only for a file tool whose target lies inside its folders, and has no effect anywhere else (ADR-060 point 1).
+
+## Permission catalog
+
+Defined in [TERM-permission-catalog](../glossary.md#term-permission-catalog--permission-catalog).
+
+**Why:** What an agent may do was spread across each [harness](../glossary.md#term-harness--harness)'s own settings, in that harness's words ([COR-028](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). A [capability](../glossary.md#term-capability--capability) that recognises a new kind of action must also be able to add it without editing the [backbone](../glossary.md#term-backbone--backbone)'s file, which [sync](../glossary.md#term-sync--sync) overwrites ([ADR-021](../../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md)).
+
+The permission catalog is the data that names each [privilege](../glossary.md#term-privilege--privilege), and says how the [system](../glossary.md#term-system--system) recognises it from a tool call or a command. It also marks each [guardrail](../glossary.md#term-guardrail--guardrail). The backbone keeps it in `.pkit/schemas/privilege-catalog.yaml`. Each installed capability may add a fragment of its own, which the [permission code](../glossary.md#term-permission-code--permission-code) merges in as it loads the catalog.
+
+**Attributes:**
+
+- for each privilege, its id, how the system recognises it and its scope type ([COR-028 point 1](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth))
+- for each privilege, whether it is a guardrail ([ADR-021 point 3](../../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#3-a-capability-contributed-privilege-may-never-be-a-guardrail--reject-do-not-strip))
+
+**Relations:**
+
+- The [permission model](../glossary.md#term-permission-model--permission-model) holds it, and the layers that own the tools may extend it (COR-028 point 1).
+- The permission code reads it as data, so the [permission hook](../glossary.md#term-permission-hook--permission-hook) and the system's commands read the same merged permission catalog ([ADR-021 point 1](../../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#1-the-merge-lives-in-load_catalog-which-gains-a-manifest-walk-it-does-not-have-today)).
+- Only an installed capability's fragment is merged in (ADR-021 point 1).
+
+**States:** None.
+
+**Always true:**
+
+- A fragment only adds privileges, and never overwrites, shadows or strips one the permission catalog holds already ([ADR-021 point 2](../../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#2-additive-only-and-collision-rejecting--the-catalog-is-a-map-so-the-merge-rule-is-load-bearing)).
+- `pkit permissions overview` names the capability that added each privilege ([ADR-021 point 6](../../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#6-attribution-is-mandatory-narrowing-but-reported)).
 
 ## Grant
 
@@ -330,7 +363,7 @@ Defined in [TERM-guardrail](../glossary.md#term-guardrail--guardrail).
 
 **Why:** Some mechanisms that enforce permissions fail open, so a fault in them lets the call go ahead ([COR-028 point 2](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)). A deny that must never be bypassed is therefore held where a fault blocks the call (COR-028 point 2).
 
-A guardrail is a [privilege](../glossary.md#term-privilege--privilege) that every [grant subject](../glossary.md#term-grant-subject--grant-subject) is denied, whatever any [grant](../glossary.md#term-grant--grant) allows, such as `vcs-history-rewrite` for a force-push. The catalog marks it `guardrail: true`. Where its [harness](../glossary.md#term-harness--harness) fails closed, each [adapter](../glossary.md#term-adapter--adapter) also holds it as a [native deny](../glossary.md#term-native-deny--native-deny), which the harness enforces itself.
+A guardrail is a [privilege](../glossary.md#term-privilege--privilege) that every [grant subject](../glossary.md#term-grant-subject--grant-subject) is denied, whatever any [grant](../glossary.md#term-grant--grant) allows, such as `vcs-history-rewrite` for a force-push. The [permission catalog](../glossary.md#term-permission-catalog--permission-catalog) marks it `guardrail: true`. Where its [harness](../glossary.md#term-harness--harness) fails closed, each [adapter](../glossary.md#term-adapter--adapter) also holds it as a [native deny](../glossary.md#term-native-deny--native-deny), which the harness enforces itself.
 
 **Attributes:** None.
 
@@ -343,8 +376,8 @@ A guardrail is a [privilege](../glossary.md#term-privilege--privilege) that ever
 
 **Always true:**
 
-- No [capability](../glossary.md#term-capability--capability) adds a guardrail: the backbone refuses a catalog fragment that marks one ([ADR-021 point 3](../../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#3-a-capability-contributed-privilege-may-never-be-a-guardrail--reject-do-not-strip)).
-- Its deny is held as a native deny, which fails closed, as well as by the [permission hook](../glossary.md#term-permission-hook--permission-hook) (COR-028 point 2).
+- No [capability](../glossary.md#term-capability--capability) adds a guardrail: the backbone refuses a fragment of the permission catalog that marks one ([ADR-021 point 3](../../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#3-a-capability-contributed-privilege-may-never-be-a-guardrail--reject-do-not-strip)).
+- Where its harness fails closed, its deny is held as a native deny as well as by the [permission hook](../glossary.md#term-permission-hook--permission-hook) (COR-028 point 2).
 
 ## Profile
 
@@ -358,7 +391,7 @@ A profile is a named set of grants and a [posture](../glossary.md#term-posture--
 
 - its name
 - its posture, which it sets as it is activated ([ADR-005 point 4](../../../architecture/decisions/ADR-005-permission-profile-surface.md#4-verbs--profile-list--show--activate-composing-existing-mutations))
-- its grants, over the privileges of the catalog alone ([ADR-005 point 5](../../../architecture/decisions/ADR-005-permission-profile-surface.md#5-shipped-tiers-nest-grants-are-over-catalog-privileges-shell-autonomy-rides-the-references))
+- its grants, over the privileges of the [permission catalog](../glossary.md#term-permission-catalog--permission-catalog) alone ([ADR-005 point 5](../../../architecture/decisions/ADR-005-permission-profile-surface.md#5-shipped-tiers-nest-grants-are-over-catalog-privileges-shell-autonomy-rides-the-references))
 
 **Relations:**
 
@@ -432,7 +465,7 @@ The permission code is the [backbone](../glossary.md#term-backbone--backbone)'s 
 **Relations:**
 
 - Every adapter's permission hook calls it, and so do the system's `pkit permissions` commands (ADR-003).
-- It reads how to recognise each [privilege](../glossary.md#term-privilege--privilege) from the catalog, as data, never from an adapter's code (ADR-003).
+- It reads how to recognise each [privilege](../glossary.md#term-privilege--privilege) from the [permission catalog](../glossary.md#term-permission-catalog--permission-catalog), as data, never from an adapter's code (ADR-003).
 
 **States:** None.
 
@@ -613,7 +646,7 @@ The cross-repository guard is the check each writing command of the [system](../
 **Relations:**
 
 - It compares where a command would write with the session anchor ([ADR-034 point 1](../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever)).
-- Each program that makes the write carries it, the system's own commands among them (COR-039 point 2).
+- Each writing command of the system carries it, since only the program that makes the write sees both repositories (COR-039 point 2).
 
 **States:** None.
 
@@ -664,6 +697,8 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/070-work-within-limits/UC-030-work-unprompted.md)
 - [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/070-work-within-limits/UC-033-find-why-prompted.md)
 - [REQ-013 · Functional · Where an allow and a deny conflict, the deny wins](../requirements/functional/020-set-up/REQ-013-deny-wins.md)
+
+**Permission catalog:** None.
 
 **Grant:**
 

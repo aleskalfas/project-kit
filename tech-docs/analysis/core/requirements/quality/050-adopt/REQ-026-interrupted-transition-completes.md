@@ -14,12 +14,17 @@ pkit:
     anchors:
       path:
         - src/project_kit/manifest.py
+        - src/project_kit/upgrade.py
+        - src/project_kit/install.py
+        - src/project_kit/status.py
+        - src/project_kit/capabilities.py
         - tests/test_upgrade.py
         - tests/test_install.py
         - tests/test_status.py
         - tests/test_capabilities.py
         - tests/test_backbone_migration_replay.py
       record:
+        - COR-059
         - COR-059#6
         - ADR-065#3
         - ADR-065#4
