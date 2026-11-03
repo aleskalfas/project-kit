@@ -34,6 +34,7 @@ pkit:
         - src/project_kit/friction_repository.py
         - src/project_kit/friction_report.py
         - src/project_kit/friction_check.py
+        - src/project_kit/friction_write.py
         - src/project_kit/agent_runs.py
         - .github/workflows/friction-report.yml
         - .pkit/rules/core.md
@@ -112,7 +113,7 @@ pkit:
 **Variants:**
 
 - **1a.** The clone is shallow, and an [artefact](../../../glossary.md#term-artefact--artefact)'s [revalidation point](../../../glossary.md#term-revalidation-point--revalidation-point) lies beyond the cut. The check reports the artefact `unreachable`, and does not judge it until `git fetch --unshallow` brings the history. The path goes on at step 2 for the other debts.
-- **1b.** An [anchor](../../../glossary.md#term-anchor--anchor)'s resolver gives no result, or the anchor names a kind that nothing installed resolves. The artefact is `unresolved`, and the check never reports it `current`. The path goes on at step 2 for the other debts.
+- **1b.** An [anchor](../../../glossary.md#term-anchor--anchor)'s [query command](../../../glossary.md#term-query-command--query-command) gives no result, or no installed [component](../../../glossary.md#term-component--component) registers the anchor's kind. The artefact is `unresolved`, and the check never reports it `current`. The path goes on at step 2 for the other debts.
 - **1c.** An anchor resolves to nothing at the latest commit, such as a path whose files were removed. The check reports it as a `dead-anchor`, an error it reports and never fails on, and judges the artefact on its other anchors ([REQ-020](../../../requirements/functional/030-change/REQ-020-dead-anchor-error.md)). The path goes on at step 2.
 - **3a.** An installed [capability](../../../glossary.md#term-capability--capability) ships an agent for the artefact's type. The developer dispatches that agent, which proposes the outcome with its evidence and the commands to run, and runs none ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)). The path goes on at step 4.
 - **3b.** An agent that an installed capability ships for the artefact's type proposed the [answer](../../../glossary.md#term-answer--answer) before the developer reached the [debt](../../../glossary.md#term-debt--debt). The agent ran with nobody watching, through the [backbone](../../../glossary.md#term-backbone--backbone)'s run command, `pkit agents run`:
@@ -135,6 +136,6 @@ pkit:
 
 **Minimal guarantees:**
 
-- The [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check) reports what it finds, and never fails on it, in either mode ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
+- The [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check) reports what it finds, and never fails on it, whatever the [friction mode](../../../glossary.md#term-friction-mode--friction-mode) ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
 - [Debt](../../../glossary.md#term-debt--debt) is derived from git at each run, never kept in a ledger, so it never drifts from the history ([COR-050 point 9](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
 - An [artefact](../../../glossary.md#term-artefact--artefact) the check could not judge is never reported `current` ([COR-050 point 2](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#2-anchors)).

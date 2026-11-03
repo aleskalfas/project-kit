@@ -7,6 +7,7 @@ explains:
   - TERM-range
   - TERM-area
   - TERM-connection-point
+  - TERM-connection
   - TERM-role
   - TERM-data-point
   - TERM-process
@@ -36,6 +37,7 @@ pkit:
         - TERM-range
         - TERM-area
         - TERM-connection-point
+        - TERM-connection
         - TERM-role
         - TERM-data-point
         - TERM-process
@@ -52,7 +54,7 @@ A [capability](../glossary.md#term-capability--capability) packages one discipli
 ```mermaid
 classDiagram
   accTitle: Capabilities, areas and connection points
-  accDescr: A capability is a component a project chooses to install. A component declares a range on the backbone, and a capability may declare a range on another capability. An area is a slice of a project's .pkit tree that needs no install. A capability provides roles, and under a role it defines connection points, which other components fill, depend on or subscribe to. A data point is the kind of connection point that takes data in. A capability also defines processes, each moving process subjects of one kind through its states, and a connection point may offer one for others to depend on. A capability may ship operational rules of its own. An install plan predicts the connections a capability's install would make and break.
+  accDescr: A capability is a component a project chooses to install. A component declares a range on the backbone, and a capability may declare a range on another capability. An area is a slice of a project's .pkit tree that needs no install. A capability provides roles, and under a role it defines connection points. Other components declare connections to them, each a contribution to a data point, a subscription to an event or a dependency on a process, and a connection may carry a mandatory mark with its reason. A data point is the kind of connection point that takes data in. A capability also defines processes, each moving process subjects of one kind through its states, and a connection point may offer one for others to depend on. A capability may ship operational rules of its own. An install plan predicts the connections a capability's install would make and break.
   class Component["Component"]
   class Backbone["Backbone"]
   class Project["Project"]
@@ -66,6 +68,9 @@ classDiagram
   ConnectionPoint : address
   ConnectionPoint : kind
   ConnectionPoint : version
+  class Connection["Connection"]
+  Connection : kind
+  Connection : mandatory mark and its reason
   class Role["Role"]
   Role : qualified name
   class DataPoint["Data point"]
@@ -86,17 +91,20 @@ classDiagram
   Capability "1" --> "*" ConnectionPoint : defines
   Role "1" o-- "*" ConnectionPoint : names
   DataPoint --|> ConnectionPoint
+  Component "1" --> "*" Connection : declares
+  Connection "*" --> "1" ConnectionPoint : ties to
   Capability "1" --> "*" Process : defines
   ConnectionPoint ..> Process : offers, where its kind is a process
   Process "1" --> "*" ProcessSubject : moves through its states
-  InstallPlan ..> Capability : predicts the connections of
+  InstallPlan ..> Capability : predicts the install of
+  InstallPlan ..> Connection : lists those the install would make and break
   Capability ..> OperationalRule : may ship
 ```
 
 ```mermaid
 flowchart LR
   accTitle: How a capability comes to connect
-  accDescr: A capability installs only where what it depends on falls within its ranges, and install refuses otherwise. Installed, it provides roles. Where two capabilities provide one role, that is an error until the project selects one. The capability providing a role defines its connection points, and other components connect to each at a version equal to its own, which the backbone resolves and checks. A data point, the kind that takes data in, is filled by a project file, installed capabilities and the providing capability's default. The backbone resolves what it holds. Where fillers overlap, a project file wins over a capability, and a capability over the default.
+  accDescr: A capability installs only where what it depends on falls within its ranges, and install refuses otherwise. Installed, it provides roles. Where two capabilities provide one role, that is an error until the project selects one. The capability providing a role defines its connection points, and other components declare connections to each at a version equal to its own, which the backbone resolves and checks. A data point, the kind that takes data in, is filled by a project file, installed capabilities and the providing capability's default. The backbone resolves what it holds. Where fillers overlap, a project file wins over a capability, and a capability over the default.
   I([A capability is to be installed]) --> K{Its ranges admit what it depends on?}
   K -->|no| N[Install refuses]
   K -->|yes| C[Capability installed]
@@ -104,7 +112,7 @@ flowchart LR
   R -->|two capabilities provide it| E[Error until the project selects one]
   E -->|the project selects one| R
   R -->|its provider defines| P[Connection point]
-  O[Other component] -->|connects at an equal version, which the backbone checks| P
+  O[Other component] -->|declares a connection at an equal version, which the backbone checks| P
   P -->|the kind that takes data in| D[Data point]
   F["Project file, installed capabilities, the default"] -->|fill| D
   D -->|the backbone resolves it, a project file over a capability over the default| H[What the data point holds]
@@ -214,7 +222,7 @@ A connection point is a declared interface that one installed capability defines
 
 - The capability that provides its role defines it (COR-053 point 2).
 - Other components connect to it at a <!-- pkit:not-the-term -->version equal to its own (COR-053 point 5).
-- The [backbone](../glossary.md#term-backbone--backbone) resolves and checks every connection to it ([COR-053 point 7](../../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)).
+- The [backbone](../glossary.md#term-backbone--backbone) resolves and checks every [connection](../glossary.md#term-connection--connection) to it ([COR-053 point 7](../../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)).
 
 **States:** None.
 
@@ -224,11 +232,45 @@ A connection point is a declared interface that one installed capability defines
 - Two of its <!-- pkit:not-the-term -->versions are compatible only when they are equal (COR-053 point 5).
 - The component that offers an event never names those that subscribe to it (COR-053 point 2).
 
+## Connection
+
+Defined in [TERM-connection](../glossary.md#term-connection--connection).
+
+**Why:** The side that needs something knows what it needs, and what the data or the signal means ([COR-053](../../../../.pkit/decisions/core/COR-053-connection-points.md)). So that side declares the connection, and nothing is asked of the other side unless the connection is marked mandatory (COR-053).
+
+A connection is a tie that a [component](../glossary.md#term-component--component) declares in its [package metadata](../glossary.md#term-package-metadata--package-metadata), under `extensions`, to a [connection point](../glossary.md#term-connection-point--connection-point) another [capability](../glossary.md#term-capability--capability) defines. `pkit connections graph` draws each one. A connection does one of three things:
+
+- it contributes to a [data point](../glossary.md#term-data-point--data-point)
+- it subscribes to an event
+- it makes a [process](../glossary.md#term-process--process) depend on another process
+
+**Attributes:**
+
+- its kind, by the key that declares it: `contributes`, `subscribes` or `depends-on` ([COR-053 point 3](../../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality))
+- the address of the connection point it ties to, where a `depends-on` connection may name the upstream process's own address instead ([COR-053 point 2](../../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds))
+- the <!-- pkit:not-the-term -->version of the connection point it targets ([COR-053 point 5](../../../../.pkit/decisions/core/COR-053-connection-points.md#5-versions-per-point-roles-unversioned))
+- optionally a mandatory mark, with its reason ([COR-053 point 6](../../../../.pkit/decisions/core/COR-053-connection-points.md#6-optional-by-default-mandatory-only-with-a-reason-on-the-individual-connection))
+- optionally a description, in prose (COR-053 point 3)
+
+**Relations:**
+
+- A component declares it in its package metadata. The `depends-on` connections are copied there from the process definitions by a command, and never written by hand ([COR-053 point 4](../../../../.pkit/decisions/core/COR-053-connection-points.md#4-depends-on-is-generated-never-hand-written)).
+- The [backbone](../glossary.md#term-backbone--backbone) resolves each one against the connection points of each [role](../glossary.md#term-role--role)'s active provider, and checks it ([COR-053 point 7](../../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)).
+- An [install plan](../glossary.md#term-install-plan--install-plan) lists the connections an [install](../glossary.md#term-install--install) would make, and the conflicts to resolve ([COR-053 point 8](../../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
+
+**States:** None.
+
+**Always true:**
+
+- It is optional unless it carries a mandatory mark, and [validation](../glossary.md#term-validation--validation) rejects a mandatory mark with no reason (COR-053 point 6).
+- It ties only to a connection point whose <!-- pkit:not-the-term -->version equals the one it targets. Otherwise it is inert: it ties to nothing, and validation reports it (COR-053 points 5 and 6).
+- Two mandatory connections facing each other form a cycle, which validation rejects (COR-053 point 6).
+
 ## Role
 
 Defined in [TERM-role](../glossary.md#term-role--role).
 
-**Why:** A connection that names the [capability](../glossary.md#term-capability--capability) at its other end breaks when that capability is replaced ([COR-053](../../../../.pkit/decisions/core/COR-053-connection-points.md)). A role names the job instead, and its publisher qualifies it, so no name is reserved for everyone (COR-053).
+**Why:** A [connection](../glossary.md#term-connection--connection) that names the [capability](../glossary.md#term-capability--capability) at its other end breaks when that capability is replaced ([COR-053](../../../../.pkit/decisions/core/COR-053-connection-points.md)). A role names the job instead, and its publisher qualifies it, so no name is reserved for everyone (COR-053).
 
 A role is a name under which one installed capability provides [connection points](../glossary.md#term-connection-point--connection-point), so that others use them without naming that capability. The publisher that coined the name qualifies it, as in `pkit::documentation`.
 
@@ -337,7 +379,7 @@ Defined in [TERM-install-plan](../glossary.md#term-install-plan--install-plan).
 
 **Why:** Nothing showed, before a [capability](../glossary.md#term-capability--capability) was installed, what it would connect to in a given [project](../glossary.md#term-project--project) ([COR-053](../../../../.pkit/decisions/core/COR-053-connection-points.md)).
 
-An install plan is a dry run that predicts, from what a capability declares, the connections its [install](../glossary.md#term-install--install) would make and break. The [backbone](../glossary.md#term-backbone--backbone) works it out exactly as it works out the live connections, so the plan matches what the install would do. `pkit capabilities install <name> --plan` prints one.
+An install plan is a dry run that predicts, from what a capability declares, the [connections](../glossary.md#term-connection--connection) its [install](../glossary.md#term-install--install) would make and break. The [backbone](../glossary.md#term-backbone--backbone) works it out exactly as it works out the live connections, so the plan matches what the install would do. `pkit capabilities install <name> --plan` prints one.
 
 **Attributes:**
 
@@ -430,8 +472,16 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 **Connection point:**
 
 - [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
+- [UC-024 — See what a capability would connect to before I install it](../use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md)
 - [UC-025 — Choose which installed capability provides a role](../use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md)
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
+
+**Connection:**
+
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
+- [UC-024 — See what a capability would connect to before I install it](../use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md)
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
+- [UC-054 — Upgrade one capability on its own](../use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md)
 
 **Role:**
 

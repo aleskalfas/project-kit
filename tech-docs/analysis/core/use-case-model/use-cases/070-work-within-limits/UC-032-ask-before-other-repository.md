@@ -19,6 +19,7 @@ pkit:
       path:
         - src/project_kit/session_guard.py
         - src/project_kit/cli.py
+        - src/project_kit/report.py
         - .pkit/permissions/decide.py
         - .pkit/adapters/claude-code/permission-hook.py
         - .pkit/rules/core.md

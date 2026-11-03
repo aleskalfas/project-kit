@@ -44,6 +44,7 @@ pkit:
         - COR-050#2
         - COR-050#6
         - COR-050#12
+        - COR-050#15
         - COR-054#3
         - COR-055#6
         - COR-062#4
@@ -100,14 +101,14 @@ pkit:
 3. The adopter adds a job to the [project](../../../glossary.md#term-project--project)'s CI that runs `pkit sync`, then `pkit validate`, `pkit friction check` and the project's other checks. The job sets `PKIT_CHECK_BASE` to the [pull request](../../../glossary.md#term-pull-request--pull-request)'s target, and sets `PKIT_CHECK_HEAD` to the pull request's [head](../../../glossary.md#term-head--head) ([COR-062 point 4](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#4-each-answer-names-what-it-read)). In project-kit, that job is `.github/workflows/checks.yml`.
 4. The adopter makes that job a required status of the [default branch](../../../glossary.md#term-default-branch--default-branch), on the hosting service.
 5. On each pull request, the CI pipeline runs the job with no terminal, and no check asks anything.
-6. Each check exits non-zero on what fails it. `pkit validate` fails on an `error` [finding](../../../glossary.md#term-finding--finding). The [change check](../../../glossary.md#term-change-check--change-check) fails on unanswered [friction](../../../glossary.md#term-friction--friction), a `bump`, a [dead anchor](../../../glossary.md#term-dead-anchor--dead-anchor), an unresolved kind and a resolver's missing result. It fails too on an [answer file](../../../glossary.md#term-answer-file--answer-file) written as [COR-062 point 10](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#10-whose-file-moved-artefacts-and-what-each-finding-is) forbids.
+6. Each check exits non-zero on what fails it. `pkit validate` fails on an `error` [finding](../../../glossary.md#term-finding--finding). The [change check](../../../glossary.md#term-change-check--change-check) fails on unanswered [friction](../../../glossary.md#term-friction--friction), a `bump`, a [dead anchor](../../../glossary.md#term-dead-anchor--dead-anchor), an `unresolved-kind` and a `no-answer`. It fails too on an [answer file](../../../glossary.md#term-answer-file--answer-file) written as [COR-062 point 10](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#10-whose-file-moved-artefacts-and-what-each-finding-is) forbids.
 7. The hosting service holds the merge until the job passes.
 
 **Variants:**
 
-- **1a.** The value is not a mode, such as `loud`. The [system](../../../glossary.md#term-system--system) refuses it with the schema's message, and writes nothing.
-- **1b.** The adopter keeps the default, `warning` mode. The [change check](../../../glossary.md#term-change-check--change-check) reports what it finds and passes, so only [validation](../../../glossary.md#term-validation--validation)'s errors and the other checks fail the job.
-- **1c.** The adopter writes `friction.mode` by hand, with a value that is no mode. The change check reads it as `warning`, with a warning line, and `pkit validate` fails on it ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
+- **1a.** The value is no [friction mode](../../../glossary.md#term-friction-mode--friction-mode), such as `loud`. The [system](../../../glossary.md#term-system--system) refuses it with the schema's message, and writes nothing.
+- **1b.** The adopter keeps the default friction mode, `warning`. The [change check](../../../glossary.md#term-change-check--change-check) reports what it finds and passes, so only [validation](../../../glossary.md#term-validation--validation)'s errors and the other checks fail the job.
+- **1c.** The adopter writes `friction.mode` by hand, with a value that is no friction mode. The change check reads it as `warning`, with a warning line, and `pkit validate` fails on it ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
 - **1d.** The adopter passes `--dry-run`, to see first each edit the command would make. The system names each edit, and writes nothing ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)).
 
 > [!WARNING]
@@ -123,7 +124,7 @@ pkit:
 
 - **4a.** The adopter never makes the job required. The checks run and say what they find, and nothing holds the merge ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)). The use case ends.
 - **6a.** The base moved on after the branch left it. The change check reports an `outdated-base` and never fails on it, since the fix is to update the branch.
-- **6b.** No [place](../../../glossary.md#term-place--place) is declared yet, or nothing in the places carries the `pkit` container. The change check is dormant and passes.
+- **6b.** No [place](../../../glossary.md#term-place--place) is declared yet, or nothing in the places carries the `pkit` container. The change check is dormant and passes ([COR-050 point 15](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#15-dormant-until-used)).
 - **6c.** A [documentation root](../../../glossary.md#term-documentation-root--documentation-root) the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration) declares does not exist yet. Validation warns of it, and does not fail the job on it ([REQ-015](../../../requirements/functional/REQ-015-missing-root-warns.md)).
 - **7a.** Someone with the right bypasses the required status, or commits straight to the [default branch](../../../glossary.md#term-default-branch--default-branch). The job does not hold that change.
 
@@ -133,5 +134,5 @@ pkit:
 
 - An invalid [friction mode](../../../glossary.md#term-friction-mode--friction-mode) fails [validation](../../../glossary.md#term-validation--validation), so enforcement is never switched off silently ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
 - A [validator](../../../glossary.md#term-validator--validator) that gives no result fails validation, and never passes it ([COR-055 point 6](../../../../../../.pkit/decisions/core/COR-055-validation.md#6-a-validator-that-gives-no-answer-fails)).
-- In enforcing mode, a resolver that gives no result fails the [change check](../../../glossary.md#term-change-check--change-check), which could not judge its [anchor](../../../glossary.md#term-anchor--anchor) (COR-050 points [2](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#2-anchors) and 12).
+- Where the friction mode is `enforcing`, an [anchor](../../../glossary.md#term-anchor--anchor)'s [query command](../../../glossary.md#term-query-command--query-command) that gives no result fails the [change check](../../../glossary.md#term-change-check--change-check) (COR-050 points [2](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#2-anchors) and 12). The check could not judge the anchor.
 - An outdated [base](../../../glossary.md#term-base--base) is reported, and never fails the change check (COR-050 point 12).

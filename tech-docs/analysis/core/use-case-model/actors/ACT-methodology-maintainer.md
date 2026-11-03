@@ -8,7 +8,7 @@ needs:
   - Keep each core record true for any project that adopts it.
   - Release the backbone so adopters can upgrade and pin to it, and know what each change since the last release means for them.
   - Never ship a backbone change that breaks installed projects without the migration that carries them across.
-  - Receive adopters' reports with their versions attached, and link each one to the issue that fixes it.
+  - Receive adopters' reports with their versions attached, and link each one to its tracked fix.
 pkit:
   friction:
     anchors:
