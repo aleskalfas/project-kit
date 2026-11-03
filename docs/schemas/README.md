@@ -117,7 +117,7 @@ The alternative keeps one language and no second file, and can check any rule ac
 
 | What you need | Checks in your scripts' code | A schema pair |
 | --- | --- | --- |
-| A user's file checked without running your scripts | ❌ Checked only when a script reads it | ✅ `pkit data validate`, and `pkit validate`'s `data` member |
+| A user's file checked without running your scripts | ❌ Checked only when a script reads it | ✅ `pkit data validate`, and `pkit validate` |
 | A misspelt key named, with the key you meant | ❌ Refused at best, with no key suggested | ✅ Validation names the key you meant |
 | A rule changed without changing code | ❌ Each rule is code | ✅ The rule is data, and `pkit schemas validate` checks it |
 | A check in the editor | ❌ None | ✅ Where a file names its schema in the editor's line |
@@ -133,7 +133,7 @@ As the author of a capability, you do not need a schema of your own in these cas
 
 - **The content is a principle, a reason or a judgement,** such as when a rule applies. It belongs in prose, such as a decision record ([the decision records' guide](../decisions/README.md)).
 - **No code reads it.** A schema is worth what a check or a script makes of it. A file only people read gains a second file to keep.
-- **Your users' files are not `.yaml`,** such as `.yml`, JSON or Markdown front matter. `pkit validate` and a folder's walk read `.yaml` files alone, and Markdown does not read as YAML. Check them in your code.
+- **Your users' files are not `.yaml`,** such as `.yml`, JSON or Markdown front matter. `pkit validate`'s check of data, and `pkit data validate` given a folder, read `.yaml` files alone. Markdown does not read as YAML. Check them in your code.
 - **One script reads it, and you want to change the two together.** Keep the check in your code, which can hold any rule you write.
 
 ## Which check judges a file
@@ -161,7 +161,7 @@ flowchart TD
 - **Backbone files.** The backbone ships a schema for each kind of file it checks, and where the file lies binds it, never a field in it. The kinds are your configuration, each component's `package.yaml`, your rule sets, and the friction block in a document's front matter. So are your answer files, where a change keeps its answers to friction, and your filler files, which answer a capability's data points. The reference's page on backbone files says which member checks each ([its "The schemas that ship"](../../.pkit/schemas/backbone-files.md#the-schemas-that-ship)).
 - **A capability's own schemas.** Each is a pair in the capability's `schemas/` folder: its YAML data and its JSON Schema companion. `pkit schemas validate` checks every pair, and so does `pkit validate`'s `schemas` member ([the reference, "The schema is a pair"](../../.pkit/schemas/README.md#the-schema-is-a-pair)).
 - **Data files.** A file's `pkit_schema:` field wins. Without it, a `binds_to:` glob may claim the file. The glob lies in the schema of a capability the project installed or registered ([the reference's page on binding, "Resolution order"](../../.pkit/schemas/data-binding.md#resolution-order)).
-- **No binding.** Named to `pkit data validate`, a file nothing binds is refused. `pkit validate`'s `data` member skips it, since it is no data of a capability ([the CLI reference, "data validate"](../../.pkit/cli/README.md#data-validate-path)).
+- **No binding.** Named to `pkit data validate`, a file nothing binds is refused. `pkit validate`'s `data` member skips it, since it is no data of a capability. That member reads no file in a dot-folder, nor in `.pkit/` outside its `project/` folders ([the CLI reference, "data validate"](../../.pkit/cli/README.md#data-validate-path)).
 
 ## Declare your backbone configuration
 

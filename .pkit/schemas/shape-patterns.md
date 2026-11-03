@@ -11,6 +11,7 @@ pkit:
       record: [COR-018, COR-019, COR-053]
       artefact:
         - .pkit/cli/README.md#schemas-validate-path
+        - .pkit/cli/README.md#new-schema-owner-name---collection-form-form---collection-name-key---no-namespace
 ---
 
 # Common shape patterns
@@ -30,8 +31,8 @@ The structural shapes that recur across schemas, each with the JSON Schema idiom
 
 Every schema's YAML opens with the same envelope: `schema_version`, an optional `source`, then the domain's fields.
 
-- **One fragment for `source`.** The `source` block is defined once, as the `source` fragment of `_defs/refs.schema.json`. A companion whose schema takes a `source` refers to it by `$ref`, so each such schema shares one shape for it. The stamp writes that `$ref` into each companion it stamps.
-- **No fragment for `schema_version`.** A companion declares it itself. The stamp declares it as the constant of the schema's version.
+- **One fragment for `source`.** The `source` block is defined once, as the `source` fragment of `_defs/refs.schema.json`. A companion whose schema takes a `source` refers to it by `$ref`, so each such schema shares one shape for it. `pkit new schema` writes that `$ref` into each companion it stamps.
+- **No fragment for `schema_version`.** A companion declares it itself. `pkit new schema` declares it as the constant of the schema's version.
 
 ## Entry collections with stable ids
 
@@ -72,7 +73,7 @@ An aggregator schema collects references to entries spread across sibling files.
 
 ## Reusable fragments via `$defs`
 
-A sub-shape that several schemas need is defined once, and each schema that needs it refers to it by `$ref`. Examples are the envelope, the constraint on an entry's id, the token's pattern and a string shaped as a semantic version. One fix then mends every schema that depends on it, and the copies cannot drift apart.
+A sub-shape that several schemas need is defined once, and each schema that needs it refers to it by `$ref`. Examples are the `source` block, the constraint on an entry's id, the token's pattern and a string shaped as a semantic version. One fix then mends every schema that depends on it, and the copies cannot drift apart.
 
 Two rules settle where a fragment's canonical definition lives:
 
@@ -80,7 +81,7 @@ Two rules settle where a fragment's canonical definition lives:
   - `reference_token`, the generic `[<namespace>:<id>]` token ([COR-019](../decisions/core/COR-019-schema-reference-form.md))
   - `address_token`, the address of a role or of a point, `[<publisher>::<role>]` or `[<publisher>::<role>:<point>]` (COR-019, as [COR-053](../decisions/core/COR-053-connection-points.md) refines it)
   - `rule_citation`, the citation of a rule in data
-  - `source`, the structured envelope
+  - `source`, the `source` block
 - **A pattern narrowed to one namespace** lives in that namespace owner's own companion, as a `$defs` entry it publishes. An example is `issue_type_ref`, for the `issue-types` namespace. A consumer refers to it across files, as `issue-types.schema.json#/$defs/issue_type_ref`. The owner is the source of truth for its own narrowed pattern.
 
 Both rules use JSON Schema's standard `$ref` across files. `pkit schemas validate` builds a registry of every companion in the same folder and of the shared `_defs/` library. So each relative `$ref` keyed by `$id` resolves.

@@ -65,7 +65,7 @@ pkit:
 
 # Schemas
 
-A schema is a YAML data file paired with a JSON Schema companion that declares its shape. Code reads its rules and data, kept apart from that code ([COR-018](../decisions/core/COR-018-capability-schemas.md)). This page holds the pair, its conventions, the references between schemas, the tooling, the layout, and what a rule set is beyond its file's shape. Three pages beside it hold the rest ("The pages beside this one" below).
+A schema is a YAML data file paired with a JSON Schema companion that declares its shape. Code reads its rules and data, kept apart from that code ([COR-018](../decisions/core/COR-018-capability-schemas.md)). This page holds the pair, its conventions, the references between schemas, the tooling, the layout, and rule sets beyond their file's shape. Three pages beside it hold the rest ("The pages beside this one" below).
 
 <a id="when-to-reach-for-schemas"></a>
 
@@ -100,7 +100,7 @@ Neither half alone is the schema. The YAML carries the facts, and the companion 
 
 ## YAML conventions
 
-Every schema's YAML follows the same envelope:
+Every schema's YAML follows the same envelope ([`shape-patterns.md`, "Envelope (every schema)"](shape-patterns.md#envelope-every-schema)):
 
 ```yaml
 schema_version: 1   # required, first key
@@ -114,7 +114,7 @@ source:             # optional — only when the schema distills from an externa
 
 - **`schema_version: <int>` is the first key, always.** The integer is the schema's own version, and the code that reads the schema switches on it when the shape changes.
 - **`source:` is an optional block** that records where the schema came from, when it distills an outside specification. An example is a methodology kept in another repository. Leave the block out when the schema is its own source of truth.
-- **Field names use `snake_case`,** such as `schema_version`, `requires_backbone` and `backend_state`.
+- **Field names use `snake_case`,** such as `schema_version`, `captured_at` and `binds_to`.
 - **Identifier values use `kebab-case`,** as the methodology's slugs do, such as `github-sub-issues` and `claude-code`.
 - **Prose of several lines uses a block scalar** (`|`).
 - **Comments at the top** say in plain prose what the schema is for and where it comes from. A comment beside a field stands only where the field's name does not say what it is for.
@@ -557,7 +557,7 @@ The pinned major is a version relation. It is checked and reported with the othe
 
 The backbone answers, for each artefact, which accepted rules bind on it, with one walk over one state (COR-051 point 7). Validation, the reading commands and every other reader take that one answer.
 
-- **A route** starts at a set of the project's own whose scope selects the artefact. `pkit friction artefacts --json` names such sets on each artefact, as its `in_scope_of`.
+- **A route** starts at a set of the project's own whose scope selects the artefact. `pkit friction artefacts --json` names such sets on each artefact, as `artefacts[].in_scope_of`.
   - **It follows** what the set inherits, pin by pin.
   - **It passes** only through sets whose own scope, where they have one, also selects the artefact. So an inherited rule binds within the scope of the set that inherits it.
   - **A set with no scope** binds only through the sets that inherit it. A parent with a scope of its own keeps it.

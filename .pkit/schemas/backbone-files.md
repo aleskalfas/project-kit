@@ -100,7 +100,7 @@ Three things hold for all of them, each decided by the record named.
 
 **`pkit validate` runs them,** each as a member of its one registry of validators. The backbone's functionalities join validation by registering validators ([COR-055](../decisions/core/COR-055-validation.md)). Each member renders its findings through one renderer, and the unknown-key message of every member comes from one shared renderer ([the CLI reference, "validate"](../cli/README.md#validate)).
 
-- **The members of the class:** `schemas`, `configuration`, `packages`, `connections`, `friction` and `rule-sets`.
+- **The members that apply them:** `configuration`, `connections`, `friction` and `rule-sets`, with `packages` for package metadata. `schemas` load-checks every schema under `backbone/`.
 - **The paths:** the configuration file's fixed path is the CLI reference's ("Configuration file"). A filler file's derived path is the lifecycle reference's (linked above).
 
 ## The schemas that ship
