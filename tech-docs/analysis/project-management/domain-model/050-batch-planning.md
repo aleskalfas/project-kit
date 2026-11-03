@@ -67,7 +67,7 @@ A use-case entry is one item of that data point. It names one goal the project's
 
 **Attributes:**
 
-- its id, `UC-` and three digits or more, at version 1 ([DEC-054 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#1-the-point))
+- its id, `UC-` and three digits or more, in the form the data point's version 1 gives ([DEC-054 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#1-the-point))
 - its title (DEC-054 point 1)
 - its status, `active` or `withdrawn` (DEC-054 point 1)
 - the path of its document, where the filler gives one (DEC-054 point 1)

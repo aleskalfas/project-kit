@@ -65,6 +65,23 @@ pkit:
         - COR-031
         - COR-039
         - ADR-034#1
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#3
+        - COR-050#6
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
+        - COR-028
+        - PRJ-004
+        - ADR-063
       artefact:
         - REQ-040
         - REQ-041
@@ -94,11 +111,11 @@ pkit:
 
 **Main path:**
 
-1. The developer chooses the [Task](../../../glossary.md#term-task--task)'s parent, its title, its kind of work, its priority and its [workstream](../../../glossary.md#term-workstream--workstream) ([DEC-004](../../../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
+1. The developer chooses the [Task](../../../glossary.md#term-task--task)'s parent, its title, its [kind of work](../../../glossary.md#term-kind-of-work--kind-of-work), its priority and its [workstream](../../../glossary.md#term-workstream--workstream) ([DEC-004](../../../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 2. The developer writes the body in a file, opening with the [parent reference](../../../glossary.md#term-parent-reference--parent-reference), or leaves the body to the Task's template ([DEC-010](../../../../../../.pkit/capabilities/project-management/decisions/DEC-010-issue-body-minimum-structure.md)).
 3. The developer runs `pkit pm create-issue --type task --title "<title>" --parent <N>`, with `--kind`, `--priority`, `--workstream` and, where they wrote one, `--body-file`.
-4. At its entry, the system checks the [project](../../../../core/glossary.md#term-project--project)'s prerequisites, and the developer's membership where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). It then checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
-5. The system composes the title from the kind's prefix and `<title>`, such as `[Bug] <title>`, and checks it against the title formats the [capability](../../../../core/glossary.md#term-capability--capability) declares ([DEC-011](../../../../../../.pkit/capabilities/project-management/decisions/DEC-011-title-formats.md)).
+4. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the [project](../../../../core/glossary.md#term-project--project)'s prerequisites, and the developer's membership where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). It then checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
+5. The system composes the title from the prefix of the Task's kind of work and `<title>`, such as `[Bug] <title>`. It checks the title against the title formats the [capability](../../../../core/glossary.md#term-capability--capability) declares ([DEC-011](../../../../../../.pkit/capabilities/project-management/decisions/DEC-011-title-formats.md)).
 6. The system reads the parent's type, and checks that a Task may sit under it: a [Feature](../../../glossary.md#term-feature--feature), an [Umbrella](../../../glossary.md#term-umbrella--umbrella) or an [EPIC](../../../glossary.md#term-epic--epic) ([DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 
 > [!WARNING]
@@ -113,14 +130,14 @@ pkit:
 9. The system checks that the body holds each section a Task requires: `## What`, `## Acceptance criteria` and `## Doc impact`. It checks too that the body holds no heading of the first level, since the title is that heading. It warns of what a body should not hold, such as a reference to a line of a file (DEC-010).
 
 10. The system lists each placeholder of the template left in the body, and each [use-case entry](../../../glossary.md#term-use-case-entry--use-case-entry) the body cites that the [data point](../../../../core/glossary.md#term-data-point--data-point) lacks. It lists too each decision id the body cites that no [decision record](../../../../core/glossary.md#term-decision-record--decision-record) holds (DEC-010). None of these stops the filing ([DEC-031](../../../../../../.pkit/capabilities/project-management/decisions/DEC-031-reject-unauthored-placeholder-bodies.md) and [DEC-054 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#4-the-rule)).
-11. The system prints the Task it is about to file, with its title, type, kind, priority, workstream, parent and labels. At a terminal, without `--yes`, it asks before it writes.
-12. The system files the Task, with its labels and its assignee, and prints `[ok] created: <url>`. It posts a comment that records the versions it was filed under ([DEC-041](../../../../../../.pkit/capabilities/project-management/decisions/DEC-041-version-provenance-stamp.md)).
+11. The system prints the Task it is about to file, with its title, type, kind of work, priority, workstream, parent and labels. At a terminal, without `--yes`, it asks before it writes.
+12. The system files the Task, with its labels and its assignee, and prints `[ok] created: <url>`. It posts a comment that records the [versions](../../../../core/glossary.md#term-version--version) it was filed under ([DEC-041](../../../../../../.pkit/capabilities/project-management/decisions/DEC-041-version-provenance-stamp.md)).
 13. The system links the Task to its parent as a GitHub sub-issue, and prints `[ok] linked #<n> as a native sub-issue of #<N>` (DEC-005 and [DEC-039](../../../../../../.pkit/capabilities/project-management/decisions/DEC-039-containment-substrate-selection.md)).
 
 **Variants:**
 
-- **1a.** An AI agent files the [Task](../../../glossary.md#term-task--task) for the developer, through the `pm` [skill](../../../../core/glossary.md#term-skill--skill)'s `create-issue.md`. It infers the kind and the [workstream](../../../glossary.md#term-workstream--workstream) from the request, and asks where it is unsure ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)). The path goes on at step 3.
-- **3a.** The developer passes `--dry-run`. The system makes the checks of steps 4 to 10, prints the Task as step 11 does, and writes nothing. The use case ends.
+- **1a.** An AI agent files the [Task](../../../glossary.md#term-task--task) for the developer, through the `pm` [skill](../../../../core/glossary.md#term-skill--skill)'s `create-issue.md`. It infers the [kind of work](../../../glossary.md#term-kind-of-work--kind-of-work) and the [workstream](../../../glossary.md#term-workstream--workstream) from the request, and asks where it is unsure ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)). The path goes on at step 3.
+- **3a.** The developer passes `--dry-run`. The [system](../../../../core/glossary.md#term-system--system) makes the checks of steps 4 to 10, prints the Task as step 11 does, and writes nothing. The use case ends.
 - **4a.** The [project](../../../../core/glossary.md#term-project--project) does not meet the prerequisites, or the developer is no member of a team that keeps a list. The system refuses, names the cause, and writes nothing ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). The use case ends.
 - **4b.** The repository is another, and the operator declines, or nobody can reply and the developer passed no `--allow-foreign-repo`. The system refuses and writes nothing. The use case ends.
 - **5a.** The composed title fails a check that blocks, such as one on a conventional-commits prefix. The system refuses, naming the check, and writes nothing ([DEC-011](../../../../../../.pkit/capabilities/project-management/decisions/DEC-011-title-formats.md)). A check that only warns, such as one on a short title, is printed, and the path goes on.
@@ -152,12 +169,12 @@ pkit:
 **Postconditions:**
 
 - The [Task](../../../glossary.md#term-task--task) is open, under its parent as a GitHub sub-issue and in its body's first line, wherever the [project](../../../../core/glossary.md#term-project--project)'s hierarchy is not advisory.
-- The Task's title carries its kind's prefix.
+- The Task's title carries the prefix of its [kind of work](../../../glossary.md#term-kind-of-work--kind-of-work).
 - The Task takes a value on each [classification axis](../../../glossary.md#term-classification-axis--classification-axis).
 - The Task's body holds each section a Task requires.
 
 **Minimal guarantees:**
 
 - A refusal before step 12 files nothing (`create-issue.py`).
-- The system never files the [Task](../../../glossary.md#term-task--task) in another repository without the operator's yes, or a confirmation passed with the call ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
-- A comment of the versions that fails to post never stops the filing ([DEC-041](../../../../../../.pkit/capabilities/project-management/decisions/DEC-041-version-provenance-stamp.md)).
+- The [system](../../../../core/glossary.md#term-system--system) never files the [Task](../../../glossary.md#term-task--task) in another repository without the operator's yes, or a confirmation passed with the call ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
+- A comment of the [versions](../../../../core/glossary.md#term-version--version) that fails to post never stops the filing ([DEC-041](../../../../../../.pkit/capabilities/project-management/decisions/DEC-041-version-provenance-stamp.md)).
