@@ -66,14 +66,14 @@ The upgrade command transitions an adopter project to a target backbone version.
 1. **Compatibility and collisions.** Each check may refuse, and none writes.
    - **A component its bundle ships older:** an adapter or a capability the running pkit's bundle ships older than the version the project records refuses the transition. The refusal names the component, both versions, and a pkit whose bundle ships that version or newer. No flag overrides it.
    - **A clash of area names:** a project's own area at `.pkit/lifecycle/` refuses the transition ("A clash of area names", below). No flag overrides it.
-   - **A file that is not the capabilities' rules index:** a file at `.pkit/rules/capabilities.md` whose first line is not the backbone's marker refuses the transition ("The capabilities' rules index", below). No flag overrides it.
+   - **A file that is not the capabilities' rules index:** a file at `.pkit/rules/capabilities.md` <!-- unanchored: names the file the step reads or writes, not its content --> whose first line is not the backbone's marker refuses the transition ("The capabilities' rules index", below). No flag overrides it.
    - **Compatibility resolution:** each installed component's post-upgrade `requires_backbone` must admit the target. It is read from the bundle where the bundle ships the component, and from the installed copy where it does not. Conflicts are surfaced so the adopter can address them: upgrade specific components, pin the backbone, or remove an incompatible component.
    - **The dependency gates** run over the set the transition would leave ("The dependency gates", below).
    - **The collision flow** asks about each new naming collision, or refuses ("A new collision", below).
 2. **The target is recorded.** `backbone_version` becomes the target, by an edit of its own line, before anything else is written ([`manifest.md`, "Backbone manifest"](manifest.md#backbone-manifest-projectpkitmanifestyaml)). `completed_version` keeps its value or stays missing. Each capability manifest still at its root then moves under its `project/` ([`manifest.md`, "Where a capability's manifest lives"](manifest.md#where-a-capabilitys-manifest-lives)). Each skip chosen in step 1 is recorded there, and each project artefact an override chose to replace is removed.
 3. **Propagation at the target.** The propagation step `pkit sync` runs copies the target's content (per COR-001). It copies the backbone's trees, adapters included, and every installed kit-shipped capability the target ships, with its skips. The upgrade calls the step, never the sync command, so sync's guard never stops it. After the copy, in this order:
    - an adapter the copy placed that the registry lacks is registered, and recorded at the version it ships
-   - `.pkit/.gitignore` is rendered, so a migration reads the render of the target's declarations
+   - `.pkit/.gitignore` <!-- unanchored: names the file the step reads or writes, not its content --> is rendered, so a migration reads the render of the target's declarations
    - the upgrade says what the copy newly binds of each loaded set it delivered ("What a step newly binds", below)
 4. **Backbone migrations** run in order ([`migrations.md`, "Three scopes (per tier)"](migrations.md#three-scopes-per-tier)): manifest-schema → structural → resource-scoped. They run across minor-version boundaries from the recorded completion, `completed_version`, to the target. With no completion recorded, every backbone migration up to the target runs (the replay, below).
 5. **Adapter migrations** run for each adapter, from the version its manifest records, in version order with the same scope ordering within each `<major>.<minor>.0/` directory. Their scripts are read from the running pkit's bundle, as a capability's are. Each registered adapter is then recorded at the version the target ships. One with no manifest runs no migration ([`manifest.md`, "An adapter's manifest"](manifest.md#an-adapters-manifest)).
@@ -83,7 +83,7 @@ The upgrade command transitions an adopter project to a target backbone version.
    - the capabilities' rules index rendered again
    - merge delivery in its tier that asks nothing
    - deploy
-   - `.pkit/.gitignore` rendered again
+   - `.pkit/.gitignore` <!-- unanchored: names the file the step reads or writes, not its content --> rendered again
    - pkit's private region of the local exclude file where the project is private
    - the agent workspace
    - provisioning
@@ -111,7 +111,7 @@ One seeding step creates the paths a project is seeded with:
 
 - each area's `project/` folder
 - the scratchpad's state folders
-- the agents overlay (`.pkit/agents/project/overlay.yaml`)
+- the agents overlay (`.pkit/agents/project/overlay.yaml` <!-- unanchored: names the file the step reads or writes, not its content -->)
 - each adapter's `settings/project/settings.json`
 - each shipped capability's `project/` folder
 
@@ -140,7 +140,7 @@ A name the capability's installed copy holds, or its manifest records as skipped
 
 ## The capabilities' rules index
 
-The backbone renders the capabilities' rules index, `.pkit/rules/capabilities.md`, at each step below, and refuses a file at that path that is not the index. What the index is, and how a session reaches it, is [the rules reference's](../rules/README.md#the-capabilities-rules-index).
+The backbone renders the capabilities' rules index, `.pkit/rules/capabilities.md` <!-- unanchored: names the file the step reads or writes, not its content -->, at each step below, and refuses a file at that path that is not the index. What the index is, and how a session reaches it, is [the rules reference's](../rules/README.md#the-capabilities-rules-index) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->.
 
 - **Rendered whole,** each time after the manifest is written:
   - at first install, sync, the self-host branch and a transition's step 8
@@ -192,7 +192,7 @@ The gates run as `pkit capabilities upgrade` runs them (COR-030, COR-053 point 6
 
 ## What the settings merge widens
 
-The merge delivery in step 8 may add to the settings file the adapter's merge writes, `.claude/settings.json` for Claude Code.
+The merge delivery in step 8 may add to the settings file the adapter's merge writes, `.claude/settings.json` <!-- unanchored: names the file the step reads or writes, not its content --> for Claude Code.
 
 - **The report:** the upgrade reads the file before and after the merge. Its report lists each allow entry and each top-level key the merge adds, such as `hooks`, `env` or `sandbox`.
 - **The question back:** an `ask` rule for an entry, in the project's additions to the adapter's settings, brings the question back.
@@ -282,9 +282,9 @@ The methodology's source repository is exempt: its sync runs the self-host branc
    - the dependency check in both directions (below), and its mandatory process connections
    - the collision flow. A new collision is asked about only under `--interactive`. Without the flag the command refuses and names it.
 2. **Its manifest,** still at the capability's root, moves under its `project/` before the copy ([`manifest.md`, "Where a capability's manifest lives"](manifest.md#where-a-capabilitys-manifest-lives)). Before the copy too, each skip chosen in step 1 is recorded there, and each project artefact an override chose to replace is removed.
-3. **Its copy,** with its skips, then `.pkit/.gitignore` rendered, so a migration reads the new version's render. It creates no seed path.
+3. **Its copy,** with its skips, then `.pkit/.gitignore` <!-- unanchored: names the file the step reads or writes, not its content --> rendered, so a migration reads the new version's render. It creates no seed path.
 4. **Its migrations,** after the copy, from the version it records, then its restamp at the version it ships. One with no readable version runs none.
-5. **Its derivable state:** the capabilities' rules index rendered again, merge delivery and deploy, its query commands' provisioning, and `.pkit/.gitignore` rendered again. The upgrade says what its copy newly binds of the capability's loaded set ("What a step newly binds", above).
+5. **Its derivable state:** the capabilities' rules index rendered again, merge delivery and deploy, its query commands' provisioning, and `.pkit/.gitignore` <!-- unanchored: names the file the step reads or writes, not its content --> rendered again. The upgrade says what its copy newly binds of the capability's loaded set ("What a step newly binds", above).
 
 **After it, the questions** of the points the capability defines and of the points its contributions reach. They are asked where a person can answer, and printed otherwise ([`manifest.md`, "A data point's question"](manifest.md#a-data-points-question)). They are no step of the transition. An incubated capability's upgrade, and one in the methodology's source, end with them too.
 

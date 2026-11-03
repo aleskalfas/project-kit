@@ -89,7 +89,7 @@ A migration's folder names the version it carries a project to, never one alread
 
 - **The stamp.** `pkit new migration` without `--version` takes the highest of these:
   - the next minor past the version the default branch records for the tier:
-    - `.pkit/VERSION` for the backbone
+    - `.pkit/VERSION` <!-- unanchored: names the file the step reads or writes, not its content --> for the backbone
     - the component's `package.yaml` for an adapter or a capability
   - the version the working tree records, where it is above that one, as on the branch of a project whose change bumps its own version
   - the next major, where its folder already waits, so the script runs after the migrations of the change that made it
