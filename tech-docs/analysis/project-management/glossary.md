@@ -66,7 +66,7 @@ TERM-audit-comment:
   name: audit comment
   noun-forms: [audit comments]
   status: active
-  definition: "message project-management posts recording a person's reason or consent for a write it governs, or at the project's fullest setting each governed write"
+  definition: "message project-management posts recording a person's reason or consent for a write project-management governs, or at the project's fullest setting each governed write"
   pkit:
     friction:
       anchors:
