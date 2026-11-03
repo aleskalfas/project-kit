@@ -2329,7 +2329,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 **Distinctions:**
 
 - **A rule set of the project's own:** one the project owns, which may take a scope. [Sync](#term-sync--sync) never reads or writes it ([COR-051 point 6](../../../.pkit/decisions/core/COR-051-rule-sets.md#6-two-kinds-two-owners)).
-- **Loaded rule set:** a method rule set whose rules bind on the work of the sessions that load its generated file, such as the [backbone](#term-backbone--backbone)'s `OPS` ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
+- **Loaded rule set:** a rule set whose rules bind on the work of the sessions that load its generated file. The [backbone](#term-backbone--backbone)'s `OPS` and a [capability](#term-capability--capability)'s are method rule sets, while a project's own is no method rule set ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
 - **Where its rules bind:** unless it is a [loaded rule set](#term-loaded-rule-set--loaded-rule-set), only through a set of the project's own that inherits it ([COR-051 point 7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 
 ## TERM-methodology — methodology
