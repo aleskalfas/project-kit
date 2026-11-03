@@ -603,7 +603,7 @@ TERM-friction-mode:
   name: friction mode
   noun-forms: [friction modes]
   status: active
-  definition: "setting of the backbone configuration, `warning` by default or `enforcing`, saying whether the change check reports its findings and passes, or fails on them"
+  definition: "backbone configuration setting, `warning` by default, whose value `enforcing` has the change check fail on a diff's dead anchors and unanswered edits to anchors' targets"
   pkit:
     friction:
       anchors:

@@ -23,6 +23,7 @@ pkit:
         - COR-003
         - COR-048
         - COR-049
+        - COR-053#6
         - COR-055
         - COR-059
         - ADR-039
@@ -320,6 +321,7 @@ Validation checks a [project](../glossary.md#term-project--project)'s own files 
 
 - Installed components join it through their validators (COR-055 point 3).
 - It checks the backbone configuration and the documentation roots ([COR-048 point 4](../../../../.pkit/decisions/core/COR-048-backbone-configuration.md#4-strict-when-checked-forgiving-when-read), [COR-049 point 7](../../../../.pkit/decisions/core/COR-049-documentation-roots.md#7-visible-and-checked)).
+- It checks the [connections](../glossary.md#term-connection--connection) that installed components declare ([COR-053 point 6](../../../../.pkit/decisions/core/COR-053-connection-points.md#6-optional-by-default-mandatory-only-with-a-reason-on-the-individual-connection)).
 
 **States:** None.
 
@@ -327,6 +329,9 @@ Validation checks a [project](../glossary.md#term-project--project)'s own files 
 
 - It judges the files as they stand, never a comparison of two states ([COR-055 point 2](../../../../.pkit/decisions/core/COR-055-validation.md#2-state-not-a-change)).
 - It fails when one of its results carries the failing severity, and only then (COR-055 point 5).
+- It rejects a mandatory mark that a connection carries with no reason (COR-053 point 6).
+- It reports a connection that ties to no [connection point](../glossary.md#term-connection-point--connection-point) (COR-053 point 6).
+- It rejects two mandatory connections facing each other, which form a cycle (COR-053 point 6).
 
 ## Validator
 

@@ -20,6 +20,7 @@ pkit:
         - src/project_kit/status.py
         - src/project_kit/capabilities.py
       record:
+        - COR-053#3
         - COR-053#8
         - ADR-065#7
       artefact:
