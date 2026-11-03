@@ -386,8 +386,6 @@ Whatever form a transition's target or gate takes, the engine stays a determinis
 - **Resolved** (deferred): a `resolver(data)` that returns which of a known set of blocks apply now. Given the data, its answer is deterministic, so the engine stays an honest validator.
 - **An open region** (core, [COR-040](../decisions/core/COR-040-process-open-region.md)): a state marked `open_region: true`, with no edges inside it, for work whose order is open-ended. Only region-scoped invariants and an explicit exit gate bound it, and the flag itself changes nothing the engine does.
 
-In every form the engine stays a deterministic validator.
-
 ### The open region
 
 An open region adds no new kind of node, and no language for states inside it ([COR-040](../decisions/core/COR-040-process-open-region.md)). The engine reduces it to a deterministic check on its boundary: "may this subject leave yet?"

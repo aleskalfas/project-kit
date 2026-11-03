@@ -207,7 +207,7 @@ Resolving the fold runs predicates and resolves member outcomes live, and writes
 - **No cycles:** the guard against cycles is inherited. A member at the parent's own address and subject is refused, and a member at another subject of the parent's own process is allowed.
 - **A known limit, accepted:** predicate answers are not memoised across the breadth of a fold.
   - The `members` predicate runs through the parent's answer memo for the invocation.
-  - Each member's outcome and membership are resolved through a fresh runner, with no memo. One `status` resolves the fold more than once, so a member's predicates run again each time.
+  - Each member's outcome and membership are resolved through a fresh runner, whose memo starts empty. One `status` resolves the fold more than once, so a member's predicates run again each time.
   - The member sets that bindings fold are small. A shared memo for each render is deferred until a binding's set size makes it pay.
 
 ### What `status` shows
@@ -277,7 +277,10 @@ The engine's runtime never reads `depends_on`, and each other reader is bounded 
 - **A targeted version.** An entry may name the upstream interface `version` it targets ("The interface version" above). It then connects only to an offered process at an equal version, and another version leaves it inert.
 - **A hand-off contract on an entry addressed by role:**
   - The health check reads the process that the role's active provider offers there, from the wiring resolver, never by a resolution of its own.
-  - An address no active provider offers is indeterminate. That is so where no provider is installed, where providers conflict, or where no process sits at that address.
+  - An address no active provider offers is indeterminate, in three cases:
+    - no provider is installed
+    - providers conflict
+    - no process sits at that address
   - The hand-off stamp reads the same process when it writes the contract, and checks the trigger against its states. A role address that reaches no offered process is a warning there, since the trigger cannot be checked.
   - The `candidates` seam still receives the address as declared.
 

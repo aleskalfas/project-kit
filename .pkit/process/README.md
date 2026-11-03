@@ -78,9 +78,12 @@ The substrate's terms come at two altitudes ([COR-033](../decisions/core/COR-033
 The substrate gives every process two guarantees ([COR-033](../decisions/core/COR-033-process-substrate.md) point 3).
 
 - **A deterministic validator.** Given a definition and observable reality, three answers are definite: "where is this subject", "may it move from here to there" and "is it valid". This holds even for dynamic structure ([the shape page, "Determinism across dynamic structure"](shape.md#determinism-across-dynamic-structure)).
-- **A memory that explains itself.** The status view shows where the subject is, why, how it got there, and what it may do next.
-  - Each comes with a live precheck, and the live precheck wins over any label in prose.
-  - It renders two ways: a narrative for people, and a structured form for agents and machines.
+- **A memory that explains itself.** The status view shows four things, each with a live precheck that wins over any label in prose:
+  - where the subject is
+  - why it is there
+  - how it got there
+  - what it may do next
+- **Its two renderings:** a narrative for people, and a structured form for agents and machines.
 
 ## Gate-checkability (the load-bearing rule)
 
@@ -145,7 +148,12 @@ Authoring a definition goes through three tiers, so it does not mean knowing the
   - `pkit process health --interpretation-only --process <address>`, scoped to the definition, is the read-only check that pairs with them. It reports each hand-off contract it cannot interpret, a seam still a stub among them, and counts no missed hand-off.
   - That check reads hand-off contracts alone. A definition that declares none passes it, whatever stubs its states and gates still hold.
 - **The `process` skill:** the walkthrough over those commands.
-  - It asks the shape questions, and then stamps the answer. The questions are what the subject is, what each state means and which moves are gated. They also ask whether a trigger is stable, and whether a candidate source would fail loudly or return empty.
+  - It asks the shape questions, and then stamps the answer. The questions are these:
+    - what the subject is
+    - what each state means
+    - which moves are gated
+    - whether a trigger is stable
+    - whether a candidate source would fail loudly or return empty
   - It also owns the judgment the stamps refuse on purpose. It routes an adopter with no owning capability through capability authoring first.
 - **The `process-author` agent:** the teeth, the predicates behind every evaluable the shape declares. They are detections, gates, entry guards, `resume_when`, invariant checks and both seams of a hand-off.
   - It turns the owner's intent, given in plain words, into predicates that satisfy the predicate-runner contract ("The predicate runner" below). Each is read-only and fails closed, and answers about the one subject it was given.
@@ -169,7 +177,7 @@ Authoring a definition goes through three tiers, so it does not mean knowing the
 
 ## The engine
 
-The engine's operations, and what each answers, are on [`engine.md`](engine.md#the-operations). Its contract with each predicate, the order a capability's commands follow around a move, and its optional journal stand below ([COR-033](../decisions/core/COR-033-process-substrate.md)).
+The engine's contract with each predicate, the order a capability's commands follow around a move, and its optional journal stand below ([COR-033](../decisions/core/COR-033-process-substrate.md)). The engine's operations, and what each answers, are on [`engine.md`](engine.md#the-operations).
 
 ### The predicate runner (engine contract)
 
@@ -202,7 +210,7 @@ A predicate that gives no answer is indeterminate, never a pass.
 
 - **No answer:** the predicate errors, times out, prints unparseable JSON or anything but a JSON object, or does not resolve. Each state of a classifier whose answer the engine cannot read is indeterminate too.
 - **What is shown:** `status` shows it apart ("couldn't evaluate: …"), and `move` refuses.
-- **What else fails closed:** a gate kind the engine does not know, such as one from a newer schema, and a detection mode the engine does not implement. Each is an engine and a definition out of step. So does a definition whose states declare more than one detection mode. None passes silently.
+- **What else fails closed:** a gate kind the engine does not know, such as one from a newer schema, and a detection mode the engine does not implement. Each is an engine and a definition out of step. A definition whose states declare more than one detection mode fails closed too. None passes silently.
 - **From an indeterminate position** no move is permitted, and `status` lists none as permitted. A `from: "*"` move that it shows there is refused, with `can-move`'s reason.
 - **Gates are correctness boundaries,** unlike the permission hook, which fails open to stay available.
 
@@ -290,7 +298,10 @@ Because detection is authoritative, the seam corrects itself whichever step fail
 
 The engine can keep an append-only journal for each subject ([COR-033](../decisions/core/COR-033-process-substrate.md) point 7). It holds an entry for each move the engine executes, and for each wait's enter and resume.
 
-- **Audit, not runtime.** Position, gates, invariants and the blocked overlay never read it. So the engine's verdicts are the same with it on or off: where the subject is, whether it may move, and whether it is valid.
+- **Audit, not runtime.** Position, gates, invariants and the blocked overlay never read it. So the engine's verdicts are the same with it on or off:
+  - where the subject is
+  - whether it may move
+  - whether it is valid
 - **The project's choice.** The project declares it in the backbone configuration file ([the CLI reference, "Configuration file"](../cli/README.md#configuration-file)):
 
 ```yaml
@@ -326,7 +337,10 @@ pkit config set process.journal.committed true --yes
 
 Each line of a journal is one JSON object: a move's entry, or a wait's.
 
-- **A move's entry** holds `ts`, `subject`, `to`, `trigger` and `actor`. It adds `from` where the origin is known, `gate_result` (`pass` or `fail`) where the move has a gate, and `severity` where the transition names one.
+- **A move's entry** holds `ts`, `subject`, `to`, `trigger` and `actor`, and adds these keys:
+  - **`from`:** where the origin is known.
+  - **`gate_result`:** `pass` or `fail`, where the move has a gate.
+  - **`severity`:** where the transition names one.
   - **`version`:** the pkit version that governed the move.
   - **`reason`:** the one place an entry says why its move was taken, written only where the caller gave `move` a `--reason` ([the engine page, "The operations"](engine.md#the-operations)).
 - **A wait's entry** holds `ts`, `subject` and `event`, `blocked-enter` or `blocked-resume`. It adds `blocked_on`, and `at` and `assignee` where the wait has them.
