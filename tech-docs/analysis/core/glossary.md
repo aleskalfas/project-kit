@@ -285,6 +285,24 @@ TERM-component-origin:
           - COR-031#D2
           - COR-041
           - COR-059#1
+TERM-connection:
+  name: connection
+  noun-forms: [connections]
+  other-senses: [network connection]
+  status: active
+  definition: "tie a component's package metadata declares to another capability's interface: a contribution to a data point, an event subscription or a process dependency"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/connections.py
+          - src/project_kit/wiring_graph.py
+        record:
+          - COR-052#2
+          - COR-053#2
+          - COR-053#3
+          - COR-053#6
+          - COR-053#7
 TERM-connection-point:
   name: connection point
   noun-forms: [connection points]
@@ -527,7 +545,6 @@ TERM-environment-block:
 TERM-extension-point:
   name: extension point
   noun-forms: [extension points]
-  other-senses: [extension points the component author uses]
   status: active
   definition: "named part of a rule that a rule of an inheriting set may fill, at most once along a line of inheritance"
   pkit:
@@ -1970,6 +1987,22 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 - **A rule's origin:** when, by whom and why a [rule](#term-rule--rule) was decided ([COR-051 point 5](../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically)). It shares only the word.
 - **Source repository:** where a [component](#term-component--component) is authored. The component is `incubated-in-repo` there, and `externally-sourced` in the projects that pull it (COR-041).
 
+## TERM-connection — connection
+
+Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#connection).
+
+**Example:** software-analysis's [package metadata](#term-package-metadata--package-metadata) declares a connection to `pkit::documentation:readers`, the readers [data point](#term-data-point--data-point) living-docs defines, and contributes one reader for each actor in force. `pkit connections graph` draws it as `contributes`.
+
+**Distinctions:**
+
+- **Connection point:** the interface a connection ties to, which a [capability](#term-capability--capability) defines under a [role](#term-role--role) and other [components](#term-component--component) connect to ([COR-053 point 2](../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds)).
+- **The `connections` block:** the block of package metadata that holds three things ([COR-053 point 3](../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality)):
+  - a capability's roles
+  - the [connection points](#term-connection-point--connection-point) it defines, under `extension-points`
+  - its connections, under `extensions`
+- **A dependency on a capability:** a [range](#term-range--range) one capability declares on another, which names that capability ([COR-030](../../../.pkit/decisions/core/COR-030-capability-dependencies.md)). A connection is optional unless it carries a mandatory mark, with its reason ([COR-053 point 6](../../../.pkit/decisions/core/COR-053-connection-points.md#6-optional-by-default-mandatory-only-with-a-reason-on-the-individual-connection)).
+- **A network connection:** a link over the network to another machine. It shares only the word.
+
 ## TERM-connection-point — connection point
 
 Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#connection-point).
@@ -2206,7 +2239,6 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 - **Fill:** the rule that fills an extension point. It names the extension point in `fills`, and anchors the rule it fills, so an edit there flags the fill ([COR-051 point 7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 - **`extension-points` in package metadata:** [COR-053](../../../.pkit/decisions/core/COR-053-connection-points.md)'s key for the [connection points](#term-connection-point--connection-point) a [capability](#term-capability--capability) defines. It shares only the words ([COR-053 point 3](../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality)).
-- **Extension points in their plain sense:** whatever a [component](#term-component--component) extends the [system](#term-system--system) through, such as a connection point or a [harness requirement](#term-harness-requirement--harness-requirement). They share only the words.
 - **Point:** a part of a [decision record](#term-decision-record--decision-record)'s Decision. It shares only the word ([COR-058 point 1](../../../.pkit/decisions/core/COR-058-record-points.md#1-a-point-is-a-heading-with-its-id-and-title)).
 
 ## TERM-finding — finding

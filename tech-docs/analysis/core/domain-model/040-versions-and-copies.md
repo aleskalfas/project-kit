@@ -316,7 +316,7 @@ Defined in [TERM-dependency-gate](../glossary.md#term-dependency-gate--dependenc
 
 **Why:** A dependency whose interface changed in a way that breaks a [capability](../glossary.md#term-capability--capability) fails silently when that capability runs, at no step of the lifecycle ([COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)). A check at [install](../glossary.md#term-install--install), upgrade and uninstall makes that failure loud there instead (COR-030).
 
-A dependency gate is a check made before an install or a [version transition](../glossary.md#term-version-transition--version-transition) writes anything. The gate checks that the capabilities the install or the transition would leave meet each other's ranges and mandatory connections. A capability that moves against a dependency outside its [range](../glossary.md#term-range--range) is refused. A dependency that moves outside a dependent's range is warned of, and the write goes on only under `--force`.
+A dependency gate is a check made before an install or a [version transition](../glossary.md#term-version-transition--version-transition) writes anything. The gate checks that the capabilities the install or the transition would leave meet each other's ranges and mandatory [connections](../glossary.md#term-connection--connection). A capability that moves against a dependency outside its [range](../glossary.md#term-range--range) is refused. A dependency that moves outside a dependent's range is warned of, and the write goes on only under `--force`.
 
 **Attributes:** None.
 
@@ -690,4 +690,6 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
 - [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
+- [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
+- [UC-054 — Upgrade one capability on its own](../use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md)
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)

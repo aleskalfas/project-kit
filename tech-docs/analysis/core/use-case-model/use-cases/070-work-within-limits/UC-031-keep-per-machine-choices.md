@@ -102,7 +102,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** the system realises the [permission model](../../../glossary.md#term-permission-model--permission-model) for Claude Code's adapter alone. Without that adapter, it refuses with `the claude-code adapter is not installed; the sandbox is harness-specific.`, and writes nothing. COR-028 point 2 decides that each adapter realises the model, and #1909 tracks it.
 
-- **3b.** The socket's path lies under a credential path that no command in the sandbox may read, such as `~/.ssh`. The system still writes the allowance, since the operator chose it. The system warns that the sandbox may still block the connection to the socket ([ADR-010 point 7](../../../../../architecture/decisions/ADR-010-host-environment-detection.md#7-credential-floor-collision--never-silently-auto-apply)).
+- **3b.** The socket's path lies under a credential path that no command in the sandbox may read, such as `~/.ssh`. The system still writes the allowance, since the operator chose it. The system warns that the sandbox may still block the network connection to the socket ([ADR-010 point 7](../../../../../architecture/decisions/ADR-010-host-environment-detection.md#7-credential-floor-collision--never-silently-auto-apply)).
 
 **Postconditions:** Each per-machine choice is in force on this machine, in a file no commit carries. What the [system](../../../glossary.md#term-system--system) counts as shared policy, such as a [profile](../../../glossary.md#term-profile--profile)'s [posture](../../../glossary.md#term-posture--posture), goes to a committed file.
 
