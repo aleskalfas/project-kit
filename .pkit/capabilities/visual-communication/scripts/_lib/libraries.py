@@ -1,6 +1,7 @@
 """The library folder, the list of the project's libraries, versions, the libraries the
-capability ships, and a piece's lock (DEC-001 point 5, DEC-002 point 3, DEC-003 points 1,
-4, 5, 8 and 9, DEC-004 point 6).
+capability ships, a piece's lock, and the versions a library is checked alone with
+(DEC-001 point 5, DEC-002 point 3, DEC-003 points 1, 4, 5, 8 and 9, DEC-004 point 6,
+DEC-005 point 7, DEC-008 point 1).
 
 - **The library folder** is `libraries/` in the location. Each version a lock may name is
   a folder of its own, `libraries/<name>/<version>/`, holding the version whole with its
@@ -33,6 +34,12 @@ capability ships, and a piece's lock (DEC-001 point 5, DEC-002 point 3, DEC-003 
   library, and refuses as when none fits, naming the libraries it was choosing. A library
   the lock does not name yet takes its newest version of any major. A pinned draft's lock
   never moves: it is checked, never changed.
+- **A version checked alone** is resolved with the newest version the project holds of
+  each major it builds on, and of each major those build on (`newest_of_majors`). The
+  search and that choice take a library's versions through one filter (`readable`): the
+  versions of its line the installed capability reads, the newest first. Where two of
+  the versions build on two majors of one library, such as a brand and its base, none
+  fits (`MajorsConflict`).
 """
 
 from __future__ import annotations
@@ -97,6 +104,11 @@ class LibraryError(Exception):
 
 class LockRefused(Exception):
     """No lock fits: the message names the conflict, or what the project lacks."""
+
+
+class MajorsConflict(LockRefused):
+    """Two versions that build on two majors of one library, so no versions fit them both:
+    the message names both."""
 
 
 @dataclass(frozen=True, order=True)
@@ -623,6 +635,64 @@ def _listing(root: Path, list_file: Path, library: Library) -> str:
 # --- the lock -----------------------------------------------------------------------------------
 
 
+def readable(held: Held, name: str, line: int | None = None) -> tuple[list[Library], list[str]]:
+    """The versions of `name` the project holds that the installed capability reads, the
+    newest first, within the major `line` where one is given; and why it cannot read each
+    other version of that line. The lock's search and the choice of the versions a library
+    is checked alone with both take a library's versions through it."""
+    found, unread = [], []
+    for version in held.versions(name):
+        if line is not None and version.major != line:
+            continue
+        why = held.unreadable(name, version)
+        if why is None:
+            found.append(held.library(name, version))
+        else:
+            unread.append(f"{name}@{version}: {why}")
+    return found, unread
+
+
+def newest_of_majors(held: Held, library: Library) -> dict[str, Library]:
+    """The versions `library` is checked alone with (DEC-005 point 7, DEC-008 point 1), by
+    name: itself, the newest version the project holds of the major it names of each
+    library it builds on, and so on for what those build on, each through `readable`.
+
+    Raises MajorsConflict where two of them build on two majors of one library, such as a
+    brand and its base, or one builds on `library` at another major than its own; and
+    LockRefused where the project holds no version of a major one of them names that the
+    installed capability reads."""
+    chosen: dict[str, Library] = {library.name: library}
+    named: dict[str, tuple[int, str]] = {library.name: (library.version.major, library.label)}
+    pending = [library]
+    while pending:
+        current = pending.pop(0)
+        for need in current.builds_on:
+            if need.name in named:
+                major, by = named[need.name]
+                if major != need.major:
+                    first = (
+                        f"{by} is of major {major}"
+                        if need.name == library.name
+                        else f"{by} builds on `{need.name}` {major}"
+                    )
+                    raise MajorsConflict(
+                        f"no versions fit: {first}, and {current.label} builds on "
+                        f"`{need.name}` {need.major}"
+                    )
+                continue
+            named[need.name] = (need.major, current.label)
+            found, unread = readable(held, need.name, need.major)
+            if not found:
+                reasons = f" ({'; '.join(unread)})" if unread else ""
+                raise LockRefused(
+                    f"{current.label} builds on `{need.name}` {need.major}, of which the project "
+                    f"holds no version the installed capability reads{reasons}"
+                )
+            chosen[need.name] = found[0]
+            pending.append(found[0])
+    return {name: chosen[name] for name in sorted(chosen)}
+
+
 def move_lock(
     held: Held,
     roots: Iterable[str],
@@ -683,8 +753,7 @@ class _Search:
 
     def candidates(self, name: str) -> list[Library]:
         held = self.held
-        versions = held.versions(name)
-        if not versions:
+        if not held.versions(name):
             self._note(f"the project holds no version of `{name}`: bring it in")
             return []
         line: int | None = None
@@ -694,23 +763,15 @@ class _Search:
             except ValueError:
                 self._note(f"the lock names `{name}: {self.lock[name]}`, which is no version")
                 return []
-        readable, unread = [], []
-        for version in versions:
-            if line is not None and version.major != line:
-                continue
-            why = held.unreadable(name, version)
-            if why is None:
-                readable.append(held.library(name, version))
-            else:
-                unread.append(f"{name}@{version}: {why}")
-        if not readable:
+        found, unread = readable(held, name, line)
+        if not found:
             within = f" of major {line}, the line the lock names" if line is not None else ""
             reasons = f" ({'; '.join(unread)})" if unread else ""
             self._note(
                 f"the project holds no version of `{name}`{within} that the installed "
                 f"capability reads{reasons}"
             )
-        return readable
+        return found
 
     def run(self, roots: list[str]) -> dict[str, Library] | None:
         """The combination found, or None where none fits. Raises _Stopped at the bound."""
