@@ -1,7 +1,7 @@
 ---
 id: DEC-014
 title: A project's own library needs the capability's version current at its release
-status: proposed
+status: accepted
 date: 2026-11-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
