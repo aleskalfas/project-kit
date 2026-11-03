@@ -1,7 +1,7 @@
 ---
 id: DEC-008
 title: A library's own role may default to another role, so a brand that does not name the library still draws it
-status: proposed
+status: accepted
 date: 2026-11-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
