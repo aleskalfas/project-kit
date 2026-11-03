@@ -569,12 +569,12 @@ The backbone runs the commands a component registers through one runner: one loo
 
   | Reading command | What a script reads it for |
   |---|---|
-  | [`pkit connections resolve <address> --json`](../cli/README.md#connections-resolve-address---json) | one data point, as it resolves ("Reading one point from a script" below) |
-  | [`pkit friction artefacts --json`](../cli/README.md#friction-artefacts---at-rev---json) | where the artefacts are |
-  | [`pkit repository base --json`](../cli/README.md#repository-base---base-ref---json) | settled state, and the history at hand |
-  | [`pkit rule-sets reach --json`](../cli/README.md#rule-sets-reach-path---at-rev---preview---json) | which accepted rules bind on each artefact ([COR-051](../decisions/core/COR-051-rule-sets.md) point 7) |
-  | [`pkit rule-sets altered --json`](../cli/README.md#rule-sets-altered---base-ref---head-rev---json) | what a change altered or brought under a rule, and the rules on each |
-  | [`pkit capabilities project-rule-set <name> --json`](../cli/README.md#the-project-rule-set-a-capability-declares) | the project rule set an installed capability declares. A capability's migration reads it for an earlier install ([`component-registry.md`, "The declared project rule set"](component-registry.md) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->) |
+  | `pkit connections resolve <address> --json`, [its section](../cli/README.md#connections-resolve-address---json) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> | one data point, as it resolves ("Reading one point from a script" below) |
+  | `pkit friction artefacts --json`, [its section](../cli/README.md#friction-artefacts---at-rev---json) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> | where the artefacts are |
+  | `pkit repository base --json`, [its section](../cli/README.md#repository-base---base-ref---json) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> | settled state, and the history at hand |
+  | `pkit rule-sets reach --json`, [its section](../cli/README.md#rule-sets-reach-path---at-rev---preview---json) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> | which accepted rules bind on each artefact ([COR-051](../decisions/core/COR-051-rule-sets.md) point 7) |
+  | `pkit rule-sets altered --json`, [its section](../cli/README.md#rule-sets-altered---base-ref---head-rev---json) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> | what a change altered or brought under a rule, and the rules on each |
+  | `pkit capabilities project-rule-set <name> --json`, [its section](../cli/README.md#the-project-rule-set-a-capability-declares) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> | the project rule set an installed capability declares. A capability's migration reads it for an earlier install ([`component-registry.md`, "The declared project rule set"](component-registry.md) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->) |
 
   - **What a query may call:** each reading command is read-only and needs no network, so a query may call it.
   - **What the script does itself:** the script applies the answer itself. For example, the living-docs validator decides which of two places matching a file wins, and which space it serves.
@@ -1028,7 +1028,7 @@ Suggestions are read from package metadata on disk only, and never fetched. A su
 
 For concrete examples of the contract the lifecycle reference defines, see these files, where the project has them:
 
-- The project's own `.pkit/manifest.yaml`, for the backbone-manifest shape with adapter and capability entries.
+- The project's own backbone manifest, for its shape with adapter and capability entries.
 - `.pkit/migrations/backbone/<X.Y.0>/`, for backbone migration script structure.
 - `.pkit/capabilities/project-management/migrations/0.12.0/`, for a capability-tier migration that handles file-rename + adopter-state cleanup.
 - `.pkit/adapters/<adapter>/migrations/`, in the methodology's source, for adapter-tier migration patterns. A project's copy of an adapter carries none ("An adapter's manifest", above).
