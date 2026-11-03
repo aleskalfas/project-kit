@@ -45,6 +45,9 @@ pkit:
         - living-docs:DEC-001#7
         - living-docs:DEC-001#8
         - living-docs:DEC-002
+        - living-docs:DEC-003#1
+        - living-docs:DEC-003#4
+        - living-docs:DEC-003#5
         - ADR-034#1
         - COR-005
         - COR-013
@@ -58,6 +61,25 @@ pkit:
         - COR-050#7
         - COR-051#7
         - COR-052
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#3
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
+        - COR-028
+        - COR-039
+        - PRJ-004
+        - ADR-063
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
+        - COR-039#1
+        - COR-048#5
       artefact:
         - REQ-023
         - REQ-024
@@ -79,11 +101,11 @@ pkit:
 
 - The [project](../../../../core/glossary.md#term-project--project) has living-docs installed, or registered in place where living-docs is developed ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-031](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md)). The CLI registers `pkit living-docs new` and `validate` from its [package metadata](../../../../core/glossary.md#term-package-metadata--package-metadata) ([COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)). The [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys the `docs-author` [skill](../../../../core/glossary.md#term-skill--skill) ([COR-005](../../../../../../.pkit/decisions/core/COR-005-bundle-pattern.md) and [COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
 - The [backbone](../../../../core/glossary.md#term-backbone--backbone) reads the [page](../../../glossary.md#term-page--page)'s anchors, and its [change check](../../../../core/glossary.md#term-change-check--change-check) asks the page for an [answer](../../../../core/glossary.md#term-answer--answer) whenever what an [anchor](../../../../core/glossary.md#term-anchor--anchor) names changes ([COR-050 point 6](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)). It resolves a `source` anchor through living-docs' resolver, `pkit living-docs resolve-source` ([COR-050 point 2](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#2-anchors)).
-- A `source` anchor that no captured file answers is a dead anchor. The core's checks report it, and fail it where a change adds it ([COR-050 point 7](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#7-dead-anchors-excluded-paths-and-over-broad-anchors) and [core:REQ-020](../../../../core/requirements/functional/030-change/REQ-020-dead-anchor-error.md)).
+- A `source` anchor that no captured file answers is a dead anchor. The core's checks report it, and fail it where a [change](../../../../core/glossary.md#term-change--change) adds it ([COR-050 point 7](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#7-dead-anchors-excluded-paths-and-over-broad-anchors) and [core:REQ-020](../../../../core/requirements/functional/030-change/REQ-020-dead-anchor-error.md)).
 - The backbone resolves the [readers](../../../glossary.md#term-reader--reader) [data point](../../../../core/glossary.md#term-data-point--data-point) from its default, the project's file and each [capability](../../../../core/glossary.md#term-capability--capability) that fills it ([COR-052](../../../../../../.pkit/decisions/core/COR-052-slots.md)). It answers where each [rule](../../../../core/glossary.md#term-rule--rule) binds ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 - Nothing checks, as the page is written, that its anchors ground each statement it makes. A [reader-review](../../../glossary.md#term-reader-review--reader-review) judges it, as `UC-046` describes (DEC-001 points [3](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#3-what-the-shared-rules-require) and [6](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#6-reader-review)). [Validation](../../../../core/glossary.md#term-validation--validation) only reports what the page mentions and does not anchor (12f).
 
-**Trigger:** The developer has something to explain to one [reader](../../../glossary.md#term-reader--reader) of a space, such as a new command its users run.
+**Trigger:** The developer has something to explain to one [reader](../../../glossary.md#term-reader--reader) of a [documentation space](../../../glossary.md#term-documentation-space--documentation-space), such as a new command its users run.
 
 **Main path:**
 
@@ -95,7 +117,7 @@ pkit:
    - rules, analysis [artefacts](../../../../core/glossary.md#term-artefact--artefact), or the section of a fact's home, by `--artefact`
    - [captured sources](../../../glossary.md#term-captured-source--captured-source) by `--source`
 4. The developer runs `pkit living-docs new page` with the page's file, its `--space`, `--kind`, `--reader` and `--title`, and an option for each [anchor](../../../../core/glossary.md#term-anchor--anchor).
-5. At its entry, before it writes, the [system](../../../../core/glossary.md#term-system--system) checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
+5. At its entry, before it writes, the [system](../../../../core/glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit living-docs new` runs no such check, and writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -112,11 +134,11 @@ pkit:
 **Variants:**
 
 - **1a.** The [page kind](../../../glossary.md#term-page-kind--page-kind) is one the [project](../../../../core/glossary.md#term-project--project) adds, with a template of its own. The [stamp](../../../../core/glossary.md#term-stamp--stamp) takes only a page kind living-docs declares, so the developer writes the [page](../../../glossary.md#term-page--page) by hand from that template (`stamp.py`). The path goes on at step 10.
-- **2a.** The developer puts the page in a [place](../../../../core/glossary.md#term-place--place) assigned to the space outside every root, as DEC-001 point 1 allows. The `docs-author` [skill](../../../../core/glossary.md#term-skill--skill)'s page operation offers that place. The stamp writes the page there, as it writes one under the root.
+- **2a.** The developer puts the page in a [place](../../../../core/glossary.md#term-place--place) assigned to the [documentation space](../../../glossary.md#term-documentation-space--documentation-space) outside every root, as [living-docs DEC-001 point 1](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces) allows. The `docs-author` [skill](../../../../core/glossary.md#term-skill--skill)'s page operation offers that place. The stamp writes the page there, as it writes one under the root.
 - **3a.** The page rests on a text outside the repository, such as a standard. The developer captures it in `.pkit/capabilities/living-docs/project/sources/<name>.yaml`, holding its `title`, its `version` and, where it has one, its `url`. The page anchors it with `--source <name>`, and nothing fetches the text ([DEC-001 point 4](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated) and [REQ-025](../../../requirements/constraints/REQ-025-never-fetch-source.md)).
-- **3b.** The page has nothing to [anchor](../../../../core/glossary.md#term-anchor--anchor) yet. The stamp writes an empty [friction](../../../../core/glossary.md#term-friction--friction) block, and [validation](../../../../core/glossary.md#term-validation--validation) counts the page as unanchored for onboarding, never failing it ([DEC-001 point 8](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)). A reason for having no anchors is a person's decision, accepted word for word before it is written ([COR-050 point 1](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)).
+- **3b.** The page has nothing to [anchor](../../../../core/glossary.md#term-anchor--anchor) yet. The stamp writes an empty [friction](../../../../core/glossary.md#term-friction--friction) block, and [validation](../../../../core/glossary.md#term-validation--validation) counts the page as unanchored for [onboarding](../../../glossary.md#term-onboarding--onboarding), never failing it ([DEC-001 point 8](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)). A reason for having no anchors is a person's decision, accepted word for word before it is written ([COR-050 point 1](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)).
 - **4a.** The developer passes `--dry-run`. The [system](../../../../core/glossary.md#term-system--system) makes the checks before the write, prints the page it would write, and writes nothing. Whether the file would be a page of the space shows only once it is written, and the use case ends.
-- **4b.** The two [documentation roots](../../../../core/glossary.md#term-documentation-root--documentation-root) are one folder, as they are by default, and the space is the user or technical space. Before its checks, the system offers to set the internal root apart, at `tech-docs` or a folder the developer names ([DEC-001 point 2](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content)). `pkit config set docs.internal` writes the new internal root, asking once, or off a terminal with the stamp's `--yes`. Declined, nothing is written and the use case ends, and accepted, the path goes on at step 5.
+- **4b.** The two [documentation roots](../../../../core/glossary.md#term-documentation-root--documentation-root) are one folder, as they are by default, and the space is the user or technical space. Before its checks, the system offers to set the internal root apart, at `tech-docs` or a folder the developer names ([DEC-001 point 2](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content)). `pkit config set docs.internal` writes the new internal root, asking once, or off a terminal with the stamp's `--yes` ([COR-048 point 5](../../../../../../.pkit/decisions/core/COR-048-backbone-configuration.md#5-written-only-with-consent)). Declined, nothing is written and the use case ends, and accepted, the path goes on at step 5.
 - **6a.** The request does not hold, in one of these ways, and the system refuses and writes nothing:
   - a space that is no space of the project, or a page kind living-docs does not declare
   - a file that exists, a path that is no Markdown file of the repository, or one reached through a link
@@ -144,11 +166,11 @@ pkit:
 - **12e.** A `source` anchor of the page names no captured file. Validation reports it, and never fails it ([DEC-001 point 4](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)).
 - **12f.** The page mentions a file, a record, a rule or a command that its anchors do not cover. Where `RS-LDOC-001` binds, validation reports the page and lists each mention with an anchor that would cover it, never failing it. The developer anchors what the page rests on, or marks a passage that only names a thing with `<!-- unanchored: <reason> -->` ([DEC-001 point 6](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#6-reader-review)).
 
-**Postconditions:** The [page](../../../glossary.md#term-page--page) lies in its space. It names its [reader](../../../glossary.md#term-reader--reader) and its [page kind](../../../glossary.md#term-page-kind--page-kind), and its anchors name what its statements rest on. Where the space's rules bind on it, [validation](../../../../core/glossary.md#term-validation--validation) holds its reader and its structure.
+**Postconditions:** The [page](../../../glossary.md#term-page--page) lies in its [documentation space](../../../glossary.md#term-documentation-space--documentation-space). It names its [reader](../../../glossary.md#term-reader--reader) and its [page kind](../../../glossary.md#term-page-kind--page-kind), and its anchors name what its statements rest on. Where the space's rules bind on it, [validation](../../../../core/glossary.md#term-validation--validation) holds its reader and its structure.
 
 **Minimal guarantees:**
 
 - A refused [stamp](../../../../core/glossary.md#term-stamp--stamp) puts back every file it wrote, or names each it could not ([REQ-023](../../../requirements/quality/REQ-023-refused-stamp-writes-nothing.md)).
 - The stamp never writes over a file that exists (`stamp.py`).
-- [Validation](../../../../core/glossary.md#term-validation--validation) and the resolver of a `source` [anchor](../../../../core/glossary.md#term-anchor--anchor) change no file, need no network and give the same result for the same state. So they meet [core:REQ-005](../../../../core/requirements/quality/REQ-005-reading-writes-nothing.md) and [core:REQ-007](../../../../core/requirements/constraints/REQ-007-offline-same-answer.md) (`validate.py` and `resolve-source.py`).
+- [Validation](../../../../core/glossary.md#term-validation--validation) and the resolver of a `source` [anchor](../../../../core/glossary.md#term-anchor--anchor) write no file, need no network and give the same result for the same state. So they meet [core:REQ-005](../../../../core/requirements/quality/REQ-005-reading-writes-nothing.md) and [core:REQ-007](../../../../core/requirements/constraints/REQ-007-offline-same-answer.md) (`validate.py` and `resolve-source.py`).
 - A [readers](../../../glossary.md#term-reader--reader) [data point](../../../../core/glossary.md#term-data-point--data-point) that does not resolve fails validation, and never passes a [page](../../../glossary.md#term-page--page) on fewer readers ([DEC-001 point 7](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#7-connections)).

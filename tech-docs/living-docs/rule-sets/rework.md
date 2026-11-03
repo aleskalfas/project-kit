@@ -1,11 +1,13 @@
 ---
 rule-set: REWORK
-version: 3.1.0
+version: 3.6.0
 inherits: [living-docs:LDOC@1, WRITE@2]
 scope:
   paths:
     - .pkit/permissions/README.md
     - docs/permissions/README.md
+    - .pkit/scratchpad/README.md
+    - docs/scratchpad/README.md
     - .pkit/capabilities/living-docs/README.md
     - .pkit/capabilities/living-docs/pages.md
     - .pkit/capabilities/living-docs/spaces.md
@@ -18,6 +20,14 @@ scope:
     - docs/capabilities/living-docs/030-write-a-page.md
     - docs/capabilities/living-docs/040-have-a-page-read-as-its-reader.md
     - docs/capabilities/living-docs/050-fix-a-stale-page.md
+    - .pkit/capabilities/software-engineering/README.md
+    - docs/capabilities/software-engineering/README.md
+    - .pkit/rules/README.md
+    - docs/rules/README.md
+    - .pkit/skills/README.md
+    - docs/skills/README.md
+    - .pkit/decisions/README.md
+    - docs/decisions/README.md
   types: [living-docs:page]
 rules:
   RS-REWORK-001:

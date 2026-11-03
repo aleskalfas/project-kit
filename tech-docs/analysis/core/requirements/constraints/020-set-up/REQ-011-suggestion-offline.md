@@ -13,6 +13,7 @@ pkit:
   friction:
     anchors:
       path:
+        - src/project_kit/capability_plans.py
         - tests/test_capability_plans.py
       record:
         - COR-053#8

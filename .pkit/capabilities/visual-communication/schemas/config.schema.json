@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "config.schema.json",
+  "title": "Project configuration — visual-communication capability",
+  "description": "Formal shape of the project's `.pkit/capabilities/visual-communication/project/config.yaml` (DEC-002 point 2): the project's choices as a whole. `location` is the working folder that holds the project's libraries and pieces, recorded by the command that first writes there (COR-049 point 5); absent, the commands take `visual/` at the repository's top. Never a look, a lock or a choice of one piece. Format 1 holds the location alone; turning on plugins that reach a service comes later. Document-shaped schema: the file IS the resource. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:config`.",
+      "const": "visual-communication:config"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "location": {
+      "description": "The location, a folder within the repository, relative to its top.",
+      "$ref": "defs.schema.json#/$defs/repository-path"
+    }
+  }
+}

@@ -11,7 +11,7 @@ requirements:
   - REQ-041
   - REQ-042
 after:
-  - [UC-060, UC-063]
+  - [UC-060, UC-063, UC-083]
 shortfalls:
   - at: 4
     issue: "#756"
@@ -59,6 +59,7 @@ pkit:
         - project-management:DEC-031
         - project-management:DEC-033
         - project-management:DEC-034
+        - project-management:DEC-035#4
         - project-management:DEC-046#1
         - project-management:DEC-049
         - project-management:DEC-052
@@ -68,6 +69,24 @@ pkit:
         - COR-033
         - COR-039
         - ADR-034#1
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#3
+        - COR-050#6
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
+        - COR-013
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
+        - COR-028
+        - PRJ-004
+        - ADR-063
       artefact:
         - REQ-040
         - REQ-041
@@ -83,21 +102,21 @@ pkit:
 - **AI agent** (`core:ACT-ai-agent`): moves the [issue](../../../glossary.md#term-issue--issue) for the developer, through the `pm` [skill](../../../../core/glossary.md#term-skill--skill)'s `transition-state.md`. It makes on its own only the moves the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) leaves to it ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 - **Operator** (`core:ACT-operator`): is asked before a command moves an issue of a repository other than the session's own, so no such move happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From [UC-060](UC-060-file-task.md), or [UC-063](../010-plan/UC-063-plan-intent.md):** The [issue](../../../glossary.md#term-issue--issue) is filed.
+**Preconditions:** **From [UC-060](UC-060-file-task.md), [UC-063](../010-plan/UC-063-plan-intent.md) or [UC-083](../040-work-in-parallel/UC-083-plan-across-scopes.md):** The [issue](../../../glossary.md#term-issue--issue) is filed.
 
 **Assumptions:**
 
 - The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and its commands ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
-- The backbone's [process](../../../../core/glossary.md#term-process--process) engine reads where the [issue](../../../glossary.md#term-issue--issue) stands, checks each move against the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle)'s definition, and journals the move ([COR-033](../../../../../../.pkit/decisions/core/COR-033-process-substrate.md)). Where the engine cannot run, the commands read where the issue stands themselves, and warn that the move was not journaled ([DEC-033](../../../../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
+- The [backbone](../../../../core/glossary.md#term-backbone--backbone)'s [process](../../../../core/glossary.md#term-process--process) engine reads where the [issue](../../../glossary.md#term-issue--issue) stands, checks each move against the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle)'s definition, and [journals](../../../glossary.md#term-journal--journal) the move ([COR-033](../../../../../../.pkit/decisions/core/COR-033-process-substrate.md)). Where the engine cannot run, the commands read where the issue stands themselves, and warn that the move was not journaled ([DEC-033](../../../../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
 
 **Trigger:** The developer takes up an [issue](../../../glossary.md#term-issue--issue) that is filed, or decides that it will not be done.
 
 **Main path:**
 
 1. The developer schedules the [issue](../../../glossary.md#term-issue--issue): `pkit pm promote-issue <N> --reason "<R>"`, with `--milestone <M>` where the [project](../../../../core/glossary.md#term-project--project) uses [Milestones](../../../glossary.md#term-milestone--milestone) ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md) and [DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
-2. At its entry, the system checks the project's prerequisites, and the developer's membership where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). It then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
+2. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the project's prerequisites, and the developer's membership where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). It then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 3. The system checks that the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) declares the move from Todo to Backlog for the issue's type. It checks too that the issue's body holds no placeholder of its template (DEC-006 and [DEC-031](../../../../../../.pkit/capabilities/project-management/decisions/DEC-031-reject-unauthored-placeholder-bodies.md)).
-4. Unless the project turns [audit comments](../../../glossary.md#term-audit-comment--audit-comment) off, the system posts the reason in an audit comment that names the move, before the move ([DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)). It then moves the issue to Backlog, and attaches the Milestone. Where the project keeps a journal, the move goes into it with its reason ([DEC-049](../../../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
+4. Unless the project turns [audit comments](../../../glossary.md#term-audit-comment--audit-comment) off, the system posts the reason in an audit comment that names the move, before the move ([DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)). It then moves the issue to Backlog, and attaches the Milestone. Where the project keeps a [journal](../../../glossary.md#term-journal--journal), the move goes into it with its reason ([DEC-049](../../../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
 
 > [!WARNING]
 > **Not built yet:** the audit comment says who bypassed the check and why, and names no move. [DEC-052](../../../../../../.pkit/capabilities/project-management/decisions/DEC-052-comment-house-style.md) decides that the comment of a move names the move it made, and #756 tracks it.
@@ -111,7 +130,7 @@ pkit:
 
 **Variants:**
 
-- **1a.** The developer passes `--dry-run` to any of these commands. The system makes its checks, names each move it would make, and writes nothing ([COR-004](../../../../../../.pkit/decisions/core/COR-004-cli-surface.md)). The use case ends.
+- **1a.** The developer passes `--dry-run` to any of these commands. The [system](../../../../core/glossary.md#term-system--system) makes its checks, names each move it would make, and writes nothing ([COR-004](../../../../../../.pkit/decisions/core/COR-004-cli-surface.md)). The use case ends.
 
 > [!WARNING]
 > **Not built yet:** the dry runs of `promote-issue`, `start-work` and `review-work` name neither the [cascade](../../../glossary.md#term-cascade--cascade)'s moves nor the hooks that would fire. That of `close-issue` lists no hook. COR-004 decides that a dry run names each edit a run would make, and #1938 tracks it.
@@ -121,7 +140,7 @@ pkit:
 - **2a.** The [project](../../../../core/glossary.md#term-project--project) does not meet the prerequisites, the developer is no member, or the operator declines a move in another repository. The system refuses and writes nothing ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md) and [core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)). The use case ends.
 - **3a.** The [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) declares no such move for the issue's type, such as Review for an [EPIC](../../../glossary.md#term-epic--epic). The system refuses, naming the moves the issue lifecycle declares, and writes nothing ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). The use case ends.
 - **3b.** The issue's body still holds a placeholder of its template. The system refuses the move until the body is written ([DEC-031](../../../../../../.pkit/capabilities/project-management/decisions/DEC-031-reject-unauthored-placeholder-bodies.md)). The use case ends.
-- **4a.** The project keeps a Projects v2 board, and its substrate map carries the state off it. With each move, the system sets the card's Status to the issue's new state, and the cascade sets the Status of each issue above ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). A Status the system cannot write is one line, and the move stands. `pkit pm sync-board` sets the cards again from the issues' states.
+- **4a.** The project keeps a Projects v2 board, and its [substrate map](../../../glossary.md#term-substrate-map--substrate-map) carries the state off it. With each move, the system sets the card's Status to the issue's new state, and the cascade sets the Status of each issue above ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). A Status the system cannot write is one line, and the move stands. `pkit pm sync-board` sets the cards again from the issues' states.
 - **4b.** The project's substrate map binds the state to the board. The system reads where an open issue stands from its card's Status, and each move sets the Status, the cascade's included ([DEC-062 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#5-where-the-map-puts-state-on-the-board-the-boards-status-is-the-source-of-an-open-issues-position)). A Status the system cannot write leaves the move unmade, and nothing is journaled. A closed issue is Done whatever its card says.
 - **4c.** The board cannot be read, or the issue has no card, no Status, or a Status naming no open state. The command refuses, saying which of the four it is, and writes nothing ([DEC-051 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-051-axis-carriage-activation.md#6-a-board-carried-state-is-read-from-the-boards-status-and-never-guessed)). Nothing falls back to the labels or the [Milestone](../../../glossary.md#term-milestone--milestone). The use case ends.
 - **5a.** A move of the cascade fails part-way. The system warns, and names the issues it did not move. Running the same move again finishes the cascade, since a move already made is not made twice ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
@@ -135,7 +154,7 @@ pkit:
 - **1i.** The Task is in Review, with its pull request open, or a checkbox of it is unticked. `close-issue` refuses, naming the pull request's merge or each unticked checkbox, and writes nothing ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md) and [DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)). The use case ends.
 - **6c.** The issue is a parent issue with no open child, and the developer authorises its close: `pkit pm close-issue <N> --mode=cascade-eligibility-close`. The system checks the parent issue's checkboxes, and that it has no open child ([DEC-034](../../../../../../.pkit/capabilities/project-management/decisions/DEC-034-cascade-slot-binding.md)). The authorisation is the developer's yes at the terminal, or `--yes`, and with neither the system refuses and writes nothing ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). Once the close is authorised, the system closes the parent issue as completed (DEC-006 and DEC-034).
 - **6d.** The parent issue still has an open child, or an unticked checkbox. The system refuses, naming what holds it, and closes nothing ([DEC-034](../../../../../../.pkit/capabilities/project-management/decisions/DEC-034-cascade-slot-binding.md)).
-- **6e.** The developer's clone holds a [seat](../../../glossary.md#term-seat--seat), and its code cannot read the [topology](../../../glossary.md#term-topology--topology) in full. `start-work` makes no claim, says what it did not understand, and changes nothing ([DEC-061 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#9-code-that-cannot-read-the-topology-in-full-uses-none-of-the-authority-it-grants)).
+- **6e.** The developer's [clone](../../../glossary.md#term-clone--clone) holds a [seat](../../../glossary.md#term-seat--seat), and its code cannot read the [topology](../../../glossary.md#term-topology--topology) in full. `start-work` writes no [ownership](../../../glossary.md#term-ownership--ownership), says what it did not understand, and changes nothing ([DEC-061 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#9-code-that-cannot-read-the-topology-in-full-uses-none-of-the-authority-it-grants)).
 - **6f.** The topology declares pools, and the Task is in none of the pools the developer's seat serves. `start-work` warns, and starts the Task as directed, since the warning is never a gate ([DEC-061 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#5-a-seat-that-builds-chooses-its-work-only-from-its-pools)).
 - **6g.** The work stops, and nobody works on the issue any more. The developer moves the issue back with the reason: `pkit pm move-issue <N> --to backlog --reason "<R>"`, or `--to todo` where the issue is in no Milestone. The system asks the developer at the terminal, or takes `--yes` as that authorisation, and posts the reason before the move. The system then releases the issue's [owner](../../../glossary.md#term-owner--owner), where it has one, and the use case ends ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 - **6h.** The issue moved back is a parent issue with a child In Progress or in Review. The system refuses, naming each such child, and writes nothing ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). It refuses too where the children cannot all be told, such as an open child in another repository. The use case ends.

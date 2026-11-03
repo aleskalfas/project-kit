@@ -1,0 +1,205 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    revalidated:
+      at: 2026-11-02T23:41:36Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    revalidated:
+      at: 2026-11-02T23:41:40Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    revalidated:
+      at: 2026-11-02T23:41:45Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    revalidated:
+      at: 2026-11-02T23:41:49Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:41:55Z
+      outcome: updated
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-axis
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:42:00Z
+      outcome: unchanged
+      unchanged-because: The README change only adds links to the pages' sections on what ships and what does not; it says nothing new of axes, so an axis is still a way a brand's values vary.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-brand
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:42:07Z
+      outcome: unchanged
+      unchanged-because: The README still says no brand ships and a project writes its own, now linking files.md's Brands as the home of that fact; a brand is still the library that holds the values a piece is drawn in.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:42:12Z
+      outcome: unchanged
+      unchanged-because: The README change only links its lines on plugins and on what does not ship to their homes; nothing it says of a piece's content changed, which stays the data a piece shows.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content-slot
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:42:17Z
+      outcome: unchanged
+      unchanged-because: The README change adds links on its plugins line, its paragraph on what does not ship and its first step; none speaks of content slots, so the term holds as defined.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-draft
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:42:22Z
+      outcome: unchanged
+      unchanged-because: The README change leaves its sentences on the lock untouched and only adds links to the pages' sections on plugins, brands and produced pictures; a draft's moving lock is as the term defines it.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-experimental
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:42:28Z
+      outcome: unchanged
+      unchanged-because: The README change only adds links on what ships and what does not; it names no library component's status, so experimental keeps its meaning.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-export
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:42:33Z
+      outcome: unchanged
+      unchanged-because: The README's plugins line still says the SVG renderer draws the exports, now with links to outputs.md's Plugins and SVG renderer sections; an export is still the numbered, kept set of files the term defines.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-final
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:42:38Z
+      outcome: unchanged
+      unchanged-because: The README change only adds links on what ships, what does not and the first step of drawing a piece; it says nothing of a final piece, so the term holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-helper-script
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:42:42Z
+      outcome: unchanged
+      unchanged-because: The README change rewords its line on producers to link outputs.md's Plugins and Produced pictures; it never speaks of helper scripts, so the term's line between a helper script and a renderer holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-layout
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:42:49Z
+      outcome: unchanged
+      unchanged-because: The README change only adds links to the pages' sections on plugins, brands and produced pictures; it says nothing of layouts, so the term holds as defined.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:42:57Z
+      outcome: unchanged
+      unchanged-because: The README's first step now links the library folder and Brands apart, and says as before that a project writes its own brand; a library is still data the capability reads.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-component
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:43:04Z
+      outcome: unchanged
+      unchanged-because: The README change adds only links on what ships and what does not; it says nothing new of library components, which keep the meaning the term gives.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-owner
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:43:10Z
+      outcome: unchanged
+      unchanged-because: The README still says a project writes its own brand, now linking files.md's Brands; such a project is still that brand's library owner, as the term's example has it.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-version
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:43:15Z
+      outcome: unchanged
+      unchanged-because: The README's first step still has a person put each library version a piece uses in the library folder, now with that link alone beside it; a library version is still a numbered state of a library.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-local-component
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:43:21Z
+      outcome: unchanged
+      unchanged-because: The README change adds only links to the pages' sections on plugins, brands and produced pictures; it says nothing of local components, so the term holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-lock
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:43:26Z
+      outcome: unchanged
+      unchanged-because: The README change does not touch its sentences on the lock, and only adds links on what ships and what does not; a lock still names one version of each library a piece uses.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-mode
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:43:32Z
+      outcome: unchanged
+      unchanged-because: The README change only adds links to the pages' sections on plugins, brands and produced pictures; it says nothing new of modes, so a mode is still one setting on one axis.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-model
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:43:38Z
+      outcome: unchanged
+      unchanged-because: The README change only links its lines on plugins and on what does not ship; it never speaks of a model, so the term holds as defined.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-notation
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:43:44Z
+      outcome: unchanged
+      unchanged-because: The README change adds only links on what ships and what does not; its opening on notations is untouched, so the term holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-option
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:43:50Z
+      outcome: unchanged
+      unchanged-because: The README change adds only links on what ships and what does not; it says nothing of options, which keep the meaning the term gives.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-piece
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:43:57Z
+      outcome: unchanged
+      unchanged-because: The README still says a piece needs a brand and none ships, and that a piece declaring a produced picture cannot be given one, now with links to their homes; a piece is still one finished item of visual work.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-pinned
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:44:04Z
+      outcome: unchanged
+      unchanged-because: The README change leaves its sentences on a pinned piece's lock untouched, and only adds links on what ships and what does not; pinned keeps its meaning.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-published
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:44:11Z
+      outcome: unchanged
+      unchanged-because: The README change only adds links on what ships and what does not; it says nothing of a published piece, so the term holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-renderer
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:44:16Z
+      outcome: unchanged
+      unchanged-because: The README's plugins line still names the SVG renderer as a shipped plugin that draws the previews and the exports, now linking outputs.md's Plugins and SVG renderer sections; a renderer is still what draws a piece in one medium.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-stable
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:44:21Z
+      outcome: unchanged
+      unchanged-because: The README change adds only links on what ships and what does not; it names no component's status, so stable keeps its meaning.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-starter-library
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:44:27Z
+      outcome: unchanged
+      unchanged-because: The README change only adds links on its list of what ships, which names the foundations and not the starter; the starter library is as the term defines it.

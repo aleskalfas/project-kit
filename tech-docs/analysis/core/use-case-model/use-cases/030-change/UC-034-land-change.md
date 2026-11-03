@@ -4,6 +4,7 @@ title: Land my change on the default branch
 status: active
 actor: ACT-developer
 other-actors:
+  - ACT-ai-agent
   - ACT-merge-authoriser
   - ACT-operator
 after:
@@ -29,6 +30,8 @@ pkit:
         - COR-009#5
         - COR-008
         - COR-050#3
+        - COR-050#9
+        - COR-062#7
         - COR-039
         - ADR-061#3
         - ADR-061#4
@@ -37,6 +40,7 @@ pkit:
         - ADR-061#8
       artefact:
         - ACT-developer
+        - ACT-ai-agent
         - ACT-merge-authoriser
         - ACT-operator
         - REQ-012
@@ -48,7 +52,8 @@ pkit:
 
 **Other actors:**
 
-- **Merge authoriser** (`ACT-merge-authoriser`): authorises the merge of one [head](../../../glossary.md#term-head--head). They read what the [change](../../../glossary.md#term-change--change) updated in the [pull request](../../../glossary.md#term-pull-request--pull-request)'s sentences, and what it leaves out of date in the [change check](../../../glossary.md#term-change-check--change-check)'s list. Where an agent commits straight to the [default branch](../../../glossary.md#term-default-branch--default-branch), the person it works for is the merge authoriser. They are told the same before the commit ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
+- **AI agent** (`ACT-ai-agent`): may commit the [change](../../../glossary.md#term-change--change) straight to the [default branch](../../../glossary.md#term-default-branch--default-branch) for the developer, as variant 1a says. Before the commit, it tells the merge authoriser what the change updated, and what the change leaves out of date ([RS-OPS-020](../../../../../../.pkit/rule-sets/ops.md#rs-ops-020--a-reviewer-checks-the-answers-a-change-owes)).
+- **Merge authoriser** (`ACT-merge-authoriser`): authorises the merge of one [head](../../../glossary.md#term-head--head). They read what the change updated in the [pull request](../../../glossary.md#term-pull-request--pull-request)'s sentences, and what it leaves out of date in the [change check](../../../glossary.md#term-change-check--change-check)'s list. Where an agent commits straight to the default branch, the person it works for is the merge authoriser. They are told the same before the commit ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - **Operator** (`ACT-operator`): is asked before the landing changes the hosting service for a repository other than the session's own. So no such change happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:** **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
@@ -59,7 +64,7 @@ pkit:
 - The command's home in the [backbone](../../../glossary.md#term-backbone--backbone) is provisional. [COR-009](../../../../../../.pkit/decisions/core/COR-009-pr-workflow.md) puts a platform's pull-request conventions in [capabilities](../../../glossary.md#term-capability--capability), and #1222 raises the conflict for a core decision (ADR-061 point 3).
 - The developer lands only once the [project](../../../glossary.md#term-project--project)'s checks pass at the [head](../../../glossary.md#term-head--head), and the merge authoriser has authorised that head. The command keeps none of these gates, which are its caller's ([ADR-061 point 5](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#5-the-command-makes-requests-and-reports-facts-the-caller-decides)).
 - The [pull request](../../../glossary.md#term-pull-request--pull-request)'s title follows conventional commits, as [COR-009 point 2](../../../../../../.pkit/decisions/core/COR-009-pr-workflow.md#2-pr-title-follows-conventional-commits) asks. No step of the [system](../../../glossary.md#term-system--system) checks it before the merge.
-- Before an agent commits straight to the [default branch](../../../glossary.md#term-default-branch--default-branch), the [reviewer](../../../glossary.md#term-reviewer--reviewer) the project chose checks the [change](../../../glossary.md#term-change--change)'s answers. The person the agent works for is told each sentence and each deferral first. Nothing at run time stops the commit ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and core rule 20).
+- Before an agent commits straight to the [default branch](../../../glossary.md#term-default-branch--default-branch), the [reviewer](../../../glossary.md#term-reviewer--reviewer) the project chose checks the [change](../../../glossary.md#term-change--change)'s answers. The person the agent works for is told each sentence and each [deferral](../../../glossary.md#term-deferral--deferral) first. Nothing at run time stops the commit ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and [RS-OPS-020](../../../../../../.pkit/rule-sets/ops.md#rs-ops-020--a-reviewer-checks-the-answers-a-change-owes)).
 
 **Trigger:** The developer's [change](../../../glossary.md#term-change--change) is ready to land, its checks run at the [pull request](../../../glossary.md#term-pull-request--pull-request)'s [head](../../../glossary.md#term-head--head).
 
@@ -82,7 +87,7 @@ pkit:
 
 **Variants:**
 
-- **1a.** The developer works alone, and commits the [change](../../../glossary.md#term-change--change) straight to the [default branch](../../../glossary.md#term-default-branch--default-branch), as [COR-009 point 5](../../../../../../.pkit/decisions/core/COR-009-pr-workflow.md#5-prs-are-recommended-not-enforced) allows. It is one commit, its subject a conventional title ([COR-008](../../../../../../.pkit/decisions/core/COR-008-git-conventions.md)). Where an agent commits, it first tells the merge authoriser what the change updated, and what the change leaves out of date (core rule 20). No command of the [system](../../../glossary.md#term-system--system) carries this way, and the use case ends.
+- **1a.** The developer works alone, and commits the [change](../../../glossary.md#term-change--change) straight to the [default branch](../../../glossary.md#term-default-branch--default-branch), as [COR-009 point 5](../../../../../../.pkit/decisions/core/COR-009-pr-workflow.md#5-prs-are-recommended-not-enforced) allows. It is one commit, its subject a conventional title ([COR-008](../../../../../../.pkit/decisions/core/COR-008-git-conventions.md)). Where an agent commits, it first tells the merge authoriser what the change updated, and what the change leaves out of date ([RS-OPS-020](../../../../../../.pkit/rule-sets/ops.md#rs-ops-020--a-reviewer-checks-the-answers-a-change-owes)). No command of the [system](../../../glossary.md#term-system--system) carries this way, and the use case ends.
 - **2a.** The developer passes `--dry-run`. The system checks the repository as step 3 does, but asks no one, so in another repository it refuses unless `--allow-foreign-repo` is passed. Otherwise it takes its one reading, says what the landing would do, and sends nothing. The use case ends.
 - **2b.** `<sha>` is no full commit id, such as an abbreviated one. The system refuses it as a usage error, reads nothing, and exits `2`, since an abbreviated [head](../../../glossary.md#term-head--head) would read as another head.
 - **3a.** The repository is another, and the operator declines. Or nobody can reply, and the developer passed no `--allow-foreign-repo`. The system refuses, sends nothing, and the use case ends.
@@ -103,7 +108,7 @@ pkit:
 
 **Postconditions:**
 
-- The [change](../../../glossary.md#term-change--change) is on the [default branch](../../../glossary.md#term-default-branch--default-branch), with every [answer](../../../glossary.md#term-answer--answer) it wrote, its deferrals included.
+- The [change](../../../glossary.md#term-change--change) is on the [default branch](../../../glossary.md#term-default-branch--default-branch), with every [answer](../../../glossary.md#term-answer--answer) it wrote, its [deferrals](../../../glossary.md#term-deferral--deferral) included.
 - Through a [pull request](../../../glossary.md#term-pull-request--pull-request), the change is one squash commit, whose subject is the pull request's title and whose body is the pull request's body. The pull request's head branch is gone.
 - Worked alone, the change is one commit made straight on the default branch.
 - What the change left without an answer or deferred stays on the default branch as [debt](../../../glossary.md#term-debt--debt) ([COR-050 point 9](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)). So does an [artefact](../../../glossary.md#term-artefact--artefact) the change revalidated apart from another change ([COR-062 point 7](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#7-answers-made-apart-are-debt-not-a-conflict)).

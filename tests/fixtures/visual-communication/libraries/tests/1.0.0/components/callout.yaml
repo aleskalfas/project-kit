@@ -1,0 +1,39 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  Pictures one under another, and a label placed at a point one of them exposes, a
+  little to the right of it.
+
+fields:
+  type: object
+  required: [pictures, label]
+  properties:
+    pictures:
+      type: array
+      minItems: 1
+      description: The pictures, each a produced output drawn by the picture block.
+      items: {type: object}
+    label:
+      type: string
+      description: What the point shows.
+      x-pkit-prose: true
+
+# The picture and the point the label stands at.
+options:
+  at: {item: pictures, point: true}
+
+parts:
+  pictures:
+    repeat: pictures
+    draw: tests/picture
+    width: "=:width"
+    column: {gap: "=@space.2"}
+  label:
+    text: {content: label, style: type.body, fill: text-primary}
+    x: "={at}.x + @space.1"
+    y: "={at}.y"
+
+preferred:
+  height: "=max(pictures.bottom, label.bottom)"

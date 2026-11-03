@@ -32,6 +32,20 @@ pkit:
         - COR-031
         - COR-051#7
         - COR-052
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#3
+        - COR-050#6
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
       artefact:
         - REQ-022
 ---
@@ -59,7 +73,7 @@ pkit:
 **Main path:**
 
 1. The developer asks the `living-docs` agent to review a [page](../../../glossary.md#term-page--page) as its [reader](../../../glossary.md#term-reader--reader).
-2. The agent reads the rules that bind on the page, `LDOC`'s and its space's own, with `pkit rule-sets reach --json` ([DEC-001 point 3](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#3-what-the-shared-rules-require)).
+2. The agent reads the rules that bind on the page, `LDOC`'s and its [documentation space](../../../glossary.md#term-documentation-space--documentation-space)'s own, with `pkit rule-sets reach --json` ([DEC-001 point 3](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#3-what-the-shared-rules-require)).
 3. The agent resolves the page's reader against the readers [data point](../../../../core/glossary.md#term-data-point--data-point), with `pkit connections resolve pkit::documentation:readers --json`. It takes that reader's needs. Where the reader's entry carries paths, the agent takes them too, each path the pages the reader reads in order (DEC-001 points [6](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#6-reader-review) and [7](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#7-connections)).
 4. The agent reads the page as that reader. It asks whether the page answers that reader's questions, only those, and in a way the reader can follow (DEC-001 point 6).
 5. The agent judges the page against each [rule](../../../../core/glossary.md#term-rule--rule) that binds on it, such as whether its anchors ground each statement. It leaves to [validation](../../../../core/glossary.md#term-validation--validation) the parts of `LDOC`'s rules that validation enforces (DEC-001 point 6).
@@ -70,14 +84,14 @@ pkit:
 
 **Variants:**
 
-- **1a.** The developer asks the agent to review a change for documentation it left missing or contradicted. That is change review, which belongs to code review, and the agent says so ([DEC-001 point 6](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#6-reader-review)). The use case ends.
+- **1a.** The developer asks the agent to review a [change](../../../../core/glossary.md#term-change--change) for documentation it left missing or contradicted. That is change review, which belongs to code review, and the agent says so ([DEC-001 point 6](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#6-reader-review)). The use case ends.
 - **2a.** No [rule](../../../../core/glossary.md#term-rule--rule) binds on the [page](../../../glossary.md#term-page--page). No [space definition](../../../glossary.md#term-space-definition--space-definition)'s scope selects it, or it is reached only through a pin behind `LDOC`'s major. The agent says so, names what [validation](../../../../core/glossary.md#term-validation--validation) reports of it, and judges it against no rule.
-- **3a.** The [readers](../../../glossary.md#term-reader--reader) [data point](../../../../core/glossary.md#term-data-point--data-point) is not available yet. The agent says so, and reads the page as its space's audience, `spaces.<space>.audience` in the [capability](../../../../core/glossary.md#term-capability--capability)'s configuration ([DEC-001 point 1](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces)). Where the space's entry names none, the agent reads a user page as users, and reads a technical page as maintainers. For a space the [project](../../../../core/glossary.md#term-project--project) adds whose entry names none, the agent names that entry, and stops.
+- **3a.** The [readers](../../../glossary.md#term-reader--reader) [data point](../../../../core/glossary.md#term-data-point--data-point) is not available yet. The agent says so, and reads the page as its [documentation space](../../../glossary.md#term-documentation-space--documentation-space)'s audience, `spaces.<space>.audience` in the [capability](../../../../core/glossary.md#term-capability--capability)'s configuration ([DEC-001 point 1](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces)). Where the space's entry names none, the agent reads a user page as users, and reads a technical page as maintainers. For a space the [project](../../../../core/glossary.md#term-project--project) adds whose entry names none, the agent names that entry, and stops.
 - **3b.** `RS-LDOC-003` binds on the page, and the readers data point holds no reader of the page's id. That is validation's [finding](../../../../core/glossary.md#term-finding--finding), so the agent names `pkit living-docs validate`, and stops.
 - **4a.** The page shows a diagram, an image or a recording. The agent judges whether each that carries meaning has a text alternative, and a decorative image an empty one ([DEC-002 point 8](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-002-visual-elements.md#8-a-text-alternative-for-each-element-that-carries-meaning)). An image's alt text is judged here alone, since no check tells a decorative image from one that carries meaning.
 
 > [!WARNING]
-> **Not built yet:** the agent reads none of DEC-002's forms, and judges a page's visual elements as any other text. DEC-002 point 8 leaves an image's text alternative to [reader-review](../../../glossary.md#term-reader-review--reader-review), and #1812 tracks it.
+> **Not built yet:** the agent reads none of [living-docs DEC-002](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-002-visual-elements.md)'s forms, and judges a page's visual elements as any other text. DEC-002 point 8 leaves an image's text alternative to [reader-review](../../../glossary.md#term-reader-review--reader-review), and #1812 tracks it.
 
 - **4b.** The reading-evidence data point holds results of executed checks that followed the page, such as a simulated reader running a guide. Before step 4, the agent resolves the point with `pkit connections resolve pkit::documentation:reading-evidence --json`. The agent reads each result for the page as advice, which never replaces its own reading (DEC-001 points [6](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#6-reader-review) and [7](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#7-connections)). The record of step 7, or the line of variant 7a, names each result the agent read, by its id.
 - **7a.** The agent finds nothing. It says so in one line, writes no file, and the use case ends ([DEC-001 point 6](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#6-reader-review)).

@@ -1,0 +1,40 @@
+# The list of the project's libraries, `libraries/libraries.yaml` in the location
+# (visual-communication DEC-003 point 4): each library's source and the versions present,
+# which are released, and the fingerprint of each released one (form 1, over every file
+# of its version folder), so the check reads from the files alone whether a version
+# still holds what was released.
+#
+# The body below is the reference instance.
+
+pkit_schema: visual-communication:libraries
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+libraries:
+  foundations:
+    source:
+      kind: shipped
+    versions:
+      1.0.0:
+        released: false
+  brand:
+    source:
+      kind: project
+    versions:
+      1.0.0:
+        released: true
+        hash:
+          form: 1
+          hash: sha256
+          format: 1
+          value: b62a779241c9b746cf78ea0ece105a8092a0a7a5d186c70eebb1dbc177e63dae
+          inputs:
+            - library: brand
+              version: 1.0.0
+              path: brand.resolver.json
+              sha256: 439c3635079b57a69aff22860369462fb9330c300fa4dbc70426f087192e369d
+            - library: brand
+              version: 1.0.0
+              path: library.yaml
+              sha256: b718f1354f7247312eca086d9a024afe5fa717ddea5adeddd6f12bcf945b2e8c

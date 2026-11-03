@@ -5,9 +5,12 @@ status: active
 explains:
   - TERM-manifest
   - TERM-release
+  - TERM-release-tag
   - TERM-recorded-version
   - TERM-migration
   - TERM-version-transition
+  - TERM-completion
+  - TERM-dependency-gate
   - TERM-propagation
   - TERM-sync
   - TERM-synced-copy
@@ -20,6 +23,7 @@ pkit:
       record:
         - COR-001
         - COR-010
+        - COR-030
         - COR-031
         - COR-041
         - COR-050#14
@@ -27,13 +31,18 @@ pkit:
         - ADR-059
         - ADR-065#1
         - ADR-065#2
+        - ADR-065#3
+        - ADR-065#6
         - PRJ-004
       artefact:
         - TERM-manifest
         - TERM-release
+        - TERM-release-tag
         - TERM-recorded-version
         - TERM-migration
         - TERM-version-transition
+        - TERM-completion
+        - TERM-dependency-gate
         - TERM-propagation
         - TERM-sync
         - TERM-synced-copy
@@ -53,15 +62,19 @@ Before it refreshes a copy, the [system](../glossary.md#term-system--system) mus
 ```mermaid
 classDiagram
   accTitle: Versions and copies
-  accDescr: A project keeps manifests, which record the recorded version of the backbone and of each shipped component, and each component's origin. A recorded version names the release whose content the project holds. A version transition moves recorded versions, runs migrations and writes its target's content by propagation. Sync runs propagation at the recorded versions. Propagation writes synced copies, whose originals lie in a source repository. A distribution ships releases from one source repository.
+  accDescr: A project keeps manifests, which record the recorded version of the backbone and of each shipped component, and each component's origin. The backbone's manifest also records the completion. A recorded version names the release whose content the project holds, and a release tag names a release. A version transition moves recorded versions, runs migrations and writes its target's content by propagation. It records its completion last, and a dependency gate checks it before it writes. Sync runs propagation at the recorded versions. Propagation writes synced copies, whose originals lie in a source repository. A distribution ships releases from one source repository.
   class Project["Project"]
   class Manifest["Manifest"]
   class RecordedVersion["Recorded version"]
   class Release["Release"]
   Release : backbone version
+  class ReleaseTag["Release tag"]
+  ReleaseTag : name
   class Migration["Migration"]
   class VersionTransition["Version transition"]
   VersionTransition : target
+  class Completion["Completion"]
+  class DependencyGate["Dependency gate"]
   class Propagation["Propagation"]
   class Sync["Sync"]
   class SyncedCopy["Synced copy"]
@@ -75,6 +88,10 @@ classDiagram
   VersionTransition --> RecordedVersion : moves
   VersionTransition --> Migration : runs each pending
   VersionTransition --> Propagation : writes its target by
+  VersionTransition --> Completion : records last
+  Manifest --> Completion : records
+  DependencyGate ..> VersionTransition : checks before it writes
+  ReleaseTag ..> Release : names
   Sync --> Propagation : runs at the recorded versions
   Propagation --> SyncedCopy : writes
   SyncedCopy ..> SourceRepository : copies an original in
@@ -107,7 +124,7 @@ A manifest is the file where a project records what it installed, and at which v
 
 **Attributes:**
 
-- the backbone's: its [recorded version](../glossary.md#term-recorded-version--recorded-version), and the completion of its last transition ([COR-059 point 6](../../../../.pkit/decisions/core/COR-059-version-transition.md#6-a-transition-of-the-backbone-records-its-target-first-and-its-completion-last)). It also lists every installed component, with its origin and the path of its own manifest ([ADR-065 point 2](../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#2-each-component-records-its-own-version-and-only-a-transition-moves-it)).
+- the backbone's: its [recorded version](../glossary.md#term-recorded-version--recorded-version), and the [completion](../glossary.md#term-completion--completion) of its last transition ([COR-059 point 6](../../../../.pkit/decisions/core/COR-059-version-transition.md#6-a-transition-of-the-backbone-records-its-target-first-and-its-completion-last)). It also lists every installed component, with its origin and the path of its own manifest ([ADR-065 point 2](../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#2-each-component-records-its-own-version-and-only-a-transition-moves-it)).
 - a shipped component's: its recorded version, and the files its [install](../glossary.md#term-install--install) skipped (ADR-065 point 2, [COR-059 point 7](../../../../.pkit/decisions/core/COR-059-version-transition.md#7-a-transition-of-the-backbone-moves-every-component-the-methodology-ships-together))
 
 **Relations:**
@@ -134,7 +151,7 @@ A release is a set of versions shipped together, named by its [backbone](../glos
 
 - its backbone version, which names it ([COR-059 point 1](../../../../.pkit/decisions/core/COR-059-version-transition.md#1-a-project-records-a-version-for-its-backbone-and-for-each-component-it-installs))
 - one version of each component shipped with it (COR-059 point 1)
-- a release tag, `v<version>`, on its release commit ([PRJ-004](../../../../.pkit/decisions/project/PRJ-004-distribution-channel.md))
+- its [release tag](../glossary.md#term-release-tag--release-tag), `v<version>` ([PRJ-004](../../../../.pkit/decisions/project/PRJ-004-distribution-channel.md))
 
 **Relations:**
 
@@ -146,6 +163,30 @@ A release is a set of versions shipped together, named by its [backbone](../glos
 **Always true:**
 
 - A transition of the backbone moves every shipped component the project installed to its version in the target release. It holds none back ([COR-059 point 7](../../../../.pkit/decisions/core/COR-059-version-transition.md#7-a-transition-of-the-backbone-moves-every-component-the-methodology-ships-together)).
+
+## Release tag
+
+Defined in [TERM-release-tag](../glossary.md#term-release-tag--release-tag).
+
+**Why:** A [project](../glossary.md#term-project--project) records the [version](../glossary.md#term-version--version) of the content it holds, and that record is sound only where a version names one content ([PRJ-004](../../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)). Only a CLI installed from a commit a release tag names gives that. A CLI installed from any other commit may hold newer files than its version says (PRJ-004).
+
+A release tag is the annotated git tag `v<version>` on the commit that lands a new [backbone](../glossary.md#term-backbone--backbone) version, such as `v2.0.0`. A machine installs that version's CLI from the [distribution](../glossary.md#term-distribution--distribution)'s URL at that tag. The release tags are the versions, and `latest` only points at the highest of them.
+
+**Attributes:**
+
+- its name, `v<major>.<minor>.<patch>`, matching the backbone's version (PRJ-004)
+
+**Relations:**
+
+- It names one [release](../glossary.md#term-release--release), by the release's backbone version (PRJ-004).
+- A distribution's channel installs the CLI at a release tag, or at `latest`, which points at the highest one (PRJ-004).
+
+**States:** None.
+
+**Always true:**
+
+- Each release gets one. New versions of [components](../glossary.md#term-component--component) alone, with no new backbone version, get none (PRJ-004).
+- A reader of release tags, such as the lookup of the highest release, reads them alone and skips `latest` (PRJ-004).
 
 ## Recorded version
 
@@ -165,7 +206,7 @@ A recorded version is the number or ref a project keeps for the [backbone](../gl
 - It names the [release](../glossary.md#term-release--release) whose content the project holds (COR-059 point 1).
 - [Sync](../glossary.md#term-sync--sync) reads it, and a [version transition](../glossary.md#term-version-transition--version-transition) moves it (COR-059 points [2](../../../../.pkit/decisions/core/COR-059-version-transition.md#2-reconciliation-runs-at-the-recorded-versions-and-moves-none) and [3](../../../../.pkit/decisions/core/COR-059-version-transition.md#3-a-version-transition-is-the-only-operation-of-the-core-layer-that-moves-a-recorded-version)).
 
-**States:** The backbone's recorded version is complete when its target and its completion name the same version. A transition records its target first, and its completion last. In between, the recorded version is incomplete and names that target (COR-059 points 1 and [6](../../../../.pkit/decisions/core/COR-059-version-transition.md#6-a-transition-of-the-backbone-records-its-target-first-and-its-completion-last)).
+**States:** The backbone's recorded version is complete when its target and its [completion](../glossary.md#term-completion--completion) name the same version. A transition records its target first, and its completion last. In between, the recorded version is incomplete and names that target (COR-059 points 1 and [6](../../../../.pkit/decisions/core/COR-059-version-transition.md#6-a-transition-of-the-backbone-records-its-target-first-and-its-completion-last)).
 
 ```mermaid
 stateDiagram-v2
@@ -211,7 +252,7 @@ A migration is a script that carries a project's state across a version of the [
 
 Defined in [TERM-version-transition](../glossary.md#term-version-transition--version-transition).
 
-**Why:** If two operations could move a [version](../glossary.md#term-version--version) and only one ran [migrations](../glossary.md#term-migration--migration), the other would strand them, and none would run later ([COR-059](../../../../.pkit/decisions/core/COR-059-version-transition.md)). One operation that moves versions and runs every migration between leaves no path that skips one (COR-059). It records its completion last, so an interrupted transition is never mistaken for a finished one (COR-059).
+**Why:** If two operations could move a [version](../glossary.md#term-version--version) and only one ran [migrations](../glossary.md#term-migration--migration), the other would strand them, and none would run later ([COR-059](../../../../.pkit/decisions/core/COR-059-version-transition.md)). One operation that moves versions and runs every migration between leaves no path that skips one (COR-059). It records its [completion](../glossary.md#term-completion--completion) last, so an interrupted transition is never mistaken for a finished one (COR-059).
 
 A version transition moves a [project](../glossary.md#term-project--project)'s [recorded versions](../glossary.md#term-recorded-version--recorded-version) to a target. It runs every migration that is pending, and records its completion only after they have run. `pkit upgrade` runs a transition of the [backbone](../glossary.md#term-backbone--backbone).
 
@@ -243,6 +284,55 @@ stateDiagram-v2
 - It is the only operation that moves a recorded version, and no other operation runs a migration (COR-059 point 3).
 - A transition of the backbone only moves forward ([COR-059 point 9](../../../../.pkit/decisions/core/COR-059-version-transition.md#9-a-command-that-propagates-content-under-another-version-than-the-project-records-stops)).
 - Where a collision needs a person and nobody can reply, it refuses before it writes anything (COR-059 point 7).
+
+## Completion
+
+Defined in [TERM-completion](../glossary.md#term-completion--completion).
+
+**Why:** A transition cut short must never read as a finished one, or the [migrations](../glossary.md#term-migration--migration) it did not run would never run ([COR-059](../../../../.pkit/decisions/core/COR-059-version-transition.md)). So the [backbone](../glossary.md#term-backbone--backbone)'s transition records a second state, last, once its work is done (COR-059).
+
+The completion is the state that first [install](../glossary.md#term-install--install) or a transition of the backbone records last, after all else it writes. It names the [version](../glossary.md#term-version--version) reached. Where it equals the target recorded first, the [project](../glossary.md#term-project--project) is at that version.
+
+**Attributes:**
+
+- the version it names, `completed_version` in the backbone's [manifest](../glossary.md#term-manifest--manifest) ([ADR-065 point 3](../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#3-the-completion-is-recorded-as-completed_version))
+
+**Relations:**
+
+- A transition of the backbone writes it last, once every migration has run and the derivable state is regenerated ([COR-059 point 6](../../../../.pkit/decisions/core/COR-059-version-transition.md#6-a-transition-of-the-backbone-records-its-target-first-and-its-completion-last)).
+- First install records it last too, after the target (COR-059 point 6).
+- The next transition of the backbone runs the backbone's migrations from it (COR-059 point 6).
+
+**States:** None.
+
+**Always true:**
+
+- A missing completion reads as incomplete, with no lower bound. The next transition then runs every backbone migration up to its target, once (COR-059 point 6).
+- A migration that fails leaves the completion where it was (COR-059 point 6).
+
+## Dependency gate
+
+Defined in [TERM-dependency-gate](../glossary.md#term-dependency-gate--dependency-gate).
+
+**Why:** A dependency whose interface changed in a way that breaks a [capability](../glossary.md#term-capability--capability) fails silently when that capability runs, at no step of the lifecycle ([COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)). A check at [install](../glossary.md#term-install--install), upgrade and uninstall makes that failure loud there instead (COR-030).
+
+A dependency gate is a check made before an install or a [version transition](../glossary.md#term-version-transition--version-transition) writes anything. The gate checks that the capabilities the install or the transition would leave meet each other's ranges and mandatory connections. A capability that moves against a dependency outside its [range](../glossary.md#term-range--range) is refused. A dependency that moves outside a dependent's range is warned of, and the write goes on only under `--force`.
+
+**Attributes:** None.
+
+**Relations:**
+
+- It reads the ranges each capability declares on another, and writes none (COR-030).
+- A transition of the [backbone](../glossary.md#term-backbone--backbone) runs it over the set of capabilities it would leave, before it writes ([ADR-065 point 6](../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#6-a-transition-settles-its-collisions-and-its-dependency-gates-before-it-writes)).
+
+**States:** None.
+
+**Always true:**
+
+- A dependent that moves against a dependency outside its range is refused, since whoever runs the command controls the dependent's [version](../glossary.md#term-version--version) (COR-030).
+- A dependency that moves outside a dependent's range warns, naming each dependent. It goes on only under an explicit `--force`, never as a hard block (COR-030).
+- A dependency that leaves a dependent's mandatory connection unmet warns in the same way (ADR-065 point 6).
+- `--force` on `pkit upgrade` overrides those warnings, and nothing else (ADR-065 point 6).
 
 ## Propagation
 
@@ -344,7 +434,7 @@ A distribution is one edition of the [methodology](../glossary.md#term-methodolo
 
 **Attributes:**
 
-- its source repository, and its channel, such as a git URL with a [release](../glossary.md#term-release--release)'s tag (PRJ-004)
+- its source repository, and its channel, such as a git URL with a [release tag](../glossary.md#term-release-tag--release-tag) (PRJ-004)
 
 **Relations:**
 
@@ -355,7 +445,7 @@ A distribution is one edition of the [methodology](../glossary.md#term-methodolo
 
 **Always true:**
 
-- Only a CLI taken from a tag on a release's commit, the release's own or `latest`, has a [version](../glossary.md#term-version--version) that vouches for its content (PRJ-004).
+- Only a CLI taken from a release tag, or from `latest`, which points at one, has a [version](../glossary.md#term-version--version) that vouches for its content (PRJ-004).
 
 ## Component origin
 
@@ -382,7 +472,7 @@ A component origin is where an installed [capability](../glossary.md#term-capabi
 
 **Always true:**
 
-- An origin governs only what the component is reconciled against. Dependencies and deployment treat every origin alike ([COR-031 point D1](../../../../.pkit/decisions/core/COR-031-capability-origin.md#d1--the-lifecycle-excludes-incubated-capabilities-from-source-reconciliation-but-not-from-self-consistency-checks)).
+- An origin governs only which source, if any, [propagation](../glossary.md#term-propagation--propagation) copies the component from. Dependencies and deployment treat every origin alike ([COR-031 point D1](../../../../.pkit/decisions/core/COR-031-capability-origin.md#d1--the-lifecycle-excludes-incubated-capabilities-from-source-reconciliation-but-not-from-self-consistency-checks)).
 - Removing a capability the project authored unregisters it, and leaves its files where they are ([COR-031 point D4](../../../../.pkit/decisions/core/COR-031-capability-origin.md#d4--every-lifecycle-verb-honours-origin-removal-never-destroys-adopter-owned-source)).
 
 ## What is built on these concepts
@@ -397,7 +487,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
 - [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
-- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md)
+- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/070-work-within-limits/UC-028-keep-intermediate-files.md)
 - [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
 - [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
 - [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md)
@@ -411,11 +501,9 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 **Release:**
 
-- [UC-003 — Declare what my change means for the next release](../use-case-model/use-cases/030-change/UC-003-declare-changeset.md)
 - [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
 - [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md)
-- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
-- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
 - [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
 - [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
 - [UC-024 — See what a capability would connect to before I install it](../use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md)
@@ -431,9 +519,19 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-008 — Release a breaking backbone change with its migration](../use-case-model/journeys/JRN-008-release-breaking-backbone-change.md)
 - [REQ-008 · Constraint · Until #1600 is done, the only area or adapter a change may add is `rule-sets`, and none may be removed](../requirements/constraints/010-develop/REQ-008-areas-held.md)
 - [REQ-010 · Functional · A command that propagates content under another version than the project records stops](../requirements/functional/REQ-010-stop-under-another-version.md)
-- [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/030-change/REQ-017-backbone-migration-safe.md)
+- [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/040-release/REQ-017-backbone-migration-safe.md)
 - [REQ-027 · Quality · The version pin holds the old one or the new one, never part, and an upgrade writes it last](../requirements/quality/050-adopt/REQ-027-pin-whole-written-last.md)
 - [REQ-028 · Quality · The router never fails a command over a version pin it cannot resolve](../requirements/quality/050-adopt/REQ-028-unresolved-pin-runs-installed.md)
+- [REQ-031 · Constraint · The CLI is installed with uv from the distribution's git URL](../requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md)
+
+**Release tag:**
+
+- [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
+- [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md)
+- [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md)
+- [UC-052 — Run each project at the version it pins](../use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md)
+- [JRN-002 — Upgrade the system](../use-case-model/journeys/JRN-002-upgrade-system.md)
+- [JRN-006 — Start working on a project on a new machine](../use-case-model/journeys/JRN-006-start-on-new-machine.md)
 - [REQ-031 · Constraint · The CLI is installed with uv from the distribution's git URL](../requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md)
 
 **Recorded version:**
@@ -451,8 +549,8 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 - [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
 - [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md)
-- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
-- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/040-release/UC-011-migrate-component-change.md)
 - [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md)
 - [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md)
 - [UC-054 — Upgrade one capability on its own](../use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md)
@@ -460,9 +558,9 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-007 — Upgrade one capability, and re-pin its rule set](../use-case-model/journeys/JRN-007-upgrade-one-capability.md)
 - [JRN-008 — Release a breaking backbone change with its migration](../use-case-model/journeys/JRN-008-release-breaking-backbone-change.md)
 - [JRN-009 — Release a breaking change of my component with its migration](../use-case-model/journeys/JRN-009-release-breaking-component-change.md)
-- [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/030-change/REQ-001-migration-runs-again.md)
+- [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/040-release/REQ-001-migration-runs-again.md)
 - [REQ-010 · Functional · A command that propagates content under another version than the project records stops](../requirements/functional/REQ-010-stop-under-another-version.md)
-- [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/030-change/REQ-017-backbone-migration-safe.md)
+- [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/040-release/REQ-017-backbone-migration-safe.md)
 - [REQ-026 · Quality · An interrupted version transition never reads as finished, and the next one completes it](../requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md)
 - [REQ-027 · Quality · The version pin holds the old one or the new one, never part, and an upgrade writes it last](../requirements/quality/050-adopt/REQ-027-pin-whole-written-last.md)
 - [REQ-029 · Functional · A version transition resolves compatibility across components before it writes anything](../requirements/functional/050-adopt/REQ-029-compatibility-before-write.md)
@@ -480,10 +578,23 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-054 — Upgrade one capability on its own](../use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md)
 - [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
 - [JRN-006 — Start working on a project on a new machine](../use-case-model/journeys/JRN-006-start-on-new-machine.md)
-- [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/030-change/REQ-001-migration-runs-again.md)
+- [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/040-release/REQ-001-migration-runs-again.md)
 - [REQ-002 · Functional · Project-owned content is written only by the writers records name](../requirements/functional/REQ-002-project-owned-writers.md)
 - [REQ-010 · Functional · A command that propagates content under another version than the project records stops](../requirements/functional/REQ-010-stop-under-another-version.md)
-- [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/030-change/REQ-017-backbone-migration-safe.md)
+- [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/040-release/REQ-017-backbone-migration-safe.md)
+
+**Completion:**
+
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
+- [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md)
+- [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/040-release/REQ-001-migration-runs-again.md)
+- [REQ-026 · Quality · An interrupted version transition never reads as finished, and the next one completes it](../requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md)
+
+**Dependency gate:**
+
+- [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md)
+- [REQ-029 · Functional · A version transition resolves compatibility across components before it writes anything](../requirements/functional/050-adopt/REQ-029-compatibility-before-write.md)
+- [REQ-030 · Functional · A choice in a version transition that needs a person is never taken silently](../requirements/functional/050-adopt/REQ-030-person-choice-never-silent.md)
 
 **Propagation:**
 
@@ -527,9 +638,9 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-003 — Declare what my change means for the next release](../use-case-model/use-cases/030-change/UC-003-declare-changeset.md)
 - [UC-004 — Know before I push that my change passes my project's checks](../use-case-model/use-cases/030-change/UC-004-check-before-push.md)
 - [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
-- [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/030-change/UC-006-gate-merges.md)
+- [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/020-set-up/UC-006-gate-merges.md)
 - [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
-- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
 - [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
 - [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
 - [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
@@ -542,11 +653,11 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-024 — See what a capability would connect to before I install it](../use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md)
 - [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md)
 - [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md)
-- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md)
-- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/020-set-up/UC-030-work-unprompted.md)
-- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/020-set-up/UC-031-keep-per-machine-choices.md)
-- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md)
-- [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/020-set-up/UC-033-find-why-prompted.md)
+- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/070-work-within-limits/UC-028-keep-intermediate-files.md)
+- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/070-work-within-limits/UC-030-work-unprompted.md)
+- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/070-work-within-limits/UC-031-keep-per-machine-choices.md)
+- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md)
+- [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/070-work-within-limits/UC-033-find-why-prompted.md)
 - [UC-034 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-034-land-change.md)
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
 - [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
@@ -566,7 +677,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
 - [UC-024 — See what a capability would connect to before I install it](../use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md)
-- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md)
+- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md)
 - [UC-048 — Put the system's CLI on my machine at a release](../use-case-model/use-cases/050-adopt/UC-048-install-cli.md)
 - [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md)
 - [UC-052 — Run each project at the version it pins](../use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md)
@@ -577,5 +688,6 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 **Component origin:**
 
 - [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
+- [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)

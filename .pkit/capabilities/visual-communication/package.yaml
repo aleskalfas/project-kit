@@ -5,3 +5,37 @@ component:
   version: 0.1.0
 description: Visual work from reusable parts — pieces whose content is data, styled by libraries of components, brands and notations, and drawn by several renderers.
 requires_backbone: ">=2.0.0,<3.0.0"
+aliases:
+  - visual
+# What a render or an export makes that is not committed — previews, exports nobody
+# has handed out, hand-overs to a producer — lies under this path, local to each clone
+# (DEC-002 point 1). Declared repository-relative; the renderer rebases it onto
+# `.pkit/.gitignore`.
+runtime_ignore:
+  - .pkit/capabilities/visual-communication/project/local/
+commands:
+  status:
+    script: scripts/status.py
+    help: "Show where the visual work lies, and each piece with its state and its lock (DEC-002 point 1, DEC-003 point 8): the location, and whether a command recorded it in the capability's configuration or it is the default, `visual/`, not recorded yet; then each piece of the location with its state, pinned or not, and the version of each library its lock names. Reads only; exit 1 when the configuration cannot be read or records a location that is refused or missing."
+  check:
+    script: scripts/check.py
+    help: "Check every piece of the location, or the one named, without drawing anything (DEC-004 points 8, 9 and 11, DEC-005 points 5, 6, 9 to 11): the binding of each file of the capability's format, the library folder and its list, each lock against the libraries the location holds, each content file against the parts and options of the components it uses, the brand's tokens and the contrast of each pair it declares, and each scene's findings — overflow, a missing picture, a missing font, contrast as drawn, what a renderer the piece exports in would lose. A draft's committed `findings.yaml` is read where its key still verifies; otherwise its scenes are computed, until the validation's bound, and a draft left fails as not checked. A finding that fails in a released library version asks for attention instead. The `visual-communication:check` member of `pkit validate`; --json prints the findings document validation reads. A query: read-only, offline; `pkit sync` provisions its dependencies. Exit 1 when a finding fails."
+    query-contract: true
+  render:
+    script: scripts/render.py
+    help: "Draw a piece in each of its languages and each combination of modes it names (DEC-002 point 5, DEC-003 point 9, DEC-005 points 13 and 14): move the piece's lock to the newest version the project holds of each library it needs, within the major the lock names, unless the piece is pinned, and write it in `piece.yaml`; compute every scene; write `findings.yaml` beside it, keyed by the fingerprint of what the scenes were computed from; draw each scene as an SVG preview in the clone's local `previews/<piece>/`, replacing the piece's previews from before. Prints the lock, each finding and each loss a renderer reports that the piece does not accept. Records the location at its first write; `--location <path>` names it. Exit 1 when refused, with nothing written."
+  export:
+    script: scripts/export.py
+    help: "Make a numbered export of a piece in each format it declares (DEC-006 point 7): one file for each page, language and combination, each carrying the next number of the piece's `exports.yaml`, `<piece>.v<N>.<language>.<key>.svg`, or `<piece>.v<N>.<language>.<key>.<n>.svg` for page `n`, from 1, of a piece of more than one page, in the clone's local `exports/<piece>/`, never overwriting another; then record the version in `exports.yaml` with the fingerprint of what its scenes were computed from, each file's hash, and when, in which state, by which release and renderers. Uses the lock `piece.yaml` holds and never moves it. Refuses a piece with no lock yet, a lock that does not hold, a produced picture that is missing, and one that is stale unless `--use-stale <output>` names it. Records the location at its first write; `--location <path>` names it. Exit 1 when refused, with nothing written."
+  produce:
+    script: scripts/produce.py
+    help: "Run the producer a piece declares for one of its produced outputs, and keep its picture (DEC-006 points 1 to 5): resolve the roles its inputs name in every combination the piece names, under the piece's lock; make one variant for each distinct set of values; hand them over and run the producer under the capability's local folder; then, only when no input changed during the run and every variant is a PNG of the declared pixel size exposing the same points, write `produced/<output>/<key>.png` and `produced/<output>/record.yaml` in the piece's folder, removing a variant file left from before. Refuses a piece with no lock yet (run `pkit visual render <piece>` first). Records the location at its first write; `--location <path>` names it. Exit 1 when refused, with nothing written in the location."
+  write-code:
+    script: scripts/write-code.py
+    help: "Write a brand out as code, as a declaration in the location asks (DEC-005 point 7, DEC-006 points 4 and 5): read `code/<name>.yaml`, its code writer, the form of its spelling, its brand and the lock of the brand and what it builds on; resolve every token the brand exports in every combination of its axes at the versions the lock names, which it never moves; write the code to the declaration's `out` and its record beside it, `<out>.record.yaml`, with the fingerprint `pkit visual check` verifies. Writes nothing where the record verifies and the code is what the writer writes now. Prints each token the writer has no form for as a loss, unless the declaration accepts it. Writes `out` and its record; exit 1 when refused."
+# The `visual-communication:check` member of `pkit validate`: a component joins
+# validation by naming a command it registers (COR-055 point 3); the block's
+# keys are ADR-058's.
+validators:
+  check:
+    command: check

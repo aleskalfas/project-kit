@@ -13,6 +13,7 @@ builds-on:
       - {id: TERM-backbone, name: backbone}
       - {id: TERM-backbone-configuration, name: backbone configuration}
       - {id: TERM-capability, name: capability}
+      - {id: TERM-change, name: change}
       - {id: TERM-change-check, name: change check}
       - {id: TERM-component, name: component}
       - {id: TERM-data-point, name: data point}
@@ -32,6 +33,7 @@ builds-on:
       - {id: TERM-skill, name: skill}
       - {id: TERM-source-repository, name: source repository}
       - {id: TERM-stamp, name: stamp}
+      - {id: TERM-storyboard, name: storyboard}
       - {id: TERM-system, name: system}
       - {id: TERM-validation, name: validation}
       - {id: TERM-whole-repository-check, name: whole-repository check}
@@ -45,8 +47,8 @@ builds-on:
       - id: ACT-adopter
         name: Adopter
         needs:
-          - Set up a documentation space for one audience, with its own location and a definition whose scope selects its pages.
-          - Bring my existing documents into documentation spaces, anchored and fit for their readers, through a proposed plan that I review before anything moves.
+          - Set up a documentation space for one audience, with its own location and a space definition whose scope selects its pages.
+          - Bring my existing documents into documentation spaces, anchored and fit for their readers, through a proposed onboarding plan that I review before anything moves.
       - id: ACT-ai-agent
         name: AI agent
       - id: ACT-operator
@@ -64,11 +66,23 @@ TERM-captured-source:
           - .pkit/capabilities/living-docs/scripts/_lib/source_layout.py
         record:
           - living-docs:DEC-001#4
+TERM-documentation-location:
+  name: documentation location
+  status: active
+  definition: "folder for one sort of a component's files, which its package metadata declares and the backbone records once the component first places one there"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/docs_roots.py
+        record:
+          - COR-049#4
+          - COR-049#5
 TERM-documentation-space:
   name: documentation space
   noun-forms: [documentation spaces]
   status: active
-  definition: "collection of pages for one audience, in the places declared for it, with the page its readers start from and the rules its pages follow"
+  definition: "collection of pages for one audience in its places, with the page its readers start from and the rules a rule set binds on them"
   pkit:
     friction:
       anchors:
@@ -77,6 +91,21 @@ TERM-documentation-space:
           - .pkit/capabilities/living-docs/scripts/_lib/spaces.py
         record:
           - living-docs:DEC-001#1
+          - COR-050#1
+          - COR-050#14
+          - COR-051#7
+TERM-onboarding:
+  name: onboarding
+  status: active
+  definition: "friction work that makes a project's existing documents pages of its documentation spaces, each anchored or with an accepted reason for none"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/living-docs/agents/living-docs/living-docs.md
+          - .pkit/capabilities/living-docs/scripts/validate.py
+        record:
+          - living-docs:DEC-001#8
 TERM-onboarding-plan:
   name: onboarding plan
   noun-forms: [onboarding plans]
@@ -93,7 +122,7 @@ TERM-onboarding-plan:
 TERM-page:
   name: page
   status: active
-  definition: "document in the places of a documentation space that names, in its front matter, the template it follows"
+  definition: "document in a documentation root, or in a place assigned to a documentation space, that names in its front matter the template it follows"
   pkit:
     friction:
       anchors:
@@ -102,6 +131,8 @@ TERM-page:
         record:
           - living-docs:DEC-001#1
           - living-docs:DEC-001#4
+          - COR-050#1
+          - COR-050#14
 TERM-page-kind:
   name: page kind
   noun-forms: [page kinds]
@@ -168,6 +199,8 @@ TERM-space-definition:
           - .pkit/capabilities/living-docs/scripts/_lib/stamp.py
         record:
           - living-docs:DEC-001#2
+          - COR-051#2
+          - COR-051#7
 TERM-unclassified-document:
   name: unclassified document
   noun-forms: [unclassified documents]
@@ -181,6 +214,8 @@ TERM-unclassified-document:
         record:
           - living-docs:DEC-001#4
           - living-docs:DEC-001#8
+          - COR-050#1
+          - COR-050#14
 ---
 
 # Glossary
@@ -198,6 +233,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [backbone](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-backbone--backbone)
   - **Term:** [backbone configuration](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-backbone-configuration--backbone-configuration)
   - **Term:** [capability](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-capability--capability)
+  - **Term:** [change](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-change--change)
   - **Term:** [change check](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-change-check--change-check)
   - **Term:** [component](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-component--component)
   - **Term:** [data point](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-data-point--data-point)
@@ -217,6 +253,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [skill](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-skill--skill)
   - **Term:** [source repository](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-source-repository--source-repository)
   - **Term:** [stamp](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-stamp--stamp)
+  - **Term:** [storyboard](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-storyboard--storyboard)
   - **Term:** [system](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-system--system)
   - **Term:** [validation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-validation--validation)
   - **Term:** [whole-repository check](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-whole-repository-check--whole-repository-check)
@@ -225,8 +262,8 @@ The words of the domain and what each means. A term's id is stable, and its name
     - Have the fix for a stale page proposed with its evidence, and review the fix before it is applied.
     - Have a page read as its declared reader would read it, each finding citing the rule the page breaks.
   - **Actor:** [Adopter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-adopter.md)
-    - Set up a documentation space for one audience, with its own location and a definition whose scope selects its pages.
-    - Bring my existing documents into documentation spaces, anchored and fit for their readers, through a proposed plan that I review before anything moves.
+    - Set up a documentation space for one audience, with its own location and a space definition whose scope selects its pages.
+    - Bring my existing documents into documentation spaces, anchored and fit for their readers, through a proposed onboarding plan that I review before anything moves.
   - **Actor:** [AI agent](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md)
   - **Actor:** [Operator](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-operator.md)
 
@@ -238,8 +275,17 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#captur
 
 **Distinctions:**
 
-- **The text it names:** the standard, specification or other text outside the repository. Nothing fetches it, so a change to it is seen only once a person records the version they read ([DEC-001 point 4](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)).
+- **The text it names:** the standard, specification or other text outside the repository. Nothing fetches it, so a new version of it is seen only once a person records the version they read ([DEC-001 point 4](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)).
 - **Source repository:** where the [backbone](../core/glossary.md#term-backbone--backbone) or a [component](../core/glossary.md#term-component--component) is authored. A captured source names a text outside the repository, never a repository the [project](../core/glossary.md#term-project--project) syncs from.
+
+## TERM-documentation-location — documentation location
+
+**Example:** living-docs declares its `definitions` documentation location at `living-docs`, below the internal [documentation root](../core/glossary.md#term-documentation-root--documentation-root). Placing the first [space definition](#term-space-definition--space-definition) recorded it as `tech-docs/living-docs`, in `.pkit/capabilities/living-docs/project/docs-locations.yaml`.
+
+**Distinctions:**
+
+- **Documentation root:** a folder the [backbone configuration](../core/glossary.md#term-backbone-configuration--backbone-configuration) names for internal or for user-facing [readers](#term-reader--reader). A documentation location derives from one until it is recorded, and a later edit of the root moves none recorded ([COR-049 point 5](../../../.pkit/decisions/core/COR-049-documentation-roots.md#5-a-derived-location-is-recorded-when-it-is-first-used)).
+- **Place:** a path or glob where the [backbone](../core/glossary.md#term-backbone--backbone) looks for documents, giving each its type. The documentation location of the space definitions is also a [place](../core/glossary.md#term-place--place) living-docs declares, of the template type ([DEC-001 point 2](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content)).
 
 ## TERM-documentation-space — documentation space
 
@@ -252,6 +298,15 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#docume
 - **Documentation root:** a folder the [backbone configuration](../core/glossary.md#term-backbone-configuration--backbone-configuration) names for internal or for user-facing readers. It is a default [place](../core/glossary.md#term-place--place) of the space it serves, and a space's pages may lie outside it too ([DEC-001 point 1](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces)).
 - **Place:** a path or glob where the [backbone](../core/glossary.md#term-backbone--backbone) looks for documents. A place outside every root belongs to the space the [project](../core/glossary.md#term-project--project) assigns it to (DEC-001 point 1).
 
+## TERM-onboarding — onboarding
+
+**Example:** a [project](../core/glossary.md#term-project--project) adopts living-docs with 14 [unclassified documents](#term-unclassified-document--unclassified-document). Its onboarding ends once [validation](../core/glossary.md#term-validation--validation) counts none of them, and no [page](#term-page--page) is left unanchored without an accepted reason.
+
+**Distinctions:**
+
+- **Onboarding plan:** the outline of one onboarding, with its evidence, which a person approves before any [proposal](#term-proposal--proposal) is drafted. The onboarding lands as the proposals the adopter accepts, each an ordinary [change](../core/glossary.md#term-change--change) ([DEC-001 point 8](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
+- **Classifying a document:** naming its [page kind](#term-page-kind--page-kind) in its front matter, which makes an unclassified document a page ([DEC-001 point 4](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)). Onboarding classifies each such document, and gives each page its anchors or an accepted reason for none (DEC-001 point 8).
+
 ## TERM-onboarding-plan — onboarding plan
 
 Explained in [VIEW-proposals-and-reviews](domain-model/020-proposals-and-reviews.md#onboarding-plan).
@@ -261,17 +316,17 @@ Explained in [VIEW-proposals-and-reviews](domain-model/020-proposals-and-reviews
 **Distinctions:**
 
 - **Proposal:** a drafted edit with its evidence. The agent writes proposals only once the plan is approved, and the plan itself changes nothing ([DEC-001 point 8](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
-- **A mapping from code to documents:** a work-tracking [capability](../core/glossary.md#term-capability--capability)'s list of which documents a change of code obliges. The plan turns its rules into [page](#term-page--page) anchors, and retiring the mapping is a separate change for its owner (DEC-001 point 8).
+- **A mapping from code to documents:** a work-tracking [capability](../core/glossary.md#term-capability--capability)'s list of which documents a [change](../core/glossary.md#term-change--change) of code obliges. The plan turns its rules into [page](#term-page--page) anchors, and retiring the mapping is a separate change for its owner (DEC-001 point 8).
 
 ## TERM-page — page
 
 Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#page).
 
-**Example:** `.pkit/permissions/README.md` declares the kind `reference` and the [reader](#term-reader--reader) `act-ai-agent`, and anchors `.pkit/permissions/decide.py`, so a change to that code asks it whether it still holds.
+**Example:** `.pkit/permissions/README.md` declares the kind `reference` and the [reader](#term-reader--reader) `act-ai-agent`, and anchors `.pkit/permissions/decide.py`, so a [change](../core/glossary.md#term-change--change) to that code asks it whether it still holds.
 
 **Distinctions:**
 
-- **Unclassified document:** a document in a space's places that declares no [page kind](#term-page-kind--page-kind). It is no page, and onboarding classifies it ([DEC-001 point 4](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)).
+- **Unclassified document:** a document in a space's places that declares no [page kind](#term-page-kind--page-kind). It is no page, and [onboarding](#term-onboarding--onboarding) classifies it ([DEC-001 point 4](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)).
 - **Decision record:** a document a page anchors. It is never a page, whatever [place](../core/glossary.md#term-place--place) it lies in (DEC-001 point 4).
 - **Page kind:** what a page declares in `kind`, such as `reference`. Declaring it is what makes a document a page (DEC-001 point 4).
 
@@ -295,7 +350,7 @@ Explained in [VIEW-proposals-and-reviews](domain-model/020-proposals-and-reviews
 **Distinctions:**
 
 - **Answer:** the statement in a [page](#term-page--page)'s `friction` block that settles its [friction](../core/glossary.md#term-friction--friction). A proposal names the [answer](../core/glossary.md#term-answer--answer) to give once it is applied, and a person gives that answer ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
-- **Onboarding plan:** the outline of a whole onboarding. The agent drafts proposals only once a person approves it ([DEC-001 point 8](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
+- **Onboarding plan:** the outline of a whole [onboarding](#term-onboarding--onboarding). The agent drafts proposals only once a person approves it ([DEC-001 point 8](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
 - **A proposed decision record or rule:** one whose status is `proposed`, which binds nothing yet. A proposal is no record, and never binds.
 
 ## TERM-reader — reader
@@ -330,13 +385,13 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#space-
 **Distinctions:**
 
 - **`LDOC`:** the rule set living-docs ships, which every space definition inherits. It takes no scope, so its rules bind on a [page](#term-page--page) only through a set of the [project](../core/glossary.md#term-project--project)'s own that selects it ([DEC-001 point 2](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content)).
-- **Template:** a writer's tool in the definitions location, such as a page template copied there. It is never a page, and holds no rule (DEC-001 point 2).
+- **Template:** a writer's tool in the space definitions' [documentation location](#term-documentation-location--documentation-location), such as a page template copied there. It is never a page, and holds no rule (DEC-001 point 2).
 
 ## TERM-unclassified-document — unclassified document
 
 Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#unclassified-document).
 
-**Example:** a [project](../core/glossary.md#term-project--project) adopts living-docs with `docs/guide.md`, whose front matter names no [page kind](#term-page-kind--page-kind). [Validation](../core/glossary.md#term-validation--validation) counts that file as an unclassified document, for onboarding to classify.
+**Example:** a [project](../core/glossary.md#term-project--project) adopts living-docs with `docs/guide.md`, whose front matter names no [page kind](#term-page-kind--page-kind). [Validation](../core/glossary.md#term-validation--validation) counts that file as an unclassified document, for [onboarding](#term-onboarding--onboarding) to classify.
 
 **Distinctions:**
 

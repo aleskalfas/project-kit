@@ -16,13 +16,16 @@ pkit:
         - project-management:DEC-026
         - project-management:DEC-035#3
         - project-management:DEC-008
+        - project-management:DEC-029
+        - project-management:DEC-059#2
+        - project-management:DEC-059#8
 ---
 
 # ACT-worker-agent — Worker agent
 
 An AI agent of a topology that takes ready Tasks one at a time, and builds each up to its merge. The worker agent plans nothing beyond the [Task](../../glossary.md#term-task--task) it builds.
 
-**Role holders:** an AI agent that follows the `pm` [skill](../../../core/glossary.md#term-skill--skill) on a developer's direction, such as the project-manager agent ([DEC-008](../../../../../.pkit/capabilities/project-management/decisions/DEC-008-pm-and-implementer-roles.md) and [DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
+**Role holders:** an AI agent that follows the `pm` [skill](../../../core/glossary.md#term-skill--skill) on its [seat](../../glossary.md#term-seat--seat)'s direction, such as the project-manager agent ([DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md) and [DEC-059 point 8](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#8-the-agent-a-seat-names-runs-the-seats-role-through-the-pm-skill)).
 
 **Occasions:**
 
