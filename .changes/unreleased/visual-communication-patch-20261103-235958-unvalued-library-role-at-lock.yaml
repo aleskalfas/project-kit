@@ -9,7 +9,8 @@ body: >
   `piece.yaml#lock`, naming the library's version, the role and the part,
   and fails; the component's version no longer carries it. Where a brand of
   that chain names the library, the part takes no finding, since that brand's
-  `library-role-missing` reports the role. A role no library declares is
+  `library-role-missing`, or its library's own finding where a default does
+  not hold, reports it. A role no library declares is
   still `unknown-role` in the component. The reference lists `base-shape`,
   `base-lock`, `base-axis`, `alias-private` and `open-wider`, which the check
   already raised.
