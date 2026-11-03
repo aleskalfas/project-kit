@@ -3,9 +3,9 @@ id: REQ-014
 title: A later edit of a documentation root moves no document
 status: active
 statement: A later edit of a documentation root moves no document, and changes no path already recorded for documents.
-measure: After a root changes, every document lies where it lay, and every path recorded for documents reads as it did. Only a path chosen afterwards derives from the new root.
-applies-to: Every write of a documentation root to the backbone configuration, by a command or by hand. It binds every component that derives a path for documents from a root.
-obligation: v1:sha256:23e4b8c82eb4573dd8825685e91a68c3f5e86f2275b7ecd35a2b8afc30f02d0c
+measure: After a root changes, every document lies where it lay, and every path recorded for documents reads as it did. Only a folder chosen afterwards derives from the new root.
+applies-to: Every write of a documentation root to the backbone configuration, by a command or by hand. It binds every component that derives a folder for documents from a root.
+obligation: v1:sha256:7aeb494772d83e435acc4ffb3e27d42e8954cfc7383decf3c2da50b945455bcb
 actors:
   - ACT-adopter
 refines: []

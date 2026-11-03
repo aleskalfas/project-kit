@@ -235,7 +235,7 @@ Choosing the target of `pkit upgrade` is one consent for every [migration](../gl
 **Always true:**
 
 - With nobody to ask and no flag, nothing is written, and the default applies (COR-048 point 5).
-- No consent is taken silently: each is given in one of the three ways above (COR-048 point 5, COR-059 point 4).
+- No consent is taken silently: each is given in one of the three ways above (COR-048 point 5 and COR-059 point 4).
 
 ## Version pin
 
