@@ -420,6 +420,20 @@ TERM-deferral:
           - src/project_kit/friction_write.py
         record:
           - COR-050#4
+TERM-deferral-point:
+  name: deferral point
+  noun-forms: [deferral points]
+  status: active
+  definition: "commit that first introduced an answer putting off one anchor's friction, from which the checks measure what the anchor stands on"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_history.py
+        record:
+          - COR-050#4
+          - COR-050#9
+          - COR-062#6
 TERM-dependency-gate:
   name: dependency gate
   noun-forms: [dependency gates]
@@ -476,7 +490,7 @@ TERM-documentation-root:
   name: documentation root
   noun-forms: [documentation roots]
   status: active
-  definition: "folder for internal or for user-facing readers, `docs/` unless the backbone configuration names another, from which locations for documents are derived unless set explicitly"
+  definition: "folder for internal or for user-facing readers, `docs/` unless the backbone configuration names another, from which the folders of documents are derived unless set explicitly"
   pkit:
     friction:
       anchors:
@@ -510,6 +524,21 @@ TERM-environment-block:
           - src/project_kit/report.py
         record:
           - PRJ-008
+TERM-extension-point:
+  name: extension point
+  noun-forms: [extension points]
+  other-senses: [extension points the component author uses]
+  status: active
+  definition: "named part of a rule that a rule of an inheriting set may fill, at most once along a line of inheritance"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/rule_sets.py
+        record:
+          - COR-051#2
+          - COR-051#3
+          - COR-051#7
 TERM-finding:
   name: finding
   noun-forms: [findings]
@@ -553,6 +582,20 @@ TERM-friction:
           - COR-050#6
           - COR-050#9
           - COR-062#1
+TERM-friction-mode:
+  name: friction mode
+  noun-forms: [friction modes]
+  status: active
+  definition: "setting of the backbone configuration, `warning` by default or `enforcing`, saying whether the change check reports its findings and passes, or fails on them"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_discovery.py
+          - src/project_kit/friction_check.py
+        record:
+          - COR-050#12
+          - COR-050#14
 TERM-grant:
   name: grant
   status: active
@@ -690,6 +733,20 @@ TERM-link-target:
           - src/project_kit/friction_discovery.py
         record:
           - COR-050#16
+TERM-loaded-file:
+  name: loaded file
+  noun-forms: [loaded files]
+  status: active
+  definition: "document generated from a rule set of operational rules where the set is authored, holding its accepted rules alone, which sessions take in"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/loaded_rules.py
+        record:
+          - COR-068#3
+          - COR-070#1
+          - COR-070#2
 TERM-loaded-rule-set:
   name: loaded rule set
   noun-forms: [loaded rule sets]
@@ -847,6 +904,19 @@ TERM-passage-for-a-person:
         record:
           - COR-057#3
           - COR-060#1
+TERM-permission-catalog:
+  name: permission catalog
+  status: active
+  definition: "data naming each privilege, how the system recognises it and whether it is a guardrail, in the backbone's file and each installed capability's fragment"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/schemas/privilege-catalog.yaml
+          - .pkit/permissions/decide.py
+        record:
+          - COR-028#1
+          - ADR-021
 TERM-permission-code:
   name: permission code
   status: active
@@ -1772,7 +1842,7 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 
 Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#backbone-configuration).
 
-**Example:** project-kit's `.pkit/project/config.yaml` declares its [documentation roots](#term-documentation-root--documentation-root) and its [friction](#term-friction--friction) mode and places, and leaves its [default branch](#term-default-branch--default-branch) at `main`.
+**Example:** project-kit's `.pkit/project/config.yaml` declares its [documentation roots](#term-documentation-root--documentation-root) and its [friction mode](#term-friction-mode--friction-mode) and places, and leaves its [default branch](#term-default-branch--default-branch) at `main`.
 
 **Distinctions:**
 
@@ -1838,7 +1908,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 **Distinctions:**
 
 - **Whole-repository check:** measures every [artefact](#term-artefact--artefact) from its own [revalidation point](#term-revalidation-point--revalidation-point) at the latest commit, and never fails (COR-050 points [6](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks) and [12](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
-- **Warning or enforcing:** in warning mode the change check reports and passes, and in enforcing mode it fails. It binds once CI requires it (COR-050 point 12).
+- **Friction mode:** with `warning`, the change check reports and passes, and with `enforcing`, it fails. It binds once CI requires it (COR-050 point 12).
 - **The list of answers:** the answers that the change check reports a [change](#term-change--change) wrote, word for word, which a [reviewer](#term-reviewer--reviewer) works from ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 
 ## TERM-changeset — changeset
@@ -1913,7 +1983,7 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
   - a [process](#term-process--process) is offered for others to depend on
   - an event signals that a writing command finished
 - **Point:** a part of a [decision record](#term-decision-record--decision-record)'s Decision ([COR-058 point 1](../../../.pkit/decisions/core/COR-058-record-points.md#1-a-point-is-a-heading-with-its-id-and-title)). It shares only the word.
-- **Extension point:** [COR-053](../../../.pkit/decisions/core/COR-053-connection-points.md)'s key in [package metadata](#term-package-metadata--package-metadata) for the connection points a capability defines, beside `extensions` for those it plugs into ([COR-053 point 3](../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality)). A [rule](#term-rule--rule)'s extension point is a part of the rule that an inheriting [rule set](#term-rule-set--rule-set) may fill, and shares only the word ([COR-051 point 3](../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers)).
+- **`extension-points`:** [COR-053](../../../.pkit/decisions/core/COR-053-connection-points.md)'s key in [package metadata](#term-package-metadata--package-metadata) for the connection points a capability defines, beside `extensions` for those it plugs into ([COR-053 point 3](../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality)). A [rule](#term-rule--rule)'s [extension point](#term-extension-point--extension-point) is another thing, which shares only the words ([COR-051 point 3](../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers)).
 - **Hook:** a named entry point that an [agent definition](#term-agent-definition--agent-definition) needs and a [skill](#term-skill--skill) or a command provides ([COR-013 point 4](../../../.pkit/decisions/core/COR-013-agent-architecture.md#4-the-hook-pattern-agents-executing-in-other-areas)). It is no connection point.
 
 ## TERM-consent — consent
@@ -2027,9 +2097,21 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 **Distinctions:**
 
 - **Deferral point:** the commit that first introduced a deferral. Rewording its reason does not move it ([COR-050 point 4](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#4-deferrals)).
-- **Deferred debt:** what a deferral leaves on the [default branch](#term-default-branch--default-branch), dated from its deferral point ([COR-050 point 9](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
+- **Deferred debt:** what a deferral leaves on the [default branch](#term-default-branch--default-branch), dated from its [deferral point](#term-deferral-point--deferral-point) ([COR-050 point 9](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
 - **A `deferred` revisit entry:** puts off the [revisit](#term-revisit--revisit) of one [link target](#term-link-target--link-target), never an anchor's [friction](#term-friction--friction) ([COR-050 point 16](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)).
 - **A permission hook's deferral:** the hook hands a call it does not decide to the [harness](#term-harness--harness), which then decides or asks. It shares only the word ([COR-028 point 2](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
+
+## TERM-deferral-point — deferral point
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#deferral-point).
+
+**Example:** The developer defers a page's [anchor](#term-anchor--anchor) on `src/project_kit/release.py` in commit `d4e5f6a`, the [deferral](#term-deferral--deferral)'s deferral point. A later edit of `release.py` is new [friction](#term-friction--friction) on the page.
+
+**Distinctions:**
+
+- **Revalidation point:** the commit where an [artefact](#term-artefact--artefact)'s answers first carried their `at`. A deferral whose deferral point a [revalidation point](#term-revalidation-point--revalidation-point) reaches answers no friction, since that revalidation answered what it put off ([COR-050 point 4](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#4-deferrals)).
+- **A deferral put back:** a commit that restores a deferral, as a revert does, does not introduce it. The deferral keeps the deferral point of the one it puts back (COR-050 point 4).
+- **Point:** a part of a [decision record](#term-decision-record--decision-record)'s Decision. It shares only the word ([COR-058 point 1](../../../.pkit/decisions/core/COR-058-record-points.md#1-a-point-is-a-heading-with-its-id-and-title)).
 
 ## TERM-dependency-gate — dependency gate
 
@@ -2089,7 +2171,7 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 
 - **Place:** a path declared to hold anchored [artefacts](#term-artefact--artefact) ([COR-050 point 1](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)). A root may hold files that no [place](#term-place--place) reads.
 - **Space:** living-docs' body of pages for one audience, under a root or in places assigned to it ([living-docs DEC-001 point 1](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces)).
-- **A recorded location:** a location derived from a root is recorded when first used, so changing the root later moves nothing ([COR-049 point 5](../../../.pkit/decisions/core/COR-049-documentation-roots.md#5-a-derived-location-is-recorded-when-it-is-first-used)).
+- **A recorded folder:** one derived from a root is recorded once a document is placed there, so editing the root later moves nothing ([COR-049 point 5](../../../.pkit/decisions/core/COR-049-documentation-roots.md#5-a-derived-location-is-recorded-when-it-is-first-used)).
 
 ## TERM-enforcement-declaration — enforcement declaration
 
@@ -2113,6 +2195,19 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 - **The adopter's text:** what the adopter writes. The [system](#term-system--system) checks it for nothing private beyond what it can see, and builds the environment block itself ([PRJ-008](../../../.pkit/decisions/project/PRJ-008-report-command.md)).
 - **A capability the system does not ship:** counted, never named, unless the adopter asks to name it (PRJ-008).
+
+## TERM-extension-point — extension point
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#extension-point).
+
+**Example:** `RS-WRITE-002#labels` is an extension point of `WRITE`'s [rule](#term-rule--rule) on parallel sections. `ANA`'s [RS-ANA-002](../../rule-sets/analysis.md#rs-ana-002--each-kinds-list-of-labels) names it in `fills`, and gives each kind's list of labels.
+
+**Distinctions:**
+
+- **Fill:** the rule that fills an extension point. It names the extension point in `fills`, and anchors the rule it fills, so an edit there flags the fill ([COR-051 point 7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
+- **`extension-points` in package metadata:** [COR-053](../../../.pkit/decisions/core/COR-053-connection-points.md)'s key for the [connection points](#term-connection-point--connection-point) a [capability](#term-capability--capability) defines. It shares only the words ([COR-053 point 3](../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality)).
+- **Extension points in their plain sense:** whatever a [component](#term-component--component) extends the [system](#term-system--system) through, such as a connection point or a [harness requirement](#term-harness-requirement--harness-requirement). They share only the words.
+- **Point:** a part of a [decision record](#term-decision-record--decision-record)'s Decision. It shares only the word ([COR-058 point 1](../../../.pkit/decisions/core/COR-058-record-points.md#1-a-point-is-a-heading-with-its-id-and-title)).
 
 ## TERM-finding — finding
 
@@ -2149,6 +2244,18 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **Debt:** what the [whole-repository check](#term-whole-repository-check--whole-repository-check) reports on the [default branch](#term-default-branch--default-branch). Friction nobody answered is stale [debt](#term-debt--debt), and a [deferral](#term-deferral--deferral) is deferred debt ([COR-050 point 9](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
 - **The `friction` block:** the block in an [artefact](#term-artefact--artefact)'s front matter that holds its anchors ([COR-050 point 1](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)). The artefact's answers live in [answer files](#term-answer-file--answer-file) apart from the artefact ([COR-062 point 1](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)). The block is no [finding](#term-finding--finding).
 
+## TERM-friction-mode — friction mode
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#friction-mode).
+
+**Example:** project-kit's `.pkit/project/config.yaml` sets `friction.mode` to `enforcing`, so its [change check](#term-change-check--change-check) fails a branch that leaves [friction](#term-friction--friction) unanswered.
+
+**Distinctions:**
+
+- **A binding check:** the friction mode decides whether the change check can fail. Whether a failure holds a merge back is the [project](#term-project--project)'s choice, made by requiring the check in its CI ([COR-050 point 12](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
+- **Validation:** fails a malformed block, a dangling [deferral](#term-deferral--deferral) and the other faults it owns, whatever the friction mode (COR-050 point 12).
+- **A file's mode:** what git records of a file beside its content, such as whether it runs as a program. An [anchor](#term-anchor--anchor) stands on it, and it shares only the word ([COR-050 point 5](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#5-when-an-anchor-has-changed-and-what-answers-it)).
+
 ## TERM-grant — grant
 
 Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#grant).
@@ -2180,9 +2287,9 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 **Distinctions:**
 
-- **Deny grant:** a [grant](#term-grant--grant) that denies one [grant subject](#term-grant-subject--grant-subject) a [privilege](#term-privilege--privilege). A [project](#term-project--project) writes it, and can remove it. A guardrail comes from the catalog's `guardrail: true`, whatever the grants say.
+- **Deny grant:** a [grant](#term-grant--grant) that denies one [grant subject](#term-grant-subject--grant-subject) a [privilege](#term-privilege--privilege). A [project](#term-project--project) writes it, and can remove it. A guardrail comes from the [permission catalog](#term-permission-catalog--permission-catalog)'s `guardrail: true`, whatever the grants say.
 - **The double lock:** a guardrail's two layers. The [backbone](#term-backbone--backbone)'s [permission code](#term-permission-code--permission-code) denies it, and the [adapter](#term-adapter--adapter)'s own deny in its [harness](#term-harness--harness) holds where the [permission hook](#term-permission-hook--permission-hook) fails ([COR-028 point 2](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
-- **A capability's privilege:** a privilege a [capability](#term-capability--capability)'s catalog fragment adds. It is never a guardrail, and the backbone refuses a fragment that marks one ([ADR-021 point 3](../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#3-a-capability-contributed-privilege-may-never-be-a-guardrail--reject-do-not-strip)).
+- **A capability's privilege:** a privilege a [capability](#term-capability--capability)'s fragment of the permission catalog adds. It is never a guardrail, and the backbone refuses a fragment that marks one ([ADR-021 point 3](../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#3-a-capability-contributed-privilege-may-never-be-a-guardrail--reject-do-not-strip)).
 
 ## TERM-harness — harness
 
@@ -2282,16 +2389,28 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **An anchor's target:** what an anchor names, such as the files a path anchor matches. What the anchor stands on is what the checks compare of that target, such as those files' content and mode ([COR-050 point 5](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#5-when-an-anchor-has-changed-and-what-answers-it)). A link target is the anchor itself, and it changed where what it stands on differs (COR-050 point 16).
 - **A version transition's target and a pull request's target:** the [release](#term-release--release) or [version](#term-version--version) a transition moves to, and the branch a [pull request](#term-pull-request--pull-request) lands on. They share the word only.
 
+## TERM-loaded-file — loaded file
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#loaded-file).
+
+**Example:** `.pkit/rules/core.md` is the loaded file of the [backbone](#term-backbone--backbone)'s `OPS`. `pkit rule-sets generate` writes it from `.pkit/rule-sets/ops.md`, and project-kit's `CLAUDE.md` includes it.
+
+**Distinctions:**
+
+- **Loaded rule set:** the collection file that a loaded file is generated from, which holds each [rule](#term-rule--rule)'s status and origin as well ([COR-068 point 3](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#3-the-loaded-file-is-generated-from-the-set-where-the-set-is-authored)).
+- **A project's plain file of rules:** a [project](#term-project--project)'s [operational rules](#term-operational-rule--operational-rule) kept in a file of their own, generated from no set. It is loaded as it stands ([COR-068 point 7](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#7-a-projects-rules-not-yet-in-a-set)).
+- **Rules index:** the generated file that lists each installed [capability](#term-capability--capability)'s loaded file, and holds no rule of its own ([ADR-076 point 2](../../architecture/decisions/ADR-076-capability-rules-index.md#2-the-backbone-renders-an-index-and-claudemd-includes-it)).
+
 ## TERM-loaded-rule-set — loaded rule set
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#loaded-rule-set).
 
-**Example:** The [backbone](#term-backbone--backbone)'s `OPS` is a loaded rule set. `.pkit/rules/core.md` is generated from it, and every session loads that file through the [harness](#term-harness--harness)'s [instruction file](#term-instruction-file--instruction-file).
+**Example:** The [backbone](#term-backbone--backbone)'s `OPS` is a loaded rule set. `.pkit/rules/core.md` is its [loaded file](#term-loaded-file--loaded-file), which every session takes in through the [harness](#term-harness--harness)'s [instruction file](#term-instruction-file--instruction-file).
 
 **Distinctions:**
 
-- **Method rule set:** one the backbone or a [component](#term-component--component) ships. A loaded rule set it ships binds where its file is loaded, never through inheritance ([COR-051 point 7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
-- **Operational rule:** each [rule](#term-rule--rule) of a loaded rule set. Only an accepted one is in the generated file ([COR-068 point 3](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#3-the-loaded-file-is-generated-from-the-set-where-the-set-is-authored)).
+- **Method rule set:** one the backbone or a [component](#term-component--component) ships. A loaded rule set it ships binds where its loaded file is loaded, never through inheritance ([COR-051 point 7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
+- **Operational rule:** each [rule](#term-rule--rule) of a loaded rule set. Only an accepted one is in the loaded file ([COR-068 point 3](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#3-the-loaded-file-is-generated-from-the-set-where-the-set-is-authored)).
 - **Scope:** a loaded rule set has none, and no [rule set](#term-rule-set--rule-set) inherits it ([COR-068 point 2](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#2-where-its-accepted-rules-bind)).
 
 ## TERM-manifest — manifest
@@ -2329,7 +2448,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 **Distinctions:**
 
 - **A rule set of the project's own:** one the project owns, which may take a scope. [Sync](#term-sync--sync) never reads or writes it ([COR-051 point 6](../../../.pkit/decisions/core/COR-051-rule-sets.md#6-two-kinds-two-owners)).
-- **Loaded rule set:** a rule set whose rules bind on the work of the sessions that load its generated file. The [backbone](#term-backbone--backbone)'s `OPS` and a [capability](#term-capability--capability)'s are method rule sets, while a project's own is no method rule set ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
+- **Loaded rule set:** a rule set whose rules bind on the work of the sessions that load its [loaded file](#term-loaded-file--loaded-file). The [backbone](#term-backbone--backbone)'s `OPS` and a [capability](#term-capability--capability)'s are method rule sets, while a project's own is no method rule set ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
 - **Where its rules bind:** unless it is a [loaded rule set](#term-loaded-rule-set--loaded-rule-set), only through a set of the project's own that inherits it ([COR-051 point 7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 
 ## TERM-methodology — methodology
@@ -2424,6 +2543,18 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 - **A rule the change stops from binding:** a finding under it, on a passage the [change](#term-change--change) owns, is a passage for a person too (COR-057 point 3).
 - **A rule the change brings text under:** a break of that rule there takes its kind as any other break. It is settled where the rule's text settles it ([COR-060 point 1](../../../.pkit/decisions/core/COR-060-brought-under-breaks.md#1-one-kind-whatever-brings-the-text-under-the-rule)).
 - **How it reaches a person:** the gate that invoked the reviewer says (COR-057 point 3).
+
+## TERM-permission-catalog — permission catalog
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#permission-catalog).
+
+**Example:** the [backbone](#term-backbone--backbone)'s `.pkit/schemas/privilege-catalog.yaml` names `vcs`, recognised from any `git` command, and marks `vcs-history-rewrite` `guardrail: true`.
+
+**Distinctions:**
+
+- **Grant:** allows or denies a [privilege](#term-privilege--privilege) the permission catalog names. A [grant](#term-grant--grant) is no part of it ([COR-028 point 1](../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth)).
+- **A capability's fragment:** the file of privileges a [capability](#term-capability--capability) ships in its own `permissions/` folder. Its ids open with the capability's name, and it marks no privilege a [guardrail](#term-guardrail--guardrail) (ADR-021 points [2](../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#2-additive-only-and-collision-rejecting--the-catalog-is-a-map-so-the-merge-rule-is-load-bearing) and [3](../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#3-a-capability-contributed-privilege-may-never-be-a-guardrail--reject-do-not-strip)).
+- **A catalogue of capabilities:** a list of the capabilities a [project](#term-project--project) may [install](#term-install--install), which a suggestion of what to install reads ([COR-053 point 8](../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)). It shares only the word.
 
 ## TERM-permission-code — permission code
 
@@ -2522,8 +2653,8 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 **Distinctions:**
 
 - **Path-scoped privilege:** a privilege recognised only for a file tool whose target lies in its folders, such as `workspace` ([ADR-060 point 1](../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#1-recognition-from-the-target-path-for-the-file-tools-only)).
-- **A capability's privilege:** a privilege a [capability](#term-capability--capability)'s catalog fragment defines, under an id that opens with the capability's name ([ADR-021](../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md)).
-- **Guardrail:** a privilege the catalog marks `guardrail: true`, which every [grant subject](#term-grant-subject--grant-subject) is denied.
+- **A capability's privilege:** a privilege a [capability](#term-capability--capability)'s fragment of the [permission catalog](#term-permission-catalog--permission-catalog) defines, under an id that opens with the capability's name ([ADR-021](../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md)).
+- **Guardrail:** a privilege the permission catalog marks `guardrail: true`, which every [grant subject](#term-grant-subject--grant-subject) is denied.
 
 ## TERM-process — process
 
@@ -2589,7 +2720,7 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
   - a [migration](#term-migration--migration), within what the records owning the written content allow
   - a [capability](#term-capability--capability)'s [install](#term-install--install), of the [rule set](#term-rule-set--rule-set) the capability declares
   - the configuration commands ([COR-048 point 5](../../../.pkit/decisions/core/COR-048-backbone-configuration.md#5-written-only-with-consent))
-- **Extension:** COR-001's name for this content. [COR-053](../../../.pkit/decisions/core/COR-053-connection-points.md)'s `extensions` and a [rule](#term-rule--rule)'s extension point are other things ([COR-053 point 3](../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality) and [COR-051 point 3](../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers)).
+- **Extension:** COR-001's name for this content. [COR-053](../../../.pkit/decisions/core/COR-053-connection-points.md)'s `extensions` and a [rule](#term-rule--rule)'s [extension point](#term-extension-point--extension-point) are other things ([COR-053 point 3](../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality) and [COR-051 point 3](../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers)).
 - **Suspension:** project-owned content that its consumer reads instead of a synced copy of the same name. The record governing that kind of file must allow it (COR-001).
 
 ## TERM-propagation — propagation
@@ -2861,7 +2992,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 - **Rule:** one entry of a rule set, an [artefact](#term-artefact--artefact) of its own ([COR-051 point 2](../../../.pkit/decisions/core/COR-051-rule-sets.md#2-a-rule-set-is-a-collection-of-artefacts)).
 - **Method rule set:** one that the [backbone](#term-backbone--backbone) or a [component](#term-component--component) ships. It takes no scope. Unless it is a loaded set, its rules bind only through a set of the [project](#term-project--project)'s own that inherits it (COR-051 points [6](../../../.pkit/decisions/core/COR-051-rule-sets.md#6-two-kinds-two-owners) and [7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
-- **Loaded rule set:** one whose rules bind on the work of the sessions that load a file generated from it, such as the backbone's `OPS`. It has no scope and no inheritance ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
+- **Loaded rule set:** one whose rules bind on the work of the sessions that load its [loaded file](#term-loaded-file--loaded-file), such as the backbone's `OPS`. It has no scope and no inheritance ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
 - **Inheritance pin:** the major number an inheriting set names for each set it inherits, as in `WRITE@2`. No [rule](#term-rule--rule) binds through a pin behind its set until the project reviews the new major (COR-051 point 7).
 - **Version pin:** the [release](#term-release--release) a project's commands run at ([ADR-049 point 1](../../architecture/decisions/ADR-049-per-project-version-pin.md#1-pin-source-a-dedicated-project-owned-directive-file)). It is no rule set's pin.
 
@@ -2869,7 +3000,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#rules-index).
 
-**Example:** project-kit's rules index is `.pkit/rules/capabilities.md`. It includes project-management's and software-engineering's loaded files, and `CLAUDE.md` includes it.
+**Example:** project-kit's rules index is `.pkit/rules/capabilities.md`. It includes project-management's and software-engineering's [loaded files](#term-loaded-file--loaded-file), and `CLAUDE.md` includes it.
 
 **Distinctions:**
 
@@ -3158,6 +3289,6 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 **Distinctions:**
 
-- **Change check:** compares one [change](#term-change--change) with its [base](#term-base--base), and fails in enforcing mode ([COR-050 point 12](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
+- **Change check:** compares one [change](#term-change--change) with its [base](#term-base--base), and fails where the [friction mode](#term-friction-mode--friction-mode) is `enforcing` ([COR-050 point 12](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
 - **Debt:** what the whole-repository check reports, derived from git on each run ([COR-050 point 9](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
 - **Tool-written status:** the `last-check` that an after-merge job writes from the check's result. The checks never read it for [friction](#term-friction--friction) ([COR-050 point 10](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#10-a-tool-written-status-on-separate-lines)).

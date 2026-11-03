@@ -235,7 +235,7 @@ Choosing the target of `pkit upgrade` is one consent for every [migration](../gl
 **Always true:**
 
 - With nobody to ask and no flag, nothing is written, and the default applies (COR-048 point 5).
-- No consent is taken silently: each is a person's reply or an explicit override (COR-059 point 4).
+- No consent is taken silently: each is given in one of the three ways above (COR-048 point 5, COR-059 point 4).
 
 ## Version pin
 
@@ -390,7 +390,7 @@ Defined in [TERM-documentation-root](../glossary.md#term-documentation-root--doc
 
 **Why:** A [project](../glossary.md#term-project--project)'s documents serve two kinds of reader, its users and those who build and extend it ([COR-049](../../../../.pkit/decisions/core/COR-049-documentation-roots.md)). Without a declared folder for each, every part that writes or reads documents must choose its own, or guess (COR-049).
 
-A documentation root is the folder for internal readers, or the one for user-facing readers. It is `docs/` unless the [backbone configuration](../glossary.md#term-backbone-configuration--backbone-configuration) names another. Locations for documents are derived from it, unless one is set explicitly, so project-kit's analysis lives in `tech-docs/analysis/` under its internal root, `tech-docs/`.
+A documentation root is the folder for internal readers, or the one for user-facing readers. It is `docs/` unless the [backbone configuration](../glossary.md#term-backbone-configuration--backbone-configuration) names another. A folder for documents that is not set explicitly is derived from it. So project-kit's analysis lives in `tech-docs/analysis/`, under its internal root, `tech-docs/`.
 
 **Attributes:**
 
@@ -407,8 +407,8 @@ A documentation root is the folder for internal readers, or the one for user-fac
 **Always true:**
 
 - It lies inside the repository, and outside the [methodology](../glossary.md#term-methodology--methodology)'s own tree (COR-049 point 1).
-- An explicit location always wins over a derived one ([COR-049 point 3](../../../../.pkit/decisions/core/COR-049-documentation-roots.md#3-where-derivation-applies)).
-- A location derived from it is recorded when first used, so changing the root later moves nothing ([COR-049 point 5](../../../../.pkit/decisions/core/COR-049-documentation-roots.md#5-a-derived-location-is-recorded-when-it-is-first-used)).
+- A folder set explicitly always wins over one derived from a root ([COR-049 point 3](../../../../.pkit/decisions/core/COR-049-documentation-roots.md#3-where-derivation-applies)).
+- A folder derived from it is recorded when a document is first placed there, so changing the root later moves nothing ([COR-049 point 5](../../../../.pkit/decisions/core/COR-049-documentation-roots.md#5-a-derived-location-is-recorded-when-it-is-first-used)).
 - A declared root that does not exist yet is a warning, never a failure ([COR-049 point 7](../../../../.pkit/decisions/core/COR-049-documentation-roots.md#7-visible-and-checked)).
 
 ## What is built on these concepts
