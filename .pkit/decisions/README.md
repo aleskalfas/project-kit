@@ -112,7 +112,7 @@ Rules form their own identifier family, **`RS-<SET>-NNN`**: the family prefix, t
   - **Core's** operational rules are the backbone's loaded set `OPS`, so core rule 19 is `backbone:RS-OPS-019`.
   - **Where they live:** the rules area's README says where the set and its file are kept.
 - **Citing a rule.** `RS-CMN-003` names a rule, and `RS-CMN-003#cause-location` names an extension point it offers. A method rule set's rules are cited with the component in front, `[living-docs:RS-LDOC-003]` in prose, bracketed like a capability decision citation.
-- **Checked by validation.** Validation checks every rule set: the schema, the join between data and prose, ids, origins, successors and inheritance. The id check above reports a rule id claimed twice. The schemas reference, "Rule-set files", says where rule-set files live, and gives their front-matter layout and every check.
+- **Checked by validation.** Validation checks every rule set: the schema, the join between data and prose, ids, origins, successors and inheritance. The id check above reports a rule id claimed twice. The schemas reference, "Rule-set files", says where rule-set files live, and gives every check. Its page on backbone files, "Rule-set files", gives their front-matter layout.
 
 ## The no-shared-files invariant
 
