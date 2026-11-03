@@ -153,15 +153,14 @@ The plan for released libraries asks how the release a project's own library nee
 ## Implications
 
 - **Edits to accepted records,** each citing this record once it is accepted. A person accepts each edit (the decisions README, "Refining an accepted record").
-  - **Refined in place, not superseded.** The record of change over time's decision stands: a library names a release of the capability, the installed capability checks it, and an older engine refuses it. This record changes how the number is found, and narrows what the check computes, so its edits to that record are refinements in place.
-  - **On top of the edits of the record of shipped library releases,** where those land first in the same points. Point 1's rule for shipped libraries and this record's rule then name the same number, and the edit may fold the two together.
-  - The record of change over time:
-    - point 1: a library names a release of the capability. A released version of a project's own library names the capability's version current at its release, as this record's point 1 says. The engine checks the number against the installed capability, and computes none.
-    - point 4: the fetch of a version from another repository reads it in full on the installed capability first, and refuses what it cannot read.
-    - point 6: releasing a project's own library reads every component of the version, and writes the release it needs.
-    - point 9: neither finding of a library that names an older release than it needs. The bullet the record of shipped library releases adds there, that a shipped version being built raises no such finding, goes, since no such finding is left to exempt. A held version that needs a newer release fails, released or not, and names the project, which upgrades.
-    - its Rationale's sentence on the three numbers, which likens the release a library needs to the oldest compiler release a package needs.
-  - The record of shipped library releases:
+  - **The record of change over time is partially superseded.** Its decision stands: a library names a release of the capability, the installed capability checks it, and an older engine refuses it. This record overturns how the number is found, and the check's computation of it. So the parts of [visual-communication:DEC-003-change-over-time] that decide those stay as they stood. That record stays accepted, and its top line reads *Partially superseded by* this record, naming what is overturned:
+    - point 1's oldest release, and the engine's computation of it from what the library uses. A released version of a project's own library names the capability's version current at its release, as this record's point 1 says;
+    - point 9's two findings of a library that names an older release than it needs, the bullet the record of shipped library releases adds there among them. A held version that needs a newer release fails, released or not, and names the project, which upgrades;
+    - the Rationale's likening of the release a library needs to the oldest compiler release a package needs.
+  - **Refined in place,** since this record completes them and overturns nothing in them:
+    - the record of change over time's point 4: the fetch of a version from another repository reads it in full on the installed capability first, and refuses what it cannot read;
+    - its point 6: releasing a project's own library reads every component of the version, and writes the release it needs.
+  - **The record of shipped library releases,** refined in place:
     - its Context's account of the release a library needs, as the record of change over time's point 1 then reads;
     - point 6: the capability's own checks read every component of each version they read, the brand's tokens and fonts included, as this record's point 1 reads it. So point 3's ground holds for a component no piece places;
     - its Implications' paragraph on a project's own library, which names this record instead of leaving the question open.
