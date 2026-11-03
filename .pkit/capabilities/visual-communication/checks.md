@@ -106,7 +106,7 @@ A few findings that lie in a library folder name no version, and always fail: `l
 
 - **A label,** a short name of what was found, such as `text-overflow`. Each label is in the tables below.
 - **A location:** `<file>#<where>`, or `<file>` where nothing within the file is named, or `.` where no file is. The file is relative to the project root. `<where>` is one of:
-  - a key path in a YAML file, written as a content source's path is ([sources](components.md#sources)), such as `body.steps[plan].head`. A run of a field of runs is named by its field's path and its place among the field's runs, from 1, as an item with no id is: `body.say#2`;
+  - a key path in a YAML file, written as a content source's path is ([sources](components.md#sources)), such as `body.steps[plan].head`, or a run's, such as `body.say#2`;
   - a key path in a component's file, such as `parts.head.height`;
   - a trace id of the scene, such as `figure/body/steps[plan]/head` ([trace ids](components.md#trace-ids));
   - a token path of a brand, such as `space.5`.

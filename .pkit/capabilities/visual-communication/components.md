@@ -405,8 +405,6 @@ Colours stay role names. A renderer takes their values from the brand's resolved
              "x": "role:space.2"}}
 ```
 
-The seam's version rose to 2 when a text came to hold its runs, each with its own paint and fonts, since a renderer must read them (DEC-012, Implications; *outputs*).
-
 ### Trace ids
 
 Every element carries its *trace*, an id that comes from the path of instances, parts and items, never from the order of drawing (DEC-005 point 5).
