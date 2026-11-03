@@ -21,6 +21,7 @@ pkit:
       record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-007", COR-017, COR-023, COR-031, COR-055]
       artefact:
         - .pkit/capabilities/visual-communication/checks.md
+        - .pkit/capabilities/visual-communication/checks.md#content-against-components
         - .pkit/capabilities/visual-communication/checks.md#the-findings-record
         - .pkit/capabilities/visual-communication/checks.md#when-the-check-reads-it
         - .pkit/capabilities/visual-communication/checks.md#what-each-run-judges
@@ -129,11 +130,12 @@ Running it is the consent for the copy.
 
 Draws a piece in each of its languages and each combination of modes it names.
 
-- **Moves the lock** of a draft to the newest versions the project holds that fit together, within the lines the lock names, and writes it into `piece.yaml`, every other byte kept. A pinned piece's lock is checked, never moved ([The lock](files.md#the-lock)).
+- **Moves the lock** of a draft to the newest versions the project holds that fit together, within the lines the lock names, and writes it into `piece.yaml`, every other byte kept. It holds back versions under which an item clashes or a tie loses an end, where neither does under the lock. A pinned piece's lock is checked, never moved ([The lock](files.md#the-lock)).
+- **States** each version it held back, each library it moved below its lock, and a search that stopped at its bound and kept the lock. Each is a fact at the lock, kept in no `findings.yaml` ([Content against components](checks.md#content-against-components)).
 - **Computes every scene.** A font with no file, or a character no font family can measure, refuses the render before anything is laid out.
 - **Writes `findings.yaml`** beside `piece.yaml`: what computing the scenes found, keyed by a fingerprint of every file they were computed from ([The findings record](checks.md#the-findings-record)).
 - **Draws the previews** with the SVG renderer, one file for each page, language and combination of modes, in `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`. They replace the piece's previews from before ([Previews](outputs.md#previews)).
-- **Prints** the lock, each finding, and each loss the renderer reports that the piece does not accept.
+- **Prints** the lock, the facts it states, each finding, and each loss the renderer reports that the piece does not accept.
 - **Exits** 0 when it drew the piece, findings or not; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
 ### `pkit visual check [<piece>]`
