@@ -527,7 +527,6 @@ TERM-environment-block:
 TERM-extension-point:
   name: extension point
   noun-forms: [extension points]
-  other-senses: [extension points the component author uses]
   status: active
   definition: "named part of a rule that a rule of an inheriting set may fill, at most once along a line of inheritance"
   pkit:
@@ -2206,7 +2205,6 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 - **Fill:** the rule that fills an extension point. It names the extension point in `fills`, and anchors the rule it fills, so an edit there flags the fill ([COR-051 point 7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 - **`extension-points` in package metadata:** [COR-053](../../../.pkit/decisions/core/COR-053-connection-points.md)'s key for the [connection points](#term-connection-point--connection-point) a [capability](#term-capability--capability) defines. It shares only the words ([COR-053 point 3](../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality)).
-- **Extension points in their plain sense:** whatever a [component](#term-component--component) extends the [system](#term-system--system) through, such as a connection point or a [harness requirement](#term-harness-requirement--harness-requirement). They share only the words.
 - **Point:** a part of a [decision record](#term-decision-record--decision-record)'s Decision. It shares only the word ([COR-058 point 1](../../../.pkit/decisions/core/COR-058-record-points.md#1-a-point-is-a-heading-with-its-id-and-title)).
 
 ## TERM-finding — finding
