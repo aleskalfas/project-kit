@@ -27,6 +27,10 @@ pkit:
         - project-management:DEC-059#7
         - COR-013
         - COR-017
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
       artefact:
         - ACT-lead-agent
         - REQ-061
@@ -41,7 +45,7 @@ pkit:
 
 **Preconditions:**
 
-- **From [UC-092](UC-092-take-seat.md):** The lead's clone holds a lead agent's [seat](../../../glossary.md#term-seat--seat), whose [scope](../../../glossary.md#term-scope--scope) names what the lead takes work from (DEC-059 points [4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat) and [7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
+- **From [UC-092](UC-092-take-seat.md):** The lead's [clone](../../../glossary.md#term-clone--clone) holds a lead agent's [seat](../../../glossary.md#term-seat--seat), whose [scope](../../../glossary.md#term-scope--scope) names what the lead takes work from (DEC-059 points [4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat) and [7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
 - **From [UC-083](UC-083-plan-across-scopes.md), [UC-060](../020-file-and-move/UC-060-file-task.md) or [UC-063](../010-plan/UC-063-plan-intent.md):** The [Task](../../../glossary.md#term-task--task) is filed in the lead's scope ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
 **Assumptions:**
@@ -74,6 +78,6 @@ pkit:
 
 What the lead needs here that no accepted record decides yet:
 
-- **The lead's identity in a linked worktree** of the clone, where the helper agent runs a command of project-management. The helper agent acts as the lead's [instance](../../../glossary.md#term-instance--instance), and [project-management DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) leaves undecided how a linked worktree reads that identity. Today a linked worktree reads no number of its clone, and #1140 proposes that a linked worktree reads its clone's number.
+- **The lead's identity in a linked worktree** of the [clone](../../../glossary.md#term-clone--clone), where the helper agent runs a command of project-management. The helper agent acts as the lead's [instance](../../../glossary.md#term-instance--instance), and [project-management DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) leaves undecided how a linked worktree reads that identity. Today a linked worktree reads no number of its clone, and #1140 proposes that a linked worktree reads its clone's number.
 - **Several delegations at once.** `start-work` checks each [Task](../../../glossary.md#term-task--task)'s branch out in the lead's own clone, so the lead delegates one Task at a time. A second delegation at once needs a linked worktree, which reads no number today (#1140).
 - **Which helper agents a lead may start.** A scratchpad note on which agent may start which other agent, `2026-07-02-agent-dispatch-privilege-model`, has produced no record yet.

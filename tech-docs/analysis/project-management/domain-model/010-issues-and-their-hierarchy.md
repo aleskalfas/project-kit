@@ -111,7 +111,7 @@ An issue is one item of work a [project](../../core/glossary.md#term-project--pr
 
 - its title, which opens with its type's prefix, such as `[Task]` ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md))
 - its body, whose first line is its [parent reference](../glossary.md#term-parent-reference--parent-reference) ([DEC-005](../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md) and [DEC-010](../../../../.pkit/capabilities/project-management/decisions/DEC-010-issue-body-minimum-structure.md))
-- its labels, such as the one that gives its kind of work (DEC-003)
+- its labels, such as `type:docs` (DEC-003)
 
 **Relations:**
 

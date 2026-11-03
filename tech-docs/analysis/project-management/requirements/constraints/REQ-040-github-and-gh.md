@@ -19,6 +19,15 @@ pkit:
         - project-management:DEC-003
         - ADR-061#1
         - ADR-061#3
+        - COR-009
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#3
+        - COR-050#6
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
       artefact:
         - ACT-planner
 ---

@@ -65,7 +65,7 @@ A *plugin* is code that meets the engine at one *seam*: what the engine hands it
 - A *producer* makes a picture while a piece is prepared. A person or an agent runs it with `pkit visual produce`. No render, check or export runs it.
 - A *code writer* writes a brand's resolved values as code in one language.
 
-Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships the `svg` renderer and the `css` code writer, each at version 1.0.0. No producer ships yet.
+Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships the `svg` renderer at version 1.0.1 and the `css` code writer at version 1.0.0. No producer ships yet.
 
 Each plugin declares what it can take, so the capability knows it without running the plugin. A renderer declares each primitive it draws, and each property of it. A producer declares its inputs, each a role of one *value type* (a token's DTCG type, such as `color`), and the value types it uses. A code writer declares the value types its language has a form for, the forms of its spelling, and the kinds of axis it spells.
 
