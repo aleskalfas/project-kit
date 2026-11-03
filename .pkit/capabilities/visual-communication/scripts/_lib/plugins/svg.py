@@ -8,7 +8,9 @@ combination of modes (visual-communication DEC-005 points 4, 5, 9 and 10).
   values in the combination it draws (`colours`), as `#rrggbb` with an opacity where the
   colour is translucent. A role with no colour there is left out, and reported.
 - **Fonts** are embedded as `@font-face` from the brand's committed files, never the
-  machine's: each family's file subset to the characters the page draws in it.
+  machine's: each family's file subset to the characters the page draws in it. A family's
+  name is written as a CSS string (`css_string`), so no name a brand gives can end the
+  style element, start another element, or leave the file malformed XML.
 - **Text** is drawn as the engine measured it: each of its lines as given, at its
   baseline, anchored at the start, the middle or the end of the text's width.
 - **A produced picture** is embedded as the variant that serves the combination drawn;
@@ -99,6 +101,31 @@ def number(value: Any) -> str:
     if rounded == int(rounded):
         return str(int(rounded))
     return f"{rounded:.2f}".rstrip("0")
+
+
+def css_string(name: str) -> str:
+    """A name as a CSS string between double quotes: `"` and `\\` escaped, and as the
+    escape of its code point each character that could end the style element or start
+    another (`<`, `>`, `&`), each control character, and each character XML 1.0 does not
+    allow. So any name reaches the file as one name, and the file stays well-formed XML."""
+    out = []
+    for char in name:
+        if char in ('"', "\\"):
+            out.append("\\" + char)
+        elif char in "<>&" or not _plain(char):
+            out.append(f"\\{ord(char):x} ")
+        else:
+            out.append(char)
+    return '"' + "".join(out) + '"'
+
+
+def _plain(char: str) -> bool:
+    """Whether a character is neither a control character (U+0000 to U+001F, U+007F to
+    U+009F) nor one XML 1.0 does not allow (a surrogate, U+FFFE, U+FFFF)."""
+    code = ord(char)
+    return not (
+        code < 0x20 or 0x7F <= code <= 0x9F or 0xD800 <= code <= 0xDFFF or code in (0xFFFE, 0xFFFF)
+    )
 
 
 def _find(elements: list[Mapping[str, Any]], trace: str) -> Mapping[str, Any] | None:
@@ -284,7 +311,7 @@ class _Canvas:
             [
                 ("data-id", element["id"]),
                 ("xml:space", "preserve"),
-                ("font-family", ", ".join(f"'{family}'" for family in families)),
+                ("font-family", ", ".join(css_string(family) for family in families)),
                 ("font-size", number(element["font-size"])),
                 ("font-weight", weight if weight not in (None, NORMAL) else None),
                 ("text-anchor", anchor if anchor != "start" else None),
@@ -326,7 +353,7 @@ class _Canvas:
             characters = "".join(sorted(self._faces[(family, weight)]))
             data, form, mime = _subset(self.font_file(family), characters)
             faces.append(
-                f"@font-face{{font-family:'{family}';font-weight:{weight};"
+                f"@font-face{{font-family:{css_string(family)};font-weight:{weight};"
                 f"src:url(data:{mime};base64,{data}) format('{form}');}}"
             )
         return "".join(faces)
