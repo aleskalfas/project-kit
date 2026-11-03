@@ -976,6 +976,22 @@ def test_an_over_broad_anchor_is_warned_about(timeline: Timeline) -> None:
     assert result.artefact_reports[0].state is fr.ArtefactState.CURRENT
 
 
+def test_an_over_broad_anchor_two_artefacts_share_is_warned_about_on_each(
+    timeline: Timeline,
+) -> None:
+    """The share is counted once for a pattern, and every artefact anchored by it is told."""
+    timeline.start(
+        {
+            "docs/guide.md": guide(anchors={"path": [".", "src/cli/**"]}),
+            "docs/notes.md": notes(anchors={"path": ["."]}),
+        }
+    )
+    result = _run(timeline)
+    broad = [f for f in result.findings if f.kind is fr.RepositoryFindingKind.OVER_BROAD]
+    assert sorted(str(f.location) for f in broad) == ["docs/guide.md", "docs/notes.md"]
+    assert len({f.message for f in broad}) == 1
+
+
 # --- the two measures, excluded paths ---------------------------------------------------------
 
 
@@ -2509,6 +2525,21 @@ def _typed_guide(at: str, because: str = "the CLI surface is as described") -> s
 )
 def test_every_spelling_of_a_time_reads_as_the_instant_it_denotes(written: str) -> None:
     assert fh.stamps_in(f"at: {written}\n".encode()) == {"2026-01-01T09:00:00": 1}
+
+
+def test_the_walk_seeks_a_time_in_a_version_s_front_matter_alone() -> None:
+    """A time a body writes is no artefact's value, so the prefilter reads only the front
+    matter, cut as a parse cuts it: a long document's body is never scanned for times."""
+    front = "---\nid: guide\nat: 2026-01-01T09:00:00Z\n---\n"
+    body = "Changed on 2026-02-02T10:00:00Z.\n" * 3
+    assert fh.stamps_in(fh._data_of((front + body).encode())) == {"2026-01-01T09:00:00": 1}
+    assert fh._data_of(front.replace("\n", "\r\n").encode() + b"Body.") == (
+        b"id: guide\nat: 2026-01-01T09:00:00Z\n"
+    )
+    assert fh._data_of(body.encode()) == b""
+    assert fh._data_of(b"---\nat: 2026-01-01T09:00:00Z\n\xff---\n") == (
+        b"---\nat: 2026-01-01T09:00:00Z\n\xff---\n"
+    )
 
 
 @pytest.mark.parametrize("spelling", sorted(SPELLINGS))

@@ -43,7 +43,8 @@ held it, tested again the same way. Rewording within a stretch moves nothing.
 **Reading little** (critic G4). A file's versions are parsed once each, by
 object id, shared by every artefact in the file; and a version whose bytes
 hold none of what the walk looks for — the value, in any spelling YAML's
-timestamp grammar allows (`stamps_in`), the block's key, every word of a
+timestamp grammar allows (`stamps_in`), sought in its front matter alone,
+where every artefact's data is read; the block's key; every word of a
 deferral's reason (`reason_words`) — carries none of it, so it is never
 parsed.
 
@@ -94,6 +95,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, TypeVar
 
+from project_kit.document_parts import split_front_matter
 from project_kit.friction_discovery import (
     Anchor,
     Artefact,
@@ -649,6 +651,20 @@ class _Bytes:
     block: bool  # it holds the block's key
 
 
+def _data_of(raw: bytes) -> bytes:
+    """The part of a version's bytes its artefacts' data is read from: its front matter,
+    as `parse_artefacts` cuts it, since a body holds no artefact's data — so a long
+    document's body is never scanned for times. Empty where there is no front matter,
+    which holds no artefact; the whole where the bytes are not UTF-8 text, which no
+    parse reads."""
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw
+    front_matter, _body = split_front_matter(text)
+    return b"" if front_matter is None else front_matter.encode("utf-8")
+
+
 def stamp(value: datetime) -> str:
     """An aware time as the prefilters compare one: the UTC instant, `YYYY-MM-DDTHH:MM:SS`."""
     return value.astimezone(UTC).strftime(_INSTANT)
@@ -734,13 +750,14 @@ class Walker:
         found = self._bytes.get(obj)
         if found is None:
             raw = self._read(obj) or b""
-            found = _Bytes(frozenset(stamps_in(raw)), _BLOCK_KEY in raw)
+            found = _Bytes(frozenset(stamps_in(_data_of(raw))), _BLOCK_KEY in raw)
             self._bytes[obj] = found
         return found
 
     def may_carry(self, state: TreeEntry | None, value: Any) -> bool:
-        """Whether the blob of `state` could carry `value`: `False` only where its bytes
-        hold no spelling of it (`stamps_in`), so it is never parsed to find out."""
+        """Whether the blob of `state` could carry `value`: `False` only where the part of
+        its bytes a parse reads data from holds no spelling of it (`stamps_in`,
+        `_data_of`), so it is never parsed to find out."""
         if state is None or state[0] in (LINK_MODE, _GITLINK_MODE):
             return False
         if value is BLOCK:

@@ -59,6 +59,7 @@ from typing import Any, cast
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from project_kit import block_yaml
 from project_kit.backbone_schemas import as_written
 from project_kit.line_breaks import universal_newlines
 
@@ -125,7 +126,7 @@ def parse_front_matter(text: str) -> tuple[Mapping[str, Any] | None, str, str | 
     if front_matter is None:
         return None, body, None
     try:
-        data = _yaml.load(io.StringIO(front_matter))
+        data = block_yaml.load(front_matter, lambda: _yaml.load(io.StringIO(front_matter)))
     except YAMLError as exc:
         return None, body, yaml_reason(exc)
     except (TypeError, ValueError, KeyError) as exc:

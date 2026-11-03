@@ -97,6 +97,7 @@ from typing import Any, cast
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from project_kit import block_yaml
 from project_kit.backbone_schemas import (
     ANSWER_FILE_SCHEMA_KIND,
     BackboneSchemaInvalid,
@@ -418,7 +419,7 @@ def read_answer_file(name: str, raw: bytes | None) -> AnswerFile:
     except UnicodeDecodeError:
         return AnswerFile(name, None, (), "is not UTF-8 text")
     try:
-        loaded = _yaml.load(text)
+        loaded = block_yaml.load(text, lambda: _yaml.load(text))
     except YAMLError as exc:
         reason = " ".join(str(getattr(exc, "problem", None) or exc).split())
         return AnswerFile(name, None, (), f"does not parse as YAML ({reason})")

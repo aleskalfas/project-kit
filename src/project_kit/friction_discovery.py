@@ -155,6 +155,7 @@ git plumbing behind a commit in `friction_git`.
 
 from __future__ import annotations
 
+import copy
 import functools
 import json
 import os
@@ -169,7 +170,7 @@ from typing import Any, Protocol, cast
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from project_kit import command_runner, docs_roots, lifecycle_ownership, validators
+from project_kit import block_yaml, command_runner, docs_roots, lifecycle_ownership, validators
 from project_kit.backbone_schemas import CONTAINER_KEY
 from project_kit.document_parts import (
     Body,
@@ -1274,9 +1275,19 @@ def _load_mapping(path: Path) -> tuple[dict[str, Any], str | None]:
 
 def _parse_mapping(text: str) -> tuple[dict[str, Any], str | None]:
     """YAML text as a mapping with text keys, and why it is none: it does not parse,
-    or it is no mapping. Empty text is an empty mapping."""
+    or it is no mapping. Empty text is an empty mapping.
+
+    A text is parsed once a run, and each caller is given a copy of its own: the
+    checks read the settings of many commits, and a capability's package metadata is
+    the same text at most of them."""
+    found, reason = _parsed_mapping(text)
+    return copy.deepcopy(found), reason
+
+
+@functools.lru_cache(maxsize=256)
+def _parsed_mapping(text: str) -> tuple[dict[str, Any], str | None]:
     try:
-        data = _yaml.load(text)
+        data = block_yaml.load(text, lambda: _yaml.load(text))
     except YAMLError:
         return {}, "does not parse as YAML"
     if data is None:

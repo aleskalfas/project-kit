@@ -576,6 +576,7 @@ class _Judge:
         self._as_head: dict[int, bool] = {}
         self._trees: dict[str, CommitTree] = {}
         self._matched: dict[str, tuple[frozenset[str], frozenset[str]]] = {}
+        self._stands_on_count: dict[str, int] = {}  # by path pattern: HEAD's files it stands on
         self._matching: dict[tuple[str, tuple[str, ...] | None], frozenset[str]] = {}
         self._after: dict[int, frozenset[str]] = {}
         self._moved: dict[tuple[str, int], ExclusionChange] = {}
@@ -947,7 +948,10 @@ class _Judge:
         if not self._tracked:
             return None
         if anchor.kind == "path":
-            matched = sum(map(self.head.stands_on(anchor.value), self.head.files))
+            matched = self._stands_on_count.get(anchor.value)
+            if matched is None:
+                matched = sum(map(self.head.stands_on(anchor.value), self.head.files))
+                self._stands_on_count[anchor.value] = matched
             verb, fix = "matches", "narrow it"
         elif anchor.kind not in CORE_ANCHOR_KINDS:
             matched = len(self._tracked.intersection(self.kinds.files(anchor)))
