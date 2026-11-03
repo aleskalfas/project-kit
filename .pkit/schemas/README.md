@@ -256,7 +256,7 @@ To resolve a token such as `[issue-types:task]`, the resolver must know where in
 }
 ```
 
-The value is a JSON Pointer (RFC 6901) into the data YAML. `/types` points at the top-level `types` mapping, and `/items` at a top-level `items` list. A nested pointer works too, such as `/groups/0/entries`.
+The value is a JSON Pointer (RFC 6901) into the data YAML. `/types` points at the top-level `types` mapping, and `/items` points at a top-level `items` list. A nested pointer works too, such as `/groups/0/entries`.
 
 The resolver reads two shapes of collection:
 
@@ -334,7 +334,7 @@ See [`data-binding.md`, "Authoring"](data-binding.md#authoring).
 
 The backbone file schemas are the schemas of the files the backbone validates but does not write. Each such file binds to its schema by where it lies, never by a field in it.
 
-The backbone file schemas are on [`backbone-files.md`](backbone-files.md), with the six schemas under `backbone/`. Five are for such files, and the sixth for package metadata, whose file no location rule binds. Each heading below leads to its section there.
+The backbone file schemas are on [`backbone-files.md`](backbone-files.md), with the six schemas under `backbone/`. Five are for such files, and the sixth is for package metadata, whose file no location rule binds. Each heading below leads to its section there.
 
 ### The container
 
@@ -365,7 +365,7 @@ The files in which a change keeps its answers to friction, in the folder `.pkit/
 
 ### Rule-set files
 
-A rule set ([COR-051](../decisions/core/COR-051-rule-sets.md)) is one Markdown file. Its front matter holds the data, and its body one section for each rule. `backbone/rule-set.schema.json` fixes the data's shape. `pkit validate` applies it, with every check below, in its `rule-sets` pass, `project_kit.rule_sets`.
+A rule set ([COR-051](../decisions/core/COR-051-rule-sets.md)) is one Markdown file. Its front matter holds the data, and its body holds one section for each rule. `backbone/rule-set.schema.json` fixes the data's shape. `pkit validate` applies it, with every check below, in its `rule-sets` pass, `project_kit.rule_sets`.
 
 - **The file's shape,** its front matter, its body and its ids, is on [`backbone-files.md`, "Rule-set files"](backbone-files.md#rule-set-files).
 - **Where the files lie, and how their rules bind,** are below.
