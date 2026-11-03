@@ -26,6 +26,8 @@ pkit:
         - src/project_kit/treecopy.py
         - src/project_kit/provisioning.py
         - src/project_kit/workspace.py
+        - .pkit/adapters/claude-code/merge-settings.sh
+        - .pkit/adapters/claude-code/merge-claude-md.sh
       record:
         - COR-059#2
         - COR-059#9

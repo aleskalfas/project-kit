@@ -21,6 +21,7 @@ pkit:
         - src/project_kit/rule_set_reading.py
         - src/project_kit/declared_rule_sets.py
         - src/project_kit/cli.py
+        - src/project_kit/status.py
         - .pkit/schemas/README.md
       record:
         - COR-051#2

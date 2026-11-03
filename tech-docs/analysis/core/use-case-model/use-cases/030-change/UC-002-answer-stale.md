@@ -35,6 +35,7 @@ pkit:
         - src/project_kit/default_branch.py
         - .github/workflows/checks.yml
         - .pkit/rules/core.md
+        - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
       record:
         - COR-050#2
         - COR-050#3

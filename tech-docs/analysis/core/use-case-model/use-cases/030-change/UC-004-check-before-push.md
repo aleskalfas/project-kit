@@ -37,6 +37,10 @@ pkit:
         - COR-055#6
         - ADR-019#2
         - ADR-058#7
+        - ADR-067#1
+        - ADR-067#2
+        - ADR-067#3
+        - ADR-067#10
         - ADR-068#6
       artefact:
         - ACT-developer
@@ -87,7 +91,7 @@ pkit:
 - **3b.** A [documentation root](../../../glossary.md#term-documentation-root--documentation-root) the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration) declares does not exist yet. [Validation](../../../glossary.md#term-validation--validation) warns of it, and does not fail on it ([REQ-015](../../../requirements/functional/REQ-015-missing-root-warns.md)).
 - **4a.** The base moved on after the branch left it. The [change check](../../../glossary.md#term-change-check--change-check) reports an `outdated-base` and passes. The developer merges the base and runs the checks again.
 - **6a.** The developer pushes with `git push --no-verify`, so the hook does not run. The CI pipeline still runs the checks on the pull request.
-- **6b.** In project-kit, the push changes only answers since the pull request's most recent full run in CI, which passed. The CI pipeline runs every check but the test suite on it (project rule 2). Where the hook ran, it ran the whole aggregator before the push.
+- **6b.** In project-kit, the push changes only answers since the pull request's most recent full run in CI, which passed. The CI pipeline runs every check but the test suite on it (project rule 2 and [ADR-067](../../../../../architecture/decisions/ADR-067-answers-only-short-check.md) points 1 to 3). Where the hook ran, it ran the whole aggregator before the push ([ADR-067 point 10](../../../../../architecture/decisions/ADR-067-answers-only-short-check.md#10-what-the-pre-push-hook-runs)).
 
 **Postconditions:** Before the push, the developer has the result the [project](../../../glossary.md#term-project--project)'s checks give on the [change](../../../glossary.md#term-change--change), against the [base](../../../glossary.md#term-base--base) CI will name.
 

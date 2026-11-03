@@ -34,6 +34,7 @@ pkit:
         - src/project_kit/friction_repository.py
         - src/project_kit/friction_report.py
         - src/project_kit/friction_check.py
+        - src/project_kit/friction_write.py
         - src/project_kit/agent_runs.py
         - .github/workflows/friction-report.yml
         - .pkit/rules/core.md

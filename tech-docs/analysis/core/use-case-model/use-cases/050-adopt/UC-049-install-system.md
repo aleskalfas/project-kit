@@ -35,6 +35,7 @@ pkit:
         - src/project_kit/workspace.py
         - src/project_kit/loaded_rules.py
         - .pkit/adapters/claude-code/merge-claude-md.sh
+        - .pkit/adapters/claude-code/merge-settings.sh
       record:
         - COR-001
         - COR-002

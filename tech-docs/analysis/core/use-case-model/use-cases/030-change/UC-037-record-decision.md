@@ -50,6 +50,7 @@ pkit:
         - COR-054#4
         - COR-049#5
         - COR-055#1
+        - COR-066#1
         - COR-004
         - ADR-034#1
       artefact:

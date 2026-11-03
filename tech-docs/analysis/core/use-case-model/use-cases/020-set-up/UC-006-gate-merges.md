@@ -44,6 +44,7 @@ pkit:
         - COR-050#2
         - COR-050#6
         - COR-050#12
+        - COR-050#15
         - COR-054#3
         - COR-055#6
         - COR-062#4
@@ -123,7 +124,7 @@ pkit:
 
 - **4a.** The adopter never makes the job required. The checks run and say what they find, and nothing holds the merge ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)). The use case ends.
 - **6a.** The base moved on after the branch left it. The change check reports an `outdated-base` and never fails on it, since the fix is to update the branch.
-- **6b.** No [place](../../../glossary.md#term-place--place) is declared yet, or nothing in the places carries the `pkit` container. The change check is dormant and passes.
+- **6b.** No [place](../../../glossary.md#term-place--place) is declared yet, or nothing in the places carries the `pkit` container. The change check is dormant and passes ([COR-050 point 15](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#15-dormant-until-used)).
 - **6c.** A [documentation root](../../../glossary.md#term-documentation-root--documentation-root) the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration) declares does not exist yet. Validation warns of it, and does not fail the job on it ([REQ-015](../../../requirements/functional/REQ-015-missing-root-warns.md)).
 - **7a.** Someone with the right bypasses the required status, or commits straight to the [default branch](../../../glossary.md#term-default-branch--default-branch). The job does not hold that change.
 
