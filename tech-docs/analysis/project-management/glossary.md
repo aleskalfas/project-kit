@@ -65,15 +65,18 @@ TERM-audit-comment:
   name: audit comment
   noun-forms: [audit comments]
   status: active
-  definition: "message project-management posts recording why a person set a check aside or moved an issue back, or at the project's fullest setting each governed write"
+  definition: "message project-management posts recording a person's reason or consent for a write it governs, or at the project's fullest setting each governed write"
   pkit:
     friction:
       anchors:
         path:
           - .pkit/capabilities/project-management/scripts/_lib/audit.py
+          - .pkit/capabilities/project-management/scripts/edit-issue.py
+          - .pkit/capabilities/project-management/scripts/_lib/pools.py
         record:
           - project-management:DEC-049
           - project-management:DEC-014
+          - project-management:DEC-061#6
           - COR-001
           - COR-010
 TERM-authorisation:
@@ -162,7 +165,7 @@ TERM-classification-axis:
   name: classification axis
   noun-forms: [classification axes]
   status: active
-  definition: "dimension along which every issue takes one value, from a fixed set or the project's own, carried as a label or a board field"
+  definition: "dimension giving every issue one value, from a fixed set or the project's own, carried where a substrate map puts it, by default a label"
   pkit:
     friction:
       anchors:
@@ -170,6 +173,8 @@ TERM-classification-axis:
           - .pkit/capabilities/project-management/schemas/classification.yaml
         record:
           - project-management:DEC-012
+          - project-management:DEC-036#1
+          - project-management:DEC-036#2
           - COR-001
           - COR-010
 TERM-clone:
@@ -395,7 +400,7 @@ TERM-ownership:
   name: ownership
   noun-forms: [ownerships]
   status: active
-  definition: "instance's mark on an issue it owns, naming a topology's seat and a clone's key, counting until the mark lapses or that seat is released"
+  definition: "instance's mark on an issue it owns, which under a topology names its seat and clone's key, counting until it lapses or the seat's release"
   pkit:
     friction:
       anchors:
@@ -795,7 +800,7 @@ Explained in [VIEW-classification-of-issues](domain-model/020-classification-of-
 **Distinctions:**
 
 - **Type of an issue:** [EPIC](#term-epic--epic), [Feature](#term-feature--feature), [Umbrella](#term-umbrella--umbrella) or [Task](#term-task--task), which places the [issue](#term-issue--issue) in the hierarchy. The `type` axis gives its [kind of work](#term-kind-of-work--kind-of-work) instead, such as `bug` or `docs` ([DEC-004](../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-012](../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
-- **Label:** GitHub's tag on an issue. It always carries the `type` axis, and carries the other two where no board field does (DEC-012).
+- **Label:** GitHub's tag on an issue. With no [substrate map](#term-substrate-map--substrate-map), it always carries the `type` axis, and carries the other two where no board field does (DEC-012 and [DEC-036 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#2-activation-is-emergent-not-a-global-mode-flag)).
 
 ## TERM-clone — clone
 

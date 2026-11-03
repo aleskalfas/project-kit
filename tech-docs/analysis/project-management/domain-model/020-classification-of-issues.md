@@ -36,7 +36,7 @@ classDiagram
   accDescr: Each issue takes one value on each of three classification axes. A kind of work is a value of the type axis, and a workstream is a value of the workstream axis. An EPIC's outcome lies within a workstream. A project's substrate map may bind each axis, and the issue's state, to a part of GitHub.
   class ClassificationAxis["Classification axis"] {
     values
-    carried as a label or a board field
+    carried where the substrate map puts it
   }
   class KindOfWork["Kind of work"] {
     value
@@ -77,12 +77,12 @@ Defined in [TERM-classification-axis](../glossary.md#term-classification-axis--c
 
 **Why:** Classification serves three jobs: consistent filing, a board's filters and plans, and pull-request titles aligned with their work. Each job needs every [issue](../glossary.md#term-issue--issue) to carry a value on each axis ([DEC-012](../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
-A classification axis is one dimension along which every issue is classified. There are three: `type`, the [kind of work](../glossary.md#term-kind-of-work--kind-of-work), then `priority` and `workstream`. An issue carries one value on each, on a label or on a field of a board.
+A classification axis is one dimension along which every issue is classified. There are three: `type`, the [kind of work](../glossary.md#term-kind-of-work--kind-of-work), then `priority` and `workstream`. An issue carries one value on each. Each axis is carried where the [project](../../core/glossary.md#term-project--project)'s [substrate map](../glossary.md#term-substrate-map--substrate-map) puts it, by default on a label (DEC-036 points [1](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#1-a-dedicated-substrate-mapyaml-schema) and [2](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#2-activation-is-emergent-not-a-global-mode-flag)).
 
 **Attributes:**
 
-- its values: a fixed set for `type` and `priority`, and the [project](../../core/glossary.md#term-project--project)'s own for `workstream` (DEC-012)
-- where it is carried: a label, or a field of a Projects v2 board where the project keeps one (DEC-012)
+- its values: a fixed set for `type` and `priority`, and the project's own for `workstream` (DEC-012)
+- where it is carried: where the substrate map puts it, such as a board's field, and a label with no map ([DEC-036](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md))
 
 **Relations:**
 
@@ -93,7 +93,7 @@ A classification axis is one dimension along which every issue is classified. Th
 
 **Always true:**
 
-- The `type` axis is always carried as a label, and no issue carries two values on it (DEC-012).
+- With no substrate map, the `type` axis is always carried as a label (DEC-012 and DEC-036 point 2). No issue carries two values on it (DEC-012).
 - An [EPIC](../glossary.md#term-epic--epic), a [Feature](../glossary.md#term-feature--feature) and an [Umbrella](../glossary.md#term-umbrella--umbrella) always take the value `feature` on `type` (DEC-012).
 - A [Milestone](../glossary.md#term-milestone--milestone) carries no classification axis (DEC-012).
 
@@ -154,7 +154,7 @@ Defined in [TERM-substrate-map](../glossary.md#term-substrate-map--substrate-map
 
 **Why:** Some projects cannot create the labels project-management writes, since their tracker already has conventions of its own. Such a [project](../../core/glossary.md#term-project--project) says where each axis already lives. Each check that needs an axis the project cannot carry then warns, rather than refusing ([DEC-036](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md)).
 
-A substrate map is a file of the project's own. It binds each [classification axis](../glossary.md#term-classification-axis--classification-axis), and an [issue](../glossary.md#term-issue--issue)'s state, to one carrier on GitHub. The carrier may be project-management's own labels, or labels the project already has ([DEC-062 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#3-the-map-can-name-the-kits-own-labels)). It may also be one of these ([DEC-036 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#1-a-dedicated-substrate-mapyaml-schema)):
+A substrate map is a file of the project's own. It binds each [classification axis](../glossary.md#term-classification-axis--classification-axis) it names, and an [issue](../glossary.md#term-issue--issue)'s state where it names the state, to one carrier on GitHub, or marks it unsupported. The carrier may be project-management's own labels, or labels the project already has ([DEC-062 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#3-the-map-can-name-the-kits-own-labels)). It may also be one of these ([DEC-036 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#1-a-dedicated-substrate-mapyaml-schema)):
 
 - a title prefix
 - a field of the project's board

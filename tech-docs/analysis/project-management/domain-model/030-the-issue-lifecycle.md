@@ -20,6 +20,7 @@ pkit:
         - project-management:DEC-046
         - project-management:DEC-049
         - project-management:DEC-055#3
+        - project-management:DEC-061#6
         - project-management:DEC-062#5
       artefact:
         - TERM-issue-lifecycle
@@ -194,7 +195,9 @@ Defined in [TERM-audit-comment](../glossary.md#term-audit-comment--audit-comment
 
 **Why:** The timeline already records each label added or removed, so a comment that only restates a move adds nothing. A comment carries what the timeline cannot: why a person overrode a check, and which [version](../../core/glossary.md#term-version--version) made an edit ([DEC-049](../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
 
-An audit comment is one the [system](../../core/glossary.md#term-system--system) posts on an [issue](../glossary.md#term-issue--issue) or a [pull request](../../core/glossary.md#term-pull-request--pull-request). At the default setting it records each [bypass](../glossary.md#term-bypass--bypass), and each move back from In Progress, with its reason. At the fullest setting it records each write the system governs too.
+An audit comment is one the [system](../../core/glossary.md#term-system--system) posts on an [issue](../glossary.md#term-issue--issue) or a [pull request](../../core/glossary.md#term-pull-request--pull-request). It records a person's reason or [consent](../../core/glossary.md#term-consent--consent) for a write the system governs.
+
+At the default setting it records each [bypass](../glossary.md#term-bypass--bypass), and each move back from In Progress, with its reason. It also records the consent that a write setting a [Task](../glossary.md#term-task--task)'s [Milestone](../glossary.md#term-milestone--milestone) may need ([DEC-061 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). At the fullest setting it records each write the system governs too.
 
 **Attributes:**
 
@@ -217,9 +220,9 @@ An audit comment is one the [system](../../core/glossary.md#term-system--system)
 
 Defined in [TERM-bypass](../glossary.md#term-bypass--bypass).
 
-**Why:** Some checks guard what may happen with an explicit justification, rather than what must never happen. A bypass lets a person override such a check with a reason. The reason is posted before the write, so it survives a step that fails ([DEC-014](../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
+**Why:** Some checks guard what may happen with an explicit justification, rather than what must never happen. A bypass lets a person override such a check with a reason. Where the [project](../../core/glossary.md#term-project--project) keeps [audit comments](../glossary.md#term-audit-comment--audit-comment), the reason is posted before the write, so it survives a step that fails ([DEC-014](../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
 
-A bypass overrides one check that refuses by default, such as scheduling an [issue](../glossary.md#term-issue--issue) with no [Milestone](../glossary.md#term-milestone--milestone). The person gives the reason with the command, and the [system](../../core/glossary.md#term-system--system) records it before it goes on.
+A bypass overrides one check that refuses by default, such as scheduling an [issue](../glossary.md#term-issue--issue) with no [Milestone](../glossary.md#term-milestone--milestone). The person gives the reason with the command, and, where the project keeps audit comments, the [system](../../core/glossary.md#term-system--system) records it before it goes on.
 
 **Attributes:**
 
@@ -228,7 +231,7 @@ A bypass overrides one check that refuses by default, such as scheduling an [iss
 
 **Relations:**
 
-- Where the [project](../../core/glossary.md#term-project--project) keeps [audit comments](../glossary.md#term-audit-comment--audit-comment), an audit comment records its reason, before the write it allows (DEC-014).
+- Where the project keeps audit comments, an audit comment records its reason, before the write it allows (DEC-014).
 - It is how a person authorises a move that the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) refuses unless a person overrides it ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
 **States:** None.
