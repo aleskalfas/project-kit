@@ -92,7 +92,7 @@ A library the capability ships reaches the location only through [`pkit visual a
 
 ## Drawing a piece
 
-1. **Bring the libraries.** `pkit visual add <library>` copies a library the capability ships, such as the foundations, into the location's library folder, and lists it in `libraries/libraries.yaml`. Put each other library version a piece uses there yourself, and list it ([The library folder](files.md#the-library-folder)). A piece needs a brand, and none ships, so the project writes its own ([Brands](files.md#brands)).
+1. **Bring the libraries.** [`pkit visual add <library>`](#pkit-visual-add-library) copies a library the capability ships, such as the foundations, into the location's library folder, and lists it in `libraries/libraries.yaml`. Put each other library version a piece uses there yourself, and list it ([The library folder](files.md#the-library-folder)). A piece needs a brand, and none ships, so the project writes its own ([Brands](files.md#brands)).
 2. **Write the piece.** A piece is a folder under `pieces/`: its `piece.yaml` names its libraries, languages, modes and exports, and its content names the components that draw it ([A piece](files.md#a-piece)).
 3. **Draw it.** `pkit visual render <piece>` writes the piece's lock, computes its scenes, keeps their findings in `findings.yaml`, and draws an SVG preview of each scene. Open the previews under `.pkit/capabilities/visual-communication/project/local/previews/<piece>/` ([The clone's local folder](files.md#the-clones-local-folder)).
 4. **Check it.** `pkit visual check <piece>`, or `pkit validate`, reports what the piece breaks ([What the check reports](checks.md)).

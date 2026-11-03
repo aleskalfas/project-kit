@@ -97,7 +97,7 @@ Only an `error` fails `pkit validate` ([CLI reference](../../cli/README.md#valid
 
 **A released library version.** A finding the project cannot correct in its own files never fails (DEC-002 point 7). A finding that lies in a library version names that version. Where the project's list of libraries marks the version released, and the version still matches its release, a finding that would fail there asks for attention instead, and names the library's owner as who acts: only the owner corrects it, in a new release. This level, and who it names, are worked out each time the check reads a finding, and are never stored. A released version whose folder no longer matches its release is the project's copy to restore, so its findings fail, `library-changed` among them (DEC-002 point 7, DEC-003 point 9). The list and its `released` field are described in [The files of the visual work](files.md#the-library-folder).
 
-A few findings that lie in a library folder name no version, and always fail: `library-folder`, `brand-unreadable`, and the findings on the list itself.
+A few findings that lie in a library folder name no version, and always fail: `library-folder` and the findings on the list itself.
 
 ## What a finding says
 
@@ -175,7 +175,7 @@ The check reads the brand each piece locks, once for each brand version, against
 | Label | What it means | Level |
 |---|---|---|
 | `roles-unreadable`, `roles-shape`, `role-name`, `role-type`, `role-default`, `axes-shape`, `axis-shape`, `families-shape`, `family-shape`, `pairs-shape`, `pair-shape` | The foundations' `roles.yaml` cannot be read, or one of its roles, axes, families or pairs is not of its shape. Stops the brand. | fails |
-| `brand-unreadable` | The brand's `library.yaml` cannot be read. Stops the brand. It names no version, so it fails in a released one too. | fails |
+| `brand-unreadable` | The brand's `library.yaml` cannot be read. Stops the brand. It names the version its folder holds, `<version>/`, since the file cannot give it, so it asks for attention in a released one, as the others do. | fails |
 | `brand-kind`, `brand-dtcg` | The library is not a brand, or names a DTCG version other than `2025.10`. Stops the brand. | fails |
 | `resolver-unreadable`, `resolver-shape`, `brand-file` | The Resolver document cannot be read, holds what format 1 does not read, or names a file the version folder does not hold. Stops the brand. | fails |
 | `brand-axis` | A modifier is no shared axis, lacks a context for one of the axis's modes, or has another default than the axis. Stops the brand. | fails |

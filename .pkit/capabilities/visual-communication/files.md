@@ -487,8 +487,8 @@ concepts:
 ```
 
 - **`concepts`** maps each concept, by its name, to `{colour: <family>}`, one of the colour families of the foundations the piece locks ([The foundations](#the-foundations)). It holds at least one concept. A concept that maps to a value, to a role or to a family the foundations do not declare is refused (*What the check reports*).
-- **A piece names the notations it uses** under `notations` in its `piece.yaml`, and its lock names a version of each ([The lock](#the-lock)).
-- **Content names a concept** read with its notation's name, `<notation>/<concept>`, as a use names a component read with its library's ([Content files](#content-files)). Content names concepts only from the notations its piece names.
+
+How a piece names the notations it uses is under [`piece.yaml`](#pieceyaml), how its lock takes them under [The lock](#the-lock), and how its content names a concept under [Content files](#content-files) and [Shapes](#shapes).
 
 ## Keys of combinations
 
