@@ -60,13 +60,13 @@ pkit:
 2. The [system](../../../glossary.md#term-system--system) lists the reports on the report target, by any author, newest first, with each one's number, kind, state and title. It reads at most the latest 100 issues of each search it runs (`report.py`). It writes nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)).
 3. The maintainer reads a [report](../../../glossary.md#term-report--report) on the hosting service, with the [versions](../../../glossary.md#term-version--version) its [environment block](../../../glossary.md#term-environment-block--environment-block) gives.
 4. The maintainer files the issue that will fix the report, or finds one that exists.
-5. The maintainer runs `pkit report link <report> <fix>`. The system adds `- [ ] #<fix>` under the report's `## Tracked by` heading, which makes that issue one of the report's [tracked fixes](../../../glossary.md#term-tracked-fix--tracked-fix). The system prints `Linked #<fix> into #<report>'s Tracked by.`
+5. The maintainer runs `pkit report link <report> <fix>`. At its entry, the system checks that the repository whose issues it edits is the session's own, and asks the operator otherwise ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)). The system adds `- [ ] #<fix>` under the report's `## Tracked by` heading, which makes that issue one of the report's [tracked fixes](../../../glossary.md#term-tracked-fix--tracked-fix). The system prints `Linked #<fix> into #<report>'s Tracked by.`
 
 > [!WARNING]
 > **Not built yet:** `pkit report link` checks only that the repository of the working directory is the report target, never that it is the session's own. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes checks the session's own repository first, and #1765 tracks it.
 
 6. Once the tracked fixes close, the maintainer runs `pkit report inbox --resolved`. The system lists each open `feedback` or `change-request` report whose tracked fixes are all closed.
-7. For each listed report, the system asks `Post a closing comment on #<n> and close it?`. On a yes, the system comments that all the report's tracked fixes are closed, and closes the report.
+7. `pkit report inbox --resolved` has checked at its entry that the repository whose issues it edits is the session's own, and asked the operator otherwise (REQ-012). For each listed report, the system asks `Post a closing comment on #<n> and close it?`. On a yes, the system comments that all the report's tracked fixes are closed, and closes the report.
 
 > [!WARNING]
 > **Not built yet:** `pkit report inbox --resolved` checks only that the repository of the working directory is the report target, never that it is the session's own. ADR-034 point 1 decides that every `pkit` command that writes checks the session's own repository first, and #1765 tracks it.
