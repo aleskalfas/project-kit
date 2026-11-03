@@ -40,6 +40,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/components.md#what-a-scene-holds
         - .pkit/capabilities/visual-communication/files.md#keys-of-combinations
+        - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#shapes
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
 ---
@@ -126,7 +127,7 @@ A *preview* is a render for a person to look at, which `pkit visual render` draw
 
 Before it draws, the capability compares each scene with the renderer's declaration. An element of a type the declaration does not name is `refused`, and left out of the file. A property the declaration does not name for its type is `left-out`. The declaration names every primitive and property a scene of format 1 holds, so this finds no loss in format 1. While it draws, the renderer reports two losses of its own, both `left-out`:
 
-- **a fill or a stroke** whose role the brand gives no colour in the combination drawn, a run's fill included. A fill is then `none`.
+- **a fill or a stroke** whose role has no colour under the brand in the combination drawn, a run's fill included. A fill is then `none`. A library's role the brand gives no value is drawn at its default ([`roles.yaml`](files.md#rolesyaml)), so it is lost only where its chain of defaults reaches no colour.
 - **an image** whose produced picture has no variant for the combination drawn.
 
 ## Exports

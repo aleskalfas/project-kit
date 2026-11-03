@@ -81,7 +81,11 @@ or in what a component's part gave the component it places, names that component
 `component`, and its library's version as `library`, empty for the piece's own. The
 finding on a component whose file cannot be read names it so too, and what names that
 component takes none. A finding in what the content gave names neither. A top that names
-no component lies in the piece, which names it: the finding says so as `piece`.
+no component lies in the piece, which names it: the finding says so as `piece`. So does
+a part that reads a library's own role the brand leaves with no value, where neither the
+brand nor a brand it builds on names the library: neither alone is at fault, so it lies
+at the piece's lock, which combines them (DEC-008 point 9). Where one names the library,
+that brand's own finding says what it owes, and the part takes none.
 """
 
 from __future__ import annotations
@@ -93,7 +97,7 @@ from typing import Any, TypeVar
 
 from _lib import formula as fm
 from _lib import names
-from _lib.env import Env, PictureInfo, UnknownConcept, UnreadableComponent
+from _lib.env import Env, PictureInfo, UnknownConcept, UnreadableComponent, UnvaluedRole
 from _lib.findings import FAILS, Finding
 from _lib.keys import key_order
 from _lib.text import Broken, Faces, Run, Style, break_runs
@@ -943,7 +947,7 @@ class Component:
                 self._issue("formula-reach", where, f"the formula `{text}` {problem}")
                 return
         try:
-            result = fm.dimension(formula, self._dimension)
+            result = fm.dimension(formula, lambda ref: self._dimension(ref, where))
         except fm.FormulaError as error:
             self._issue("formula-dimension", where, str(error))
             return
@@ -994,7 +998,10 @@ class Component:
             return f"reads `{ref}`: a point has no parts"
         return None
 
-    def _dimension(self, ref: fm.Reference) -> int | None:
+    def _dimension(self, ref: fm.Reference, where: str) -> int | None:
+        """The dimension of what `ref`, in the formula at the key path `where`, reads. A
+        role it cannot read is reported once, in the component; a library's own role the
+        brand leaves with no value is reported where `Context.unvalued_at_lock` places it."""
         if isinstance(ref, fm.Engine):
             return fm.LENGTH if ref.name in ("width", "height") else fm.NUMBER
         if isinstance(ref, fm.Path):
@@ -1004,6 +1011,10 @@ class Component:
         dimension, problem = self._ctx.role_dimension(ref.path)
         if problem and ref.path not in self._roles_reported:
             self._roles_reported.add(ref.path)
+            unvalued = self._ctx.unvalued(ref.path)
+            if unvalued is not None:
+                self._ctx.unvalued_at_lock(unvalued, f"`{self.use}`, at `{where}`,")
+                return dimension
             code = (
                 "unknown-role"
                 if dimension is None and "no value" in problem
@@ -1018,6 +1029,9 @@ class Component:
         self._value_dims[name] = None  # a loop of values is reported when one is computed
         found: set[int | None] = set()
 
+        def read(ref: fm.Reference) -> int | None:
+            return self._dimension(ref, f"values.{name}")
+
         def collect(value: Any) -> None:
             if isinstance(value, Mapping) and SWITCH in value:
                 for key, branch in value.items():
@@ -1025,7 +1039,7 @@ class Component:
                         collect(branch)
                 return
             try:
-                found.add(fm.dimension(fm.parse(value), self._dimension))
+                found.add(fm.dimension(fm.parse(value), read))
             except (fm.FormulaError, TypeError, AttributeError):
                 found.add(None)
 
@@ -1124,15 +1138,53 @@ class Context:
         return use in self._unreadable
 
     def role(self, path: str) -> Any:
-        """A role's resolved value; raises `KeyError` where the brand gives it none."""
+        """A role's resolved value. Raises `UnvaluedRole` for a library's own role the brand
+        leaves with none, and `KeyError` for a path that holds no role."""
         if path not in self._roles:
             try:
                 self._roles[path] = self.env.role(path)
-            except KeyError:
-                self._roles[path] = KeyError
-        if self._roles[path] is KeyError:
+            except KeyError as missing:
+                self._roles[path] = missing
+        found = self._roles[path]
+        if isinstance(found, UnvaluedRole):
+            raise UnvaluedRole(found.role, found.library, named=found.named)
+        if isinstance(found, KeyError):
             raise KeyError(path)
-        return self._roles[path]
+        return found
+
+    def unvalued(self, path: str) -> UnvaluedRole | None:
+        """Why the role at `path` has no value, where it is a library's own role the brand
+        leaves with none; None for a role with a value, or a path that holds no role."""
+        try:
+            self.role(path)
+        except UnvaluedRole as unvalued:
+            return unvalued
+        except KeyError:
+            return None
+        return None
+
+    def unvalued_at_lock(self, unvalued: UnvaluedRole, part: str) -> None:
+        """Records that `part` reads a library's own role the brand leaves with no value
+        (DEC-008 points 8 and 9). Where the brand, or a brand it builds on, names the
+        library, that brand owes the role a value, which is its own finding, so the part
+        takes none. Where none does, neither the brand nor the library alone is at fault:
+        the finding lies at the lock that combines them, which the piece names, so it says
+        so as `piece`. It names no version, so it fails."""
+        if unvalued.named:
+            return
+        library, role = unvalued.library, unvalued.role
+        message = (
+            f"under this lock, {part} reads `@{role}`, a role of {self.library(library)} that "
+            f"has no value: its chain of defaults reaches none, and the brand does not name "
+            f"`{library}` to give it one"
+        )
+        fix = (
+            f"lock a brand that names `{library}` and gives `@{role}` a value, or a version "
+            f"of `{library}` whose `@{role}` has a default that reaches a shared role"
+        )
+        self.add(
+            Finding("unknown-role", FAILS, message, where="lock", fix=fix, extra={"piece": True})
+        )
 
     def family(self, name: str) -> Mapping[str, str] | None:
         """The members of a colour family the foundations declare, each mapped to a colour
@@ -1571,6 +1623,11 @@ class Instance:
             if role not in styles:
                 try:
                     styles[role] = Style.of_role(role, self.ctx.role(role), self.ctx.faces)
+                except UnvaluedRole as unvalued:
+                    use = self.component.use
+                    self.ctx.unvalued_at_lock(unvalued, f"the text `{trace}` of `{use}`")
+                    node.present = False
+                    return
                 except KeyError:
                     message = f"{trace}: the brand gives the role @{role} no value"
                     self._lose(node, "unknown-role", message, trace)
