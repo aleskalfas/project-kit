@@ -34,9 +34,11 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#notations
         - .pkit/capabilities/visual-communication/outputs.md
         - .pkit/capabilities/visual-communication/outputs.md#exports
+        - .pkit/capabilities/visual-communication/outputs.md#plugins
         - .pkit/capabilities/visual-communication/outputs.md#previews
         - .pkit/capabilities/visual-communication/outputs.md#produced-pictures
         - .pkit/capabilities/visual-communication/outputs.md#the-declaration
+        - .pkit/capabilities/visual-communication/outputs.md#the-svg-renderer
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-an-export
         - .pkit/capabilities/visual-communication/outputs.md#written-code
         - .pkit/cli/README.md#sync
@@ -52,11 +54,11 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 - **The commands** `pkit visual …`, also reachable as `pkit visual-communication …`. Each is described under [Commands](#commands).
 - **The file formats,** format 1: a schema for each kind of file a piece, a library or a command writes, under `schemas/`. Each file names its schema in its first lines ([The binding](files.md#the-binding)), so `pkit validate` checks its shape.
 - **The foundations library,** under `libraries/foundations/`: a few shared roles, two axes, six colour families and the `figure` component ([The foundations](files.md#the-foundations)). Its version is not released yet, so it may change in any release of the capability.
-- **Two plugins:** the SVG renderer, which draws the previews and the exports, and the CSS code writer, which writes a brand out as CSS variables.
+- **Two plugins:** the SVG renderer, which draws the previews and the exports, and the CSS code writer, which writes a brand out as CSS variables ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [Written code](outputs.md#written-code)).
 - **The check,** the `visual-communication:check` member of `pkit validate`.
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
 
-No brand, notation or producer ships. A project writes its own brand and notations, and `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one.
+No brand, notation or producer ships ([Brands](files.md#brands), [Plugins](outputs.md#plugins)). A project writes its own brand and notations, and `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)).
 
 The pages beside this README are the reference:
 
@@ -78,7 +80,7 @@ The visual work lies in one folder of the repository, the *location*: `visual/` 
 
 ## Drawing a piece
 
-1. **Bring the libraries.** Put each library version a piece uses in the location's library folder, and list it in `libraries/libraries.yaml`. A piece needs a brand, and none ships, so the project writes its own ([The library folder](files.md#the-library-folder), [Brands](files.md#brands)).
+1. **Bring the libraries.** Put each library version a piece uses in the location's library folder, and list it in `libraries/libraries.yaml` ([The library folder](files.md#the-library-folder)). A piece needs a brand, and none ships, so the project writes its own ([Brands](files.md#brands)).
 2. **Write the piece.** A piece is a folder under `pieces/`: its `piece.yaml` names its libraries, languages, modes and exports, and its content names the components that draw it ([A piece](files.md#a-piece)).
 3. **Draw it.** `pkit visual render <piece>` writes the piece's lock, computes its scenes, keeps their findings in `findings.yaml`, and draws an SVG preview of each scene. Open the previews under `.pkit/capabilities/visual-communication/project/local/previews/<piece>/` ([The clone's local folder](files.md#the-clones-local-folder)).
 4. **Check it.** `pkit visual check <piece>`, or `pkit validate`, reports what the piece breaks ([What the check reports](checks.md)).

@@ -1,0 +1,9 @@
+component: visual-communication
+kind: none
+body: >
+  The capability's reference pages give each fact one home (#2507). That no
+  brand ships takes its home in files.md's Brands, and a page that refers to a
+  fact another page holds names the section that holds it. The README links its
+  sibling pages' sections; inside the pages, a reference to a sibling page's
+  section stays an italic name, and a few references inside one page became
+  links. No command, path, file format or check changes, so no surface moves.

@@ -156,7 +156,7 @@ versions:
 | Field | What it holds |
 |---|---|
 | `version` | the version's number, from 1 |
-| `fingerprint` | the version's fingerprint, whose inputs *The fingerprint* in *What the check reports* lists |
+| `fingerprint` | the version's fingerprint, whose inputs *The input set of each kind* in *What the check reports* lists |
 | `files` | each file the run made, by name, with the SHA-256 of the file |
 | `recorded` | only recorded, never compared, so a new release of the capability makes no export stale: the `time` in UTC, the piece's `state` then (`draft`, the only state of format 1), the release of the `capability`, each of the `renderers` with its version, each produced output the run used with the version of its picture, the `value` of its record's fingerprint (`used`), and each of those it used while it was stale (`used-stale`) |
 
@@ -181,7 +181,7 @@ Each of these is found before the first write, so a refused run records no locat
 
 A *produced picture* is a picture a producer makes for one piece while it is prepared, such as a 3D render (DEC-006 point 1). It takes every value from the brand, and holds none of the piece's words: the piece places each label as its own text (DEC-006 point 2).
 
-**No producer ships yet.** So `pkit visual produce` refuses every producer a piece names, and no piece has a produced picture. What follows is the contract every producer meets. The capability's tests run a producer kept for them alone.
+No producer ships yet ([Plugins](#plugins)), so `pkit visual produce` refuses every producer a piece names, and no piece has a produced picture. What follows is the contract every producer meets. The capability's tests run a producer kept for them alone.
 
 ### Declaring a produced output
 
