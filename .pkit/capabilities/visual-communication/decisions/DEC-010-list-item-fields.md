@@ -1,7 +1,7 @@
 ---
 id: DEC-010
 title: Content names a list's component, and each item's arrangement, in fields its pattern declares
-status: proposed
+status: accepted
 date: 2026-11-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
