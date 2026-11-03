@@ -31,7 +31,7 @@ pkit:
 
 # REQ-012 · Functional · The system asks the operator before its command changes another repository
 
-**Verified by:** Tests of the [cross-repository guard](../../glossary.md#term-cross-repository-guard--cross-repository-guard) find that the session's own repository passes silently. Another repository, with no terminal and no confirmation, is refused unasked. At a terminal the check asks on standard error, and only a yes passes. A dry run never asks.
+**Verified by:** Tests of the [cross-repository guard](../../glossary.md#term-cross-repository-guard--cross-repository-guard) find that the session's own repository passes silently. Another repository, with no terminal and no confirmation, is refused unasked. At a terminal the guard asks on standard error, and only a yes passes. A dry run never asks.
 
 Tests run a [pull request](../../glossary.md#term-pull-request--pull-request)'s landing and its deletion of a branch from another repository. Tests run `pkit version tag --push`, `pkit release apply`, `release merge` and `release publish-notes` there too. Each refuses before its first write, and a confirmation passed with the call lets it go on. No test covers any other command that writes, since none of them runs the check yet (#1765).
 
