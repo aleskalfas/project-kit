@@ -42,6 +42,24 @@ REFERENCE = {
 :root {
   --accent: #0969da;
   --background: #ffffff;
+  --family--blue--fill: #ddf4ff;
+  --family--blue--line: #0969da;
+  --family--blue--text: #033d8b;
+  --family--green--fill: #dafbe1;
+  --family--green--line: #1a7f37;
+  --family--green--text: #044f1e;
+  --family--neutral--fill: #f6f8fa;
+  --family--neutral--line: #d0d7de;
+  --family--neutral--text: #1f2328;
+  --family--orange--fill: #fff1e5;
+  --family--orange--line: #bc4c00;
+  --family--orange--text: #762c00;
+  --family--purple--fill: #fbefff;
+  --family--purple--line: #8250df;
+  --family--purple--text: #512a97;
+  --family--red--fill: #ffebe9;
+  --family--red--line: #cf222e;
+  --family--red--text: #82071e;
   --font--body: "Source Sans Pro";
   --font--heading: "Source Sans Pro Semibold";
   --line: #d0d7de;
@@ -59,6 +77,24 @@ REFERENCE = {
 [data-colour-scheme="light"] {
   --accent: #0969da;
   --background: #ffffff;
+  --family--blue--fill: #ddf4ff;
+  --family--blue--line: #0969da;
+  --family--blue--text: #033d8b;
+  --family--green--fill: #dafbe1;
+  --family--green--line: #1a7f37;
+  --family--green--text: #044f1e;
+  --family--neutral--fill: #f6f8fa;
+  --family--neutral--line: #d0d7de;
+  --family--neutral--text: #1f2328;
+  --family--orange--fill: #fff1e5;
+  --family--orange--line: #bc4c00;
+  --family--orange--text: #762c00;
+  --family--purple--fill: #fbefff;
+  --family--purple--line: #8250df;
+  --family--purple--text: #512a97;
+  --family--red--fill: #ffebe9;
+  --family--red--line: #cf222e;
+  --family--red--text: #82071e;
   --line: #d0d7de;
   --surface: #f6f8fa;
   --text-primary: #1f2328;
@@ -68,6 +104,24 @@ REFERENCE = {
 [data-colour-scheme="dark"] {
   --accent: #4493f8;
   --background: #0d1117;
+  --family--blue--fill: #0c2d6b;
+  --family--blue--line: #4493f8;
+  --family--blue--text: #a5d6ff;
+  --family--green--fill: #033a16;
+  --family--green--line: #2ea043;
+  --family--green--text: #7ee787;
+  --family--neutral--fill: #161b22;
+  --family--neutral--line: #30363d;
+  --family--neutral--text: #e6edf3;
+  --family--orange--fill: #5a1e02;
+  --family--orange--line: #db6d28;
+  --family--orange--text: #ffc680;
+  --family--purple--fill: #3c1e70;
+  --family--purple--line: #a371f7;
+  --family--purple--text: #e2c5ff;
+  --family--red--fill: #67060c;
+  --family--red--line: #f85149;
+  --family--red--text: #ffc1ba;
   --line: #30363d;
   --surface: #161b22;
   --text-primary: #e6edf3;
@@ -76,6 +130,13 @@ REFERENCE = {
 
 [data-contrast="high"] {
   --background: #ffffff;
+  --family--blue--text: #000000;
+  --family--green--text: #000000;
+  --family--neutral--line: #000000;
+  --family--neutral--text: #000000;
+  --family--orange--text: #000000;
+  --family--purple--text: #000000;
+  --family--red--text: #000000;
   --line: #000000;
   --text-primary: #000000;
   --text-secondary: #1f2328;
@@ -83,6 +144,13 @@ REFERENCE = {
 
 [data-colour-scheme="dark"][data-contrast="high"] {
   --background: #000000;
+  --family--blue--text: #ffffff;
+  --family--green--text: #ffffff;
+  --family--neutral--line: #ffffff;
+  --family--neutral--text: #ffffff;
+  --family--orange--text: #ffffff;
+  --family--purple--text: #ffffff;
+  --family--red--text: #ffffff;
   --line: #ffffff;
   --text-primary: #ffffff;
   --text-secondary: #e6edf3;

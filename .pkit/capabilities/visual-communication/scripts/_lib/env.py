@@ -1,9 +1,9 @@
 """What the engine reads, through one protocol (visual-communication DEC-005 point 3).
 
 The engine (`formula`, `layout`, `text`, `scene`) knows nothing of the working folder,
-pieces, the library list or the configuration. It reads every component, role, font
-and produced picture through an `Env`, which the pipeline builds from the project's
-files, and which the engine's tests stand in for with an in-memory one.
+pieces, the library list or the configuration. It reads every component, role, colour
+family, concept, font and produced picture through an `Env`, which the pipeline builds
+from the project's files, and which the engine's tests stand in for with an in-memory one.
 """
 
 from __future__ import annotations
@@ -30,6 +30,19 @@ class UnreadableComponent(KeyError):
 
     def __str__(self) -> str:
         return f"the component `{self.use}` cannot be read: {self.why}"
+
+
+class UnknownConcept(KeyError):
+    """A concept the piece's notations do not hold: the piece names no notation of its
+    name, or its notation holds no such concept. The message says which."""
+
+    def __init__(self, concept: str, why: str) -> None:
+        super().__init__(concept)
+        self.concept = concept
+        self.why = why
+
+    def __str__(self) -> str:
+        return self.why
 
 
 @dataclass(frozen=True)
@@ -73,6 +86,14 @@ class Env(Protocol):
     def family(self, name: str) -> dict[str, str]:
         """A colour family the foundations declare: each member mapped to a colour role
         (DEC-004 point 10). Raises `KeyError` where they declare no such family."""
+        ...
+
+    def concept(self, name: str) -> str | None:
+        """The colour family a concept maps to, by its name read with its notation's,
+        `<notation>/<concept>` (DEC-004 point 10); None where its notation, or the concept
+        in it, cannot be read, which is a finding in the notation. Raises `UnknownConcept`,
+        a `KeyError`, where the piece names no such notation, or its notation holds no such
+        concept."""
         ...
 
     def library_version(self, library: str) -> str:

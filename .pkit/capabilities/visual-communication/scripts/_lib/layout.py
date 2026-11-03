@@ -43,9 +43,12 @@ its measured text's, and its width, where none is given, its widest paragraph's.
 image's height, where none is given, keeps its picture's proportions. Any property
 value may be a switch, `{by: <option>, <word>: <value>, ...}`, naming every word. A
 colour is a role's token path, or `:colour.<member>`: the role the foundations map that
-member of the instance's colour family to (DEC-004 point 10). Content's `override:
-{<part>: <role>}` points a part's paint at another role. `:index` and `:count` are an
-item's place among the items its list draws, from 1, and how many it draws.
+member of the instance's colour family to (DEC-004 point 10). The instance's family is
+the one a notation maps the content's `concept: <notation>/<concept>` to, else the
+`colour` of the `repeat` part that draws it, else its component's, else its container's;
+a state may change it. Content's `override: {<part>: <role>}` points a part's paint at
+another role. `:index` and `:count` are an item's place among the items its list draws,
+from 1, and how many it draws.
 
 **Computed value by value.** Every value is a cell computed on first use, in the order
 the references give, as a spreadsheet computes its cells: a loop is refused naming every
@@ -69,7 +72,7 @@ from typing import Any, TypeVar
 
 from _lib import formula as fm
 from _lib import names
-from _lib.env import Env, PictureInfo, UnreadableComponent
+from _lib.env import Env, PictureInfo, UnknownConcept, UnreadableComponent
 from _lib.findings import FAILS, Finding
 from _lib.keys import key_order
 from _lib.text import Broken, Faces, Style, break_lines
@@ -654,6 +657,7 @@ class Context:
         self._unreadable: set[str] = set()
         self._roles: dict[str, Any] = {}
         self._families: dict[str, Mapping[str, str] | None] = {}
+        self._concepts: dict[str, str | UnknownConcept | None] = {}
 
     def finding(self, code: str, message: str, *, where: str, use: str = "") -> Finding:
         """A finding that fails, at `where`: in the file of the component `use`, which it
@@ -737,6 +741,21 @@ class Context:
             except KeyError:
                 self._families[name] = None
         return self._families[name]
+
+    def concept(self, name: str) -> str | None:
+        """The colour family a concept maps to, `<notation>/<concept>` (DEC-004 point 10);
+        `None` where its notation, or the concept in it, cannot be read, which is a finding
+        in the notation. Raises `UnknownConcept` where the piece's notations do not hold
+        it."""
+        if name not in self._concepts:
+            try:
+                self._concepts[name] = self.env.concept(name)
+            except UnknownConcept as unknown:
+                self._concepts[name] = unknown
+        found = self._concepts[name]
+        if isinstance(found, UnknownConcept):
+            raise UnknownConcept(found.concept, found.why)
+        return found
 
     def role_dimension(self, path: str) -> tuple[int | None, str | None]:
         """A role's dimension in a formula, or why it has none."""
@@ -935,9 +954,12 @@ class Instance:
         return raw
 
     def _colour(self, place: tuple[str, str] | None) -> tuple[str | None, str]:
-        """The instance's colour family: its place's default in a list, else its
-        component's, else its container's; then its state's."""
-        if place is not None:
+        """The instance's colour family (DEC-001 point 6): its concept's, else its place's
+        default in a list, else its component's, else its container's; then its state's."""
+        concept = self._concept()
+        if concept is not None:
+            family, source = concept, self.source_of_field("concept")
+        elif place is not None:
             family, source = place
         elif self.component.colour:
             family, source = self.component.colour, f"default:{self.component.use}"
@@ -956,6 +978,28 @@ class Instance:
             elif self.component.states[state]:
                 family, source = self.component.states[state], self.source_of_field("state")
         return family, source
+
+    def _concept(self) -> str | None:
+        """The colour family of the concept the instance names, `<notation>/<concept>`
+        (DEC-004 point 10); None where it names none, or none gives it a family. A concept
+        of another shape, or one the piece's notations do not hold, is reported; one its
+        notation cannot read is a finding in that notation alone."""
+        raw = self.given.get("concept")
+        if raw is None:
+            return None
+        # A concept is read with its notation's name, as a use is with its library's.
+        if not _is_use(raw):
+            self._note(
+                "unknown-concept",
+                f"{self.trace}: `concept` takes `<notation>/<concept>`, not `{raw}`",
+                given="concept",
+            )
+            return None
+        try:
+            return self.ctx.concept(raw)
+        except UnknownConcept as unknown:
+            self._note("unknown-concept", f"{self.trace}: {unknown}", given="concept")
+            return None
 
     def _read_overrides(self) -> None:
         raw = self.given.get("override")

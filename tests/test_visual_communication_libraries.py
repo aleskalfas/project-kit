@@ -122,7 +122,7 @@ TWO_BASES = "builds-on: [{name: alpha, major: 1, base: true}, {name: beta, major
     ("old", "new", "said"),
     [
         ("name: x", "name: X", "`name`"),
-        ("kind: components", "kind: notation", "`kind`"),
+        ("kind: components", "kind: palette", "`kind`"),
         ("version: 1.0.0", "version: 0.1.0", "X at least 1"),
         ("needs-release: 0.1.0", "needs-release: next", "is not a release"),
         ("builds-on: []", "builds-on: {}", "not a list"),

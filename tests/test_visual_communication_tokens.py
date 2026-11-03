@@ -89,7 +89,7 @@ def codes(found: Any) -> set[str]:
 # --- the foundations ----------------------------------------------------------------------------
 
 
-def test_the_foundations_declare_the_shared_roles_axes_and_pair(foundations: Any) -> None:
+def test_the_foundations_declare_the_shared_roles_axes_and_pairs(foundations: Any) -> None:
     assert foundations.roles["text-primary"] == tokens.Role("text-primary", "color")
     assert foundations.roles["space.3"].type == "dimension"
     assert foundations.roles["type.body"].type == "typography"
@@ -97,10 +97,9 @@ def test_the_foundations_declare_the_shared_roles_axes_and_pair(foundations: Any
     assert foundations.axes["contrast"] == tokens.Axis(
         "contrast", "value", ("standard", "high"), "standard"
     )
-    assert foundations.pairs == (tokens.Pair("text-primary", "background", "text"),)
+    assert foundations.pairs[0] == tokens.Pair("text-primary", "background", "text")
     assert foundations.pairs[0].minimum == 4.5
-    assert foundations.families == {}
-    assert {"space", "type", "font", "text-primary"} <= set(foundations.top_groups)
+    assert {"space", "type", "font", "text-primary", "family"} <= set(foundations.top_groups)
 
 
 ROLES_TEXT = """\
@@ -377,10 +376,11 @@ def test_a_pair_below_its_contrast_fails_in_the_combination_it_lies_in(
     edit_json(folder / DARK, setting("scheme|ink|$value", "{palette.night.800}"))
     found = tokens.read_brand(folder, foundations).findings
     assert codes(found) == {"pair-contrast"}
-    (finding,) = found
-    assert finding.level == findings.FAILS
-    assert "`colour-scheme.dark`" in finding.message
-    assert finding.where == "text-primary"
+    # The neutral family paints its text with the primary text, so its pair falls with it.
+    assert sorted(finding.where for finding in found) == ["family.neutral.text", "text-primary"]
+    for finding in found:
+        assert finding.level == findings.FAILS
+        assert "`colour-scheme.dark`" in finding.message
 
 
 def test_a_translucent_ground_asks_for_attention(tmp_path: Path, foundations: Any) -> None:
@@ -662,3 +662,51 @@ def test_contrast_is_wcag_contrast() -> None:
 def test_a_translucent_text_is_laid_over_its_ground_first() -> None:
     half = tokens.contrast_ratio(colour(0, 0, 0, alpha=0.5), colour(1, 1, 1))
     assert half == pytest.approx(tokens.contrast_ratio(colour(0.5, 0.5, 0.5), colour(1, 1, 1)))
+
+
+# --- colour families (DEC-004 points 8 and 10) --------------------------------------------------
+
+#: The colour families the foundations declare, and the members of each.
+FAMILIES = ("neutral", "blue", "green", "orange", "purple", "red")
+MEMBERS = ("fill", "line", "text")
+
+
+def test_the_foundations_declare_each_colour_family_with_a_shared_role_for_each_member(
+    foundations: Any,
+) -> None:
+    assert tuple(foundations.families) == FAMILIES
+    for family in FAMILIES:
+        members = foundations.families[family]
+        assert members == {member: f"family.{family}.{member}" for member in MEMBERS}
+        for role in members.values():
+            # Roles of the foundations' first version, so none carries a default.
+            assert foundations.roles[role] == tokens.Role(role, "color")
+
+
+def test_each_familys_text_must_contrast_with_its_fill(foundations: Any) -> None:
+    for family in FAMILIES:
+        pair = tokens.Pair(f"family.{family}.text", f"family.{family}.fill", "text")
+        assert pair in foundations.pairs
+
+
+def test_the_test_brand_gives_each_familys_roles_a_value_in_every_combination(brand: Any) -> None:
+    assert brand.findings == ()
+    for family in FAMILIES:
+        for combination in brand.combinations():
+            text = brand.resolve(f"family.{family}.text", combination)
+            fill = brand.resolve(f"family.{family}.fill", combination)
+            assert brand.resolve(f"family.{family}.line", combination)["alpha"] == 1
+            assert tokens.contrast_ratio(text, fill) >= 4.5, (family, combination)
+
+
+def test_a_familys_text_below_its_contrast_fails_in_the_combinations_it_lies_in(
+    tmp_path: Path, foundations: Any
+) -> None:
+    folder = brand_copy(tmp_path)
+    edit_json(folder / DARK, setting("scheme|blue|text|$value", "{palette.blue.900}"))
+    found = tokens.read_brand(folder, foundations).findings
+    assert codes(found) == {"pair-contrast"}
+    (finding,) = found  # at high contrast, the family's text is the scheme's strongest
+    assert finding.where == "family.blue.text"
+    assert "`family.blue.text` on `family.blue.fill`" in finding.message
+    assert "the combination `colour-scheme.dark`" in finding.message
