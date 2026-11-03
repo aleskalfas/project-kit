@@ -238,7 +238,11 @@ Defined in [TERM-connection](../glossary.md#term-connection--connection).
 
 **Why:** The side that needs something knows what it needs, and what the data or the signal means ([COR-053](../../../../.pkit/decisions/core/COR-053-connection-points.md)). So that side declares the connection, and nothing is asked of the other side unless the connection is marked mandatory (COR-053).
 
-A connection is a tie that a [component](../glossary.md#term-component--component) declares in its [package metadata](../glossary.md#term-package-metadata--package-metadata), under `extensions`, to a [connection point](../glossary.md#term-connection-point--connection-point) another [capability](../glossary.md#term-capability--capability) defines. It contributes to a [data point](../glossary.md#term-data-point--data-point), subscribes to an event, or makes a [process](../glossary.md#term-process--process) depend on another process. `pkit connections graph` draws each one.
+A connection is a tie that a [component](../glossary.md#term-component--component) declares in its [package metadata](../glossary.md#term-package-metadata--package-metadata), under `extensions`, to a [connection point](../glossary.md#term-connection-point--connection-point) another [capability](../glossary.md#term-capability--capability) defines. `pkit connections graph` draws each one. A connection does one of three things:
+
+- it contributes to a [data point](../glossary.md#term-data-point--data-point)
+- it subscribes to an event
+- it makes a [process](../glossary.md#term-process--process) depend on another process
 
 **Attributes:**
 
