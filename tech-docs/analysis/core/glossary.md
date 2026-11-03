@@ -1996,7 +1996,10 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 **Distinctions:**
 
 - **Connection point:** the interface a connection ties to, which a [capability](#term-capability--capability) defines under a [role](#term-role--role) and other [components](#term-component--component) connect to ([COR-053 point 2](../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds)).
-- **The `connections` block:** the block of package metadata that holds a capability's roles, the [connection points](#term-connection-point--connection-point) it defines under `extension-points`, and its connections under `extensions` ([COR-053 point 3](../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality)).
+- **The `connections` block:** the block of package metadata that holds three things ([COR-053 point 3](../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality)):
+  - a capability's roles
+  - the [connection points](#term-connection-point--connection-point) it defines, under `extension-points`
+  - its connections, under `extensions`
 - **A dependency on a capability:** a [range](#term-range--range) one capability declares on another, which names that capability ([COR-030](../../../.pkit/decisions/core/COR-030-capability-dependencies.md)). A connection is optional unless it carries a mandatory mark, with its reason ([COR-053 point 6](../../../.pkit/decisions/core/COR-053-connection-points.md#6-optional-by-default-mandatory-only-with-a-reason-on-the-individual-connection)).
 - **A network connection:** a link over the network to another machine. It shares only the word.
 
