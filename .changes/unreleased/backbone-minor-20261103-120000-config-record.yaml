@@ -1,0 +1,16 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit config record <capability> <key> <value>` records one key, once, in
+  an installed capability's own configuration, `project/config.yaml`, bound
+  to its `config` schema (COR-049 point 5; #2511). The key's line goes in as
+  text, every other byte of the file kept — comments, order, line endings and
+  a byte-order mark. An absent file is created bound to the schema, and
+  nothing is written where the result would not read back as the file plus
+  that key, or would bring a schema error the file did not have. A key held
+  with another value is never moved. It asks once at a terminal and takes
+  `--yes` off one; `--dry-run` writes nothing, and `--json` prints the
+  outcome for a capability's script, which runs the command rather than keep
+  a writer of its own.
