@@ -38,6 +38,7 @@ pkit:
         - .pkit/adapters/README.md#currently-shipped
         - docs/permissions/README.md#deny-something-to-one-agent
         - docs/rules/README.md#add-your-own-rules
+        - docs/skills/README.md#choose-a-skill-or-an-agent-definition
         - .pkit/cli/README.md#init
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#validate
@@ -135,7 +136,7 @@ Without agent definitions, you write Claude Code's subagent files in `.claude/ag
 
 You do not need agent definitions, or one of your own, in these cases:
 
-- **The work is one task's procedure.** Write a skill instead (COR-006).
+- **The work is one task's procedure.** Write a skill instead ([the skills guide, "Choose a skill or an agent definition"](../skills/README.md#choose-a-skill-or-an-agent-definition)).
 - **You need a helper once, for one question.** Ask your session for it directly. A definition earns its keep once the same work has come up two or three times (COR-007).
 - **You only share agents across your projects.** A [Claude Code plugin](https://code.claude.com/docs/en/plugins) carries agents to each project that installs it, with no methodology around them.
 - **Your harness is not Claude Code.** project-kit ships one adapter, Claude Code's, so nothing deploys a definition for another harness ([the adapters reference](../../.pkit/adapters/README.md#currently-shipped)).
