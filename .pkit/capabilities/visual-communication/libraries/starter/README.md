@@ -19,6 +19,8 @@ pkit:
         - visual-communication:DEC-010
         - visual-communication:DEC-011
         - visual-communication:DEC-012
+      artefact:
+        - .pkit/capabilities/visual-communication/files.md#the-foundations
 ---
 
 # The starter
@@ -35,7 +37,7 @@ Its version 1.0.0 is not released yet. Every component is experimental, so a lat
 
 ## The patterns, by the question they answer
 
-Each pattern answers one question a visual answers. Choose a pattern by its question, not by its look. The evidence comes from project-kit's own talk, whose slides the design work studied (project-kit#2424).
+Each pattern answers one question a visual answers. Choose a pattern by its question, not by its look.
 
 | Pattern | Its question | Take another pattern when |
 |---|---|---|
@@ -46,7 +48,6 @@ Each pattern answers one question a visual answers. Choose a pattern by its ques
 
 - **Form:** levels stacked one on another, the top first, each as wide as the stack. Notes may stand to the right of the stack, sharing its height, for what holds across the levels. Ties join a note or a level to another.
 - **Source:** Nancy Duarte's structure (*slide:ology*, chapter 3). Lohse, Biolsi, Walker and Rueter's structure diagrams, and Yuri Engelhardt's lining up in an order, check it.
-- **Evidence:** the talk's `fits` slide, five layers from its decisions down to the code, with notes beside them.
 - **Options:** none.
 - **Lists:**
   - `levels`, each drawn by the `card`, unless the component field `level` names another;
@@ -58,7 +59,6 @@ Each pattern answers one question a visual answers. Choose a pattern by its ques
 
 - **Form:** items of equal standing, in no order, side by side in one row, under a head where the content gives one.
 - **Source:** Yuri Engelhardt's lining up, with no order.
-- **Evidence:** the lists of reasons on the talk's `permissions` and `connect` slides.
 - **Options:** `widths`, its words `equal` and `own`. With `equal`, the default, each item is as wide as the others and as tall as the tallest. With `own`, each takes the size it asks for, as a row of tags does.
 - **Lists:** `items`, each drawn by the `card`, unless the component field `item` names another.
 - **Its boundaries:** a list's items have no order, where layers rest one on another and steps follow one another. Items that belong to groups need a pattern of groups.
@@ -70,8 +70,6 @@ A block draws one item of a pattern, or stands alone where content places it.
 ### `card`
 
 - **Form:** a box with rounded corners that holds a head, a tag and a text, one under another, each where the content gives it.
-- **Source:** the card of Material Design, the tile of IBM Carbon and the summary card of GOV.UK.
-- **Evidence:** each level and each note on the `fits` slide, and each capability on the `connect` slide.
 - **Fields:** `head`, `tag` and `text`, each optional. `text` is a field of runs, its words `plain` and `strong`, `plain` the default.
 - **Options:**
   - `fill`: `plain`, the default, lies on the surface; `tint` lies on its colour family's fill, its texts in the family's text.
@@ -80,16 +78,13 @@ A block draws one item of a pattern, or stands alone where content places it.
 ### `tag`
 
 - **Form:** a short label on a small box with rounded corners, all in its colour family: its fill, its edge and its text. It is as large as its label, on one line.
-- **Source:** the tag of GOV.UK and of IBM Carbon, and the chip of Material Design.
-- **Evidence:** the name of each role under each capability on the `connect` slide.
 - **Fields:** `label`, required.
 - **Options:** none. Placed alone or in a list, it takes its concept's family. A card's tag stays `neutral`, even on a tinted card.
 
 ### `connector`
 
 - **Form:** a line from where a tie starts to where it ends, in its colour family's text, with arrowheads where the content asks. It routes around nothing, so a tie best joins items set apart, with nothing between them.
-- **Source:** Yuri Engelhardt's linking by a connector, and the straight and elbow connectors of diagram editors.
-- **Evidence:** the arrows from the notes to the layers on the `fits` slide, and the lines from capabilities to slots on the `connect` slide.
+- **Source:** Yuri Engelhardt's linking by a connector.
 - **Ends:** it takes the two ends a pattern's list of ties gives it, so a pattern draws it as a tie.
 - **Options:**
   - `route`: `straight`, the default, or `corners`.
@@ -107,7 +102,7 @@ A component reads a shared role where the starter means just that role, such as 
 
 - **Colours** are always shared: `surface`, `line`, `text-primary`, `text-secondary`, and each family's `fill`, `line` and `text`. The starter declares no colour role, and so no contrast pair.
 - **Shared sizes and types:** `type.body` sets a card's plain text and a tag's label. `space.1` and `space.2` lie around a tag's label, and between a card's head, tag and text.
-- **The shared roles the starter adds:** `stroke.thick`, the width of a line drawn on its own, and `type.strong`, the body's type in a heavier weight. Neither has a default, so every brand gives each a value (visual-communication DEC-008 point 2).
+- **Two more shared roles:** `stroke.thick` and `type.strong`, roles of the foundations ([The foundations](../../files.md#the-foundations)). Neither has a default, so every brand gives each a value (visual-communication DEC-008 point 2).
 - **The starter's own roles,** each with a default whose chain ends at a shared role:
 
 | Role | What it sizes or sets | Its default |
@@ -123,12 +118,12 @@ A component reads a shared role where the starter means just that role, such as 
 
 A brand that does not name the starter draws it at these defaults, in the brand's own values for the shared roles. A brand that names the starter by its major, 1, may give any of these roles a value of its own (visual-communication DEC-008 point 4).
 
-At the defaults a connector's line is a line drawn on its own, not an edge. Its arrowheads are as long as five widths of its line, and at an edge's width they would be too small to read. A strong run keeps the body's size and line height, in a heavier weight, so it stands out without breaking its line. Emphasis in running text is a weight, as in Material Design, IBM Carbon and GOV.UK.
+At the defaults a connector's line is a line drawn on its own, not an edge. Its arrowheads are as long as five widths of its line, and at an edge's width they would be too small to read. A strong run keeps the body's size and line height, in a heavier weight, so it stands out without breaking its line.
 
 ## What the starter leaves out, for now
 
-- **A stepped pyramid,** whose levels narrow towards the top as on the `fits` slide. It waits for a tool that sizes an item by its place in its list.
-- **Notes to the left of the stack.** `layers` places them to the right only, since a side option would need a length of nothing, which a formula cannot write yet.
+- **A stepped pyramid,** whose levels narrow towards the top.
+- **Notes to the left of the stack.** `layers` places them to the right only.
 - **A colour for each place,** such as a tint that deepens down the levels (project-kit#2576).
 - **A legend and icons,** so that colour is never the only sign (project-kit#2576).
 - **The other patterns and blocks:** the patterns `panels`, `groups` and `network` with the blocks `code` and `aside` (project-kit#2565), and the rest of the first wave (project-kit#2576).

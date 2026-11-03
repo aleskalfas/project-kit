@@ -38,6 +38,8 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/libraries/starter/README.md
+        - .pkit/capabilities/visual-communication/libraries/starter/README.md#the-patterns-by-the-question-they-answer
+        - .pkit/capabilities/visual-communication/libraries/starter/README.md#the-blocks
         - .pkit/capabilities/visual-communication/outputs.md
         - .pkit/capabilities/visual-communication/outputs.md#exports
         - .pkit/capabilities/visual-communication/outputs.md#plugins
