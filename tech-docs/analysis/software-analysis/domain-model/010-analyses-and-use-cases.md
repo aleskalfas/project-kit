@@ -23,7 +23,7 @@ pkit:
 
 # VIEW-analyses-and-use-cases — Analyses, use cases and their ids
 
-A [project](../../core/glossary.md#term-project--project) needs a written account of what its software must do, which decays silently as the code changes ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)). An [analysis](../glossary.md#term-analysis--analysis) is that account for one unit of the software, developed and versioned on its own, kept true by what it rests on. Its [use cases](../glossary.md#term-use-case--use-case) hold each goal and how the [system](../../core/glossary.md#term-system--system) meets it. Each id, once settled, names one [artefact](../../core/glossary.md#term-artefact--artefact) for good, save a [freed id](../glossary.md#term-freed-id--freed-id).
+A [project](../../core/glossary.md#term-project--project) needs a written account of what its software must do, which decays silently as the code changes ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)). An [analysis](../glossary.md#term-analysis--analysis) is that account, kept true by what it rests on, for one unit of the software, developed and versioned on its own. Its [use cases](../glossary.md#term-use-case--use-case) hold each goal and how the [system](../../core/glossary.md#term-system--system) meets it. Each id, once settled, names one [artefact](../../core/glossary.md#term-artefact--artefact) for good, save a [freed id](../glossary.md#term-freed-id--freed-id).
 
 ```mermaid
 classDiagram
@@ -76,7 +76,7 @@ An analysis says what the unit of the software it describes must do, and for who
 
 **Relations:**
 
-- It describes one unit of its project's software, developed and versioned on its own, such as the [backbone](../../core/glossary.md#term-backbone--backbone) or a [component](../../core/glossary.md#term-component--component) (DEC-001 point 2).
+- It describes one unit of its project's software, developed and versioned on its own, such as the [backbone](../../core/glossary.md#term-backbone--backbone) or a [capability](../../core/glossary.md#term-capability--capability) (DEC-001 point 2).
 - It builds on the analyses of the units that the unit it describes depends on, required or optional, and names no other (DEC-001 point 2).
 - It holds its use cases (DEC-001 point 2).
 
