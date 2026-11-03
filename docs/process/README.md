@@ -26,14 +26,17 @@ pkit:
         - .pkit/process/shape.md#position-the-precedence-rule
         - .pkit/process/shape.md#invariants--position-independent-always-checks-core
         - .pkit/process/engine.md#the-operations
+        - .pkit/process/engine.md#performance-the-answer-memo
         - .pkit/process/engine.md#the-predicate-runner-engine-contract
         - .pkit/process/engine.md#seam-ordering-contract-journal-as-intent-log
         - .pkit/process/engine.md#the-journal--optional-audit-cor-033-point-7
         - .pkit/process/connections.md#addressing-an-upstream-by-role
+        - .pkit/process/connections.md#the-interface-version
         - .pkit/process/connections.md#the-generated-depends-on-list
         - .pkit/process/connections.md#the-mandatory-mark
         - .pkit/process/connections.md#the-relations
         - .pkit/agents/README.md#write-carrying-categories
+        - .pkit/lifecycle/README.md#the-connection-documentation-and-friction-blocks
         - .pkit/cli/README.md#init
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#validate
@@ -62,18 +65,19 @@ A process is a staged, gated journey that your capability defines over its own s
 
 You want other components to use what your capability does without naming it, and the engine to run and check its processes. Without a shared engine, these things go wrong:
 
-- **You write a state machine around your checks.** Your capability tracks a page from draft to published. Beside the checks of where a page stands, you write the code that picks one position, lists the moves allowed and explains a refusal. The next capability with a staged journey writes it all again.
+- **You write a state machine around your checks.** Your capability, `doc-review`, tracks a page from draft to published. Beside the checks of where a page stands, you write the code that picks one position, lists the moves allowed and explains a refusal. The next capability with a staged journey writes it all again.
 - **A move goes through that nobody checked.** You declare that publishing needs a review, and the script that checks it is never written. Or the agent that publishes the page also signs its review. Either way the page is published with no review.
 - **A process that waits on yours names your capability.** Another capability's announcement waits for your page, and declares so by naming `doc-review`. Replace `doc-review` with a capability that does the same job, and that declaration names a capability that is gone.
 
 ### What processes do instead
 
-Processes answer these problems with four claims. The first answers the first problem, the next two the second, and the last the third. The commands after the list prove the first claim, and the tasks the later claims link to prove those.
+Processes answer these problems with five claims. The first two answer the first problem, the next two answer the second, and the last answers the third. The commands after the list prove the first claim, and the tasks the later claims link to prove those.
 
-- **One command writes your process's definition, which validation passes, and the engine then answers where a subject is and which moves it may make.**
+- **One command writes your process's definition and a check for each state and gate, and validation passes it.**
+- **Once its checks are written, `pkit process status` says where a subject is, why, and which moves it may make** ([Write the checks behind it](#write-the-checks-behind-it)).
 - **A check not written yet fails, and the engine refuses each move that rests on it** ([Write the checks behind it](#write-the-checks-behind-it)).
 - **A sign-off gate refuses the actor who signed, where your command asks the engine first and names the actor** ([Write the checks behind it](#write-the-checks-behind-it)).
-- **A process that waits on yours can name your role, so its definition and package name no capability** ([Connect it to another process](#connect-it-to-another-process)).
+- **A process that waits on yours can name your role, so its definition and package never name your capability** ([Connect it to another process](#connect-it-to-another-process)).
 
 Each fence on this page starts from a fresh project where `pkit init` has run, and its files are committed.
 
@@ -112,7 +116,7 @@ $ pkit process can-move doc-review:publish --to published
 
 What the output proves:
 
-- **One command.** The stamp wrote the definition, and one check for each state and for the gate, each a script registered in the capability's package. Validation passes, and `pkit process status` answers where the page is and which moves it may make ([the reference, "Binding a process"](../../.pkit/process/README.md#binding-a-process-how-a-capability-uses-this)).
+- **One command.** The stamp wrote the definition, and one check for each state and for the gate, each a script registered in the capability's package. Validation passes ([the reference, "Binding a process"](../../.pkit/process/README.md#binding-a-process-how-a-capability-uses-this)).
 - **Refused while unwritten.** Every check the stamp wrote fails until someone writes it. So the engine cannot tell where the page is, lists no legal move, and refuses the move ([the engine page, "The predicate runner"](../../.pkit/process/engine.md#the-predicate-runner-engine-contract)). [Write the checks behind it](#write-the-checks-behind-it) shows a gate's own check still unwritten.
 
 ### Compared with a state machine in your own scripts
@@ -126,7 +130,7 @@ The alternative is your capability's own code: a status kept in a file, and a sc
 | A gate that needs someone else's sign-off | ❌ Your code checks who signed, or does not | ✅ The engine refuses the actor who signed |
 | Why a subject is where it is, and what it may do next | ❌ A view you write | ✅ `pkit process status`, as text or as JSON |
 | Another process that waits on yours | ❌ It names your code | ✅ It can name your role, and the wiring graph draws the link |
-| Setup | ✅ None beyond your code | ❌ A capability of your own, registered, and a script for each check |
+| Setup | ✅ None beyond your code | ❌ Registering your capability, and a script for each check |
 | The cost of a check | ✅ A function call | ❌ A program the engine starts on each call, [bounded at 30 seconds](../../.pkit/process/engine.md#the-predicate-runner-engine-contract) |
 | Reacting to a change the moment it happens | ✅ Your code can listen for it | ❌ The engine reads only when asked |
 | A change someone makes by hand | ✅ Your stored status ignores it until your code moves it | ❌ It moves the subject, past any gate |
@@ -170,8 +174,8 @@ flowchart LR
 
 - **The definition** is data in your capability: its states, the moves between them, and the check behind each question ([the shape page, "The fields"](../../.pkit/process/shape.md#the-fields)).
 - **The checks** are scripts your capability registers. The engine runs each with the subject's id, and reads one JSON answer. A check that fails or gives no answer is never a pass ([the engine page, "The predicate runner"](../../.pkit/process/engine.md#the-predicate-runner-engine-contract)).
-- **The engine** asks the state checks where the subject is on every call, and keeps no position between calls. Then it asks each gate out of that state whether its move may happen ([the engine page, "The operations"](../../.pkit/process/engine.md#the-operations)).
-- **Your capability's commands** ask the engine whether a move may happen before they make the change it stands for, such as publishing the page. Then they record the move. The reference's seam-ordering contract sets that order ([the engine page, "Seam-ordering contract"](../../.pkit/process/engine.md#seam-ordering-contract-journal-as-intent-log)).
+- **The engine** asks the state checks where the subject is on every call, and keeps no position between calls. Then it asks each gate out of that state whether its move may happen ([the engine page, "Performance"](../../.pkit/process/engine.md#performance-the-answer-memo)).
+- **Your capability's commands** ask the engine whether a move may happen before they make the change it stands for, such as publishing the page. Then they report the move with `pkit process move --from <origin>`, which journals it where your project keeps a journal. The reference's seam-ordering contract sets that order ([the engine page, "Seam-ordering contract"](../../.pkit/process/engine.md#seam-ordering-contract-journal-as-intent-log)).
 - **The journal** records each move where your project turns it on. It is off by default, and nothing the engine decides reads it ([the engine page, "The journal"](../../.pkit/process/engine.md#the-journal--optional-audit-cor-033-point-7)).
 
 ## Give your capability a process
@@ -181,22 +185,25 @@ Give your capability a process by having your agent run the `process` skill. It 
 - **Have a capability of your own, registered with your project.** Make one through the `capability-author` skill, and register it with `pkit capabilities register` ([COR-031](../../.pkit/decisions/core/COR-031-capability-origin.md)). The stamp refuses a capability your project does not register, and names the command.
 - **Not a capability you receive from elsewhere.** The stamp refuses one whose files your project receives as copies, such as one the methodology ships, and writes nothing. A sync would overwrite what it wrote there.
 
-What the skill asks, and what each answer stamps:
+What the skill asks, and what each answer stamps ([the CLI reference, `process new`](../../.pkit/cli/README.md#process-new-capabilityprocess-id-flags)):
 
-- **What is the subject?** One journey, or many, such as one for each issue. Many is `--cardinality keyed`, and every command on the process then takes the subject's id as `--subject` ([the shape page, "Subject cardinality"](../../.pkit/process/shape.md#subject-cardinality-core)).
+- **What is the subject?** One journey, or many, such as one for each issue. Many is `--cardinality keyed`, and each command on one of its subjects then takes the subject's id as `--subject` ([the shape page, "Subject cardinality"](../../.pkit/process/shape.md#subject-cardinality-core)).
 - **What does each state mean?** Each `--state` takes an id and a meaning, which `pkit process status` shows. Where two states' checks can both hold, the state declared first is where the subject is ([the shape page, "Position: the precedence rule"](../../.pkit/process/shape.md#position-the-precedence-rule)).
 - **Which moves exist?** Each `--transition` names its states, its trigger and who may make it, `user` unless you name another.
 - **Which moves need a gate?** Each `--gate` adds a check that must pass before that move. A sign-off is the kind `authorisation-artifact`, and any other check is `deterministic`. A move with no gate has no check at all.
-- **Does a subject wait on something, or must something always hold?** `--blocked` declares a wait, and `--invariant` a check that must hold wherever the subject is.
+- **Does a subject wait on something, or must something always hold?** `--blocked` declares a wait, and `--invariant` declares a check that must hold wherever the subject is.
 
 Each check the stamp declares gets a script that fails until it is written ([Write the checks behind it](#write-the-checks-behind-it)). The stamp writes a process only once. It refuses an id the capability already has, and changing a definition's states later is not a command yet ([the reference, "The authoring layer"](../../.pkit/process/README.md#the-authoring-layer)).
 
 ## Connect it to another process
 
-Let other capabilities' processes declare that they wait on yours by role, so that none of them names your capability ([COR-053](../../.pkit/decisions/core/COR-053-connection-points.md)). Three steps:
+Connect a process to another capability's by the role that capability provides, so that the waiting definition never names it ([COR-053](../../.pkit/decisions/core/COR-053-connection-points.md)). The capability that offers the process provides the role, and the capability that waits couples to it. Three steps:
 
-1. **Provide a role, and offer the process under it.** In your capability's `package.yaml`, list the role under `connections.roles`, and the process under `connections.extension-points.offers`. A role is named `<publisher>::<role>`, with your own name as the publisher.
-2. **Couple the waiting process to the role.** In the capability that waits, have the `process` skill run `pkit process couple`, with `--upstream` naming the role's process ([COR-038](../../.pkit/decisions/core/COR-038-process-connections.md)).
+1. **Provide a role, and offer the process under it.** In the offering capability's `package.yaml`, list the role under `connections.roles`, and list the process under `connections.extension-points.offers` ([the lifecycle reference, "The connection, documentation and friction blocks"](../../.pkit/lifecycle/README.md#the-connection-documentation-and-friction-blocks)).
+   - A role is named `<publisher>::<role>`, with your own name as the publisher.
+   - An offer is keyed `<publisher>::<role>:<point>`, and takes `kind: process`, `process: <id>`, `schema_version` and a `description`, as the fence below shows.
+   - Where the definition declares an `interface.version`, the offer's `schema_version` equals it ([the connections page, "The interface version"](../../.pkit/process/connections.md#the-interface-version)).
+2. **Couple the waiting process to the role.** In the capability that waits, have the `process` skill run `pkit process couple`, with `--upstream` naming the role's process ([the CLI reference, `process couple`](../../.pkit/cli/README.md#process-couple-addr---state-s---upstream-addr---relation-r---mode-m---why-prose---version-n---mandatory-reason)). `--upstream` also takes `<capability>:<process-id>`, which names the capability ([COR-038](../../.pkit/decisions/core/COR-038-process-connections.md)).
 3. **Refresh the waiting capability's package.** `pkit capabilities refresh` copies the connections into its package, and validation fails until you run it ([the connections page, "The generated `depends-on` list"](../../.pkit/process/connections.md#the-generated-depends-on-list)).
 
 Below, `doc-review` provides the role `acme::review`, and offers its process there, in a `connections` block its new package lacks. A second capability, `site`, couples its announcement to that role, adds a contract that the hand-off happens, and checks the contract:
@@ -247,20 +254,21 @@ Process interpretability  (authoring check — indeterminates only; misses are n
 ```
 
 - **The role, not the capability.** Neither the announcement's definition nor `site`'s package names `doc-review`. The wiring graph shows the connection reaching `doc-review`'s process through the role, as its active provider.
-- **Whichever capability provides the role.** A connection by role reaches the process that the role's active provider offers at that point ([the connections page, "Addressing an upstream by role"](../../.pkit/process/connections.md#addressing-an-upstream-by-role)).
+- **Whichever capability provides the role.** A connection by role reaches the process that the role's active provider offers at that point ([the connections page, "Addressing an upstream by role"](../../.pkit/process/connections.md#addressing-an-upstream-by-role)). Where two installed capabilities provide the role, validation fails, and names the command that selects one.
 - **The connection makes nothing wait.** The engine never reads it, and it moves no subject. A gate of the announcement's own, with a check you write, makes it wait for the page. The connection's relation is then `gates-on-readiness` ([the connections page, "The relations"](../../.pkit/process/connections.md#the-relations)).
 - **Mark a connection mandatory** with `--mandatory <reason>`, where the upstream must exist. Installing or upgrading the waiting capability is then refused while it is missing ([the connections page, "The mandatory mark"](../../.pkit/process/connections.md#the-mandatory-mark)).
-- **A hand-off contract** asks whether each upstream subject at its trigger has a counterpart downstream ([COR-042](../../.pkit/decisions/core/COR-042-process-health.md)). It adds two checks to write. Until they are written, the health check reports the contract indeterminate, as the fence shows, and `pkit process health` reports each hand-off missed.
-- **Embedding and folding are by name.** A process that embeds another runs it by its capability's name, and so does a fold over many ([COR-036](../../.pkit/decisions/core/COR-036-process-composition.md), [COR-037](../../.pkit/decisions/core/COR-037-process-cascade.md)). Only a connection may name a role.
+- **A hand-off contract** asks whether each upstream subject at its trigger has a counterpart downstream ([COR-042](../../.pkit/decisions/core/COR-042-process-health.md)). It adds two checks to write. Until they are written, `pkit process health` reports the contract indeterminate, with `--interpretation-only` as the fence shows, and without it too. Once they are written, `pkit process health` reports each hand-off missed.
+- **Embedding and folding are by name.** A process that embeds another runs it by its capability's name, and so does a fold over many. Only a connection may name a role ([COR-053](../../.pkit/decisions/core/COR-053-connection-points.md) point 2).
 
 ## Write the checks behind it
 
 Write each check as a short script that reads your files and prints one JSON answer. Your agent writes them as the `process-author` agent, once you grant it the files ([COR-044](../../.pkit/decisions/core/COR-044-process-authoring-layer.md)):
 
-- **Grant the files.** List your definition and its scripts under `process-authoring-targets` in your agents' overlay. Your next `pkit sync` deploys the agent with them ([the agents reference, "Write-carrying categories"](../../.pkit/agents/README.md#write-carrying-categories)).
-- **Until you grant them,** the list ships empty, and the agent only says what it would write, for you to write. An overlay from before the list has no such key, so no `process-author` agent is deployed until `pkit agents reconcile --write` adds the empty list.
-- **What a check answers.** A state's check prints `{"result": true}` when the subject is in that state, and `false` when not. A sign-off gate prints whether the sign-off exists, and who produced it. Each adds a `reason`.
-- **What a check never does:** write anything. `pkit process status` runs your checks live on each call.
+- **Grant the files.** List your definition and its scripts under `process-authoring-targets` in your agents' overlay, and the grant reaches the agent at your next sync. Until then the list ships empty, and the agent only says what it would write, for you to write. An overlay from before the list has no such key, and deploys no `process-author` agent until the key is added ([the agents reference, "Write-carrying categories"](../../.pkit/agents/README.md#write-carrying-categories)).
+- **What a check answers** ([the engine page, "The predicate runner"](../../.pkit/process/engine.md#the-predicate-runner-engine-contract)):
+  - A state's check, or a `deterministic` gate, prints `{"result": true, "reason": "…"}`, with `false` when it does not hold.
+  - A sign-off gate prints `{"exists": true, "produced_by": "<login>", "reason": "…"}`.
+  - A check never writes anything, since `pkit process status` runs your checks live on each call.
 - **Answer with JSON's `true` and `false`.** The engine reads any other value by its truth, so the string `"false"` reads as true ([the engine page, "The predicate runner"](../../.pkit/process/engine.md#the-predicate-runner-engine-contract)).
 
 Below, you write the checks of the first fence by hand, the states' first. The page is published once `public/plan.md` exists, and `review.txt` holds the login of whoever signed the review:
@@ -307,6 +315,7 @@ Process doc-review:publish  (subject '_', definition v1)
 
 What the output proves:
 
+- **Where, why and which moves.** Once the state checks were written, `pkit process status` placed the page at `draft`, with that state's meaning. It listed the page's one move, and why the move is not open.
 - **An unwritten gate refuses its move.** With the state checks written, the engine placed the page at `draft`. It refused the move to `published`, whose gate check still failed.
 - **A sign-off refuses its signer.** With `ana`'s sign-off in place, the gate refused `ana`, and permitted the move to `bob`.
 - **The file shows the rule, not a guarantee.** Any actor can write `review.txt`. A real gate reads a sign-off its actor cannot write, such as an approving review on the pull request.
@@ -316,4 +325,4 @@ Check your work as you go:
 
 - **`pkit validate`** passes the definition whether or not its checks are written, as the first fence shows. `pkit process status` and `pkit process can-move` show whether they answer.
 - **An unwritten gate refuses only its own move.** The subject's other moves stay open, each on its own gate, or on none.
-- **Name the actor on every call.** `pkit process status` and `pkit process can-move` check gates as `operator` unless given `--actor`, and `pkit process move` as your `gh` login. Name one actor on each, or they can disagree ([the engine page, "The operations"](../../.pkit/process/engine.md#the-operations)).
+- **Name the actor on every call.** `pkit process status` and `pkit process can-move` check gates as `operator` unless given `--actor`, and `pkit process move` checks them as your `gh` login. Name one actor on each, or they can disagree ([the engine page, "The operations"](../../.pkit/process/engine.md#the-operations)).
