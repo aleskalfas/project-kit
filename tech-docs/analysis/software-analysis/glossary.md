@@ -19,7 +19,9 @@ builds-on:
       - {id: TERM-component, name: component}
       - {id: TERM-debt, name: debt}
       - {id: TERM-decision-record, name: decision record}
+      - {id: TERM-declared-surface, name: declared surface}
       - {id: TERM-default-branch, name: default branch}
+      - {id: TERM-deferral, name: deferral}
       - {id: TERM-documentation-root, name: documentation root}
       - {id: TERM-friction, name: friction}
       - {id: TERM-head, name: head}
@@ -55,7 +57,7 @@ builds-on:
 TERM-analysis:
   name: analysis
   status: active
-  definition: "account of what one component must do and for whom, kept as anchored artefacts under the project's internal documentation root"
+  definition: "account of what one separately developed and versioned software part must do and for whom, kept as anchored artefacts under the project's internal documentation root"
   pkit:
     friction:
       anchors:
@@ -264,7 +266,9 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [component](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-component--component)
   - **Term:** [debt](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-debt--debt)
   - **Term:** [decision record](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-decision-record--decision-record)
+  - **Term:** [declared surface](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-declared-surface--declared-surface)
   - **Term:** [default branch](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-default-branch--default-branch)
+  - **Term:** [deferral](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-deferral--deferral)
   - **Term:** [documentation root](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-documentation-root--documentation-root)
   - **Term:** [friction](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-friction--friction)
   - **Term:** [head](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-head--head)
@@ -299,7 +303,7 @@ Explained in [VIEW-analyses-and-use-cases](domain-model/010-analyses-and-use-cas
 
 **Distinctions:**
 
-- **Documentation for users:** what the [system](../core/glossary.md#term-system--system) does and how to use it, for whoever receives a [component](../core/glossary.md#term-component--component). An analysis is internal documentation for those who develop its component, and never ships with it ([DEC-001 point 2](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them)).
+- **Documentation for users:** what the [system](../core/glossary.md#term-system--system) does and how to use it, for whoever receives the software. An analysis is internal documentation for those who develop the part it describes, and never ships with that part ([DEC-001 point 2](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them)).
 - **Decisions and architecture:** how the system is built to do what it must, and why. An analysis states what the system must do, and points at them by anchors, never the reverse ([DEC-001 point 11](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#11-scope-boundary-and-how-the-analysis-meets-the-solution)).
 - **Testing:** running the software to see whether it does what a description says. An analysis is judged by reading, and runs nothing ([DEC-001 point 7](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#7-revalidation-is-not-testing)).
 

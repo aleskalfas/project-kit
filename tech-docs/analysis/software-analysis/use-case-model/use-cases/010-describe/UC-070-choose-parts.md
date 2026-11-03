@@ -64,7 +64,7 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`core:ACT-ai-agent`): walks the choice through the `analysis-author` [skill](../../../../core/glossary.md#term-skill--skill). It writes an entry of the [project](../../../../core/glossary.md#term-project--project)'s own structures only once the adopter accepts it ([REQ-050](../../../requirements/functional/REQ-050-agent-proposes.md)).
+- **AI agent** (`core:ACT-ai-agent`): walks the choice through the `analysis-author` [skill](../../../../core/glossary.md#term-skill--skill). It writes an entry of the [project](../../../../core/glossary.md#term-project--project)'s own `structures.yaml` only once the adopter accepts it ([REQ-050](../../../requirements/functional/REQ-050-agent-proposes.md)).
 - **Operator** (`core:ACT-operator`): is asked before `pkit analysis new` writes in a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:** None.

@@ -23,14 +23,14 @@ pkit:
 
 # VIEW-analyses-and-use-cases — Analyses, use cases and their ids
 
-A [project](../../core/glossary.md#term-project--project) needs a written account of what its software must do, which decays silently as the code changes ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)). An [analysis](../glossary.md#term-analysis--analysis) is that account for one [component](../../core/glossary.md#term-component--component), kept true by what it rests on. Its [use cases](../glossary.md#term-use-case--use-case) hold each goal and how the [system](../../core/glossary.md#term-system--system) meets it. Each id, once settled, names one [artefact](../../core/glossary.md#term-artefact--artefact) for good, save a [freed id](../glossary.md#term-freed-id--freed-id).
+A [project](../../core/glossary.md#term-project--project) needs a written account of what its software must do, which decays silently as the code changes ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)). An [analysis](../glossary.md#term-analysis--analysis) is that account for one part of the software, developed and versioned on its own, and what it rests on keeps it true. Its [use cases](../glossary.md#term-use-case--use-case) hold each goal and how the [system](../../core/glossary.md#term-system--system) meets it. Each id, once settled, names one [artefact](../../core/glossary.md#term-artefact--artefact) for good, save a [freed id](../glossary.md#term-freed-id--freed-id).
 
 ```mermaid
 classDiagram
   accTitle: Analyses, use cases and their ids
-  accDescr: An analysis describes one component, builds on the analyses of the components it depends on, and holds its use cases. A freed id was the id of removed use cases, journeys or requirements, and names the commit that removed them.
+  accDescr: An analysis describes one part of a project's software, builds on the analyses of the parts that part depends on, and holds its use cases. A freed id was the id of removed use cases, journeys or requirements, and names the commit that removed them.
   class Analysis
-  Analysis : component
+  Analysis : part it describes
   Analysis : folder
   class UseCase["Use case"]
   UseCase : id
@@ -64,27 +64,27 @@ Defined in [TERM-analysis](../glossary.md#term-analysis--analysis).
 - the account stays as it was
 - nobody notices until a reader is misled
 
-A [component](../../core/glossary.md#term-component--component) owns what describes it, so its account changes with it and at its pace ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
+A separately developed and versioned part of the software owns what describes it, so its account changes with it and at its pace ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
-An analysis says what one component must do, and for whom: its actors, its [use cases](../glossary.md#term-use-case--use-case), its journeys, its terms and its requirements. It lies in the internal documentation of the repository where its component is developed. Where a [project](../../core/glossary.md#term-project--project) keeps several, each lies in a folder named after its component.
+An analysis says what the part of the software it describes must do, and for whom: its actors, [use cases](../glossary.md#term-use-case--use-case), journeys, terms and requirements. It lies in the internal documentation of the repository where that part is developed. Where a [project](../../core/glossary.md#term-project--project) keeps several, each lies in a folder named after the part it describes.
 
 **Attributes:**
 
-- the component it describes, and the folder it lies in ([DEC-001 point 2](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them))
-- the analyses it builds on, those of the components its component depends on (DEC-001 point 2)
+- the part of the software it describes, and the folder it lies in ([DEC-001 point 2](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them))
+- the analyses it builds on, those of the parts that the part it describes depends on (DEC-001 point 2)
 - its own [artefacts](../../core/glossary.md#term-artefact--artefact), each with an id unique across the repository (DEC-001 points 2 and [3](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers))
 
 **Relations:**
 
-- It describes one component, such as the methodology's core or one of its [capabilities](../../core/glossary.md#term-capability--capability) (DEC-001 point 2).
-- It builds on the analyses of the components its component depends on, required or optional, and names no other (DEC-001 point 2).
+- It describes one part of its project's software, developed and versioned on its own, such as the [backbone](../../core/glossary.md#term-backbone--backbone) or a [component](../../core/glossary.md#term-component--component) (DEC-001 point 2).
+- It builds on the analyses of the parts that the part it describes depends on, required or optional, and names no other (DEC-001 point 2).
 - It holds its use cases (DEC-001 point 2).
 
 **States:** None.
 
 **Always true:**
 
-- An analysis never ships with its component, so whoever receives the component receives no analysis (DEC-001 point 2).
+- An analysis never ships with the part it describes, so whoever receives that part receives no analysis (DEC-001 point 2).
 - It points at the solution by anchors, and nothing in the solution points back at it ([DEC-001 point 11](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#11-scope-boundary-and-how-the-analysis-meets-the-solution)).
 
 ## Use case
