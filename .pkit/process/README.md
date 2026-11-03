@@ -349,10 +349,11 @@ Each line of a journal is one JSON object: a move's entry, or a wait's.
   - **`severity`:** where the transition names one.
   - **`version`:** the pkit version that governed the move.
   - **`reason`:** the one place an entry says why its move was taken, written only where the caller gave `move` a `--reason` ([the engine page, "The operations"](engine.md#the-operations)).
-- **A wait's entry** holds `ts`, `subject` and `event`, and adds the wait's keys:
+- **A wait's entry** holds `ts` and `subject`, and the wait's keys:
   - **`event`:** `blocked-enter` or `blocked-resume`.
   - **`blocked_on`:** the wait's reason.
-  - **`at` and `assignee`:** where the wait has them.
+  - **`at`:** the state the subject waits at, where the wait has one.
+  - **`assignee`:** who owns the wait, where the declaration names one.
 
 #### Journaling a wait
 

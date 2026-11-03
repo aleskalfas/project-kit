@@ -378,7 +378,7 @@ pkit connections graph
 
 Each of these waits for a real demand ([COR-038](../decisions/core/COR-038-process-connections.md)).
 
-- **From the first family of always-checks across subjects.** Its first family, a missed hand-off's existence, reported only, shipped through COR-042. Still deferred from it:
+- **From the first family of always-checks across subjects.** The first family of the slot for always-checks across subjects, a missed hand-off's existence, reported only, shipped through COR-042. Still deferred from it:
   - general invariants across subjects, such as mutual exclusion
   - the signals of drift and difference in data couplings
   - the inverse, orphaned artefacts

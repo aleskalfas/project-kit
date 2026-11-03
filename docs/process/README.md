@@ -189,7 +189,10 @@ What the skill asks, and what each answer stamps ([the CLI reference, `process n
 
 - **What is the subject?** One journey, or many, such as one for each issue. Many is `--cardinality keyed`, and each command on one of its subjects then takes the subject's id as `--subject` ([the shape page, "Subject cardinality"](../../.pkit/process/shape.md#subject-cardinality-core)).
 - **What does each state mean?** Each `--state` takes an id and a meaning, which `pkit process status` shows. Where two states' checks can both hold, the state declared first is where the subject is ([the shape page, "Position: the precedence rule"](../../.pkit/process/shape.md#position-the-precedence-rule)).
-- **Which moves exist?** Each `--transition` names its states, its trigger and who may make it, `user` unless you name another.
+- **Which moves exist?** Each `--transition` names three things:
+  - its states
+  - its trigger
+  - who may make it, `user` unless you name another
 - **Which moves need a gate?** Each `--gate` adds a check that must pass before that move. A sign-off is the kind `authorisation-artifact`, and any other check is `deterministic`. A move with no gate has no check at all.
 - **Does a subject wait on something, or must something always hold?** `--blocked` declares a wait, and `--invariant` declares a check that must hold wherever the subject is.
 
@@ -206,7 +209,11 @@ Connect a process to another capability's by the role that capability provides, 
 2. **Couple the waiting process to the role.** In the capability that waits, have the `process` skill run `pkit process couple`, with `--upstream` naming the role's process ([the CLI reference, `process couple`](../../.pkit/cli/README.md#process-couple-addr---state-s---upstream-addr---relation-r---mode-m---why-prose---version-n---mandatory-reason)). `--upstream` also takes `<capability>:<process-id>`, which names the capability ([COR-038](../../.pkit/decisions/core/COR-038-process-connections.md)).
 3. **Refresh the waiting capability's package.** `pkit capabilities refresh` copies the connections into its package, and validation fails until you run it ([the connections page, "The generated `depends-on` list"](../../.pkit/process/connections.md#the-generated-depends-on-list)).
 
-Below, `doc-review` provides the role `acme::review`, and offers its process there, in a `connections` block its new package lacks. A second capability, `site`, couples its announcement to that role, adds a contract that the hand-off happens, and checks the contract:
+Below, `doc-review` provides the role `acme::review`, and offers its process there, in a `connections` block its new package lacks. A second capability, `site`, does three things:
+
+- It couples its announcement to that role.
+- It adds a contract that the hand-off happens.
+- It checks the contract.
 
 ```console
 $ pkit new capability doc-review >/dev/null && pkit capabilities register doc-review >/dev/null

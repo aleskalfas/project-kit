@@ -370,7 +370,7 @@ process:
 - **Shown on every status read, and enforced by report only:**
   - A violation is shown on the status view. An agent reading status sees it on every read, and a binding's wrapper declines what follows.
   - The engine's `validate` operation reports it too, narrative or `--json`, and exits non-zero on any violation.
-  - It does not block moves, fail transitions or remediate. A binding that wants a hard gate everywhere writes it as a gate predicate.
+  - A violation does not block moves, fail transitions or remediate. A binding that wants a hard gate everywhere writes it as a gate predicate.
   - The status narrative shows only violations, to stay short. `status --json` and `validate` carry the full set.
 - **Determinism kept.** An invariant is a predicate over reality, like a detection predicate, so the engine stays a deterministic validator.
 - **The open region's boundary.** A region-scoped invariant shows on status as the reason the region's exit gate is shut. The boundary is enforced by composing the gate, not by blocking moves: the exit gate's predicate checks the region's conditions. So invariants report, and the exit gate checks.
