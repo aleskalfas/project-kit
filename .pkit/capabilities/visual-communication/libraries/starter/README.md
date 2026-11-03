@@ -92,7 +92,7 @@ A block draws one item of a pattern, or stands alone where content places it.
 
 ## Colours
 
-Each starter component declares the colour family `neutral`, which the concept an item names replaces with the concept's own. A text in a family's text lies on that family's fill, a pair the foundations declare. On the surface, a card's texts take the shared roles `text-primary` and `text-secondary` instead. So a run of a card's text reads the family only where the card is tinted.
+Each starter block declares the colour family `neutral`, which the concept an item names replaces with the concept's own. A text in a family's text lies on that family's fill, a pair the foundations declare. On the surface, a card's texts take the shared roles `text-primary` and `text-secondary` instead. So a run of a card's text reads the family only where the card is tinted.
 
 A connector's line takes its family's text, not its line. Nothing beside the line shows the tie, so it needs a contrast of 3 to 1 against what it lies on (WCAG 2.1, success criterion 1.4.11). A family's line edges a fill, and may be faint: the neutral family's is the shared `line`. A family's text is the member a brand makes legible, since the foundations pair it with the family's fill.
 
@@ -118,7 +118,7 @@ A component reads a shared role where the starter means just that role, such as 
 
 A brand that does not name the starter draws it at these defaults, in the brand's own values for the shared roles. A brand that names the starter by its major, 1, may give any of these roles a value of its own (visual-communication DEC-008 point 4).
 
-At the defaults a connector's line is a line drawn on its own, not an edge. Its arrowheads are as long as five widths of its line, and at an edge's width they would be too small to read. A strong run keeps the body's size and line height, in a heavier weight, so it stands out without breaking its line.
+At the defaults a connector's line is as wide as a line drawn on its own, not as an edge. A strong run keeps the body's size and line height, in a heavier weight, so it stands out without breaking its line.
 
 ## What the starter leaves out, for now
 
