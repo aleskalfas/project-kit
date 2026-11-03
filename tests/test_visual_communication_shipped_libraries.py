@@ -5,7 +5,7 @@ merge. They lie outside a project's validation, which never runs them.
 The shipped folder (`shipped`) holds, for each library, the version being built,
 `libraries/<library>/`, and apart from it each released version,
 `releases/<library>/<version>/`, with the library's record, `releases/<library>/releases.yaml`.
-Five checks hold every version it ships, each run on the capability's folder as the tree
+Six checks hold every version it ships, each run on the capability's folder as the tree
 holds it and on the history as the clone holds it:
 
 1. **Each released version** matches the hash its record keeps, and the engine reads its
@@ -22,9 +22,14 @@ holds it and on the history as the clone holds it:
 5. **A version being built that carries a released number** differs from that released
    version only in the release it needs, and none carries a number below the newest
    released one.
+6. **A version being built breaks nothing its major promises:** the release's comparison
+   (`comparison.compare`) of each version being built with the newest released version of
+   the major it carries, each read in full on the versions it is checked with, finds no
+   break. An addition fails nothing, since whether a change is a patch or a minor is the
+   owner's judgement (DEC-013 point 3).
 
-The release's comparison of a version being built with the newest released version of
-its major, the sixth check of DEC-013 point 6, joins this module later (#2609).
+Each version is read in full through the one routine the release and the fetch read it
+through too (`full_read.read`, DEC-014 point 1).
 
 **Findings are read by their labels,** not their levels: the check makes a failing finding
 in a released version ask for attention instead. A label of `FAILS_AT_ANY_LEVEL` fails
@@ -59,36 +64,32 @@ from tests.visual_communication_project import (
 
 (
     checks,
-    files,
+    comparison,
     findings_,
     fingerprint,
-    layout,
+    full_read,
     libraries,
     location,
-    notations,
     pl,
     reading,
     shipped,
-    tokens,
 ) = load(
     "visual-communication",
     "checks",
-    "files",
+    "comparison",
     "findings",
     "fingerprint",
-    "layout",
+    "full_read",
     "libraries",
     "location",
-    "notations",
     "pipeline",
     "reading",
     "shipped",
-    "tokens",
 )
 
 #: The label of a file of the capability's format that its schema refuses. These checks
 #: report it, since the core's data validation reads no file under `.pkit/`.
-SCHEMA_REFUSED = "schema-refused"
+SCHEMA_REFUSED = full_read.SCHEMA_REFUSED
 
 #: The labels that fail at any level: those that mean a version cannot be read, or cannot
 #: be read with its bases, or no longer matches its hash. A released version that shows
@@ -263,100 +264,11 @@ def location_of(tmp: Path, versions: Sequence[Copied], kind: str) -> Any:
     return libraries.Held(root, LOCATION)
 
 
-def file_findings(folder: Path, files_: Sequence[Path], label: str, root: Path) -> list[Any]:
-    """Each file of the capability's format among `files_`, the files of the version folder
-    `folder`, against its binding and its schema."""
-    found = []
-    for path in files_:
-        kind = libraries.kind_within(path.relative_to(folder).parts)
-        if kind is not None:
-            found.extend(shape_findings(path, kind, label, root))
-    return found
-
-
-def shape_findings(path: Path, kind: str, label: str, root: Path) -> list[Any]:
-    """A file of `kind` against its binding and its schema, the findings naming it relative
-    to `root`."""
-    shown = path.relative_to(root).as_posix()
-    try:
-        data = reading.read_yaml(path)
-    except reading.ReadError as exc:
-        return [findings_.Finding("file-unreadable", "fails", str(exc), file=shown, library=label)]
-    problem = files.binding_problem(data, kind)
-    if problem is not None:
-        message = f"a file of the capability's format {problem}"
-        return [findings_.Finding("binding", "fails", message, file=shown, library=label)]
-    return [
-        findings_.Finding(
-            SCHEMA_REFUSED,
-            "fails",
-            f"the schema `{kind}` refuses it at {refused}",
-            file=shown,
-            library=label,
-        )
-        for refused in files.shape_problems(data, kind)
-    ]
-
-
-def engine_findings(held: Any, name: str, version: Any) -> list[Any]:
-    """What the engine finds reading a version the location `held` holds with the versions
-    it is checked with: the newest version held of each major it builds on, and of each
-    major those build on (`libraries.newest_of_majors`). It reads the foundations'
-    declarations and the version's own roles, each of its components through the
-    environment of a library checked alone (`pipeline.LibraryEnv`), a brand over its base
-    and a notation against the foundations' colour families. A version it cannot resolve
-    with its bases is `alone-majors` or `alone-missing`, as the check says. Each finding
-    lies in the version."""
-    label = f"{name}@{version}"
-    file = f"{LOCATION}/{libraries.FOLDER}/{name}/{version}/library.yaml"
-    why = held.unreadable(name, version)
-    if why is not None:
-        message = f"the engine cannot read {label}: {why}"
-        return [findings_.Finding("library-unreadable", "fails", message, file=file, library=label)]
-    library = held.library(name, version)
-    try:
-        chosen = libraries.newest_of_majors(held, library)
-    except libraries.LockRefused as exc:
-        code = "alone-majors" if isinstance(exc, libraries.MajorsConflict) else "alone-missing"
-        message = f"{label} cannot be read with its bases: {exc}"
-        return [findings_.Finding(code, "fails", message, file=file, library=label)]
-    folders = {other.name: other.folder for other in chosen.values()}
-    found: list[Any] = []
-    try:
-        scope = tokens.read_scope(folders, root=held.root)
-    except tokens.TokenError as exc:
-        return [finding for finding in exc.findings if finding.library == label]
-    found.extend(scope.findings_of(name))
-    if library.kind == "components":
-        ctx = layout.Context(pl.LibraryEnv(chosen, scope), "")
-        for path in held.files(name, version):
-            if path.parent == library.folder / pl.COMPONENTS and path.suffix == ".yaml":
-                ctx.component(f"{name}/{path.stem}")
-        found.extend(ctx.findings)
-    elif library.kind == "brand":
-        fonts = held.root / LOCATION / pl.FONTS
-        try:
-            brand = tokens.read_brand(
-                library.folder, scope, fonts=fonts, root=held.root, locked=folders
-            )
-            found.extend(brand.findings)
-        except tokens.TokenError as exc:
-            found.extend(exc.findings)
-    elif library.kind == "notation":
-        notation = notations.read_notation(library.folder, scope.families, root=held.root)
-        found.extend(notation.findings)
-    return [finding for finding in found if finding.library == label]
-
-
 def version_findings(held: Any, name: str, version: Any) -> list[Any]:
-    """A version the location `held` holds, each of its files against its schema, then
-    read by the engine with the versions it is checked with."""
-    folder = held.root / LOCATION / libraries.FOLDER / name / str(version)
-    label = f"{name}@{version}"
-    return [
-        *file_findings(folder, held.files(name, version), label, held.root),
-        *engine_findings(held, name, version),
-    ]
+    """What reading a version the location `held` holds in full finds (`full_read.read`):
+    each of its files against its schema, then the engine's read of it with the versions it
+    is checked with, the newest version held of each major it builds on."""
+    return list(full_read.read(held, name, version).findings)
 
 
 # --- the checks ---------------------------------------------------------------------------------
@@ -397,7 +309,7 @@ def released_outcome(tmp: Path, folder: Path) -> Outcome:
     versions = released_versions(folder, outcome)
     for library in shipped.read(folder):
         if library.record.is_file():
-            for finding in shape_findings(library.record, "libraries", "", folder):
+            for finding in full_read.shape_findings(library.record, "libraries", "", folder):
                 outcome.fail(said(finding, finding.level))
     for each in versions:
         changes = each.hash_changes()
@@ -463,11 +375,10 @@ def together_outcome(tmp: Path, folder: Path) -> Outcome:
     return outcome
 
 
-def built_outcome(tmp: Path, folder: Path) -> Outcome:
-    """Check 4: each version being built, read and checked on the versions being built of
-    its bases, in a location that lists each as a project's own library not yet released:
-    each file against its schema, each read by the engine, and the capability's check."""
-    outcome = Outcome()
+def built_versions(folder: Path, outcome: Outcome) -> list[Copied]:
+    """The version being built of each library the capability whose folder is `folder`
+    ships, each to be listed as a project's own library not yet released; one that cannot
+    be read fails."""
     versions = []
     for library in shipped.read(folder):
         try:
@@ -478,6 +389,15 @@ def built_outcome(tmp: Path, folder: Path) -> Outcome:
         found = tuple(listed(folder, library.built))
         unreleased = {"released": False}
         versions.append(Copied(library.name, built.version, library.built, found, unreleased))
+    return versions
+
+
+def built_outcome(tmp: Path, folder: Path) -> Outcome:
+    """Check 4: each version being built, read and checked on the versions being built of
+    its bases, in a location that lists each as a project's own library not yet released:
+    each file against its schema, each read by the engine, and the capability's check."""
+    outcome = Outcome()
+    versions = built_versions(folder, outcome)
     if not versions:
         return outcome
     held = location_of(tmp, versions, "project")
@@ -541,6 +461,45 @@ def numbers_outcome(folder: Path) -> Outcome:
     return outcome
 
 
+def comparison_outcome(tmp: Path, folder: Path) -> Outcome:
+    """Check 6: the release's comparison of each version being built with the newest
+    released version of the major it carries, where that major has one (DEC-013 point 6).
+    The released version is read on the newest released version of each major it builds
+    on, and the version being built on the versions being built of its bases. The version
+    being built keeps that major, so each break the comparison finds fails. Each addition
+    is reported, and fails nothing."""
+    outcome = Outcome()
+    compared = []
+    for library in shipped.read(folder):
+        try:
+            built = library.being_built()
+            newest = library.newest_of_majors().get(built.version.major)
+        except (libraries.LibraryError, shipped.ShippedError):
+            continue  # checks 1 and 4 fail it
+        if newest is not None:
+            compared.append((library.name, newest.version, built.version))
+    if not compared:
+        return outcome
+    released = released_location(tmp / "released", released_versions(folder, Outcome()))
+    being_built = location_of(tmp / "built", built_versions(folder, Outcome()), "project")
+    for name, was, now in compared:
+        try:
+            found = comparison.compare(
+                full_read.read(released, name, was), full_read.read(being_built, name, now)
+            )
+        except comparison.ComparisonError as exc:
+            outcome.fail(f"the comparison of `{name}` {was} with {now} cannot be made: {exc}")
+            continue
+        for change in found.breaks:
+            outcome.fail(
+                f"`{name}` {now} keeps the major of its released version {was}, and breaks it: "
+                f"{change}"
+            )
+        for change in found.additions:
+            outcome.report(f"`{name}` {now} adds to its released version {was}: {change}")
+    return outcome
+
+
 # --- the checks, on the tree and the history as the clone holds them ----------------------------
 
 
@@ -572,14 +531,20 @@ def test_a_version_being_built_keeps_to_its_released_numbers() -> None:
     assert outcome.failures == []
 
 
+def test_a_version_being_built_breaks_nothing_its_released_major_promises(tmp_path: Path) -> None:
+    outcome = comparison_outcome(tmp_path, CAPABILITY)
+    outcome.show("versions being built against their released majors")
+    assert outcome.failures == []
+
+
 def test_the_labels_that_fail_at_any_level_are_labels_the_check_reports() -> None:
-    """Each label of the list is one the capability's code raises, or this module's own,
-    and a label left to its level is not among them."""
+    """Each label of the list is one the capability's code raises, and a label left to its
+    level is not among them."""
     code = "\n".join(
         path.read_text(encoding="utf-8") for path in (CAPABILITY / "scripts" / "_lib").glob("*.py")
     )
     unknown = {label for label in FAILS_AT_ANY_LEVEL if f'"{label}"' not in code}
-    assert unknown == {SCHEMA_REFUSED}
+    assert unknown == set()
     assert not FAILS_AT_ANY_LEVEL & set(LEFT_TO_LEVEL)
 
 
@@ -854,6 +819,105 @@ def test_a_released_place_or_a_record_entry_alone_fails(tmp_path: Path) -> None:
         "releases/foundations/1.0.1/ is no released version releases/foundations/releases.yaml "
         "lists: list it, or take the folder out",
     ]
+
+
+#: A stable component the engine reads: a line of text, and a note below it.
+LABEL = bound(
+    "component",
+    status="stable",
+    about="A line of text, and a note below it.",
+    fields={
+        "type": "object",
+        "properties": {"text": {"type": "string"}, "note": {"type": "string"}},
+    },
+    parts={
+        "text": {
+            "text": {"content": "text", "style": "type.body", "fill": "text-primary"},
+            "width": "=:width",
+        },
+        "note": {
+            "when": "note",
+            "text": {"content": "note", "style": "type.body", "fill": "text-secondary"},
+            "y": "=text.bottom",
+            "width": "=:width",
+        },
+    },
+)
+
+#: An experimental component the engine reads.
+BADGE = bound(
+    "component",
+    status="experimental",
+    about="A badge.",
+    parts={"box": {"box": {"fill": "accent"}, "width": "=:width", "height": "=:height"}},
+)
+
+
+def without_note(folder: Path) -> None:
+    """The label being built, its field `note` removed, and the part that shows it."""
+    path = built(folder) / pl.COMPONENTS / "label.yaml"
+    data = reading.read_yaml(path)
+    del data["fields"]["properties"]["note"]
+    del data["parts"]["note"]
+    write(path, yaml_text(data))
+
+
+def test_a_version_being_built_that_breaks_its_released_major_fails(tmp_path: Path) -> None:
+    """A stable component's field removed in a minor fails; in a major, its major has no
+    released version to compare with."""
+    folder = capability(tmp_path)
+    add_component(folder, LABEL, "label", "foundations")
+    release(folder)
+    without_note(folder)
+    set_fields(built(folder) / "library.yaml", version="1.1.0")
+
+    minor = comparison_outcome(tmp_path / "minor", folder)
+    set_fields(built(folder) / "library.yaml", version="2.0.0")
+    major = comparison_outcome(tmp_path / "major", folder)
+
+    assert minor.failures == [
+        "`foundations` 1.1.0 keeps the major of its released version 1.0.0, and breaks it: "
+        "`foundations/label`, field `note`: is removed (DEC-003 point 6)"
+    ]
+    assert major == Outcome()
+
+
+def test_a_version_being_built_that_adds_an_experimental_component_in_a_patch_passes(
+    tmp_path: Path,
+) -> None:
+    """Whether the change is a patch or a minor is the owner's judgement, so the addition is
+    reported and fails nothing."""
+    folder = capability(tmp_path)
+    add_component(folder, LABEL, "label", "foundations")
+    release(folder)
+    add_component(folder, BADGE, "badge", "foundations")
+    set_fields(built(folder) / "library.yaml", version="1.0.1")
+
+    outcome = comparison_outcome(tmp_path, folder)
+
+    assert outcome == Outcome(
+        reported=[
+            "`foundations` 1.0.1 adds to its released version 1.0.0: `foundations/badge`: is "
+            "new (DEC-003 point 1)"
+        ]
+    )
+
+
+def test_a_version_being_built_that_cannot_be_compared_fails(tmp_path: Path) -> None:
+    """The version being built of a library builds on a major of the foundations that
+    nothing builds, so it cannot be read with its bases."""
+    folder = capability(tmp_path)
+    release(folder)
+    add_library(folder, "parts", {"foundations": 1}, "1.0.0")
+    release(folder, "parts")
+    add_library(folder, "parts", {"foundations": 2}, "1.1.0")
+
+    [failure] = comparison_outcome(tmp_path, folder).failures
+
+    assert failure.startswith(
+        "the comparison of `parts` 1.0.0 with 1.1.0 cannot be made: parts@1.1.0 cannot be "
+        "compared: parts@1.1.0 cannot be read with its bases"
+    )
 
 
 # --- a history the tests build ------------------------------------------------------------------

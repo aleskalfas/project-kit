@@ -21,6 +21,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/records.py
         - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
         - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/full_read.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/comparison.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/notations.py
         - .pkit/capabilities/visual-communication/scripts/_lib/keys.py
@@ -54,7 +56,7 @@ pkit:
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/notation.yaml
         - tests/fixtures/visual-communication/libraries/test-parts/1.0.0/roles.yaml
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012", "visual-communication:DEC-013", "visual-communication:DEC-014"]
+      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-009", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012", "visual-communication:DEC-013", "visual-communication:DEC-014"]
 ---
 
 # The files of the visual work
@@ -428,6 +430,32 @@ pairs:
 - **A role with no default** takes a value only from a brand, as `test-parts.warning` does. A role whose chain of defaults ends at one, rather than at a shared role, has no value under a brand that gives none along it. Only a role whose chain ends at a shared role draws under every brand.
 - **Each pair names one of its own roles.** At its defaults, each of the library's own roles replaced by the role its default aliases, a pair falls on one that the foundations, the library or a library it builds on declares, in either order, at a level that needs as much contrast or more (DEC-008 point 6). `test-parts.ink` on `test-parts.paper` falls on the foundations' `text-primary` on `background`. Under a brand, a library's pair is measured only where the brand's values reach it: a value the brand gives a library's role along either role's chain of defaults. It is then measured in every combination where both roles have a value.
 - **It declares no `axes` and no `families`,** which are the foundations' alone. What is wrong in the file stops nothing: a role or a pair that cannot be read is left out, and reported.
+
+### What a release compares
+
+The *comparison* reads two versions of one library, each in full with the versions it is checked with (DEC-014 point 1). It names each *break*, a change that breaks what the earlier version promises, and each *addition*. The later number needs a major for a break, at least a minor for an addition, and otherwise at least a patch (DEC-013 point 3). Whether a change of look makes a patch a minor is the owner's judgement.
+
+The capability's own checks run it on each library the capability ships ([The libraries the capability ships](#the-libraries-the-capability-ships)). They compare the version being built with the newest released version of its major, where that major has one. The version being built keeps that major, so each break fails (DEC-013 point 6). Each addition is reported and fails nothing, so an addition in a patch passes.
+
+A change of how something looks breaks nothing (DEC-003 point 6). So it passes over a brand's values, a component's colour, the look of its states and parts, and each drawing. What it compares, kind by kind:
+
+- **Every library.** A change of its kind breaks, and so does a library it builds on taken at a new major (DEC-003 point 6). A notation is compared by these alone.
+- **A component library's components.** Only a component the earlier version marks stable or deprecated is compared (DEC-003 point 7). An experimental one may change in any release, so only a new component is named, as an addition (DEC-003 point 1). A stable or deprecated component removed breaks, and so does one marked experimental. One marked deprecated breaks nothing.
+- **A compared component,** part by part:
+  - **Its fields.** A field removed breaks, and so does one newly required, or new and required (DEC-003 point 6, DEC-009 point 7). A new optional field is an addition (DEC-009 point 7).
+  - **What a field takes.** A field breaks where it no longer takes a type, a value or a count of items it took. A key below it, removed or newly required, breaks it too (DEC-003 point 6). Another change of its schema, such as its `description`, is neither a break nor an addition.
+  - **Its options, states and exposed parts.** Each removed breaks, and so do an option's word removed and an option that comes to take another kind of thing (DEC-003 point 6). Each new one, and a new word, is an addition (DEC-009 point 7). An option's default word is neither.
+  - **Its fields of runs.** A field that ceases to take runs breaks, and so do a change of its first word and a word removed (DEC-012 point 6). A field that comes to take runs, and a new word after the first, are additions.
+  - **Its lists.** A list's component field removed or renamed breaks, and so does marking a field it held as one (DEC-010 point 7). So does an arrangement field or one of its words removed. A new component field, arrangement field or word is an addition. An arrangement field's default is neither.
+  - **Its ties.** End fields declared for a list it held break, and so do its end fields swapped or one removed (DEC-011 point 6). So does a component that ceases to take ends. A new list of ties is an addition.
+  - **A top's layouts.** A layout or a slot removed breaks, and so does a new required slot (DEC-003 point 6, DEC-009 point 7). A top that makes its layouts its pages' forms, or ceases to, breaks too (DEC-010 point 7). A new layout and a new optional slot are additions. A slot of a page's form is compared as a field is, and a slot that comes to hold pages, or ceases to, breaks.
+- **A library's own roles.** A role promises what the components that read it promise (DEC-008 point 7). So only an own role a stable or deprecated component reads, directly or through a default, can break. It breaks where it is removed, changes type, or no longer ends its chain of defaults at a shared role, where it did. A new one such a component reads breaks where its chain ends at no shared role, and any other new own role is an addition.
+- **Pairs.** Every pair a library declares is compared, the foundations' included, whatever reads it (DEC-008 point 7). A pair removed, or its level lowered, breaks, and a new pair is an addition. A pair written the other way round is the same pair.
+- **The foundations' shared roles,** whatever reads them (DEC-004 point 5). A shared role removed, or of another type, breaks, and so does one that loses its default (DEC-004 point 7). A new shared role with no default breaks, since every brand must then give it a value. A new one with a default is an addition.
+- **The foundations' axes and colour families,** whatever reads them. An axis or a mode removed breaks, and so does a new axis, or an axis of another kind or default (DEC-004 point 5). A colour family or a member removed breaks (DEC-003 point 6). A new mode, colour family or member is an addition.
+- **A brand's exported names** (DEC-004 point 5): its token paths, its axes and modes ([Axes and modes](#axes-and-modes)), and its open roles ([Open roles](#open-roles)). A token removed or of another type breaks, as do an axis or a mode removed and an axis of another kind or default. So does a role taken off its open roles. A new token, axis, mode or open role is an addition.
+
+Where either version cannot be read with its bases, or the later one cannot read a component the earlier one promises, no comparison is made. The checks fail it. A brand's component tokens are not compared yet.
 
 ## Brands
 

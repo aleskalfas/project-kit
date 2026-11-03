@@ -33,6 +33,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#reserved-words
         - .pkit/capabilities/visual-communication/files.md#content-files
+        - .pkit/capabilities/visual-communication/files.md#what-a-release-compares
 ---
 
 # Components
@@ -112,7 +113,9 @@ The file takes these keys and no other:
 | `ends` | `true` where the component takes ends, so a pattern may draw a tie with it ([Ties and connectors](#ties-and-connectors)). |
 | `layouts` | On a top component only: its layouts and their slots, and, where they are its pages' forms, each layout's own drawing. |
 
-Every name in the file takes the capability's name shape ([files](files.md)). The status says what the component's library promises (DEC-003 point 7). An experimental component may change in any release, renamed, reshaped or removed. A stable one changes in a breaking way only in a major release of its library. A deprecated one may be removed only in a major release.
+Every name in the file takes the capability's name shape ([files](files.md)).
+
+The status says what the component's library promises (DEC-003 point 7), which a release checks ([What a release compares](files.md#what-a-release-compares)). An experimental component may change in any release, renamed, reshaped or removed. A stable one changes in a breaking way only in a major release of its library. A deprecated one may be removed only in a major release.
 
 ### Fields
 
