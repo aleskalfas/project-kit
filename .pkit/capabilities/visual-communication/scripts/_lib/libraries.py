@@ -34,7 +34,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any
 
-from _lib import fingerprint
+from _lib import fingerprint, records
 from _lib.files import FileError, read_bound
 from _lib.findings import FAILS, Finding
 from _lib.location import files as listed_files
@@ -44,6 +44,9 @@ from _lib.root import SHIPPED
 
 #: The library folder, within the location.
 FOLDER = "libraries"
+
+#: The library that owns the shared roles, axes, families and pairs (DEC-004 point 7).
+FOUNDATIONS = "foundations"
 
 #: The list of the project's libraries, within the location.
 LIST = f"{FOLDER}/libraries.yaml"
@@ -279,8 +282,8 @@ class Held:
         if self.list_path not in self._files:
             return None
         try:
-            data = read_bound(path, "libraries")
-        except (ReadError, FileError) as exc:
+            data = records.read(path, "libraries")
+        except records.RecordError as exc:
             raise LibraryError(str(exc)) from exc
         libraries = data.get("libraries")
         if not isinstance(libraries, Mapping):

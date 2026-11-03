@@ -49,7 +49,7 @@ from typing import Any
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import checks, fingerprint, libraries, location, tokens
+from _lib import checks, fingerprint, libraries, location, records, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.files import write_whole
@@ -64,10 +64,11 @@ Results = Sequence[tuple[str, SceneResult]]
 #: Where the previews of each piece lie, relative to the project root.
 PREVIEWS = f"{LOCAL}/previews"
 
+#: The comment that opens the findings record, a line each.
 HEADER = (
-    "The findings record of the piece (visual-communication DEC-005 point 13): what\n"
-    "computing its scenes found, keyed by a fingerprint of every file they were computed\n"
-    "from. `pkit visual render` rewrites it; commit it, so the check reads it."
+    "The findings record of the piece (visual-communication DEC-005 point 13): what",
+    "computing its scenes found, keyed by a fingerprint of every file they were computed",
+    "from. `pkit visual render` rewrites it; commit it, so the check reads it.",
 )
 
 
@@ -129,7 +130,7 @@ def _render(root: Path, name: str, given: str | None) -> int:
         "findings": [checks.record_entry(finding) for finding in found],
     }
     pl.write_file(
-        root, piece.folder / pl.FINDINGS_FILE, pl.yaml_text(record, HEADER).encode("utf-8")
+        root, piece.folder / pl.FINDINGS_FILE, records.text(record, HEADER).encode("utf-8")
     )
     if folder.is_dir():
         for old in folder.glob("*.svg"):

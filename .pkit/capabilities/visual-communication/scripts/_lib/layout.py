@@ -54,8 +54,10 @@ parent's layout. Each problem is a finding; a value that cannot be computed is z
 
 **Where a finding lies** is the file a person edits to mend it. A finding in a component,
 or in what a component's part gave the component it places, names that component as
-`component`, and its library's version as `library`, empty for the piece's own. A
-finding in what the content gave names neither.
+`component`, and its library's version as `library`, empty for the piece's own. The
+finding on a component whose file cannot be read names it so too, and what names that
+component takes none. A finding in what the content gave names neither. A top that names
+no component lies in the piece, which names it: the finding says so as `piece`.
 """
 
 from __future__ import annotations
@@ -67,7 +69,7 @@ from typing import Any, TypeVar
 
 from _lib import formula as fm
 from _lib import names
-from _lib.env import Env, PictureInfo
+from _lib.env import Env, PictureInfo, UnreadableComponent
 from _lib.findings import FAILS, Finding
 from _lib.keys import key_order
 from _lib.text import Broken, Faces, Style, break_lines
@@ -649,6 +651,7 @@ class Context:
         self.active: set[tuple[int, tuple[str, ...]]] = set()
         self._seen: set[tuple[str, str, str]] = set()
         self._components: dict[str, Component | None] = {}
+        self._unreadable: set[str] = set()
         self._roles: dict[str, Any] = {}
         self._families: dict[str, Mapping[str, str] | None] = {}
 
@@ -692,10 +695,15 @@ class Context:
             return library
 
     def component(self, use: str) -> Component | None:
-        """A component, read and checked once, its issues recorded; `None` where there is none."""
+        """A component, read and checked once, its issues recorded; `None` where there is none,
+        or where its file cannot be read, which is a finding in that file (`unreadable`)."""
         if use not in self._components:
             try:
                 data = self.env.component(use)
+            except UnreadableComponent as unreadable:
+                self._unreadable.add(use)
+                self.report("component-unreadable", str(unreadable), where="", use=use)
+                data = None
             except KeyError:
                 data = None
             component = Component(use, data, self) if isinstance(data, Mapping) else None
@@ -703,6 +711,11 @@ class Context:
             for code, where, message in component.issues if component else ():
                 self.report(code, message, where=where, use=use)
         return self._components[use]
+
+    def unreadable(self, use: Any) -> bool:
+        """Whether `use` names a component whose file is present and cannot be read. What
+        names it is not at fault, so it takes no finding."""
+        return use in self._unreadable
 
     def role(self, path: str) -> Any:
         """A role's resolved value; raises `KeyError` where the brand gives it none."""
@@ -1078,13 +1091,15 @@ class Instance:
     def _component(self, node: Node, use: Any, trace: str, *, by_content: bool) -> Component | None:
         """The component `use` names, to draw a part or an item; `None` where there is none,
         with a finding in what named it: the content where `by_content`, else this
-        instance's component."""
+        instance's component. A component whose file cannot be read is a finding in that
+        file alone (`Context.component`)."""
         component = self.ctx.component(use) if isinstance(use, str) else None
         if component is None:
-            named_in = "" if by_content else self.component.use
-            self.ctx.report(
-                "unknown-component", f"{trace}: no component `{use}`", where=trace, use=named_in
-            )
+            if not self.ctx.unreadable(use):
+                named_in = "" if by_content else self.component.use
+                self.ctx.report(
+                    "unknown-component", f"{trace}: no component `{use}`", where=trace, use=named_in
+                )
             node.present = False
         return component
 
@@ -1560,11 +1575,17 @@ class Instance:
 
 def place_top(ctx: Context, top: str, content: Mapping[str, Any]) -> Instance | None:
     """The piece's top component placed with its content, every part below it built;
-    `None`, with a finding, where the top names no component."""
+    `None`, with a finding, where the top names no component, or one whose file cannot be
+    read (`Context.component`). The piece itself names its top, so the finding on a top
+    that names no component lies there, at `top`, and says so as `piece`."""
     trace = top.split("/")[-1]
     component = ctx.component(top)
     if component is None:
-        ctx.report("unknown-component", f"the piece's top names no component `{top}`", where=trace)
+        if not ctx.unreadable(top):
+            message = f"the piece's top names no component `{top}`"
+            ctx.add(
+                Finding("unknown-component", FAILS, message, where="top", extra={"piece": True})
+            )
         return None
     if not component.top:
         ctx.report("not-top", f"the piece's top `{top}` declares no layouts", where=trace, use=top)
