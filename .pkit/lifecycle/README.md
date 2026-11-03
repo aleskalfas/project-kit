@@ -491,6 +491,8 @@ The backbone runs the commands a component registers through one runner, `projec
 
   Each is read-only and needs no network, so a query may call it. The script applies the answer itself — the living-docs validator decides which of two places matching a file wins, and which space it serves — but never re-reads the declarations, lists the working tree or matches a path against a place, nor resolves a reference or computes a merge-base, nor walks a route to a rule set or judges a pin. The artefacts, rule-set and settled-state readings resolve no data point, so a filler may call them while a point it contributes to resolves; a filler never asks for a point. A query that calls one keeps the reading inside its own bound — a filler the reading starts inherits the query's deadline and the outermost run's process group ("A run inside a run" above) — and inside `pkit validate` a point the run has already resolved is read from its run cache ("Reading one point from a script" below).
 
+  No query calls [`pkit docs record-location`](../cli/README.md#docs-record-location-capability-name---dry-run) or [`pkit config record`](../cli/README.md#config-record-capability-key-value---yes---dry-run---json): each is an action. The CLI README's section on each says what it records, and when a capability's command runs it.
+
 The dispatcher's proxy is not a run in this sense: `pkit <capability> <command>` is a person's focused surface, so it takes the lookup, inherits the terminal's streams, and is neither bounded nor captured. A data point's question runs through the same proxy run (`dispatcher.run_as_typed`), since a person answers it ("A data point's question", below).
 
 #### How a registered anchor kind is resolved

@@ -109,11 +109,17 @@ class DataValidationIssue:
     in scope, a routine in-progress state per COR-029; reported, does not
     fail the run). Defaults to `"error"` so every existing call site keeps
     its hard-failure semantics.
+
+    `check`, on a shape finding, is the schema keyword the data breaks
+    (`required`, `additionalProperties`, `type`, ...): with the location it
+    tells one finding from another where the message, which names what the
+    data holds, cannot.
     """
 
     location: str  # path-relative-to-target or "<path>:<json-pointer>"
     message: str
     severity: Severity = "error"
+    check: str | None = None
 
 
 @dataclass(frozen=True)
@@ -281,6 +287,21 @@ def _resolve_from_field(
         )
     capability, schema_name = parts
     return _build_binding(data_path, target_root, capability, schema_name, source="field")
+
+
+def bind(
+    data_path: Path, target_root: Path, capability: str, schema_name: str
+) -> ResolvedBinding | BindingError:
+    """The binding `pkit_schema: <capability>:<schema_name>` gives `data_path`, whether
+    or not the file names it yet: for a writer that stamps that field, as a file it
+    creates is bound."""
+    return _build_binding(data_path, target_root, capability, schema_name, source="field")
+
+
+def schema_version_of(binding: ResolvedBinding) -> int | None:
+    """The `schema_version` the bound schema is at, which a file bound to it declares;
+    None where the schema's YAML does not say."""
+    return _read_schema_version(binding.schema_yaml)
 
 
 def _build_binding(
@@ -454,6 +475,17 @@ def validate_data_file(
         data = _yaml.load(data_path.read_text(encoding="utf-8"))
     except YAMLError as exc:
         return [DataValidationIssue(location=rel, message=f"YAML parse error: {exc}")]
+    return validate_data(data, binding, target_root)
+
+
+def validate_data(
+    data: Any, binding: ResolvedBinding, target_root: Path
+) -> list[DataValidationIssue]:
+    """The schema-version cross-check and the shape validation `validate_data_file`
+    runs, of `data` already in hand — the file's mapping, or what a writer is about
+    to make of it — against `binding`'s schema. Locations name `binding.data_path`.
+    Returns the findings (empty = clean)."""
+    rel = _rel(binding.data_path, target_root)
     data = _stringify_dates(data)
 
     # Load companion + run schema-version cross-check.
@@ -517,7 +549,11 @@ def validate_data_file(
         # (ADR-056 point 4); any other violation keeps the validator's message.
         for path, message in backbone_schemas.expand_schema_error(error):
             pointer = "/" + "/".join(path) if path else ""
-            issues.append(DataValidationIssue(location=f"{rel}{pointer}", message=message))
+            issues.append(
+                DataValidationIssue(
+                    location=f"{rel}{pointer}", message=message, check=str(error.validator)
+                )
+            )
     return issues
 
 
