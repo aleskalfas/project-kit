@@ -165,7 +165,7 @@ flowchart TD
 
 ## Declare your backbone configuration
 
-Your project's backbone configuration is one file, `.pkit/project/config.yaml`, which you write and no sync touches. It holds such settings as your default branch, your documentation roots and your places. The CLI reference lists every key ([its "Configuration file"](../../.pkit/cli/README.md#configuration-file)). How you write each kind of key, and how it is checked:
+Your project's backbone configuration is one file, `.pkit/project/config.yaml` <!-- unanchored: names the file the step reads or writes, not its content -->, which you write and no sync touches. It holds such settings as your default branch, your documentation roots and your places. The CLI reference lists every key ([its "Configuration file"](../../.pkit/cli/README.md#configuration-file)). How you write each kind of key, and how it is checked:
 
 - **A key that holds one value:** set it with `pkit config set`. The command checks the whole result against the schema first, then asks before it writes. Off a terminal it needs `--yes`.
 - **A key that holds a list,** such as your places, `friction.places`: write it in the file by hand. `pkit config set` refuses it, and names the file.

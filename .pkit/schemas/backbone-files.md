@@ -120,7 +120,7 @@ The container, in both its forms: a document's front matter, and a collection's 
 
 ### `config.schema.json`
 
-The backbone configuration file, `.pkit/project/config.yaml`. Its keys:
+The backbone configuration file, at the fixed path the CLI reference's "Configuration file" gives. Its keys:
 
 - `name`
 - `docs`
@@ -294,7 +294,7 @@ A revalidation, its deferrals and a revisit entry live in answer files of each c
 
 Artefacts are looked for only in the declared places:
 
-- **The project's places:** `friction.places` in `.pkit/project/config.yaml`. Each is a path or a glob from the repository's root. A folder, or a glob ending in `**`, means every Markdown file beneath it.
+- **The project's places:** `friction.places` in `.pkit/project/config.yaml` <!-- unanchored: names the file the step reads or writes, not its content -->. Each is a path or a glob from the repository's root. A folder, or a glob ending in `**`, means every Markdown file beneath it.
 - **Each installed capability's places:** `friction.places` in its `package.yaml`.
 
 **A capability's place** is an object, `{path, location?, type?, revisits?, derived-links?, description?}`. That is the package schema's only shape for it ([the lifecycle reference, "The connection, documentation and friction blocks"](../lifecycle/README.md#the-connection-documentation-and-friction-blocks)).
@@ -378,7 +378,7 @@ With `--at <rev>`, the same walk reads one commit. So a script reads another sta
 A type is a declared name for what an artefact is, and an artefact has one type or none ([COR-056](../decisions/core/COR-056-artefact-types.md)).
 
 - **A capability's types:** it declares them in its type registry, `friction.types` in its `package.yaml` ([the lifecycle reference, "The connection, documentation and friction blocks"](../lifecycle/README.md#the-connection-documentation-and-friction-blocks)). It names one on a place as `type`. Its full name is `<capability>:<name>`.
-- **A project's place** is a bare path, which gives no type, or `{path, type}` in `.pkit/project/config.yaml`. Its `type` is a bare type of the project's own, or a capability's type whose registry admits project places.
+- **A project's place** is a bare path, which gives no type, or `{path, type}` in `.pkit/project/config.yaml` <!-- unanchored: names the file the step reads or writes, not its content -->. Its `type` is a bare type of the project's own, or a capability's type whose registry admits project places.
 - **What the configuration schema refuses:** a `backbone:` type, since no place names one, and a value that is not a type's name.
 - **A rule** is always of the type `backbone:rule`.
 - **How a type resolves:** discovery resolves every other artefact's type from the places matching its file, and every reader takes it from there. The order of places, the kind field and the tie are [the CLI reference's, "Artefact types"](../cli/README.md#configuration-file).
@@ -434,7 +434,7 @@ Each of these fails `pkit validate`, in either mode, and names its fix (COR-050 
 - **A capability place not walked.** It is one not in the shape `{path, location?, type?, revisits?, derived-links?, description?}`. Or it names a location not declared as `{path, root?}`, with nothing recorded for it. Or it leaves the repository: it is absolute, climbs above the root, or resolves outside it through a link.
   - **Where it is reported:** against its `package.yaml`, with a JSON Pointer to the entry.
   - **When:** whenever it is declared, dormant or not. The pass's count line counts it.
-- **A place matching a synced copy** (`synced-place`): a declared place, the project's or a capability's, one of whose matches arrives as a copy. "Where artefacts are looked for" above says what a copy is. It is reported against its declaration, `.pkit/project/config.yaml` or the `package.yaml`, with a JSON Pointer to the entry. It names the synced matches, and is reported and counted as a place not walked is.
+- **A place matching a synced copy** (`synced-place`): a declared place, the project's or a capability's, one of whose matches arrives as a copy. "Where artefacts are looked for" above says what a copy is. It is reported against its declaration, `.pkit/project/config.yaml` <!-- unanchored: names the file the step reads or writes, not its content --> or the `package.yaml`, with a JSON Pointer to the entry. It names the synced matches, and is reported and counted as a place not walked is.
 - **A capability's surface entry not read.** `friction.surface` is not a list, or an entry in it is not a path or a glob. It is reported against its `package.yaml`, with a JSON Pointer to the entry, or to `friction.surface` itself. It is reported and counted as a place not walked is.
 - **A capability's held folder that holds nothing.** It holds nothing, so the places matching its documents read them as artefacts. It is reported whenever declared, dormant or not, against its `package.yaml` and a JSON Pointer to the entry. `pkit friction artefacts` names why, in the folder's `skipped`. It is one of these:
   - one not in its shape `{location, path, description?}`. It has no `location`, or a `**` or a glob in its last segment. Or its path leaves its location, or names a location `docs.locations` does not declare.

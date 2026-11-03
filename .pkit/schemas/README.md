@@ -400,7 +400,7 @@ The folder under the internal documentation root follows the root as it stands (
 
 A loaded set keeps operational rules, the rules every session loads (COR-068, [COR-070](../decisions/core/COR-070-capability-loaded-rules.md)).
 
-- **The backbone's** is `OPS`, `.pkit/rule-sets/ops.md`, whose loaded file is `.pkit/rules/core.md`. The rules area's README describes both.
+- **The backbone's** is `OPS`, `.pkit/rule-sets/ops.md`. The rules area's README describes it and its loaded file.
 - **A capability's,** where it ships one, sits in its `rule-sets/` folder. Its loaded file is its `rules.md`, and the capabilities' rules index reaches it.
 - **Where its rules bind:** on what a session does, not on files. So it takes none of the parts that say where a rule binds.
 
@@ -423,7 +423,7 @@ A loaded set keeps operational rules, the rules every session loads (COR-068, [C
 
 **The loaded file** is generated from the set by `pkit rule-sets generate`.
 
-- **Where it goes:** the backbone's goes to `.pkit/rules/core.md`, a capability's goes to `.pkit/capabilities/<name>/rules.md`, and a project's own goes to `.pkit/rules/project.md`. The set's owner fixes where it goes, never a key.
+- **Where it goes:** the backbone's goes to `.pkit/rules/core.md` <!-- unanchored: names the file the step reads or writes, not its content -->, a capability's goes to `.pkit/capabilities/<name>/rules.md`, and a project's own goes to `.pkit/rules/project.md` <!-- unanchored: names the file the step reads or writes, not its content -->. The set's owner fixes where it goes, never a key.
 - **What it holds:** the set's body, with each accepted rule's section under the heading `N. Title (RS-<SET>-NNN)`, at the level the set writes it. It leaves out the front matter, and each other rule's section.
 
 **Kept in step** (`loaded-file-stale`, an error). Where the set is authored, the pass compares the loaded file with the generator's output, byte for byte, once line endings are read as `\n`. A file that differs, or is missing, fails.
