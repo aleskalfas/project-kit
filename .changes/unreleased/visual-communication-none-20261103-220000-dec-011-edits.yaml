@@ -1,0 +1,7 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-010, DEC-002, DEC-003, DEC-005, DEC-006 and DEC-009 state in place
+  what DEC-011 decides of them (#2546). The records design ahead: the code
+  that reads a list of ties, its end fields and their key paths lands in a
+  later pull request, so no surface moves yet.
