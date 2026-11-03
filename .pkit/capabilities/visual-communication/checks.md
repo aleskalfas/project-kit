@@ -30,6 +30,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/seam.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/svg_declaration.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf_declaration.py
         - .pkit/capabilities/visual-communication/schemas/findings.schema.json
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
       record: ["visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012"]
@@ -289,7 +290,7 @@ The check reports `contrast-drawn`, `unknown-colour`, the two statuses and an `u
 
 | Label | What it means | Level | Where it points | What to do |
 |---|---|---|---|---|
-| `loss` | The SVG renderer, which draws every piece's previews and exports, does not draw an element's kind (it refuses it) or one of its properties (it leaves it out). The check knows this from the renderer's declaration, before it runs (DEC-005 point 9). Or a producer reported a loss, which its output's record keeps. | asks the piece's author for attention | `<piece>/piece.yaml#<trace>`; a producer's, `<piece>/piece.yaml#produced.<output>` | Accept it under the piece's `accept-losses` ([accepting a loss](outputs.md#accepting-a-loss)), or change what draws it. An accepted loss is not reported. |
+| `loss` | A renderer that draws the piece does not draw an element's kind (it refuses it) or one of its properties (it leaves it out). Those renderers are the SVG renderer, which draws every piece's previews, and the renderer of each format the piece exports in. The check knows this from each renderer's declaration, before it runs (DEC-005 point 9). Or a producer reported a loss, which its output's record keeps. | asks the piece's author for attention | `<piece>/piece.yaml#<trace>`; a producer's, `<piece>/piece.yaml#produced.<output>` | Accept it under the piece's `accept-losses` ([accepting a loss](outputs.md#accepting-a-loss)), or change what draws it. An accepted loss is not reported. |
 
 A loss of written code is `code-loss`, below. What a renderer finds only while it draws is the renderer's to report ([the loss report](outputs.md#the-loss-report)). A producer's losses are read from its record, since the check never runs a producer.
 

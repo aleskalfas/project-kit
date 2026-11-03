@@ -24,6 +24,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/seam.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/svg.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/svg_declaration.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf_declaration.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/css.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/css_declaration.py
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
@@ -32,7 +34,7 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/produced-record.schema.json
         - .pkit/capabilities/visual-communication/schemas/code.schema.json
         - .pkit/capabilities/visual-communication/schemas/code-record.schema.json
-      record: ["visual-communication:DEC-002", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-011", "visual-communication:DEC-012"]
+      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-011", "visual-communication:DEC-012"]
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -54,6 +56,7 @@ Plugins make what the capability gives out. A renderer draws a piece's scenes as
 <!-- pkit:contents -->
 - [Plugins](#plugins)
 - [The SVG renderer](#the-svg-renderer)
+- [The PDF renderer](#the-pdf-renderer)
 - [Exports](#exports)
 - [Produced pictures](#produced-pictures)
 - [Written code](#written-code)
@@ -67,17 +70,17 @@ A *plugin* is code that meets the engine at one *seam*: what the engine hands it
 - A *producer* makes a picture while a piece is prepared. A person or an agent runs it with `pkit visual produce`. No render, check or export runs it.
 - A *code writer* writes a brand's resolved values as code in one language.
 
-Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships the `svg` renderer at version 1.0.1 and the `css` code writer at version 1.0.0. No producer ships yet.
+Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships the `svg` renderer at version 1.0.1, the `pdf` renderer at version 1.0.0 and the `css` code writer at version 1.0.0. No producer ships yet.
 
 Each plugin declares what it can take, so the capability knows it without running the plugin. A renderer declares each primitive it draws, and each property of it. A producer declares its inputs, each a role of one *value type* (a token's DTCG type, such as `color`), and the value types it uses. A code writer declares the value types its language has a form for, the forms of its spelling, and the kinds of axis it spells.
 
-Each plugin also declares what it needs beyond the project's files: the outside programs it calls (`programs`) and the services it reaches (`services`), each a list of names (DEC-005 point 9). The SVG renderer and the CSS code writer call no outside program and reach no service. A producer that names a service is refused before it runs, since a plugin that reaches a service runs only where the project's configuration turns it on, and format 1's configuration turns none on (DEC-002 point 8). So is a producer that names a program the machine lacks.
+Each plugin also declares what it needs beyond the project's files: the outside programs it calls (`programs`) and the services it reaches (`services`), each a list of names (DEC-005 point 9). The SVG and PDF renderers and the CSS code writer call no outside program and reach no service. A producer that names a service is refused before it runs, since a plugin that reaches a service runs only where the project's configuration turns it on, and format 1's configuration turns none on (DEC-002 point 8). So is a producer that names a program the machine lacks.
 
 ### Versions
 
 - **A plugin's own version,** `X.Y.Z`, is apart from the capability's. It rises when the same input could give another output. Reference outputs pinned to it in the capability's tests catch a change made without a new version (DEC-005 point 9).
 - **The seam's version** is 3. A plugin's declaration names the seam version it reads, and the capability refuses a plugin of another version. Version 2 hands a renderer a text's runs, each with its own paint and fonts ([What a scene holds](components.md#what-a-scene-holds)). Version 3 hands it a line's arrowheads, and a tie's connector with its points and the elements its ends meet (DEC-011). What a producer and a code writer are handed and return is as version 1 had it.
-- **What rose with ties.** The seam rose to 3, since a renderer must read a line's new properties. The SVG renderer stays at 1.0.1, and the CSS code writer at 1.0.0. A scene of seam 2 holds no arrowhead and no connector, and each draws it as before.
+- **What rose with ties.** The seam rose to 3, since a renderer must read a line's new properties. The SVG renderer stays at 1.0.1, and the CSS code writer at 1.0.0. A scene of seam 2 holds no arrowhead and no connector, and each draws it as before. The PDF renderer reads seam 3 from its first version, 1.0.0.
 - **The document of values** that producers and code writers read has its own version, 1 ([The hand-over](#the-hand-over)).
 - **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1.
 - **None of these versions** is the format number of the files a project keeps.
@@ -133,14 +136,45 @@ Before it draws, the capability compares each scene with the renderer's declarat
 
 The third is `refused`: a line that holds neither its ends nor its points, which is left out of the file. Every line of a scene the engine computes holds its ends ([What a scene holds](components.md#what-a-scene-holds)).
 
+## The PDF renderer
+
+The `pdf` renderer draws a scene as one PDF file for each language and each combination of modes the piece names. The file holds the scene's pages in order, one PDF page for each. It draws the exports a piece declares as `pdf` ([Exports](#exports)); previews stay SVG.
+
+- **Pages.** Each page is as large as its frame. Each px of the scene is 0.75 pt of the page, CSS's 96 px to the inch. Format 1's top components declare no physical size, so the renderer's declaration states this mapping as its `unit` (DEC-001 point 2).
+- **Shapes and lines.** A box's stroke lies inside its frame, as in the SVG renderer. Rounded corners and ellipses are cubic Bézier curves. A line, or a tie's connector through each of its points, is stroked with SVG's miter limit. An arrowhead is the SVG renderer's triangle: five strokes long, its tip at the line's end, in the line's stroke.
+- **Colours.** A colour stays a role in the scene. The renderer takes its value from the brand's resolved values in the combination it draws, as DeviceRGB. A translucent colour takes an opacity of its own.
+- **Text.** Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. Each run is drawn in its own font, size and paint. The renderer shapes each span again with HarfBuzz from the committed font file, as the engine shaped it (DEC-005 point 4). It places each glyph at the advance shaped, so kerning is kept.
+- **Fonts.** Each family a run draws in is embedded once in the file, from the brand's committed font file, never from the machine's fonts. It is cut down to the glyphs the file draws in it. Each is a CID-keyed font with a map from each glyph back to its characters, so the text can be searched and copied. A CFF font is embedded as CFF, and a TrueType font as TrueType.
+- **A family's name** is written as a PDF name, in the font's dictionaries. Each byte of its UTF-8 that is no regular character, and each `#`, is written as `#` and two hexadecimal digits. A name cannot hold the byte 0, so U+0000 is written as U+FFFD. So no name a brand gives can end the dictionary that holds it.
+- **The file** names its language, `/Lang`, and the renderer with its version, `/Producer`.
+- **The same bytes.** Lengths are written to 1/100 px, colours to 1/10 000, and objects in one order. The streams are not compressed, so no compression library moves a byte. The file holds no date, and its `/ID` is taken from its own bytes. So the same scene and values give the same file on every machine.
+
+### What the PDF renderer does not carry yet
+
+The PDF is not tagged. It carries no alternative text, no reading order and no structure such as headings (DEC-005 point 5). Its declaration says so under `not-carried`, and a later version adds them ([project-kit#2570](https://github.com/aleskalfas/project-kit/issues/2570)). The reasons below hold for that change too:
+
+- **The capability's own code writes the PDF, on fontTools.** The capability already pins fontTools to measure and subset fonts, and HarfBuzz to shape text. A library pinned for exports alone would be fetched at the first export, yet drawing to a file needs no network (DEC-002 point 8). Each of its updates would also raise the renderer's version.
+- **Glyphs are placed from the shapes.** A renderer draws the lines the engine measured, so the PDF places each glyph by its id at the advance shaped. Each font carries a map back to Unicode, so the text is read without its shapes.
+- **The same scene gives the same file.** The `/ID` comes from the file's bytes, so a tagged PDF keeps it as stable as its content.
+
+### What the PDF renderer loses
+
+Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer ([What the SVG renderer loses](#what-the-svg-renderer-loses)). The declaration names every primitive of format 1's scene but the image. So an image is `refused`, and left out of the file. No producer ships yet, so no piece can show a picture yet ([Produced pictures](#produced-pictures)); a later version draws it. The check reports the loss for each piece that exports `pdf` (*Losses* in *What the check reports*).
+
+While it draws, the renderer reports three losses of its own:
+
+- **a fill or a stroke** whose role has no colour under the brand in the combination drawn, `left-out`. It is not drawn, but a run's text is drawn unpainted, so it can still be searched.
+- **a font file** whose outlines are neither CFF nor TrueType, such as CFF2, `left-out`. The text drawn in it is left out.
+- **a line** that holds neither its ends nor its points, `refused`, and left out of the file.
+
 ## Exports
 
 An *export* is a set of files a piece is handed out as. Each export run is one *version*, numbered within its piece (DEC-006 point 7).
 
-- **Formats.** A piece names its formats under `exports` in its `piece.yaml`. Format 1 knows one, `svg`, which the SVG renderer draws.
-- **What a run makes:** one file for each format, each page, each language and each combination of modes the piece names, drawn from the scenes under the lock `piece.yaml` holds.
+- **Formats.** A piece names its formats under `exports` in its `piece.yaml`. Format 1 knows two: `svg`, which the SVG renderer draws, and `pdf`, which the PDF renderer draws.
+- **What a run makes:** for `svg`, one file for each page, each language and each combination of modes the piece names; for `pdf`, one file for each language and combination, which holds every page in order. Each is drawn from the scenes under the lock `piece.yaml` holds.
 - **The number.** A run takes the number one higher than the highest version the piece's `exports.yaml` records or any file of its exports folder carries, or 1 where there is none. Every file of the run carries it, so version 3 in English matches version 3 in Czech. A file the record does not name, such as one a failed run could not remove, is never overwritten, and refuses no later run.
-- **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. A piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.<format>`, such as `deck.v1.en.default.2.svg`.
+- **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. An SVG file of a piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.svg`, such as `deck.v1.en.default.2.svg`. A PDF holds every page, so its name carries none: `deck.v1.en.default.pdf`.
 - **Where:** `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the clone and never committed. No export overwrites another. What is committed is the record of exports, in the piece's folder.
 
 ### The record of exports

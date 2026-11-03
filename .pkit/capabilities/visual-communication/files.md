@@ -216,7 +216,7 @@ lock:
 | `audience` | yes | Who the piece is for, in words. |
 | `shown` | yes | Where the piece is shown, in words. |
 | `explains` | yes | `true` where the piece explains, rather than only shows. |
-| `exports` | yes | The formats an export makes (*Exports* in *What is made from a piece*). |
+| `exports` | yes | The formats an export makes: `svg`, a file for each page, and `pdf`, a file that holds every page (*Exports* in *What is made from a piece*). |
 | `state` | yes | The piece's stage of life. Format 1 takes `draft` alone. |
 | `modes` | no | For each axis, the modes the piece is drawn in. An axis it leaves out is drawn in its default. |
 | `pinned` | no | `true` pins the lock. |
