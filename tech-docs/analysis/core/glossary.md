@@ -1908,7 +1908,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 **Distinctions:**
 
 - **Whole-repository check:** measures every [artefact](#term-artefact--artefact) from its own [revalidation point](#term-revalidation-point--revalidation-point) at the latest commit, and never fails (COR-050 points [6](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks) and [12](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
-- **Friction mode:** with `warning`, the change check reports and passes, and with `enforcing`, it fails. It binds once CI requires it (COR-050 point 12).
+- **Friction mode:** with `warning`, the change check reports and passes, and with `enforcing`, it fails. The change check binds once CI requires it (COR-050 point 12).
 - **The list of answers:** the answers that the change check reports a [change](#term-change--change) wrote, word for word, which a [reviewer](#term-reviewer--reviewer) works from ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 
 ## TERM-changeset — changeset
@@ -2254,7 +2254,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 - **A binding check:** the friction mode decides whether the change check can fail. Whether a failure holds a merge back is the [project](#term-project--project)'s choice, made by requiring the check in its CI ([COR-050 point 12](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
 - **Validation:** fails a malformed block, a dangling [deferral](#term-deferral--deferral) and the other faults it owns, whatever the friction mode (COR-050 point 12).
-- **A file's mode:** what git records of a file beside its content, such as whether it runs as a program. An [anchor](#term-anchor--anchor) stands on it, and it shares only the word ([COR-050 point 5](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#5-when-an-anchor-has-changed-and-what-answers-it)).
+- **A file's mode:** what git records of a file beside its content, such as whether it runs as a program. An [anchor](#term-anchor--anchor) stands on that mode, which shares only the word ([COR-050 point 5](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#5-when-an-anchor-has-changed-and-what-answers-it)).
 
 ## TERM-grant — grant
 
