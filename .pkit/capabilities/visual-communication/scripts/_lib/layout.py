@@ -20,6 +20,14 @@
 - `values`: named formulas, read by their name alone;
 - `preferred`: `width` and `height`, the size it asks for;
 - `parts`: drawn in order (below);
+- `lists`: for each list field a `repeat` part of its own repeats over, the fields DEC-010
+  gives that list, `{component: <field>, arrangement: {<field>: {words: [<word>, ...],
+  shares: {<word>: <number>, ...}}}}`. `component` names the list's component field, a
+  field of its own that no part places or passes on, in which content names the component
+  that draws each item that names none, as it places a component. Each arrangement field
+  is a key an item of the list may carry, taking one of its `words`, the first the
+  default; one with `shares`, a number above zero for each word, is the list's weight, of
+  which a list holds one at most (DEC-010 points 1 to 4);
 - `exposes`: the parts a component that places it may read. An exposed image part
   exposes its picture's points too, as parts of zero size of the component itself;
 - `layouts`, on a top component. Format 1's form is one layout, `{<layout>: {slots:
@@ -46,10 +54,15 @@
 - `use: <library>/<component>`, a component the part places, with `fields` (its field ->
   a field of this component) and `options` (its option -> a word, or a switch);
 - `slot: <field>`, the component the content places in that field;
-- `repeat: <list field>`, each item drawn by `draw` (a use) or the item's own `use`,
-  arranged by `row` or `column` with `gap`, `align-items` (`stretch start center end`),
-  `justify-content` (`start center end space-between`) and `sizes` (`own`, each item
-  its preferred size along the line, or `equal`, the line shared equally). `colour` gives
+- `repeat: <list field>`, each item drawn by the item's own `use`, else by the one its
+  list's component field names, else by `draw` (a use). An item that names none takes
+  each key the field gives that it does not give itself, and names the field as its
+  source. A key that both an item's component and its list declare is read by neither.
+  Items are arranged by `row` or `column` with `gap`, `align-items` (`stretch start
+  center end`), `justify-content` (`start center end space-between`) and `sizes` (`own`,
+  each item its preferred size along the line, `equal`, the line shared equally, or
+  `shares`, the line shared in proportion to the shares its list's weight gives its
+  items, equally where they are all the same). `colour` gives
   the items' default family.
 
 A part may carry `when`: a field the content fills, a field of runs where one of its
@@ -152,14 +165,22 @@ WORDS: Mapping[str, tuple[str, ...]] = {
     "text-anchor": ("start", "middle", "end"),
     "align-items": ("stretch", "start", "center", "end"),
     "justify-content": ("start", "center", "end", "space-between"),
-    "sizes": ("own", "equal"),
+    "sizes": ("own", "equal", "shares"),
 }
 OPERATOR_WORDS = ("align-items", "justify-content", "sizes")
 
 COMPONENT_KEYS = (
     "pkit_schema", "schema_version", "status", "about", "fields", "options", "states",
-    "colour", "values", "preferred", "parts", "exposes", "layouts",
+    "colour", "values", "preferred", "parts", "lists", "exposes", "layouts",
 )  # fmt: skip
+
+#: The keys of a list's entry under `lists`, and of an arrangement field's (DEC-010).
+LIST_KEYS = ("component", "arrangement")
+ARRANGEMENT_KEYS = ("words", "shares")
+
+#: The keys a list's component field gives each item that names no component of its own:
+#: its component's options, and these (DEC-010 point 1).
+GIVEN_BY_FIELD = ("concept", "state", "override")
 
 #: The key of a switch, which no option takes as a word.
 SWITCH = "by"
@@ -349,6 +370,100 @@ def page_forms(data: Any) -> PageForms | None:
     return PageForms(marked, declared)
 
 
+@dataclass(frozen=True)
+class ArrangementField:
+    """An arrangement field a pattern declares for a list (DEC-010 points 2 to 4): the
+    words an item of the list may give it, the first the default, and, where it is the
+    list's weight, the share each word stands for, a number with no unit."""
+
+    words: tuple[str, ...]
+    shares: Mapping[str, float] | None = None
+
+    @property
+    def default(self) -> str:
+        return self.words[0]
+
+
+@dataclass(frozen=True)
+class ListFields:
+    """What a component declares for a list it repeats (DEC-010 points 1 to 4): its
+    component field, in which content may name the component that draws each item that
+    names none, and its arrangement fields, by name."""
+
+    component: str | None
+    arrangement: Mapping[str, ArrangementField]
+
+    @property
+    def weight(self) -> tuple[str, ArrangementField] | None:
+        """The list's weight, by its name: its first arrangement field that gives shares."""
+        return next(
+            ((name, each) for name, each in self.arrangement.items() if each.shares is not None),
+            None,
+        )
+
+
+def list_fields(data: Any) -> dict[str, ListFields]:
+    """What a component's data declares under `lists`, by list, as far as it is of its
+    shape: a component field that is a name, and each arrangement field whose `words` are
+    names, each once, with its shares where each word has a number above zero. What is of
+    another shape is left out here, and the component's reading reports it. The engine
+    and the check of the content both read a list's fields so."""
+    lists = data.get("lists") if isinstance(data, Mapping) else None
+    found: dict[str, ListFields] = {}
+    for name, decl in (lists if isinstance(lists, Mapping) else {}).items():
+        if not isinstance(decl, Mapping):
+            continue
+        component = decl.get("component")
+        raw = decl.get("arrangement")
+        arranged = {}
+        for field_name, each in (raw if isinstance(raw, Mapping) else {}).items():
+            words = each.get("words") if isinstance(each, Mapping) else None
+            if (
+                _words_problem(words) is not None
+                or not names.is_name(field_name)
+                or field_name in names.RESERVED_PLACING_KEYS
+            ):
+                continue
+            arranged[str(field_name)] = ArrangementField(tuple(words), _shares(words, each))
+        found[str(name)] = ListFields(
+            str(component) if names.is_name(component) else None, arranged
+        )
+    return found
+
+
+def _words_problem(words: Any) -> str | None:
+    """Why an arrangement field's `words` are no list of words it may take, or None."""
+    if not isinstance(words, list) or not words:
+        return "declares no word"
+    if not all(names.is_name(word) and word != SWITCH for word in words):
+        return f"declares a word that is no name, or `{SWITCH}`"
+    if len(set(words)) != len(words):
+        return "declares a word twice"
+    return None
+
+
+def _is_share(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
+
+
+def _shares(words: list[str], decl: Mapping[str, Any]) -> dict[str, float] | None:
+    """A weight's share for each of its words, where `shares` gives each a number above
+    zero and names no other word; None otherwise."""
+    shares = decl.get("shares")
+    if not isinstance(shares, Mapping) or set(shares) != set(words):
+        return None
+    if not all(_is_share(share) for share in shares.values()):
+        return None
+    return {word: float(shares[word]) for word in words}
+
+
+def _leaves(value: Any) -> list[Any]:
+    """The values a value may take: itself, or each branch of its switch, at any depth."""
+    if isinstance(value, Mapping) and SWITCH in value:
+        return [leaf for key, each in value.items() if key != SWITCH for leaf in _leaves(each)]
+    return [value]
+
+
 # --- components ---------------------------------------------------------------------------
 
 
@@ -455,6 +570,10 @@ class Component:
             self.states[state] = decl.get("colour") if isinstance(decl, Mapping) else None
         for name, spec in self._mapping(data, "parts").items():
             self._read_kind(name, spec)
+        # What it declares for each list it repeats, known before any `repeat` part is
+        # read, which may share its line by the list's weight (DEC-010).
+        self.list_fields: dict[str, ListFields] = list_fields(data)
+        self._read_lists(data)
         for name, value in self.values.items():
             if name in self.parts:
                 self._shape(f"values.{name}", f"names `{name}` both a value and a part")
@@ -633,6 +752,112 @@ class Component:
                 self._switched(at, value, self._words(WORDS[key]))
             else:
                 self._shape(at, f"`{operators[0]}` takes no `{key}`")
+        declared = self.list_fields.get(listed) if isinstance(listed, str) else None
+        if "shares" in _leaves(settings.get("sizes")) and (declared is None or not declared.weight):
+            self._shape(
+                f"{where}.{operators[0]}.sizes",
+                f"shares the line by the weight of `{listed}`, and declares no weight for it "
+                "under `lists`",
+            )
+
+    def _read_lists(self, data: Mapping[str, Any]) -> None:
+        """What the component declares under `lists` (DEC-010 points 1 to 4, and 9). Each
+        entry is for a list field that a `repeat` part of its own repeats over, never the
+        field that holds a top's pages. Its component field is a field of its own that
+        holds no list, and that no part places or passes on. Each arrangement field is a
+        name and no reserved key's, with its words, each once, and, for a weight, a share
+        above zero for each word. A list takes one weight at most."""
+        for listed, decl in self._mapping(data, "lists").items():
+            where = f"lists.{listed}"
+            schema = self.fields.get(listed)
+            if isinstance(schema, Mapping) and schema.get(PAGES) is True:
+                self._shape(
+                    where,
+                    f"declares fields for `{listed}`, the list of its pages: a page's content is "
+                    "its layout's or its component's, so the list takes no component field and "
+                    "no arrangement field",
+                )
+                continue
+            if listed not in self.repeats_over:
+                self._shape(
+                    where, f"declares fields for `{listed}`, over which no part of it repeats"
+                )
+            if not isinstance(decl, Mapping):
+                self._shape(where, f"`{listed}` holds no mapping of `component` and `arrangement`")
+                continue
+            for key in decl:
+                if key not in LIST_KEYS:
+                    self._shape(f"{where}.{key}", f"the entry of `{listed}` takes no `{key}`")
+            if "component" in decl:
+                self._read_component_field(f"{where}.component", listed, decl["component"])
+            arrangement = decl.get("arrangement", {})
+            if not isinstance(arrangement, Mapping):
+                self._shape(f"{where}.arrangement", "`arrangement` is not a mapping")
+                continue
+            weights = [
+                name
+                for name, each in arrangement.items()
+                if self._read_arrangement(f"{where}.arrangement.{name}", name, each)
+                and "shares" in each
+            ]
+            for name in weights[1:]:
+                self._shape(
+                    f"{where}.arrangement.{name}",
+                    f"`{listed}` has the weight `{weights[0]}` already: an item takes one share "
+                    "of its line",
+                )
+
+    def _read_component_field(self, where: str, listed: str, name: Any) -> None:
+        """A list's component field: a field of the component's own that holds no list,
+        which no part places or passes on, since it places nothing (DEC-010 point 1)."""
+        if not _is_field(name, self.fields):
+            self._shape(where, f"the component field of `{listed}` names no field `{name}`")
+            return
+        if name in self.lists:
+            self._shape(
+                where,
+                f"the component field `{name}` is a list field: it holds one mapping, which "
+                "names a component",
+            )
+        for part in self.parts.values():
+            bound = part.spec.get("fields") if part.kind == "use" else None
+            if part.kind == "slot" and part.spec.get("slot") == name:
+                done = "places"
+            elif isinstance(bound, Mapping) and name in bound.values():
+                done = "passes on"
+            else:
+                continue
+            self._shape(
+                where,
+                f"the part `{part.name}` {done} the component field `{name}`, which places "
+                f"nothing: it names the component of each item of `{listed}`",
+            )
+
+    def _read_arrangement(self, where: str, name: Any, decl: Any) -> bool:
+        """An arrangement field of a list (DEC-010 points 2 to 4): a name and no reserved
+        key's, which takes one of its `words`, the first the default; a weight also gives
+        `shares`, a number above zero for each word and no other. True where its words
+        may be read."""
+        if not names.is_name(name) or name in names.RESERVED_PLACING_KEYS:
+            self._shape(where, f"the arrangement field `{name}` is no name, or a reserved key's")
+            return False
+        if not isinstance(decl, Mapping):
+            self._shape(where, f"the arrangement field `{name}` holds no mapping of `words`")
+            return False
+        for key in decl:
+            if key not in ARRANGEMENT_KEYS:
+                self._shape(f"{where}.{key}", f"an arrangement field takes no `{key}`")
+        problem = _words_problem(decl.get("words"))
+        if problem is not None:
+            self._shape(f"{where}.words", f"the arrangement field `{name}` {problem}")
+            return False
+        if "shares" in decl and _shares(decl["words"], decl) is None:
+            self._shape(
+                f"{where}.shares",
+                f"the weight `{name}` gives each of its words a share above zero, and names no "
+                "other word",
+            )
+        return True
 
     def _read_when(self, where: str, when: Any) -> None:
         if isinstance(when, str):
@@ -1293,6 +1518,8 @@ class Instance:
         self.part_name = part
         self.is_item = is_item  # an item its parent's list draws
         self.position = 0  # its place among the items its list draws, from 0
+        # The word each arrangement field of its list takes on it, where it is an item.
+        self.arranged: dict[str, str] = {}
         self.chain = chain or (component.use,)
         self.cells: dict[tuple[str, ...], Any] = {}
         self.nodes: dict[str, Node] = {}
@@ -1771,17 +1998,26 @@ class Instance:
             )  # fmt: skip
 
     def _build_items(self, node: Node, trace: str) -> None:
-        """Each item of the list the part repeats over, drawn in the content's order. An item
-        that is no mapping, repeats an id, or names no component is left out: it takes no
-        place among the items drawn, so `:index` and `:count` never count it. Its trace
-        keeps its place in the content's list, and so does its key path, which names the
-        list as the content file writes it."""
+        """Each item of the list the part repeats over, drawn in the content's order. What
+        draws an item is the component its own `use` names, else the one its list's
+        component field names, else the part's `draw` (DEC-010 point 1). An item that names
+        none takes each key the field gives that it does not give itself, which names the
+        field as its source. The item's component never reads an arrangement field of its
+        list: the item keeps the word each takes in `arranged`. A key that both the item's
+        component and its list declare is read by neither, so the component's field stays
+        unfilled and the arrangement field takes its default (point 2). An item that is no
+        mapping, repeats an id, or names no component is left out: it takes no place among
+        the items drawn, so `:index` and `:count` never count it. Its trace keeps its place
+        in the content's list, and so does its key path, which names the list as the
+        content file writes it."""
         spec = node.part.spec
         name = spec["repeat"]
         listed = self.given.get(name)
         listed = listed if isinstance(listed, list) else []
         place = (spec["colour"], f"default:{self.component.use}") if spec.get("colour") else None
         path = self.field_path(name)
+        declared = self.component.list_fields.get(name, ListFields(None, {}))
+        chosen = self._list_component(node, declared, trace)
         seen: set[str] = set()
         for index, item in enumerate(listed, start=1):
             key = item.get("id") if isinstance(item, Mapping) else None
@@ -1797,19 +2033,54 @@ class Instance:
                 continue
             if key is not None:
                 seen.add(key)
-            use = item.get("use", spec.get("draw"))
-            component = self._component(node, use, at, by_content="use" in item)
+            given: Mapping[str, Any] = item
+            sources: dict[str, str] = {}
+            if "use" in item:
+                component = self._component(node, item["use"], at, by_content=True)
+            elif chosen is not None:
+                component, by_field, field_source = chosen
+                taken = {k: v for k, v in by_field.items() if k not in item}
+                given = {**taken, **item}
+                sources = {k: f"{field_source}.{k}" for k in taken}
+            else:
+                component = self._component(node, spec.get("draw"), at, by_content=False)
             if component is None:
                 node.present = True  # the list stays; the item is left out
                 continue
+            claimed = {*component.fields, *component.options}
             instance = Instance(
-                self.ctx, component, item, trace=at,
-                content_path=None if path is None else f"{path}{step}", parent=self,
-                part=node.part.name, is_item=True, place_colour=place,
-                through_pages=name in self.component.pages,
+                self.ctx, component,
+                {k: v for k, v in given.items() if k not in declared.arrangement},
+                trace=at, content_path=None if path is None else f"{path}{step}",
+                sources=sources, parent=self, part=node.part.name, is_item=True,
+                place_colour=place, through_pages=name in self.component.pages,
             )  # fmt: skip
             instance.position = len(node.items)
+            for field_name, each in declared.arrangement.items():
+                word = item.get(field_name)
+                read = field_name not in claimed and word in each.words
+                instance.arranged[field_name] = word if read else each.default
             node.items.append(instance)
+
+    def _list_component(
+        self, node: Node, declared: ListFields, trace: str
+    ) -> tuple[Component | None, dict[str, Any], str] | None:
+        """The component a list's component field names (DEC-010 point 1), with the keys
+        the field gives each item that names none, its component's options, `concept`,
+        `state` and `override`, and the field's source. None where the component declares
+        no component field for the list, or the content names no component in it, so the
+        part's `draw` draws such an item; the check of the content reports a field of
+        another shape. A component the field names that there is none of is reported once,
+        at the part's trace, and draws no item."""
+        raw = self.given.get(declared.component) if declared.component is not None else None
+        if not isinstance(raw, Mapping) or not isinstance(raw.get("use"), str):
+            return None
+        component = self._component(node, raw["use"], trace, by_content=True)
+        node.present = True  # the list stays
+        if component is None or declared.component is None:
+            return None, {}, ""
+        given = {k: v for k, v in raw.items() if k in component.options or k in GIVEN_BY_FIELD}
+        return component, given, self.source_of_field(declared.component)
 
     def _build_pages(self) -> list[Instance]:
         """The pages of a top whose layouts are its pages' forms, in the content's order
@@ -2047,7 +2318,10 @@ class Instance:
         return self.word(where, part.settings.get(key), WORDS[key][0])
 
     def _arrange(self, name: str, axis: str) -> Arrangement:
-        """A list's items laid out along its line (`main`) or across it (`cross`)."""
+        """A list's items laid out along its line (`main`) or across it (`cross`). Along
+        it, with `sizes: shares`, the items share the part's size, less the gaps, in
+        proportion to the share its list's weight gives each, and equally where every
+        share is the same (DEC-010 point 4)."""
         node = self.nodes[name]
         part, items = node.part, node.items
         count = len(items)
@@ -2066,11 +2340,17 @@ class Instance:
         raw = part.settings.get("gap")
         gap = self.number(f"parts.{name}.{part.operator}.gap", raw) if raw is not None else 0.0
         gaps = gap * max(count - 1, 0)
-        if self.setting(name, "sizes") == "own":
+        sharing = self.setting(name, "sizes")
+        shares = self._item_shares(name, items) if sharing == "shares" else []
+        if sharing == "own":
             sizes = [item.get("preferred", size) for item in items]
         elif given is None:
-            message = f"{self.trace}/{name}: the list shares its {size} equally, and is given none"
+            how = "equally" if sharing == "equal" else "by its items' weights"
+            message = f"{self.trace}/{name}: the list shares its {size} {how}, and is given none"
             raise self._fail("no-size", message, where=f"{self.trace}/{name}")
+        elif len(set(shares)) > 1:
+            total = sum(shares)
+            sizes = [(given - gaps) * share / total for share in shares]
         else:
             sizes = [(given - gaps) / count] * count if count else []
         asked = sum(sizes) + gaps
@@ -2084,6 +2364,18 @@ class Instance:
             offsets.append(at)
             at += each + gap
         return Arrangement(tuple(offsets), tuple(sizes), asked)
+
+    def _item_shares(self, name: str, items: list[Instance]) -> list[float]:
+        """The share each item of a list takes of its line: the one its list's weight gives
+        the word it carries. A list with no weight, reported when the component was read,
+        gives each item the same."""
+        listed = self.nodes[name].part.spec["repeat"]
+        declared = self.component.list_fields.get(listed)
+        weight = declared.weight if declared is not None else None
+        if weight is None or weight[1].shares is None:
+            return [1.0] * len(items)
+        field_name, each = weight
+        return [each.shares[item.arranged.get(field_name, each.default)] for item in items]
 
     def item_frame(self, name: str, position: int) -> tuple[float, float, float, float]:
         """An item's frame within its list's part: x, y, width, height."""

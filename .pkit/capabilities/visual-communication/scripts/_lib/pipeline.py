@@ -18,6 +18,9 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
   (DEC-004 point 10), the combinations the piece names, and the `Env` over them. It
   computes one scene for each language and each key over the size axes; format 1 has no
   size axis, so that key is always `default`.
+- **A library version checked alone** is read through `LibraryEnv`, an `Env` that no
+  piece or brand stands behind: components from a combination of library versions, and
+  roles from their declarations alone (DEC-008 point 1, DEC-010 point 9).
 - **A produced picture** is read from `produced/<output>/record.yaml`. A missing record,
   or a variant file it names that is missing, makes the picture missing for the engine,
   with the reason kept so the finding names `pkit visual produce <piece> <output>`; it
@@ -33,9 +36,9 @@ from pathlib import Path
 from typing import Any
 
 from _lib import keys, notations, records, tokens, values
-from _lib.env import PictureInfo, UnknownConcept, UnreadableComponent
+from _lib.env import MissingFont, PictureInfo, UnknownConcept, UnreadableComponent
 from _lib.files import FileError, read_bound, refuse_links, without_binding, write_whole
-from _lib.libraries import FOLDER, FOUNDATIONS, Held, Version
+from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, Version
 from _lib.location import files as listed_files
 from _lib.names import PIECE, is_language, is_name, split_use
 from _lib.plugins import seam
@@ -454,20 +457,10 @@ class ProjectEnv:
     def _read_component(self, use: str) -> dict[str, Any] | None:
         """A component's data; None where there is none, and where its file is present and
         cannot be read as one, why kept in `_unreadable`."""
-        path = self.component_path(use)
-        if path is None or not path.is_file():
-            return None
-        try:
-            data = read_yaml(path)
-        except ReadError as exc:
-            # The reader names the file by its path on this machine. The finding names it
-            # from the piece or the version, so a findings record holds where the work moves.
-            self._unreadable[use] = str(exc).removeprefix(f"{path}: ")
-            return None
-        if not isinstance(data, Mapping):
-            self._unreadable[use] = "it is not a mapping"
-            return None
-        return dict(data)
+        data, why = read_component(self.component_path(use))
+        if why is not None:
+            self._unreadable[use] = why
+        return data
 
     def component_path(self, use: str) -> Path | None:
         """The file of a component, by its use; None where the lock names no version of its
@@ -576,6 +569,93 @@ class ProjectEnv:
 
     def library_version(self, library: str) -> str:
         return self._project.lock[library]
+
+
+def read_component(path: Path | None) -> tuple[dict[str, Any] | None, str | None]:
+    """A component's data from its file at `path`; None where there is no such file. Where
+    the file is present and cannot be read as a component, None and why. The reader names
+    the file by its path on this machine, and why names it by nothing: the finding names
+    it from the piece or the version, so a findings record holds where the work moves."""
+    if path is None or not path.is_file():
+        return None, None
+    try:
+        data = read_yaml(path)
+    except ReadError as exc:
+        return None, str(exc).removeprefix(f"{path}: ")
+    if not isinstance(data, Mapping):
+        return None, "it is not a mapping"
+    return dict(data), None
+
+
+class LibraryEnv:
+    """The `Env` a library version checked alone is read through, which no piece or brand
+    stands behind (DEC-008 point 1, DEC-010 point 9): components from a combination of
+    library versions, such as the one `libraries.newest_of_majors` chooses, and roles from
+    the declarations alone, the scope of those versions (`tokens.Scope`).
+
+    A role's value is a stand-in of the type its declaration gives, of no magnitude: a
+    length of 0 px, the number 0, or, for any other type, a mapping that holds the type
+    alone. So the engine reads a component's formulas, their dimensions included, as under
+    any brand that gives each role a value of its type. It computes no scene: no font,
+    produced picture or concept lies behind it."""
+
+    def __init__(self, versions: Mapping[str, Library], scope: tokens.Scope) -> None:
+        self._versions = dict(versions)
+        self._scope = scope
+        self._components: dict[str, dict[str, Any] | None] = {}
+        self._unreadable: dict[str, str] = {}
+
+    def component(self, use: str) -> dict:
+        if use not in self._components:
+            data, why = read_component(self.component_path(use))
+            self._components[use] = data
+            if why is not None:
+                self._unreadable[use] = why
+        if use in self._unreadable:
+            raise UnreadableComponent(use, self._unreadable[use])
+        found = self._components[use]
+        if found is None:
+            raise KeyError(use)
+        return found
+
+    def component_path(self, use: str) -> Path | None:
+        """The file of a component, by its use; None where the combination holds no version
+        of its library, and for a piece's own component, since no piece stands behind it."""
+        try:
+            library, name = split_use(use)
+        except ValueError:
+            return None
+        version = self._versions.get(library)
+        if library == PIECE or version is None:
+            return None
+        return version.folder / COMPONENTS / f"{name}.yaml"
+
+    def role(self, token_path: str) -> Any:
+        """A stand-in of the role's declared type. Raises tokens.UnknownRole, a KeyError,
+        for a path no declaration of the scope holds."""
+        kind = self._scope.type_of(token_path)
+        if kind == "dimension":
+            return {"value": 0.0, "unit": "px"}
+        if kind == "number":
+            return 0.0
+        return {"$type": kind}
+
+    def font_file(self, family: str) -> Path:
+        raise MissingFont(
+            f"no brand stands behind a library checked alone, so no file measures {family!r}"
+        )
+
+    def picture(self, output: str) -> PictureInfo:
+        raise KeyError(output)
+
+    def family(self, name: str) -> dict[str, str]:
+        return dict(self._scope.families[name])
+
+    def concept(self, name: str) -> str | None:
+        raise UnknownConcept(name, "no piece names a notation where a library is checked alone")
+
+    def library_version(self, library: str) -> str:
+        return str(self._versions[library].version)
 
 
 class _Missing(Exception):
