@@ -20,6 +20,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/reading.py
         - .pkit/capabilities/visual-communication/scripts/_lib/records.py
         - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/notations.py
         - .pkit/capabilities/visual-communication/scripts/_lib/keys.py
@@ -52,7 +53,7 @@ pkit:
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/notation.yaml
         - tests/fixtures/visual-communication/libraries/test-parts/1.0.0/roles.yaml
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-010", "visual-communication:DEC-012"]
+      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-010", "visual-communication:DEC-012", "visual-communication:DEC-013"]
 ---
 
 # The files of the visual work
@@ -323,9 +324,33 @@ open: [accent, space]
 
 Every field is required, `builds-on: []` included. `dtcg`, `resolver` and `open` are required of a brand, and refused in a component library or a notation.
 
+### The libraries the capability ships
+
+The capability's own folder, `.pkit/capabilities/visual-communication/`, keeps for each library it ships (DEC-013 point 2):
+
+- **The version being built,** `libraries/<library>/`, under a name that names no version. Every change to the library goes into it, so a change of its number moves no file. The libraries the capability ships are those with a version being built.
+- **Each released version,** whole, as it was released, at `releases/<library>/<version>/`. Its release adds the folder, and nothing later renames, removes or changes a file in it.
+- **The library's record,** `releases/<library>/releases.yaml`, beside its released versions. A library with no released version has no record.
+
+The record is a list of libraries that holds the one library, in the shape of a location's list ([The list, `libraries.yaml`](#the-list-librariesyaml)). It names the source `shipped`, and each released version with `released: true` and its `hash`. The hash is the fingerprint over every file of the released version, its `library.yaml` with the release it needs included.
+
+```yaml
+pkit_schema: visual-communication:libraries
+schema_version: 1
+libraries:
+  foundations:
+    source: {kind: shipped}
+    versions:
+      1.0.0: {released: true, hash: {form: 1, hash: sha256, format: 1, value: …, inputs: […]}}
+```
+
+The released versions and the record lie outside the version being built, and each library's apart from every other's. So a release changes no file of the version being built. Only whoever maintains the capability releases a version, by a release of its own. A release of the capability releases none (DEC-013 point 1).
+
+Every change to a version the capability ships reaches a project that brings it in. So it ships as at least a patch of the capability, as [`libraries/README.md`](libraries/README.md) asks of whoever changes it (DEC-013 point 4).
+
 ### The foundations
 
-The capability ships the foundations at `.pkit/capabilities/visual-communication/libraries/foundations/`: version 1.0.0, of kind `components`, needing release 0.1.0, building on nothing, and not yet released. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the folder whole to `libraries/foundations/1.0.0/` and lists it with `source: {kind: shipped}` ([What the location holds](#what-the-location-holds)). The foundations hold:
+The capability ships the foundations' version being built at `.pkit/capabilities/visual-communication/libraries/foundations/` ([The libraries the capability ships](#the-libraries-the-capability-ships)): version 1.0.0, of kind `components`, needing release 0.1.0, building on nothing, and not yet released. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the folder whole to `libraries/foundations/1.0.0/` and lists it with `source: {kind: shipped}` ([What the location holds](#what-the-location-holds)). The foundations hold:
 
 - `library.yaml`;
 - `roles.yaml`, the shared roles, axes, colour families and contrast pairs that every library shares (DEC-004 points 2, 7 and 8);
