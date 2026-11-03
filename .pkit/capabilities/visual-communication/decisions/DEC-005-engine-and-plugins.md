@@ -31,14 +31,14 @@ A *formula* computes one number in a component's data.
 - **Where lengths come from:** a role's value, the size the component gets, and the frames point 3 lets it read. A *frame* is an element's place and size. A literal length would be a raw value, which no component holds (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 5).
 - **Dimensions are checked.** The terms of a sum share one dimension. A number with no unit may scale a length, and is never added to one.
 - **What it never holds:** a comparison, a condition, a loop, text, or a function a library defines.
-- **A choice is declared, never computed.** A component chooses between values or parts by an option, or by whether a field is filled, which its schema checks (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 6).
+- **A choice is declared, never computed.** A component chooses between values or parts by an option, or by whether a field is filled, which its schema checks (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 6). The option may also be an *arrangement field*: a word that a pattern declares for the items of a list, and each item gives. Only the pattern chooses by it, and only how it sizes or places that item (refinement per [visual-communication:DEC-010-list-item-fields]).
 - **A new function or name is a new tool of the engine.** The capability's reference holds the grammar.
 
 ### 2. Layout operators arrange, and connectors route simply
 
 - **Repetition** draws a component once for each item of a list in the content.
 - **Layout operators** stack elements, align them, distribute them and give them equal sizes. They reach a list's first item, its last, or an item by its id. Their names follow CSS's flexible layout where the meanings match.
-- **No operator chooses, filters or sorts items by what they hold.** The content's order and the declared options decide.
+- **No operator chooses, filters or sorts items by what they hold.** The content's order and the declared options decide how items are arranged. An arrangement field sets how the pattern sizes or places its item, and never chooses, filters or sorts (refinement per [visual-communication:DEC-010-list-item-fields]).
 - **Connectors** join named elements, straight, with corners or curved, with their ends spread evenly. They never route around obstacles.
 - **A layout no operator computes,** such as a graph's, is work outside the engine (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 8). A new operator is added when a need recurs, and built and tested once ([visual-communication:DEC-001-visual-communication-discipline] point 4).
 
@@ -70,7 +70,7 @@ A *formula* computes one number in a component's data.
   - Documents and PDF files get alternative text, a reading order, and structure such as headings, lists, tables and captions.
 - **Values stay roles.** Each value that moves nothing, such as a colour or a picture, names its role. Its value comes from the document of point 7, so one scene serves every mode of the value axes. So the variants of one picture in one scene share one pixel size, and the same exposed points at the same places.
 - **The root says what the scene is:** the piece, its lock, its language, the key over its size axes, and the seam's version.
-- **Pages are declared by a slot.** A top component's slot says that its items are pages. A diagram is then a page alone, and part of a page inside a slide. A page inside a page is an error.
+- **Pages are declared by a slot, or by a field the top marks** (refinement per [visual-communication:DEC-010-list-item-fields]). A top component's slot says that its items are pages. A diagram is then a page alone, and part of a page inside a slide. A page inside a page is an error. A top whose pages each take one of its layouts, such as a deck with a cover and a slide, marks the field that holds its pages instead, and that field lies in no layout.
 - **Every element carries its trace** (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 3). Its id comes from the path of instances, parts and item ids, or an item's place where it has no id, never from the order of drawing. Each property names its source: a content field, an option, a library's default, a role, or the engine.
 - **Computed, never committed.** Order and rounding are fixed, so under one release of the capability the same files give the same scene on every machine, and two scenes compare.
 
