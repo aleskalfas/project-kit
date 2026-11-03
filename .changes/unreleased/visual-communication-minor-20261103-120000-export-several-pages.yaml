@@ -1,0 +1,13 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit visual export` exports a piece of several pages (#2504): one SVG
+  file for each page, language and combination, under one version number.
+  A piece of more than one page adds the page's number, from 1, to each
+  file's name, `<piece>.v<N>.<language>.<key>.<n>.svg`, as its previews are
+  named; a piece of one page keeps the name it had. The `exports` schema
+  accepts the page's number in a file's name, and every name it accepted
+  before. A piece with no page in one of its languages is refused, as
+  before.
