@@ -25,13 +25,13 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md
         - .pkit/capabilities/visual-communication/files.md#a-piece
         - .pkit/capabilities/visual-communication/files.md#brands
+        - .pkit/capabilities/visual-communication/files.md#notations
         - .pkit/capabilities/visual-communication/files.md#the-binding
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#the-library-folder
         - .pkit/capabilities/visual-communication/files.md#the-location
         - .pkit/capabilities/visual-communication/files.md#the-lock
-        - .pkit/capabilities/visual-communication/files.md#notations
         - .pkit/capabilities/visual-communication/outputs.md
         - .pkit/capabilities/visual-communication/outputs.md#exports
         - .pkit/capabilities/visual-communication/outputs.md#plugins
@@ -58,7 +58,7 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 - **The check,** the `visual-communication:check` member of `pkit validate`.
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
 
-No brand, notation or producer ships ([Brands](files.md#brands), [Plugins](outputs.md#plugins)). A project writes its own brand and notations, and `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)).
+No brand, notation or producer ships ([Brands](files.md#brands), [Notations](files.md#notations), [Plugins](outputs.md#plugins)). A project writes its own brand and notations, and `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)).
 
 The pages beside this README are the reference:
 

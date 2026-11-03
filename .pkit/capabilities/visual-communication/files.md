@@ -55,7 +55,7 @@ pkit:
 
 # The files of the visual work
 
-Where a project's visual work lies, what each of its files holds, and who writes each one. The examples come from the shipped foundations library and from the capability's test files. The test brand `test-brand`, the test library `tests` and the test notation `test-notation` exist for the tests only: no notation ships.
+Where a project's visual work lies, what each of its files holds, and who writes each one. The examples come from the shipped foundations library and from the capability's test files. The test brand `test-brand`, the test library `tests` and the test notation `test-notation` exist for the tests only.
 
 ## Contents
 
@@ -467,6 +467,8 @@ An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* 
 ## Notations
 
 A *notation* is a library of kind `notation`: the concepts of one subject, each mapped to a colour family the foundations declare (DEC-004 point 10). It maps a concept to a family, never to a value, so each brand colours the concept its own way. Its version folder holds its `library.yaml`, which builds on the foundations, and its `notation.yaml`. The test notation, `test-notation`, names the parts of a system.
+
+No notation ships with the capability. A project writes its own, and keeps it in its library folder as it keeps any library ([The library folder](#the-library-folder)).
 
 ### `notation.yaml`
 
