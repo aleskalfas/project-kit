@@ -87,7 +87,7 @@ A block draws one item of a pattern, or stands alone where content places it.
 
 ### `connector`
 
-- **Form:** a line from where a tie starts to where it ends, in its colour family's line, with arrowheads where the content asks. It routes around nothing, so a tie best joins items that face each other.
+- **Form:** a line from where a tie starts to where it ends, in its colour family's text, with arrowheads where the content asks. It routes around nothing, so a tie best joins items set apart, with nothing between them.
 - **Source:** Yuri Engelhardt's linking by a connector, and the straight and elbow connectors of diagram editors.
 - **Evidence:** the arrows from the notes to the layers on the `fits` slide, and the lines from capabilities to slots on the `connect` slide.
 - **Ends:** it takes the two ends a pattern's list of ties gives it, so a pattern draws it as a tie.
@@ -99,12 +99,15 @@ A block draws one item of a pattern, or stands alone where content places it.
 
 Each starter component declares the colour family `neutral`, which the concept an item names replaces with the concept's own. A text in a family's text lies on that family's fill, a pair the foundations declare. On the surface, a card's texts take the shared roles `text-primary` and `text-secondary` instead. So a run of a card's text reads the family only where the card is tinted.
 
+A connector's line takes its family's text, not its line. Nothing beside the line shows the tie, so it needs a contrast of 3 to 1 against what it lies on (WCAG 2.1, success criterion 1.4.11). A family's line edges a fill, and may be faint: the neutral family's is the shared `line`. A family's text is the member a brand makes legible, since the foundations pair it with the family's fill.
+
 ## Shared roles, and the starter's own
 
 A component reads a shared role where the starter means just that role, such as the body's type or the surface. It reads one of its own roles where a brand may want the starter's look apart, such as a card's corners.
 
 - **Colours** are always shared: `surface`, `line`, `text-primary`, `text-secondary`, and each family's `fill`, `line` and `text`. The starter declares no colour role, and so no contrast pair.
 - **Shared sizes and types:** `type.body` sets a card's plain text and a tag's label. `space.1` and `space.2` lie around a tag's label, and between a card's head, tag and text.
+- **The shared roles the starter adds:** `stroke.thick`, the width of a line drawn on its own, and `type.strong`, the body's type in a heavier weight. Neither has a default, so every brand gives each a value (visual-communication DEC-008 point 2).
 - **The starter's own roles,** each with a default whose chain ends at a shared role:
 
 | Role | What it sizes or sets | Its default |
@@ -114,11 +117,13 @@ A component reads a shared role where the starter means just that role, such as 
 | `starter.gap` | the space between a pattern's items | `space.3` |
 | `starter.bar` | how thick a card's bar is | `space.1` |
 | `starter.edge` | how wide a card's and a tag's edge is | `stroke.thin` |
-| `starter.connector` | how wide a connector's line is | `starter.edge` |
+| `starter.connector` | how wide a connector's line is | `stroke.thick` |
 | `starter.type.head` | the type of a card's head and a list's head | `type.heading` |
-| `starter.type.strong` | the type of a strong run in a card's text | `starter.type.head` |
+| `starter.type.strong` | the type of a strong run in a card's text | `type.strong` |
 
-A brand that does not name the starter draws it at these defaults, in the brand's own values for the shared roles. A brand that names the starter by its major, 1, may give any of these roles a value of its own (visual-communication DEC-008 point 4). At the defaults a strong run takes the head's type, larger than the body, since the shared roles hold no strong body type.
+A brand that does not name the starter draws it at these defaults, in the brand's own values for the shared roles. A brand that names the starter by its major, 1, may give any of these roles a value of its own (visual-communication DEC-008 point 4).
+
+At the defaults a connector's line is a line drawn on its own, not an edge. Its arrowheads are as long as five widths of its line, and at an edge's width they would be too small to read. A strong run keeps the body's size and line height, in a heavier weight, so it stands out without breaking its line. Emphasis in running text is a weight, as in Material Design, IBM Carbon and GOV.UK.
 
 ## What the starter leaves out, for now
 

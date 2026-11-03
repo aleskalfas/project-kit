@@ -4,8 +4,10 @@ its defaults, at a shared role (DEC-008 point 2); each pattern declares a compon
 for each list it repeats (DEC-010, Implications); it holds no raw value; and each
 component's reference renders, under the test brand, pass the check and draw each word of
 each option and of each field of runs (DEC-007 point 3). A run that reads a colour family
-lies on that family's fill (`components.md`, *Values, states and colour*). The README
-names what the components declare.
+lies on that family's fill (`components.md`, *Values, states and colour*). A connector's
+line reaches 3:1 against what it lies on in every mode, and crosses no item but its ends;
+a strong run keeps the body's size and line height. The README names what the components
+declare.
 
 The reference renders are the pieces under `tests/fixtures/visual-communication/starter/`,
 one for each component, drawn in English and in German. Run in this process
@@ -13,6 +15,8 @@ one for each component, drawn in English and in German. Run in this process
 
 from __future__ import annotations
 
+import itertools
+import math
 import re
 import shutil
 from collections.abc import Iterator, Mapping
@@ -34,7 +38,9 @@ from tests.visual_communication_project import (
     write_list,
 )
 
-add, checks, pl, reading = load("visual-communication", "add.py", "checks", "pipeline", "reading")
+add, checks, pl, reading, tokens = load(
+    "visual-communication", "add.py", "checks", "pipeline", "reading", "tokens"
+)
 
 STARTER = CAPABILITY / "libraries" / "starter"
 PIECES = FIXTURES / "starter" / "pieces"
@@ -218,16 +224,35 @@ def location(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 @pytest.fixture(scope="module")
-def scenes(location: Path) -> dict[tuple[str, str], Mapping[str, Any]]:
-    """The scene of each reference piece in each language, by piece and language."""
-    computed = {}
+def projects(location: Path) -> dict[str, Any]:
+    """Each reference piece as the engine draws it, by the piece's name."""
+    drawn = {}
     for piece_folder in sorted(PIECES.iterdir()):
         piece = pl.read_piece(location, "visual", piece_folder.name)
-        drawn = pl.Project(piece, piece.lock, pl.Held(location, "visual"))
+        drawn[piece_folder.name] = pl.Project(piece, piece.lock, pl.Held(location, "visual"))
+    return drawn
+
+
+@pytest.fixture(scope="module")
+def scenes(projects: Mapping[str, Any]) -> dict[tuple[str, str], Mapping[str, Any]]:
+    """The scene of each reference piece in each language, by piece and language."""
+    computed = {}
+    for name, drawn in projects.items():
         for language, result in drawn.scenes():
-            assert result.findings == [], (piece_folder.name, language, result.findings)
-            computed[(piece_folder.name, language)] = result.scene.to_dict()
+            assert result.findings == [], (name, language, result.findings)
+            computed[(name, language)] = result.scene.to_dict()
     return computed
+
+
+@pytest.fixture(scope="module")
+def resolved(projects: Mapping[str, Any]) -> dict[str, tuple[dict[str, Any], list[str]]]:
+    """For each reference piece, the test brand's value of each token in each combination
+    of modes, by token path, and the combinations the piece is drawn in."""
+    found = {}
+    for name, drawn in projects.items():
+        values = {path: token["values"] for path, token in drawn.values()["tokens"].items()}
+        found[name] = (values, list(drawn.keys))
+    return found
 
 
 def test_each_component_has_its_reference_piece_pinned_with_the_test_brand() -> None:
@@ -353,6 +378,144 @@ def test_a_text_in_a_familys_text_lies_on_that_familys_fill(
                             and frame[3] <= under[3]
                             for fill, under in boxes
                         ), (piece, element["id"], run["text"])
+    assert checked > 0
+
+
+#: Every combination of the foundations' modes: a piece drawn in each mode of each axis is
+#: drawn in all of them.
+COMBINATIONS = math.prod(
+    len(axis["modes"]) for axis in read(FOUNDATIONS / "roles.yaml")["axes"].values()
+)
+#: How many points of each stretch of a connector's route are measured.
+SAMPLES = 16
+
+Point = tuple[float, float]
+#: A box drawn on a page: its fill, and its frame on the page.
+Painted = tuple[str, tuple[float, float, float, float]]
+
+
+def connector_lines(
+    page: Mapping[str, Any],
+) -> Iterator[tuple[Mapping[str, Any], list[Point], list[Painted]]]:
+    """Each line a starter connector draws on `page`, with the points of its route on the
+    page, and the boxes drawn before it."""
+    connectors: set[str] = set()
+    boxes: list[Painted] = []
+    for element, frame in frames(page):
+        if element.get("component") == "starter/connector":
+            connectors.add(str(element["id"]))
+        if element["type"] == "box" and element.get("fill"):
+            boxes.append((str(element["fill"]), frame))
+        if element["type"] == "line" and str(element["id"]).rpartition("/")[0] in connectors:
+            left, top = frame[0] - element["x"], frame[1] - element["y"]
+            ends = element.get("points") or [
+                {"x": element["x1"], "y": element["y1"]},
+                {"x": element["x2"], "y": element["y2"]},
+            ]
+            route = [(left + point["x"], top + point["y"]) for point in ends]
+            yield element, route, list(boxes)
+
+
+def inside(route: list[Point]) -> Iterator[Point]:
+    """Points along each stretch of a route, short of its two ends, where it meets its items."""
+    for (x1, y1), (x2, y2) in itertools.pairwise(route):
+        for step in range(SAMPLES):
+            share = (step + 0.5) / SAMPLES
+            yield x1 + (x2 - x1) * share, y1 + (y2 - y1) * share
+
+
+def under(point: Point, boxes: list[Painted]) -> list[str]:
+    """The fills of the boxes that hold `point`, the last drawn first."""
+    x, y = point
+    return [
+        fill
+        for fill, (left, top, right, bottom) in reversed(boxes)
+        if left <= x <= right and top <= y <= bottom
+    ]
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_a_connectors_line_reaches_3_to_1_against_what_it_lies_on_in_every_mode(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]],
+    resolved: Mapping[str, tuple[Mapping[str, Any], list[str]]],
+    language: str,
+) -> None:
+    """A connector's line is a mark nothing beside it shows, so it needs WCAG's contrast
+    for marks against the fill under it (WCAG 2.1, 1.4.11), in each mode of the test
+    brand, at every point of its route."""
+    measured = 0
+    for (piece, lang), scene in scenes.items():
+        if lang != language:
+            continue
+        values, keys = resolved[piece]
+        assert len(keys) == COMBINATIONS, (piece, keys)
+        for page in [each for each in elements(scene) if each.get("page")]:
+            for line, route, boxes in connector_lines(page):
+                assert str(line["stroke"]).startswith("family."), (piece, line["id"])
+                grounds = {under(point, boxes)[0] for point in inside(route)}
+                for ground in grounds:
+                    for key in keys:
+                        ratio = tokens.contrast_ratio(
+                            values[line["stroke"]][key], values[ground][key]
+                        )
+                        assert ratio >= tokens.LEVELS["marks"], (
+                            piece,
+                            line["id"],
+                            ground,
+                            key,
+                            round(ratio, 2),
+                        )
+                        measured += 1
+    assert measured > 0
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_a_connector_crosses_no_item_but_its_ends(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
+) -> None:
+    """The connector routes around nothing, so each reference render places its items
+    where a tie's line, short of its ends, lies on the page's background alone."""
+    checked = 0
+    for (piece, lang), scene in scenes.items():
+        if lang != language:
+            continue
+        for page in [each for each in elements(scene) if each.get("page")]:
+            for line, route, boxes in connector_lines(page):
+                for point in inside(route):
+                    assert under(point, boxes) == ["background"], (piece, line["id"], point)
+                checked += 1
+    assert checked > 0
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_a_strong_run_keeps_the_size_and_line_height_of_a_plain_run(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]],
+    resolved: Mapping[str, tuple[Mapping[str, Any], list[str]]],
+    language: str,
+) -> None:
+    """A strong run of a card's text stands out by its weight alone, so it never breaks
+    the line it lies in: its size and its line height are a plain run's, in each mode."""
+    roles = {word: role for role, word in styled_runs(COMPONENTS["card"])["text"].items()}
+    checked = 0
+    for (piece, lang), scene in scenes.items():
+        if lang != language:
+            continue
+        values, keys = resolved[piece]
+        for key in keys:
+            plain, strong = values[roles["plain"]][key], values[roles["strong"]][key]
+            assert strong["fontSize"] == plain["fontSize"], (piece, key)
+            assert strong["lineHeight"] == plain["lineHeight"], (piece, key)
+            assert strong["fontWeight"] > plain["fontWeight"], (piece, key)
+        plain_size = float(values[roles["plain"]]["default"]["fontSize"]["value"])
+        plain_height = plain_size * float(values[roles["plain"]]["default"]["lineHeight"])
+        for element in elements(scene):
+            runs = [run for paragraph in element.get("paragraphs", []) for run in paragraph]
+            if not any(run["style"] == roles["strong"] for run in runs):
+                continue
+            for run in runs:
+                assert run["font-size"] == plain_size, (piece, element["id"], run["text"])
+            assert element["line-height"] == pytest.approx(plain_height), (piece, element["id"])
+            checked += 1
     assert checked > 0
 
 

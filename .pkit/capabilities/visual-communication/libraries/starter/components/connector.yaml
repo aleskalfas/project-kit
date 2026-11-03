@@ -3,7 +3,7 @@ schema_version: 1
 
 status: experimental
 about: >-
-  A line from where a tie starts to where it ends, in its colour family's line, straight
+  A line from where a tie starts to where it ends, in its colour family's text, straight
   or with corners, and an arrowhead at its end, at its start, at both or at neither. It
   takes the two ends a pattern's list of ties gives it, and routes around nothing.
 
@@ -18,9 +18,13 @@ colour: neutral
 ends: true
 
 parts:
+  # The line is a mark that nothing beside it shows, so it needs 3:1 against what it lies
+  # on (WCAG 2.1, 1.4.11). It takes its family's text, the member a brand makes legible:
+  # the foundations pair it with the family's fill. A family's line edges a fill, and may
+  # be faint.
   line:
     line:
-      stroke: ":colour.line"
+      stroke: ":colour.text"
       stroke-width: "=@starter.connector"
       marker-start: {by: arrow, end: none, start: arrow, both: arrow, none: none}
       marker-end: {by: arrow, end: arrow, start: none, both: arrow, none: none}

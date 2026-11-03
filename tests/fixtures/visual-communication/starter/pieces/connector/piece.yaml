@@ -2,9 +2,10 @@ pkit_schema: visual-communication:piece
 schema_version: 1
 
 # The connector's reference renders (DEC-007 point 3): each word of each of its options
-# drawn once, as the ties of the layers, between a note and a level and between two
-# levels, in its default family and in a concept's, in English and in German, whose
-# compound words and diacritics stress the text around it. It has no field of runs.
+# drawn once, in its default family and in a concept's, in English and in German, whose
+# compound words and diacritics stress the text around it. It has no field of runs. The
+# connector routes around nothing, so its ties join cards the piece's own pattern `rows`
+# sets well apart, each line clear of every card but its ends: across, down and aslant.
 # Pinned with the test brand, the starter and the test notation, so only a person moves
 # what they draw.
 top: foundations/deck

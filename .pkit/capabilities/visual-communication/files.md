@@ -361,7 +361,7 @@ The capability ships the foundations' version being built at `.pkit/capabilities
 
 The top components the capability ships are the foundations' (DEC-007 point 1).
 
-Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`; the dimensions `space.1` to `space.4`, `stroke.thin`, `size.figure` and `size.slide`, a slide's width; the font families `font.body` and `font.heading`; and the typographies `type.body` and `type.heading`.
+Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`. The dimensions are `space.1` to `space.4`, `size.figure` and `size.slide`, a slide's width. The strokes are `stroke.thin`, an edge's width, and `stroke.thick`, the width of a line drawn on its own. The font families are `font.body` and `font.heading`. The typographies are `type.body`, `type.heading` and `type.strong`, the body's size and line height in a heavier weight.
 
 They declare six colour families: `neutral`, `blue`, `green`, `orange`, `purple` and `red` (DEC-004 point 10). Each has three members: `fill`, the colour of what it paints; `line`, its edge; and `text`, the text on its fill. Each member is a shared colour role of the family's own, `family.<family>.<member>`, such as `family.blue.fill`, with no default, so a brand gives each a value. Each family's text and fill are a pair at the level `text`.
 

@@ -6,63 +6,69 @@ slides:
     layout: slide
     title: Ein gerader Verbinder, seine Pfeilspitze am Ende oder am Anfang
     visual:
-      use: starter/layers
-      levels:
+      use: piece/rows
+      upper:
+        - id: ideas
+          head: Ideenfindung
+          text: Im Gespräch oder in einer Notiz.
         - id: decisions
           head: Entscheidungen
           text: Getroffene Entscheidungen.
+        - id: review
+          head: Überprüfung
+          text: Jede Änderung wird erneut gelesen.
+      lower:
+        - id: checks
+          head: Prüfungen
+          text: Laufen bei jeder Änderung.
         - id: rules
           head: Arbeitsregeln
           text: Genau, was zu tun ist.
         - id: work
           head: Quellcode
           text: Die Arbeit selbst.
-      notes:
-        - id: ideas
-          head: Ideenfindung
-          text: Im Gespräch oder in einer Notiz.
-        - id: review
-          head: Überprüfung
-          text: Jede Änderung wird erneut gelesen.
       ties:
         - id: ideas-decisions
-          from: {item: "notes[ideas]"}
-          to: {item: "levels[decisions]"}
-        - id: rules-decisions
-          from: {item: "levels[rules]"}
-          to: {item: "levels[decisions]"}
+          from: {item: "upper[ideas]"}
+          to: {item: "upper[decisions]"}
+        - id: work-decisions
+          from: {item: "lower[work]"}
+          to: {item: "upper[decisions]"}
           arrow: start
 
   - id: corners
     layout: slide
     title: Ein Verbinder mit Ecken, Pfeilspitzen an beiden Enden oder an keinem
     visual:
-      use: starter/layers
+      use: piece/rows
       tie: {use: starter/connector, route: corners}
-      levels:
+      upper:
+        - id: ideas
+          head: Ideenfindung
+          text: Im Gespräch oder in einer Notiz.
         - id: decisions
           head: Entscheidungen
           text: Getroffene Entscheidungen.
+        - id: review
+          head: Überprüfung
+          text: Jede Änderung wird erneut gelesen.
+      lower:
+        - id: checks
+          head: Prüfungen
+          text: Laufen bei jeder Änderung.
         - id: rules
           head: Arbeitsregeln
           text: Genau, was zu tun ist.
         - id: work
           head: Quellcode
           text: Die Arbeit selbst.
-      notes:
-        - id: ideas
-          head: Ideenfindung
-          text: Im Gespräch oder in einer Notiz.
-        - id: review
-          head: Überprüfung
-          text: Jede Änderung wird erneut gelesen.
       ties:
-        - id: ideas-decisions
-          from: {item: "notes[ideas]"}
-          to: {item: "levels[decisions]"}
+        - id: ideas-rules
+          from: {item: "upper[ideas]"}
+          to: {item: "lower[rules]"}
           arrow: both
           concept: test-notation/service
-        - id: review-work
-          from: {item: "notes[review]"}
-          to: {item: "levels[work]"}
+        - id: review-rules
+          from: {item: "upper[review]"}
+          to: {item: "lower[rules]"}
           arrow: none

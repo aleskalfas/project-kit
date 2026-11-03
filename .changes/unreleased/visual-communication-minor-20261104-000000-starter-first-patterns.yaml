@@ -15,3 +15,7 @@ body: >
   Its README lists each pattern by the question it answers, with its
   boundaries, and names each component's options, component fields, end
   fields and fields of runs, with their words.
+  The foundations gain two shared roles with no default, which every brand
+  now gives a value: `stroke.thick`, the width of a line drawn on its own,
+  such as a connector's, and `type.strong`, the body's size and line height
+  in a heavier weight, for a strong run.
