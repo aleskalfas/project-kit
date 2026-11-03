@@ -567,7 +567,7 @@ The changeset guard is a check that a change adds or edits a changeset naming th
 
 **Attributes:**
 
-- its escape hatch, which skips its check of paths for a change that moves no surface (PRJ-002)
+- its escape hatch, which skips its surface check for a change that moves no surface (PRJ-002)
 
 **Relations:**
 
