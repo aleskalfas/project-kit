@@ -8,16 +8,21 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
 - **Primitives at the leaves:** `box`, `ellipse`, `text`, `line` and `image`, their
   properties under SVG's names. Colours stay role names; a renderer takes their values
   from the document of resolved values, so one scene serves every mode of the value axes.
-- **A text** holds its text, its lines with their widths, its style role and font
-  properties, its line height, the first baseline below its top, its measured height,
-  the font files that measured it (file name and sha256), and how it was measured.
+- **A text** holds its text, its line height, the greatest among the typography roles
+  its runs take, its paragraphs of runs, its lines and its measured height. Each run
+  holds its text, its typography role and font properties, its paint, the font files
+  that measured it (file name and sha256), how it was measured, and the source of each.
+  Each line holds its text, its width, its baseline below its top, its paragraph, and
+  its spans: each the part of one run of its paragraph that lies on it, with its width
+  (DEC-012 points 4 and 7).
 - **An image of a produced output** holds the output's variants by key and its exposed
   points, mapped into the image's frame.
 - **Traces.** Each element's id is its trace: the path of instances, parts and items
   from the top, joined by `/`; an item is `<list>[<id>]`, or `<list>#<place>` (from 1)
   where it has no id. A page of a top whose layouts are its pages' forms is traced as an
   item of the field that holds the pages, `<field>[<id>]`, and lies at the top's origin,
-  as large as the top. Each drawn property names its source: `content:<field path>`,
+  as large as the top. Each drawn property names its source: `content:<field path>`, a
+  run of a list of runs by its place, `<field path>#<place>`, as an item with no id,
   `option:<name>`, `default:<library>/<component>`, `role:<token path>` or `engine`. A
   value the component leaves to the engine, such as a text's `text-anchor` where it gives
   none, is the engine's.
@@ -36,9 +41,9 @@ from typing import Any
 
 from _lib import formula as fm
 from _lib.env import Env
-from _lib.findings import Finding
-from _lib.layout import TOLERANCE, Context, Instance, Node, place_top
-from _lib.text import MEASURED, Broken
+from _lib.findings import ATTENTION, Finding
+from _lib.layout import TOLERANCE, Context, Instance, Node, TextRun, place_top
+from _lib.text import MEASURED, Broken, paragraphs
 
 #: Lengths are rounded to this many decimal places of a px.
 PLACES = 2
@@ -136,8 +141,8 @@ def compute_scene(
     children = []
     if root is not None:
         for trace, node in root.texts():
-            if node.style is not None:
-                node.style.check(node.text, trace)
+            for run in node.runs:
+                run.style.check(run.text, trace)
         children.append(_Emitter(ctx, pages).root(root))
     scene = Scene(piece, dict(lock), language, size_key, seam_version, pages, children)
     return SceneResult(scene, list(ctx.findings))
@@ -273,48 +278,120 @@ class _Emitter:
         self._lengths(element, instance, node, ("stroke-width",))
 
     def _text(self, element: Element, instance: Instance, node: Node) -> None:
-        name, props, style = node.part.name, node.part.props, node.style
-        assert style is not None
+        name, props = node.part.name, node.part.props
         empty = Broken((), (), False)
         broken = self.ctx.attempt(lambda: instance.get("lines", name), empty)
         where = f"parts.{name}.text"
-        default = f"default:{instance.component.use}"
         # Where the component gives no anchor, the engine's default, `start`, is the engine's.
         anchor_raw = props.get("text-anchor")
         _, _, chosen = instance.pick(f"{where}.text-anchor", anchor_raw)
         anchor = instance.word(f"{where}.text-anchor", anchor_raw, "start")
-        given = default if anchor_raw is not None else ENGINE
+        given = f"default:{instance.component.use}" if anchor_raw is not None else ENGINE
         element.set("text-anchor", anchor, f"option:{chosen}" if chosen else given)
-        self._paints(element, instance, node, ("fill",))
-        _, _, chosen = instance.pick(f"{where}.style", props.get("style"))
-        element.set("style", style.role, f"option:{chosen}" if chosen else default)
-        role = f"role:{style.role}"
-        element.set("font-family", list(style.families), role)
-        element.set("font-size", length(style.size), role)
-        if style.weight is not None:
-            element.set("font-weight", style.weight, role)
-        element.set("line-height", length(style.line_height), role)
-        element.set("baseline", length(style.baseline), ENGINE)
+        tallest = max(node.runs, key=lambda run: run.style.line_height).style
+        element.set("line-height", length(node.line_height), f"role:{tallest.role}")
         element.set("text", node.text, instance.source_of_field(props["content"]))
+        split = broken.paragraphs or paragraphs([run.text for run in node.runs])
+        element.set(
+            "paragraphs",
+            [
+                [self._run(instance, node, node.runs[index], text) for index, text in parts]
+                for parts in split
+            ],
+            ENGINE,
+        )
         lines = [
-            {"text": text, "width": length(w)}
-            for text, w in zip(broken.lines, broken.widths, strict=True)
+            {
+                "text": line.text,
+                "width": length(line.width),
+                "baseline": length(line.baseline),
+                "paragraph": line.paragraph,
+                "spans": [
+                    {"run": span.run, "text": span.text, "width": length(span.width)}
+                    for span in line.spans
+                ],
+            }
+            for line in broken.placed
         ]
         element.set("lines", lines, ENGINE)
-        element.set("measured-height", length(len(broken.lines) * style.line_height), ENGINE)
-        element.set("measured", MEASURED, ENGINE)
-        faces = style.faces_used(node.text)
-        fonts = [{"family": f.family, "file": f.path.name, "sha256": f.sha256} for f in faces]
-        element.set("fonts", fonts, ENGINE)
+        element.set("measured-height", length(len(broken.lines) * node.line_height), ENGINE)
+        for run in node.runs:
+            why = instance.unpainted(name, run)
+            if why is not None:
+                self.ctx.add(
+                    Finding(
+                        "concept-uncoloured",
+                        ATTENTION,
+                        f"{element.id}: the run {run.place} names the concept `{run.concept}`, "
+                        f"which shows in no colour: {why} paints it with a role",
+                        where=element.id,
+                        fix="give the run a style its component paints from its colour family, "
+                        "or drop the override; or ask the owner of what paints the style to "
+                        "paint it from a colour family",
+                        who="the piece's author",
+                    )
+                )
         if broken.overflow:
             element.set("overflow", True, ENGINE)
-            width = element.properties["width"]
-            self.ctx.report(
+            self._overflow(element, instance, node, broken)
+
+    def _run(self, instance: Instance, node: Node, run: TextRun, text: str) -> dict[str, Any]:
+        """A run of a text as the scene holds it, within one paragraph: its part of the
+        run's text, its typography role and font properties, its paint, the font files
+        that measured its text, how it was measured, and the source of each (DEC-012
+        points 3, 4 and 7)."""
+        style, part = run.style, node.part
+        _, _, chosen = instance.pick(
+            f"parts.{part.name}.text.style", part.props.get("style"), run.word
+        )
+        if chosen and chosen in instance.component.runs:
+            style_source = run.word_source
+        else:
+            style_source = f"option:{chosen}" if chosen else f"default:{instance.component.use}"
+        role = f"role:{style.role}"
+        held: dict[str, Any] = {"text": text}
+        sources = {"text": run.source, "style": style_source}
+        fill, fill_source = self.ctx.attempt(
+            lambda: instance.paint(part.name, "fill", run), (None, "")
+        )
+        if fill is not None:
+            held["fill"], sources["fill"] = fill, fill_source
+        held["style"] = style.role
+        held["font-family"], sources["font-family"] = list(style.families), role
+        held["font-size"], sources["font-size"] = length(style.size), role
+        if style.weight is not None:
+            held["font-weight"], sources["font-weight"] = style.weight, role
+        faces = style.faces_used(run.text)
+        held["fonts"] = [
+            {"family": f.family, "file": f.path.name, "sha256": f.sha256} for f in faces
+        ]
+        held["measured"] = style.measured
+        held["sources"] = dict(sorted(sources.items()))
+        return held
+
+    def _overflow(self, element: Element, instance: Instance, node: Node, broken: Broken) -> None:
+        """A text that overflows its width: it fails where each of its runs is measured from
+        a font file, and asks for attention where some run is measured from a table or by an
+        estimate, which may be wider than it is drawn (DEC-005 point 14)."""
+        width = element.properties["width"]
+        source = instance.source_of_field(node.part.props["content"])
+        message = (
+            f"{element.id}: a word of {source} is wider than the text's width {width} px: "
+            f"{length(broken.natural)} px"
+        )
+        estimated = sorted({run.style.measured for run in node.runs} - {MEASURED})
+        if not estimated:
+            self.ctx.report("text-overflow", message, where=element.id)
+            return
+        self.ctx.add(
+            Finding(
                 "text-overflow",
-                f"{element.id}: a word of {instance.source_of_field(props['content'])} is wider "
-                f"than the text's width {width} px: {length(broken.natural)} px",
+                ATTENTION,
+                f"{message}, measured in part {', '.join(estimated)}, not from a font file",
                 where=element.id,
+                who="the piece's author",
             )
+        )
 
     def _image(self, element: Element, instance: Instance, node: Node) -> None:
         picture = node.picture

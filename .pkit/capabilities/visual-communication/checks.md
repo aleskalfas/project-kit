@@ -32,7 +32,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/svg_declaration.py
         - .pkit/capabilities/visual-communication/schemas/findings.schema.json
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
-      record: ["visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-010"]
+      record: ["visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-010", "visual-communication:DEC-012"]
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
         - .pkit/capabilities/visual-communication/components.md#breaking-lines
@@ -43,6 +43,8 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#placing-a-component-use-and-slot
         - .pkit/capabilities/visual-communication/components.md#primitives
         - .pkit/capabilities/visual-communication/components.md#sources
+        - .pkit/capabilities/visual-communication/components.md#switches
+        - .pkit/capabilities/visual-communication/components.md#text
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/components.md#values-states-and-colour
         - .pkit/capabilities/visual-communication/components.md#what-an-element-asks-for-and-what-it-gets
@@ -106,7 +108,7 @@ A few findings that lie in a library folder name no version, and always fail: `l
 
 - **A label,** a short name of what was found, such as `text-overflow`. Each label is in the tables below.
 - **A location:** `<file>#<where>`, or `<file>` where nothing within the file is named, or `.` where no file is. The file is relative to the project root. `<where>` is one of:
-  - a key path in a YAML file, written as a content source's path is ([sources](components.md#sources)), such as `body.steps[plan].head`;
+  - a key path in a YAML file, written as a content source's path is ([sources](components.md#sources)), such as `body.steps[plan].head`, or a run's, such as `body.say#2`;
   - a key path in a component's file, such as `parts.head.height`;
   - a trace id of the scene, such as `figure/body/steps[plan]/head` ([trace ids](components.md#trace-ids));
   - a token path of a brand, such as `space.5`.
@@ -170,7 +172,7 @@ Each content file is read against the `fields` and `options` of each component i
 |---|---|---|
 | `id-shape` | An id is not of the id shape. | Write an id of that shape. |
 | `id-twice` | An id appears twice in one list. | Make each id unique in its list. |
-| `id-languages` | A list lacks ids it holds in the piece's first language, or holds ids it lacks there. The message names each. The order is free: a translation may order a list's items its own way. An id twice in one list is `id-twice`. | Give each item the same id in every language ([content files](files.md#content-files)). |
+| `id-languages` | A list lacks ids it holds in the piece's first language, or holds ids it lacks there. The message names each. The order is free: a translation may order a list's items its own way. An id twice in one list is `id-twice`. A list of runs holds runs, not items, so none of the `id-` labels reaches it. | Give each item the same id in every language ([content files](files.md#content-files)). |
 | `content-key` | A key that is no field or option of the component, no arrangement field of its list where it is an item, and no reserved key; on a list's component field, a key that is no option of the component it names and no reserved key; on a page in a layout, a key that is no slot of its layout, no `layout` and no reserved key ([content files](files.md#content-files)). The message names the nearest known key, where one is close. | Rename or remove the key. |
 | `content-layout` | A page of a top whose layouts are its pages' forms names neither a layout, with `layout`, nor a component, with `use`; or it names a layout its top does not declare. The message names the top's layouts, and the nearest, where one is close. | Name one of the top's layouts, or the component that draws the page. |
 | `content-required` | A required field is missing. | Add the field. |
@@ -181,6 +183,10 @@ Each content file is read against the `fields` and `options` of each component i
 | `content-component` | A list's component field names no component with `use`, or gives an id or a field of the component it names. | Name the component with `use`, and give the id and the fields on each item. |
 | `item-clash` | An item carries a key that both its component and its list declare, under the versions the piece locks. Neither reads it: the component's field stays unfilled, and the arrangement field takes its default. | Take the key off the item, or move the lock to versions under which the two do not both declare it. |
 | `list-clash` | A component that draws items of a list declares a key that the list declares too, under the versions the piece locks, and no item carries it, so the content's author learns of the clash before writing the key. | Nothing, until an item needs the key. |
+| `run-shape` | A run of a field of runs is neither text nor a mapping, or is a mapping with no `text`, or whose `text` is no text ([content files](files.md#content-files)). | Give the run as text, or as a mapping with its `text`. |
+| `run-key` | A run holds a key other than `text`, `style` and `concept`, an `id` included. The message names the nearest, where one is close. | Rename or remove the key. |
+| `run-style` | A run names a style its field does not declare. The message names the field's words, and the nearest, where one is close. | Name a word of the field's run styles ([fields](components.md#fields)). |
+| `runs-unmarked` | A field that takes text holds a list, and its component does not mark it as taking runs. | Give the field text, or have its component mark it as a field of runs. |
 
 ### Brands, tokens and contrast
 
@@ -234,7 +240,7 @@ Each fails, unless its row says otherwise.
 
 | Label | What it means | Where it points |
 |---|---|---|
-| `component-shape` | A component holds a key, a part, an option or an exposed name its format does not allow ([a component's file](components.md#a-components-file)). Or a pattern declares for its lists what `lists` does not allow, such as fields for a list no part of it repeats over, a component field a part places, or an arrangement field with no word ([lists](components.md#lists)). Or a top whose layouts are its pages' forms breaks their shape, such as marking no field as holding its pages, or two, naming a slot `layout`, leaving a layout without its own drawing, or declaring fields for its list of pages ([layouts](components.md#layouts)). | the component, `#<key path>` |
+| `component-shape` | A component holds a key, a part, an option or an exposed name its format does not allow ([a component's file](components.md#a-components-file)). Or a pattern declares for its lists what `lists` does not allow, such as fields for a list no part of it repeats over, a component field a part places, or an arrangement field with no word ([lists](components.md#lists)). Or a top whose layouts are its pages' forms breaks their shape, such as marking no field as holding its pages, or two, naming a slot `layout`, leaving a layout without its own drawing, or declaring fields for its list of pages ([layouts](components.md#layouts)). Or a field of runs breaks its rules ([fields](components.md#fields), [switches](components.md#switches)): a mark elsewhere than on a field or a page layout's slot, a `$ref` that leads to a marked schema, a marked field that takes more than text, or holds `enum`, `const` or `$ref`, no word, a word that is no name or appears twice; a switch on its run styles that leaves a word out or names another, or lies elsewhere than a text part's `style` and `fill` that shows the field; a field of more than one word no text part chooses by; or a part other than a text part that reads the field, beyond a `when`, or passes it on. | the component, `#<key path>` |
 | `two-owners` | A text part gives a `height`, which its measured text sets ([primitives](components.md#primitives)). | the component |
 | `formula-unreadable`, `formula-reach`, `formula-dimension`, `unknown-role` | A formula cannot be read, reads what it may not reach, has dimensions that disagree, or reads a role that has no value under the brand ([errors](components.md#errors)). | the component |
 | `unknown-component` | The piece's top, a part or an item names no component. A component whose file is present and cannot be read is `component-unreadable`, and what names it takes no finding. | the top's, `<piece>/piece.yaml#top`; a part's or an item's, the content or the component that names it, `#<trace>` |
@@ -248,14 +254,15 @@ Each fails, unless its row says otherwise.
 | `division-by-zero` | A formula divides by zero. | the component |
 | `missing-exposed` | A formula reads an exposed part, point or item that is missing. | the component |
 | `no-colour` | A part paints `:colour.<member>`, and the instance has no colour family, from its concept or by default, or has one the foundations do not declare, or one with no such member ([values, states and colour](components.md#values-states-and-colour)). | the component, `#<trace>` |
-| `unknown-concept` | The content names a concept that is not `<notation>/<concept>`, that comes from a notation the piece does not name under `notations`, or that its notation does not hold ([values, states and colour](components.md#values-states-and-colour)). | the content, or the component whose part gave it, `#<trace>` |
-| `unknown-role`, `role-type` | A text's typography role has no value under the brand, or is no typography. | the component, `#<trace>` |
+| `unknown-concept` | The content names a concept that is not `<notation>/<concept>`, that comes from a notation the piece does not name under `notations`, or that its notation does not hold ([values, states and colour](components.md#values-states-and-colour)). A run that names one takes its instance's family. | the content, or the component whose part gave it, `#<trace>`; a run's, `#<key path>` of the run |
+| `concept-uncoloured` | A run names a concept, and is painted with a role, by its style or by an `override` on its part, so its concept shows in no colour ([values, states and colour](components.md#values-states-and-colour)). The message names the run, and its style or the override. Asks the piece's author for attention: choose a style its component paints from its colour family, or drop the override; or ask the owner of what paints the style to paint it from a family. | the content, `#<trace>` |
+| `unknown-role`, `role-type` | A typography role a text's style chooses, for any of its runs, has no value under the brand, or is no typography. | the component, `#<trace>` |
 | `gets-less` | A component gets less width or height than it asks for ([what an element asks for](components.md#what-an-element-asks-for-and-what-it-gets)). | the content, `#<trace>` |
-| `text-overflow` | A word is wider than its text's width. Text never shrinks to fit ([breaking lines](components.md#breaking-lines)). | the content, `#<trace>` |
+| `text-overflow` | A word is wider than its text's width. Text never shrinks to fit ([breaking lines](components.md#breaking-lines)). Where some run of the text is measured otherwise than from a font file, such as from a table or by an estimate, it asks the piece's author for attention instead, and the message names how (DEC-005 point 14). | the content, `#<trace>` |
 | `missing-picture` | The piece has no produced output the content names. Left out where a produced-picture finding already reports that output. The fix is `pkit visual produce <piece> <output>`. | the content, or the component whose part gave it, `#<trace>` |
 | `picture-variants` | The variants of a picture differ in pixel size or in the places of their points, and one scene holds them all. | as above |
 | `font-missing` | A font family has no committed file, or no family measures a character. Nothing is laid out (DEC-004 point 9). The check reports it where it computes the scenes. `pkit visual render` refuses instead, and writes no record. | `<piece>/piece.yaml#brand` |
-| `contrast-drawn` | A text is below WCAG's contrast against the fill under it, in a combination the piece names (DEC-004 point 8). A text of 24 px or more, or of 18.66 px or more with a weight of 700 or more, needs 3; any other text needs 4.5. The fill under each line is the last box or ellipse drawn before the text that holds the line's middle, a translucent fill laid over the one under it. A text over a picture, or over nothing, is not measured. | `<piece>/piece.yaml#<trace>` |
+| `contrast-drawn` | A run of a text is below WCAG's contrast against the fill under it, in its own paint, in a combination the piece names (DEC-004 point 8, DEC-012 point 3). A run of 24 px or more, or of 18.66 px or more with a weight of 700 or more, needs 3; any other run needs 4.5. The fill under each part of a run on a line is the last box or ellipse drawn before the text that holds that part's middle, a translucent fill laid over the one under it. A text over a picture, or over nothing, is not measured. | `<piece>/piece.yaml#<trace>` |
 | `unknown-colour` | An element paints its fill or stroke with a role that is no colour role with a value under the brand, such as a library's role the brand leaves with none. | `<piece>/piece.yaml#<trace>` |
 | `component-experimental` | The piece uses an experimental component, which its library may change in any release (DEC-003 point 9). States a fact. | `<piece>/piece.yaml#<trace>` |
 | `component-deprecated` | The piece uses a deprecated component. Asks the piece's author for attention: replace it with the component its library names in its place. | `<piece>/piece.yaml#<trace>` |

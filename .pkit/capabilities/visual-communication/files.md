@@ -52,7 +52,7 @@ pkit:
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/notation.yaml
         - tests/fixtures/visual-communication/libraries/test-parts/1.0.0/roles.yaml
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-010"]
+      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-010", "visual-communication:DEC-012"]
 ---
 
 # The files of the visual work
@@ -235,7 +235,7 @@ The render writes the lock into `piece.yaml` as text, as a top-level block mappi
 
 ### Content files
 
-A content file, `content.<language>.yaml`, holds what the piece shows in one language. It names no position, size, colour or font. It chooses only among what its libraries declare: components, layouts, options, states, concepts and roles (DEC-001 point 3). A second language is a second file of the same shape, with the same ids. The content from the capability's tests for the piece above:
+A content file, `content.<language>.yaml`, holds what the piece shows in one language. It names no position, size, colour or font. It chooses only among what its libraries declare: components, layouts, options, states, concepts, roles and the words of a field's run styles (DEC-001 point 3). A second language is a second file of the same shape, with the same ids. A field's runs are its value, so their number, order and styles may differ between languages, as its text does. The content from the capability's tests for the piece above:
 
 ```yaml
 pkit_schema: visual-communication:content
@@ -259,6 +259,7 @@ caption: The flow.
 - **`state`** names a state the component declares, such as `state: marked`.
 - **`override`** points a painted part of the component at another role, by its token path, never at a value. `override: {b: accent}` paints the part `b` with `accent`.
 - **`concept`** names what the component it places stands for: a concept of a notation the piece names, as `<notation>/<concept>`, such as `concept: test-notation/store` ([Notations](#notations)). The concept gives the component its colour family; how a component paints with its family is in *Components*.
+- **A field of runs,** one its component marks as taking runs (*Components*), takes text, as any field of text does, or a list of *runs*: spans of its text, each in a style of its own (DEC-012 point 1). A run is text, set in the field's first style, or a mapping of `text`, which holds text, and perhaps `style`, one of the words of the field's run styles, and `concept`, written as above, which gives the run its colour family. The format fixes these three keys on a run, which places no component, so a run holds no other key and no reserved key binds it. The runs' texts are joined as written, with nothing between them. The field is filled where one of its runs holds text. A run carries no id: a list of runs holds runs, not items, so no rule of ids reaches it. A terminal's line, its command in the field's first style: `line: [{text: "$ ", style: prompt}, pkit visual render deck, {text: "  # draws every page", style: comment}]`.
 - **An id** marks an item, or another component the content places, that another part of the piece names (DEC-001 point 3). It is unique in its list. Each list holds the same ids in every language as in the source language, in any order.
 
 Each key of a mapping that places a component must be a field or an option of that component, an arrangement field of its list where the mapping is an item, or a reserved key. A key that both an item's component and its list declare is read by neither (DEC-010 point 2). A key of a page in a layout must be a slot of that layout, `layout`, or a reserved key. How a component declares its fields, options, states, layouts, slots and lists is in *Components*.

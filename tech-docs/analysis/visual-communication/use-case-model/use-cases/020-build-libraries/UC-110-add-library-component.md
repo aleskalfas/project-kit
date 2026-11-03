@@ -43,7 +43,7 @@ pkit:
 **Main path:**
 
 1. The developer writes the library component in a library the project owns. The library component states the job it does, the established form it follows with that form's source, and its fields and options.
-2. The system checks the library component, and draws it once with each value of each of its options.
+2. The system checks the library component, and draws it once with each value of each of its options. It also draws it once with each run style of each field of runs.
 3. The developer has the library component reviewed against its job and its form, with the drawings of step 2.
 4. The developer gives the library a new library version, in which the library component is experimental.
 5. Later, the developer judges that pieces can rely on the library component, and marks it stable in its file.
@@ -78,7 +78,7 @@ What the developer needs here that no accepted record decides yet:
   - **Steps 1 to 3:** the bar a library component of the starter library meets ([DEC-007 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-007-starter-library.md#3-each-component-enters-as-experimental)). A project's own library may follow that bar, which binds only the starter library ([DEC-007](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-007-starter-library.md), Implications). The bar asks for:
     - the library component's job, and the form it follows with that form's source
     - its fields and options
-    - a drawing of each option's value
+    - a drawing of each option's value, and of each run style of each field of runs
     - a review
   - **Steps 4 to 6 and the guarantee:** a library owner marks each library component's status, and no count of uses decides it. A stable one breaks only in a library version with a new major number ([DEC-003 point 7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#7-a-components-status-says-what-its-library-promises)).
   - **Variant 1a:** a library component's options are declared, and its colours are roles a brand gives values to (DEC-001 points [5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning) and [6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#6-a-pattern-arranges-items-and-an-item-says-what-it-is)).

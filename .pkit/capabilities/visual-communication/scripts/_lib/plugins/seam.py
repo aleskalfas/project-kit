@@ -24,7 +24,9 @@ import importlib
 from dataclasses import dataclass
 from typing import Any
 
-SEAM_VERSION = 1
+#: 2 since a scene's text holds paragraphs of runs, each with its own role, paint and fonts,
+#: and each line its own baseline and spans (visual-communication DEC-012).
+SEAM_VERSION = 2
 
 RENDERER = "renderer"
 PRODUCER = "producer"
