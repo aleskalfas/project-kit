@@ -1,0 +1,7 @@
+component: visual-communication
+kind: none
+body: >
+  The capability's reference pages give each fact one home (#2507). A page
+  that repeated a fact another page holds now names that page's section, and
+  sibling pages link each other where one summarises the other. No command,
+  path, file format or check changes, so no surface moves.
