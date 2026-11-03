@@ -33,15 +33,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ruamel.yaml.scalarstring import SingleQuotedScalarString
-
-from _lib import fingerprint, framing
+from _lib import fingerprint, framing, records
 from _lib import pipeline as pl
 from _lib.env import MissingFont
-from _lib.files import FileError, read_bound
 from _lib.libraries import installed_release
 from _lib.plugins import seam
-from _lib.reading import ReadError, sha256
+from _lib.reading import sha256
 from _lib.root import LOCAL
 from _lib.scene import SceneResult
 
@@ -51,10 +48,11 @@ RENDERERS = {"svg": "svg"}
 #: Where each piece's exports lie, relative to the project root.
 FOLDER = f"{LOCAL}/exports"
 
+#: The comment that opens the record, a line each.
 HEADER = (
-    "The record of the piece's exports (visual-communication DEC-006 point 7): each\n"
-    "numbered export, the fingerprint of what it was made from, each file it made with its\n"
-    "hash, and what is only recorded. `pkit visual export` rewrites it; commit it."
+    "The record of the piece's exports (visual-communication DEC-006 point 7): each",
+    "numbered export, the fingerprint of what it was made from, each file it made with its",
+    "hash, and what is only recorded. `pkit visual export` rewrites it; commit it.",
 )
 
 
@@ -97,8 +95,8 @@ def recorded_versions(piece: pl.Piece) -> list[dict[str, Any]]:
     if not path.is_file():
         return []
     try:
-        data = read_bound(path, "exports")
-    except (ReadError, FileError) as exc:
+        data = records.read(path, "exports")
+    except records.RecordError as exc:
         raise pl.Refused(f"{exc}: mend it before the next export") from exc
     versions = data.get("versions")
     if not isinstance(versions, list) or not all(
@@ -273,16 +271,8 @@ def write(planned: Planned) -> None:
     record = {
         "pkit_schema": "visual-communication:exports",
         "schema_version": 1,
-        "versions": [_quoted_time(entry) for entry in planned.versions],
+        "versions": [records.quoted_time(entry) for entry in planned.versions],
     }
     pl.write_file(
-        piece.root, piece.folder / pl.EXPORTS_FILE, pl.yaml_text(record, HEADER).encode("utf-8")
+        piece.root, piece.folder / pl.EXPORTS_FILE, records.text(record, HEADER).encode("utf-8")
     )
-
-
-def _quoted_time(entry: Mapping[str, Any]) -> dict[str, Any]:
-    """A version as the record writes it: its time quoted, as commands write times."""
-    recorded = dict(entry.get("recorded") or {})
-    if isinstance(recorded.get("time"), str):
-        recorded["time"] = SingleQuotedScalarString(recorded["time"])
-    return {**entry, "recorded": recorded}

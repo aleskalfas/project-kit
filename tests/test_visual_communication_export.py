@@ -6,7 +6,6 @@ pages, one file for each page under one number."""
 from __future__ import annotations
 
 import subprocess
-import sys
 from collections.abc import Iterator, Mapping
 from pathlib import Path
 from typing import Any
@@ -23,7 +22,7 @@ from tests.test_visual_communication_pipeline import (
     drawing_project,
     write_picture,
 )
-from tests.visual_communication_project import CONFIG, SCHEMAS, bound, write, yaml_text
+from tests.visual_communication_project import CONFIG, SCHEMAS, bound, importable, write, yaml_text
 
 script, exports, svg, seam, framing, files, reading, fingerprint, pl = load(
     "visual-communication",
@@ -46,7 +45,7 @@ RECORD = f"{PIECE_FOLDER}/exports.yaml"
 def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """The renderer stands in for the import a run makes when it draws, and the test
     producer is registered, for the length of the test."""
-    monkeypatch.setitem(sys.modules, "_lib.plugins.svg", svg)
+    importable(monkeypatch, svg)
     producer.register(seam)
     yield
     seam.unregister(producer.NAME)

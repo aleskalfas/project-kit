@@ -5,16 +5,22 @@ under `.pkit/capabilities/`, which is how a command finds the root. The other he
 the location's files in it: a library version copied from the shipped foundations or the
 test brand, or written from fields; the list of libraries; a piece. No helper runs git,
 so the location's files are listed by walking the folder, as outside a repository.
+
+A command imports a plugin when it runs it, and `importable` lets it find the one a test
+loaded.
 """
 
 from __future__ import annotations
 
 import io
 import shutil
+import sys
 from collections.abc import Mapping
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
+import pytest
 from ruamel.yaml import YAML
 
 REPO = Path(__file__).resolve().parent.parent
@@ -56,6 +62,14 @@ def project(tmp_path: Path) -> Path:
     root = tmp_path / "project"
     (root / ".pkit" / "capabilities" / "visual-communication").mkdir(parents=True)
     return root
+
+
+def importable(monkeypatch: pytest.MonkeyPatch, *plugins: ModuleType) -> None:
+    """Each plugin a test loaded (`tests.in_process.load`), found by the import a command
+    makes when it runs it (`seam.implementation`), for the length of the test: `load`
+    keeps no `_lib` in `sys.modules` once it returns."""
+    for plugin in plugins:
+        monkeypatch.setitem(sys.modules, plugin.__name__, plugin)
 
 
 def version_folder(root: Path, name: str, version: str, location: str = "visual") -> Path:

@@ -26,25 +26,19 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
 
 from __future__ import annotations
 
-import io
 from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from ruamel.yaml import YAML
-
-from _lib import keys, tokens, values
+from _lib import keys, records, tokens, values
 from _lib.env import PictureInfo, UnreadableComponent
 from _lib.files import FileError, read_bound, refuse_links, without_binding, write_whole
-from _lib.libraries import FOLDER, Held, Version
+from _lib.libraries import FOLDER, FOUNDATIONS, Held, Version
 from _lib.location import files as listed_files
 from _lib.names import PIECE, is_language, is_name, split_use
 from _lib.plugins import seam
-from _lib.reading import ReadError, load_yaml, read_yaml, sha256
+from _lib.reading import ReadError, read_yaml, sha256
 from _lib.scene import SceneResult, compute_scene
-
-#: The library that owns the shared roles, axes, families and pairs (DEC-004 point 7).
-FOUNDATIONS = "foundations"
 
 #: The folder of the location that holds the pieces, one folder each.
 PIECES = "pieces"
@@ -64,8 +58,8 @@ EXPORTS_FILE = "exports.yaml"
 SIZE_KEY = keys.DEFAULT_KEY
 
 
-#: The byte-order mark a file may open with, which a rewrite keeps.
-BOM = "\ufeff"
+#: The byte-order mark a file may open with, which a rewrite of the lock keeps.
+BOM = records.BOM
 
 
 class Refused(Exception):
@@ -275,46 +269,14 @@ def needed(piece: Piece) -> list[str]:
 
 def lock_text(piece_yaml: str, lock: Mapping[str, str]) -> str:
     """The text of a `piece.yaml` with its top-level `lock` replaced by `lock`, or added at
-    its end, every other byte kept: its comments, its order, its line endings and a
-    byte-order mark. Raises Refused when the text would not read back as it was with that
-    lock."""
-    bom = BOM if piece_yaml.startswith(BOM) else ""
-    body = piece_yaml[len(bom) :]
-    lines = body.splitlines(keepends=True)
-    newline = "\r\n" if lines and lines[0].endswith("\r\n") else "\n"
-    block = [f"lock:{' {}' if not lock else ''}{newline}"]
-    block += [f"  {name}: {lock[name]}{newline}" for name in sorted(lock)]
-    start = next((i for i, line in enumerate(lines) if _is_lock_line(line)), None)
-    if start is None:
-        if lines and not lines[-1].endswith(("\n", "\r")):
-            lines[-1] += newline
-        updated = lines + block
-    else:
-        end = start
-        for index in range(start + 1, len(lines)):
-            line = lines[index]
-            if not line.strip():
-                continue
-            if line[0] not in " \t":
-                break
-            end = index
-        updated = lines[:start] + block + lines[end + 1 :]
-    text = bom + "".join(updated)
+    its end, one library a line in name order, every other byte kept: its comments, its
+    order, its line endings and a byte-order mark (`records.with_mapping`). Raises Refused
+    when the text would not read back as it was with that lock."""
+    ordered = {name: lock[name] for name in sorted(lock)}
     try:
-        before, after = load_yaml(body), load_yaml(text[len(bom) :])
-    except ReadError as exc:
+        return records.with_mapping(piece_yaml, "lock", ordered, each="library")
+    except records.RecordError as exc:
         raise Refused(f"{PIECE_FILE} cannot take the lock as text: {exc}") from exc
-    if not isinstance(before, Mapping) or after != {**before, "lock": dict(lock)}:
-        raise Refused(
-            f"{PIECE_FILE} cannot take the lock as text: write its top-level `lock:` as a block "
-            f"mapping, one library a line"
-        )
-    return text
-
-
-def _is_lock_line(line: str) -> bool:
-    head = line.split("#", 1)[0].rstrip()
-    return head == "lock:" or head.startswith(("lock: ", "lock:\t"))
 
 
 def locked(piece: Piece, lock: Mapping[str, str]) -> bytes | None:
@@ -660,15 +622,8 @@ def recorded_fonts(root: Path, location: str, recorded: Mapping[str, Any]) -> li
 
 def yaml_text(data: Mapping[str, Any], header: str) -> str:
     """A file a command writes whole: `header`, a comment of `# ` lines, then `data` as
-    block YAML, indented as the capability's reference instances are."""
-    yaml = YAML()
-    yaml.indent(mapping=2, sequence=4, offset=2)
-    yaml.width = 4096
-    yaml.representer.ignore_aliases = lambda *_: True
-    stream = io.StringIO()
-    yaml.dump(dict(data), stream)
-    comment = "".join(f"# {line}\n" if line else "#\n" for line in header.splitlines())
-    return f"{comment}\n{stream.getvalue()}"
+    block YAML, set apart by a blank line (`records.text`)."""
+    return records.text(data, header.splitlines())
 
 
 def writable(root: Path, path: Path) -> None:
