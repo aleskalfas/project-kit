@@ -159,7 +159,7 @@ The PDF is not tagged. It carries no alternative text, no reading order and no s
 
 ### What the PDF renderer loses
 
-Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer ([What the SVG renderer loses](#what-the-svg-renderer-loses)). The declaration names every primitive of format 1's scene but the image. So an image is `refused`, and left out of the file. No producer ships yet, so no piece can show a picture yet ([Produced pictures](#produced-pictures)); a later version draws it. The check reports the loss for each piece that exports `pdf` (*Losses* in *What the check reports*).
+Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer ([What the SVG renderer loses](#what-the-svg-renderer-loses)). The declaration names every primitive of format 1's scene but the image. So an image is `refused`, and left out of the file. No producer ships yet, so no piece can show a picture yet ([Produced pictures](#produced-pictures)); a later version draws it. The capability reports the loss before the renderer runs, unless the piece accepts it (DEC-005 point 9; *Losses* in *What the check reports*).
 
 While it draws, the renderer reports three losses of its own:
 
