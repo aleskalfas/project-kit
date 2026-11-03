@@ -3,14 +3,17 @@ kind: patch
 custom:
   category: Changed
 body: >
-  The person builds a foundation's records Task, or a session they direct,
-  and authors every one of its records, whatever kind each is. The critic,
+  A foundation's records Task is built by the person, or the primary agent
+  of a session they direct, from a clone that holds no seat. Whoever builds
+  it authors every one of its records, whatever kind each is. The critic,
   then the architect agent where the project deploys it, review each before
   the person accepts it (DEC-064, #2513). For a planner, batch planning's
-  first plan no longer hands the records to the architect. It says at its
-  gate that the person builds the records Task, and gives that Task one more
-  acceptance criterion: each record reviewed, and each review, its findings
-  and how each was settled, listed in the pull request's description. For a
-  worker, the loop builds no records Task: it says so on the Task and leaves
-  it to the person. DEC-060 carries a top line saying what DEC-064 decides,
-  and DEC-059 point 2 and DEC-063 point 1 each point to it.
+  first plan no longer hands the records to the architect. It leaves the
+  records Task in Todo with no owner, says at its gate who builds it, and
+  gives that Task one more acceptance criterion: each record reviewed, and
+  each review, its findings or none and how each was settled, listed in the
+  pull request's description. A lead's plan leaves the records Task for the
+  person to file. For a worker, the loop builds no records Task: it says so
+  on the Task and, on the person's authorisation, moves it back to Todo.
+  DEC-060 carries a top line saying what DEC-064 decides, and DEC-059 point
+  2 and DEC-063 point 1 each point to it.
