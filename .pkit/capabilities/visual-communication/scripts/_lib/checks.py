@@ -59,7 +59,7 @@ from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from _lib import code, fingerprint, framing, location, names, notations, tokens
+from _lib import code, fingerprint, framing, location, names, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.files import FileError, binding_problem, nearest, read_bound, schema_of
@@ -73,7 +73,7 @@ from _lib.findings import (
     as_read,
 )
 from _lib.findings import loss_finding as _loss_finding
-from _lib.libraries import FOLDER, Held, Version
+from _lib.libraries import FOLDER, Held, Version, kind_within
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml
 from _lib.root import CONFIG
@@ -423,16 +423,7 @@ def kind_of(inside: str) -> str | None:
     if parts == [FOLDER, "libraries.yaml"]:
         return "libraries"
     if parts[0] == FOLDER and len(parts) >= 4:
-        within = parts[3:]
-        if within == ["library.yaml"]:
-            return "library"
-        if within == ["roles.yaml"]:
-            return "roles"
-        if within == [notations.FILE]:
-            return "notation"
-        if len(within) == 2 and within[0] == pl.COMPONENTS:
-            return "component"
-        return None
+        return kind_within(parts[3:])
     if parts[0] == pl.PIECES and len(parts) >= 3:
         within = parts[2:]
         single = {
