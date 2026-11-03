@@ -20,6 +20,13 @@ pkit:
         - .pkit/process/shape.md
         - .pkit/process/engine.md
         - .pkit/process/connections.md
+        - .pkit/process/shape.md#core-and-deferred
+        - .pkit/process/shape.md#determinism-across-dynamic-structure
+        - .pkit/process/engine.md#the-operations
+        - .pkit/process/engine.md#the-predicate-runner-engine-contract
+        - .pkit/process/engine.md#seam-ordering-contract-journal-as-intent-log
+        - .pkit/process/engine.md#where-journals-live
+        - .pkit/process/connections.md#the-generated-depends-on-list
         - .pkit/agents/README.md#write-carrying-categories
         - .pkit/cli/README.md#process-commands
         - .pkit/cli/README.md#process-new-capabilityprocess-id-flags
@@ -37,7 +44,7 @@ The process substrate is a content-free state machine that a capability binds it
 - **Who owns what.** The backbone owns the shape contract and the engine. Each capability ships its own process definition, an instance that conforms to the shape.
 - **What every process gets:** a deterministic validator of each move, and a memory of where each subject stands that explains itself ("The two guarantees" below). So an agent can rely on it for "where am I, may I move, am I valid". A person with no manual can read the same answers.
 - **Core and deferred.** Each part of the shape is core, shipped now, or deferred. A deferred part is named in the shape, and built only when a binding needs it ([the shape page, "Core and deferred"](shape.md#core-and-deferred)). It then gains a decision of its own.
-- <a id="grounding--status"></a>**Its grounding:** COR-033's implications record the bindings that proved the substrate before it shipped.
+- <a id="grounding--status"></a>**Its grounding:** [COR-033](../decisions/core/COR-033-process-substrate.md)'s implications record the bindings that proved the substrate before it shipped.
 
 ## Contents
 
@@ -78,6 +85,9 @@ Every transition gate reduces to one of two forms ([COR-033](../decisions/core/C
 
 An actor's own assertion that a gate passed is never enough. A gate that rests on judgment must leave a trace that another authority made and a check can confirm, or validation is theatre.
 
+- **What the engine compares.** For an authorisation artefact, the engine compares the `produced_by` its predicate reports with the actor the caller names ([the engine page, "The predicate runner"](engine.md#the-predicate-runner-engine-contract)). It confirms neither.
+- **So the gate holds** only where the predicate reads a trace the actor cannot write, and the caller names the actor truthfully.
+
 ## Layout
 
 A process's parts sit in five places:
@@ -92,45 +102,48 @@ src/project_kit/process.py          # the engine, in the pkit binary — it does
 .pkit/schemas/_defs/
   process.schema.json               # the shape contract as a JSON-Schema fragment (reaches a project);
                                     # capability instance schemas $ref it to inherit the shape
-.pkit/capabilities/<capability>/schemas/<process>.yaml
+.pkit/capabilities/<capability>/schemas/<process-id>.yaml
                                     # each capability's own conforming process definition (instance)
 .pkit/capabilities/<capability>/project/process/<process-id>/<subject>.journal.jsonl
                                     # each subject's journal, where the project keeps one
 ```
 
 - **The engine** ships in the binary, as `pkit`'s `process` commands. Capabilities never implement the state machine again: they bind to it ([the engine page, "The operations"](engine.md#the-operations)).
-- **The journal,** where kept, is data the project owns, committed or kept in each clone as the project chose. Its path is the engine's ([the engine page, "The journal"](engine.md#the-journal--optional-audit-cor-033-point-7)).
+- **The journal,** where kept, is data the project owns, committed or kept in each clone as the project chose. Its path is the engine's ([the engine page, "Where journals live"](engine.md#where-journals-live)).
 
 ## Binding a process (how a capability uses this)
 
 A capability binds a process in four steps ([COR-033](../decisions/core/COR-033-process-substrate.md) point 2):
 
-1. Author a process definition as the capability's own instance schema, at `.pkit/capabilities/<capability>/schemas/<process>.yaml`. It declares that it conforms to the shape contract, which is `../../../schemas/_defs/process.schema.json` from its folder. Author it through the authoring layer below, never by hand, since the stamps own the file's correctness.
+1. Author a process definition as the capability's own instance schema, at `.pkit/capabilities/<capability>/schemas/<process-id>.yaml`. It declares that it conforms to the shape contract, which is `../../../schemas/_defs/process.schema.json` from its folder.
+   - Author it through the authoring layer below, not by hand, since the stamps own the file's correctness.
+   - The one exception is a block no stamp writes yet ("Deferred authoring operations" below). Such a block is written into the definition by hand.
 2. Drive it through the capability's commands, each named by a verb and a subject, which call the engine ([the engine page, "Seam-ordering contract"](engine.md#seam-ordering-contract-journal-as-intent-log)).
 3. Address the process elsewhere as `<capability>:<process-id>`.
    - A parent embeds it by that address, through a `subprocess` state ([COR-036](../decisions/core/COR-036-process-composition.md)).
    - When its capability offers it under a role, another definition's `depends_on` may address it by role instead, as `<publisher>::<role>:<point>` ([COR-053](../decisions/core/COR-053-connection-points.md)).
    - Orchestration, a concurrent hand-off, stays deferred.
-4. When a definition's `depends_on` changes, run `pkit capabilities refresh <capability>`, so that the package's generated `depends-on` list follows it ([the connections page, "depends_on"](connections.md#depends_on--inert-cross-process-connection-metadata-core-cor-038)). `pkit validate` fails until it does.
+4. When a definition's `depends_on` changes, run `pkit capabilities refresh <capability>`, so that the package's generated `depends-on` list follows it ([the connections page, "The generated `depends-on` list"](connections.md#the-generated-depends-on-list)). `pkit validate` fails until it does.
 
 The schema-binding grammar is unchanged ([COR-023](../decisions/core/COR-023-schema-binds-inline.md)). Capabilities stay independent peers that describe themselves.
 
 ## The authoring layer
 
-Authoring a definition does not mean knowing these pages by heart. The layer has three tiers, split by the kind of work each does ([COR-044](../decisions/core/COR-044-process-authoring-layer.md)).
+Authoring a definition does not mean knowing these pages by heart. The layer has three tiers, split by the kind of work each does ([COR-044](../decisions/core/COR-044-process-authoring-layer.md)). A definition's shape is declarative data with closed vocabularies, so a procedure can walk it. Its teeth are logic over the owner's reality, which takes judgment.
 
 - **The commands,** `pkit process new`, `pkit process couple` and `pkit process hand-off` ([the CLI reference, "Process commands"](../cli/README.md#process-commands)):
   - They are deterministic stamps. They scaffold and change the definition, and validate every value against the vocabularies, read as data from the shape contract, `.pkit/schemas/_defs/process.schema.json`.
   - They scaffold a predicate stub that fails closed for each declared evaluable, and register it in the owning capability's package.
   - Each needs an owning capability that the project registers as a component, the same set that contract discovery walks. So a stamp can never write a definition that nothing watches. The CLI reference specifies the grammar, and that refusal.
-  - `pkit process health --interpretation-only` is the read-only check that pairs with them. It reports each hand-off contract it cannot interpret, a seam still a stub among them, and counts no missed hand-off.
+  - A stamp also refuses a capability whose files the project receives as synced copies, such as one the methodology ships.
+  - `pkit process health --interpretation-only --process <address>`, scoped to the definition, is the read-only check that pairs with them. It reports each hand-off contract it cannot interpret, a seam still a stub among them, and counts no missed hand-off.
   - That check reads hand-off contracts alone. A definition that declares none passes it, whatever stubs its states and gates still hold.
 - **The `process` skill:** the walkthrough over those commands.
   - It asks the shape questions, and then stamps the answer. The questions are what the subject is, what each state means and which moves are gated. They also ask whether a trigger is stable, and whether a candidate source would fail loudly or return empty.
   - It also owns the judgment the stamps refuse on purpose. It routes an adopter with no owning capability through capability authoring first.
 - **The `process-author` agent:** the teeth, the predicates behind every evaluable the shape declares. They are detections, gates, entry guards, `resume_when`, invariant checks and both seams of a hand-off.
   - It turns the owner's intent, given in plain words, into predicates that satisfy the predicate-runner contract ([the engine page, "The predicate runner"](engine.md#the-predicate-runner-engine-contract)). Each is read-only and fails closed, and answers about the one subject it was given.
-  - It finishes with `pkit process health --interpretation-only`.
+  - It finishes with the same check, scoped to the definition it worked on.
   - A problem of shape it uncovers goes back through the skill's operations, never fixed by hand. Registering a predicate stays with the commands.
   - Stubs fail closed until they are written, so an unwritten predicate reads as indeterminate, never green.
 

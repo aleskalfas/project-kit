@@ -8,7 +8,7 @@ pkit:
         - src/project_kit/process.py
         - src/project_kit/validators.py
         - .pkit/schemas/_defs/process.schema.json
-      record: [COR-032, COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-053, ADR-036, ADR-062]
+      record: [COR-032, COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-053, "ADR-023#1", ADR-036, ADR-062]
 ---
 
 # The shape
@@ -36,7 +36,7 @@ Each field of the shape is marked core or deferred ([COR-033](../decisions/core/
 
 ## The fields
 
-A process definition, which a capability authors, declares the fields below. Each line notes whether it is core or deferred. Every block marked optional may be left out.
+A process definition, which a capability authors, declares the fields below. Each line notes whether it is core or deferred.
 
 ```
 process:
@@ -69,7 +69,7 @@ process:
           version:  <int>           # core (optional, COR-053)  the upstream INTERFACE version targeted — connects only at an equal one
           mandatory: { reason: <prose> }   # core (optional, COR-053)  the upstream must exist; read by the capability lifecycle only
           handoff: { trigger, candidates, resolve }   # core (optional, COR-042)  OPT-IN evaluable hand-off contract — read by `health` only
-      entry:    <guard?>            # core      start state? guarded; MULTIPLE entries allowed
+      entry:    true | { when: <predicate> }   # core   start state: unconditional, or guarded; MULTIPLE entries allowed
       terminal: <bool>             # core      end state? (also a process OUTCOME for composition — COR-036)
       open_region: <bool>          # core (optional, COR-040)  free-order state: no internal edges, bounded by region-scoped invariants + one exit gate
 
@@ -77,9 +77,10 @@ process:
     - from: <state> | "*"          # core      back-edges + self-loops expressible
       to:   <state>                # core: static target  |  deferred: a resolver(data) over a known block set
       trigger:       <command>     # core      the named action
-      authorisation: user | agent-autonomous | script   # core   WHO may move
+      authorisation: user | agent-autonomous | script   # core   WHO may move — the CALLER enforces it; the engine reads it only for an awaiting-human wait
       gate:                        # core      WHAT must hold — must be checkable (the README, "Gate-checkability")
         kind: deterministic | authorisation-artifact | subprocess-outcome | cascade-outcome   # core: subprocess-outcome (COR-036) — engine-computed from an embedded inner outcome; cascade-outcome (COR-037) — engine-computed from the process's `cascade` fold
+        predicate: <predicate>     # core      REQUIRED for deterministic and authorisation-artifact; FORBIDDEN for the two engine-computed kinds
         outcome: <inner-state>     # core (subprocess-outcome)  the inner OUTCOME this move leaves the subprocess state on
       severity:      <ref>         # core      a validation-severity token (reused, not re-invented)
       why:           <prose>       # core      status view
@@ -95,6 +96,7 @@ process:
       op:        all | count       # core      all = every member reached `outcome`  |  count = at least `threshold` did
       outcome:   <child-state>     # core      the child OUTCOME each member is folded against
       threshold: <int>             # core (count)  the saturation floor (forbidden for `all`)
+    on_empty:  fail-closed | satisfied   # core (optional, COR-037)  a DETERMINATELY empty member set: gate shut (default) or open
   # the parent gate it feeds is a transition `gate: { kind: cascade-outcome }` (no predicate / outcome — the fold IS the check)
 
   invariants:                      # core (optional, COR-035)  position-independent always-checks, run by `validate` + surfaced on status
@@ -109,18 +111,29 @@ process:
   orchestration: { overflow, cross_gates }   # deferred  altitude-2 (overflow / hand-off — concurrent spawn)
 ```
 
-The connections page describes `subprocess`, `interface`, `cascade` and `depends_on` in full. The engine page describes how each predicate is run and read.
+What a definition must hold, and how its parts are written:
+
+- **Required:**
+  - a process's `id`, `version`, `subject`, `states` and `transitions`, and a subject's `cardinality`
+  - a state's `id`, `meaning` and `detection`, and a detection's `mode` and `predicate`
+  - a transition's `from`, `to`, `trigger` and `authorisation`, and a gate's `kind`
+- **Every other field may be left out.** A transition with no `gate` has no check, and any caller may take it.
+- **A predicate** is `{run: <command>, with: {...}}`. `run` names a command the owning capability registers, and `with`, optional, maps static arguments, which the runner does not pass yet.
+- **An entry** is `true`, an unconditional start, or `{when: <predicate>}`, a start guarded by a predicate.
+
+The connections page describes how the engine reads `subprocess`, `interface`, `cascade` and `depends_on`. The engine page describes how each predicate is run and read.
 
 ## Subject cardinality (core)
 
 A process declares `subject.cardinality`, which is `singleton` or `keyed`.
 
-- **`singleton`:** one journey for each process. It has no subject identifier, and the engine tracks the one journey under a fixed internal key.
+- **`singleton`:** one journey for each process. It has no subject identifier, and the engine tracks the one journey under a fixed internal key, `_`. Its predicates receive `_` as their subject.
 - **`keyed`** ([COR-032](../decisions/core/COR-032-keyed-process-subjects.md)): many units under one definition, each at its own position, such as one for each issue. The engine works on one subject identifier it is given:
   - It resolves that subject's position, validates and executes that subject's moves, and writes that subject's journal.
   - It passes the identifier to every predicate it runs, as the predicate's first argument.
   - The identifier is required, with no singleton default. Each of the engine's operations on one of its subjects must be given `--subject <id>`, and fails with a clear error without it.
-  - A keyed subject may declare a descriptive `key`, naming what identifies a unit, such as `issue-number`. The engine does not interpret it. A subject identifier must be safe to use in the path of that subject's journal.
+  - A keyed subject may declare a descriptive `key`, naming what identifies a unit, such as `issue-number`. The engine does not interpret it.
+  - A subject identifier must be safe to use in the path of that subject's journal. The singleton's `_` is refused as a keyed subject's identifier.
 
 **The engine never enumerates** a keyed process's subjects. It only ever acts on the one it is given.
 
@@ -132,10 +145,7 @@ A process declares `subject.cardinality`, which is `singleton` or `keyed`.
 
 - **A position** (core), resolved live.
 - **A derived blocked state** (core): "no legal move", with an optional declared wait, `blocked` ("Blocked" below).
-- **A journal** (optional audit): an append-only record of the subject's moves, kept only where the project turns journal logging on, which is off by default.
-  - Each entry holds `{ts, subject, from→to, trigger, actor, gate-result, severity, reason}`: how the subject got here.
-  - `reason` is the one place an entry says why its move was taken.
-  - Nothing the engine decides reads the journal. The engine page describes it.
+- **A journal** (optional audit): an append-only record of how the subject got here. It is kept only where the project turns journal logging on, which is off by default. Nothing the engine decides reads it, and the engine page describes its entries.
 
 ## Detection modes (core)
 
@@ -153,7 +163,7 @@ Each state's `detection` declares the mode in which reality is asked ([COR-033](
 Every state of a definition declares the same mode.
 
 - **Per definition.** An embedded inner process, or the child process a cascade folds, is a definition of its own, and is read by its own mode.
-- **A definition that mixes modes** does not conform. Validation reports it as an error, and the engine runs none of its detections.
+- **A definition that mixes modes** does not conform. Validation's `process` member reports it as an error, and the engine runs none of its detections.
 - **Its states.** Every state of such a definition is indeterminate, for one reason that names each mode and the states that declare it. So no position is ever resolved from some of the states.
 
 ### How a classifier's answer is read
@@ -263,7 +273,7 @@ transitions:
 
 ### The four reasons
 
-`blocked_on` takes one of four reasons.
+`blocked_on` takes one of four reasons. A definition declares one wait, on its subject block.
 
 - **Three are read from one subject's reality** ([COR-032](../decisions/core/COR-032-keyed-process-subjects.md)):
   - **`awaiting-human`:** a person must act.
@@ -293,7 +303,7 @@ The blocked flag is a derived overlay, recomputed live and never stored as truth
 - **`awaiting-cascade-outcome`** carries no `resume_when`, which the schema forbids.
   - **Blocked:** while the subject sits at a state whose outgoing `cascade-outcome` gate has no legal move. The fold over the declared child's members has not resolved open then.
   - **Resumes on its own,** its condition being the live fold, re-read in the check for a legal move. When all members reached the outcome, or the threshold is met, the gate opens, a legal move exists, and the wait clears.
-  - **Fail-closed throughout:** any unresolved member, and an empty member set, hold the fold shut, so the parent stays blocked.
+  - **Fail-closed throughout:** any unresolved member holds the fold shut, and so does an empty member set, unless the cascade's `on_empty` is `satisfied`. The parent stays blocked.
 
 ### The journal of a wait
 
@@ -359,7 +369,7 @@ A process need not be a fixed pipeline. A transition's target or gate takes one 
 
 - **Static** (core): listed in the definition.
 - **Resolved** (deferred): a `resolver(data)` that returns which of a known set of blocks apply now. Given the data, its answer is deterministic, so the engine stays an honest validator.
-- **An open region** (core, [COR-040](../decisions/core/COR-040-process-open-region.md)): a state marked `open_region: true`, with no edges inside it, for work whose order is open-ended. Only region-scoped invariants and an explicit exit gate bound it.
+- **An open region** (core, [COR-040](../decisions/core/COR-040-process-open-region.md)): a state marked `open_region: true`, with no edges inside it, for work whose order is open-ended. Only region-scoped invariants and an explicit exit gate bound it, and the flag itself changes nothing the engine does.
 
 In every form the engine stays a deterministic validator.
 

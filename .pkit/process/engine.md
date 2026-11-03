@@ -10,12 +10,14 @@ pkit:
         - src/project_kit/process_journal.py
         - src/project_kit/command_runner.py
         - src/project_kit/visibility.py
+        - src/project_kit/cli.py
         - .pkit/migrations/backbone/1.150.0/001-keep-process-journal-logging.sh
-      record: [COR-032, COR-033, COR-034, COR-035, COR-042, COR-048, ADR-009#7, ADR-020, ADR-057#5, ADR-062]
+      record: [COR-032, COR-033, COR-034, COR-035, COR-042, COR-048, "project-management:DEC-049", ADR-009#7, ADR-020, ADR-057#5, ADR-062]
       artefact:
         - .pkit/process/shape.md#detection-modes-core
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
         - .pkit/lifecycle/README.md#validation-the-package-schema
+        - .pkit/lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4
 ---
 
 # The engine
@@ -38,8 +40,8 @@ The backbone exposes the engine as the `process` command group of `pkit`. Its co
 | Operation | What it answers or does |
 |---|---|
 | `status` | Where the subject is, and why. How it got here: the journal, or "journal logging is not enabled for this project". Its legal moves, each with a live precheck, and the next hint. Narrative, or `--json`, which carries `journal_logging: {enabled, committed}` beside `journal` |
-| `can-move --to <state>` | Validates a candidate move: the gate's precheck and the authorisation. A refusal gives a reason that explains itself |
-| `move --to <state> [--from <state>] [--reason <text>]` | Executes a legal move, and records its journal entry where the project keeps a journal. It will run hooks once they ship. The verdict is the same either way |
+| `can-move --to <state>` | Validates a candidate move by its gate's precheck, for the actor named. A refusal gives a reason that explains itself, and exits 1 |
+| `move --to <state> [--from <state>] [--reason <text>]` | Executes a legal move, and records its journal entry where the project keeps a journal. It will run hooks once they ship. The verdict is the same with logging on or off, and a refusal exits 1 |
 | `validate` | Runs the subject's invariants ([COR-035](../decisions/core/COR-035-process-invariants.md)), and reports which hold and which are violated. Narrative or `--json`. It exits non-zero on any violation |
 | `cascade` | Resolves the cascade fold the process declares, outside any gated transition, and prints it, narrative or `--json`. A wrapper reads it to combine the fold with gates of its own |
 | `health` | Walks every declared hand-off contract ([COR-042](../decisions/core/COR-042-process-health.md)), and reports missed hand-offs: upstream subjects at their trigger with no downstream counterpart |
@@ -48,6 +50,11 @@ The backbone exposes the engine as the `process` command group of `pkit`. Its co
 - **`move`'s `--from`** names the state the subject held before the caller applied the move's domain side-effect. The move is validated and journaled from there ("Seam-ordering contract" below).
 - **`move`'s `--reason`** says why the caller took the move. An instance is the justification for overriding a gate the binding lets it bypass, or a move that one subject's move caused in another. It is recorded on the entry's `reason` as given, and no verdict reads it.
 - **`health`** takes no subject. It runs outside the engine's runtime, reports only, and is deterministic. It prints narrative or `--json`, and exits non-zero on any miss or any indeterminate finding.
+  - `--process <address>` scopes it to one process's contracts.
+  - `--interpretation-only` reports only the contracts it cannot interpret, a seam still a stub among them, and counts no miss. It is the authoring check a definition's author runs, scoped to that definition.
+- **`cascade`** exits 1 when the fold is not open, or when the process declares none.
+- **`--actor <login>`** names the actor whose gates are checked. `status` and `can-move` take `operator` without it, and `move` the caller's `gh` login. A wrapper names one actor on each call, or a sign-off gate can give two verdicts.
+- **A transition's `authorisation`** names who may take the move. The engine does not enforce it, and the caller does. The engine reads it only to tell an `awaiting-human` wait, and where a `prompt` goes.
 
 **The engine is content-free.** It reads any capability's process definition and the subject's reality, and resolves and validates against them.
 
@@ -174,7 +181,7 @@ Because detection is authoritative, the seam corrects itself whichever step fail
 
 The engine can keep an append-only journal for each subject ([COR-033](../decisions/core/COR-033-process-substrate.md) point 7). It holds an entry for each move the engine executes, and for each wait's enter and resume.
 
-- **Audit, not runtime.** Position, gates, invariants and the blocked overlay never read it. So every answer the engine gives is the same with it on or off.
+- **Audit, not runtime.** Position, gates, invariants and the blocked overlay never read it. So the engine's verdicts are the same with it on or off: where the subject is, whether it may move, and whether it is valid.
 - **The project's choice.** The project declares it in the backbone configuration file, which the CLI reference describes:
 
 ```yaml
@@ -206,6 +213,15 @@ pkit config set process.journal.committed true --yes
   - It writes `enabled: true`, with `committed` following whether git tracks those journals. Otherwise it writes nothing, so logging stays off.
   - It decides from the clone it runs in. A project whose journals lived only in other clones turns logging on itself.
 
+### An entry
+
+Each line of a journal is one JSON object: a move's entry, or a wait's.
+
+- **A move's entry** holds `ts`, `subject`, `to`, `trigger` and `actor`. It adds `from` where the origin is known, `gate_result` (`pass` or `fail`) where the move has a gate, and `severity` where the transition names one.
+- **`version`** is the pkit version that governed the move.
+- **`reason`** is the one place an entry says why its move was taken, as the caller gave it with `--reason`.
+- **A wait's entry** holds `ts`, `subject` and `event`, `blocked-enter` or `blocked-resume`. It adds `blocked_on`, and `at` and `assignee` where the wait has them.
+
 ### Journaling a wait
 
 With logging on, a subject's wait is journaled as it starts and as it ends ([COR-034](../decisions/core/COR-034-human-pause-gate.md)). With logging off, the wait is as live and as blocking, nothing records it, and it has no `since`.
@@ -230,7 +246,7 @@ Each subject's journal is an append-only JSON Lines file in the owning capabilit
 - **Written** only where the project turns journal logging on.
 - **Its path** is the engine's, and its ignore pattern the backbone's. A capability does not declare either.
 - **A sync** leaves it in place, since the subtree is the project's.
-- **Uninstalling** a methodology-shipped capability deletes its folder, journals included. Committed journals survive in version control's history.
+- **Uninstalling** a methodology-shipped capability deletes its folder, journals included ([the lifecycle README, "Uninstall"](../lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4)). Committed journals survive in version control's history.
 
 ### The ignore rules follow the setting
 

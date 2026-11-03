@@ -15,6 +15,7 @@ pkit:
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-006, COR-030, COR-032, COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-042, COR-044, COR-053, "ADR-023#1", ADR-048]
       artefact:
+        - .pkit/process/shape.md#the-fields
         - .pkit/process/shape.md#blocked--a-first-class-wait-core
         - .pkit/process/engine.md#the-predicate-runner-engine-contract
         - .pkit/lifecycle/README.md#the-connection-documentation-and-friction-blocks
@@ -22,7 +23,7 @@ pkit:
 
 # Connections between processes
 
-How one process reads another's outcome, folds the outcomes of many, or declares a connection the engine never reads ([COR-033](../decisions/core/COR-033-process-substrate.md)). Composition and the cascade are the engine's to resolve, and `depends_on` is metadata that the engine's runtime never reads.
+How one process reads another's outcome, folds the outcomes of many, or declares a connection the engine never reads ([COR-033](../decisions/core/COR-033-process-substrate.md)). Composition and the cascade are the engine's to resolve, and `depends_on` is metadata that the engine's runtime never reads. Their fields are listed with the rest of a definition's in [the shape page's "The fields"](shape.md#the-fields).
 
 ## Contents
 
@@ -79,10 +80,12 @@ The engine resolves the outcome of one inner process whose subject is determinat
 
 ### No cycles
 
-A process may not embed itself, directly or through others: A runs A, or A runs B, which runs A.
+A process may not embed itself at the same subject, directly or through others.
 
-- **The guard.** The engine tracks the stack of active resolutions: each engine's own address, and every inner process above it. It refuses an address already on the stack.
-- **Fail-closed.** The refusal is shown as an unknown gate kind is. A cyclic resolution never ends, so it has no definite answer.
+- **The guard.** The engine tracks the stack of active resolutions, each an address with a subject. It refuses an address and subject already on the stack.
+- **The same process at other subjects** is no cycle. A cascade over other subjects of the parent's own process is allowed, such as a container that closes once its children have.
+- **One level deep.** A resolution reads the inner process's detected position, and never recurses through the inner process's own `subprocess` or `cascade` gates. So in practice the guard refuses only a direct self-embedding: A at subject S running A at S.
+- **Fail-closed.** The refusal is shown as an unknown gate kind is: indeterminate, with `cyclic embedding refused` and the chain in its reason. A cyclic resolution never ends, so it has no definite answer.
 - **Not a deadlock.** This guard differs from the deferred `deadlock` reason ([COR-034](../decisions/core/COR-034-human-pause-gate.md)), a cycle of peer subjects in another graph.
 
 ### Waiting on the inner process
@@ -93,7 +96,7 @@ While the inner process has not reached a wired terminal outcome, the parent has
 - **An unwired outcome.** A parent parked on an inner outcome that no transition wires is correctly still waiting, not a case to handle apart. The author owns the wiring of outcomes to transitions.
 - **Determinism kept.** A subprocess state's position is the inner process's terminal outcome. The inner definition's own detection reads that outcome from reality, in its own mode.
   - So "where is the subject?" becomes "what outcome did the inner process reach?", a composed, definite answer.
-  - With cycles forbidden, the composition ends. Position is still read live from reality, and the validator stays deterministic.
+  - Resolution is one level deep, so the composition ends. Position is still read live from reality, and the validator stays deterministic.
 
 ### The interface version
 
@@ -140,6 +143,7 @@ process:
       op:        all | count             # all = every member reached `outcome`  |  count = at least `threshold` did
       outcome:   <child-terminal-state>  # the child OUTCOME each member is folded against
       threshold: <int>                   # required for `count`, forbidden for `all`
+    on_empty:  fail-closed | satisfied   # optional: a DETERMINATELY empty member set keeps the gate shut (default) or opens it
   states:
     - id: <waiting-state>
       meaning: <prose>
@@ -181,9 +185,11 @@ The fold opens only on members it could resolve, and holds shut on any doubt.
 - **An indeterminate membership test** holds the whole fold unresolved too, as an unresolved member's outcome does. The `membership` predicate errored or timed out for a candidate.
   - Dropping the candidate silently would look like fewer members, and could let an `all` pass vacuously.
   - A determinate `result: false` cleanly excludes a real non-member.
-- **The empty set** fails closed too. An `all` or a `count` over no members does not open the gate: it is a determinate "not yet", never true.
-  - It covers a parent with no candidates, and a parent whose candidates are none of them members.
-  - The two collapse on purpose, and neither opens the gate.
+- **A determinately empty set** is decided by the cascade's `on_empty`, and the reducer is not evaluated ([COR-037](../decisions/core/COR-037-process-cascade.md)):
+  - `fail-closed`, the default, keeps the gate shut: a determinate "not yet", never true.
+  - `satisfied` opens it, for a parent with nothing to wait on.
+  - The set covers a parent with no candidates, and a parent whose candidates are none of them members. The two collapse on purpose.
+- **Doubt overrides `on_empty`.** Where enumerating the candidates or testing a membership errors, the fold stays unresolved, even under `satisfied`.
 
 ### The aggregate wait
 
@@ -197,7 +203,7 @@ A parent gated by a cascade parks under `awaiting-cascade-outcome`, a wait that 
 Resolving the fold runs predicates and resolves member outcomes live, and writes nothing.
 
 - **Deterministic:** the fold is a deterministic reduction over a finite member set. Each member's outcome is a composed, definite answer, and the membership set is a live reading of a deterministic predicate.
-- **No cycles:** the guard against cycles is inherited. So a cascade whose child is the parent process is refused, as a cyclic embedding is.
+- **No cycles:** the guard against cycles is inherited. A member at the parent's own address and subject is refused, and a member at another subject of the parent's own process is allowed.
 - **A known limit, accepted:** predicate answers are not memoised across the breadth of a fold.
   - The `members` predicate runs through the parent's memo for the invocation ([the engine page, "The predicate runner"](engine.md#the-predicate-runner-engine-contract)).
   - Each member's outcome and membership are resolved through a fresh runner, with no memo. One `status` resolves the fold more than once, so a member's predicates run again each time.
@@ -303,16 +309,14 @@ pkit capabilities refresh <capability>
 
 ### Stamping a coupling
 
-Write an entry with the coupling stamp, never by hand ([COR-044](../decisions/core/COR-044-process-authoring-layer.md)). The CLI reference gives its grammar:
+Write an entry with the coupling stamp, never by hand ([COR-044](../decisions/core/COR-044-process-authoring-layer.md)). Its flags and its refusals are the CLI reference's:
 
 ```
-pkit process couple <capability>:<process-id> --state <state> --upstream <address> --relation <relation> --mode <mode> --why <prose> [--version <n>] [--mandatory <reason>]
+pkit process couple <capability>:<process-id> --state <state> --upstream <address> …
 ```
 
-- **The upstream** takes either form: `<capability>:<process-id>`, or by role, `<publisher>::<role>:<point>`.
-- **The targeted interface version** is `--version <n>`, and the mandatory mark `--mandatory <reason>`. The stamp writes each only when given, so the entry has the shape above.
-- **A role address** is resolved through the wiring, as the health check resolves it. One that reaches no offered process is warned about, not refused, since the entry is inert.
-- **It writes the definition and nothing else.** When the capability's generated `depends-on` list is then stale, the stamp ends by naming the refresh. Run it: validation fails until the list follows the definitions.
+- **What it writes:** the entry, in the definition alone. Its upstream takes either form ("Addressing an upstream by role" above), and it carries a targeted version and a mandatory mark only when given.
+- **The refresh it names.** When the capability's generated `depends-on` list is then stale, the stamp ends by naming the refresh. Run it: validation fails until the list follows the definitions ([COR-053](../decisions/core/COR-053-connection-points.md) point 4).
 
 ### The relations
 
