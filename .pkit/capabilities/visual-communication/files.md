@@ -37,6 +37,7 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/foundations/library.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/roles.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
+        - .pkit/capabilities/visual-communication/libraries/**
         - tests/visual_communication_project.py
         - tests/test_visual_communication_pipeline.py
         - tests/test_visual_communication_layout.py
@@ -50,7 +51,7 @@ pkit:
 
 # The files of the visual work
 
-Where a project's visual work lies, what each of its files holds, and who writes each one. The examples come from the shipped foundations library and from the capability's test files. The test brand `test-brand` and the test library `tests` exist for the tests only: no brand ships.
+Where a project's visual work lies, what each of its files holds, and who writes each one. The examples come from the shipped foundations library and from the capability's test files. The test brand `test-brand` and the test library `tests` exist for the tests only.
 
 ## Contents
 
@@ -204,12 +205,12 @@ lock:
 | `audience` | yes | Who the piece is for, in words. |
 | `shown` | yes | Where the piece is shown, in words. |
 | `explains` | yes | `true` where the piece explains, rather than only shows. |
-| `exports` | yes | The formats an export makes (*What is made from a piece*). |
+| `exports` | yes | The formats an export makes (*Exports* in *What is made from a piece*). |
 | `state` | yes | The piece's stage of life. Format 1 takes `draft` alone. |
 | `modes` | no | For each axis, the modes the piece is drawn in. An axis it leaves out is drawn in its default. |
 | `pinned` | no | `true` pins the lock. |
-| `produced` | no | Each picture a producer makes for the piece (*What is made from a piece*). |
-| `accept-losses` | no | The losses of a plugin a person accepted (*What is made from a piece*). |
+| `produced` | no | Each picture a producer makes for the piece (*Declaring a produced output* in *What is made from a piece*). |
+| `accept-losses` | no | The losses of a plugin a person accepted (*Accepting a loss* in *What is made from a piece*). |
 | `lock` | no | The version of each library the piece uses. A render writes it. |
 
 ### The lock
@@ -274,7 +275,7 @@ libraries:
 ```
 
 - **`source.kind`** is `shipped`, `project` or `repository`. A `repository` source names its `url` and `ref`; the others name neither.
-- **`versions`** maps each version to `released: true` or `false`. A released version carries `hash`, its fingerprint over every file of its folder (*What the check reports*). A version not released carries none.
+- **`versions`** maps each version to `released: true` or `false`. A released version carries `hash`, its fingerprint over every file of its folder (*The fingerprint* in *What the check reports*). A version not released carries none.
 - **One library to a name:** a second library of one name is refused (DEC-003 point 4).
 
 ### `library.yaml`
@@ -347,6 +348,8 @@ The capability reads the `roles.yaml` of the foundations alone.
 ## Brands
 
 A *brand* is a library of kind `brand`: it holds values (DEC-001 point 5). It keeps them as design tokens in the DTCG format, version 2025.10, and its modes as one Resolver document (DEC-004 point 1). The capability reads the subset of DTCG below, and refuses the rest. The test brand's `library.yaml` is shown under [`library.yaml`](#libraryyaml).
+
+No brand ships with the capability. A project writes its own, and keeps it in its library folder as it keeps any library ([The library folder](#the-library-folder)).
 
 ### Token files
 

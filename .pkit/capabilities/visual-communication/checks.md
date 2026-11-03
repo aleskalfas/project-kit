@@ -62,6 +62,7 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#written-code
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#validate
+        - .pkit/lifecycle/README.md#how-a-registered-command-is-run
 ---
 
 # What the check reports
@@ -320,7 +321,7 @@ The key holds no version of the engine. A new release of the capability reaches 
 
 ### The validation's bound
 
-`pkit validate` runs each member under a fixed bound, and tells the check its deadline in `PKIT_COMMAND_DEADLINE`, in seconds since the epoch. Computing scenes takes time, so the check stops computing them one second before the deadline. Each piece left whose record is missing or does not verify fails as `not-checked`, at `<piece>/findings.yaml`. The fix: run `pkit visual render <piece>`, and commit its findings record. The summary counts the piece as not checked. Without a deadline, as when a person runs `pkit visual check`, the check computes every piece that needs it.
+`pkit validate` runs each member under a fixed bound, and tells the check its deadline in `PKIT_COMMAND_DEADLINE`, in seconds since the epoch ([the lifecycle README, "How a registered command is run"](../../lifecycle/README.md#how-a-registered-command-is-run)). Computing scenes takes time, so the check stops computing them one second before the deadline. Each piece left whose record is missing or does not verify fails as `not-checked`, at `<piece>/findings.yaml`. The fix: run `pkit visual render <piece>`, and commit its findings record. The summary counts the piece as not checked. Without a deadline, as when a person runs `pkit visual check`, the check computes every piece that needs it.
 
 ## The fingerprint
 
