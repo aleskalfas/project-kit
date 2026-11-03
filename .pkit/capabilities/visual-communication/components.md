@@ -17,6 +17,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/checks.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/seam.py
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
+        - .pkit/capabilities/visual-communication/libraries/foundations/components/deck.yaml
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/steps.yaml
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/card.yaml
@@ -24,7 +25,7 @@ pkit:
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/picture.yaml
         - tests/visual_engine.py
         - tests/test_visual_communication_scene.py
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-007"]
+      record: ["visual-communication:DEC-001", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-007", "visual-communication:DEC-009", "visual-communication:DEC-010"]
       artefact:
         - .pkit/capabilities/visual-communication/files.md
         - .pkit/capabilities/visual-communication/files.md#the-foundations
@@ -54,7 +55,7 @@ One model binds every component. A pattern, an item component and a block are ro
 - **A pattern** arranges items. It has a `repeat` part over a list of the content, and decides how its items lie. `tests/steps` is a pattern.
 - **An item component** draws one item of a list. The pattern names it in `draw`. An item may name its own in `use`, a pattern included.
 - **A block** is a small component, such as a card, that a pattern draws its items with, or that content places alone (DEC-007 point 1). `tests/card` and `tests/picture` are blocks.
-- **A top component** declares `layouts`. A piece names one as its top ([files](files.md)). The foundations' `figure` is one.
+- **A top component** declares `layouts`. A piece names one as its top ([files](files.md)). The foundations' `figure` is one, with one layout. Their `deck` is one whose layouts are the forms its pages take, a cover and a slide ([Layouts](#layouts)).
 - **A local component** belongs to one piece. Its `use` is `piece/<component>`, and a library component's is `<library>/<component>`. The lock alone says which version of a library is read.
 
 ## A component's file
@@ -105,7 +106,7 @@ The file takes these keys and no other:
 | `preferred` | `width` and `height`, the size it asks for, each a formula. |
 | `parts` | What it draws and places, by name, in drawing order. |
 | `exposes` | The parts a component that places it may read. |
-| `layouts` | On a top component only: its layout and the layout's slots. |
+| `layouts` | On a top component only: its layouts and their slots, and, where they are its pages' forms, each layout's own drawing. |
 
 Every name in the file takes the capability's name shape ([files](files.md)). The status says what the component's library promises (DEC-003 point 7). An experimental component may change in any release, renamed, reshaped or removed. A stable one changes in a breaking way only in a major release of its library. A deprecated one may be removed only in a major release.
 
@@ -117,6 +118,7 @@ Every name in the file takes the capability's name shape ([files](files.md)). Th
 - **`properties` and `required`:** the fields, by name. No field takes a reserved key's name: `id`, `use`, `concept`, `state`, `override` or `pkit` ([Reserved words](files.md#reserved-words)).
 - **`items`, `minItems` and `maxItems`:** what a list holds, and how many. **`enum` and `const`:** the values a field may hold.
 - **`description`,** and **`x-pkit-prose: true`,** which marks a field that holds prose. No command reads the mark.
+- **`x-pkit-pages: true`,** which marks the list field of a top that holds its pages, where its layouts are its pages' forms ([Layouts](#layouts)).
 - **`$ref`:** a reference that starts with `#/`, read within the component's own `fields`.
 - **`additionalProperties`:** only `false`. Leaving it out means the same.
 
@@ -185,10 +187,56 @@ A value may be a *switch*: `{by: <option>, <word>: <value>, ...}`. It names an o
 
 ### Layouts
 
-A top component declares `layouts`: one layout in format 1, by name, with its `slots`. Each slot is a field the content fills. A slot marked `pages: true` holds pages: each item of its list, or the component placed in it, is a page.
+A top component declares `layouts`, by name. Each layout has a *drawing*, the parts that draw the top in it, and the top's own drawing of a layout is the layout's default (DEC-009 point 1). A top declares its layouts in one of two ways.
+
+**One layout for the whole top.** The layout holds its `slots`, each a field of the top that the content fills, and the top's `parts` are its drawing. A slot marked `pages: true` holds pages: each item of its list, or the component placed in it, is a page.
 
 - **A top component with no slot of pages** is a page alone, and part of the page that holds it (DEC-005 point 5). The figure declares `layouts: {frame: {slots: {body: {}, caption: {}}}}`, with no slot of pages. As a piece's top it is one page. Placed in a slide's slot, it is part of that slide.
-- **A page inside a page is reported:** what a slot of pages places, where that slot lies inside a page.
+
+**Layouts that are its pages' forms** (DEC-010 point 5). The top marks one list field of its own `x-pkit-pages: true`: the field that holds its pages, which lies in no layout. Each layout then takes these keys:
+
+- **`slots`:** the fields a page in that layout fills, each written as a field of `fields` is. They are a page's fields, not the top's. No slot takes a reserved key's name, nor `layout`, the key by which a page names its layout, nor the name of a field of the top. No slot holds pages.
+- **`required`:** the slots a page in that layout must fill.
+- **`parts`:** the layout's drawing, which draws one page. Every layout has one. It takes the page's slots, the top's other fields and the words of the top's options, as the content gives them to the top, and the states, colour and values the top declares (DEC-009 point 5). Its `:width` and `:height` are the top's size. A part that places a slot is best named after the slot, as the deck's are, so what the slot places keeps one trace id under every drawing.
+
+The deck's field of pages, and its slide trimmed to two of its slots, their descriptions left out:
+
+```yaml
+fields:
+  type: object
+  required: [slides]
+  properties:
+    slides:
+      type: array
+      minItems: 1
+      items: {type: object}
+      x-pkit-pages: true
+layouts:
+  slide:
+    slots:
+      title: {type: string, x-pkit-prose: true}
+      lead: {type: string, x-pkit-prose: true}
+    required: [title]
+    parts:
+      title:
+        text: {content: title, style: type.heading, fill: text-primary}
+        x: "=margin"
+        y: "=margin"
+        width: "=:width - 2 * margin"
+      lead:
+        when: lead
+        text: {content: lead, style: type.body, fill: text-secondary}
+        x: "=margin"
+        y: "=title.bottom + @space.3"
+        width: "=:width - 2 * margin"
+```
+
+- **The top draws nothing around its pages.** It has no `parts` of its own. Each page is a page of its own, drawn by its layout's drawing at the top's origin, as large as the top. The top is not a page.
+- **A page names its form.** It names its layout with `layout`, and fills that layout's slots, or names the component that draws it with `use` ([content files](files.md#content-files)). A page drawn by its own component is as large as the top too.
+- **A slot that holds one page** places it as every slot places a component, by `use`, and names no layout. The key `layout` belongs to a page of a top whose layouts are its pages' forms, which places no component.
+- **A top that is a page alone keeps one layout,** as the figure does. Its content is the top's own mapping, whose keys are the top's fields, and a top with one layout may declare a field named `layout`. So the key cannot choose among forms of such a top without refusing a file format 1 accepts.
+
+A page inside a page is reported: what a slot of pages places, where that slot lies inside a page, and each page of a top whose layouts are its pages' forms, where that top lies inside one.
 
 ## Formulas
 
@@ -302,9 +350,9 @@ The *scene* is every element's final frame, values and source, for one language.
 
 ### What a scene holds
 
-The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, `seam` (the version of the seam its plugins read, 1), `pages` (the trace ids of its pages, in order) and `children`. Each element holds its `type`, `group` or a primitive's kind, and its `id`, its trace id. It holds its frame, `x y width height`, relative to its parent, in px, rounded to 1/100 px, half away from zero. Then come its properties, `sources`, where each came from, and on a group its `children`, in drawing order.
+The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, `seam` (the version of the seam its plugins read, 1), `pages` (the trace ids of its pages, in order: a top that is a page alone, what a slot of pages places, or each page of a top whose layouts are its pages' forms) and `children`. Each element holds its `type`, `group` or a primitive's kind, and its `id`, its trace id. It holds its frame, `x y width height`, relative to its parent, in px, rounded to 1/100 px, half away from zero. Then come its properties, `sources`, where each came from, and on a group its `children`, in drawing order.
 
-A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. An `image` adds `output`, `preserveAspectRatio` (`xMidYMid meet`), `variants` by key with each file and pixel size, and `points` mapped into its frame.
+A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. An `image` adds `output`, `preserveAspectRatio` (`xMidYMid meet`), `variants` by key with each file and pixel size, and `points` mapped into its frame.
 
 Colours stay role names. A renderer takes their values from the brand's resolved values, so one scene serves every mode of the value axes (*outputs*). This is the first step's head in a scene of the figure, trimmed:
 
@@ -327,6 +375,7 @@ Every element carries its *trace*, an id that comes from the path of instances, 
 - **The top component's** id is its component's name: `figure`.
 - **A part's** id is its component's id, `/`, and the part's name: `figure/body`. A component placed by `use` or `slot` takes its part's id.
 - **An item's** id is its `repeat` part's id followed by `[<id>]`, or by `#<place>`, from 1, where the item has no id: `figure/body/steps[plan]`, `figure/body/steps#2`.
+- **A page of a top whose layouts are its pages' forms** takes the top's id, `/`, and the field that holds the pages, followed by `[<id>]` or `#<place>` as an item's: `deck/slides[cover]`. Each part of its drawing takes the page's id: `deck/slides[cover]/title`.
 
 ### Sources
 

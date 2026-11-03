@@ -48,6 +48,7 @@ ROLES: dict[str, Any] = {
     "space.4": _px(32),
     "stroke.thin": _px(1),
     "size.figure": _px(640),
+    "size.slide": _px(1280),
     "font.body": [FAMILY],
     "type.body": {
         "fontFamily": [FAMILY],
@@ -55,6 +56,14 @@ ROLES: dict[str, Any] = {
         "fontWeight": 400,
         "letterSpacing": _px(0),
         "lineHeight": 1.4,
+    },
+    # Measured with the body's one file, which measures every weight of its family.
+    "type.heading": {
+        "fontFamily": [FAMILY],
+        "fontSize": _px(24),
+        "fontWeight": 600,
+        "letterSpacing": _px(0),
+        "lineHeight": 1.2,
     },
 }
 
