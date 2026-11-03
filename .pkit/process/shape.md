@@ -133,7 +133,7 @@ A block that is declared requires these fields:
 - **A `depends_on` entry:** `upstream`, `relation`, `mode` and `why`. A `mandatory` mark takes `reason`, and a `handoff` takes `trigger`, `candidates` and `resolve`.
 - **An `interface`'s inputs and outcomes:** each a `name`.
 
-The connections page describes how the engine reads `subprocess`, `interface`, `cascade` and `depends_on`. The engine page describes how each predicate is run and read.
+The connections page describes how the engine reads `subprocess`, `interface`, `cascade` and `depends_on`. The process README's predicate runner says how each predicate is run and read.
 
 ## Subject cardinality (core)
 
@@ -157,7 +157,7 @@ A process declares `subject.cardinality`, which is `singleton` or `keyed`.
 
 - **A position** (core), resolved live.
 - **A derived blocked state** (core): "no legal move", with an optional declared wait, `blocked` ("Blocked" below).
-- **A journal** (optional audit): an append-only record of how the subject got here. It is kept only where the project turns journal logging on, which is off by default. Nothing the engine decides reads it, and the engine page describes its entries.
+- **A journal** (optional audit): an append-only record of how the subject got here. It is kept only where the project turns journal logging on, which is off by default. Nothing the engine decides reads it, and the process README's journal section describes its entries.
 
 ## Detection modes (core)
 
@@ -201,7 +201,7 @@ A subject's position may be resolved more than once in one invocation, as a casc
 
 ### How an `inferred` definition is read
 
-Each detection is read by its `result`. A `state` beside it is not read, and an answer with no `result` is false, not indeterminate. The engine page says how a `result` is read.
+Each detection is read by its `result`. A `state` beside it is not read, and an answer with no `result` is false, not indeterminate. The process README's predicate runner says how a `result` is read.
 
 - **Where the two modes differ:** a missing `state` under `classified` is indeterminate, and a missing `result` under `inferred` is false.
 - **One limit follows.** A classifier's command named in an `inferred` definition reads as false for each state that names it. Where every state names it, every subject resolves to a determinate "no position". The engine cannot tell, because it reads an answer by the declared mode.
@@ -219,7 +219,7 @@ A predicate declared anywhere else carries no `mode`, and is read by its own kin
 
 ### Position: the precedence rule
 
-Each state's detection comes out true, false or indeterminate. The position is the first state, in declaration order, whose detection is true. Failing that, it is indeterminate if any detection was, and failing that, none.
+The position is the first state, in declaration order, whose detection is true. Each state's detection comes out true, false or indeterminate. Failing that, it is indeterminate if any detection was, and failing that, it is none.
 
 - **One classifier** makes at most one of its states true. So in a definition with a single classifier, the order of states decides nothing.
 - **Several classifiers** resolve as several `inferred` detections do. Where two each place the subject, the state declared earlier is the position.
@@ -230,7 +230,10 @@ Each state's detection comes out true, false or indeterminate. The position is t
 
 Handed a definition in a mode it does not implement, an engine treats every state's detection as indeterminate, and says the mode is not implemented.
 
-- **The position is then indeterminate.** `move` refuses, `health` lists the subject as indeterminate, and a cascade holds its fold.
+- **The position is then indeterminate:**
+  - `move` refuses.
+  - `health` lists the subject as indeterminate.
+  - A cascade holds its fold.
 - **Every engine shipped before `classified`** does this with a `classified` definition.
 - **A capability whose definition uses the mode** declares the backbone it needs (`requires_backbone`). That floor guards install, upgrade and validation. This reading is all that guards a running binary older than the floor.
 - **An engine older than the one-mode rule** cannot enforce it. It would evaluate a mixed definition's `inferred` states alone, and could place the subject by them. So a mixed definition has no reading to rely on under any engine.
@@ -310,16 +313,16 @@ The blocked flag is a derived overlay, recomputed live and never stored as truth
   - **Fail-closed:** an indeterminate `resume_when` keeps the subject blocked, rather than resume it silently.
 - **`awaiting-subprocess-outcome`** carries no `resume_when`, which the schema forbids.
   - **Blocked:** while the subject sits in a `subprocess` state with no legal move. No `subprocess-outcome` gate passes then, since the embedded inner process has not reached a wired terminal outcome.
-  - **Resumes on its own,** as `awaiting-condition` does. Its condition is the inner process's resolution, which the `subprocess-outcome` gates carry, re-read live in the check for a legal move. When a wired inner outcome resolves, a gate opens, a legal move exists, and the wait clears.
+  - **Resumes on its own,** as `awaiting-condition` does. Its condition is the inner process's resolution, which the `subprocess-outcome` gates carry, re-read live in the check for a legal move. When a wired inner outcome resolves, a gate opens. A legal move then exists, and the wait clears.
   - **An unwired outcome:** a parent parked on an inner outcome that no transition wires stays blocked, correctly. The author owns the wiring of outcomes to transitions, not the engine.
 - **`awaiting-cascade-outcome`** carries no `resume_when`, which the schema forbids.
   - **Blocked:** while the subject sits at a state whose outgoing `cascade-outcome` gate has no legal move. The fold over the declared child's members has not resolved open then.
-  - **Resumes on its own,** its condition being the live fold, re-read in the check for a legal move. When all members reached the outcome, or the threshold is met, the gate opens, a legal move exists, and the wait clears.
+  - **Resumes on its own,** its condition being the live fold, re-read in the check for a legal move. When all members reached the outcome, or the threshold is met, the gate opens. A legal move then exists, and the wait clears.
   - **Fail-closed throughout:** any unresolved member holds the fold shut, and so does an empty member set, unless the cascade's `on_empty` is `satisfied`. The parent stays blocked.
 
 ### The journal of a wait
 
-Where the project keeps a journal, the engine journals a wait as it starts and as it ends ([COR-034](../decisions/core/COR-034-human-pause-gate.md)). The journal is the audit trail, and whether the subject is blocked now is always the live reading, which wins over any journal entry. The engine page says when each entry is written.
+Where the project keeps a journal, the engine journals a wait as it starts and as it ends ([COR-034](../decisions/core/COR-034-human-pause-gate.md)). The journal is the audit trail, and whether the subject is blocked now is always the live reading, which wins over any journal entry. The process README's journal section says when each entry is written.
 
 ### The question on a person's move
 
@@ -345,7 +348,7 @@ Each of these waits for a decision of its own, once a binding needs it ([COR-034
 
 ## Invariants — position-independent always-checks (core)
 
-An invariant answers a third question, beside detection and gates: is something that must always be true, true ([COR-035](../decisions/core/COR-035-process-invariants.md))? Detection answers "where is this subject?", and a gate "may it move from here to there?". A process may declare a list of invariants on its `process` block, each holding process-wide, across every state.
+An invariant answers a third question, beside detection and gates: is something that must always be true, true ([COR-035](../decisions/core/COR-035-process-invariants.md))? Detection answers "where is this subject?", and a gate answers "may it move from here to there?". A process may declare a list of invariants on its `process` block, each holding process-wide, across every state.
 
 ```
 process:
@@ -377,7 +380,7 @@ process:
 
 ## Determinism across dynamic structure
 
-A process need not be a fixed pipeline. A transition's target or gate takes one of three forms ([COR-033](../decisions/core/COR-033-process-substrate.md) point 6):
+Whatever form a transition's target or gate takes, the engine stays a deterministic validator. A process need not be a fixed pipeline: the target or gate takes one of three forms ([COR-033](../decisions/core/COR-033-process-substrate.md) point 6):
 
 - **Static** (core): listed in the definition.
 - **Resolved** (deferred): a `resolver(data)` that returns which of a known set of blocks apply now. Given the data, its answer is deterministic, so the engine stays an honest validator.

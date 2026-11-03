@@ -13,11 +13,10 @@ pkit:
         - src/project_kit/package_validate.py
         - src/project_kit/capabilities.py
         - .pkit/schemas/_defs/process.schema.json
-      record: [COR-006, COR-030, COR-032, COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-042, COR-044, COR-053, "ADR-023#1", ADR-048]
+      record: [COR-006, COR-030, COR-032, COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-042, COR-044, COR-053, "ADR-023#1", ADR-048, ADR-062]
       artefact:
         - .pkit/process/shape.md#the-fields
         - .pkit/process/shape.md#blocked--a-first-class-wait-core
-        - .pkit/process/engine.md#the-predicate-runner-engine-contract
         - .pkit/lifecycle/README.md#the-connection-documentation-and-friction-blocks
 ---
 
@@ -76,7 +75,7 @@ The engine resolves the outcome of one inner process whose subject is determinat
 - **A determinate subject.** The inner process is a `singleton`, with no id, or `subprocess.subject` supplies the one id of a keyed inner process. A keyed inner process with no subject supplied fails closed, by the rule that a keyed subject is required ([COR-032](../decisions/core/COR-032-keyed-process-subjects.md)).
 - **One subject, never many.** The engine resolves that one subject, and never enumerates a keyed inner process's subjects. Folding across many is the cascade's, which calls this resolution once for each subject it folds.
 - **A new engine for the inner process.** While the subject is parked in a `subprocess` state, the engine builds a new engine on the inner address and the determinate inner subject. It reads the inner process's terminal state through that engine's own resolution of position.
-- **The engine computes the gate.** A `subprocess-outcome` gate on the parent is computed by the engine, with no capability predicate, as an `authorisation-artifact` gate is. It passes when the inner process reached exactly the gate's named `outcome`.
+- **The engine computes the gate.** The engine computes a `subprocess-outcome` gate on the parent from the inner process's outcome, and the gate takes no predicate. It passes when the inner process reached exactly the gate's named `outcome`.
 - **Read-only.** Running `status` resolves the inner process, and writes neither journal.
 
 ### No cycles
@@ -207,7 +206,7 @@ Resolving the fold runs predicates and resolves member outcomes live, and writes
 - **Deterministic:** the fold is a deterministic reduction over a finite member set. Each member's outcome is a composed, definite answer, and the membership set is a live reading of a deterministic predicate.
 - **No cycles:** the guard against cycles is inherited. A member at the parent's own address and subject is refused, and a member at another subject of the parent's own process is allowed.
 - **A known limit, accepted:** predicate answers are not memoised across the breadth of a fold.
-  - The `members` predicate runs through the parent's memo for the invocation ([the engine page, "The predicate runner"](engine.md#the-predicate-runner-engine-contract)).
+  - The `members` predicate runs through the parent's answer memo for the invocation.
   - Each member's outcome and membership are resolved through a fresh runner, with no memo. One `status` resolves the fold more than once, so a member's predicates run again each time.
   - The member sets that bindings fold are small. A shared memo for each render is deferred until a binding's set size makes it pay.
 
@@ -278,7 +277,7 @@ The engine's runtime never reads `depends_on`, and each other reader is bounded 
 - **A targeted version.** An entry may name the upstream interface `version` it targets ("The interface version" above). It then connects only to an offered process at an equal version, and another version leaves it inert.
 - **A hand-off contract on an entry addressed by role:**
   - The health check reads the process that the role's active provider offers there, from the wiring resolver, never by a resolution of its own.
-  - An address no active provider offers is indeterminate: no provider is installed, providers conflict, or no process sits at that address.
+  - An address no active provider offers is indeterminate. That is so where no provider is installed, where providers conflict, or where no process sits at that address.
   - The hand-off stamp reads the same process when it writes the contract, and checks the trigger against its states. A role address that reaches no offered process is a warning there, since the trigger cannot be checked.
   - The `candidates` seam still receives the address as declared.
 
@@ -331,7 +330,7 @@ The `relation` set annotates only the edges the engine cannot already see.
 
 ### The seam payloads
 
-Both seams of a hand-off contract are commands that the declaring, downstream capability registers ([COR-042](../decisions/core/COR-042-process-health.md)). They run under the ordinary contract of [the engine page's predicate runner](engine.md#the-predicate-runner-engine-contract): one subject argument and `--json`, from the repository's root, read-only.
+Both seams of a hand-off contract are commands that the declaring, downstream capability registers ([COR-042](../decisions/core/COR-042-process-health.md)). They run under the predicate runner's ordinary contract, which the process README gives: one subject argument and `--json`, from the repository's root, read-only.
 
 - **`candidates`** runs with the subject slot carrying the contract's upstream process address, the scope it enumerates. The binding knows the trigger statically, from its own declaration.
   - It returns `{candidates: ["<id>", …]}`.
@@ -347,7 +346,7 @@ Both seams of a hand-off contract are commands that the declaring, downstream ca
 
 - **Already declared.** A composition or aggregation edge is declared in full by the `subprocess` or `cascade` block, which the engine owns and resolves.
 - **One home.** Stated again as an annotation, it would be a second copy of a fact whose home is that block, and the two would drift ([COR-006](../decisions/core/COR-006-artifact-roles.md)).
-- **So the render derives them.** It computes the configured composite as the derived edges, read from `subprocess` and `cascade`, joined with the annotated edges of `depends_on`. Each edge is expressed exactly one way, and no edge both.
+- **So the render derives them.** It computes the configured composite as the derived edges, read from `subprocess` and `cascade`, joined with the annotated edges of `depends_on`. Each edge is expressed exactly one way, and no edge is expressed both ways.
 - **What `depends_on` is:** the layer that makes visible the edges the engine cannot see.
 
 ### `mode: push` adds no events

@@ -67,8 +67,8 @@ The adopter populates that category with their own definition files and predicat
 
 ## Key documents to read
 
-- **`.pkit/process/README.md`** — the substrate's specification and its vocabulary, leading to the three pages beside it.
-- **`.pkit/process/engine.md`** — the **predicate-runner contract** your scripts must satisfy, under "The predicate runner". Read this before writing a predicate, every time; the runner contract is the part people get wrong.
+- **`.pkit/process/README.md`** — the substrate's specification, and the **predicate-runner contract** your scripts must satisfy, under "The predicate runner". Read this before writing a predicate, every time; the runner contract is the part people get wrong. It leads to the three pages beside it.
+- **`.pkit/process/engine.md`** — the engine's operations, which you run to check your work.
 - **`.pkit/process/shape.md`** — the shape contract: every evaluable a definition declares, and how a detection's answer is read under each mode.
 - **`.pkit/process/connections.md`** — what a cascade's member seams and a hand-off contract's seams must answer.
 - **`.pkit/cli/README.md`** — the grammar of the process commands you invoke to verify your work, and of the stamps that own registration.

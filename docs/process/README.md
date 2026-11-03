@@ -26,10 +26,10 @@ pkit:
         - .pkit/process/shape.md#position-the-precedence-rule
         - .pkit/process/shape.md#invariants--position-independent-always-checks-core
         - .pkit/process/engine.md#the-operations
-        - .pkit/process/engine.md#performance-the-answer-memo
-        - .pkit/process/engine.md#the-predicate-runner-engine-contract
-        - .pkit/process/engine.md#seam-ordering-contract-journal-as-intent-log
-        - .pkit/process/engine.md#the-journal--optional-audit-cor-033-point-7
+        - .pkit/process/README.md#performance-the-answer-memo
+        - .pkit/process/README.md#the-predicate-runner-engine-contract
+        - .pkit/process/README.md#seam-ordering-contract-journal-as-intent-log
+        - .pkit/process/README.md#the-journal--optional-audit-cor-033-point-7
         - .pkit/process/connections.md#addressing-an-upstream-by-role
         - .pkit/process/connections.md#the-interface-version
         - .pkit/process/connections.md#the-generated-depends-on-list
@@ -71,10 +71,10 @@ You want other components to use what your capability does without naming it, an
 
 ### What processes do instead
 
-Processes answer these problems with five claims. The first two answer the first problem, the next two answer the second, and the last answers the third. The commands after the list prove the first claim, and the tasks the later claims link to prove those.
+Processes answer these problems with five claims. The first two claims answer the first problem, and the next two answer the second. The last claim answers the third. The commands after the list prove the first claim, and the tasks the later claims link to prove those.
 
 - **One command writes your process's definition and a check for each state and gate, and validation passes it.**
-- **Once its checks are written, `pkit process status` says where a subject is, why, and which moves it may make** ([Write the checks behind it](#write-the-checks-behind-it)).
+- **With its checks written, `pkit process status` says where a subject is, and why each move is open or shut** ([Write the checks behind it](#write-the-checks-behind-it)).
 - **A check not written yet fails, and the engine refuses each move that rests on it** ([Write the checks behind it](#write-the-checks-behind-it)).
 - **A sign-off gate refuses the actor who signed, where your command asks the engine first and names the actor** ([Write the checks behind it](#write-the-checks-behind-it)).
 - **A process that waits on yours can name your role, so its definition and package never name your capability** ([Connect it to another process](#connect-it-to-another-process)).
@@ -117,7 +117,7 @@ $ pkit process can-move doc-review:publish --to published
 What the output proves:
 
 - **One command.** The stamp wrote the definition, and one check for each state and for the gate, each a script registered in the capability's package. Validation passes ([the reference, "Binding a process"](../../.pkit/process/README.md#binding-a-process-how-a-capability-uses-this)).
-- **Refused while unwritten.** Every check the stamp wrote fails until someone writes it. So the engine cannot tell where the page is, lists no legal move, and refuses the move ([the engine page, "The predicate runner"](../../.pkit/process/engine.md#the-predicate-runner-engine-contract)). [Write the checks behind it](#write-the-checks-behind-it) shows a gate's own check still unwritten.
+- **Refused while unwritten.** Every check the stamp wrote fails until someone writes it. So the engine cannot tell where the page is, lists no legal move, and refuses the move ([the reference, "The predicate runner"](../../.pkit/process/README.md#the-predicate-runner-engine-contract)). [Write the checks behind it](#write-the-checks-behind-it) shows a gate's own check still unwritten.
 
 ### Compared with a state machine in your own scripts
 
@@ -131,7 +131,7 @@ The alternative is your capability's own code: a status kept in a file, and a sc
 | Why a subject is where it is, and what it may do next | ❌ A view you write | ✅ `pkit process status`, as text or as JSON |
 | Another process that waits on yours | ❌ It names your code | ✅ It can name your role, and the wiring graph draws the link |
 | Setup | ✅ None beyond your code | ❌ Registering your capability, and a script for each check |
-| The cost of a check | ✅ A function call | ❌ A program the engine starts on each call, [bounded at 30 seconds](../../.pkit/process/engine.md#the-predicate-runner-engine-contract) |
+| The cost of a check | ✅ A function call | ❌ A program the engine starts on each call, [bounded at 30 seconds](../../.pkit/process/README.md#the-predicate-runner-engine-contract) |
 | Reacting to a change the moment it happens | ✅ Your code can listen for it | ❌ The engine reads only when asked |
 | A change someone makes by hand | ✅ Your stored status ignores it until your code moves it | ❌ It moves the subject, past any gate |
 
@@ -173,10 +173,10 @@ flowchart LR
 ```
 
 - **The definition** is data in your capability: its states, the moves between them, and the check behind each question ([the shape page, "The fields"](../../.pkit/process/shape.md#the-fields)).
-- **The checks** are scripts your capability registers. The engine runs each with the subject's id, and reads one JSON answer. A check that fails or gives no answer is never a pass ([the engine page, "The predicate runner"](../../.pkit/process/engine.md#the-predicate-runner-engine-contract)).
-- **The engine** asks the state checks where the subject is on every call, and keeps no position between calls. Then it asks each gate out of that state whether its move may happen ([the engine page, "Performance"](../../.pkit/process/engine.md#performance-the-answer-memo)).
-- **Your capability's commands** ask the engine whether a move may happen before they make the change it stands for, such as publishing the page. Then they report the move with `pkit process move --from <origin>`, which journals it where your project keeps a journal. The reference's seam-ordering contract sets that order ([the engine page, "Seam-ordering contract"](../../.pkit/process/engine.md#seam-ordering-contract-journal-as-intent-log)).
-- **The journal** records each move where your project turns it on. It is off by default, and nothing the engine decides reads it ([the engine page, "The journal"](../../.pkit/process/engine.md#the-journal--optional-audit-cor-033-point-7)).
+- **The checks** are scripts your capability registers. The engine runs each with the subject's id, and reads one JSON answer. A check that fails or gives no answer is never a pass ([the reference, "The predicate runner"](../../.pkit/process/README.md#the-predicate-runner-engine-contract)).
+- **The engine** asks the state checks where the subject is on every call, and keeps no position between calls. Then it asks each gate out of that state whether its move may happen ([the reference, "Performance"](../../.pkit/process/README.md#performance-the-answer-memo)).
+- **Your capability's commands** ask the engine whether a move may happen before they make the change it stands for, such as publishing the page. Then they report the move with `pkit process move --from <origin>`, which journals it where your project keeps a journal. The reference's seam-ordering contract sets that order ([the reference, "Seam-ordering contract"](../../.pkit/process/README.md#seam-ordering-contract-journal-as-intent-log)).
+- **The journal** records each move where your project turns it on. It is off by default, and nothing the engine decides reads it ([the reference, "The journal"](../../.pkit/process/README.md#the-journal--optional-audit-cor-033-point-7)).
 
 ## Give your capability a process
 
@@ -265,11 +265,11 @@ Process interpretability  (authoring check — indeterminates only; misses are n
 Write each check as a short script that reads your files and prints one JSON answer. Your agent writes them as the `process-author` agent, once you grant it the files ([COR-044](../../.pkit/decisions/core/COR-044-process-authoring-layer.md)):
 
 - **Grant the files.** List your definition and its scripts under `process-authoring-targets` in your agents' overlay, and the grant reaches the agent at your next sync. Until then the list ships empty, and the agent only says what it would write, for you to write. An overlay from before the list has no such key, and deploys no `process-author` agent until the key is added ([the agents reference, "Write-carrying categories"](../../.pkit/agents/README.md#write-carrying-categories)).
-- **What a check answers** ([the engine page, "The predicate runner"](../../.pkit/process/engine.md#the-predicate-runner-engine-contract)):
+- **What a check answers** ([the reference, "The predicate runner"](../../.pkit/process/README.md#the-predicate-runner-engine-contract)):
   - A state's check, or a `deterministic` gate, prints `{"result": true, "reason": "…"}`, with `false` when it does not hold.
   - A sign-off gate prints `{"exists": true, "produced_by": "<login>", "reason": "…"}`.
   - A check never writes anything, since `pkit process status` runs your checks live on each call.
-- **Answer with JSON's `true` and `false`.** The engine reads any other value by its truth, so the string `"false"` reads as true ([the engine page, "The predicate runner"](../../.pkit/process/engine.md#the-predicate-runner-engine-contract)).
+- **Answer with JSON's `true` and `false`.** The engine reads any other value by its truth, so the string `"false"` reads as true ([the reference, "The predicate runner"](../../.pkit/process/README.md#the-predicate-runner-engine-contract)).
 
 Below, you write the checks of the first fence by hand, the states' first. The page is published once `public/plan.md` exists, and `review.txt` holds the login of whoever signed the review:
 
