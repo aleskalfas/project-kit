@@ -54,6 +54,7 @@ pkit:
         - COR-010
         - COR-053#8
         - COR-059#3
+        - ADR-071
 ---
 
 # UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent

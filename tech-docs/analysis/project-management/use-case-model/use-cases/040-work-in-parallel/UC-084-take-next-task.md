@@ -77,6 +77,8 @@ pkit:
         - PRJ-004
         - ADR-063
         - project-management:DEC-063#1
+        - ADR-072
+        - ADR-073
       artefact:
         - ACT-worker-agent
         - REQ-061

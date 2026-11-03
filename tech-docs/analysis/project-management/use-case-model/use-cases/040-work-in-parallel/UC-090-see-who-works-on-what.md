@@ -35,6 +35,8 @@ pkit:
         - project-management:DEC-051#6
         - COR-017
         - COR-021
+        - ADR-071
+        - ADR-072
       artefact:
         - ACT-planner
         - REQ-062

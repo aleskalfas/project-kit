@@ -7,6 +7,8 @@ other-actors:
   - ACT-planning-agent
   - ACT-worker-agent
   - ACT-lead-agent
+  - core:ACT-ai-agent
+  - core:ACT-operator
 requirements:
   - REQ-040
   - REQ-041
@@ -43,6 +45,14 @@ pkit:
         - project-management:DEC-061#10
         - COR-013
         - COR-017
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
+        - COR-028
+        - COR-039
+        - PRJ-004
+        - ADR-063
       artefact:
         - ACT-planner
         - ACT-planning-agent
@@ -60,6 +70,8 @@ pkit:
 
 - **Planning agent** (`ACT-planning-agent`): plans the intent on the planner's direction, and files nothing before the planner approves the whole plan ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 - **Worker agent** (`ACT-worker-agent`) and **Lead agent** (`ACT-lead-agent`): take the Tasks from the [ready Tasks](../../../glossary.md#term-ready-task--ready-task) that every [seat](../../../glossary.md#term-seat--seat) shares, or from their seats' [pools](../../../glossary.md#term-pool--pool). Each [Task](../../../glossary.md#term-task--task) names the Tasks that the Task waits on, so these agents never start a Task too early (`batch-plan.md`).
+- **AI agent** (`core:ACT-ai-agent`): the critic and the architect, each of which reviews the plan where `UC-063` step 5 asks for it ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
+- **Operator** (`core:ACT-operator`): is asked before a filing changes a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:**
 

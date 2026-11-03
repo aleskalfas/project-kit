@@ -49,6 +49,7 @@ pkit:
         - COR-057#5
         - COR-068
         - project-management:DEC-063#1
+        - ADR-073
       artefact:
         - ACT-worker-agent
         - REQ-040

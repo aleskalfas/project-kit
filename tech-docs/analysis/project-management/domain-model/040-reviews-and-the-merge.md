@@ -26,13 +26,13 @@ pkit:
 
 # VIEW-reviews-and-the-merge — Reviews and the merge
 
-In the `agent` review mode, no person is assigned to review, so an agent's review needs a signal that counts as approval. The signal must say these ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)):
+Where the [project](../../core/glossary.md#term-project--project)'s settings leave review to agents (the `agent` mode of `review.mode`), no person is assigned to review. So an agent's review needs a signal that counts as approval. The signal must say these ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)):
 
 - whose review it is
 - what stops self-approval
 - when it goes stale
 
-A [verdict](../glossary.md#term-verdict--verdict) is that signal. A [required reviewer](../glossary.md#term-required-reviewer--required-reviewer) is an agent whose verdict the [change](../../core/glossary.md#term-change--change) needs. The [merge gate](../glossary.md#term-merge-gate--merge-gate) holds the [pull request](../../core/glossary.md#term-pull-request--pull-request) to their verdicts before it lands. After the merge, a [fixer](../glossary.md#term-fixer--fixer) the [project](../../core/glossary.md#term-project--project) granted proposes answers for what the merge left out of date.
+A [verdict](../glossary.md#term-verdict--verdict) is that signal. A [required reviewer](../glossary.md#term-required-reviewer--required-reviewer) is an agent whose verdict the [change](../../core/glossary.md#term-change--change) needs. The [merge gate](../glossary.md#term-merge-gate--merge-gate) holds the [pull request](../../core/glossary.md#term-pull-request--pull-request) to their verdicts before it lands. After the merge, a [fixer](../glossary.md#term-fixer--fixer) the project granted proposes answers for what the merge left out of date.
 
 ```mermaid
 classDiagram
@@ -80,7 +80,7 @@ flowchart LR
 
 Defined in [TERM-verdict](../glossary.md#term-verdict--verdict).
 
-**Why:** In the `agent` review mode, no person is assigned to review, so an agent's review needs a signal that counts as approval. A command must read the signal, tell whose it is, and see when new commits make it stale ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
+**Why:** Where the [project](../../core/glossary.md#term-project--project)'s settings leave review to agents, no person is assigned to review. So an agent's review needs a signal that counts as approval. A command must read the signal, tell whose it is, and see when new commits make it stale ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 
 A verdict is a comment a [reviewer](../../core/glossary.md#term-reviewer--reviewer) agent posts on a [pull request](../../core/glossary.md#term-pull-request--pull-request). Its first line approves the [change](../../core/glossary.md#term-change--change) or requests changes, and a marker names the [head](../../core/glossary.md#term-head--head) and the [base](../../core/glossary.md#term-base--base) it reviewed. Its [findings](../../core/glossary.md#term-finding--finding) follow, each tagged for what it does to the merge.
 
