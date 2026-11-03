@@ -156,7 +156,7 @@ versions:
 | Field | What it holds |
 |---|---|
 | `version` | the version's number, from 1 |
-| `fingerprint` | the version's fingerprint, whose inputs *The input set of each kind* lists |
+| `fingerprint` | the version's fingerprint, whose inputs *The input set of each kind* in *What the check reports* lists |
 | `files` | each file the run made, by name, with the SHA-256 of the file |
 | `recorded` | only recorded, never compared, so a new release of the capability makes no export stale: the `time` in UTC, the piece's `state` then (`draft`, the only state of format 1), the release of the `capability`, each of the `renderers` with its version, each produced output the run used with the version of its picture, the `value` of its record's fingerprint (`used`), and each of those it used while it was stale (`used-stale`) |
 
