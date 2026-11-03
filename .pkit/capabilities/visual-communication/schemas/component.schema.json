@@ -144,7 +144,7 @@
   },
   "$defs": {
     "field-schema": {
-      "description": "The subset of JSON Schema 2020-12 a component's `fields` takes in format 1 (v3 of the walking skeleton's design): `type`, `properties`, `required`, `items`, `minItems`, `maxItems`, `enum`, `const`, `description`, `x-pkit-prose`, `x-pkit-pages`, a local `$ref`, and `additionalProperties` only as `false`, which its absence means too. No property takes a reserved key's name.",
+      "description": "The subset of JSON Schema 2020-12 a component's `fields` takes in format 1 (v3 of the walking skeleton's design): `type`, `properties`, `required`, `items`, `minItems`, `maxItems`, `enum`, `const`, `description`, `x-pkit-prose`, `x-pkit-pages`, `x-pkit-runs`, a local `$ref`, and `additionalProperties` only as `false`, which its absence means too. No property takes a reserved key's name.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -253,6 +253,24 @@
           "description": "The field holds a top component's pages, each in one of its layouts. Only a list field of the top's own fields takes it.",
           "const": true
         },
+        "x-pkit-runs": {
+          "description": "The field is a field of runs: content gives it text, read as one run in its first style, or a list of runs, each text or `{text, style?, concept?}` (visual-communication DEC-012 points 1 and 2). The words of its run styles, the first the default; `by` is none of them. Only one of the component's own fields, or a slot of a layout that draws a page, takes it, and only where its `type` is `string` alone and it holds no `enum`, `const` or `$ref`.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "allOf": [
+              {
+                "$ref": "defs.schema.json#/$defs/name"
+              },
+              {
+                "not": {
+                  "const": "by"
+                }
+              }
+            ]
+          }
+        },
         "$ref": {
           "type": "string",
           "pattern": "^#/"
@@ -314,7 +332,7 @@
       ]
     },
     "paint-switch": {
-      "description": "A switch of paints: `by` names an option of words; a word's paint may be null.",
+      "description": "A switch of paints: `by` names an option of words, or, for a text's `fill`, the field of runs the text shows, whose paint each run then takes by its style (DEC-012 point 2); a word's paint may be null.",
       "type": "object",
       "required": [
         "by"
@@ -325,7 +343,7 @@
       },
       "properties": {
         "by": {
-          "description": "The option of words the value switches on.",
+          "description": "The option of words, or the field of runs, the value switches on.",
           "$ref": "defs.schema.json#/$defs/name"
         }
       },
@@ -352,7 +370,7 @@
       ]
     },
     "role-switch": {
-      "description": "A switch of roles on an option of words.",
+      "description": "A switch of roles on an option of words, or, for a text's `style`, on the field of runs the text shows, whose typography role each run then takes by its style (DEC-012 point 2).",
       "type": "object",
       "required": [
         "by"
@@ -363,7 +381,7 @@
       },
       "properties": {
         "by": {
-          "description": "The option of words the value switches on.",
+          "description": "The option of words, or the field of runs, the value switches on.",
           "$ref": "defs.schema.json#/$defs/name"
         }
       },
@@ -623,7 +641,7 @@
       }
     },
     "layout": {
-      "description": "A layout of a top component. In format 1 its slots name the top's fields. In a layout that is a page's form, each slot is the schema of a field the page fills, `required` names the slots a page must fill, and `parts` draw the page.",
+      "description": "A layout of a top component. In format 1 its slots name the top's fields. In a layout that is a page's form, each slot is the schema of a field the page fills, which `x-pkit-runs` may mark as a field of runs, `required` names the slots a page must fill, and `parts` draw the page.",
       "type": "object",
       "required": [
         "slots"
@@ -752,7 +770,7 @@
       }
     },
     "text": {
-      "description": "A text's properties: the field it shows, its typography role, and SVG's names.",
+      "description": "A text's properties: the field it shows, its typography role, and SVG's names. Where the field it shows is a field of runs, its `style` and `fill` may switch on the field's run styles, and each run takes the role and paint its style chooses.",
       "type": "object",
       "required": [
         "content",
@@ -761,7 +779,7 @@
       "additionalProperties": false,
       "properties": {
         "content": {
-          "description": "The field of text it shows.",
+          "description": "The field of text it shows, a field of runs included.",
           "$ref": "defs.schema.json#/$defs/name"
         },
         "style": {

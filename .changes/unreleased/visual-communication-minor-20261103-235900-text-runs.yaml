@@ -1,0 +1,29 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A field of text may hold runs, each in a style its field declares (#2559,
+  DEC-012). A component marks a field of text, or a slot of a layout that is
+  a page's form, `x-pkit-runs: [<word>, ...]`, the words of its run styles,
+  the first the default. Content gives such a field text, read as one run in
+  its first style, or a list of runs, each text or a mapping of `text`,
+  `style` and `concept`. The text part that shows the field chooses each
+  run's typography role and paint by a switch on the field, `{by: <field>,
+  <word>: ...}`. A run that names a concept takes its colour family, and a
+  state of its instance replaces it. The engine measures each run in its own
+  role, breaks lines across runs, and gives a text one line height and each
+  line one baseline. The scene's text now holds its paragraphs of runs, each
+  with its role, paint, fonts and sources, and each line its baseline and
+  spans, so the seam's version rises to 2, and every plugin declares seam 2.
+  No plugin's own version rose: the SVG renderer stays 1.0.1, drawing a text
+  of one run byte for byte as before and each other run in a span of its
+  own, and the CSS code writer stays 1.0.0, so no export goes stale. The
+  check reports a field of runs a component marks or reads wrongly
+  (`component-shape`), a run of the wrong shape, key or style in content
+  (`run-shape`, `run-key`, `run-style`), a list in a field that takes no
+  runs (`runs-unmarked`, which `content-type` reported before), and a run
+  whose concept shows in no colour (`concept-uncoloured`, asking for
+  attention); it skips a list of runs when it reads ids, and measures each
+  run's contrast in its own paint. Every file format 1 accepted is read and
+  drawn as before.

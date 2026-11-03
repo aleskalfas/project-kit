@@ -4,8 +4,10 @@ an item of a list a part passes on under another name read against the component
 draws it, a page read against the layout or the component it names (DEC-010 point 5),
 contrast as drawn, the losses a renderer's declaration predicts, the document the
 validator reads, a component it cannot read, a top that names no component, the notations
-a piece names and the concepts its content names (DEC-004 point 10), and an error it does
-not expect on one piece. The command around it is `test_visual_communication_check.py`."""
+a piece names and the concepts its content names (DEC-004 point 10), an error it does
+not expect on one piece, and a field's list of runs: read against its run styles, skipped
+by the check of ids, each run measured against the fill under it (DEC-012 points 1, 3 and
+8). The command around it is `test_visual_communication_check.py`."""
 
 from __future__ import annotations
 
@@ -300,7 +302,12 @@ def test_content_is_checked_against_the_fields_of_each_component_it_fills(
             "body.steps[note].pictures[square].output",
             "the field `output` is required",
         ),
-        ("content-type", "caption", "the field holds an array, not string"),
+        (
+            "runs-unmarked",
+            "caption",
+            "the field holds a list, and takes text: only a field its component marks "
+            "`x-pkit-runs` takes a list of runs",
+        ),
     ]
     assert {f.file for f in found} == {CONTENT}
 
@@ -328,7 +335,24 @@ COLOURS = {
 KEYS = ["default", "colour-scheme.dark"]
 
 
+def run(fill: str, *, size: float = 16, weight: int = 400, words: str = "Word") -> Any:
+    return {
+        "text": words,
+        "fill": fill,
+        "style": "type.body",
+        "font-family": ["Sans"],
+        "font-size": size,
+        "font-weight": weight,
+    }
+
+
 def text(trace: str, fill: str, *, x: float = 0, size: float = 16, weight: int = 400) -> Any:
+    return runs(trace, [run(fill, size=size, weight=weight)], x=x)
+
+
+def runs(trace: str, given: list[Any], *, x: float = 0) -> Any:
+    """A text of one paragraph, on one line, of the runs `given`, each 40 px wide."""
+    spans = [{"run": n, "text": r["text"], "width": 40} for n, r in enumerate(given)]
     return {
         "type": "text",
         "id": trace,
@@ -336,12 +360,19 @@ def text(trace: str, fill: str, *, x: float = 0, size: float = 16, weight: int =
         "y": 0,
         "width": 100,
         "height": 20,
-        "fill": fill,
-        "font-size": size,
-        "font-weight": weight,
         "line-height": 20,
         "text-anchor": "start",
-        "lines": [{"text": "Word", "width": 40}],
+        "text": "".join(r["text"] for r in given),
+        "paragraphs": [given],
+        "lines": [
+            {
+                "text": "".join(r["text"] for r in given),
+                "width": 40 * len(given),
+                "baseline": 15,
+                "paragraph": 0,
+                "spans": spans,
+            }
+        ],
     }
 
 
@@ -1180,3 +1211,123 @@ def test_a_page_carries_its_layout_the_reserved_keys_and_its_slots_alone(
     found = [f for f in checks.content_findings(project_of(root)) if f.file == CONTENT]
 
     assert [(f.code, f.where) for f in found] == [("content-key", "slides[a].slides")]
+
+
+# --- a field of runs (DEC-012) ----------------------------------------------------------------
+
+#: A local component whose `say` takes runs in two styles, and whose `note` takes text.
+SAID = bound(
+    "component",
+    status="experimental",
+    about="A said line.",
+    fields={
+        "type": "object",
+        "properties": {
+            "say": {"type": "string", "x-pkit-runs": ["plain", "strong"]},
+            "note": {"type": "string"},
+        },
+    },
+    parts={
+        "say": {
+            "text": {
+                "content": "say",
+                "style": {"by": "say", "plain": "type.body", "strong": "type.heading"},
+            },
+            "width": "=:width",
+        }
+    },
+)
+
+
+def said_project(tmp_path: Path, **languages: Any) -> Path:
+    """The drawing project with the piece's component `said`, its body placing it with
+    each language's fields."""
+    root = drawing_project(tmp_path, languages=list(languages))
+    write(root / PIECE_FOLDER / "components" / "said.yaml", yaml_text(SAID))
+    for language, fields in languages.items():
+        write_content(root, language, body={"use": "piece/said", **fields})
+    return root
+
+
+def test_a_list_of_runs_is_read_against_the_run_styles_of_its_field(tmp_path: Path) -> None:
+    runs = [
+        "Plain text, ",
+        3,
+        {"text": "a", "stlye": "strong"},
+        {"style": "strong"},
+        {"text": ["b"]},
+        {"text": "c", "style": "strnog"},
+        {"text": "d", "style": "strong", "concept": "flow/queue"},
+    ]
+    root = said_project(tmp_path, en={"say": runs, "note": ["a list"]})
+
+    found = checks.content_findings(project_of(root))
+
+    assert [(f.code, f.where, f.message) for f in found] == [
+        (
+            "run-shape",
+            "body.say#2",
+            "the run holds an integer, not text or a mapping of `text`, `style` and `concept`",
+        ),
+        (
+            "run-key",
+            "body.say#3.stlye",
+            "a run takes no key `stlye`, only `text`, `style` and `concept`; did you mean `style`?",
+        ),
+        ("run-shape", "body.say#4", "the run holds no `text`"),
+        ("run-shape", "body.say#5.text", "the run holds an array in `text`, not text"),
+        (
+            "run-style",
+            "body.say#6.style",
+            "`strnog` is no run style of the field (plain, strong); did you mean `strong`?",
+        ),
+        (
+            "runs-unmarked",
+            "body.note",
+            "the field holds a list, and takes text: only a field its component marks "
+            "`x-pkit-runs` takes a list of runs",
+        ),
+    ]
+    assert {f.file for f in found} == {CONTENT}
+
+
+def test_a_field_of_runs_given_text_or_well_formed_runs_has_no_finding(tmp_path: Path) -> None:
+    runs = ["Plain, ", {"text": "strong", "style": "strong"}, {"text": " and plain"}]
+    root = said_project(tmp_path, en={"say": runs}, cs={"say": "Prostý text"})
+
+    assert checks.content_findings(project_of(root)) == []
+
+
+def test_the_check_of_ids_skips_a_list_of_runs(tmp_path: Path) -> None:
+    """A run carries no id, and a field's runs may differ between languages, so a list of
+    runs takes neither the id rules nor their comparison across languages; a stray `id`
+    on a run is a key the format does not fix on it."""
+    en = {"say": ["A ", {"text": "b", "style": "strong", "id": "yes"}]}
+    root = said_project(tmp_path, en=en, cs={"say": [{"text": "B", "id": "b"}, "a", "c"]})
+
+    assert checks.id_findings(piece_of(root)) == []
+    found = checks.content_findings(project_of(root))
+    assert [(f.code, f.file, f.where) for f in found] == [
+        ("run-key", CONTENT, "body.say#2.id"),
+        ("run-key", f"{PIECE_FOLDER}/content.cs.yaml", "body.say#1.id"),
+    ]
+
+
+def test_each_run_is_measured_against_the_fill_under_it_in_its_own_paint() -> None:
+    scene = page(
+        box("figure/back", "paper"),
+        box("figure/dark", "ink", x=40, width=40),
+        runs("figure/said", [run("ink"), run("ink"), run("paper", size=24), run("ink")]),
+    )
+
+    found = checks.drawn_contrast(scene, COLOURS, KEYS)
+
+    # The second run lies on the ink box, the third on the paper in the paper's own colour;
+    # the first and the last, ink on paper, pass.
+    assert [f.message.split(" has ")[0] + " " + f.message.split("(")[-1] for f in found] == [
+        "`ink` on `ink` `text`)",
+        "`ink` on `ink` `text`)",
+        "`paper` on `paper` `large-text`)",
+        "`paper` on `paper` `large-text`)",
+    ]
+    assert {f.where for f in found} == {"figure/said"}

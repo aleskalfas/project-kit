@@ -491,7 +491,8 @@ def test_a_node_takes_its_concept_s_family_else_its_list_s_and_its_state_changes
         trace = f"figure/body/items[{node['id']}]"
         box, name = result.scene.find(f"{trace}/box"), result.scene.find(f"{trace}/name")
         assert box is not None and name is not None
-        assert box.sources["fill"] == box.sources["stroke"] == name.sources["fill"]
+        [[run]] = name.properties["paragraphs"]
+        assert box.sources["fill"] == box.sources["stroke"] == run["sources"]["fill"]
         painted[node["id"]] = (box.properties["fill"], box.sources["fill"])
     assert painted == {
         "user": ("family.purple.fill", "content:body.items[user].concept"),
@@ -611,7 +612,8 @@ def test_a_part_reading_a_librarys_roles_draws_them_at_their_defaults(tmp_path: 
     label = result.scene.find("figure/body/label")
     assert box is not None and label is not None
     assert box.properties["fill"] == "test-parts.paper"
-    assert label.properties["fill"] == "test-parts.note"
+    [[run]] = label.properties["paragraphs"]  # a text's paint lies in its runs
+    assert run["fill"] == "test-parts.note"
     assert project.env.role("test-parts.gap") == project.env.role("space.2")
 
 
@@ -644,5 +646,6 @@ def test_a_role_with_no_value_under_the_brand_is_none_to_the_engine_or_the_docum
     [(_, result)] = project.scenes()
     label = result.scene.find("figure/body/label")
     assert label is not None
-    assert label.properties["fill"] == "test-parts.warning"
+    [[run]] = label.properties["paragraphs"]
+    assert run["fill"] == "test-parts.warning"
     assert "test-parts.warning" not in project.values()["tokens"]

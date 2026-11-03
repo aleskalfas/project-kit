@@ -1,11 +1,16 @@
 """Components as data, and the values of one scene computed in reference order
-(visual-communication DEC-001 points 4 and 6, DEC-005 points 1 to 3).
+(visual-communication DEC-001 points 4 and 6, DEC-005 points 1 to 3, DEC-012).
 
 **A component** is a mapping. Beside its binding (`pkit_schema`, `schema_version`) it holds:
 
 - `status` and `about`;
 - `fields`: the JSON Schema of the content it takes. The engine reads its `properties`. A
-  field whose `type` is `array`, or a list of types holding it, is a list field;
+  field whose `type` is `array`, or a list of types holding it, is a list field. A field
+  whose `type` is `string` alone, with no `enum`, `const` or `$ref`, may be marked
+  `x-pkit-runs: [<word>, ...]`, the words of its run styles, the first the default: a
+  field of runs, whose content is text, read as one run of the first word, or a list of
+  runs, each text or `{text, style?, concept?}` (DEC-012 points 1 and 2). The mark lies on
+  no schema below a field, and no `$ref` leads to it;
 - `options`: each a list of words, the first the default; or `{item: <list field>}`,
   which names an item of that list by its id; or `{item: <list field>, point: true}`,
   which names an item and one of its exposed points, `{item: <id>, point: <name>}`. Such
@@ -24,16 +29,20 @@
   layouts are its pages' forms (DEC-010 point 5) marks one list field of its own
   `x-pkit-pages: true`, holds no parts, and declares each layout as `{slots: {<slot>:
   <field schema>}, required: [<slot>, ...], parts: {...}}`: the fields a page in it
-  fills, and the layout's own drawing, its default (DEC-009 point 1). Each page names its
-  layout with `layout`, or its component with `use`, and is drawn as a page of its own,
-  as large as the top asks to be.
+  fills, a slot marked as a field of runs as a field is, and the layout's own drawing,
+  its default (DEC-009 point 1). Each page names its layout with `layout`, or its
+  component with `use`, and is drawn as a page of its own, as large as the top asks to
+  be.
 
 **A part** is one of:
 
 - a primitive, `box`, `ellipse`, `text`, `line` or `image`, whose own mapping holds its
   properties under SVG's names: `fill`, `stroke`, `stroke-width`, `rx`, `text-anchor`;
   a text's `content` (a field) and `style` (a typography role); an image's `produced` (a
-  field naming a produced output);
+  field naming a produced output). Only a text part shows a field of runs: its `style`
+  and `fill` may switch on the run styles of the field it shows, `{by: <field>, <word>:
+  <value>, ...}`, naming every word, and give each run the role and the paint its word
+  chooses;
 - `use: <library>/<component>`, a component the part places, with `fields` (its field ->
   a field of this component) and `options` (its option -> a word, or a switch);
 - `slot: <field>`, the component the content places in that field;
@@ -43,19 +52,24 @@
   its preferred size along the line, or `equal`, the line shared equally). `colour` gives
   the items' default family.
 
-A part may carry `when`: a field the content fills, or `{<option>: [<word>, ...]}`. A
-missing part has zero size at its place. Its place is `x` and `y` (zero if absent), its
+A part may carry `when`: a field the content fills, a field of runs where one of its
+runs holds text, or `{<option>: [<word>, ...]}`. A missing part has zero size at its
+place. Its place is `x` and `y` (zero if absent), its
 size `width` and `height`, each a formula; a line has `x1 y1 x2 y2`. A text's height is
 its measured text's, and its width, where none is given, its widest paragraph's. An
 image's height, where none is given, keeps its picture's proportions. Any property
 value may be a switch, `{by: <option>, <word>: <value>, ...}`, naming every word. A
-colour is a role's token path, or `:colour.<member>`: the role the foundations map that
-member of the instance's colour family to (DEC-004 point 10). The instance's family is
-the one a notation maps the content's `concept: <notation>/<concept>` to, else the
-`colour` of the `repeat` part that draws it, else its component's, else its container's;
-a state may change it. Content's `override: {<part>: <role>}` points a part's paint at
-another role. `:index` and `:count` are an item's place among the items its list draws,
-from 1, and how many it draws.
+switch on a field's run styles serves only a text part's `style` and `fill`, and no part
+passes a field of runs on, or reads one but in `when`. A colour is a role's token path,
+or `:colour.<member>`: the role the foundations map that member of the instance's colour
+family to (DEC-004 point 10). The instance's family is the one a notation maps the
+content's `concept: <notation>/<concept>` to, else the `colour` of the `repeat` part
+that draws it, else its component's, else its container's; a state may change it. A run
+that names a concept takes that concept's family before its instance's, and a state
+that changes the instance's family replaces it too. Content's `override: {<part>:
+<role>}` points a part's paint at another role, each run's included. `:index` and
+`:count` are an item's place among the items its list draws, from 1, and how many it
+draws.
 
 **Computed value by value.** Every value is a cell computed on first use, in the order
 the references give, as a spreadsheet computes its cells: a loop is refused naming every
@@ -82,7 +96,7 @@ from _lib import names
 from _lib.env import Env, PictureInfo, UnknownConcept, UnreadableComponent
 from _lib.findings import FAILS, Finding
 from _lib.keys import key_order
-from _lib.text import Broken, Faces, Style, break_lines
+from _lib.text import Broken, Faces, Run, Style, break_runs
 
 PRIMITIVES = ("box", "ellipse", "text", "line", "image")
 PLACING = ("use", "slot", "repeat")
@@ -157,6 +171,12 @@ LAYOUT = "layout"
 #: The mark of the field that holds such a top's pages.
 PAGES = "x-pkit-pages"
 
+#: The mark of a field of runs, which holds the words of its run styles (DEC-012 point 1).
+RUNS = "x-pkit-runs"
+
+#: The keys the format fixes on a run, and no other (DEC-012 point 1).
+RUN_KEYS = ("text", "style", "concept")
+
 #: The engine's mark for a member of the instance's colour family.
 FAMILY = ":colour."
 
@@ -205,6 +225,87 @@ def _is_list(schema: Any) -> bool:
     types that holds `array`, such as `[array, null]`."""
     kind = schema.get("type") if isinstance(schema, Mapping) else None
     return kind == "array" or (isinstance(kind, list) and "array" in kind)
+
+
+def run_problem(name: str, schema: Any) -> str | None:
+    """Why a field's schema marked `x-pkit-runs` is no field of runs (DEC-012 points 1, 2
+    and 8): it takes more than text, or holds `enum`, `const` or `$ref`; or its mark
+    declares no word, a word that is no name, or one twice. None where it is one."""
+    if not isinstance(schema, Mapping):
+        return f"the field `{name}` is no schema"
+    kind = schema.get("type")
+    if (kind if isinstance(kind, list) else [kind]) != ["string"]:
+        return f"the field of runs `{name}` takes more than text: its `type` is `string` alone"
+    held = [key for key in ("enum", "const", "$ref") if key in schema]
+    if held:
+        return f"the field of runs `{name}` holds `{held[0]}`, and takes any text"
+    words = schema.get(RUNS)
+    if not isinstance(words, list) or not words:
+        return (
+            f"the field of runs `{name}` declares no word of its run styles: `{RUNS}` takes a "
+            "list of words, the first the default"
+        )
+    for word in words:
+        if not names.is_name(word) or word == SWITCH:
+            return f"the field of runs `{name}` declares `{word}`, which is no word of a run style"
+    if len(set(words)) != len(words):
+        return f"the field of runs `{name}` declares a word twice"
+    return None
+
+
+def runs_of(fields: Mapping[str, Any]) -> dict[str, tuple[str, ...]]:
+    """The fields of runs among a component's fields, each with the words of its run
+    styles, the first the default (DEC-012 points 1 and 2). A mark of another shape marks
+    no field of runs, and the component's reading reports it."""
+    return {
+        name: tuple(schema[RUNS])
+        for name, schema in fields.items()
+        if isinstance(schema, Mapping) and RUNS in schema and run_problem(name, schema) is None
+    }
+
+
+def _marks_below(schema: Any, path: str) -> list[str]:
+    """The key path of each mark of a field of runs below a schema: in a list's items or an
+    object's properties, at any depth."""
+    found: list[str] = []
+    if not isinstance(schema, Mapping):
+        return found
+    below: list[tuple[str, Any]] = [(f"{path}.items", schema.get("items"))]
+    properties = schema.get("properties")
+    if isinstance(properties, Mapping):
+        below.extend((f"{path}.properties.{key}", each) for key, each in properties.items())
+    for at, each in below:
+        if isinstance(each, Mapping):
+            if RUNS in each:
+                found.append(f"{at}.{RUNS}")
+            found.extend(_marks_below(each, at))
+    return found
+
+
+def _refs(schema: Any, path: str) -> list[tuple[str, str]]:
+    """Each local `$ref` within a schema, at any depth, with its key path."""
+    found: list[tuple[str, str]] = []
+    if not isinstance(schema, Mapping):
+        return found
+    if isinstance(schema.get("$ref"), str):
+        found.append((f"{path}.$ref", schema["$ref"]))
+    found.extend(_refs(schema.get("items"), f"{path}.items"))
+    properties = schema.get("properties")
+    if isinstance(properties, Mapping):
+        for key, each in properties.items():
+            found.extend(_refs(each, f"{path}.properties.{key}"))
+    return found
+
+
+def _target(ref: str, root: Any) -> Any:
+    """What a local `$ref` (`#/...`) leads to within `root`; None where it leads nowhere."""
+    if not ref.startswith("#"):
+        return None
+    target = root
+    for step in [step for step in ref[1:].split("/") if step]:
+        step = step.replace("~1", "/").replace("~0", "~")
+        target = target.get(step) if isinstance(target, Mapping) else None
+    return target
 
 
 @dataclass(frozen=True)
@@ -292,7 +393,9 @@ class Component:
     switches, and every formula's references and dimensions. `issues` lists what is
     wrong, as `(code, key path, message)`."""
 
-    def __init__(self, use: str, data: Mapping[str, Any], ctx: Context) -> None:
+    def __init__(
+        self, use: str, data: Mapping[str, Any], ctx: Context, *, layout: str | None = None
+    ) -> None:
         self.use = use
         self.issues: list[tuple[str, str, str]] = []
         self.options: dict[str, Option] = {}
@@ -309,7 +412,7 @@ class Component:
         self.pages_field: str | None = None
         self.drawings: dict[str, Component] = {}
         # The layout this component draws, where it is a top's own drawing of one.
-        self.layout: str | None = None
+        self.layout = layout
         self._ctx = ctx
         self._value_dims: dict[str, int | None] = {}
         self._roles_reported: set[str] = set()
@@ -317,12 +420,16 @@ class Component:
         properties = fields.get("properties") if isinstance(fields, Mapping) else None
         self.fields: Mapping[str, Any] = properties if isinstance(properties, Mapping) else {}
         self.lists = {name for name, schema in self.fields.items() if _is_list(schema)}
+        # Each field of runs, with its words; and those some text part chooses by.
+        self.runs = runs_of(self.fields)
+        self.chosen_by: set[str] = set()
         self.colour: str | None = data.get("colour")
         self.values = self._mapping(data, "values")
         self.preferred = self._mapping(data, "preferred")
         exposes = data.get("exposes") or []
         self.exposes: tuple[str, ...] = tuple(exposes) if isinstance(exposes, list) else ()
         self._read(data)
+        self._read_runs(data)
 
     def _issue(self, code: str, where: str, message: str) -> None:
         self.issues.append((code, where, f"{self.use}: {message}"))
@@ -436,6 +543,12 @@ class Component:
             self._read_use(part)
         elif kind == "slot" and not _is_field(spec["slot"], self.fields):
             self._shape(f"{where}.slot", f"the slot `{part.name}` names no field `{spec['slot']}`")
+        elif kind == "slot" and spec["slot"] in self.runs:
+            self._shape(
+                f"{where}.slot",
+                f"the slot `{part.name}` places the field of runs `{spec['slot']}`, which only a "
+                "text part shows",
+            )
         elif kind == "repeat":
             self._read_repeat(part)
 
@@ -448,20 +561,30 @@ class Component:
         for key in REQUIRED_PROPERTIES.get(part.kind, ()):
             if key not in part.props:
                 self._shape(where, f"the {part.kind} `{part.name}` needs `{key}`")
+        # A text part that shows a field of runs may choose its role and paint by the
+        # field's run styles (DEC-012 point 2).
+        shown = part.props.get("content") if part.kind == "text" else None
+        runs = shown if isinstance(shown, str) and shown in self.runs else None
         for key, value in part.props.items():
             at = f"{where}.{key}"
             if key not in PROPERTIES[part.kind]:
                 self._shape(at, f"the {part.kind} `{part.name}` takes no property `{key}`")
             elif key in PAINTS:
-                self._switched(at, value, self._paint, nothing=True)
+                self._switched(at, value, self._paint, nothing=True, runs=runs)
             elif key in LENGTHS:
                 self._number(at, value, fm.LENGTH)
             elif key in WORDS:
                 self._switched(at, value, self._words(WORDS[key]))
             elif key == "style":
-                self._switched(at, value, self._role)
+                self._switched(at, value, self._role, runs=runs)
             elif not _is_field(value, self.fields):  # content, produced
                 self._shape(at, f"`{key}` names no field `{value}`")
+            elif key == "produced" and value in self.runs:
+                self._shape(
+                    at,
+                    f"the image `{part.name}` names the field of runs `{value}`, which only a "
+                    "text part shows",
+                )
 
     def _read_use(self, part: Part) -> None:
         where = f"parts.{part.name}"
@@ -474,6 +597,12 @@ class Component:
             for theirs, ours in bound.items():
                 if not _is_field(ours, self.fields):
                     self._shape(f"{where}.fields.{theirs}", f"passes no field `{ours}` of its own")
+                elif ours in self.runs:
+                    self._shape(
+                        f"{where}.fields.{theirs}",
+                        f"passes the field of runs `{ours}` on to a component it places, which "
+                        "no part does for now: only a text part of its own shows it",
+                    )
         chosen = part.spec.get("options") or {}
         if not isinstance(chosen, Mapping):
             self._shape(f"{where}.options", "`options` is not a mapping")
@@ -545,6 +674,12 @@ class Component:
                     self._shape(f"layouts.{layout}.slots.{slot}", f"the slot `{slot}` is no field")
                 if isinstance(slot_decl, Mapping) and slot_decl.get("pages") is True:
                     pages.add(slot)
+                if isinstance(slot_decl, Mapping) and RUNS in slot_decl:
+                    self._shape(
+                        f"layouts.{layout}.slots.{slot}.{RUNS}",
+                        f"marks the slot `{slot}` as taking runs: the slot names a field of the "
+                        "top, and the field takes the mark",
+                    )
         self.pages = frozenset(pages)
 
     def _read_forms(self, data: Mapping[str, Any], forms: PageForms) -> None:
@@ -623,8 +758,8 @@ class Component:
                     "parts": parts,
                 },
                 self._ctx,
+                layout=layout,
             )
-            drawing.layout = layout
             for code, at, message in drawing.issues:
                 at = f"{where}.{at}" if at == "parts" or at.startswith("parts.") else at
                 if (code, at, message) not in self.issues:
@@ -650,29 +785,119 @@ class Component:
                 "inside a page",
             )
 
+    # -- fields of runs
+
+    def _read_runs(self, data: Mapping[str, Any]) -> None:
+        """The component's fields of runs (DEC-012 points 1, 2 and 8), judged once every
+        part and layout is read. Each mark lies directly on one of its fields, or on a slot
+        of a layout that is a page's form, never below one, and no `$ref` leads to a
+        marked schema. A marked field takes text alone, and declares its words, each a
+        name, once. A field of more than one word is one that some text part of the
+        component, a top's own drawing included, chooses its role or paint by. A top's own
+        drawing of a layout leaves all of this to the top that declares it."""
+        if self.layout is not None:
+            return
+        fields = data.get("fields")
+        if isinstance(fields, Mapping) and RUNS in fields:
+            self._shape(f"fields.{RUNS}", "marks the schema of all its fields as taking runs")
+        drawn = set(self.chosen_by)
+        for drawing in self.drawings.values():
+            drawn |= drawing.chosen_by
+        self._read_marks("fields", self.fields, fields, drawn)
+        layouts = data.get("layouts") if self.forms else None
+        for layout, decl in (layouts if isinstance(layouts, Mapping) else {}).items():
+            slots = decl.get("slots") if isinstance(decl, Mapping) else None
+            if isinstance(slots, Mapping):
+                drawing = self.drawings.get(layout)
+                chosen = drawing.chosen_by if drawing is not None else set()
+                root = {"type": "object", "properties": slots}
+                self._read_marks(f"layouts.{layout}.slots", slots, root, chosen, slots=True)
+
+    def _read_marks(
+        self,
+        where: str,
+        properties: Mapping[str, Any],
+        root: Any,
+        chosen: set[str],
+        *,
+        slots: bool = False,
+    ) -> None:
+        """The marks of fields of runs among `properties`, the fields or a layout's slots
+        at `where`, whose `$ref`s lead within `root`; `chosen`, the fields of runs some
+        text part chooses by."""
+        for name, schema in properties.items():
+            at = f"{where}.{name}" if slots else f"{where}.properties.{name}"
+            for below in _marks_below(schema, at):
+                self._shape(
+                    below,
+                    f"marks a schema below the field `{name}` as taking runs: only a field "
+                    "itself, or a layout's slot, takes runs",
+                )
+            for path, ref in _refs(schema, at):
+                target = _target(ref, root)
+                if isinstance(target, Mapping) and RUNS in target:
+                    self._shape(
+                        path,
+                        f"`$ref: {ref}` leads to a field of runs, so another field would take "
+                        "runs through it",
+                    )
+            if not isinstance(schema, Mapping) or RUNS not in schema:
+                continue
+            problem = run_problem(str(name), schema)
+            if problem is not None:
+                self._shape(f"{at}.{RUNS}", problem)
+            elif len(schema[RUNS]) > 1 and name not in chosen:
+                self._shape(
+                    f"{at}.{RUNS}",
+                    f"the field of runs `{name}` declares {len(schema[RUNS])} words, and no "
+                    "text part chooses its role or paint by them",
+                )
+
     # -- values, which may switch on an option
 
     def _switched(
-        self, where: str, value: Any, check: Callable[[str, Any], None], *, nothing: bool = False
+        self,
+        where: str,
+        value: Any,
+        check: Callable[[str, Any], None],
+        *,
+        nothing: bool = False,
+        runs: str | None = None,
     ) -> None:
-        """Checks a value, or each branch of its switch; `nothing` lets a branch be null."""
+        """Checks a value, or each branch of its switch; `nothing` lets a branch be null.
+        A switch names an option of words, or, where `runs` names the field of runs a text
+        part shows, that field's run styles: a text part's role and paint alone choose by
+        them (DEC-012 point 2)."""
         if not (isinstance(value, Mapping) and SWITCH in value):
             check(where, value)
             return
-        option = self.options.get(value[SWITCH])
-        if option is None or not option.words:
-            self._shape(where, f"switches on `{value[SWITCH]}`, which is no option of words")
-            return
+        by = value[SWITCH]
+        if isinstance(by, str) and by in self.runs:
+            if by != runs:
+                self._shape(
+                    where,
+                    f"chooses by the run styles of `{by}`, which only the role and the paint "
+                    f"of a text part that shows `{by}` choose by",
+                )
+                return
+            self.chosen_by.add(by)
+            words, named = self.runs[by], f"the run styles of `{by}`"
+        else:
+            option = self.options.get(by) if isinstance(by, str) else None
+            if option is None or not option.words:
+                self._shape(where, f"switches on `{by}`, which is no option of words")
+                return
+            words, named = option.words, f"`{option.name}`"
         branches = {key for key in value if key != SWITCH}
-        if branches != set(option.words):
+        if branches != set(words):
             self._shape(
                 where,
-                f"the switch on `{option.name}` names {', '.join(sorted(branches))}, not each "
-                f"word of it: {', '.join(option.words)}",
+                f"the switch on {named} names {', '.join(sorted(map(str, branches)))}, not each "
+                f"word of it: {', '.join(words)}",
             )
-        for word in option.words:
+        for word in words:
             if word in value and not (nothing and value[word] is None):
-                self._switched(f"{where}.{word}", value[word], check, nothing=nothing)
+                self._switched(f"{where}.{word}", value[word], check, nothing=nothing, runs=runs)
 
     def _number(self, where: str, value: Any, expected: int | None) -> None:
         self._switched(where, value, lambda at, text: self._formula(at, text, expected))
@@ -969,26 +1194,62 @@ class Arrangement:
     asked: float
 
 
+@dataclass(frozen=True)
+class TextRun:
+    """A run of a text as its text part draws it (DEC-012): its text, the word of its
+    style, which a field that takes no runs has none of, the typography role that word
+    chooses, the concept it names, its colour family, and where each comes from: its
+    text, its word and its family. `place` is its key path in the content file, where it
+    has one, else its text's trace."""
+
+    text: str
+    word: str | None
+    style: Style
+    concept: Any
+    family: str | None
+    family_source: str
+    source: str
+    word_source: str
+    place: str
+
+
 @dataclass
 class Node:
-    """A part as one instance draws it."""
+    """A part as one instance draws it: a text holds its text and its runs."""
 
     part: Part
     present: bool = True
     child: Instance | None = None
     items: list[Instance] = field(default_factory=list)
     text: str = ""
-    style: Style | None = None
+    runs: list[TextRun] = field(default_factory=list)
     picture: PictureInfo | None = None
     output: str = ""
+
+    @property
+    def line_height(self) -> float:
+        """A text's line height: the greatest among the roles its runs take (DEC-012 point
+        4)."""
+        return max((run.style.line_height for run in self.runs), default=0.0)
 
 
 def _join(path: str, key: str) -> str:
     return f"{path}.{key}" if path else key
 
 
-def _filled(value: Any) -> bool:
+def _filled(value: Any, *, runs: bool = False) -> bool:
+    """Whether a field holds something: not missing, empty text, an empty list or an empty
+    mapping. A list of runs, where `runs`, is filled where one of its runs holds text
+    (DEC-012 point 1)."""
+    if runs and isinstance(value, list):
+        return any(_run_text(run) for run in value)
     return value not in (None, "", [], {})
+
+
+def _run_text(run: Any) -> str:
+    """The text a run holds: the run itself, or its `text`; empty where it holds none."""
+    text = run.get("text") if isinstance(run, Mapping) else run
+    return text if isinstance(text, str) else ""
 
 
 def first_variant(picture: PictureInfo) -> str:
@@ -1237,13 +1498,18 @@ class Instance:
             else:
                 self.overrides[name] = (role, f"{self.source_of_field('override')}.{name}")
 
-    def pick(self, where: str, value: Any) -> tuple[str, Any, str | None]:
+    def pick(self, where: str, value: Any, run: str | None = None) -> tuple[str, Any, str | None]:
         """A value through its switches: the key path of the branch taken, the value, and
-        the option that chose it."""
+        the option, or the field of runs, that chose it. A switch on a field's run styles
+        takes `run`, the word of the run drawn, else the field's first word."""
         chosen = None
         while isinstance(value, Mapping) and SWITCH in value:
             chosen = value[SWITCH]
-            word = self.options.get(chosen)
+            words = self.component.runs.get(chosen) if isinstance(chosen, str) else None
+            if words is not None:
+                word = run if run in words else words[0]
+            else:
+                word = self.options.get(chosen)
             where, value = f"{where}.{word}", value.get(word)
         return where, value, chosen
 
@@ -1252,7 +1518,7 @@ class Instance:
         if when is None:
             return True
         if isinstance(when, str):
-            return _filled(self.given.get(when))
+            return _filled(self.given.get(when), runs=when in self.component.runs)
         if isinstance(when, Mapping) and len(when) == 1:
             ((name, words),) = when.items()
             return self.options.get(name) in (words if isinstance(words, list) else [words])
@@ -1276,32 +1542,121 @@ class Instance:
         return node
 
     def _build_text(self, node: Node, trace: str) -> None:
+        """The text a text part shows: its field's text, one run, or, in a field of runs,
+        its runs (DEC-012 point 1). Each run takes the typography role its word chooses.
+        A field given as text is one run of the field's first word."""
         props = node.part.props
         content = props.get("content", "")
+        words = self.component.runs.get(content)
         value = self.given.get(content)
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             value = str(value)
-        if value is not None and not isinstance(value, str):
+        given = self._given_runs(content, words, value) if isinstance(value, list) else []
+        if not isinstance(value, list) or words is None:
+            if value is not None and not isinstance(value, str):
+                self._note(
+                    "content-shape",
+                    f"{trace}: the field `{content}` holds no text",
+                    where=trace,
+                    given=content,
+                )
+                value = None
+            given = [(value or "", words[0] if words else None, False, None, None)]
+        styles: dict[str, Style] = {}
+        for text, word, named, concept, place in given:
+            _, role, _ = self.pick(f"parts.{node.part.name}.text.style", props.get("style"), word)
+            if not isinstance(role, str):
+                node.present = False  # recorded when the component was read
+                return
+            if role not in styles:
+                try:
+                    styles[role] = Style.of_role(role, self.ctx.role(role), self.ctx.faces)
+                except KeyError:
+                    message = f"{trace}: the brand gives the role @{role} no value"
+                    self._lose(node, "unknown-role", message, trace)
+                    return
+                except ValueError as error:
+                    self._lose(node, "role-type", f"{trace}: {error}", trace)
+                    return
+            node.runs.append(
+                self._text_run(content, text, word, named, concept, place, styles[role], trace)
+            )
+        node.text = "".join(run.text for run in node.runs)
+
+    def _given_runs(
+        self, content: str, words: tuple[str, ...] | None, value: list[Any]
+    ) -> list[tuple[str, str | None, bool, Any, int | None]]:
+        """The runs a field of runs holds, each its text, its word, whether it names it, its
+        concept and its place among the field's runs, from 1. A run that is neither text
+        nor a mapping with text is left out, and a word its field does not declare is the
+        first, as the check of the content reports. A list that gives no run is one empty
+        run."""
+        if words is None:
+            return []
+        found: list[tuple[str, str | None, bool, Any, int | None]] = []
+        for place, run in enumerate(value, start=1):
+            if isinstance(run, str):
+                found.append((run, words[0], False, None, place))
+            elif isinstance(run, Mapping) and isinstance(run.get("text"), str):
+                named = run.get("style") in words
+                word = run["style"] if named else words[0]
+                found.append((run["text"], word, named, run.get("concept"), place))
+        return found or [("", words[0], False, None, None)]
+
+    def _text_run(
+        self,
+        content: str,
+        text: str,
+        word: str | None,
+        named: bool,
+        concept: Any,
+        place: int | None,
+        style: Style,
+        trace: str,
+    ) -> TextRun:
+        """A run as its text part draws it. Its source names its field and, in a list, its
+        place among the field's runs, as a source names an item with no id (DEC-012,
+        Implications). A run that names a concept takes its concept's family before the
+        instance's own, and a state that gives the instance a family replaces it (point 3)."""
+        source = self.source_of_field(content)
+        path = self.field_path(content)
+        at = trace
+        if place is not None:
+            source = f"{source}#{place}" if source.startswith(CONTENT) else source
+            at = f"{path}#{place}" if path is not None else trace
+        word_source = f"{source}.style" if named else f"default:{self.component.use}"
+        family, family_source = self.family, self.family_source
+        if concept is not None:
+            found = self._run_concept(content, concept, at, trace)
+            state = self.given.get("state")
+            stated = isinstance(state, str) and bool(self.component.states.get(state))
+            if found is not None and not stated:
+                family, family_source = found, f"{source}.concept"
+        return TextRun(text, word, style, concept, family, family_source, source, word_source, at)
+
+    def _run_concept(self, content: str, raw: Any, at: str, trace: str) -> str | None:
+        """The colour family of the concept a run names, read with its notation's name as an
+        item's is (DEC-012 point 3); None where it names none the piece's notations hold,
+        which is reported at the run."""
+        if not _is_use(raw):
             self._note(
-                "content-shape",
-                f"{trace}: the field `{content}` holds no text",
-                where=trace,
+                "unknown-concept",
+                f"{trace}: a run of `{content}` names the concept `{raw}`, not "
+                "`<notation>/<concept>`",
+                where=at,
                 given=content,
             )
-            value = None
-        node.text = value or ""
-        _, role, _ = self.pick(f"parts.{node.part.name}.text.style", props.get("style"))
-        if not isinstance(role, str):
-            node.present = False  # recorded when the component was read
-            return
+            return None
         try:
-            node.style = Style.of_role(role, self.ctx.role(role), self.ctx.faces)
-        except KeyError:
-            self._lose(
-                node, "unknown-role", f"{trace}: the brand gives the role @{role} no value", trace
+            return self.ctx.concept(raw)
+        except UnknownConcept as unknown:
+            self._note(
+                "unknown-concept",
+                f"{trace}: a run of `{content}`: {unknown}",
+                where=at,
+                given=content,
             )
-        except ValueError as error:
-            self._lose(node, "role-type", f"{trace}: {error}", trace)
+            return None
 
     def _lose(self, node: Node, code: str, message: str, where: str) -> None:
         """Records why the component cannot draw the part at `where`, which then has zero
@@ -1662,8 +2017,7 @@ class Instance:
             return 0.0
         if part.kind == "text" and not (key == "width" and "width" in spec):
             lines = self.get("lines", name)
-            assert node.style is not None
-            return lines.natural if key == "width" else len(lines.lines) * node.style.line_height
+            return lines.natural if key == "width" else len(lines.lines) * node.line_height
         if key in spec:
             return self.number(where, spec[key])
         if part.kind == "image" and key == "height" and node.picture is not None:
@@ -1676,10 +2030,11 @@ class Instance:
         raise Fault()  # a size the part needs, recorded when the component was read
 
     def _lines(self, name: str) -> Broken:
+        """A text's lines, broken across its runs (DEC-012 point 4)."""
         node = self.nodes[name]
-        assert node.style is not None
         width = self.get("part", name, "width") if "width" in node.part.spec else None
-        return break_lines(node.text, width, node.style, self.ctx.language)
+        runs = [Run(run.text, run.style) for run in node.runs]
+        return break_runs(runs, width, self.ctx.language)
 
     def word(self, where: str, raw: Any, default: str) -> str:
         _, value, _ = self.pick(where, raw)
@@ -1852,39 +2207,62 @@ class Instance:
 
     # -- what is drawn
 
-    def paint(self, name: str, prop: str) -> tuple[str | None, str]:
-        """A part's paint, as a role, and where it comes from. `:colour.<member>` paints
+    def paint(self, name: str, prop: str, run: TextRun | None = None) -> tuple[str | None, str]:
+        """A part's paint, as a role, and where it comes from; a text's, for its `run`, by
+        the run's word, from the run's family (DEC-012 point 3). `:colour.<member>` paints
         with the role the foundations map that member of the instance's colour family to
         (DEC-004 point 10); an instance with no family, a family the foundations do not
         declare, or one that lacks the member paints nothing. Raises `Fault`."""
         part = self.nodes[name].part
         if name in self.overrides and OVERRIDDEN.get(part.kind) == prop:
             return self.overrides[name]
-        _, value, chosen = self.pick(f"parts.{name}.{part.kind}.{prop}", part.props.get(prop))
+        word = run.word if run is not None else None
+        raw = part.props.get(prop)
+        _, value, chosen = self.pick(f"parts.{name}.{part.kind}.{prop}", raw, word)
         if not isinstance(value, str):
             return None, ""
-        source = f"option:{chosen}" if chosen else f"default:{self.component.use}"
+        if chosen and chosen in self.component.runs and run is not None:
+            source = run.word_source
+        else:
+            source = f"option:{chosen}" if chosen else f"default:{self.component.use}"
         if not value.startswith(FAMILY):
             return value, source
+        family = run.family if run is not None else self.family
+        family_source = run.family_source if run is not None else self.family_source
         where = f"{self.trace}/{name}"
-        if self.family is None:
+        if family is None:
             message = f"{where}: paints `{value}`, and has no colour family"
             raise self._fail("no-colour", message, where)
-        members = self.ctx.family(self.family)
+        members = self.ctx.family(family)
         if members is None:
             message = (
-                f"{where}: paints `{value}` of the colour family `{self.family}`, which the "
+                f"{where}: paints `{value}` of the colour family `{family}`, which the "
                 "foundations do not declare"
             )
             raise self._fail("no-colour", message, where)
         member = value[len(FAMILY) :]
         if member not in members:
             message = (
-                f"{where}: paints `{value}`, and the colour family `{self.family}` has no "
+                f"{where}: paints `{value}`, and the colour family `{family}` has no "
                 f"member `{member}`"
             )
             raise self._fail("no-colour", message, where)
-        return members[member], self.family_source or source
+        return members[member], family_source or source
+
+    def unpainted(self, name: str, run: TextRun) -> str | None:
+        """Why a run that names a concept shows it in no colour, where it does: the
+        `override` its part is pointed by, or its style, which its part paints with a role
+        (DEC-012 point 3). None where the run names no concept, or its paint reads its
+        family."""
+        if run.concept is None:
+            return None
+        if name in self.overrides:
+            return f"the `override` of its part `{name}`"
+        part = self.nodes[name].part
+        _, value, _ = self.pick(f"parts.{name}.text.fill", part.props.get("fill"), run.word)
+        if isinstance(value, str) and value.startswith(FAMILY):
+            return None
+        return f"its style `{run.word}`" if run.word is not None else "its part's paint"
 
     def shortfalls(self) -> list[tuple[str, float, float]]:
         """Each size this instance gets that is less than it asks for: size, gets, asks.

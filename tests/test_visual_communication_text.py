@@ -6,19 +6,35 @@
 - lines broken at Unicode's break opportunities and the language's own rules (Czech: a
   one-letter word never ends a line), against the planned width less 2 % of the em, and
   placed in the planned width;
-- never shrunk: a long word breaks after a `/`, else the text overflows.
+- never shrunk: a long word breaks after a `/`, else the text overflows;
+- runs (DEC-012 point 4): each part of a line measured in its own run's role, lines
+  broken across runs by Unicode's rules and the language's, against a margin at the
+  greatest font size among the runs' roles; one line height for the text, the greatest,
+  and one baseline on each line; a text of one run broken as format 1 breaks it.
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
 import pytest
 from fontTools import subset
 
-from tests.visual_engine import FAMILY, FONT, ROLES, env, text
+from tests.visual_engine import (
+    FAMILY,
+    FIXTURES,
+    FONT,
+    ROLES,
+    RUN_FONTS,
+    RUN_ROLES,
+    SEMIBOLD,
+    SEMIBOLD_FONT,
+    env,
+    text,
+)
 
 TYPE = ROLES["type.body"]
 
@@ -216,3 +232,121 @@ def test_no_czech_line_of_any_width_ends_in_a_one_letter_word() -> None:
         broken = lines(CZECH, width, "cs")
         assert not ends_with_one_letter(broken), (width, broken)
         assert " ".join(broken) == CZECH
+
+
+# --- runs ---------------------------------------------------------------------------------
+
+#: The heading, in its own semibold family: 24 px, a line height of 1.2.
+HEADING = text.Style.of_role(
+    "type.heading", RUN_ROLES["type.heading"], text.Faces(lambda family: RUN_FONTS[family])
+)
+#: The margin at the heading's size, the greatest of the runs below.
+WIDE_MARGIN = text.BREAK_MARGIN * 24
+
+
+def runs(*given: tuple[str, Any]) -> list[Any]:
+    return [text.Run(words, face) for words, face in given]
+
+
+def test_each_weight_a_run_is_drawn_in_is_a_family_of_its_own() -> None:
+    """The test brand gives its heading's weight a family and a file of its own, and the
+    tests of runs do too, so no run is measured from another weight's file (DEC-012,
+    Implications, "A weight's own file")."""
+    tokens = json.loads(
+        (FIXTURES / "test-brand" / "1.0.0" / "tokens" / "base.tokens.json").read_text()
+    )
+    heading = tokens["font"]["heading"]
+    assert heading["$value"] == [SEMIBOLD]
+    files = heading["$extensions"]["pkit.visual-communication"]["files"]
+    assert files == {SEMIBOLD: f"fonts/{SEMIBOLD_FONT.name}"}
+    weights: dict[str, set[int]] = {}
+    for role in RUN_ROLES.values():
+        for family in role["fontFamily"]:
+            weights.setdefault(family, set()).add(role["fontWeight"])
+    assert weights == {FAMILY: {400}, SEMIBOLD: {600}}
+    assert HEADING.faces[0].path == SEMIBOLD_FONT
+    assert HEADING.width("Wide") != style(fontSize={"value": 24, "unit": "px"}).width("Wide")
+
+
+def test_a_text_of_one_run_is_broken_as_format_1_breaks_it() -> None:
+    for words, width in (("word word word", 80.0), ("One line\nand two", None), ("", 50.0)):
+        broken = text.break_runs(runs((words, BODY)), width, "en")
+        assert (broken.lines, broken.widths, broken.overflow) == (
+            text.break_lines(words, width, BODY, "en").lines,
+            text.break_lines(words, width, BODY, "en").widths,
+            text.break_lines(words, width, BODY, "en").overflow,
+        )
+        assert broken.line_height == BODY.line_height
+        assert all(line.baseline == BODY.baseline for line in broken.placed)
+
+
+def test_runs_are_joined_as_written_and_each_part_is_measured_in_its_own_role() -> None:
+    broken = text.break_runs(runs(("Plan ", BODY), ("the", HEADING), (" work", BODY)), None, "en")
+
+    [line] = broken.placed
+    assert line.text == "Plan the work"
+    assert [(span.run, span.text) for span in line.spans] == [
+        (0, "Plan "),
+        (1, "the"),
+        (2, " work"),
+    ]
+    assert [span.width for span in line.spans] == [
+        BODY.advance("Plan "),
+        HEADING.advance("the"),
+        BODY.advance(" work"),
+    ]
+    assert line.width == pytest.approx(sum(span.width for span in line.spans))
+    assert HEADING.advance("the") > BODY.advance("the")
+
+
+def test_a_word_whose_letters_lie_in_two_runs_stays_one_word() -> None:
+    # Wide enough for "aaaa bb" in the body, not for "aaaa bbbb" with "bb" in the heading.
+    width = BODY.advance("aaaa bb") + WIDE_MARGIN + 1
+    given = runs(("aaaa bb", BODY), ("bb cccc", HEADING))
+
+    broken = text.break_runs(given, width, "en")
+
+    assert broken.lines == ("aaaa", "bbbb", "cccc")
+    assert [[(span.run, span.text) for span in line.spans] for line in broken.placed] == [
+        [(0, "aaaa")],
+        [(0, "bb"), (1, "bb")],
+        [(1, "cccc")],
+    ]
+
+
+def test_a_czech_one_letter_word_moves_on_with_the_next_word_whichever_runs_hold_them() -> None:
+    # Wide enough for "aaaa v", not for "aaaa v bbbb".
+    width = BODY.advance("aaaa ") + HEADING.advance("v") + WIDE_MARGIN + 1
+    given = runs(("aaaa ", BODY), ("v", HEADING), (" bbbb", BODY))
+
+    assert list(text.break_runs(given, width, "en").lines) == ["aaaa v", "bbbb"]
+    assert list(text.break_runs(given, width, "cs").lines) == ["aaaa", "v bbbb"]
+
+
+def test_the_margin_is_taken_at_the_greatest_font_size_among_the_runs() -> None:
+    given = runs(("word ", HEADING), ("word", BODY))
+    both = HEADING.advance("word ") + BODY.advance("word")
+
+    # The body's margin alone would keep both words on one line at the narrower width.
+    assert MARGIN < WIDE_MARGIN - 0.1
+    assert list(text.break_runs(given, both + WIDE_MARGIN, "en").lines) == ["word word"]
+    assert list(text.break_runs(given, both + WIDE_MARGIN - 0.1, "en").lines) == ["word", "word"]
+
+
+def test_a_text_takes_one_line_height_and_each_line_one_baseline() -> None:
+    given = runs(("Small\nand ", BODY), ("Large", HEADING))
+
+    broken = text.break_runs(given, None, "en")
+
+    tall = HEADING.line_height
+    assert broken.line_height == tall == pytest.approx(28.8)
+    small, mixed = broken.placed
+    assert (small.paragraph, mixed.paragraph) == (0, 1)
+    assert [(span.run, span.text) for span in mixed.spans] == [(0, "and "), (1, "Large")]
+    # A line of one role stands where that role would place it in the text's line height.
+    assert small.baseline == BODY.baseline_in(tall)
+    # A line of two roles splits the leading around the greatest ascent and descent.
+    ascent, descent = max(BODY.ascent, HEADING.ascent), max(BODY.descent, HEADING.descent)
+    assert mixed.baseline == pytest.approx((tall - (ascent + descent)) / 2 + ascent)
+    assert 0 < mixed.baseline < tall
+    assert broken.paragraphs == (((0, "Small"),), ((0, "and "), (1, "Large")))

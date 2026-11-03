@@ -27,8 +27,9 @@ and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9)
 - each notation a piece names, against the colour families of the foundations it locks:
   a library that is no notation, a file that cannot be read, a concept that maps to no
   colour family the foundations declare (DEC-004 points 10 and 11);
-- the ids in each content file, and each content file against the fields and options of
-  the components it fills, the nearest known key named.
+- the ids in each content file, a list of runs skipped, and each content file against the
+  fields and options of the components it fills, each list of runs against the words of
+  its field's run styles, the nearest known key or word named (DEC-012 points 1, 2 and 8).
 
 **Scene findings** (`scene_findings`): what computing a piece's scenes finds, in every
 language: the engine's own (overflow, a component that gets less than it asks for, two
@@ -64,9 +65,9 @@ import dataclasses
 import math
 import re
 import time
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Collection, Iterator, Mapping, Sequence
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, Protocol
 
 from _lib import code, fingerprint, framing, location, names, tokens
 from _lib import pipeline as pl
@@ -82,7 +83,7 @@ from _lib.findings import (
     as_read,
 )
 from _lib.findings import loss_finding as _loss_finding
-from _lib.layout import LAYOUT, PageForms, page_forms
+from _lib.layout import LAYOUT, RUN_KEYS, RUNS, PageForms, page_forms, run_problem
 from _lib.libraries import (
     FOLDER,
     FOUNDATIONS,
@@ -738,12 +739,17 @@ def lock_findings(held: Held, piece: pl.Piece) -> list[Finding]:
 def id_findings(piece: pl.Piece) -> list[Finding]:
     """The ids of a piece's content (DEC-002 point 4): each of the id shape, unique in its
     list, and the same in every language. A translation may order a list's items its own
-    way, so each list's ids are compared as a set with those of the source language."""
+    way, so each list's ids are compared as a set with those of the source language. A list
+    of runs holds runs, not items, so it is skipped: the components the piece's lock names
+    say which lists hold runs, read before the lock is checked (DEC-012 point 1)."""
     found: list[Finding] = []
     lists: dict[str, dict[str, list[Any]]] = {}
+    locked = _Locked(piece)
     for language, content in piece.contents.items():
         file = piece.file(pl.content_file(language))
-        for path, items in _lists(content, ""):
+        reader = _Fields(locked, file, [])
+        reader.placed(piece.top, content, "")
+        for path, items in _lists(content, "", reader.runs):
             ids = [item.get("id") for item in items if isinstance(item, Mapping) and "id" in item]
             lists.setdefault(path, {})[language] = ids
             for item in ids:
@@ -799,23 +805,77 @@ def _shown(ids: set[str]) -> str:
     return ", ".join(f"`{item}`" for item in sorted(ids))
 
 
-def _lists(value: Any, path: str) -> Iterator[tuple[str, list[Any]]]:
+def _lists(
+    value: Any, path: str, runs: Collection[str] = (), at: str = ""
+) -> Iterator[tuple[str, list[Any]]]:
     """Each list of a content value, by a path of keys and places that is the same in
-    every language."""
+    every language. A list of runs, which `runs` names by its key path as the check of the
+    content writes it (`at`, an item by its id where it has one), is no list of items, and
+    is skipped (DEC-012 point 1)."""
     if isinstance(value, Mapping):
         for key, item in value.items():
-            yield from _lists(item, f"{path}.{key}" if path else str(key))
-    elif isinstance(value, list):
+            yield from _lists(item, _join(path, str(key)), runs, _join(at, str(key)))
+    elif isinstance(value, list) and at not in runs:
         yield path, value
         for index, item in enumerate(value, start=1):
-            yield from _lists(item, f"{path}#{index}")
+            yield from _lists(item, f"{path}#{index}", runs, f"{at}{_item(item, index)}")
+
+
+class _Components(Protocol):
+    """What reads a component's data by its use; KeyError where there is none to read."""
+
+    def component(self, use: str) -> Mapping[str, Any]: ...
+
+
+class _Locked:
+    """The components a piece's lock names, and its own, read before its lock is checked:
+    what the check of ids needs to know which lists of the content hold runs. A component
+    that a use, the lock or its file does not lead to, or that cannot be read as a
+    mapping, is none, and the lock's check and the scene report why."""
+
+    def __init__(self, piece: pl.Piece) -> None:
+        self.piece = piece
+        self.read: dict[str, Mapping[str, Any] | None] = {}
+
+    def component(self, use: str) -> Mapping[str, Any]:
+        if use not in self.read:
+            self.read[use] = self._read(use)
+        found = self.read[use]
+        if found is None:
+            raise KeyError(use)
+        return found
+
+    def _read(self, use: str) -> Mapping[str, Any] | None:
+        try:
+            library, name = names.split_use(use)
+        except ValueError:
+            return None
+        piece = self.piece
+        if library == names.PIECE:
+            path = piece.folder / pl.COMPONENTS / f"{name}.yaml"
+        else:
+            try:
+                version = Version.parse(piece.lock.get(library))
+            except ValueError:
+                return None
+            folder = piece.root / piece.location / FOLDER / library / str(version)
+            path = folder / pl.COMPONENTS / f"{name}.yaml"
+        if not path.is_file():
+            return None
+        try:
+            data = read_yaml(path)
+        except ReadError:
+            return None
+        return data if isinstance(data, Mapping) else None
 
 
 def content_findings(project: pl.Project) -> list[Finding]:
     """Each content file against the components it fills (DEC-001 point 3, DEC-002 point
     4): a key no component declares as a field or an option, a required field missing, a
     value of another type, a word an option does not take, a page that names no layout of
-    its top or one its top does not declare (DEC-010 point 5); the nearest known key, word
+    its top or one its top does not declare (DEC-010 point 5), a run of a field of runs
+    that is not of a run's shape or names a style its field does not declare, and a list
+    in a field of text that takes no runs (DEC-012 point 8); the nearest known key, word
     or layout named."""
     found: list[Finding] = []
     piece = project.piece
@@ -828,12 +888,16 @@ def content_findings(project: pl.Project) -> list[Finding]:
 class _Fields:
     """Reads content against the `fields` of the components it fills: the fixed subset of
     JSON Schema format 1 takes (`type`, `properties`, `required`, `items`, `minItems`,
-    `maxItems`, `enum`, `const`, a local `$ref`), a key no property names refused."""
+    `maxItems`, `enum`, `const`, a local `$ref`), a key no property names refused. A field
+    marked `x-pkit-runs` takes text, against its schema, or a list of runs, each against
+    the words of its run styles (DEC-012 point 7). `runs` keeps the key path of each list
+    of runs it read."""
 
-    def __init__(self, env: pl.ProjectEnv, file: str, found: list[Finding]) -> None:
+    def __init__(self, env: _Components, file: str, found: list[Finding]) -> None:
         self.env = env
         self.file = file
         self.found = found
+        self.runs: set[str] = set()
 
     def _fail(self, code: str, path: str, message: str) -> None:
         self.found.append(Finding(code, FAILS, message, file=self.file, where=path))
@@ -985,11 +1049,25 @@ class _Fields:
     def _value(
         self, schema: Any, value: Any, path: str, root: Mapping[str, Any], *, items: bool = True
     ) -> None:
+        if isinstance(value, list) and isinstance(schema, Mapping) and RUNS in schema:
+            if run_problem(path, schema) is None:
+                self.runs.add(path)
+                self._runs(tuple(schema[RUNS]), value, path)
+                return
         schema = _resolved(schema, root)
         if not isinstance(schema, Mapping):
             return
         wanted = schema.get("type")
         if wanted is not None and not any(_is_type(value, t) for t in _as_list(wanted)):
+            kinds = _as_list(wanted)
+            if isinstance(value, list) and "string" in kinds and "array" not in kinds:
+                self._fail(
+                    "runs-unmarked",
+                    path,
+                    "the field holds a list, and takes text: only a field its component "
+                    f"marks `{RUNS}` takes a list of runs",
+                )
+                return
             self._fail(
                 "content-type",
                 path,
@@ -1020,6 +1098,50 @@ class _Fields:
             "properties" in schema or schema.get("type") == "object"
         ):
             self._object(schema, value, path, root)
+
+    def _runs(self, words: tuple[str, ...], runs: list[Any], path: str) -> None:
+        """A field's list of runs (DEC-012 points 1 and 2): each run text, or a mapping whose
+        `text` holds text, which may hold `style`, a word of its field's run styles, and
+        `concept`, and no other key. A run lies at its field's path and its place among the
+        field's runs. The scene reads a run's concept, with the piece's notations, as it
+        reads an item's."""
+        for place, run in enumerate(runs, start=1):
+            at = f"{path}#{place}"
+            if isinstance(run, str):
+                continue
+            if not isinstance(run, Mapping):
+                self._fail(
+                    "run-shape",
+                    at,
+                    f"the run holds {_type_name(run)}, not text or a mapping of `text`, "
+                    "`style` and `concept`",
+                )
+                continue
+            for key in run:
+                if key not in RUN_KEYS:
+                    close = nearest(str(key), list(RUN_KEYS))
+                    hint = f"; did you mean `{close}`?" if close else ""
+                    self._fail(
+                        "run-key",
+                        _join(at, str(key)),
+                        f"a run takes no key `{key}`, only `text`, `style` and `concept`{hint}",
+                    )
+            if "text" not in run:
+                self._fail("run-shape", at, "the run holds no `text`")
+            elif not isinstance(run["text"], str):
+                self._fail(
+                    "run-shape",
+                    _join(at, "text"),
+                    f"the run holds {_type_name(run['text'])} in `text`, not text",
+                )
+            if "style" in run and not any(run["style"] == word for word in words):
+                close = nearest(str(run["style"]), list(words))
+                hint = f"; did you mean `{close}`?" if close else ""
+                self._fail(
+                    "run-style",
+                    _join(at, "style"),
+                    f"`{run['style']}` is no run style of the field ({', '.join(words)}){hint}",
+                )
 
 
 def _join(path: str, key: str) -> str:
@@ -1249,9 +1371,10 @@ def _pages(scene: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
 def drawn_contrast(
     scene: Mapping[str, Any], colours: Mapping[str, Mapping[str, Any]], keys: Sequence[str]
 ) -> list[Finding]:
-    """Each text of a scene measured against the fill under it, in each combination
-    `keys` names, at WCAG's level for its size (DEC-004 point 8). The fill under a line is
-    that of the last box or ellipse drawn before the text that holds the line's middle; a
+    """Each run of each text of a scene measured against the fill under it, in each
+    combination `keys` names, at WCAG's level for the run's size and weight, in the run's
+    own paint (DEC-004 point 8, DEC-012 point 3). The fill under a run's span of a line is
+    that of the last box or ellipse drawn before the text that holds the span's middle; a
     translucent one is laid over the one under it. A text over a picture is not measured,
     nor one with nothing under it."""
     found = []
@@ -1274,51 +1397,77 @@ def _text_contrast(
     colours: Mapping[str, Mapping[str, Any]],
     keys: Sequence[str],
 ) -> list[Finding]:
-    role = text.get("fill")
+    left, width = x + float(text["x"]), float(text["width"])
+    step = float(text["line-height"])
+    paragraphs = text.get("paragraphs") or [[{}]]
+    # Each look of a run and the fills under its spans, in the order first met.
+    measured: list[tuple[Mapping[str, Any], list[str]]] = []
+    looks: list[tuple[Any, ...]] = []
+    for index, line in enumerate(text["lines"]):
+        runs = paragraphs[line.get("paragraph", 0)] or [{}]
+        drawn = float(line.get("width", 0))
+        at = {"middle": left + (width - drawn) / 2, "end": left + width - drawn}.get(
+            str(text.get("text-anchor")), left
+        )
+        middle = y + float(text["y"]) + index * step + step / 2
+        # A line with no span is measured at its start, in its paragraph's first run.
+        spans = line.get("spans") or [{"run": 0, "width": 0}]
+        for span in spans:
+            run = runs[int(span.get("run", 0))]
+            span_width = float(span.get("width", 0))
+            stack = _under((at + span_width / 2, middle), painted)
+            if stack is None:
+                return []  # over a picture: a reviewer judges it
+            at += span_width
+            look = (run.get("fill"), run.get("font-size"), run.get("font-weight"), stack)
+            if stack and look not in looks:
+                looks.append(look)
+                measured.append((run, stack))
+    found = []
+    for run, stack in measured:
+        found.extend(_run_contrast(text, run, stack, colours, keys))
+    return found
+
+
+def _run_contrast(
+    text: Mapping[str, Any],
+    run: Mapping[str, Any],
+    stack: Sequence[str],
+    colours: Mapping[str, Mapping[str, Any]],
+    keys: Sequence[str],
+) -> list[Finding]:
+    """A run of a text measured against one stack of fills under it, in its own paint, at
+    WCAG's level for its size and weight."""
+    role = run.get("fill")
     if role is not None and role not in colours:
         return []  # a colour role the brand lacks is a finding of its own
-    size, weight = float(text["font-size"]), text.get("font-weight")
+    if any(fill not in colours for fill in stack):
+        return []
+    size, weight = float(run.get("font-size", 0)), run.get("font-weight")
     bold = isinstance(weight, (int, float)) and weight >= BOLD
     level = "large-text" if size >= LARGE or (size >= LARGE_BOLD and bold) else "text"
     minimum = tokens.LEVELS[level]
-    left, width = x + float(text["x"]), float(text["width"])
-    step = float(text["line-height"])
-    unders: list[list[str]] = []
-    for index, line in enumerate(text["lines"]):
-        drawn = float(line.get("width", 0))
-        start = {"middle": left + (width - drawn) / 2, "end": left + width - drawn}.get(
-            str(text.get("text-anchor")), left
-        )
-        middle = (start + drawn / 2, y + float(text["y"]) + index * step + step / 2)
-        stack = _under(middle, painted)
-        if stack is None:
-            return []  # over a picture: a reviewer judges it
-        if stack and stack not in unders:
-            unders.append(stack)
     found = []
-    for stack in unders:
-        if any(fill not in colours for fill in stack):
+    for key in keys:
+        ground = _ground([colours[fill][key] for fill in stack])
+        if ground is None:
             continue
-        for key in keys:
-            ground = _ground([colours[fill][key] for fill in stack])
-            if ground is None:
-                continue
-            ink = colours[role][key] if role is not None else BLACK
-            ratio = tokens.contrast_ratio(ink, ground)
-            if ratio < minimum:
-                found.append(
-                    Finding(
-                        "contrast-drawn",
-                        FAILS,
-                        f"`{role or 'black'}` on `{stack[-1]}` has the contrast {ratio:.2f} in "
-                        f"the combination `{key}`, below the {minimum} a text of {size:g} px "
-                        f"needs (`{level}`)",
-                        file=pl.PIECE_FILE,
-                        where=str(text["id"]),
-                        fix="change the colour roles of the text or of what lies under it, in "
-                        "the component, its content's `override`, or the brand",
-                    )
+        ink = colours[role][key] if role is not None else BLACK
+        ratio = tokens.contrast_ratio(ink, ground)
+        if ratio < minimum:
+            found.append(
+                Finding(
+                    "contrast-drawn",
+                    FAILS,
+                    f"`{role or 'black'}` on `{stack[-1]}` has the contrast {ratio:.2f} in "
+                    f"the combination `{key}`, below the {minimum} a text of {size:g} px "
+                    f"needs (`{level}`)",
+                    file=pl.PIECE_FILE,
+                    where=str(text["id"]),
+                    fix="change the colour roles of the text or of what lies under it, in "
+                    "the component, its content's `override`, or the brand",
                 )
+            )
     return found
 
 
@@ -1380,8 +1529,10 @@ def _unknown_colours(
 ) -> list[Finding]:
     found = []
     for element, _, _ in _walk(scene.get("children", [])):
-        for prop in ("fill", "stroke"):
-            role = element.get(prop)
+        painted = [element]
+        for runs in element.get("paragraphs", []) if element.get("type") == "text" else []:
+            painted.extend(runs)  # each run of a text holds its own paint (DEC-012)
+        for prop, role in [(p, each.get(p)) for each in painted for p in ("fill", "stroke")]:
             if role is not None and role not in colours:
                 found.append(
                     Finding(

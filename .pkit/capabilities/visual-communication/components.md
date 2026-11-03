@@ -25,7 +25,7 @@ pkit:
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/picture.yaml
         - tests/visual_engine.py
         - tests/test_visual_communication_scene.py
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-009", "visual-communication:DEC-010"]
+      record: ["visual-communication:DEC-001", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-009", "visual-communication:DEC-010", "visual-communication:DEC-012"]
       artefact:
         - .pkit/capabilities/visual-communication/files.md
         - .pkit/capabilities/visual-communication/files.md#the-foundations
@@ -56,7 +56,7 @@ One model binds every component. A pattern, an item component and a block are ro
 - **A pattern** arranges items. It has a `repeat` part over a list of the content, and decides how its items lie. `tests/steps` is a pattern.
 - **An item component** draws one item of a list. The pattern names it in `draw`. An item may name its own in `use`, a pattern included.
 - **A block** is a small component, such as a card, that a pattern draws its items with, or that content places alone (DEC-007 point 1). `tests/card` and `tests/picture` are blocks.
-- **A top component** declares `layouts`. A piece names one as its top ([files](files.md)). The foundations' `figure` is one, with one layout. Their `deck` is one whose layouts are the forms its pages take, a cover and a slide ([Layouts](#layouts)).
+- **A top component** declares `layouts`. A piece names one as its top ([files](files.md)). The foundations' `figure` is one, with one layout. Their `deck` is one whose layouts are the forms its pages take, a cover and a slide ([The foundations](files.md#the-foundations), [Layouts](#layouts)).
 - **A local component** belongs to one piece. Its `use` is `piece/<component>`, and a library component's is `<library>/<component>`. The lock alone says which version of a library is read.
 
 ## A component's file
@@ -120,10 +120,17 @@ Every name in the file takes the capability's name shape ([files](files.md)). Th
 - **`items`, `minItems` and `maxItems`:** what a list holds, and how many. **`enum` and `const`:** the values a field may hold.
 - **`description`,** and **`x-pkit-prose: true`,** which marks a field that holds prose. No command reads the mark.
 - **`x-pkit-pages: true`,** which marks the list field of a top that holds its pages, where its layouts are its pages' forms ([Layouts](#layouts)).
+- **`x-pkit-runs: [<word>, ...]`,** which marks a *field of runs*, below.
 - **`$ref`:** a reference that starts with `#/`, read within the component's own `fields`.
 - **`additionalProperties`:** only `false`. Leaving it out means the same.
 
 A field whose `type` is `array`, or a list of types that holds it, such as `[array, null]`, is a *list field*. A `repeat` part draws its items, and an option may name one of them. How content is judged against `fields` is in *checks*.
+
+A *field of runs* is a field of text whose content may give it as *runs*: spans of its text, each set in a style of its own, such as the prompt, the command and the comment of a terminal's line (DEC-012 points 1 and 2). How content gives runs is in [content files](files.md#content-files).
+
+- **The mark** `x-pkit-runs` lists the words of the field's *run styles*, such as `[command, prompt, comment]`. Each word is a name, never `by`, and appears once. The first is the default: a run that names no style takes it, and so does a field given as text. Another field may declare other words.
+- **Only on a field of text.** The mark lies on one of the component's own fields, or on a slot of a layout that is a page's form ([Layouts](#layouts)), never on a schema within a field, such as a list's items, nor on the schema of all the fields. No `$ref` leads to a marked schema. The field's `type` is `string` and no other, and it holds no `enum`, `const` or `$ref`.
+- **Shown by a text part alone.** A text part of the component shows the field, and a `when` may read whether it is filled. No other part reads it: no `slot` places it, no `image` names it, and no `use` part passes it on, for now. At least one text part of a field of more than one word chooses its role, its paint or both by the words ([Switches](#switches)).
 
 ### Options
 
@@ -146,8 +153,11 @@ An option takes a value from what the component declares, never a free number or
 - **`colour`** names the component's default colour family. A *colour family* is a group of colour roles that paints one thing, such as its line, its fill and the text on it. The foundations declare each family in their `roles.yaml`, as a mapping of its members to colour roles (DEC-004 point 10; [the foundations](files.md#the-foundations)).
 - **`states`** maps each state to `{colour: <family>}`, the family the state paints with, or to `{}`, which keeps the instance's family. The content names a state as `state: <name>`.
 - **An instance's family** is the family its concept maps to, where the content names one as `concept: <notation>/<concept>` ([content files](files.md#content-files)). Else it is the `colour` of the `repeat` part that draws it as an item, else its component's `colour`, else the family of the component that places it. A state with a `colour` then replaces it. A concept the piece's notations do not hold is reported, and the instance takes its family as if it named none.
-- **A paint `:colour.<member>`** paints with the role the foundations map that member of the instance's family to. Where the instance has no family, its family is none the foundations declare, or the family has no such member, the part paints nothing there, and is reported.
-- **The content's `override: {<part>: <role>}`** points one part's paint at another role: the `fill` of a box, an ellipse or a text, the `stroke` of a line.
+- **A run's family.** A run of a field of runs that names a concept takes that concept's family, before its instance's own. A run that names none takes its instance's family. A state with a `colour` replaces the family of each run of the instance too, a run's concept included (DEC-012 point 3).
+- **A paint `:colour.<member>`** paints with the role the foundations map that member of the instance's family to, or, for a run, of the run's family. Where the instance has no family, its family is none the foundations declare, or the family has no such member, the part paints nothing there, and is reported.
+- **The content's `override: {<part>: <role>}`** points one part's paint at another role: the `fill` of a box, an ellipse or a text, every run of the text included, the `stroke` of a line.
+- **A run's concept shows** where its paint reads the run's family. A run painted with a role, by its style or by an `override`, shows its concept in no colour, and is reported.
+- **Run styles that read a family** are painted from it only where their text lies on that family's own fill, the starter's included. The foundations promise a family's `text` on its `fill` alone, and declare no member of a family promised on the shared surfaces ([The foundations](files.md#the-foundations)). Elsewhere, the contrast as drawn alone guards the colour a run's concept gives it (*checks*).
 
 ### Parts
 
@@ -165,7 +175,7 @@ An option takes a value from what the component declares, never a free number or
 | `repeat` | `x y width height draw colour`, and `row` or `column` | `draw`, and one of `row` and `column` |
 
 - **Places and sizes** are formulas that give a length, in the component's own frame. A missing `x` or `y` is zero.
-- **`when`** draws the part only while a condition holds. It names a field, and holds while the content fills it: the field is not missing, empty text, an empty list or an empty mapping. Or it is `{<option>: [<word>, ...]}`, and holds while the option takes one of the words. A part not drawn has zero size, at its place.
+- **`when`** draws the part only while a condition holds. It names a field, and holds while the content fills it: the field is not missing, empty text, an empty list or an empty mapping. A field of runs is filled where one of its runs holds text. Or it is `{<option>: [<word>, ...]}`, and holds while the option takes one of the words. A part not drawn has zero size, at its place.
 
 The figure draws its caption only when the content gives one:
 
@@ -181,6 +191,22 @@ The figure draws its caption only when the content gives one:
 ### Switches
 
 A value may be a *switch*: `{by: <option>, <word>: <value>, ...}`. It names an option of words, and gives a value for each of its words, no more and no fewer. A branch may be a switch itself. A paint's branch may be `null`, which paints nothing. A switch serves wherever a part takes a formula, a paint, a style, a word of `text-anchor` or of an operator, or a placed component's option, and in `values` and `preferred`. `values.gap` of `tests/steps` above is a switch.
+
+**A switch on a field's run styles,** `{by: <field>, <word>: <value>, ...}`, names the field of runs a text part shows, and gives a value for each of its words, no more and no fewer. Only that text part's `style` and `fill` take one: each run of the text then takes the typography role and the paint its style chooses (DEC-012 point 2). No other property, part, value or option switches on a field's run styles, nor a text part that shows another field. A field of more than one word needs at least one text part of the component, a top's own drawing of a layout included, that chooses by them. Another text part may show the field in one look, and draws every run in it. A terminal's line, whose command is set in the heading's role:
+
+```yaml
+fields:
+  type: object
+  properties:
+    line: {type: string, x-pkit-runs: [command, prompt, comment]}
+parts:
+  line:
+    text:
+      content: line
+      style: {by: line, command: type.heading, prompt: type.body, comment: type.body}
+      fill: {by: line, command: text-primary, prompt: accent, comment: text-secondary}
+    width: "=:width"
+```
 
 ### Exposes
 
@@ -303,12 +329,12 @@ A primitive's properties lie in its own mapping, under SVG's names.
 |---|---|---|
 | `box` | `fill`, `stroke`, `stroke-width`, `rx` | a rectangle in its frame |
 | `ellipse` | `fill`, `stroke`, `stroke-width` | an ellipse in its frame |
-| `text` | `content`, `style` (both required), `fill`, `text-anchor` | the text of a field, in lines |
+| `text` | `content`, `style` (both required), `fill`, `text-anchor` | the text of a field, in lines, each run in its own role and paint |
 | `line` | `stroke` (required), `stroke-width` | a straight line from `x1 y1` to `x2 y2` |
 | `image` | `produced` (required) | the picture of a produced output of the piece |
 
 - **A paint,** `fill` or `stroke`, is a colour role's token path, `:colour.<member>`, or a switch. `stroke-width` and `rx` are formulas that give a length.
-- **A text** shows the field `content` names, in the typography role `style` names. Its height is always its measured text's: a text that gives a `height` is reported as a value with two owners. With a `width`, its lines are broken to that width; without one, each paragraph is one line, and the text is as wide as its widest. `text-anchor` is `start`, the default, `middle` or `end`: where each line stands in the text's width.
+- **A text** shows the field `content` names, in the typography role `style` names. A text that shows a field of runs draws each run in the role and the paint its style chooses ([Switches](#switches)). Its height is always its measured text's: a text that gives a `height` is reported as a value with two owners. With a `width`, its lines are broken to that width; without one, each paragraph is one line, and the text is as wide as its widest. `text-anchor` is `start`, the default, `middle` or `end`: where each line stands in the text's width.
 - **A line's frame** comes from its ends: it starts at the lesser of the two `x` and of the two `y`, and is as wide and as tall as the distance between them.
 - **An image** shows the produced output that the field `produced` names (*outputs*). It needs a `width`. Where it gives no `height`, its height keeps the picture's proportions. The picture is drawn whole, centred, as large as its frame allows, and its points are mapped into the frame the same way. The variants of one picture share one pixel size and the same points, and the engine reads the first variant key in order. An output the piece lacks is not drawn, and is reported.
 
@@ -351,22 +377,33 @@ The *scene* is every element's final frame, values and source, for one language.
 
 ### What a scene holds
 
-The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, `seam` (the version of the seam its plugins read, 1), `pages` (the trace ids of its pages, in order: a top that is a page alone, what a slot of pages places, or each page of a top whose layouts are its pages' forms) and `children`. Each element holds its `type`, `group` or a primitive's kind, and its `id`, its trace id. It holds its frame, `x y width height`, relative to its parent, in px, rounded to 1/100 px, half away from zero. Then come its properties, `sources`, where each came from, and on a group its `children`, in drawing order.
+The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, `seam` (the version of the seam its plugins read), `pages` (the trace ids of its pages, in order: a top that is a page alone, what a slot of pages places, or each page of a top whose layouts are its pages' forms) and `children`. Each element holds its `type`, `group` or a primitive's kind, and its `id`, its trace id. It holds its frame, `x y width height`, relative to its parent, in px, rounded to 1/100 px, half away from zero. Then come its properties, `sources`, where each came from, and on a group its `children`, in drawing order.
 
-A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. An `image` adds `output`, `preserveAspectRatio` (`xMidYMid meet`), `variants` by key with each file and pixel size, and `points` mapped into its frame.
+A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. A `text` adds the rest of what [Text](#text) describes:
 
-Colours stay role names. A renderer takes their values from the brand's resolved values, so one scene serves every mode of the value axes (*outputs*). This is the first step's head in a scene of the figure, trimmed:
+- **The text's own:** `text-anchor`, `line-height`, the greatest among the typography roles its runs take, `text`, its runs' texts joined, and `measured-height`, the number of its lines times its line height, with `overflow: true` where it overflows.
+- **`paragraphs`:** the text split at its line feeds, each paragraph a list of its runs' parts. A run that goes on past a line feed is a run of each paragraph it reaches. Each holds its `text`, its paint `fill`, its typography role `style`, its `font-family`, `font-size` and `font-weight`, the `fonts` that measured it, each family's file and its sha256, how it was `measured`, and the `sources` of each. A text of one run holds one run in each paragraph.
+- **`lines`:** each line's `text`, its drawn `width`, its `baseline` below the line's top, its `paragraph`, from 0, and its `spans`, each the part of one run on it: the run's place among its paragraph's runs, from 0, its text and its width.
+
+An `image` adds `output`, `preserveAspectRatio` (`xMidYMid meet`), `variants` by key with each file and pixel size, and `points` mapped into its frame.
+
+Colours stay role names. A renderer takes their values from the brand's resolved values, so one scene serves every mode of the value axes (*outputs*). This is the first step's head in a scene of the figure, trimmed. Its field takes no runs, so it is one run:
 
 ```json
 {"type": "text", "id": "figure/body/steps[plan]/head",
  "x": 8.0, "y": 8.0, "width": 181.33, "height": 22.4,
- "text-anchor": "start", "fill": "text-primary", "style": "type.body",
- "font-family": ["Source Sans Pro"], "font-size": 16.0, "font-weight": 400,
- "line-height": 22.4, "baseline": 16.89, "text": "Plan the work",
- "lines": [{"text": "Plan the work", "width": 91.97}], "measured-height": 22.4, "measured": "file",
- "fonts": [{"family": "Source Sans Pro", "file": "SourceSansPro-Regular.otf", "sha256": "6b096b47…"}],
- "sources": {"fill": "default:tests/card", "font-size": "role:type.body", "height": "engine",
-             "text": "content:body.steps[plan].head", "x": "role:space.2"}}
+ "text-anchor": "start", "line-height": 22.4, "text": "Plan the work",
+ "paragraphs": [[{"text": "Plan the work", "fill": "text-primary", "style": "type.body",
+   "font-family": ["Source Sans Pro"], "font-size": 16.0, "font-weight": 400,
+   "fonts": [{"family": "Source Sans Pro", "file": "SourceSansPro-Regular.otf", "sha256": "6b096b47…"}],
+   "measured": "file",
+   "sources": {"fill": "default:tests/card", "font-size": "role:type.body", "style": "default:tests/card",
+               "text": "content:body.steps[plan].head"}}]],
+ "lines": [{"text": "Plan the work", "width": 91.97, "baseline": 16.89, "paragraph": 0,
+            "spans": [{"run": 0, "text": "Plan the work", "width": 91.97}]}],
+ "measured-height": 22.4,
+ "sources": {"height": "engine", "line-height": "role:type.body", "text": "content:body.steps[plan].head",
+             "x": "role:space.2"}}
 ```
 
 ### Trace ids
@@ -382,27 +419,29 @@ Every element carries its *trace*, an id that comes from the path of instances, 
 
 Each drawn property names its source in `sources`:
 
-- **`content:<field path>`:** a field of the content, such as `content:body.steps[plan].head`. The path names the keys the content file writes, joined by `.`, an item of a list as `[<id>]`, or as `#<place>` from 1 where it has no id. It names the list field, where a trace id names the `repeat` part. Under a `use` part that passes a field on under another name, at any depth, it keeps the name the content file writes.
+- **`content:<field path>`:** a field of the content, such as `content:body.steps[plan].head`. The path names the keys the content file writes, joined by `.`, an item of a list as `[<id>]`, or as `#<place>` from 1 where it has no id. It names the list field, where a trace id names the `repeat` part. Under a `use` part that passes a field on under another name, at any depth, it keeps the name the content file writes. A run of a list of runs is named by its place among its field's runs, as an item with no id: `content:body.say#2`. The run's style comes from `<its source>.style` where it names one, and its family from `<its source>.concept`.
 - **`option:<name>`:** a value a switch on that option chose.
 - **`default:<library>/<component>`:** the component's own value. A field that a `use` part does not pass on is the placing component's, which gives it nothing.
-- **`role:<token path>`:** a formula that reads one role and nothing else, such as `"=@space.2"`, or a text's typography role.
+- **`role:<token path>`:** a formula that reads one role and nothing else, such as `"=@space.2"`, a run's typography role, or the role whose line height a text takes.
 - **`engine`:** a value the engine computed, such as a text's measured height or an item's frame, or one the component leaves to the engine's default, such as `text-anchor` on a text that gives none.
 
 ## Text
 
-- **The default font profile.** The engine measures every text from the committed font files that the brand names for each family, never from a font found on the machine. A text records this as `measured: file`. How a brand names its files is in [files](files.md).
+- **The default font profile.** The engine measures every text from the committed font files that the brand names for each family, never from a font found on the machine. Each run records this as `measured: file`. How a brand names its files is in [files](files.md).
+- **Runs.** A text is one or more runs, joined in order. A text whose field takes no runs, or is given as text, is one run. Each run is measured in the typography role its style chooses (DEC-012 point 4).
 - **The typography role** that `style` names gives `fontFamily`, one family or a list, `fontSize` in px, `lineHeight` as a ratio of the size, `fontWeight`, and a `letterSpacing` of zero, if any. A role that names no family, gives another letter spacing, a size in another unit or no line height as a number is reported, and the text is not drawn.
 - **Several families.** The first family measures each character it has, the next the rest, and so on.
-- **One file a family.** A family's one file measures the text, whatever its weight.
+- **One file a family.** A family's one file measures the text, whatever its weight. A brand that gives a weight a family of its own, as the test brand's heading is, has that weight measured and drawn from its own file.
 - **Refused before layout.** A family with no committed file, or a character no family measures, refuses the scene, and the message names it.
-- **Shaped from the file.** Each run of text in one family is shaped with HarfBuzz, with the font's default features. A line's width is the sum of its advances at the font size. Spaces at its end do not count.
-- **The line height** is the font size times `lineHeight`, and **the measured height** the number of lines times the line height.
-- **The baseline** is the first baseline below a line's top, with the space above and below the letters split evenly, from the first family's metrics.
+- **Shaped from the file.** Each piece of a run in one family is shaped with HarfBuzz, with the font's default features. A line's width is the sum of its advances, each at its own run's font size. Spaces at its end do not count.
+- **The line height** is the font size times `lineHeight`. A text takes the greatest line height among the roles its runs take, so its lines lie evenly, and **the measured height** is the number of lines times that line height.
+- **The baseline** of each line lies below the line's top. Where the line's runs take one role, the space above and below its letters is split evenly, from the first family's metrics, as a text of one run is placed. Where they take several, it is split evenly around the greatest ascent and the greatest descent among their first families, so the line's runs stand on one baseline.
 
 ### Breaking lines
 
-- **Paragraphs.** The text is split into paragraphs at its line feeds. With no width, each paragraph is one line.
-- **A width:** the engine breaks each paragraph where Unicode's line-breaking rules (UAX #14) allow it and the language's own rules do not forbid it. It fills each line with as much as fits in the width less 2 % of the font size, and places the line in the whole width. So a renderer's slightly different metrics move no word.
-- **The language's rules** are read by the primary subtag of the scene's language. In Czech, `cs`, a one-letter word never ends a line: it moves to the next line with the word after it. Other languages follow Unicode's rules alone.
+- **Paragraphs.** The text is split into paragraphs at its line feeds. A run whose text holds a line feed goes on into the next paragraph. With no width, each paragraph is one line.
+- **A width:** the engine breaks each paragraph where Unicode's line-breaking rules (UAX #14) allow it and the language's own rules do not forbid it. It fills each line with as much as fits in the width less 2 % of the font size, and places the line in the whole width. So a renderer's slightly different metrics move no word. A text of several runs takes the margin at the greatest font size among the roles its runs take (DEC-005 point 4, DEC-012 point 4).
+- **Across runs.** The engine finds where a paragraph may break in its whole text, whichever runs hold it, and measures each part of a line in its own run's role. So a word whose letters lie in two runs stays one word.
+- **The language's rules** are read by the primary subtag of the scene's language. In Czech, `cs`, a one-letter word never ends a line: it moves to the next line with the word after it, whichever runs hold them. Other languages follow Unicode's rules alone.
 - **A word wider than its line** may break after a `/` in it. A word still wider stays whole, and the text overflows: it holds `overflow: true`, and the check reports it.
 - **Never shrunk.** The engine never makes text smaller to fit, and never hyphenates.
