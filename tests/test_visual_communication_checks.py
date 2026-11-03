@@ -1080,6 +1080,92 @@ def test_a_version_that_names_majors_no_versions_fit_cannot_be_checked_alone(
     assert checks.place(missing) == "visual/libraries/libraries.yaml#libraries.test-parts"
 
 
+# --- a part that reads a library's role with no value (DEC-008 points 8 and 9) -----------------
+
+TAG_FILE = f"{PARTS_FOLDER}/1.0.0/components/tag.yaml"
+
+
+def replaced(path: Path, changes: dict[str, str]) -> None:
+    """`path`, each text of `changes` replaced by its new text."""
+    text = path.read_text(encoding="utf-8")
+    for old, new in changes.items():
+        assert old in text
+        text = text.replace(old, new)
+    path.write_text(text, encoding="utf-8")
+
+
+def tag_reads(root: Path, spacing: str, typography: str) -> None:
+    """The project's test tag places its label at the spacing role `spacing`, and sets its
+    text in the typography role `typography`."""
+    replaced(
+        root / TAG_FILE,
+        {'x: "=@test-parts.gap"': f'x: "=@{spacing}"', "style: type.body": f"style: {typography}"},
+    )
+
+
+def reads_unvalued(root: Path) -> None:
+    """The project's test library declares a spacing and a typography with no default, and
+    its tag reads both, which only a brand that names the library gives values."""
+    replaced(
+        root / PARTS_FOLDER / "1.0.0" / "roles.yaml",
+        {
+            "  test-parts.warning: {type: color}\n": (
+                "  test-parts.warning: {type: color}\n"
+                "  test-parts.inset: {type: dimension}\n"
+                "  test-parts.type: {type: typography}\n"
+            )
+        },
+    )
+    tag_reads(root, "test-parts.inset", "test-parts.type")
+
+
+def test_a_part_reading_a_library_role_with_no_value_lies_at_the_lock_that_combines_them(
+    tmp_path: Path,
+) -> None:
+    root = parts_project(tmp_path)
+    reads_unvalued(root)
+    for report in (checks.check(root), checks.check(root, only="tags")):
+        found = judged(report, "unknown-role")
+        assert [(checks.place(f), f.library, level) for f, level in found] == [
+            (f"{TAGS_FILE}#lock", "", "fails")
+        ] * 2
+        assert sorted(f.message for f, _ in found) == [
+            f"under this lock, {part} reads `@test-parts.{role}`, a role of test-parts@1.0.0 "
+            "that has no value: its chain of defaults reaches none, and the brand does not "
+            "name `test-parts` to give it one"
+            for part, role in (
+                ("`test-parts/tag`, at `parts.label.x`,", "inset"),
+                ("the text `figure/body/label` of `test-parts/tag`", "type"),
+            )
+        ]
+        assert all("lock a brand that names `test-parts`" in f.fix for f, _ in found)
+
+
+def test_a_part_reading_a_library_role_with_no_value_takes_no_finding_where_the_brand_names_it(
+    tmp_path: Path,
+) -> None:
+    root = parts_project(tmp_path)
+    reads_unvalued(root)
+    name_parts(root)
+    report = checks.check(root)
+    assert judged(report, "unknown-role") == []
+    missing = judged(report, "library-role-missing")
+    assert sorted((f.where, f.library, level) for f, level in missing) == [
+        ("test-parts.inset", "test-brand@1.0.0", "fails"),
+        ("test-parts.type", "test-brand@1.0.0", "fails"),
+    ]
+
+
+def test_a_role_no_library_declares_is_still_found_in_the_component(tmp_path: Path) -> None:
+    root = parts_project(tmp_path)
+    tag_reads(root, "test-parts.nothing", "test-parts.none")
+    found = judged(checks.check(root, only="tags"), "unknown-role")
+    assert sorted((checks.place(f), f.library, level) for f, level in found) == [
+        (f"{TAG_FILE}#@test-parts.nothing", "test-parts@1.0.0", "fails"),
+        (f"{TAG_FILE}#figure/body/label", "test-parts@1.0.0", "fails"),
+    ]
+
+
 # --- a top whose layouts are its pages' forms (#2558) ------------------------------------------
 
 #: A deck's pages in each language: a cover, and two slides, one with a picture.

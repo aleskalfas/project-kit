@@ -1017,6 +1017,30 @@ def test_a_base_that_does_not_name_the_library_opens_none_of_its_roles(
     assert read.resolve("test-parts.ink", {}) == read.resolve("text-primary", {})
 
 
+def without_value(brand: Any, path: str) -> Any:
+    """What resolving the role at `path` under `brand` raises, which has no value there."""
+    with pytest.raises(tokens.RoleWithoutValue) as raised:
+        brand.resolve(path, {})
+    return raised.value
+
+
+def test_a_role_without_a_value_names_its_library_and_whether_a_brand_of_the_chain_names_it(
+    tmp_path: Path, parts: Any
+) -> None:
+    alone = without_value(tokens.read_brand(TEST_BRAND, parts), "test-parts.warning")
+    assert isinstance(alone, env.UnvaluedRole)
+    assert (alone.role, alone.library, alone.named) == ("test-parts.warning", "test-parts", False)
+    named = tokens.read_brand(naming_brand(tmp_path / "named", {}), parts)
+    assert without_value(named, "test-parts.warning").named
+    base, edition = library_chain(tmp_path / "chain", base_names=True, edition_names=False)
+    edit_json(base / BASE, dropping("test-parts|warning"))
+    read = tokens.read_brand(edition, parts, locked={"test-brand": base})
+    assert ("library-role-missing", "test-brand@1.0.0") in {
+        (finding.code, finding.library) for finding in read.findings
+    }
+    assert without_value(read, "test-parts.warning").named
+
+
 @pytest.mark.parametrize(
     ("roles", "builds_on", "code", "said"),
     [

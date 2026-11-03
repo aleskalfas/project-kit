@@ -121,7 +121,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from _lib import keys
-from _lib.env import MissingFont
+from _lib.env import MissingFont, UnvaluedRole
 from _lib.files import FileError, read_bound
 from _lib.findings import ATTENTION, FACT, FAILS, Finding
 from _lib.libraries import FOUNDATIONS, LibraryError, read_library
@@ -177,9 +177,11 @@ class UnknownRole(KeyError):
     """A token path the brand gives no value at: no role, or a role it leaves with none."""
 
 
-class RoleWithoutValue(UnknownRole):
+class RoleWithoutValue(UnknownRole, UnvaluedRole):
     """A role the scope declares that has no value under the brand: a library's own role
-    whose chain of defaults reaches none, which no brand of its chain gives one."""
+    whose chain of defaults reaches none, which no brand of its chain gives one. The engine
+    reads it as `env.UnvaluedRole`: it names the role's library, and whether a brand of the
+    chain names that library (DEC-008 points 4 and 9)."""
 
 
 @dataclass(frozen=True)
@@ -906,10 +908,23 @@ class Brand:
         no role at, and keys.BadKey for a combination the axes do not hold."""
         if token_path not in self.valued:
             if token_path in self.scope.roles:
-                raise RoleWithoutValue(token_path)
+                library = self.scope.owner[token_path]
+                raise RoleWithoutValue(token_path, library, named=self.names(library))
             raise UnknownRole(token_path)
         key = keys.key_of(combination, self.axes)
         return self._resolved[key][token_path].value
+
+    def names(self, library: str) -> bool:
+        """Whether the brand, or a brand of the chain below it, names the library `library`
+        among those it builds on (DEC-008 point 4). A role of such a library that has no
+        value is that brand's finding (`library-role-missing`), or its library's where its
+        default does not hold."""
+        brand: Brand | None = self
+        while brand is not None:
+            if library in brand.named:
+                return True
+            brand = brand.base
+        return False
 
     def type_of(self, token_path: str) -> str:
         """The DTCG type of the role at `token_path`, as its declaration gives it, whether
