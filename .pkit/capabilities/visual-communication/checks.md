@@ -45,6 +45,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#sources
         - .pkit/capabilities/visual-communication/components.md#switches
         - .pkit/capabilities/visual-communication/components.md#text
+        - .pkit/capabilities/visual-communication/components.md#ties-and-connectors
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/components.md#values-states-and-colour
         - .pkit/capabilities/visual-communication/components.md#what-an-element-asks-for-and-what-it-gets
