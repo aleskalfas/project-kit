@@ -28,6 +28,6 @@ pkit:
 
 Among published releases one such clash can happen, in the `lifecycle` area. A test of that area's content stops propagation before it writes, but cannot tell every case apart. A transition's propagation still writes over a project's own `lifecycle` area that holds a file named `ownership.py`. So ADR-065 point 13 keeps a release from adding another clash until #1600 builds the full check.
 
-One area passes the hold: `rule-sets`, where the [backbone](../../../glossary.md#term-backbone--backbone) keeps its method [rule sets](../../../glossary.md#term-rule-set--rule-set). A project has no use for an area of that name, since every file in it is read as a rule set the backbone ships. The exception is no precedent (ADR-065 point 13).
+One area passes the hold: `rule-sets`, where the [backbone](../../../glossary.md#term-backbone--backbone) keeps its [method rule sets](../../../glossary.md#term-method-rule-set--method-rule-set). A project has no use for an area of that name, since every file in it is read as a [rule set](../../../glossary.md#term-rule-set--rule-set) the backbone ships. The exception is no precedent (ADR-065 point 13).
 
 The constraint ends when #1600 is done.

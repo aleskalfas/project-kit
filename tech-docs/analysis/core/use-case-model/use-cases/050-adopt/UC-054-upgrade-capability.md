@@ -84,7 +84,7 @@ pkit:
 6. The system finds no new name collision that the new version's [skills](../../../glossary.md#term-skill--skill) or [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) bring ([ADR-065 point 6](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#6-a-transition-settles-its-collisions-and-its-dependency-gates-before-it-writes)).
 7. The system moves the capability's [manifest](../../../glossary.md#term-manifest--manifest) under its `project/` where it still lies at the root. It copies the new version, runs the capability's [migrations](../../../glossary.md#term-migration--migration) after the copy, then records the new version ([ADR-065 point 4](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#4-a-transition-runs-in-cor-010s-order-with-seed-paths-after-the-migrations)).
 8. The system prints `Refreshed capability '<name>' -> v<version> at .pkit/capabilities/<name>/`.
-9. The system runs each [adapter](../../../glossary.md#term-adapter--adapter)'s scripts, which deploy the capability's skills and agent definitions. It provisions the capability's query commands, and renders `.pkit/.gitignore`.
+9. The system runs each [adapter](../../../glossary.md#term-adapter--adapter)'s scripts, which deploy the capability's skills and agent definitions. It provisions the capability's [query commands](../../../glossary.md#term-query-command--query-command), and renders `.pkit/.gitignore`.
 10. Where a person can reply, the system runs in turn each question the capability's [data points](../../../glossary.md#term-data-point--data-point) declare ([COR-061](../../../../../../.pkit/decisions/core/COR-061-point-questions.md)).
 
 **Variants:**

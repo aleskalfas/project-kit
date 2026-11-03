@@ -47,10 +47,10 @@ pkit:
 
 **Variants:**
 
-- **1a.** The [change](../../glossary.md#term-change--change) renames or removes files only where the [migration](../../glossary.md#term-migration--migration) check finds no trigger, such as the [component](../../glossary.md#term-component--component)'s `project/` folder ([UC-011](../use-cases/040-release/UC-011-migrate-component-change.md) variant 5b). The path ends after step 1.
+- **1a.** The [change](../../glossary.md#term-change--change) renames or removes files only where `pkit migrations check-diff` finds no trigger, such as the [component](../../glossary.md#term-component--component)'s `project/` folder ([UC-011](../use-cases/040-release/UC-011-migrate-component-change.md) variant 5b). The path ends after step 1.
 
 **Postconditions:** The [component](../../glossary.md#term-component--component)'s new [version](../../glossary.md#term-version--version) carries the breaking [change](../../glossary.md#term-change--change), with its [migration](../../glossary.md#term-migration--migration) in that version's folder. A [project](../../glossary.md#term-project--project)'s upgrade of the component across that version runs the migration. The changelog entry says what changed in the component, and what the component now requires.
 
 **Minimal guarantees:**
 
-- Wherever the path stops, the [migration](../../glossary.md#term-migration--migration) stays in a folder no [version](../../glossary.md#term-version--version) of the [component](../../glossary.md#term-component--component) has reached, since the migration check fails one already released. An upgrade of the component from below that folder's version to one at or past it runs the migration (`migrations.py`).
+- Wherever the path stops, the [migration](../../glossary.md#term-migration--migration) stays in a folder no [version](../../glossary.md#term-version--version) of the [component](../../glossary.md#term-component--component) has reached, since `pkit migrations check-diff` fails one already released. An upgrade of the component from below that folder's version to one at or past it runs the migration (`migrations.py`).
