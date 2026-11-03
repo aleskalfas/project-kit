@@ -18,6 +18,7 @@ from tests.visual_communication_project import (
     TEST_BRAND,
     bound,
     copy_library,
+    importable,
     project,
     write,
     yaml_text,
@@ -32,9 +33,9 @@ LOCK = {"foundations": "1.0.0", "test-brand": "1.0.0"}
 
 @pytest.fixture(autouse=True)
 def _writer_importable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The command imports its writer when it runs; `load` keeps no `_lib` in
-    `sys.modules`, so the writer it loaded with the script stands in for that import."""
-    monkeypatch.setitem(sys.modules, "_lib.plugins.css", css)
+    """The writer stands in for the import the command makes when it runs it, for the
+    length of the test."""
+    importable(monkeypatch, css)
 
 
 def declare(root: Path, **fields: object) -> None:

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -20,6 +19,7 @@ from tests.visual_communication_project import (
     TEST_BRAND,
     bound,
     copy_library,
+    importable,
     project,
     write,
     yaml_text,
@@ -44,10 +44,9 @@ TYPOGRAPHY = ("type.body", "type.heading")
 
 @pytest.fixture(autouse=True)
 def _writer_importable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A run imports its writer when it runs (`seam.implementation`). `load` keeps no
-    `_lib` in `sys.modules` once it returns, so the writer it loaded with `code` stands
-    in for that import, for the test's length."""
-    monkeypatch.setitem(sys.modules, "_lib.plugins.css", css)
+    """The writer stands in for the import a run makes when it runs it, for the length of
+    the test."""
+    importable(monkeypatch, css)
 
 
 def declare(root: Path, name: str = NAME, **fields: Any) -> Path:
