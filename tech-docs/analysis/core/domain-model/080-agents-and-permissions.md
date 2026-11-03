@@ -330,7 +330,7 @@ Defined in [TERM-guardrail](../glossary.md#term-guardrail--guardrail).
 
 **Why:** Some mechanisms that enforce permissions fail open, so a fault in them lets the call go ahead ([COR-028 point 2](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)). A deny that must never be bypassed is therefore held where a fault blocks the call (COR-028 point 2).
 
-A guardrail is a [privilege](../glossary.md#term-privilege--privilege) that every [grant subject](../glossary.md#term-grant-subject--grant-subject) is denied, whatever any [grant](../glossary.md#term-grant--grant) allows, such as `vcs-history-rewrite` for a force-push. The catalog marks it `guardrail: true`. Each [adapter](../glossary.md#term-adapter--adapter) also holds it as a [native deny](../glossary.md#term-native-deny--native-deny), which its [harness](../glossary.md#term-harness--harness) enforces itself.
+A guardrail is a [privilege](../glossary.md#term-privilege--privilege) that every [grant subject](../glossary.md#term-grant-subject--grant-subject) is denied, whatever any [grant](../glossary.md#term-grant--grant) allows, such as `vcs-history-rewrite` for a force-push. The catalog marks it `guardrail: true`. Where its [harness](../glossary.md#term-harness--harness) fails closed, each [adapter](../glossary.md#term-adapter--adapter) also holds it as a [native deny](../glossary.md#term-native-deny--native-deny), which the harness enforces itself.
 
 **Attributes:** None.
 

@@ -33,7 +33,7 @@ pkit:
 
 # UC-003 — Declare what my change means for the next release
 
-**Goal:** Declare what my change means for the next release, in changesets naming the backbone or each component it moves, and the bump segment I judge.
+**Goal:** Declare what my change means for the next release: changesets naming what it moves, the backbone or a component, and the bump segment I judge.
 
 **Other actors:**
 

@@ -93,7 +93,7 @@ pkit:
 
 9. The system runs the scripts of every adapter in the order of the adapters' names ([UC-014](UC-014-develop-methodology.md)). So the new adapter's scripts deploy the skills and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) where the new harness reads them.
 10. The author runs `pkit validate`. Its `packages` member checks the adapter's package metadata: its name, its version and its range. Its `schemas` member checks the support declaration against its schema.
-11. The author runs `pkit harness report --adapter <name>`. The system reads only the declaration, never the harness ([COR-047](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md) points 3 to 5). So it reports a harness requirement `unsatisfied` where its entry grades it `not-achievable` for every version, and `indeterminate` otherwise. It exits with status `1` while any requirement is not `satisfied`.
+11. The author runs `pkit harness report --adapter <name>`. The system reads only the declaration, never the harness ([COR-047](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md) points 3 to 5). So it reports a harness requirement `unsatisfied` where its entry grades it `not-achievable` for every version, and reports the requirement `indeterminate` otherwise. It exits with status `1` while any requirement is not `satisfied`.
 
 **Variants:**
 

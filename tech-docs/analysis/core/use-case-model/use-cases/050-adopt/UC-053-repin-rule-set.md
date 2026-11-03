@@ -61,6 +61,6 @@ pkit:
 
 **Minimal guarantees:**
 
-- While an [inheritance pin](../../../glossary.md#term-inheritance-pin--inheritance-pin) is behind its set, no [rule](../../../glossary.md#term-rule--rule) binds through it, and [validation](../../../glossary.md#term-validation--validation) fails, so the gap is never silent ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
+- While an [inheritance pin](../../../glossary.md#term-inheritance-pin--inheritance-pin) is behind its set, no [rule](../../../glossary.md#term-rule--rule) binds through that pin, and [validation](../../../glossary.md#term-validation--validation) fails, so no gap is silent ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 - `pkit status`, `pkit validate` and `pkit rule-sets reach` write nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)).
 - The [system](../../../glossary.md#term-system--system) moves no pin of its own accord. The adopter moves it, once the new major is reviewed (COR-051 point 7).
