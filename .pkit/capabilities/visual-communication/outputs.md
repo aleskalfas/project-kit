@@ -65,7 +65,7 @@ A *plugin* is code that meets the engine at one *seam*: what the engine hands it
 - A *producer* makes a picture while a piece is prepared. A person or an agent runs it with `pkit visual produce`. No render, check or export runs it.
 - A *code writer* writes a brand's resolved values as code in one language.
 
-Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships the `svg` renderer and the `css` code writer, each at version 1.0.0. No producer ships yet.
+Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships the `svg` renderer at version 1.0.1 and the `css` code writer at version 1.0.0. No producer ships yet.
 
 Each plugin declares what it can take, so the capability knows it without running the plugin. A renderer declares each primitive it draws, and each property of it. A producer declares its inputs, each a role of one *value type* (a token's DTCG type, such as `color`), and the value types it uses. A code writer declares the value types its language has a form for, the forms of its spelling, and the kinds of axis it spells.
 
@@ -133,9 +133,9 @@ Before it draws, the capability compares each scene with the renderer's declarat
 An *export* is a set of files a piece is handed out as. Each export run is one *version*, numbered within its piece (DEC-006 point 7).
 
 - **Formats.** A piece names its formats under `exports` in its `piece.yaml`. Format 1 knows one, `svg`, which the SVG renderer draws.
-- **What a run makes:** one file for each format, each language and each combination of modes the piece names, drawn from the scenes under the lock `piece.yaml` holds.
+- **What a run makes:** one file for each format, each page, each language and each combination of modes the piece names, drawn from the scenes under the lock `piece.yaml` holds.
 - **The number.** A run takes the number one higher than the highest version in the piece's `exports.yaml`, or 1 where there is none. Every file of the run carries it, so version 3 in English matches version 3 in Czech.
-- **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone.
+- **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. A piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.<format>`, such as `deck.v1.en.default.2.svg`.
 - **Where:** `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the clone and never committed. No export overwrites another. What is committed is the record of exports, in the piece's folder.
 
 ### The record of exports
@@ -171,7 +171,7 @@ An export run is refused, and writes nothing, when:
 - a produced picture the piece shows is missing: it has no record, or its record names a variant file that is missing;
 - a produced picture is stale (*What makes an output stale*), unless `--use-stale <output>` names it;
 - `--use-stale` names an output the piece does not declare under `produced`: the refusal names those it declares;
-- the piece has more than one page, since format 1 names an export file by piece, version, language and combination alone;
+- the piece has no page in one of its languages, so the version would hold no file in it;
 - a file of the run's number already lies in the piece's exports folder, or a file the run would write, `exports.yaml` among them, is reached through a link;
 - `exports.yaml` cannot be read, or holds no list of numbered versions.
 

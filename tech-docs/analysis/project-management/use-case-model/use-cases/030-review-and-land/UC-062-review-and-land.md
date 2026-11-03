@@ -67,6 +67,26 @@ pkit:
         - COR-064#2
         - ADR-034#1
         - ADR-061
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#3
+        - COR-050#6
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
+        - COR-066#3
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
+        - COR-054
+        - PRJ-002
+        - COR-028
+        - PRJ-004
+        - ADR-063
       artefact:
         - REQ-040
         - REQ-041
@@ -84,13 +104,13 @@ pkit:
 - **CI pipeline** (`core:ACT-ci-pipeline`): runs the checks the merge waits for, at the [pull request](../../../../core/glossary.md#term-pull-request--pull-request)'s head.
 - **Operator** (`core:ACT-operator`): is asked before a command changes a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From [UC-061](../020-file-and-move/UC-061-move-issue.md):** The [Task](../../../glossary.md#term-task--task) is in Review, and its [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
+**Preconditions:** **From [UC-061](../020-file-and-move/UC-061-move-issue.md):** The developer's [Task](../../../glossary.md#term-task--task) is in Review, and its [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 
 **Assumptions:**
 
 - The [project](../../../../core/glossary.md#term-project--project) has project-management installed, the CLI registers `pkit pm`, and the [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys each [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) agent ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md), [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
-- The [backbone](../../../../core/glossary.md#term-backbone--backbone) runs each reviewer agent the system names, and returns its output (COR-013).
-- The backbone tells which artefacts a [change](../../../../core/glossary.md#term-change--change) alters, or brings under a [rule](../../../../core/glossary.md#term-rule--rule), that an accepted rule binds on ([COR-057](../../../../../../.pkit/decisions/core/COR-057-rule-set-reviewer.md)).
+- The [backbone](../../../../core/glossary.md#term-backbone--backbone) runs each reviewer agent the [system](../../../../core/glossary.md#term-system--system) names, and returns its output (COR-013).
+- The backbone tells which [artefacts](../../../../core/glossary.md#term-artefact--artefact) a [change](../../../../core/glossary.md#term-change--change) alters, or brings under a [rule](../../../../core/glossary.md#term-rule--rule), that an accepted rule binds on ([COR-057](../../../../../../.pkit/decisions/core/COR-057-rule-set-reviewer.md)).
 - The backbone's [change check](../../../../core/glossary.md#term-change-check--change-check) lists the answers the change wrote, from the [answer](../../../../core/glossary.md#term-answer--answer) files the change adds ([COR-050](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md) and [COR-062](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md)).
 - The backbone merges the [pull request](../../../../core/glossary.md#term-pull-request--pull-request) pinned to a [head](../../../../core/glossary.md#term-head--head), and deletes its branch, as `core:UC-034` describes ([ADR-061](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md)).
 
@@ -99,7 +119,7 @@ pkit:
 **Main path:**
 
 1. The developer runs `pkit pm land-work <N>`, with the [Task](../../../glossary.md#term-task--task)'s number.
-2. At its entry, the system checks the [project](../../../../core/glossary.md#term-project--project)'s prerequisites, and the developer's membership where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). It then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
+2. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the [project](../../../../core/glossary.md#term-project--project)'s prerequisites, and the developer's membership where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). It then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 3. The system reads the [pull request](../../../../core/glossary.md#term-pull-request--pull-request)'s [head](../../../../core/glossary.md#term-head--head), prints it, and holds it as the head this run judges.
 4. The system waits for the checks at that head, and goes on once each has passed. A head that shows no check never counts as passed (`ci_checks.py`).
 5. The system works out the [required reviewers](../../../glossary.md#term-required-reviewer--required-reviewer): those the project's settings name, and each a [capability](../../../../core/glossary.md#term-capability--capability) contributes whose condition the [change](../../../../core/glossary.md#term-change--change) meets ([DEC-032 point D1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d1--the-required-local-reviewer-set-resolves-from-the-prs-closing-issues)). It prints them, with each contributed [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) the project declined and its reason ([DEC-032 point D2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d2--capabilities-contribute-reviewer-requirements-pm-collects-them-by-walking-the-manifest)).
@@ -119,7 +139,7 @@ pkit:
 
 **Variants:**
 
-- **1a.** The developer runs `pkit pm review-pr <N>` alone, to have the [change](../../../../core/glossary.md#term-change--change) reviewed before landing it. The system runs steps 2 and 5 to 7, and the use case ends.
+- **1a.** The developer runs `pkit pm review-pr <N>` alone, to have the [change](../../../../core/glossary.md#term-change--change) reviewed before landing it. The [system](../../../../core/glossary.md#term-system--system) runs steps 2 and 5 to 7, and the use case ends.
 - **1b.** The developer passes `--dry-run`. The system makes its checks, says what it would run and merge, and writes nothing ([COR-004](../../../../../../.pkit/decisions/core/COR-004-cli-surface.md)). The use case ends.
 
 > [!WARNING]
@@ -152,7 +172,7 @@ pkit:
 
 - A [verdict](../../../glossary.md#term-verdict--verdict) that is missing or cannot be read never satisfies the [merge gate](../../../glossary.md#term-merge-gate--merge-gate) ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 - Only a comment that carries the verdict's marker counts as a verdict (DEC-028).
-- An approval stands only while the developer changes nothing its [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) checks. A commit the system cannot read makes it stale (DEC-028).
+- An approval stands only while the developer changes nothing its [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) checks. A commit the [system](../../../../core/glossary.md#term-system--system) cannot read makes it stale (DEC-028).
 - Where the [required reviewers](../../../glossary.md#term-required-reviewer--required-reviewer) cannot be worked out, nothing merges on part of them ([DEC-032 point D5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d5--activation-is-install-driven-the-resolved-set-is-recomputed-at-gate-time)).
 - The merge is pinned to the [head](../../../../core/glossary.md#term-head--head) the gate judged, so a push after the gate fails it (DEC-028).
 - Nothing merges through `land-work` without an [authorisation](../../../glossary.md#term-authorisation--authorisation) for that head, given at a terminal or by `--yes` with `--expect-head` ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation) and [REQ-042](../../../requirements/functional/REQ-042-held-moves-authorised.md)).
