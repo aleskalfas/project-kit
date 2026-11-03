@@ -32,7 +32,7 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/produced-record.schema.json
         - .pkit/capabilities/visual-communication/schemas/code.schema.json
         - .pkit/capabilities/visual-communication/schemas/code-record.schema.json
-      record: ["visual-communication:DEC-002", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-012"]
+      record: ["visual-communication:DEC-002", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-012"]
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -323,13 +323,13 @@ out: web/brand.css
 | `writer` | the code writer: `css`, the only one |
 | `form` | the form of the writer's spelling: `1` |
 | `brand` | the brand, by its library's name |
-| `lock` | a version of the brand and of every library it builds on, each one the project holds, whose majors fit what each builds on |
+| `lock` | a version of the brand and of every library it builds on, and of any other library whose roles the code holds, each one the project holds and the capability reads, whose majors fit what each builds on |
 | `out` | where the code goes: a file of the project's tree |
 | `prefix` | optional: a name that opens every name the code writes |
 | `accept-losses` | optional: the losses a person accepted ([Accepting a loss](#accepting-a-loss)) |
 
 - **The lock is the declaration's own.** A person moves it on purpose, and no command moves it, so the code changes only when the declaration changes (DEC-005 point 7).
-- **What the code holds:** every token the brand exports, in every combination of the brand's axes, at the versions the lock names. It follows no piece's modes.
+- **What the code holds:** the document of values under the lock: every token the brand exports, and every other role of each library of components the lock names, at the brand's value or at its default (DEC-008 point 5), in every combination of the brand's axes, at the versions the lock names. A library's role that has no value under the brand is left out. Code that reads a library's role names that library's major in its lock, since the library promises its names by major. A brand built on a base is read over the base the lock names. The code follows no piece's modes.
 - **Where `out` may not lie:** outside the repository, under `.pkit/`, under a hidden folder, or in the location's library folder, its `code/` folder or its `pieces/` folder. Nor may it be reached through a link, or be a folder.
 - **Committing the code** is the project's choice, as for any file its build writes. Its record goes with it (DEC-006 point 4).
 
@@ -341,7 +341,7 @@ out: web/brand.css
 
 The CSS writer writes one style sheet. Form 1 spells it as follows.
 
-- **Names.** Each token path gives one custom property: `--`, then the `prefix` and `--` where the declaration names one, then the path's segments joined by `--`. A segment keeps its own single hyphens, so no two paths give one name: `space.1` gives `--space--1`, `text-primary` gives `--text-primary`, and `space.1` with the prefix `brand` gives `--brand--space--1`.
+- **Names.** Each token path gives one custom property: `--`, then the `prefix` and `--` where the declaration names one, then the path's segments joined by `--`. A segment keeps its own single hyphens, so no two paths give one name: `space.1` gives `--space--1`, `text-primary` gives `--text-primary`, a library's role `test-parts.note` gives `--test-parts--note`, and `space.1` with the prefix `brand` gives `--brand--space--1`.
 - **Values.** A `color` is `#rrggbb`, each channel rounded to 8 bits, half up, or `#rrggbbaa` where its alpha is not 1. A `dimension` is its number and `px`. A `fontFamily` is its names, each in double quotes, joined by `, `. A `fontWeight` or a `number` is the number, in the capability's canonical text, such as `1.4` or `16`.
 - **Modes.** Each mode is switched by an attribute, `data-<axis>="<mode>"`, on one element: the page's root by default. An area that changes modes sets every axis's attribute on its own element; the root may leave out an axis at its default. Form 1 spells value axes alone, and refuses a brand with an axis of another kind.
 

@@ -477,3 +477,56 @@ def test_a_pinned_lock_whose_libraries_do_not_build_on_each_other_is_refused(
     lock = {"base": "2.0.0", "charts": "1.0.0"}
     with pytest.raises(libraries.LockRefused, match="builds on `base` 1"):
         libraries.move_lock(held(root), ["charts"], lock, pinned=True)
+
+
+# --- a version checked alone (DEC-005 point 7, DEC-008 point 1) ----------------------------------
+
+
+def chosen(found: dict[str, Any]) -> dict[str, str]:
+    return {name: str(library.version) for name, library in found.items()}
+
+
+def test_a_version_alone_takes_the_newest_of_each_major_it_names(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    add_library(root, "base", "1.0.0")
+    add_library(root, "base", "1.4.0")
+    add_library(root, "base", "2.0.0")
+    add_library(root, "parts", "1.0.0", builds_on={"base": 1})
+    add_library(root, "parts", "1.2.0", builds_on={"base": 1})
+    add_library(root, "brand", "1.0.0", builds_on={"base": 1, "parts": 1}, kind="brand")
+    found = libraries.newest_of_majors(held(root), held(root).library("brand", V("1.0.0")))
+    assert chosen(found) == {"base": "1.4.0", "brand": "1.0.0", "parts": "1.2.0"}
+
+
+def test_the_newest_of_a_major_skips_a_version_the_capability_cannot_read(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path)
+    add_library(root, "base", "1.0.0")
+    add_library(root, "base", "1.1.0", needs_release="9.0.0")
+    add_library(root, "parts", "1.0.0", builds_on={"base": 1})
+    found = libraries.newest_of_majors(held(root), held(root).library("parts", V("1.0.0")))
+    assert chosen(found) == {"base": "1.0.0", "parts": "1.0.0"}
+
+
+def test_two_majors_of_one_library_conflict_naming_both(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    add_library(root, "base", "1.0.0")
+    add_library(root, "base", "2.0.0")
+    add_library(root, "parts", "1.0.0", builds_on={"base": 2})
+    add_library(root, "brand", "1.0.0", builds_on={"base": 1, "parts": 1}, kind="brand")
+    with pytest.raises(libraries.MajorsConflict) as refused:
+        libraries.newest_of_majors(held(root), held(root).library("brand", V("1.0.0")))
+    said = str(refused.value)
+    assert "brand@1.0.0 builds on `base` 1" in said
+    assert "parts@1.0.0 builds on `base` 2" in said
+    assert isinstance(refused.value, libraries.LockRefused)
+
+
+def test_a_major_the_project_holds_no_version_of_is_refused_naming_why(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    add_library(root, "base", "1.0.0", needs_release="9.0.0")
+    add_library(root, "parts", "1.0.0", builds_on={"base": 1, "other": 3})
+    with pytest.raises(libraries.LockRefused, match=r"needs release 9\.0\.0") as refused:
+        libraries.newest_of_majors(held(root), held(root).library("parts", V("1.0.0")))
+    assert not isinstance(refused.value, libraries.MajorsConflict)
