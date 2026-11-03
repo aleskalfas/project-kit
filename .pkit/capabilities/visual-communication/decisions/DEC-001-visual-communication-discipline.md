@@ -123,7 +123,7 @@ The capability works with no other capability installed.
 
 The capability is shipped by the methodology (COR-031), and a project installs it only when it asks for it (COR-017).
 - **A project's own pieces and libraries** live in its own files, never in the capability's folder. So no project's work ships with the capability.
-- **Every copy of a library in a project** is the project's file, whoever releases the library, a shipped library's copy included (COR-001). A *library copy* is a released version of a library, held whole in the project. A copy that a lock names is never rewritten, so an update of the capability changes no piece's libraries.
+- **Every copy of a library in a project** is the project's file, whoever releases the library, a shipped library's copy included (COR-001). A *library copy* is a released version of a library, held whole in the project. A library copy that a lock names is never rewritten, and an update of the capability changes no piece's libraries. Restoring a library copy to its released hash rewrites nothing. A version not yet released, held in a project, is the project's file too, but no library copy. The command that brings a shipped library in may bring such a copy of it up to date (refinement per [visual-communication:DEC-013-shipped-library-releases]).
 
 ## Rationale
 
@@ -149,7 +149,7 @@ The capability is shipped by the methodology (COR-031), and a project installs i
 
 **Why options are declared, and colour follows meaning.** A free number would make each pattern a small language, and no set of renders could show every value. A word from a declared list is checked by the schema, and drawn once for each value. The talk's tables coloured each column by the layer of a pyramid it stood for, so a colour says what a thing is, not where it sits. A state may still change it, as a broken tie turns red, and a default serves where no concept is named, so a pyramid with no notation still shades its levels by their place.
 
-**Why a lock per piece.** In visual work every change shows, so a version's promise that a fix is safe does not hold for pictures. A published figure that changes with nobody looking, or a talk that looks different when it is given again, breaks trust. A lock per piece lets one piece take a library's improvement while another stays as it was. A library copy is the project's file, as every file in a project has one owner (COR-001), and a copy a lock names stays as it was fetched.
+**Why a lock per piece.** In visual work every change shows, so a version's promise that a fix is safe does not hold for pictures. A published figure that changes with nobody looking, or a talk that looks different when it is given again, breaks trust. A lock per piece lets one piece take a library's improvement while another stays as it was. A library copy is the project's file, as every file in a project has one owner (COR-001), and a library copy a lock names stays as it was fetched.
 
 **Why work outside the engine runs while preparing.** If a local component is slow to write as data, people go around the tool, and that was the largest risk found in the design. Some work no general tool should do: most of one project's 59 documentation diagrams are graphs that need a layout, a ring of items needs sine and cosine, and a 3D render is a program's work. A program run while preparing keeps the engine's tools a closed set. Its output is kept and checked, so the scene does not change with the program's version or the machine.
 
