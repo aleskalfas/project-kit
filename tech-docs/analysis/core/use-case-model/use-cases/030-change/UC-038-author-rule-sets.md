@@ -21,6 +21,7 @@ pkit:
         - src/project_kit/rule_set_reading.py
         - src/project_kit/declared_rule_sets.py
         - src/project_kit/cli.py
+        - src/project_kit/status.py
         - .pkit/schemas/README.md
       record:
         - COR-051#2
@@ -78,14 +79,14 @@ pkit:
 - **1c.** The developer would edit a [rule](../../../glossary.md#term-rule--rule) a method rule set ships. That edit belongs to the [component](../../../glossary.md#term-component--component) that ships the set, so the developer proposes it there, or does not inherit the set ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)). The use case ends.
 - **2a.** A scope holds an empty list, names neither paths nor types, or names a type that no owner declares. [Validation](../../../glossary.md#term-validation--validation) fails on it, and the path rejoins at step 2.
 - **5a.** The set would inherit a set that does not exist under the address written, or the inheriting would close a cycle. Validation fails, naming the set, and the path rejoins at step 5.
-- **5b.** An inherited rule offers an extension point, and a rule of the set fills it. The filling rule names the extension point in `fills`, and anchors the rule it fills, so an edit there flags the fill ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
+- **5b.** An inherited rule offers an [extension point](../../../glossary.md#term-extension-point--extension-point), and a rule of the set fills it. The filling rule names the extension point in `fills`, and anchors the rule it fills, so an edit there flags the fill ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 - **5c.** The set would inherit a [loaded rule set](../../../glossary.md#term-loaded-rule-set--loaded-rule-set), such as the [backbone](../../../glossary.md#term-backbone--backbone)'s `OPS`. A loaded rule set's rules bind on the work of the sessions that load it, not on [artefacts](../../../glossary.md#term-artefact--artefact), so no set inherits it. Validation fails, naming the [inheritance pin](../../../glossary.md#term-inheritance-pin--inheritance-pin), and the path rejoins at step 5 ([COR-068 point 1](../../../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#1-a-loaded-rule-set)).
 - **6a.** Validation fails on a rule or a set's name, naming each, and the path rejoins at step 3. It fails on each of these:
   - a rule's id that carries another set's name, or redefines an inherited id
   - a rule and a section that do not match
   - two rule sets that share a name
 - **6b.** An accepted rule has no complete origin, or its origin cites a [decision record](../../../glossary.md#term-decision-record--decision-record) that is not accepted. Validation fails, naming the rule ([COR-051 point 5](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically)).
-- **6c.** A rule's origin cites a source of a kind a capability registers. Validation resolves it through that kind's command, offline as [REQ-007](../../../requirements/constraints/REQ-007-offline-same-answer.md) asks, and stops the command after thirty seconds ([REQ-006](../../../requirements/quality/REQ-006-command-time-bound.md)). A command that gives no result fails validation as `unanswered-source`, and is never passed ([REQ-004](../../../requirements/quality/REQ-004-missing-answer-never-clean.md)). A kind no installed component resolves is reported, without failing ([COR-051 point 5](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically)).
+- **6c.** A rule's origin cites a source that a capability resolves as it resolves an [anchor](../../../glossary.md#term-anchor--anchor). Validation resolves the source through the capability's [query command](../../../glossary.md#term-query-command--query-command), offline as [REQ-007](../../../requirements/constraints/REQ-007-offline-same-answer.md) asks, and stops the command after thirty seconds ([REQ-006](../../../requirements/quality/REQ-006-command-time-bound.md)). A command that gives no result fails validation as `unanswered-source`, and is never passed ([REQ-004](../../../requirements/quality/REQ-004-missing-answer-never-clean.md)). A source whose kind no installed component registers is reported, without failing ([COR-051 point 5](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically)).
 - **6d.** Validation fails at a fill, and the path rejoins at step 5. It fails on each of these:
   - a fill of an extension point that no inherited rule offers
   - a second fill of one extension point along the chain

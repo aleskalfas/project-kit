@@ -1,5 +1,5 @@
 {
-  "$description": "High contrast, in either colour scheme: text and lines at the scheme's strongest.",
+  "$description": "High contrast, in either colour scheme: text and lines at the scheme's strongest, the text of each colour family's hue too.",
   "background": {
     "$type": "color",
     "$value": "{scheme.strong-paper}"
@@ -15,5 +15,33 @@
   "line": {
     "$type": "color",
     "$value": "{scheme.strong-ink}"
+  },
+  "family": {
+    "$type": "color",
+    "blue": {
+      "text": {
+        "$value": "{scheme.strong-ink}"
+      }
+    },
+    "green": {
+      "text": {
+        "$value": "{scheme.strong-ink}"
+      }
+    },
+    "orange": {
+      "text": {
+        "$value": "{scheme.strong-ink}"
+      }
+    },
+    "purple": {
+      "text": {
+        "$value": "{scheme.strong-ink}"
+      }
+    },
+    "red": {
+      "text": {
+        "$value": "{scheme.strong-ink}"
+      }
+    }
   }
 }

@@ -1,11 +1,13 @@
 """The pipeline from a project's files to the engine (visual-communication DEC-002 point 5,
-DEC-003 point 9, DEC-005 point 13): a piece read with its content, the lock written into
-`piece.yaml` with every other byte kept, the `Env` over the locked libraries and the
-piece's produced pictures, and the scenes of each language.
+DEC-003 point 9, DEC-004 point 10, DEC-005 point 13): a piece read with its content, the
+lock written into `piece.yaml` with every other byte kept, the `Env` over the locked
+libraries, the notations the piece names and its produced pictures, and the scenes of each
+language.
 
-It also holds the project the render, check and export tests draw: `drawing_project`, the
+It also holds the projects the render, check and export tests draw: `drawing_project`, the
 piece `flow`, a figure of the `tests` library's steps whose last step is a callout over the
-produced picture `square`.
+produced picture `square`; and `system_project`, the piece `system`, a figure of a pattern
+whose nodes take their colour family by concept, by the pattern's and by state.
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ from tests.visual_communication_project import (
     FIXTURES,
     FOUNDATIONS,
     TEST_BRAND,
+    TEST_NOTATION,
     bound,
     copy_library,
     project,
@@ -196,6 +199,11 @@ def test_a_piece_is_read_with_its_content_in_each_language(tmp_path: Path) -> No
         ),
         pytest.param({"top": "figure"}, "`top` is not a use", id="top"),
         pytest.param({"lock": {"foundations": 1}}, "`lock` is not a mapping", id="lock"),
+        pytest.param(
+            {"notations": "test-notation"},
+            "`notations` is not a list of libraries' names",
+            id="notations",
+        ),
     ],
 )
 def test_a_piece_that_cannot_be_read_is_refused_naming_the_file(
@@ -240,6 +248,12 @@ def test_a_piece_always_needs_the_foundations_whose_roles_every_piece_reads(
 ) -> None:
     piece = piece_of(drawing_project(tmp_path, top="tests/steps", picture=False))
     assert pl.needed(piece) == ["foundations", "test-brand", "tests"]
+
+
+def test_a_piece_needs_each_notation_it_names(tmp_path: Path) -> None:
+    piece = pl.read_piece(system_project(tmp_path), "visual", "system")
+    assert piece.notations == ["test-notation"]
+    assert pl.needed(piece) == ["foundations", "test-brand", "test-notation"]
 
 
 # --- writing the lock ---------------------------------------------------------------------------
@@ -361,6 +375,150 @@ def test_a_lock_naming_a_version_not_held_is_refused(tmp_path: Path) -> None:
     root = drawing_project(tmp_path, lock={**LOCK, "test-brand": "2.0.0"})
     with pytest.raises(pl.Refused, match=r"names test-brand@2\.0\.0, which the project does not"):
         project_of(root)
+
+
+# --- a notation's concepts ----------------------------------------------------------------------
+
+#: A pattern of the piece's own: the parts of a system in a row, each drawn by a node in
+#: the family `orange` unless its concept or its state says otherwise.
+PATTERN = bound(
+    "component",
+    status="experimental",
+    about="The parts of a system in a row, each drawn by a node.",
+    fields={
+        "type": "object",
+        "required": ["items"],
+        "properties": {"items": {"type": "array", "items": {"type": "object"}}},
+    },
+    parts={
+        "items": {
+            "repeat": "items",
+            "draw": "piece/node",
+            "colour": "orange",
+            "width": "=:width",
+            "row": {"gap": "=@space.2", "sizes": "equal", "align-items": "stretch"},
+        }
+    },
+    preferred={"height": "=items.height"},
+)
+
+#: One part of a system: its name on a box, both painted from its colour family.
+NODE = bound(
+    "component",
+    status="experimental",
+    about="One part of a system, its name on a box of its colour family.",
+    fields={
+        "type": "object",
+        "required": ["name"],
+        "properties": {"name": {"type": "string", "x-pkit-prose": True}},
+    },
+    states={"failing": {"colour": "red"}},
+    parts={
+        "box": {
+            "box": {"fill": ":colour.fill", "stroke": ":colour.line"},
+            "width": "=:width",
+            "height": "=:height",
+        },
+        "name": {
+            "text": {"content": "name", "style": "type.body", "fill": ":colour.text"},
+            "x": "=@space.2",
+            "y": "=@space.2",
+            "width": "=:width - 2 * @space.2",
+        },
+    },
+    preferred={"height": "=name.bottom + @space.2"},
+)
+
+#: The nodes of the pattern: a person by its concept, a service by the pattern's family, a
+#: queue by its state, and a store whose state changes its concept's family.
+NODES = [
+    {"id": "user", "name": "User", "concept": "test-notation/person"},
+    {"id": "api", "name": "API"},
+    {"id": "queue", "name": "Queue", "state": "failing"},
+    {"id": "store", "name": "Store", "concept": "test-notation/store", "state": "failing"},
+]
+
+
+def system_project(tmp_path: Path) -> Path:
+    """The foundations, the test brand and the test notation, listed unreleased, and the
+    draft `system`: a figure of the pattern over `NODES`, in both colour schemes."""
+    root = project(tmp_path)
+    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
+    copy_library(root, TEST_NOTATION, "test-notation", "1.0.0")
+    unreleased = {"1.0.0": {"released": False}}
+    write_list(
+        root,
+        {
+            "foundations": {"source": {"kind": "shipped"}, "versions": unreleased},
+            "test-brand": {"source": {"kind": "project"}, "versions": unreleased},
+            "test-notation": {"source": {"kind": "project"}, "versions": unreleased},
+        },
+    )
+    write_piece(
+        root,
+        "system",
+        notations=["test-notation"],
+        modes={"colour-scheme": ["light", "dark"]},
+        lock={"foundations": "1.0.0", "test-brand": "1.0.0", "test-notation": "1.0.0"},
+    )
+    folder = root / "visual" / "pieces" / "system"
+    write(folder / "components" / "pattern.yaml", yaml_text(PATTERN))
+    write(folder / "components" / "node.yaml", yaml_text(NODE))
+    body = {"use": "piece/pattern", "items": NODES}
+    write(folder / "content.en.yaml", yaml_text(bound("content", body=body, caption="A system.")))
+    return root
+
+
+def hex_of(colour: Mapping[str, Any]) -> str:
+    """An sRGB colour of the values document, as its hex code."""
+    return "#" + "".join(f"{round(c * 255):02x}" for c in colour["components"])
+
+
+def test_a_node_takes_its_concept_s_family_else_its_list_s_and_its_state_changes_either(
+    tmp_path: Path,
+) -> None:
+    root = system_project(tmp_path)
+    piece = pl.read_piece(root, "visual", "system")
+    project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+
+    [(_, result)] = project.scenes()
+
+    assert result.findings == []
+    painted = {}
+    for node in NODES:
+        trace = f"figure/body/items[{node['id']}]"
+        box, name = result.scene.find(f"{trace}/box"), result.scene.find(f"{trace}/name")
+        assert box is not None and name is not None
+        assert box.sources["fill"] == box.sources["stroke"] == name.sources["fill"]
+        painted[node["id"]] = (box.properties["fill"], box.sources["fill"])
+    assert painted == {
+        "user": ("family.purple.fill", "content:body.items[user].concept"),
+        "api": ("family.orange.fill", "default:piece/pattern"),
+        "queue": ("family.red.fill", "content:body.items[queue].state"),
+        "store": ("family.red.fill", "content:body.items[store].state"),
+    }
+    document = project.values()
+    resolved = {
+        key: {
+            family: [hex_of(pl.colours_at(document, key)[f"family.{family}.{member}"])
+                     for member in ("fill", "line", "text")]
+            for family in ("purple", "orange", "red")
+        }
+        for key in project.keys
+    }  # fmt: skip
+    assert resolved == {
+        "default": {
+            "purple": ["#fbefff", "#8250df", "#512a97"],
+            "orange": ["#fff1e5", "#bc4c00", "#762c00"],
+            "red": ["#ffebe9", "#cf222e", "#82071e"],
+        },
+        "colour-scheme.dark": {
+            "purple": ["#3c1e70", "#a371f7", "#e2c5ff"],
+            "orange": ["#5a1e02", "#db6d28", "#ffc680"],
+            "red": ["#67060c", "#f85149", "#ffc1ba"],
+        },
+    }
 
 
 # --- the findings record's key and the YAML a command writes ------------------------------------

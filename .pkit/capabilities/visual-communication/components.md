@@ -29,6 +29,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#reserved-words
+        - .pkit/capabilities/visual-communication/files.md#content-files
 ---
 
 # Components
@@ -141,7 +142,7 @@ An option takes a value from what the component declares, never a free number or
 - **`preferred`** holds `width` and `height`, each a formula that gives a length. A component placed with no size given, and that asks for none, is reported.
 - **`colour`** names the component's default colour family. A *colour family* is a group of colour roles that paints one thing, such as its line, its fill and the text on it. The foundations declare each family in their `roles.yaml`, as a mapping of its members to colour roles (DEC-004 point 10; [the foundations](files.md#the-foundations)).
 - **`states`** maps each state to `{colour: <family>}`, the family the state paints with, or to `{}`, which keeps the instance's family. The content names a state as `state: <name>`.
-- **An instance's family** is the `colour` of the `repeat` part that draws it as an item. Else it is its component's `colour`, else the family of the component that places it. A state with a `colour` then replaces it.
+- **An instance's family** is the family its concept maps to, where the content names one as `concept: <notation>/<concept>` ([content files](files.md#content-files)). Else it is the `colour` of the `repeat` part that draws it as an item, else its component's `colour`, else the family of the component that places it. A state with a `colour` then replaces it. A concept the piece's notations do not hold is reported, and the instance takes its family as if it named none.
 - **A paint `:colour.<member>`** paints with the role the foundations map that member of the instance's family to. Where the instance has no family, its family is none the foundations declare, or the family has no such member, the part paints nothing there, and is reported.
 - **The content's `override: {<part>: <role>}`** points one part's paint at another role: the `fill` of a box, an ellipse or a text, the `stroke` of a line.
 

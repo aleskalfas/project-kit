@@ -61,7 +61,6 @@ from _lib.reading import (
     canonical_json,
     load_json,
     load_yaml,
-    read_json,
     sha256,
 )
 
@@ -98,14 +97,16 @@ class Input:
 # --- reading ------------------------------------------------------------------------------------
 
 
-def reading(path: Path, format: int = FORMAT) -> bytes:
+def reading(path: Path, format: int = FORMAT, data: bytes | None = None) -> bytes:
     """The bytes a file's hash is taken of: a YAML file of the capability's format as the
     canonical text of its value, at `format`; a JSON file as the canonical text of its
-    value; any other file, one that does not parse included, as its bytes."""
-    try:
-        data = path.read_bytes()
-    except OSError as exc:
-        raise FingerprintError(f"{path} cannot be read: {exc.strerror or exc}") from exc
+    value; any other file, one that does not parse included, as its bytes. `data`, where
+    given, is what the file holds once a command writes it, read in place of the file."""
+    if data is None:
+        try:
+            data = path.read_bytes()
+        except OSError as exc:
+            raise FingerprintError(f"{path} cannot be read: {exc.strerror or exc}") from exc
     if path.suffix == ".yaml":
         try:
             value = load_yaml(data.decode("utf-8"), str(path))
@@ -117,8 +118,8 @@ def reading(path: Path, format: int = FORMAT) -> bytes:
         return canonical_bytes(value)
     if path.suffix == ".json":
         try:
-            return canonical_bytes(read_json(path))
-        except ReadError:
+            return canonical_bytes(load_json(data.decode("utf-8"), str(path)))
+        except (ReadError, UnicodeDecodeError):
             return data
     return data
 
@@ -150,9 +151,10 @@ def _at_format(path: Path, value: Mapping[str, Any], format: int) -> None:
 # --- inputs -------------------------------------------------------------------------------------
 
 
-def file_input(rel: str, path: Path, format: int = FORMAT) -> Input:
-    """A piece's file, by its path within the piece folder."""
-    return Input({"file": rel}, sha256(reading(path, format)))
+def file_input(rel: str, path: Path, format: int = FORMAT, data: bytes | None = None) -> Input:
+    """A piece's file, by its path within the piece folder; `data`, where given, read in
+    place of the file (`reading`)."""
+    return Input({"file": rel}, sha256(reading(path, format, data)))
 
 
 def part_input(rel: str, keys: Sequence[str], value: Any) -> Input:
@@ -308,12 +310,16 @@ def findings_key_inputs(
     versions: Mapping[str, tuple[str, Path, Iterable[Path]]],
     fonts: Iterable[Path],
     format: int = FORMAT,
+    written: Mapping[Path, bytes] | None = None,
 ) -> list[Input]:
     """The key of a piece's findings record: the piece's own files among `files`, every
     file of each locked version (`versions`: library -> version, folder, files), and each
-    font of the location's `fonts/` read."""
+    font of the location's `fonts/` read. `written` gives the bytes of each file a render
+    writes, such as `piece.yaml` with its lock moved, read in place of the file, so the
+    render takes the key before its first write."""
+    written = written or {}
     inputs = [
-        file_input(path.relative_to(piece).as_posix(), path, format)
+        file_input(path.relative_to(piece).as_posix(), path, format, written.get(path))
         for path in piece_files(piece, files)
     ]
     for library, (version, folder, held) in sorted(versions.items()):

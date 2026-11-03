@@ -131,7 +131,7 @@ An onboarding plan says how a project's existing documents come into its [docume
 
 - It cites its evidence for each thing it proposes (DEC-001 point 8).
 - Retiring a mapping from code to documents is a separate [change](../../core/glossary.md#term-change--change), for whoever owns the mapping (DEC-001 point 8).
-- Onboarding is complete when the declared surface is covered, and no page is left unanchored without an accepted reason (DEC-001 point 8).
+- Onboarding is complete when the [declared surface](../../core/glossary.md#term-declared-surface--declared-surface) is covered, and no page is left unanchored without an accepted reason (DEC-001 point 8).
 
 ## What is built on these concepts
 

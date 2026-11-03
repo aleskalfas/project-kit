@@ -7,7 +7,9 @@ builds-on:
       - {id: TERM-agent-definition, name: agent definition}
       - {id: TERM-anchor, name: anchor}
       - {id: TERM-answer, name: answer}
+      - {id: TERM-answer-file, name: answer file}
       - {id: TERM-artefact, name: artefact}
+      - {id: TERM-artefact-type, name: artefact type}
       - {id: TERM-backbone, name: backbone}
       - {id: TERM-base, name: base}
       - {id: TERM-capability, name: capability}
@@ -29,9 +31,11 @@ builds-on:
       - {id: TERM-project, name: project}
       - {id: TERM-pull-request, name: pull request}
       - {id: TERM-report, name: report}
+      - {id: TERM-revalidation-answer, name: revalidation answer}
       - {id: TERM-reviewer, name: reviewer}
       - {id: TERM-role, name: role}
       - {id: TERM-rule, name: rule}
+      - {id: TERM-scratchpad-note, name: scratchpad note}
       - {id: TERM-skill, name: skill}
       - {id: TERM-system, name: system}
       - {id: TERM-validation, name: validation}
@@ -62,15 +66,18 @@ TERM-audit-comment:
   name: audit comment
   noun-forms: [audit comments]
   status: active
-  definition: "message project-management posts recording why a person set a check aside or moved an issue back, or at the project's fullest setting each governed write"
+  definition: "message project-management posts recording a person's reason or consent for a write project-management governs, or at the project's fullest setting each governed write"
   pkit:
     friction:
       anchors:
         path:
           - .pkit/capabilities/project-management/scripts/_lib/audit.py
+          - .pkit/capabilities/project-management/scripts/edit-issue.py
+          - .pkit/capabilities/project-management/scripts/_lib/pools.py
         record:
           - project-management:DEC-049
           - project-management:DEC-014
+          - project-management:DEC-061#6
           - COR-001
           - COR-010
 TERM-authorisation:
@@ -159,7 +166,7 @@ TERM-classification-axis:
   name: classification axis
   noun-forms: [classification axes]
   status: active
-  definition: "dimension along which every issue takes one value, from a fixed set or the project's own, carried as a label or a board field"
+  definition: "dimension giving every issue one value, from a fixed set or the project's own, carried where a substrate map puts it, by default a label"
   pkit:
     friction:
       anchors:
@@ -167,6 +174,8 @@ TERM-classification-axis:
           - .pkit/capabilities/project-management/schemas/classification.yaml
         record:
           - project-management:DEC-012
+          - project-management:DEC-036#1
+          - project-management:DEC-036#2
           - COR-001
           - COR-010
 TERM-clone:
@@ -226,7 +235,7 @@ TERM-fixer:
   name: fixer
   noun-forms: [fixers]
   status: active
-  definition: "agent declared for one type of artefact, which a command starts, where the project granted it, to propose answers for out-of-date artefacts of that type"
+  definition: "agent declared for one artefact type, which a command starts, where the project granted it, to propose answers for out-of-date artefacts of that artefact type"
   pkit:
     friction:
       anchors:
@@ -237,6 +246,10 @@ TERM-fixer:
         record:
           - project-management:DEC-056#1
           - project-management:DEC-056#2
+          - COR-056#1
+          - COR-056#2
+          - COR-056#3
+          - COR-056#5
           - project-management:DEC-056#3
           - COR-050#1
           - COR-050#3
@@ -392,7 +405,7 @@ TERM-ownership:
   name: ownership
   noun-forms: [ownerships]
   status: active
-  definition: "instance's mark on an issue it owns, naming a topology's seat and a clone's key, counting until the mark lapses or that seat is released"
+  definition: "instance's mark on an issue it owns, counting until the mark lapses or, under a topology, the seat the mark names is released"
   pkit:
     friction:
       anchors:
@@ -654,12 +667,14 @@ TERM-workstream:
 
 The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
 
-- **From core at 2.0.0:** the areas up to `030-change`. No release holds the core's analysis yet, so the links name the next release, 2.0.0, rather than project-management's floor, 1.144.0.
+- **From core at 2.0.0:** the areas up to `030-change`, at project-management's floor. The core's glossary at 2.0.0 holds no answer file and no revalidation answer, which the core defined after that release.
   - **Term:** [adapter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-adapter--adapter)
   - **Term:** [agent definition](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-agent-definition--agent-definition)
   - **Term:** [anchor](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-anchor--anchor)
   - **Term:** [answer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-answer--answer)
+  - **Term:** [answer file](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-answer-file--answer-file)
   - **Term:** [artefact](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-artefact--artefact)
+  - **Term:** [artefact type](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-artefact-type--artefact-type)
   - **Term:** [backbone](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-backbone--backbone)
   - **Term:** [base](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-base--base)
   - **Term:** [capability](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-capability--capability)
@@ -681,9 +696,11 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [project](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-project--project)
   - **Term:** [pull request](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-pull-request--pull-request)
   - **Term:** [report](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-report--report)
+  - **Term:** [revalidation answer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-revalidation-answer--revalidation-answer)
   - **Term:** [reviewer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-reviewer--reviewer)
   - **Term:** [role](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-role--role)
   - **Term:** [rule](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-rule--rule)
+  - **Term:** [scratchpad note](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-scratchpad-note--scratchpad-note)
   - **Term:** [skill](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-skill--skill)
   - **Term:** [system](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-system--system)
   - **Term:** [validation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-validation--validation)
@@ -789,7 +806,7 @@ Explained in [VIEW-classification-of-issues](domain-model/020-classification-of-
 **Distinctions:**
 
 - **Type of an issue:** [EPIC](#term-epic--epic), [Feature](#term-feature--feature), [Umbrella](#term-umbrella--umbrella) or [Task](#term-task--task), which places the [issue](#term-issue--issue) in the hierarchy. The `type` axis gives its [kind of work](#term-kind-of-work--kind-of-work) instead, such as `bug` or `docs` ([DEC-004](../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-012](../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
-- **Label:** GitHub's tag on an issue. It always carries the `type` axis, and carries the other two where no board field does (DEC-012).
+- **Label:** GitHub's tag on an issue. With no [substrate map](#term-substrate-map--substrate-map), it always carries the `type` axis, and carries the other two where no board field does (DEC-012 and [DEC-036 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#2-activation-is-emergent-not-a-global-mode-flag)).
 
 ## TERM-clone — clone
 

@@ -1,0 +1,6 @@
+component: living-docs
+kind: none
+body: >
+  project-kit's own living-docs configuration assigns the process area's
+  three new reference pages, `shape.md`, `engine.md` and `connections.md`,
+  to the user space (#2494). Nothing living-docs ships to an adopter changes.

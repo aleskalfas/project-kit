@@ -50,6 +50,9 @@ places:
   .pkit/lifecycle/README.md: user
   .pkit/permissions/README.md: user
   .pkit/process/README.md: user
+  .pkit/process/shape.md: user
+  .pkit/process/engine.md: user
+  .pkit/process/connections.md: user
   .pkit/rules/README.md: user
   .pkit/schemas/README.md: user
   .pkit/scratchpad/README.md: user

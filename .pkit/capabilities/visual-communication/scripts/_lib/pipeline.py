@@ -8,14 +8,15 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
   `content.<language>.yaml` for each language it lists, its local components, and what
   a producer made for it under `produced/<output>/`. `read_piece` reads it.
 - **Its lock** names the version of each library it uses. `needed` gives the libraries
-  the piece names itself: its top's library, its brand and every library its content
-  uses; `libraries.move_lock` adds what they build on. `write_lock` writes a lock into
-  `piece.yaml` as text, every other byte kept.
+  the piece names itself: its top's library, its brand, its notations and every library
+  its content uses; `libraries.move_lock` adds what they build on. `write_lock` writes a
+  lock into `piece.yaml` as text, every other byte kept.
 - **A project** (`Project`) is a piece under one lock: the foundations' declarations and
   the brand read from the locked versions, over its base at the version the lock names
-  when it builds on one (DEC-004 point 6), the combinations the piece names, and the
-  `Env` over them. It computes one scene for each language and each key over the size
-  axes; format 1 has no size axis, so that key is always `default`.
+  when it builds on one (DEC-004 point 6), the notations the piece names (DEC-004 point
+  10), the combinations the piece names, and the `Env` over them. It computes one scene
+  for each language and each key over the size axes; format 1 has no size axis, so that
+  key is always `default`.
 - **A produced picture** is read from `produced/<output>/record.yaml`. A missing record,
   or a variant file it names that is missing, makes the picture missing for the engine,
   with the reason kept so the finding names `pkit visual produce <piece> <output>`; it
@@ -30,8 +31,8 @@ from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from _lib import keys, records, tokens, values
-from _lib.env import PictureInfo, UnreadableComponent
+from _lib import keys, notations, records, tokens, values
+from _lib.env import PictureInfo, UnknownConcept, UnreadableComponent
 from _lib.files import FileError, read_bound, refuse_links, without_binding, write_whole
 from _lib.libraries import FOLDER, FOUNDATIONS, Held, Version
 from _lib.location import files as listed_files
@@ -123,6 +124,11 @@ class Piece:
         return str(self.data["brand"])
 
     @property
+    def notations(self) -> list[str]:
+        """The notations its content names concepts from, by their libraries' names."""
+        return list(dict.fromkeys(self.data.get("notations") or []))
+
+    @property
     def languages(self) -> list[str]:
         return list(self.data["languages"])
 
@@ -181,6 +187,13 @@ def read_piece(root: Path, location: str, name: str) -> Piece:
     shown = f"{rel}/{PIECE_FILE}"
     _require(isinstance(data.get("top"), str) and _is_use(data["top"]), shown, "top", "a use")
     _require(is_name(data.get("brand")), shown, "brand", "a library's name")
+    named = data.get("notations", [])
+    _require(
+        isinstance(named, list) and all(map(is_name, named)),
+        shown,
+        "notations",
+        "a list of libraries' names",
+    )
     languages = data.get("languages")
     _require(
         isinstance(languages, list) and bool(languages) and all(map(is_language, languages)),
@@ -254,9 +267,9 @@ def uses(value: Any) -> Iterator[str]:
 
 def needed(piece: Piece) -> list[str]:
     """The libraries the piece names itself: the foundations, which hold the shared roles
-    every piece reads, its top's, its brand, and every library its content uses, in name
-    order. What they build on the lock adds."""
-    found = {FOUNDATIONS, piece.brand}
+    every piece reads, its top's, its brand, its notations, and every library its content
+    uses, in name order. What they build on the lock adds."""
+    found = {FOUNDATIONS, piece.brand, *piece.notations}
     for use in [piece.top, *(use for content in piece.contents.values() for use in uses(content))]:
         library = use.partition("/")[0]
         if _is_use(use) and library != PIECE:
@@ -304,12 +317,14 @@ def write_lock(piece: Piece, lock: Mapping[str, str]) -> bool:
 
 
 class Project:
-    """A piece under one lock: the foundations' declarations and the brand read from the
-    locked versions, the combinations the piece names, and the `Env` the engine reads.
+    """A piece under one lock: the foundations' declarations, the brand and the notations
+    the piece names, read from the locked versions, the combinations the piece names, and
+    the `Env` the engine reads. A notation that cannot be read, wholly or in part, keeps
+    its findings (`notations.Notation`), and stops nothing.
 
-    Raises Refused when the lock lacks the foundations or the brand, or the piece names a
-    mode its brand lacks; `tokens.TokenError`, carrying its findings, when the
-    declarations or the brand cannot be read."""
+    Raises Refused when the lock lacks the foundations, the brand or a notation, or the
+    piece names a mode its brand lacks; `tokens.TokenError`, carrying its findings, when
+    the declarations or the brand cannot be read."""
 
     def __init__(self, piece: Piece, lock: Mapping[str, str], held: Held) -> None:
         # Each name and version of the lock becomes a segment of a path below the library
@@ -342,6 +357,12 @@ class Project:
                 for library, version in self.lock.items()
             },
         )
+        self.notations = {
+            name: notations.read_notation(
+                self.version_folder(name), self.foundations.families, root=self.root
+            )
+            for name in piece.notations
+        }
         try:
             self.combinations = keys.combinations(piece.modes, self.brand.axes)
         except keys.BadKey as exc:
@@ -400,7 +421,8 @@ class Project:
 class ProjectEnv:
     """The `Env` the engine reads a project through: components from the locked versions
     and the piece's own folder, roles and fonts from the brand, colour families from the
-    foundations' declarations, produced pictures from their records, and the lock.
+    foundations' declarations, concepts from the notations the piece names, produced
+    pictures from their records, and the lock.
 
     It keeps what the engine asked for that a check needs: why a produced picture is
     missing (`missing`), the records read (`records`), and the font files read from the
@@ -528,6 +550,22 @@ class ProjectEnv:
     def family(self, name: str) -> dict[str, str]:
         return dict(self._project.foundations.families[name])
 
+    def concept(self, name: str) -> str | None:
+        named, _, concept = name.partition("/")
+        notation = self._project.notations.get(named)
+        if notation is None:
+            raise UnknownConcept(
+                name,
+                f"the concept `{name}` comes from `{named}`, a notation the piece does not name "
+                f"under `notations`",
+            )
+        try:
+            return notation.family(concept)
+        except KeyError:
+            raise UnknownConcept(
+                name, f"the notation {notation.label} holds no concept `{concept}`"
+            ) from None
+
     def library_version(self, library: str) -> str:
         return self._project.lock[library]
 
@@ -633,11 +671,3 @@ def writable(root: Path, path: Path) -> None:
         refuse_links(root, path)
     except FileError as exc:
         raise Refused(str(exc)) from exc
-
-
-def write_file(root: Path, path: Path, data: bytes) -> None:
-    """Write a file a command owns whole, making its folders. Raises Refused where it is
-    reached through a link."""
-    writable(root, path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    write_whole(path, data)

@@ -122,7 +122,7 @@ TWO_BASES = "builds-on: [{name: alpha, major: 1, base: true}, {name: beta, major
     ("old", "new", "said"),
     [
         ("name: x", "name: X", "`name`"),
-        ("kind: components", "kind: notation", "`kind`"),
+        ("kind: components", "kind: palette", "`kind`"),
         ("version: 1.0.0", "version: 0.1.0", "X at least 1"),
         ("needs-release: 0.1.0", "needs-release: next", "is not a release"),
         ("builds-on: []", "builds-on: {}", "not a list"),
@@ -396,6 +396,42 @@ def test_a_lock_within_a_line_the_project_no_longer_holds_is_refused(tmp_path: P
     add_library(root, "base", "2.0.0")
     with pytest.raises(libraries.LockRefused, match="of major 1, the line the lock names"):
         libraries.move_lock(held(root), ["base"], {"base": "1.4.0"})
+
+
+def backtracking_project(tmp_path: Path, versions: int) -> Path:
+    """`a` and `b` at `versions` versions each, every one built on `base` 1, and `c` built
+    on `base` 2: a search for `a`, `b` and `c` tries every pair of `a` and `b` before it
+    finds that none fits."""
+    root = project(tmp_path)
+    add_library(root, "base", "1.0.0")
+    add_library(root, "base", "2.0.0")
+    for minor in range(versions):
+        add_library(root, "a", f"1.{minor}.0", builds_on={"base": 1})
+        add_library(root, "b", f"1.{minor}.0", builds_on={"base": 1})
+    add_library(root, "c", "1.0.0", builds_on={"base": 2})
+    return root
+
+
+def test_a_search_past_its_bound_stops_naming_the_libraries_it_was_choosing(
+    tmp_path: Path,
+) -> None:
+    """80 versions each: some 12 800 tried before the search could find that none fits."""
+    root = backtracking_project(tmp_path, 80)
+    with pytest.raises(libraries.LockRefused) as refused:
+        libraries.move_lock(held(root), ["a", "b", "c"])
+    assert str(refused.value) == (
+        f"the search for versions that fit together stopped at its bound, "
+        f"{libraries.SEARCH_STEPS} versions tried, choosing among those of `a`, `b`, `base`, "
+        f"`c`: name the line of each in the lock, or take the versions no piece needs out of "
+        f"the library folder"
+    )
+
+
+def test_the_bound_leaves_room_for_a_search_of_many_versions(tmp_path: Path) -> None:
+    """60 versions each: some 7 300 tried, within the bound, to find that none fits."""
+    root = backtracking_project(tmp_path, 60)
+    with pytest.raises(libraries.LockRefused, match=re.escape("c@1.0.0 builds on `base` 2")):
+        libraries.move_lock(held(root), ["a", "b", "c"])
 
 
 # --- a pinned lock ------------------------------------------------------------------------------

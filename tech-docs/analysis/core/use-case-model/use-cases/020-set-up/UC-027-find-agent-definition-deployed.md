@@ -10,6 +10,7 @@ after:
   - [UC-014, UC-049]
   - [UC-014, UC-019, UC-049]
   - [UC-022, UC-049]
+  - [UC-022]
 requirements:
   - REQ-002
   - REQ-005
@@ -46,6 +47,7 @@ pkit:
         - ADR-051#6
         - ADR-052
         - ADR-034#1
+        - ADR-066
       artefact:
         - ACT-ai-agent
         - ACT-operator
@@ -72,12 +74,13 @@ pkit:
 
 - **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
 - **From UC-014, [UC-019](../010-develop/UC-019-adapt-harness.md) or UC-049:** An [adapter](../../../glossary.md#term-adapter--adapter) for the project's [harness](../../../glossary.md#term-harness--harness) deploys [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) where that harness reads them.
-- **From [UC-022](UC-022-add-own-additions.md) or UC-049:** The [overlay](../../../glossary.md#term-overlay--overlay), `.pkit/agents/project/overlay.yaml`, holds the project's own paths for the [overlay categories](../../../glossary.md#term-overlay-category--overlay-category) it sets. The project's own grants lie beside the methodology's. First [install](../../../glossary.md#term-install--install) seeds the overlay with a value for each category the methodology's own agent definitions name (`install.py`). So those agent definitions deploy before the adopter names a path.
+- **From [UC-022](UC-022-add-own-additions.md) or UC-049:** The [overlay](../../../glossary.md#term-overlay--overlay), `.pkit/agents/project/overlay.yaml`, holds the project's own paths for the [overlay categories](../../../glossary.md#term-overlay-category--overlay-category) it sets. First [install](../../../glossary.md#term-install--install) seeds the overlay with a value for each category the methodology's own agent definitions name (`install.py`). So those agent definitions deploy before the adopter names a path.
+- **From UC-022:** The project's own grants lie beside the methodology's.
 
 **Assumptions:**
 
 - The [harness](../../../glossary.md#term-harness--harness) loads a deployed [agent definition](../../../glossary.md#term-agent-definition--agent-definition) when a session dispatches the agent. It limits the agent to the tools its `tools:` list names ([ADR-004 point 1](../../../../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#1-intent-what-may-be-invoked)). Claude Code, for one, reads `.claude/agents/<name>.md`.
-- The harness names the dispatched agent in each tool call it hands the [permission hook](../../../glossary.md#term-permission-hook--permission-hook), as Claude Code's `agent_type` does (`decide.py`).
+- The harness names the dispatched agent in each tool call it hands the [permission hook](../../../glossary.md#term-permission-hook--permission-hook), as Claude Code's `agent_type` does ([ADR-066](../../../../../architecture/decisions/ADR-066-unattended-agent-runner.md) and `decide.py`).
 - The running agent finds the [project](../../../glossary.md#term-project--project)'s paths in its agent definition's front matter. The deploy fills no [placeholder](../../../glossary.md#term-placeholder--placeholder) in the body, which keeps each `<category>` as written, and nothing shows that the agent reads the front matter (#1731).
 - The agent changes only the paths its agent definition owns. Its `owns:` is metadata, not a permission, so nothing at run time holds the agent to it ([ADR-051 point 6](../../../../../architecture/decisions/ADR-051-process-author-edit-authority.md#6-the-mechanical-layer-is-a-validation-time-guarantee-an-honest-interlock-at-runtime)).
 

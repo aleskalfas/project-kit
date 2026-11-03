@@ -400,7 +400,7 @@ An ownership is the mark that makes an [instance](../glossary.md#term-instance--
 
 Defined in [TERM-state-issue](../glossary.md#term-state-issue--state-issue).
 
-**Why:** Some shared data takes new values while agents work, with no review of each value, such as which [clone](../glossary.md#term-clone--clone) holds a [seat](../glossary.md#term-seat--seat). That data belongs to no [issue](../glossary.md#term-issue--issue) of work. Committed configuration would need a merge for each new value, and an issue of work would carry the rules for work ([DEC-058](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md)).
+**Why:** Some shared data takes new values while agents work, with no review of each value, such as which [clone](../glossary.md#term-clone--clone) holds a [seat](../glossary.md#term-seat--seat). That data belongs to no [issue](../glossary.md#term-issue--issue) of work. Committed configuration would need a merge for each new value. An issue of work would come under every check that work is held to: its type, its parent, its classification and its state ([DEC-058](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md)).
 
 A state issue holds one piece of shared data that changes while agents work, named by a key, such as a seat's name. A state issue sits outside the hierarchy of work, and no one builds a state issue. The state issue's comments log each new value. The state issue's description shows the current value, rebuilt from the comments (DEC-058 points 2 to 4).
 

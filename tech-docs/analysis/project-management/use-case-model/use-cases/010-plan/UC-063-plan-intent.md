@@ -27,6 +27,8 @@ pkit:
         - .pkit/capabilities/project-management/scripts/_lib/use_case_task.py
         - .pkit/capabilities/project-management/scripts/_lib/use_case_citations.py
         - .pkit/capabilities/project-management/scripts/edit-issue.py
+        - .pkit/capabilities/project-management/scripts/create-issue.py
+        - .pkit/capabilities/project-management/scripts/promote-issue.py
         - .pkit/capabilities/project-management/schemas/use-cases.schema.json
       record:
         - project-management:DEC-014

@@ -8,10 +8,12 @@ pkit:
         - .pkit/capabilities/visual-communication/package.yaml
         - .pkit/capabilities/visual-communication/scripts/status.py
         - .pkit/capabilities/visual-communication/scripts/check.py
+        - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/produce.py
         - .pkit/capabilities/visual-communication/scripts/export.py
         - .pkit/capabilities/visual-communication/scripts/write-code.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/files.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
@@ -25,12 +27,15 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md
         - .pkit/capabilities/visual-communication/files.md#a-piece
         - .pkit/capabilities/visual-communication/files.md#brands
+        - .pkit/capabilities/visual-communication/files.md#notations
         - .pkit/capabilities/visual-communication/files.md#the-binding
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#the-library-folder
+        - .pkit/capabilities/visual-communication/files.md#the-list-librariesyaml
         - .pkit/capabilities/visual-communication/files.md#the-location
         - .pkit/capabilities/visual-communication/files.md#the-lock
+        - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/outputs.md
         - .pkit/capabilities/visual-communication/outputs.md#exports
         - .pkit/capabilities/visual-communication/outputs.md#plugins
@@ -52,16 +57,16 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 
 - **The commands** `pkit visual …`, also reachable as `pkit visual-communication …`. Each is described under [Commands](#commands).
 - **The file formats,** format 1: a schema for each kind of file a piece, a library or a command writes, under `schemas/`. Each file names its schema in its first lines ([The binding](files.md#the-binding)), so `pkit validate` checks its shape.
-- **The foundations library,** under `libraries/foundations/`: a few shared roles, two axes and the `figure` component ([The foundations](files.md#the-foundations)). Its version is not released yet, so it may change in any release of the capability.
+- **The foundations library,** under `libraries/foundations/`: a few shared roles, two axes, six colour families and the `figure` component ([The foundations](files.md#the-foundations)). Its version is not released yet, so it may change in any release of the capability.
 - **Two plugins:** the SVG renderer, which draws the previews and the exports, and the CSS code writer, which writes a brand out as CSS variables ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [Written code](outputs.md#written-code)).
 - **The check,** the `visual-communication:check` member of `pkit validate`.
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
 
-No brand ships, so a project writes its own ([Brands](files.md#brands)). No producer ships either ([Plugins](outputs.md#plugins)), so `pkit visual produce` has none to run yet, and a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)).
+No brand, notation or producer ships ([Brands](files.md#brands), [Notations](files.md#notations), [Plugins](outputs.md#plugins)). A project writes its own brand and notations, and `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)).
 
 The pages beside this README are the reference:
 
-- [The files of the visual work](files.md): the working folder, the piece, its content, libraries, brands and keys.
+- [The files of the visual work](files.md): the working folder, the piece, its content, libraries, brands, notations and keys.
 - [Components](components.md): a component's file, formulas, layouts and how text is measured.
 - [What is made from a piece](outputs.md): renderers, exports, produced pictures and written code.
 - [What the check reports](checks.md): every finding, its severity, the findings record and the fingerprint.
@@ -77,9 +82,17 @@ pkit sync
 
 The visual work lies in one folder of the repository, the *location*: `visual/` at the top of the repository, unless the project names another. Nothing needs configuring before the first command: the first command that writes there records the location in the capability's configuration. [The location](files.md#the-location) says how it is found and recorded.
 
+Every piece uses the foundations, so bring them into the location first:
+
+```
+pkit visual add foundations
+```
+
+A library the capability ships reaches the location only through [`pkit visual add`](#pkit-visual-add-library). No install, sync or upgrade of the capability writes there, so an upgrade changes no piece's look ([What the location holds](files.md#what-the-location-holds)).
+
 ## Drawing a piece
 
-1. **Bring the libraries.** Put each library version a piece uses in the location's library folder, and list it in `libraries/libraries.yaml` ([The library folder](files.md#the-library-folder)). A piece needs a brand, and none ships, so the project writes its own ([Brands](files.md#brands)).
+1. **Bring the libraries.** `pkit visual add <library>` copies a library the capability ships, such as the foundations, into the location's library folder, and lists it in `libraries/libraries.yaml`. Put each other library version a piece uses there yourself, and list it ([The library folder](files.md#the-library-folder)). A piece needs a brand, and none ships, so the project writes its own ([Brands](files.md#brands)).
 2. **Write the piece.** A piece is a folder under `pieces/`: its `piece.yaml` names its libraries, languages, modes and exports, and its content names the components that draw it ([A piece](files.md#a-piece)).
 3. **Draw it.** `pkit visual render <piece>` writes the piece's lock, computes its scenes, keeps their findings in `findings.yaml`, and draws an SVG preview of each scene. Open the previews under `.pkit/capabilities/visual-communication/project/local/previews/<piece>/` ([The clone's local folder](files.md#the-clones-local-folder)).
 4. **Check it.** `pkit visual check <piece>`, or `pkit validate`, reports what the piece breaks ([What the check reports](checks.md)).
@@ -90,7 +103,7 @@ A brand's values reach code the same way: a declaration under the location's `co
 
 ## Commands
 
-Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names. A command prints `error: …` and exits 1 when it refuses; then it has written nothing.
+Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, and takes back the location it recorded. It names each file it could not put back. `produce` alone writes before it can refuse: it hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)).
 
 ### `pkit visual status`
 
@@ -99,6 +112,17 @@ Shows where the visual work lies, and each piece with its state and its lock.
 - **Prints** the location, and whether the configuration records it or it is the default, not recorded yet. Then each piece under `pieces/`, with its state, whether it is pinned, and the version of each library its lock names. A piece with no lock yet says that its first render writes one.
 - **Writes** nothing.
 - **Exits** 1 when the configuration cannot be read, or records a location that is refused or missing; 0 otherwise.
+
+### `pkit visual add <library>`
+
+Copies a library the capability ships into the location's library folder, and lists it.
+
+- **Copies** the version the capability ships, whole, to `libraries/<library>/<version>/`, and never over a version the library folder holds ([What the location holds](files.md#what-the-location-holds)). `pkit visual add foundations` makes `libraries/foundations/1.0.0/`.
+- **Lists it** in `libraries/libraries.yaml` with the source `shipped`, `released: false`, since no shipped library is released yet. Every other byte of the list stays ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)).
+- **Refuses** a library the capability does not ship, naming the ones it ships; a version whose files of the capability's format lack their binding ([The binding](files.md#the-binding)); a version the list names already; and a library the list names from another source, since one name ties one library to its source.
+- **Exits** 0 when it copied and listed the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
+
+Running it is the consent for the copy.
 
 ### `pkit visual render <piece>`
 
@@ -109,7 +133,7 @@ Draws a piece in each of its languages and each combination of modes it names.
 - **Writes `findings.yaml`** beside `piece.yaml`: what computing the scenes found, keyed by a fingerprint of every file they were computed from ([The findings record](checks.md#the-findings-record)).
 - **Draws the previews** with the SVG renderer, one file for each page, language and combination of modes, in `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`. They replace the piece's previews from before ([Previews](outputs.md#previews)).
 - **Prints** the lock, each finding, and each loss the renderer reports that the piece does not accept.
-- **Exits** 0 when it drew the piece, findings or not; 1 when it refused, with nothing written.
+- **Exits** 0 when it drew the piece, findings or not; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
 ### `pkit visual check [<piece>]`
 
@@ -128,17 +152,17 @@ Runs the producer a piece declares for one of its produced outputs, and keeps it
 - **Keeps the picture** only when no input changed during the run and every variant is a PNG of the declared pixel size, exposing the same points. Then it writes each variant and the record in the piece's folder, under `produced/<output>/`, and removes a variant file left from before.
 - **Prints** each loss the producer reports that the piece does not accept.
 - **Refuses** a piece with no lock yet (run `pkit visual render <piece>` first), and a producer that reaches a service or calls an outside program this machine lacks, before it runs. What a producer is handed and returns is under [Produced pictures](outputs.md#produced-pictures).
-- **Exits** 0 when it wrote the variants and their record; 1 when it refused, with nothing written in the location.
+- **Exits** 0 when it wrote the variants and their record; 1 when it refused, with nothing written in the location, or a write failed ([Commands](#commands)).
 
 ### `pkit visual export <piece>`
 
 Makes a numbered export of a piece in each format it declares.
 
-- **Numbers the run:** every file it makes carries the next version number of the piece's `exports.yaml`, as `<piece>.v<N>.<language>.<key>.svg`, in `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`. A piece of more than one page makes one file for each page, which adds the page's number, from 1: `<piece>.v<N>.<language>.<key>.<n>.svg`. No file overwrites another ([Exports](outputs.md#exports)).
+- **Numbers the run:** every file it makes carries the piece's next version number, as `<piece>.v<N>.<language>.<key>.svg`, in `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`. A piece of more than one page makes one file for each page, which adds the page's number, from 1: `<piece>.v<N>.<language>.<key>.<n>.svg`. No file overwrites another ([Exports](outputs.md#exports)).
 - **Records the version** in `exports.yaml`.
 - **Uses the lock** `piece.yaml` holds, and never moves it.
 - **Refuses** a piece with no lock yet, a lock that does not hold, and a produced picture that is missing or stale, unless `--use-stale <output>` names it. `--use-stale` may repeat. Every reason it refuses is under [What refuses an export](outputs.md#what-refuses-an-export).
-- **Exits** 0 when it exported and recorded the version; 1 when it refused, with nothing written.
+- **Exits** 0 when it exported and recorded the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
 ### `pkit visual write-code <name>`
 
@@ -147,7 +171,7 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 - **Writes** the code to the declaration's `out`, and its record beside it, `<out>.record.yaml`. Where the record verifies and the code is what the writer writes now, it writes nothing and says the code is up to date.
 - **Never moves** the declaration's lock: a person moves it on purpose ([The declaration](outputs.md#the-declaration)).
 - **Prints** each token the writer has no form for as a loss, unless the declaration accepts it under `accept-losses`.
-- **Exits** 0 when it wrote the code or found it up to date; 1 when it refused; 2 on a usage error.
+- **Exits** 0 when it wrote the code or found it up to date; 1 when it refused, or a write failed ([Commands](#commands)); 2 on a usage error.
 
 ## Citing this capability's decisions
 

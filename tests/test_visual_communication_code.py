@@ -1,7 +1,8 @@
 """Written code (visual-communication DEC-002 point 1, DEC-005 points 7 to 9, DEC-006 points 4,
 5 and 8): the declaration and where its code may go, a run that writes the code and its
-record, and what the check finds about them. Run in this process, in a project in the
-test's own folder, from the shipped foundations and the test brand."""
+record, what a write that fails leaves, and what the check finds about them. Run in this
+process, in a project in the test's own folder, from the shipped foundations and the test
+brand."""
 
 from __future__ import annotations
 
@@ -24,6 +25,7 @@ from tests.visual_communication_project import (
     write,
     yaml_text,
 )
+from tests.visual_communication_writes import FULL, failing
 
 code, css, seam, files, fingerprint, reading, findings_ = load(
     "visual-communication",
@@ -111,6 +113,11 @@ def test_a_run_writes_the_code_and_its_record_beside_it(root: Path) -> None:
     assert "  time: '2026-11-02T10:30:00Z'\n" in text
 
 
+#: The tokens the CSS writer writes of the test brand: the shared roles but the typographies,
+#: the colours of the foundations' six colour families among them.
+WRITTEN = 32
+
+
 def test_the_record_fingerprints_the_declaration_each_value_written_and_the_writer(
     root: Path,
 ) -> None:
@@ -122,7 +129,7 @@ def test_the_record_fingerprints_the_declaration_each_value_written_and_the_writ
     read = {(i["value"], i["key"]) for i in identities if "value" in i}
     tokens_written = {path for path, _ in read}
     assert not tokens_written & set(TYPOGRAPHY)
-    assert len(tokens_written) == 14
+    assert len(tokens_written) == WRITTEN
     assert read == {
         (path, key)
         for path in tokens_written
@@ -133,7 +140,7 @@ def test_the_record_fingerprints_the_declaration_each_value_written_and_the_writ
             "colour-scheme.dark+contrast.high",
         )
     }
-    assert len(entries) == 2 + 14 * 4
+    assert len(entries) == 2 + WRITTEN * 4
 
 
 def test_a_prefix_opens_every_name(root: Path) -> None:
@@ -429,3 +436,50 @@ def test_each_finding_has_a_level_and_names_its_file(root: Path) -> None:
         assert finding.level in findings_.LEVELS
         assert finding.file
         assert finding.fix
+
+
+# --- what a failed run leaves -------------------------------------------------------------------
+
+
+def written_files(root: Path) -> dict[str, bytes]:
+    return {path.name: path.read_bytes() for path in sorted((root / "web").iterdir())}
+
+
+@pytest.mark.parametrize("file", ["brand.css", "brand.css.record.yaml"])
+def test_a_write_that_fails_leaves_the_code_and_its_record_as_they_were(
+    root: Path, monkeypatch: pytest.MonkeyPatch, file: str
+) -> None:
+    run(root)
+    declare(root, prefix="brand")
+    before = written_files(root)
+    with monkeypatch.context() as patch:
+        failing(patch, write={file})
+        with pytest.raises(files.WriteFailed) as failed:
+            run(root)
+    assert str(failed.value) == f"web/{file} could not be written: {FULL}"
+    assert written_files(root) == before
+    assert found(root) == [("code-stale", "fails")]
+
+
+def test_a_failed_first_run_writes_neither_the_code_nor_its_record(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with monkeypatch.context() as patch:
+        failing(patch, write={"brand.css.record.yaml"})
+        with pytest.raises(files.WriteFailed):
+            run(root)
+    assert not (root / "web").exists()
+    assert found(root) == [("code-not-written", "fact")]
+
+
+def test_code_a_failed_run_could_not_take_back_is_named_and_never_read_as_edited(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with monkeypatch.context() as patch:
+        failing(patch, write={"brand.css.record.yaml"}, remove={"brand.css"})
+        with pytest.raises(files.WriteFailed) as failed:
+            run(root)
+    assert str(failed.value).endswith(
+        "these could not be put back as they were before the run: web/brand.css"
+    )
+    assert found(root) == [("code-record-missing", "fails")]

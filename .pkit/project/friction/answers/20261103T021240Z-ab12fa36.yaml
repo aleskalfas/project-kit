@@ -1,0 +1,323 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:12:40Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T233447Z-d3a48320.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:12:44Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    read:
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T000900Z-bed893e8.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:12:49Z
+      outcome: unchanged
+      unchanged-because: checks.py's kind_of now takes the kind of each file of a library version from libraries.kind_within, with the same result, and files.md's foundations entry now says `pkit visual add foundations` copies them in; components.md says neither how the check finds a component's file nor how the foundations reach the location, so what it says of the figure, colour families and the foundations' roles holds.
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261102T233447Z-d3a48320.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:12:53Z
+      outcome: unchanged
+      unchanged-because: package.yaml registers `add`, which writes only in the library folder, and checks.py's kind_of reads a version's file kinds through libraries.kind_within with the same result; outputs.md speaks of renderers, exports, produced pictures and written code, none of which the copy of a shipped library touches, and leaves each command as a whole to the README's Commands.
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T233447Z-d3a48320.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:12:58Z
+      outcome: unchanged
+      unchanged-because: package.yaml registers `add`, libraries.py gains the copy of a shipped library and kind_within, which checks.py's kind_of now calls with the same result, and files.md says the command copies versions and writes the list; the check judges bindings, the library folder and the list as before, and its list findings' fixes hold whether a person or the command wrote the list.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-axis
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:13:02Z
+      outcome: unchanged
+      unchanged-because: The README now documents `pkit visual add`, which copies a shipped library and lists it, and uses it in setup and step 1; none of it names an axis of a brand, so axes and the modes along them stand as the term defines them.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-brand
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:13:06Z
+      outcome: unchanged
+      unchanged-because: Step 1 of the README now brings shipped libraries in with `pkit visual add` and still says a piece needs a brand, none ships and the project writes its own; a brand stays the library of values a piece is drawn in.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:13:10Z
+      outcome: unchanged
+      unchanged-because: The new `pkit visual add` copies a library version into the library folder and lists it; it writes no content, so a piece's content is still kept as data apart from its look.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content-slot
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:13:15Z
+      outcome: unchanged
+      unchanged-because: What the README adds, the `pkit visual add` command, its use in setup and step 1, and `add` among the commands that write in the location, speaks of no slot, so a content slot holds as defined.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-draft
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:13:19Z
+      outcome: unchanged
+      unchanged-because: The README's render still moves a draft's lock to the newest versions the project holds; `pkit visual add` only brings a shipped version into the library folder, where a draft's next render may take it, so a draft's moving lock stands.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-experimental
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:13:23Z
+      outcome: unchanged
+      unchanged-because: "`pkit visual add` copies a shipped library whole and names no library component's status, so experimental keeps the meaning the term gives it."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-export
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:13:28Z
+      outcome: unchanged
+      unchanged-because: The README's export entry is as it was, and the new `pkit visual add` writes in the library folder and makes no export, so an export is still a numbered, kept set of files a piece is handed out as.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-final
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:13:32Z
+      outcome: unchanged
+      unchanged-because: The added command copies a library version into the library folder and moves no lock, and the README says nothing new of marking a piece final or of the exports it handed out, so final holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-helper-script
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:13:36Z
+      outcome: unchanged
+      unchanged-because: The README's new command copies a library the capability ships and runs no program of the project's while a piece is prepared, so the line between a helper script and a renderer stands.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-layout
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:13:40Z
+      outcome: unchanged
+      unchanged-because: Copying a shipped library and listing it, which the README now documents, says nothing of how a page is arranged, so a layout stands as defined.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:13:45Z
+      outcome: unchanged
+      unchanged-because: The README now brings a library the capability ships into the library folder with `pkit visual add`, copied whole and listed with its source; a library is still data the capability reads, never a capability of its own.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-component
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:13:49Z
+      outcome: unchanged
+      unchanged-because: "`pkit visual add` copies a library with its components whole and changes none of them, so library component, a reusable part that arranges and draws content, holds."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-owner
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:13:53Z
+      outcome: unchanged
+      unchanged-because: "`pkit visual add` copies a shipped library into the project's location, so the copy is among the project's files while the project that ships it stays its library owner, as the term's distinction says; a project that writes its own brand is still its owner."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-version
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:13:57Z
+      outcome: unchanged
+      unchanged-because: The README's `pkit visual add` copies the version of a library the capability ships into a folder of its own, `libraries/<library>/<version>/`, never over one the folder holds; a library version is still a numbered state of a library.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-local-component
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:14:01Z
+      outcome: unchanged
+      unchanged-because: The new command copies a whole library version into the library folder and writes nothing in a piece, so local component, a part made inside one piece, holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-lock
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:14:06Z
+      outcome: unchanged
+      unchanged-because: "`pkit visual add` brings a version into the library folder and moves no lock, while render still moves a draft's lock and export never moves it, so a lock still names the version of each library a piece uses."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-mode
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:14:10Z
+      outcome: unchanged
+      unchanged-because: The README's new command and its use in setup and step 1 name no mode and no axis, so a mode stays one setting on one axis of a brand.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-model
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:14:14Z
+      outcome: unchanged
+      unchanged-because: Copying a shipped library and listing it, which the README adds, says nothing of a model, so the term holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-notation
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:14:18Z
+      outcome: unchanged
+      unchanged-because: The README's opening on notations is as it was, and `pkit visual add` copies whatever library the capability ships without reading what it says a thing is, so notation holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-option
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:14:22Z
+      outcome: unchanged
+      unchanged-because: "`pkit visual add` copies a library whole and changes none of its components, so the choices a library component declares, and option, keep their meaning."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-piece
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:14:27Z
+      outcome: unchanged
+      unchanged-because: The README's setup now brings in the foundations, which every piece uses, with `pkit visual add`, and step 1 still says a piece needs a brand the project writes; a piece is still one visual item, of one page or several.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-pinned
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:14:31Z
+      outcome: unchanged
+      unchanged-because: "`pkit visual add` adds a version to the library folder and moves no lock, and render still checks a pinned piece's lock and never moves it, so pinned holds as defined."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-published
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:14:35Z
+      outcome: unchanged
+      unchanged-because: Bringing a shipped version into the library folder moves no published piece's lock, and the README adds nothing on a reviewed move, so published holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-renderer
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:14:39Z
+      outcome: unchanged
+      unchanged-because: The new command copies a library and draws nothing, and the README's plugins line still names the SVG renderer, so a renderer is still what draws a piece in one medium.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-stable
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:14:43Z
+      outcome: unchanged
+      unchanged-because: "`pkit visual add` copies a library version as shipped and names no component's status or what its owner promises, so stable keeps its meaning."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-starter-library
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+    revalidated:
+      at: 2026-11-03T02:14:47Z
+      outcome: unchanged
+      unchanged-because: "`pkit visual add` copies a library the capability ships, and the README's list of what ships still names the foundations and not the starter, so the starter library holds as defined."

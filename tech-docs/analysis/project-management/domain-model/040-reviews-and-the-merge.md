@@ -26,18 +26,18 @@ pkit:
 
 # VIEW-reviews-and-the-merge — Reviews and the merge
 
-In the `agent` review mode, no person is assigned to review, so an agent's review needs a signal that counts as approval. The signal must say these ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)):
+Where the [project](../../core/glossary.md#term-project--project)'s settings leave review to agents (the `agent` mode of `review.mode`), no person is assigned to review. So an agent's review needs a signal that counts as approval. The signal must say these ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)):
 
 - whose review it is
 - what stops self-approval
 - when it goes stale
 
-A [verdict](../glossary.md#term-verdict--verdict) is that signal. A [required reviewer](../glossary.md#term-required-reviewer--required-reviewer) is an agent whose verdict the [change](../../core/glossary.md#term-change--change) needs. The [merge gate](../glossary.md#term-merge-gate--merge-gate) holds the [pull request](../../core/glossary.md#term-pull-request--pull-request) to their verdicts before it lands. After the merge, a [fixer](../glossary.md#term-fixer--fixer) the [project](../../core/glossary.md#term-project--project) granted proposes answers for what the merge left out of date.
+A [verdict](../glossary.md#term-verdict--verdict) is that signal. A [required reviewer](../glossary.md#term-required-reviewer--required-reviewer) is an agent whose verdict the [change](../../core/glossary.md#term-change--change) needs. The [merge gate](../glossary.md#term-merge-gate--merge-gate) holds the [pull request](../../core/glossary.md#term-pull-request--pull-request) to their verdicts before it lands. After the merge, a [fixer](../glossary.md#term-fixer--fixer) the project granted proposes answers for what the merge left out of date.
 
 ```mermaid
 classDiagram
   accTitle: Reviews and the merge
-  accDescr: A required reviewer posts verdicts on a pull request, each naming the head and the base it reviewed. The merge gate holds the pull request to a standing approval from each required reviewer, and to the checkboxes of each issue it closes. A fixer proposes answers for the artefacts of its type that a merge left out of date.
+  accDescr: A required reviewer posts verdicts on a pull request, each naming the head and the base it reviewed. The merge gate holds the pull request to a standing approval from each required reviewer, and to the checkboxes of each issue it closes. A fixer proposes answers for the artefacts of its artefact type that a merge left out of date.
   class Verdict {
     approves or requests changes
     head reviewed
@@ -80,7 +80,7 @@ flowchart LR
 
 Defined in [TERM-verdict](../glossary.md#term-verdict--verdict).
 
-**Why:** In the `agent` review mode, no person is assigned to review, so an agent's review needs a signal that counts as approval. A command must read the signal, tell whose it is, and see when new commits make it stale ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
+**Why:** Where the [project](../../core/glossary.md#term-project--project)'s settings leave review to agents, no person is assigned to review. So an agent's review needs a signal that counts as approval. A command must read the signal, tell whose it is, and see when new commits make it stale ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 
 A verdict is a comment a [reviewer](../../core/glossary.md#term-reviewer--reviewer) agent posts on a [pull request](../../core/glossary.md#term-pull-request--pull-request). Its first line approves the [change](../../core/glossary.md#term-change--change) or requests changes, and a marker names the [head](../../core/glossary.md#term-head--head) and the [base](../../core/glossary.md#term-base--base) it reviewed. Its [findings](../../core/glossary.md#term-finding--finding) follow, each tagged for what it does to the merge.
 
@@ -157,19 +157,19 @@ The merge gate is the set of conditions project-management holds a [pull request
 
 Defined in [TERM-fixer](../glossary.md#term-fixer--fixer).
 
-**Why:** A merge may leave [artefacts](../../core/glossary.md#term-artefact--artefact) of the [default branch](../../core/glossary.md#term-default-branch--default-branch) out of date, and a person must [answer](../../core/glossary.md#term-answer--answer) each one. An agent that owns an artefact's type can propose those answers, but only where the person chose to let it. So each fixer starts only where the [project](../../core/glossary.md#term-project--project) granted it, and it only proposes ([DEC-056](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md)).
+**Why:** A merge may leave [artefacts](../../core/glossary.md#term-artefact--artefact) of the [default branch](../../core/glossary.md#term-default-branch--default-branch) out of date, and a person must [answer](../../core/glossary.md#term-answer--answer) each one. An agent that owns the [artefact type](../../core/glossary.md#term-artefact-type--artefact-type) of an out-of-date artefact can propose that artefact's answer, but only where the person chose to let it. So each fixer starts only where the [project](../../core/glossary.md#term-project--project) granted it, and it only proposes ([DEC-056](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md)).
 
-A fixer is an agent a [capability](../../core/glossary.md#term-capability--capability), or the project, declares for one type of artefact. After a merge, a command starts each fixer the project granted on the default branch's out-of-date artefacts of its type. The fixer proposes an answer for each artefact, and a person decides each answer (DEC-056 points 1 to 3).
+A fixer is an agent a [capability](../../core/glossary.md#term-capability--capability), or the project, declares for one artefact type. After a merge, a command starts each fixer the project granted on the default branch's out-of-date artefacts of its artefact type. The fixer proposes an answer for each artefact, and a person decides each answer (DEC-056 points 1 to 3).
 
 **Attributes:**
 
-- the agent, and the types of artefact it fixes ([DEC-056 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#1-a-capability-declares-its-fixers))
+- the agent, and the artefact types it fixes ([DEC-056 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#1-a-capability-declares-its-fixers))
 - whether the project granted it, refused it or was never asked ([DEC-056 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#2-the-person-grants-each-fixer))
 
 **Relations:**
 
-- A capability declares it for the types it owns, and the project may declare one for any type (DEC-056 point 1).
-- A command starts it on the artefacts of its type that the default branch left out of date, and on nothing else ([DEC-056 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)).
+- A capability declares it for the artefact types it owns, and the project may declare one for any artefact type (DEC-056 point 1).
+- A command starts it on the default branch's out-of-date artefacts of its artefact type, and on nothing else ([DEC-056 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)).
 
 **States:** A fixer is unanswered until the person is asked about it. The person's reply grants it or refuses it, and a revoke records a refusal. A grant counts once its [change](../../core/glossary.md#term-change--change) is on the default branch (DEC-056 point 2).
 

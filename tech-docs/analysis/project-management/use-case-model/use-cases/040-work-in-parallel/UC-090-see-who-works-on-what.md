@@ -18,6 +18,7 @@ pkit:
       path:
         - .pkit/capabilities/project-management/scripts/_lib/instance_ownership.py
         - .pkit/capabilities/project-management/scripts/seats.py
+        - .pkit/capabilities/project-management/scripts/land-work.py
       record:
         - project-management:DEC-006
         - project-management:DEC-035#1
@@ -34,6 +35,8 @@ pkit:
         - project-management:DEC-051#6
         - COR-017
         - COR-021
+        - ADR-071
+        - ADR-072
       artefact:
         - ACT-planner
         - REQ-062
