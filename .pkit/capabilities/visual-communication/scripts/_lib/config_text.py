@@ -4,7 +4,9 @@
 A command records a key, such as the location, the first time it needs it. The line goes
 in as text at the end of the file, so its comments, its order, its line endings and a
 byte-order mark all stay. The file must read back as it was plus that key, or nothing is
-written. An absent file is created, bound to the configuration's schema.
+written. An absent file is created, bound to the configuration's schema. The command
+writes the text as a step of its change (`files.Change`), so a write of the run that
+fails takes the key back out.
 
 Copied in substance from living-docs' `_lib/stamp.py` (`_config_text`, `_inserted`,
 `_crlf`): a capability cannot import the backbone's splice, nor another capability's code.
@@ -18,7 +20,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from _lib.files import FORMAT, FileError, refuse_links, schema_of, write_whole
+from _lib.files import FORMAT, FileError, refuse_links, schema_of
 from _lib.names import YAML_WORDS
 from _lib.reading import ReadError, load_yaml
 from _lib.root import CONFIG
@@ -77,9 +79,11 @@ def with_key(existing: str | None, key: str, value: str) -> str:
     return bom + (updated.replace("\n", "\r\n") if crlf else updated)
 
 
-def record(root: Path, key: str, value: str) -> bool:
-    """Record `key: value` in the capability's configuration under `root`, every other byte
-    kept, and read the file back. Returns whether it wrote. Raises ConfigRefused."""
+def recording(root: Path, key: str, value: str) -> str | None:
+    """The text of the capability's configuration under `root` once it records `key:
+    value`, every other byte kept, or None where it records that value already. Writes
+    nothing. Raises ConfigRefused where the configuration cannot be read, is reached through
+    a link, or cannot take the key as text."""
     target = root / CONFIG
     try:
         refuse_links(root, target)
@@ -89,17 +93,7 @@ def record(root: Path, key: str, value: str) -> bool:
     except FileError as exc:
         raise ConfigRefused(str(exc)) from exc
     text = with_key(existing, key, value)
-    if text == existing:
-        return False
-    try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        write_whole(target, text.encode("utf-8"))
-        back = target.read_bytes().decode("utf-8")
-    except (OSError, UnicodeDecodeError) as exc:
-        raise ConfigRefused(f"{CONFIG} could not be written: {exc}") from exc
-    if back != text or _load(back.lstrip("﻿").replace("\r\n", "\n")).get(key) != value:
-        raise ConfigRefused(f"{CONFIG} does not read back as written; check it by hand")
-    return True
+    return None if text == existing else text
 
 
 def _scalar(value: str) -> str:

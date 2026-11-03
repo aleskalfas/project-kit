@@ -24,7 +24,9 @@ the writer has no form for, as a loss, unless the declaration accepts it in
 Writes `out` and its record, which may lie anywhere in the project's tree but under
 `.pkit/`, under a hidden folder, in the location's library folder, its `code/` folder of
 declarations or its `pieces/` folder; nor may `out` be reached through a link, or be a
-folder. Needs no network.
+folder. It writes the code, then its record, as one change: a write that fails leaves
+both as they were before the run, so the check never reads new code beside its old record
+as code edited by hand. Needs no network.
 
 Usage:
   pkit visual write-code <name>
@@ -32,7 +34,9 @@ Usage:
 Exit codes:
   0  written, or up to date
   1  refused: no such declaration, a declaration that cannot be read, an `out` the rules
-     refuse, a lock that does not hold, or a brand that cannot be resolved
+     refuse, a lock that does not hold, or a brand that cannot be resolved. Or a write
+     failed: it names the file, and the code and its record are as they were before the
+     run, or the file it could not put back is named
   2  usage error
 """
 
@@ -47,6 +51,7 @@ sys.path.insert(0, str(_HERE))
 
 from _lib import code
 from _lib import location as loc
+from _lib.files import WriteFailed
 from _lib.root import project_root
 
 
@@ -66,7 +71,7 @@ def main() -> int:
                 f"holds the declarations, `{loc.DEFAULT}/{code.FOLDER}/<name>.yaml` by default"
             )
         written = code.write(root, found.path, args.name)
-    except (code.CodeRefused, loc.LocationRefused, loc.GitFailed) as exc:
+    except (code.CodeRefused, loc.LocationRefused, loc.GitFailed, WriteFailed) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     if written.changed:

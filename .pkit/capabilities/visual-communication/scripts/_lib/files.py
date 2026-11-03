@@ -7,6 +7,9 @@ by which the core binds a data file: `pkit_schema: visual-communication:<kind>` 
 shape against its schema; the capability's check fails a file of the format whose binding
 is missing or names another schema, and names the nearest known key where content holds
 one no component declares.
+
+A command writes the files of one run as one `Change`: where a write fails, every file is
+put back as it was before the run, or named in the `WriteFailed` it raises.
 """
 
 from __future__ import annotations
@@ -14,9 +17,10 @@ from __future__ import annotations
 import contextlib
 import difflib
 import os
+import shutil
 import stat
 import tempfile
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -158,16 +162,8 @@ def refuse_links(root: Path, target: Path) -> None:
 def write_whole(target: Path, data: bytes) -> None:
     """Write `data` to `target` whole or not at all: to a temporary file beside it, then
     moved over it. A file keeps its mode; a new one takes what the umask gives."""
-    mode = stat.S_IMODE(target.stat().st_mode) if target.exists() else 0o666 & ~_umask()
-    handle, temporary = tempfile.mkstemp(
-        dir=target.parent, prefix=f".{target.name}.", suffix=".tmp"
-    )
+    temporary = _beside(target, data)
     try:
-        with os.fdopen(handle, "wb") as out:
-            out.write(data)
-            out.flush()
-            os.fsync(out.fileno())
-        os.chmod(temporary, mode)
         os.replace(temporary, target)
     except BaseException:
         with contextlib.suppress(OSError):
@@ -175,7 +171,235 @@ def write_whole(target: Path, data: bytes) -> None:
         raise
 
 
+def _beside(target: Path, data: bytes) -> Path:
+    """A temporary file beside `target` that holds `data`, on the disk, with the mode
+    `target` has, or the umask gives a new file."""
+    mode = stat.S_IMODE(target.stat().st_mode) if target.exists() else 0o666 & ~_umask()
+    handle, name = tempfile.mkstemp(dir=target.parent, prefix=f".{target.name}.", suffix=".tmp")
+    temporary = Path(name)
+    try:
+        with os.fdopen(handle, "wb") as out:
+            out.write(data)
+            out.flush()
+            os.fsync(out.fileno())
+        os.chmod(temporary, mode)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(temporary)
+        raise
+    return temporary
+
+
 def _umask() -> int:
     mask = os.umask(0)
     os.umask(mask)
     return mask
+
+
+# --- a change of several files ------------------------------------------------------------------
+
+
+class WriteFailed(Exception):
+    """A write that failed: the message names the file that could not be written, or
+    removed, and why, and each file the command could not then put back as it was before
+    the run."""
+
+    def __init__(
+        self,
+        root: Path,
+        path: Path,
+        error: OSError,
+        left: Sequence[Path] = (),
+        *,
+        done: str = "written",
+    ) -> None:
+        said = f"{_shown(root, path)} could not be {done}: {error.strerror or error}"
+        if left:
+            named = ", ".join(_shown(root, each) for each in left)
+            said += f"; these could not be put back as they were before the run: {named}"
+        super().__init__(said)
+        self.path = path
+        self.left = tuple(left)
+
+
+class Change:
+    """The files a command writes, folders it adds and files it removes, as one change: a
+    write that fails leaves every file as it was before the run, or names each it could not
+    put back.
+
+    `commit` stages every step beside its place first: a file is written to a temporary
+    file beside it, a folder is copied to a temporary folder beside it, and a file to remove
+    is read. Then it moves each into place, or removes it, in the order the steps were
+    given, so a command gives its records last. Where a step fails, each step taken is taken
+    back, the last first: a file the change made is removed, a file it replaced or removed
+    is written again with its bytes from before, a folder it added is removed. Every
+    temporary file and folder is removed, and every folder the change made that is empty
+    again."""
+
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self._steps: list[_Step] = []
+        self._made: list[Path] = []
+
+    def write(self, target: Path, data: bytes) -> None:
+        """Write `data` to the file `target`, whole, making its folders."""
+        self._steps.append(_Write(target, data))
+
+    def add_folder(self, target: Path, sources: Mapping[str, Path]) -> None:
+        """Add the folder `target`, which does not exist, holding a copy of each file of
+        `sources` at its path within the folder."""
+        self._steps.append(_Folder(target, sources))
+
+    def remove(self, target: Path) -> None:
+        """Remove the file `target`."""
+        self._steps.append(_Removal(target))
+
+    def commit(self) -> None:
+        """Take every step, or none. Raises WriteFailed, naming the step that failed and
+        each file it could not put back."""
+        taken: list[_Step] = []
+        step: _Step | None = None
+        try:
+            for step in self._steps:
+                self._make_folders(step.target.parent)
+                step.stage()
+            for step in self._steps:
+                step.take()
+                taken.append(step)
+        except OSError as exc:
+            assert step is not None
+            left = self._take_back(taken)
+            raise WriteFailed(self.root, step.target, exc, left, done=step.done) from exc
+        except BaseException:
+            # An interrupt, or any other error, between two steps takes the run back too,
+            # then goes on as it came.
+            self._take_back(taken)
+            raise
+
+    def _make_folders(self, folder: Path) -> None:
+        """Make `folder`, and each folder above it that is missing, keeping each one made."""
+        missing = []
+        while not folder.exists() and folder != folder.parent:
+            missing.append(folder)
+            folder = folder.parent
+        for each in reversed(missing):
+            each.mkdir()
+            self._made.append(each)
+
+    def _take_back(self, taken: Sequence[_Step]) -> list[Path]:
+        """Take back each step taken, the last first, and remove every temporary file and
+        folder, then each folder made that is empty again; each path that could not be put
+        back as it was."""
+        left = []
+        for step in reversed(taken):
+            try:
+                step.take_back()
+            except OSError:
+                left.append(step.target)
+        for step in self._steps:
+            try:
+                step.discard()
+            except OSError:
+                left.append(step.staged or step.target)
+        for folder in reversed(self._made):
+            with contextlib.suppress(OSError):
+                folder.rmdir()
+        return left
+
+
+class _Step:
+    """One step of a change: staged beside its place, then taken, and taken back where a
+    later step fails. `done` is the word for it in a failure."""
+
+    done = "written"
+
+    def __init__(self, target: Path) -> None:
+        self.target = target
+        self.staged: Path | None = None
+        self.before: bytes | None = None
+
+    def stage(self) -> None:
+        raise NotImplementedError
+
+    def take(self) -> None:
+        raise NotImplementedError
+
+    def take_back(self) -> None:
+        raise NotImplementedError
+
+    def discard(self) -> None:
+        """Remove what was staged and not taken."""
+        if self.staged is not None:
+            self.staged.unlink(missing_ok=True)
+            self.staged = None
+
+
+class _Write(_Step):
+    def __init__(self, target: Path, data: bytes) -> None:
+        super().__init__(target)
+        self.data = data
+
+    def stage(self) -> None:
+        self.before = self.target.read_bytes() if self.target.exists() else None
+        self.staged = _beside(self.target, self.data)
+
+    def take(self) -> None:
+        assert self.staged is not None
+        os.replace(self.staged, self.target)
+        self.staged = None
+
+    def take_back(self) -> None:
+        if self.before is None:
+            self.target.unlink(missing_ok=True)
+        else:
+            write_whole(self.target, self.before)
+
+
+class _Folder(_Step):
+    def __init__(self, target: Path, sources: Mapping[str, Path]) -> None:
+        super().__init__(target)
+        self.sources = sources
+
+    def stage(self) -> None:
+        parent, name = self.target.parent, self.target.name
+        self.staged = Path(tempfile.mkdtemp(dir=parent, prefix=f".{name}.", suffix=".tmp"))
+        for rel, source in self.sources.items():
+            copied = self.staged / rel
+            copied.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, copied)
+
+    def take(self) -> None:
+        assert self.staged is not None
+        os.rename(self.staged, self.target)
+        self.staged = None
+
+    def take_back(self) -> None:
+        shutil.rmtree(self.target)
+
+    def discard(self) -> None:
+        if self.staged is not None:
+            shutil.rmtree(self.staged)
+            self.staged = None
+
+
+class _Removal(_Step):
+    done = "removed"
+
+    def stage(self) -> None:
+        self.before = self.target.read_bytes() if self.target.exists() else None
+
+    def take(self) -> None:
+        if self.before is not None:
+            self.target.unlink()
+
+    def take_back(self) -> None:
+        if self.before is not None:
+            write_whole(self.target, self.before)
+
+
+def _shown(root: Path, path: Path) -> str:
+    """`path` as a command names it: relative to the project root, where it lies within it."""
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return str(path)

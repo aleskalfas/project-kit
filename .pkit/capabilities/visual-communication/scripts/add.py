@@ -23,14 +23,17 @@ names from another source, since a name ties one library to its source.
 It writes in the location, so where the configuration records none it takes `visual/` and
 records it before its first write, or the path `--location` names. Every check that can
 refuse runs before that first write, so a refused copy writes nothing, the location
-included.
+included. It moves the copied folder into its place, then writes the list, as one change:
+a write that fails removes the copy, and leaves the list and the configuration as they
+were before the run.
 
 Usage:
   pkit visual add <library> [--location <path>]
 
 Exit codes:
   0  copied and listed
-  1  refused: nothing is written
+  1  refused: nothing is written. Or a write failed: it names the file, and every file is
+     as it was before the run, or each it could not put back is named
 """
 
 from __future__ import annotations
@@ -42,7 +45,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import libraries, location
+from _lib import files, libraries, location
 from _lib.root import project_root
 
 
@@ -57,7 +60,12 @@ def main() -> int:
     root = project_root()
     try:
         return _add(root, args.library, args.location)
-    except (libraries.CopyRefused, location.LocationRefused, location.GitFailed) as exc:
+    except (
+        libraries.CopyRefused,
+        location.LocationRefused,
+        location.GitFailed,
+        files.WriteFailed,
+    ) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
@@ -65,9 +73,11 @@ def main() -> int:
 def _add(root: Path, name: str, given: str | None) -> int:
     where = location.for_writing(root, given)
     planned = libraries.plan_copy(root, where.path, name)
-    if where.record:
-        print(location.record(root, where.path))
-    libraries.copy_shipped(planned)
+    change = files.Change(root)
+    said = location.record(change, where)
+    libraries.copy_shipped(planned, change)
+    if said is not None:
+        print(said)
     library = planned.library
     count = len(planned.files)
     print(

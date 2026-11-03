@@ -23,6 +23,7 @@ from tests.visual_communication_project import (
     write,
     yaml_text,
 )
+from tests.visual_communication_writes import FULL, failing
 
 script, css = load("visual-communication", "write-code.py", "plugins.css")
 
@@ -123,6 +124,18 @@ def test_it_refuses_a_lock_that_does_not_hold_and_writes_nothing(root: Path) -> 
     shown = run(root, "brand-css")
     assert shown.returncode == 1
     assert "the lock names no version of `foundations`" in shown.stderr
+    assert not (root / "web").exists()
+
+
+def test_a_write_that_fails_is_an_error_naming_the_file_and_leaves_nothing(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with monkeypatch.context() as patch:
+        failing(patch, write={"brand.css.record.yaml"})
+        shown = run(root, "brand-css")
+    assert shown.returncode == 1
+    assert shown.stdout == ""
+    assert shown.stderr == f"error: web/brand.css.record.yaml could not be written: {FULL}\n"
     assert not (root / "web").exists()
 
 
