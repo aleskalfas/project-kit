@@ -32,7 +32,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/svg_declaration.py
         - .pkit/capabilities/visual-communication/schemas/findings.schema.json
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
-      record: ["visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012", "visual-communication:DEC-013"]
+      record: ["visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012", "visual-communication:DEC-013", "visual-communication:DEC-014"]
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
         - .pkit/capabilities/visual-communication/components.md#breaking-lines
@@ -104,7 +104,7 @@ Only an `error` fails `pkit validate` ([CLI reference](../../cli/README.md#valid
 
 **A released library version.** A finding the project cannot correct in its own files never fails (DEC-002 point 7). A finding that lies in a library version names that version. Where the project's list of libraries marks the version released, and the version still matches its release, a finding that would fail there asks for attention instead, and names the library's owner as who acts: only the owner corrects it, in a new release. This level, and who it names, are worked out each time the check reads a finding, and are never stored. A released version whose folder no longer matches its release is the project's copy to restore, so its findings fail, `library-changed` among them (DEC-002 point 7, DEC-003 point 9). The list and its `released` field are described in [The files of the visual work](files.md#the-library-folder).
 
-A few findings that lie in a library folder name no version, and always fail: `library-folder` and the findings on the list itself.
+A few findings that lie in a library folder name no version, and always fail: `library-folder` and the findings on the list itself. So does `library-unreadable` where a version needs a newer release of the capability than the one installed (DEC-014 point 5). That number is no fault in the version, released or not. Only the project corrects the finding: it upgrades the capability, or takes out a version no lock names (DEC-003 point 4). So the finding names the project as who acts, never the library's owner.
 
 ## What a finding says
 
@@ -157,7 +157,7 @@ These follow DEC-003 point 9, `library-name` DEC-004 point 7, `arrangement-clash
 | `library-folder` | A folder that holds a `library.yaml` is not named `X.Y.Z`. | fails | the folder | Name it after the version its `library.yaml` gives. |
 | `version-unlisted` | The folder holds a version the list does not name. | fails | the list, `#libraries.<library>.versions` | Add the version. |
 | `version-missing` | The list names a version the folder does not hold. | fails | the list, `#libraries.<library>.versions.<version>` | Restore the folder, or take the version off the list. |
-| `library-unreadable` | The installed capability cannot read a version: its `library.yaml` cannot be read, names another library or version than its folder, or needs a newer release of the capability. | fails | `<version>/library.yaml` | Mend the file, or upgrade the capability. |
+| `library-unreadable` | The installed capability cannot read a version: its `library.yaml` cannot be read, or names another library or version than its folder; or the version needs a newer release of the capability. | fails, or asks the library's owner for attention in a released version; a version that needs a newer release fails, released or not, and names the project ([why](#severities)) | `<version>/library.yaml` | Mend the file. For a newer release, upgrade the capability, or take the version out of the library folder and off the list once no lock names it. |
 | `library-changed` | A released version's folder no longer matches the fingerprint the list keeps of it. The message names each file that changed. | fails: the project restores its own copy | `<version>/` | Restore the folder as it was released. |
 | `library-name` | A library a piece's lock names takes a reserved word, or the name of a top group of the shared roles of the foundations that lock names (DEC-004 points 7 and 11). Reported once for each version. | fails, or asks the library's owner for attention in a released version | `<version>/library.yaml#name` | Rename the library, in a version of its own, and lock that version ([reserved words](files.md#reserved-words)). |
 | `lock-missing` | The piece has no lock yet. | fails | `<piece>/piece.yaml#lock` | Run `pkit visual render <piece>`. |

@@ -1,7 +1,9 @@
-"""The library folder, its list, versions, a piece's lock, and what the command that brings
-a shipped library in reads of the locks and of the capability's folder (DEC-001 point 5,
-DEC-003 points 1, 4, 8 and 9, DEC-004 point 6, DEC-013 point 5). Each project is laid in
-the test's own folder, outside git, so its files are listed by walking."""
+"""The library folder, its list, versions, and a piece's lock (DEC-001 point 5, DEC-003
+points 1, 4, 8 and 9, DEC-004 point 6); the level of a version the installed capability
+cannot read, released or not (DEC-002 point 7, DEC-014 point 5); and what the command that
+brings a shipped library in reads of the locks and of the capability's folder (DEC-013
+point 5). Each project is laid in the test's own folder, outside git, so its files are
+listed by walking."""
 
 from __future__ import annotations
 
@@ -251,8 +253,69 @@ def test_the_list_and_the_folder_must_agree(tmp_path: Path) -> None:
         "version-missing",
     ]
     assert found[0].file == "visual/libraries/charts/latest"
-    assert found[1].library == "arrows@1.0.0"
+    assert (found[1].library, found[1].who) == ("", "the project")
     assert found[3].where == "libraries.charts.versions.2.0.0"
+
+
+def unreadable_version(root: Path, cause: str) -> None:
+    """`charts@1.0.0`, held, with the cause of `library-unreadable` that `cause` names:
+    `file` a `library.yaml` that cannot be read, `other` one that names another library
+    than its folder, `newer` one that needs a newer release than the installed capability."""
+    folder = add_library(
+        root, "charts", "1.0.0", needs_release="9.0.0" if cause == "newer" else "0.1.0"
+    )
+    file = folder / "library.yaml"
+    if cause == "file":
+        write(file, "name: [\n")
+    elif cause == "other":
+        text = file.read_text(encoding="utf-8")
+        assert "name: charts\n" in text
+        write(file, text.replace("name: charts\n", "name: arrows\n"))
+
+
+def unreadable_as_checked(tmp_path: Path, cause: str, released: bool) -> tuple[Any, str]:
+    """The `library-unreadable` finding the check gives `charts@1.0.0` with `cause`, held
+    released where `released` says so and still as it was released, with its level."""
+    root = project(tmp_path)
+    unreadable_version(root, cause)
+    entry = released_entry(root, "charts", "1.0.0") if released else UNRELEASED
+    write_list(root, {"charts": {"source": PROJECT, "versions": {"1.0.0": entry}}})
+    report = checks.check(root)
+    assert "library-changed" not in [finding.code for finding, _ in report.judged]
+    (judged,) = [(f, level) for f, level in report.judged if f.code == "library-unreadable"]
+    return judged
+
+
+@pytest.mark.parametrize("released", [False, True], ids=["not-released", "released"])
+@pytest.mark.parametrize("cause", ["file", "other"])
+def test_a_library_yaml_not_read_as_its_folder_names_it_asks_its_owner_once_released(
+    tmp_path: Path, cause: str, released: bool
+) -> None:
+    finding, level = unreadable_as_checked(tmp_path, cause, released)
+    assert finding.library == "charts@1.0.0"
+    if released:
+        owner = "the owner of `charts`, who corrects it in a new release"
+        assert (level, finding.who) == ("attention", owner)
+    else:
+        assert (level, finding.who) == ("fails", "")
+
+
+@pytest.mark.parametrize("released", [False, True], ids=["not-released", "released"])
+def test_a_version_that_needs_a_newer_release_fails_released_or_not_and_names_the_project(
+    tmp_path: Path, released: bool
+) -> None:
+    finding, level = unreadable_as_checked(tmp_path, "newer", released)
+    assert (level, finding.library, finding.who) == ("fails", "", "the project")
+    assert finding.file == "visual/libraries/charts/1.0.0/library.yaml"
+    said = checks.said(finding)
+    assert said.startswith(
+        "the installed capability cannot read charts@1.0.0: it needs release 9.0.0 of the "
+        "capability, and "
+    )
+    assert said.endswith(
+        " is installed — for the project — upgrade the capability, or take charts@1.0.0 out "
+        "of the library folder and off the list once no lock names it"
+    )
 
 
 def test_a_released_version_that_changed_is_a_finding(tmp_path: Path) -> None:

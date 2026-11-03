@@ -6,7 +6,9 @@ where it lies: in a file the project can correct, it takes the level its record
 sets; in a released library version, which only its owner corrects, a failing
 finding asks for attention instead, and names the library's owner as who is to
 act (DEC-002 point 7). So the level, and that `who`, are worked out when a
-finding is read (`as_read`), never stored with it.
+finding is read (`as_read`), never stored with it. A finding the project corrects
+whether the version is released or not names no version, so it keeps its level: a
+version that needs a newer release of the capability is one (DEC-014 point 5).
 
 The validator document maps the levels onto the backbone's severities:
 fails -> `error`, attention -> `warning`, fact -> `info`.
@@ -54,7 +56,8 @@ class Finding:
     - `where`: the field, item, token path or trace id within the file, or "".
     - `fix`: the file, field or item to change, and the command that mends it.
     - `library`: `<name>@<version>` when it lies in a library version, else "".
-    - `who`: for a finding that asks for attention, who is expected to act.
+    - `who`: who is expected to act, for a finding that asks for attention, or for a
+      failing one whose file lies in a library version but that the project corrects.
     """
 
     code: str
