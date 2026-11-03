@@ -132,7 +132,7 @@ Runs the producer a piece declares for one of its produced outputs, and keeps it
 
 Makes a numbered export of a piece in each format it declares.
 
-- **Numbers the run:** every file it makes carries the next version number of the piece's `exports.yaml`, as `<piece>.v<N>.<language>.<key>.svg`, in `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`. No file overwrites another ([Exports](outputs.md#exports)).
+- **Numbers the run:** every file it makes carries the next version number of the piece's `exports.yaml`, as `<piece>.v<N>.<language>.<key>.svg`, in `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`. A piece of more than one page makes one file for each page, which adds the page's number, from 1: `<piece>.v<N>.<language>.<key>.<n>.svg`. No file overwrites another ([Exports](outputs.md#exports)).
 - **Records the version** in `exports.yaml`.
 - **Uses the lock** `piece.yaml` holds, and never moves it.
 - **Refuses** a piece with no lock yet, a lock that does not hold, and a produced picture that is missing or stale, unless `--use-stale <output>` names it. `--use-stale` may repeat. Every reason it refuses is under [What refuses an export](outputs.md#what-refuses-an-export).

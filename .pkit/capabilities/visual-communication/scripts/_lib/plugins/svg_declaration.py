@@ -22,7 +22,7 @@ _FRAME = ("x", "y", "width", "height")
 DECLARATION = {
     "name": "svg",
     "kind": "renderer",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "seam": 1,
     "module": "svg",
     "about": "An SVG file for each page, language and combination of modes.",

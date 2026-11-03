@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import Any
 
 from _lib import keys, records, tokens, values
-from _lib.env import PictureInfo
+from _lib.env import PictureInfo, UnreadableComponent
 from _lib.files import FileError, read_bound, refuse_links, without_binding, write_whole
 from _lib.libraries import FOLDER, FOUNDATIONS, Held, Version
 from _lib.location import files as listed_files
@@ -409,6 +409,7 @@ class ProjectEnv:
     def __init__(self, project: Project) -> None:
         self._project = project
         self._components: dict[str, dict[str, Any] | None] = {}
+        self._unreadable: dict[str, str] = {}
         self.missing: dict[str, str] = {}
         self.records: dict[str, Mapping[str, Any]] = {}
         self.fonts_read: set[Path] = set()
@@ -416,20 +417,30 @@ class ProjectEnv:
     def component(self, use: str) -> dict:
         if use not in self._components:
             self._components[use] = self._read_component(use)
+        if use in self._unreadable:
+            raise UnreadableComponent(use, self._unreadable[use])
         found = self._components[use]
         if found is None:
             raise KeyError(use)
         return found
 
     def _read_component(self, use: str) -> dict[str, Any] | None:
+        """A component's data; None where there is none, and where its file is present and
+        cannot be read as one, why kept in `_unreadable`."""
         path = self.component_path(use)
         if path is None or not path.is_file():
             return None
         try:
             data = read_yaml(path)
-        except ReadError:
+        except ReadError as exc:
+            # The reader names the file by its path on this machine. The finding names it
+            # from the piece or the version, so a findings record holds where the work moves.
+            self._unreadable[use] = str(exc).removeprefix(f"{path}: ")
             return None
-        return dict(data) if isinstance(data, Mapping) else None
+        if not isinstance(data, Mapping):
+            self._unreadable[use] = "it is not a mapping"
+            return None
+        return dict(data)
 
     def component_path(self, use: str) -> Path | None:
         """The file of a component, by its use; None where the lock names no version of its

@@ -23,6 +23,7 @@ from tests.test_visual_communication_pipeline import (
     PIECE_FOLDER,
     TESTS,
     drawing_project,
+    write_content,
     write_picture,
 )
 from tests.visual_communication_project import CONFIG, importable, write_list
@@ -40,6 +41,7 @@ script, svg, seam, framing, files, reading, pl = load(
 
 PREVIEWS = ".pkit/capabilities/visual-communication/project/local/previews/flow"
 FINDINGS = f"{PIECE_FOLDER}/findings.yaml"
+TESTS_FOLDER = "visual/libraries/tests/1.0.0"
 LOCATION = (
     f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
     f"to move the work, move the folder and change the `location:` line there"
@@ -119,10 +121,10 @@ def test_it_draws_a_figure_of_steps_and_a_callout_over_a_produced_picture(
     drawn = previews(root)
     assert sorted(drawn) == ["flow.en.colour-scheme.dark.svg", "flow.en.default.svg"]
     light = drawn["flow.en.default.svg"]
-    assert 'data-key="default"' in light and 'data-renderer="svg 1.0.0"' in light
+    assert 'data-key="default"' in light and 'data-renderer="svg 1.0.1"' in light
     assert '<image data-id="figure/body/steps[note]/pictures[square]/image"' in light
     assert ">Here</tspan>" in light and ">The flow.</tspan>" in light
-    assert "@font-face{font-family:'Source Sans Pro'" in light
+    assert '@font-face{font-family:"Source Sans Pro"' in light
     assert drawn["flow.en.colour-scheme.dark.svg"] != light
 
     record = reading.read_yaml(root / FINDINGS)
@@ -334,3 +336,27 @@ def test_a_piece_the_location_lacks_is_refused(tmp_path: Path) -> None:
     shown = run(root, "other")
     assert shown.returncode == 1
     assert "the location holds no piece `other`" in shown.stderr
+
+
+def test_a_component_whose_file_cannot_be_read_is_reported_at_that_file(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    (root / TESTS_FOLDER / "components" / "broken.yaml").write_text("parts: [\n", encoding="utf-8")
+    write_content(root, body={"use": "tests/broken"})
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    said = (
+        f"fails: {TESTS_FOLDER}/components/broken.yaml: the component `tests/broken` cannot be "
+        f"read: does not parse as YAML: "
+    )
+    assert [line for line in shown.stdout.splitlines() if line.startswith(said)]
+    assert "unknown-component" not in shown.stdout
+    kept = reading.read_yaml(root / FINDINGS)["findings"]
+    [entry] = [e for e in kept if e["code"] == "component-unreadable"]
+    assert (entry["level"], entry["file"], entry["library"], entry["where"]) == (
+        "fails",
+        "components/broken.yaml",
+        "tests@1.0.0",
+        "",
+    )
+    assert "unknown-component" not in [e["code"] for e in kept]
+    assert str(tmp_path) not in entry["message"]

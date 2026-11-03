@@ -2,12 +2,13 @@
 
 - **What a run makes.** Each format the piece declares under `exports`, in each of its
   languages and each combination of modes it names, drawn from the scene by the renderer
-  of that format. Format 1 declares `svg`: one file for each language and combination, so
-  a piece of one page alone exports as SVG.
+  of that format. Format 1 declares `svg`: one file for each page, language and
+  combination. A piece with no page in one of its languages is refused.
 - **A number for each run.** Version `N` is one more than the highest the piece's
   `exports.yaml` records, shared by every file the run makes; each file is named
-  `<piece>.v<N>.<language>.<key>.<format>`. The files lie in the clone's local exports
-  folder, never committed; no export overwrites another.
+  `<piece>.v<N>.<language>.<key>.<format>`, and a piece of more than one page adds the
+  page's number, from 1: `<piece>.v<N>.<language>.<key>.<n>.<format>`. The files lie in
+  the clone's local exports folder, never committed; no export overwrites another.
 - **No stale output.** A run stops on a produced picture whose record no longer verifies,
   naming what changed, unless the person names it to be used as it is; it stops on a
   picture that is missing whatever is named. Naming an output the piece does not declare
@@ -77,8 +78,14 @@ class Planned:
         return self.piece.root / FOLDER / self.piece.name
 
 
-def file_name(piece: str, number: int, language: str, key: str, form: str) -> str:
-    return f"{piece}.v{number}.{language}.{key}.{form}"
+def file_name(
+    piece: str, number: int, language: str, key: str, form: str, page: int | None = None
+) -> str:
+    """An exported file's name: the piece, the version, the language, the combination's
+    key and the format, with the page's number before the format where `page` names one,
+    as for each page of a piece of more than one page."""
+    numbered = "" if page is None else f".{page}"
+    return f"{piece}.v{number}.{language}.{key}{numbered}.{form}"
 
 
 def recorded_versions(piece: pl.Piece) -> list[dict[str, Any]]:
@@ -215,17 +222,24 @@ def used_versions(project: pl.Project) -> dict[str, str]:
 def _drawn(
     project: pl.Project, results: Sequence[tuple[str, SceneResult]], number: int
 ) -> dict[str, str]:
+    """Each file of the export and its text, by its name: one for each page, language and
+    combination, the pages of each in order. Raises Refused where a language has no page,
+    since the version would hold no file in it."""
     piece = project.piece
     files: dict[str, str] = {}
     for form in piece.exports:
         for language, key, drawn in pl.drawn(project, results, RENDERERS[form]):
-            if len(drawn.pages) != 1:
+            if not drawn.pages:
                 raise pl.Refused(
-                    f"`{piece.name}` has {len(drawn.pages)} pages; an export file of format 1 "
-                    f"is named by piece, version, language and combination, so a piece of one "
-                    f"page alone exports as `{form}`"
+                    f"`{piece.name}` has no page in `{language}`, so the export would hold no "
+                    f"file in that language"
                 )
-            files[file_name(piece.name, number, language, key, form)] = drawn.pages[0].svg
+            several = len(drawn.pages) > 1
+            for index, page in enumerate(drawn.pages, start=1):
+                name = file_name(
+                    piece.name, number, language, key, form, index if several else None
+                )
+                files[name] = page.svg
     return files
 
 
