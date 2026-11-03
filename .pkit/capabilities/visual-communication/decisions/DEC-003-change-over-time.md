@@ -6,6 +6,8 @@ date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [visual-communication:DEC-014-own-library-needed-release].** Overturned: point 1's oldest release, which the engine computes from what a library uses. Also overturned: point 9's two findings of a library that names an older release than it needs, and the bullet that exempts a version from them. And overturned: the Rationale's likening of the release a library needs to the oldest compiler release a package needs. The rest stands.
+
 **In plain terms:** once a version of a library is released, it stays as it was, and a change is a new version. When the capability's file format changes in a way older files cannot follow, a converter reads the older files people wrote. Nothing rewrites them unless a person asks and reviews the diff. While the core's validation refuses a file whose schema version differs from its schema's, though, it would fail every such older file, so no such change ships until validation accepts them. A piece's state, draft, final or published, says who may move its lock, and a draft's lock may be pinned. A component's status says what its library promises about it.
 
 ## Context
@@ -58,6 +60,7 @@ The capability's design review asked how a format change reaches files that no m
 - **One library to a name.** A name ties a library to its source in the list. A second library of one name is refused, so a library built on a base finds it by name.
 - **Kept while named.** A version stays while a lock names it. One that no lock names may be removed.
 - **Pulled whole.** A version from another repository is fetched whole at its release, never merged, with no registry, as the core shares whole content between repositories (COR-041). It is fetched over the channel the project already uses for that repository, with the methodology's shared sign-in ([project-kit#2418](https://github.com/aleskalfas/project-kit/issues/2418)). Unlike that content, it is the project's file. The capability's commands keep it, and sync never touches it.
+- **Read in full before it is taken** (refinement per [visual-communication:DEC-014-own-library-needed-release]). The command that fetches a version from another repository reads it in full on the installed capability before taking it. It refuses what that capability cannot read.
 
 ### 5. A shipped library reaches the project only through a command a person runs
 
@@ -69,7 +72,7 @@ The capability's design review asked how a format change reaches files that no m
 ### 6. A released version never changes
 
 - **Released means fixed.** Each released version stays as it was released, whoever owns the library, the project included. A change is a new version. Releasing a version runs the check on it first.
-- **A project's own library** changes freely only in a version not yet released, which only a draft may lock (point 8). Releasing it fixes it, and the next change starts a new version.
+- **A project's own library** changes freely only in a version not yet released, which only a draft may lock (point 8). Its release checks the version in full, the brand's tokens and fonts included, then writes the release the version needs (refinement per [visual-communication:DEC-014-own-library-needed-release]). Releasing it fixes it, and the next change starts a new version.
 - **A library the capability ships** (refinement per [visual-communication:DEC-013-shipped-library-releases]). Whoever maintains the capability releases a version of it as it stands, where the capability is authored. It does so only where no change has touched the version since the release that wrote the capability's current version. A change after that release puts the library's release off until the next release that moves the capability's version.
 - **What breaks.** A change breaks when it removes or renames anything that a piece, or a library built on it, names, or changes what that means. A component, its fields, its options and their words, its states, the parts it lets others read, a layout and its slots, and a role are such names. Moving to a new major of a base breaks too, since a piece cannot lock two majors of one library. A change of how something looks does not break, since the lock and the before-and-after protect each piece. What breaks a brand is the record of brands and notations' ([visual-communication:DEC-004-brands-and-notations] point 5).
 
