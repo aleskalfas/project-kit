@@ -222,7 +222,7 @@ Defined in [TERM-bypass](../glossary.md#term-bypass--bypass).
 
 **Why:** Some checks guard what may happen with an explicit justification, rather than what must never happen. A bypass lets a person override such a check with a reason. Where the [project](../../core/glossary.md#term-project--project) keeps [audit comments](../glossary.md#term-audit-comment--audit-comment), the reason is posted before the write, so it survives a step that fails ([DEC-014](../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
 
-A bypass overrides one check that refuses by default, such as scheduling an [issue](../glossary.md#term-issue--issue) with no [Milestone](../glossary.md#term-milestone--milestone). The person gives the reason with the command, and, where the project keeps audit comments, the [system](../../core/glossary.md#term-system--system) records it before it goes on.
+A bypass overrides one check that refuses by default, such as scheduling an [issue](../glossary.md#term-issue--issue) with no [Milestone](../glossary.md#term-milestone--milestone). The person gives the reason with the command, and, where the project keeps audit comments, project-management records the reason before the command goes on.
 
 **Attributes:**
 
