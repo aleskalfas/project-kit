@@ -21,6 +21,7 @@ pkit:
       record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-007", COR-017, COR-023, COR-031, COR-055]
       artefact:
         - .pkit/capabilities/visual-communication/checks.md
+        - .pkit/capabilities/visual-communication/checks.md#content-against-components
         - .pkit/capabilities/visual-communication/checks.md#the-findings-record
         - .pkit/capabilities/visual-communication/checks.md#when-the-check-reads-it
         - .pkit/capabilities/visual-communication/checks.md#what-each-run-judges
