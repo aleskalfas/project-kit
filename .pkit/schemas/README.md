@@ -332,7 +332,7 @@ See [`data-binding.md`, "Authoring"](data-binding.md#authoring).
 
 ## Backbone file schemas and the methodology's front-matter container
 
-The backbone file schemas are the schemas of the files the backbone validates but does not write. Each such file binds to its schema by where it lies, never by a field in it. They are on [`backbone-files.md`](backbone-files.md), with the six schemas that ship, and each heading below leads to its section there.
+The backbone file schemas are the schemas of the files the backbone validates but does not write. Each such file binds to its schema by where it lies, never by a field in it. They are on [`backbone-files.md`](backbone-files.md), with the six schemas under `backbone/`. Five are for such files, and the sixth for package metadata, whose file no location rule binds. Each heading below leads to its section there.
 
 ### The container
 

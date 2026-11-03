@@ -105,7 +105,7 @@ Three things hold for all of them, each decided by the record named.
 
 ## The schemas that ship
 
-`backbone/` holds six schemas. Each is named below, with:
+`backbone/` holds six schemas: one for each kind of file above, and package metadata's, whose file no location rule binds. Each is named below, with:
 
 - what it covers
 - what binds a file to it
@@ -640,10 +640,9 @@ An answer on what is gone is reported, never failed ("What the pass warns of and
 
 ## Rule-set files
 
-A rule set (COR-051) is one Markdown file. Its front matter holds the data, and its body one section for each rule. `backbone/rule-set.schema.json` fixes the data's shape. `pkit validate` applies it in its `rule-sets` pass, `project_kit.rule_sets`.
+This section gives a rule-set file's shape: its front matter, its body and its ids. `rule-set.schema.json` fixes the shape of its front matter ("The schemas that ship" above). This area's README holds the rest, under "Rule-set files":
 
-This section gives the file's shape: its front matter, its body and its ids. This area's README holds the rest, under "Rule-set files":
-
+- what a rule set is
 - where rule-set files lie
 - the checks of their pass
 - how their rules bind
