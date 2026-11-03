@@ -10,6 +10,7 @@ in-memory `Env` (`tests/visual_engine.py`):
   sources of its ends;
 - a tie into a list that a nested component draws, two levels deep, through a component
   that renames the list: the key path keeps the content file's keys;
+- the engine's walk of a key path and the check of the content's, alike on the same paths;
 - an end at a picture's point, a point the item does not expose, and one whose place
   cannot be read;
 - an end drawn twice, drawn nowhere, and on another page: each tie left out and reported,
@@ -44,7 +45,7 @@ from tests.visual_engine import (
     top,
 )
 
-(svg,) = load("visual-communication", "plugins.svg")
+checks, svg = load("visual-communication", "checks", "plugins.svg")
 
 LISTED = {"type": "array", "items": {"type": "object"}}
 SHAPE = "component-shape"
@@ -331,6 +332,58 @@ def test_a_key_path_through_a_part_s_own_name_reaches_nothing() -> None:
     # Left out, and the check of the content reports the path (`tie-path`).
     assert result.scene.find("top/links[az]") is None
     assert "end-not-found" not in codes(result)
+
+
+def test_the_engine_and_the_check_of_the_content_walk_a_key_path_alike() -> None:
+    """The engine leaves out unreported a tie whose path the check of the content refuses
+    (`Instance._held`), and the check reports it (`_Fields._end_path`). Each walks a path
+    by its own code, so both run here on the same paths: one reaches an item exactly where
+    the other does, or a tie would be left out with no finding."""
+    found = renaming()
+    pattern = found["lab/top"]
+    pattern["parts"]["side"] = {"slot": "side", "x": "=@space.4 * 15"}
+    pattern["fields"]["properties"] |= {
+        "side": {"type": "object"},
+        "hidden": LISTED,
+        "meta": {"type": "object"},
+    }
+    content = {
+        "steps": [{"id": "a"}],
+        "groups": [{"id": "g1", "members": [{"id": "z"}]}],
+        "side": {"use": "lab/column", "entries": [{"id": "q"}]},
+        "hidden": [{"id": "h"}],
+        "meta": {"things": [{"id": "t"}]},
+        "links": [link("az", "steps[a]", "groups[g1].members[z]")],
+    }
+    reaches = {
+        "steps[a]": True,
+        "groups[g1]": True,
+        "groups[g1].members[z]": True,
+        "side.entries[q]": True,
+        "hidden[h]": True,  # an item the content holds, which no part draws
+        "meta.things[t]": True,  # through a mapping no component draws, by its keys alone
+        "groups[g1].entries[z]": False,  # a part's own name
+        "side.items[q]": False,
+        "side[q]": False,
+        "steps[q]": False,
+        "stepz[a]": False,
+        "steps": False,
+        "steps[a].head": False,
+        "links[az]": False,  # a tie
+        "steps[a]..x": False,
+    }
+
+    root = layout.place_top(layout.Context(FakeEnv(components=found), "en"), "lab/top", content)
+    assert root is not None
+    index = root.by_path()
+    fields = checks._Fields(FakeEnv(components=found), "content.en.yaml", [])
+    reader = checks._Reader(
+        frozenset(pattern["fields"]["properties"]), fields._repeats(pattern, ("lab/top",))
+    )
+
+    engine = {path: root._held(path, index) is not None for path in reaches}
+    check = {path: fields._end_path(path, content, reader) is False for path in reaches}
+    assert engine == check == reaches
 
 
 # --- an end at a picture's point ----------------------------------------------------------------

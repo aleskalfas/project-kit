@@ -2769,27 +2769,42 @@ class Instance:
         return x, y
 
     def find_ends(self) -> None:
-        """Finds the two ends of each tie this instance draws, then those of the ties each
-        instance below it draws, once every part is built. Each end is found among the
-        instances below this one by the key path of what content gave it (`_tie_found`). A
-        tie whose end is not found is left out, and takes no place among the ties drawn."""
+        """Finds the two ends of each tie drawn at or below this instance, once every part
+        is built: first those of the ties each instance below it draws, but its own ties,
+        so that what a tie left out there holds counts toward no end here; then those of
+        its own ties; then those of the ties below each tie it keeps. Each end is found
+        among the instances below this one by the key path of what content gave it
+        (`_tie_found`). A tie whose end is not found is left out, and takes no place among
+        the ties drawn. What lies below this instance's own ties still counts while their
+        ends are found, since which of them are left out is what that finding decides."""
+        for child in self.children():
+            if child.tie is None:
+                child.find_ends()
         drawn = [
             node
             for node in self.nodes.values()
             if node.present and self.component.ties(node.part) is not None
         ]
-        if drawn:
-            index: dict[str, list[Instance]] = {}
-            for each in self.below():
-                if each.content_path is not None:
-                    index.setdefault(each.content_path, []).append(each)
-            for node in drawn:
-                kept = [tie for tie in node.items if self._tie_found(tie, index)]
-                for position, tie in enumerate(kept):
-                    tie.position = position
-                node.items = kept
-        for child in self.children():
-            child.find_ends()
+        if not drawn:
+            return
+        index = self.by_path()
+        for node in drawn:
+            kept = [tie for tie in node.items if self._tie_found(tie, index)]
+            for position, tie in enumerate(kept):
+                tie.position = position
+            node.items = kept
+        for node in drawn:
+            for tie in node.items:
+                tie.find_ends()
+
+    def by_path(self) -> dict[str, list[Instance]]:
+        """The instances below this one by the key path in the content file of what content
+        gave each; an instance no key of the content file gives is in none."""
+        index: dict[str, list[Instance]] = {}
+        for each in self.below():
+            if each.content_path is not None:
+                index.setdefault(each.content_path, []).append(each)
+        return index
 
     def _tie_found(self, tie: Instance, index: Mapping[str, list[Instance]]) -> bool:
         """Whether both ends of `tie` are found, each kept in `tie.ends`, and the tie lies on
@@ -2801,6 +2816,9 @@ class Instance:
         tie."""
         fields = tie.tie.ends if tie.tie is not None else None
         if fields is None or tie.content_path is None:
+            # A tie has no key path only where its list reached the pattern through a `use`
+            # part, and such a part passes no list of ties on: `_build_use` reports it, as
+            # `component-shape`, and builds no tie of it.
             return False
         named: dict[str, tuple[str, str | None]] = {}
         held: dict[str, str] = {}
@@ -2811,8 +2829,7 @@ class Instance:
             point = raw.get("point")
             if point is not None and not names.is_name(point):
                 return False
-            steps = key_path(raw["item"])
-            reached = self._held(steps, index) if steps and steps[-1][1] is not None else None
+            reached = self._held(raw["item"], index)
             if reached is None:
                 return False  # the content holds no such item, or it is a tie
             named[which], held[which] = (raw["item"], point), reached
@@ -2852,13 +2869,17 @@ class Instance:
             return False
         return True
 
-    def _held(
-        self, steps: list[tuple[str, str | None]], index: Mapping[str, list[Instance]]
-    ) -> str | None:
-        """The key path in the content file of the item an end's steps lead to, from this
-        instance's own mapping; None where the content holds no such item, it is a tie, or
-        a step names a key that no component on the way declares as a field. A mapping
-        that no instance below draws is read by its keys alone."""
+    def _held(self, text: Any, index: Mapping[str, list[Instance]]) -> str | None:
+        """The key path in the content file of the item an end's key path `text` leads to,
+        from this instance's own mapping, `index` holding the instances below it by their
+        key paths (`by_path`). None where `text` is no key path or ends at no list's item,
+        the content holds no such item, it is a tie, or a step names a key that no
+        component on the way declares as a field. A mapping that no instance below draws
+        is read by its keys alone. The check of the content walks a path by its own code
+        (`checks._Fields._end_path`), and a test runs both on the same paths."""
+        steps = key_path(text)
+        if not steps or steps[-1][1] is None:
+            return None
         mapping: Any = self.given
         path = self.content_path or ""
         reader: Instance | None = self
