@@ -150,7 +150,7 @@ def test_the_root_says_what_the_scene_is_and_to_dict_is_stable_and_ordered() -> 
         "test-piece",
         "en",
         "default",
-        2,
+        3,
     )
     assert list(first["lock"]) == sorted(first["lock"])
     group = first["children"][0]

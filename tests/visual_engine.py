@@ -202,7 +202,7 @@ def draw(
         language=language,
         lock=dict(VERSIONS),
         size_key="default",
-        seam_version=2,
+        seam_version=3,
         env=FakeEnv(**environment),
     )
 

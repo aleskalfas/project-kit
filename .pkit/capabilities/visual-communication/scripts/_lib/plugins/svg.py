@@ -16,6 +16,9 @@ combination of modes (visual-communication DEC-005 points 4, 5, 9 and 10).
   `<text>` takes the font and the paint of the text's first run; each span of a run that
   looks otherwise is a `<tspan>` with its own (DEC-012). A text of one run is drawn as
   format 1 drew it.
+- **A line** with corners, a tie's connector, is a `<polyline>` through its points, and
+  names the elements its ends meet (`data-start`, `data-end`). An arrowhead is a marker
+  the page defines once for each colour a line draws one in.
 - **A produced picture** is embedded as the variant that serves the combination drawn;
   where the record maps the combination to none, the picture is left out, and reported.
 - **Every element carries its trace id** (`data-id`), and a group the component that drew
@@ -44,6 +47,9 @@ from fontTools.ttLib import TTFont
 
 from _lib.plugins import seam
 from _lib.plugins.svg_declaration import DECLARATION
+
+#: A line's two ends, each of which may carry an arrowhead.
+ENDS = ("start", "end")
 
 NAME: str = DECLARATION["name"]
 VERSION: str = DECLARATION["version"]
@@ -176,6 +182,8 @@ class _Canvas:
         self.pictures = pictures
         self.losses: list[seam.Loss] = []
         self._faces: dict[tuple[str, int], set[str]] = {}
+        # Each arrowhead marker the page draws, by its id: which end, its colour, opacity.
+        self._arrows: dict[str, tuple[str, str, str | None]] = {}
 
     def _lose(self, what: str, did: str, why: str) -> None:
         loss = seam.Loss(NAME, what, did, why)
@@ -186,6 +194,7 @@ class _Canvas:
 
     def page(self, element: Mapping[str, Any]) -> str:
         self._faces = {}
+        self._arrows = {}
         body = "".join(self._element(child) for child in element.get("children", []))
         width, height = number(element["width"]), number(element["height"])
         head = _attributes(
@@ -209,7 +218,8 @@ class _Canvas:
             ]
         )
         style = f"<style>{self._font_faces()}text{{white-space:pre}}</style>"
-        return f"<svg {head}><defs>{style}</defs><g {group}>{body}</g></svg>\n"
+        defs = f"{style}{self._arrow_markers()}"
+        return f"<svg {head}><defs>{defs}</defs><g {group}>{body}</g></svg>\n"
 
     def _element(self, element: Mapping[str, Any]) -> str:
         kind = element.get("type")
@@ -292,14 +302,46 @@ class _Canvas:
         return f"<ellipse {attributes}/>"
 
     def _line(self, element: Mapping[str, Any]) -> str:
+        """A line, or a tie's connector: a `<polyline>` through its points where it has
+        corners, which names the elements its ends meet (`data-start`, `data-end`). An
+        arrowhead is a marker in the line's stroke colour."""
+        attached = element.get("attached") or {}
+        stroke = self._stroke(element)
+        points = element.get("points")
+        shape = (
+            [("points", " ".join(f"{number(p['x'])},{number(p['y'])}" for p in points))]
+            if points
+            else [(end, number(element[end])) for end in ("x1", "y1", "x2", "y2")]
+        )
         attributes = _attributes(
             [
                 ("data-id", element["id"]),
-                *((end, number(element[end])) for end in ("x1", "y1", "x2", "y2")),
-                *self._stroke(element),
+                *((f"data-{which}", attached[which]["id"]) for which in ENDS if which in attached),
+                *shape,
+                ("fill", "none") if points else ("fill", None),
+                *stroke,
+                *self._markers(element, stroke),
             ]
         )
-        return f"<line {attributes}/>"
+        return f"<polyline {attributes}/>" if points else f"<line {attributes}/>"
+
+    def _markers(
+        self, element: Mapping[str, Any], stroke: list[tuple[str, Any]]
+    ) -> list[tuple[str, Any]]:
+        """The arrowheads a line draws, each a marker the page defines once for its colour.
+        A line with no stroke draws none."""
+        paint = dict(stroke)
+        if "stroke" not in paint:
+            return []
+        found = []
+        for which in ENDS:
+            if element.get(f"marker-{which}") == "arrow":
+                colour, alpha = paint["stroke"], paint.get("stroke-opacity")
+                key = f"{which}-{colour.lstrip('#')}" + (f"-{alpha}" if alpha else "")
+                marker = f"pkit-arrow-{key.replace('.', '')}"
+                self._arrows[marker] = (which, colour, alpha)
+                found.append((f"marker-{which}", f"url(#{marker})"))
+        return found
 
     def _text(self, element: Mapping[str, Any]) -> str:
         x, width = float(element["x"]), float(element["width"])
@@ -388,6 +430,30 @@ class _Canvas:
             ]
         )
         return f"<image {attributes}/>"
+
+    # -- arrowheads
+
+    def _arrow_markers(self) -> str:
+        """The arrowhead markers the page draws, in the order of their ids: a triangle as
+        long as five strokes are wide, its tip at the line's end, pointing away from the
+        line."""
+        markers = []
+        for marker, (which, colour, alpha) in sorted(self._arrows.items()):
+            tip, shape = ("10", "M0,0L10,5L0,10z") if which == "end" else ("0", "M10,0L0,5L10,10z")
+            attributes = _attributes(
+                [
+                    ("id", marker),
+                    ("viewBox", "0 0 10 10"),
+                    ("refX", tip),
+                    ("refY", "5"),
+                    ("markerWidth", "5"),
+                    ("markerHeight", "5"),
+                    ("orient", "auto"),
+                ]
+            )
+            fill = _attributes([("d", shape), ("fill", colour), ("fill-opacity", alpha)])
+            markers.append(f"<marker {attributes}><path {fill}/></marker>")
+        return "".join(markers)
 
     # -- fonts
 

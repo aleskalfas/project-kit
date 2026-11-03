@@ -26,7 +26,7 @@ pkit:
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/picture.yaml
         - tests/visual_engine.py
         - tests/test_visual_communication_scene.py
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-009", "visual-communication:DEC-010", "visual-communication:DEC-012"]
+      record: ["visual-communication:DEC-001", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-009", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012"]
       artefact:
         - .pkit/capabilities/visual-communication/files.md
         - .pkit/capabilities/visual-communication/files.md#the-foundations
@@ -55,7 +55,7 @@ The examples come from the foundations' `figure`, which ships, and from `tests`,
 One model binds every component. A pattern, an item component and a block are roles a component plays, not kinds of file (DEC-001 points 4 and 6).
 
 - **A pattern** arranges items. It has a `repeat` part over a list of the content, and decides how its items lie. `tests/steps` is a pattern.
-- **An item component** draws one item of a list. The pattern names its default in `draw`. Content may name another for the whole list, in a field the pattern declares for the list ([Lists](#lists)). An item may name its own in `use`, a pattern included.
+- **An item component** draws one item of a list. The pattern names its default in `draw`. Content may name another for the whole list, in a field the pattern declares for the list ([Lists](#lists)). An item may name its own in `use`, a pattern included. Which of them draws an item is in [Repeating over a list](#repeating-over-a-list-row-and-column).
 - **A block** is a small component, such as a card, that a pattern draws its items with, or that content places alone (DEC-007 point 1). `tests/card` and `tests/picture` are blocks.
 - **A top component** declares `layouts`. A piece names one as its top ([files](files.md)). The foundations' `figure` is one, with one layout. Their `deck` is one whose layouts are the forms its pages take, a cover and a slide ([The foundations](files.md#the-foundations), [Layouts](#layouts)).
 - **A local component** belongs to one piece. Its `use` is `piece/<component>`, and a library component's is `<library>/<component>`. The lock alone says which version of a library is read.
@@ -107,8 +107,9 @@ The file takes these keys and no other:
 | `values` | Its named numbers, each a formula or a switch of formulas. |
 | `preferred` | `width` and `height`, the size it asks for, each a formula. |
 | `parts` | What it draws and places, by name, in drawing order. |
-| `lists` | On a pattern: for each list it repeats over, the field in which content names the list's component, and its items' arrangement fields. |
+| `lists` | On a pattern: for each list it repeats over, the field in which content names the list's component, its items' arrangement fields, and a list of ties' end fields. |
 | `exposes` | The parts a component that places it may read. |
+| `ends` | `true` where the component takes ends, so a pattern may draw a tie with it ([Ties and connectors](#ties-and-connectors)). |
 | `layouts` | On a top component only: its layouts and their slots, and, where they are its pages' forms, each layout's own drawing. |
 
 Every name in the file takes the capability's name shape ([files](files.md)). The status says what the component's library promises (DEC-003 point 7). An experimental component may change in any release, renamed, reshaped or removed. A stable one changes in a breaking way only in a major release of its library. A deprecated one may be removed only in a major release.
@@ -170,11 +171,11 @@ An option takes a value from what the component declares, never a free number or
 | `box` | `x y width height` | `width height` |
 | `ellipse` | `x y width height` | `width height` |
 | `text` | `x y width` | |
-| `line` | `x1 y1 x2 y2` | all four |
+| `line` | `x1 y1 x2 y2`, or `connect` | all four, or `connect` alone |
 | `image` | `x y width height` | `width` |
 | `use` | `x y width height fields options` | |
 | `slot` | `x y width height` | |
-| `repeat` | `x y width height draw colour`, and `row` or `column` | `draw`, and one of `row` and `column` |
+| `repeat` | `x y width height draw colour`, and `row` or `column` | `draw`, and one of `row` and `column`, except over a list of ties, which takes neither |
 
 - **Places and sizes** are formulas that give a length, in the component's own frame. A missing `x` or `y` is zero.
 - **`when`** draws the part only while a condition holds. It names a field, and holds while the content fills it: the field is not missing, empty text, an empty list or an empty mapping. A field of runs is filled where one of its runs holds text. Or it is `{<option>: [<word>, ...]}`, and holds while the option takes one of the words. A part not drawn has zero size, at its place.
@@ -212,11 +213,12 @@ parts:
 
 ### Lists
 
-`lists` declares, for each list field that a `repeat` part of the component repeats over, what the items of that list carry for the component, apart from its own fields and options (DEC-010 points 1 to 4). Its entry for a list takes two keys, both optional:
+`lists` declares, for each list field that a `repeat` part of the component repeats over, what the items of that list carry for the component, apart from its own fields and options (DEC-010 points 1 to 4, DEC-011 point 1). Its entry for a list takes three keys, each optional:
 
-- **`component`:** the list's *component field*, a field of the component's own that holds no list. Content names a component in it as it places one, by `use` ([content files](files.md#content-files)), yet nothing is placed there, so no part places the field or passes it on. Each item that names no component of its own is drawn by the component it names. The item takes each key the field gives that the item does not give itself, and a value it takes names the field as its source ([Sources](#sources)).
+- **`component`:** the list's *component field*, a field of the component's own that holds no list. Content names a component in it as it places one, by `use` ([content files](files.md#content-files)), yet nothing is placed there, so no part places the field or passes it on. Which items that component draws is in [Repeating over a list](#repeating-over-a-list-row-and-column). The item takes each key the field gives that the item does not give itself, and a value it takes names the field as its source ([Sources](#sources)).
 - **`arrangement`:** the items' *arrangement fields*, by name, each `{words: [<word>, ...]}`. An item gives one of the words, and one that leaves the field out takes the first. A name is no reserved key's, and the words follow an option's rules ([Options](#options)). The component reads an arrangement field, and the component that draws the item never does.
 - **A weight** is an arrangement field that also gives `shares`: a number above zero for each of its words, and for no other. A `repeat` part with `sizes: shares` shares its line among the items in proportion to their shares ([Repeating over a list](#repeating-over-a-list-row-and-column)). A list has one weight at most.
+- **`ends`:** two *end fields*, `[<start>, <end>]`, which make the list a *list of ties*. Every item of it is a *tie*, and gives both end fields, the first where the tie starts. Each is a name, no reserved key's and no arrangement field's of the list ([Ties and connectors](#ties-and-connectors)).
 
 A pattern that lets content choose the component of its steps, and give a step twice the width of another, could declare:
 
@@ -241,8 +243,8 @@ parts:
     row: {gap: "=@space.2", sizes: shares}
 ```
 
-- **A key both declare.** Where an item's component declares a field or an option named as an arrangement field of the item's list, neither reads the key on that item. The component's field stays unfilled, and the arrangement field takes its default. The check reports such a key (*checks*).
-- **What is refused** when the component is read: an entry for a list no part of the component repeats over, or for the field that holds a top's pages ([Layouts](#layouts)); a component field that is no field of the component, holds a list, or is placed or passed on by a part; an arrangement field with no word, a word twice, or a reserved key's name; a weight whose shares miss a word, name another, or are not above zero; a second weight; and `sizes: shares` on a part whose list has no weight.
+- **A key both declare.** Where an item's component declares a field or an option named as an arrangement field of the item's list, neither reads the key on that item. The component's field stays unfilled, and the arrangement field takes its default. Named as an end field, the tie lacks that end, and is left out. The check reports such a key (*checks*).
+- **What is refused** when the component is read: an entry for a list no part of the component repeats over, or for the field that holds a top's pages ([Layouts](#layouts)); a component field that is no field of the component, holds a list, takes runs, or is placed or passed on by a part; an arrangement field with no word, a word twice, or a reserved key's name; a weight whose shares miss a word, name another, or are not above zero; a second weight; and `sizes: shares` on a part whose list has no weight. So is `ends` that are not two names, no reserved key's, each once, and none an arrangement field of the list.
 
 ### Exposes
 
@@ -260,6 +262,7 @@ A top component declares `layouts`, by name. Each layout has a *drawing*, the pa
 
 - **`slots`:** the fields a page in that layout fills, each written as a field of `fields` is. They are a page's fields, not the top's. No slot takes a reserved key's name, nor `layout`, the key by which a page names its layout, nor the name of a field of the top. No slot holds pages.
 - **`required`:** the slots a page in that layout must fill.
+- **`lists`:** the fields of each list among its slots that its drawing repeats over, as a pattern declares them ([Lists](#lists)). They lie in the top's file, and content gives them as it gives the slots (DEC-011 point 5).
 - **`parts`:** the layout's drawing, which draws one page. Every layout has one. It takes the page's slots, the top's other fields and the words of the top's options, as the content gives them to the top, and the states, colour and values the top declares (DEC-009 point 5). Its `:width` and `:height` are the top's size. A part that places a slot is best named after the slot, as the deck's are, so what the slot places keeps one trace id under every drawing.
 
 The deck's field of pages, and its slide trimmed to two of its slots, their descriptions left out:
@@ -317,6 +320,7 @@ A *formula* is text that starts with `=` and computes one number (DEC-005 point 
 | `<value>` | a value of the component, by its name alone, such as `gap` |
 | `<part>.<exposed>….<measure>` | a measure of a part's frame, or of a part exposed below it |
 | `{<option>}.….<measure>` | a measure of the item, or the point, an option gives |
+| `{start}.<measure>`, `{end}.<measure>` | in a component that takes ends, a measure of an end it is given as a tie |
 
 - **A function's name** is followed at once by its `(`.
 - **The engine's names** are marked with `:`, which no name holds. A name the engine lacks, such as `:size`, is refused.
@@ -351,11 +355,11 @@ A formula is refused with a message that names it and says why, such as "the for
 - **Its dimensions disagree,** or it gives another dimension than its key needs.
 - **It reads a role** that has no value under the brand, a length in a unit other than `px`, or a role that is neither a length nor a number. A role has none where no library the piece locks declares it, or where it is a library's role that neither the brand nor its chain of defaults gives a value ([`roles.yaml`](files.md#rolesyaml)). A library's role with no value is found at the piece's lock, not in the component. Where the brand, or a base below it, names the library, the part takes no finding: that brand's `library-role-missing`, or its library's own finding where a default does not hold, reports it.
 
-It finds these when it computes the scene: a division by zero, `:index` or `:count` in a component that is no item, a path to an exposed part, a point or an item that is missing, and a loop. A value that cannot be computed is zero. The check reports each problem as a finding (*checks*).
+It finds these when it computes the scene: a division by zero, `:index` or `:count` in a component that is no item, a path to an exposed part, a point, an item or an end that is missing, and a loop. A value that cannot be computed is zero. The check reports each problem as a finding (*checks*).
 
 ## Layout operators and drawing primitives
 
-The engine knows the five primitives, the two ways to place a component and the one way to repeat one, below. It has no other primitive and no other layout operator.
+The engine knows the five primitives, the two ways to place a component, the one way to repeat one and the connector tool, below. It has no other primitive and no other layout operator.
 
 ### Primitives
 
@@ -366,12 +370,13 @@ A primitive's properties lie in its own mapping, under SVG's names.
 | `box` | `fill`, `stroke`, `stroke-width`, `rx` | a rectangle in its frame |
 | `ellipse` | `fill`, `stroke`, `stroke-width` | an ellipse in its frame |
 | `text` | `content`, `style` (both required), `fill`, `text-anchor` | the text of a field, in lines, each run in its own role and paint |
-| `line` | `stroke` (required), `stroke-width` | a straight line from `x1 y1` to `x2 y2` |
+| `line` | `stroke` (required), `stroke-width`, `marker-start`, `marker-end` | a straight line from `x1 y1` to `x2 y2`, or a connector between its component's ends |
 | `image` | `produced` (required) | the picture of a produced output of the piece |
 
 - **A paint,** `fill` or `stroke`, is a colour role's token path, `:colour.<member>`, or a switch. `stroke-width` and `rx` are formulas that give a length.
 - **A text** shows the field `content` names, in the typography role `style` names. A text that shows a field of runs draws each run in the role and the paint its style chooses ([Switches](#switches)). Its height is always its measured text's: a text that gives a `height` is reported as a value with two owners. With a `width`, its lines are broken to that width; without one, each paragraph is one line, and the text is as wide as its widest. `text-anchor` is `start`, the default, `middle` or `end`: where each line stands in the text's width.
-- **A line's frame** comes from its ends: it starts at the lesser of the two `x` and of the two `y`, and is as wide and as tall as the distance between them.
+- **A line's frame** comes from its ends: it starts at the lesser of the two `x` and of the two `y`, and is as wide and as tall as the distance between them. A connector's frame holds every point of its route.
+- **An arrowhead,** `marker-start` or `marker-end`, is `none`, the default, or `arrow`, or a switch. It is drawn at that end of the line, pointing away from it, in the line's stroke.
 - **An image** shows the produced output that the field `produced` names (*outputs*). It needs a `width`. Where it gives no `height`, its height keeps the picture's proportions. The picture is drawn whole, centred, as large as its frame allows, and its points are mapped into the frame the same way. The variants of one picture share one pixel size and the same points, and the engine reads the first variant key in order. An output the piece lacks is not drawn, and is reported.
 
 ### Placing a component: `use` and `slot`
@@ -382,7 +387,7 @@ A primitive's properties lie in its own mapping, under SVG's names.
 
 ### Repeating over a list: `row` and `column`
 
-A `repeat` part draws a component for each item of a list field, in the content's order. Each item is drawn by the component its own `use` names, else by the one its list's component field names, else by `draw` ([Lists](#lists)). An item that is not a mapping, repeats an id, or names no component, is reported and left out. It takes no place among the items drawn, so `:index` and `:count` do not count it, and its trace id keeps its place in the content's list. `colour` gives the items' default colour family.
+A `repeat` part draws a component for each item of a list field, in the content's order. **What draws an item** is the component its own `use` names, else the one its list's component field names, else `draw` ([Lists](#lists)). An item that is not a mapping, repeats an id, or names no component, is reported and left out. It takes no place among the items drawn, so `:index` and `:count` do not count it, and its trace id keeps its place in the content's list. `colour` gives the items' default colour family.
 
 The part's *layout operator*, `row` or `column`, lays the items along a line, across or down. Its settings take the names of CSS flexible layout:
 
@@ -395,6 +400,53 @@ The part's *layout operator*, `row` or `column`, lays the items along a line, ac
 
 - **The part's own size,** where it gives none, is what its items ask for: along the line, their sizes and the gaps; across, the largest.
 - **In the tests' figure,** where `@space.2` is 8 px, `tests/steps` lays three steps with `row: {gap: "=gap", sizes: equal, align-items: stretch}` in a row 608 px wide. Each step is 197.33 px wide, and as tall as the tallest.
+- **Over a list of ties,** the part takes neither `row` nor `column`. Each tie lies in the part's whole frame, by default the component's, and is drawn between its ends ([Ties and connectors](#ties-and-connectors)). A tie whose component takes no ends is left out.
+
+### Ties and connectors
+
+A *tie* is an item that its pattern draws as a connector between two other items, its *ends* (DEC-011 point 1). The pattern declares the list of ties and its two end fields under `lists`, and draws it with a `repeat` part of its own ([Lists](#lists)). Content names each end by a key path ([content files](files.md#content-files)).
+
+- **A component that takes ends** declares `ends: true`. Its pattern gives each tie it draws two ends, `start` and `end`: the element drawn for each end's item, or the point an end names. It declares no option `start` or `end`.
+- **Reading an end.** A formula reads an end as `{start}` or `{end}`, then a measure, in the tie's own frame. Nothing below an end may be read, since an end names no part.
+- **The connector tool** is a `line` part that gives `connect` in place of its ends: `straight`, or `corners`, or a switch. It runs from the start to the end, and never around anything (DEC-005 point 2).
+- **Where it meets an end.** It leaves each end's frame by the side that faces the other end. That is the left or the right side where the two frames lie further apart across than down, else the top or the bottom.
+- **Several ties on one side** of one item spread evenly along it. They are ordered by where the centres of their other ends lie along that side, then as their lists hold them.
+- **A point.** A tie that names a point ends at that point, which its item's component exposes ([Exposes](#exposes)).
+- **With corners,** the connector leaves and meets each end square to its side, and turns twice, halfway between them. Where the two ends lie in one line, it is straight.
+- **Found once.** An end is the element drawn for its item, wherever a component below the pattern draws it. It is found where that item is drawn exactly once, on the tie's page.
+- **Left out.** A tie whose end is not found, or that does not lie on one page with both its ends, is left out and reported. The rest of its list is drawn.
+- **Computed like any value.** The frames of the ends are computed in the order the references give, and a loop through them is refused ([How the engine computes a scene](#how-the-engine-computes-a-scene)).
+- **Items that overlap.** Two ends whose items overlap in the drawing are drawn as they lie, and are no finding. The connector routes around nothing, so the drawing shows the overlap as it is.
+
+A pattern that ties its steps, and an arrow that draws each tie:
+
+```yaml
+# The pattern
+lists:
+  links:
+    ends: [from, to]
+parts:
+  links:
+    repeat: links
+    draw: piece/arrow
+# piece/arrow
+ends: true
+parts:
+  arrow:
+    line: {stroke: line, marker-end: arrow}
+    connect: corners
+```
+
+Content then ties two steps. Inside a flow mapping, YAML reads `[` as the start of a list, so a key path there takes quotes. In a block mapping it needs none:
+
+```yaml
+links:
+  - {id: plan-build, from: {item: "steps[plan]"}, to: {item: "steps[build]"}}
+  - id: build-note
+    from: {item: "steps[build]"}
+    to:
+      item: steps[note]
+```
 
 ### What an element asks for, and what it gets
 
@@ -415,7 +467,13 @@ The *scene* is every element's final frame, values and source, for one language.
 
 The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, `seam` (the version of the seam its plugins read), `pages` (the trace ids of its pages, in order: a top that is a page alone, what a slot of pages places, or each page of a top whose layouts are its pages' forms) and `children`. Each element holds its `type`, `group` or a primitive's kind, and its `id`, its trace id. It holds its frame, `x y width height`, relative to its parent, in px, rounded to 1/100 px, half away from zero. Then come its properties, `sources`, where each came from, and on a group its `children`, in drawing order.
 
-A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. A `text` adds the rest of what [Text](#text) describes:
+A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. A line adds `marker-start` and `marker-end` where it draws an arrowhead there. A tie's connector adds these:
+
+- **`points`:** every point of its route, where it turns. Its ends are its first and last points.
+- **`attached`:** for each end, `start` and `end`, the trace id of the element it meets, with the `side` it meets, or the image part with the `point` it ends at.
+- **Its ends' sources:** the end fields that name them, such as `content:body.links[plan-build].from`.
+
+A `text` adds the rest of what [Text](#text) describes:
 
 - **The text's own:** `text-anchor`, `line-height`, the greatest among the typography roles its runs take, `text`, its runs' texts joined, and `measured-height`, the number of its lines times its line height, with `overflow: true` where it overflows.
 - **`paragraphs`:** the text split at its line feeds, each paragraph a list of its runs' parts. A run that goes on past a line feed is a run of each paragraph it reaches. Each holds its `text`, its paint `fill`, its typography role `style`, its `font-family`, `font-size` and `font-weight`, the `fonts` that measured it, each family's file and its sha256, how it was `measured`, and the `sources` of each. A text of one run holds one run in each paragraph.

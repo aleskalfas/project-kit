@@ -89,7 +89,16 @@ from _lib.findings import (
     as_read,
 )
 from _lib.findings import loss_finding as _loss_finding
-from _lib.layout import LAYOUT, RUN_KEYS, RUNS, PageForms, page_forms, run_problem
+from _lib.layout import (
+    LAYOUT,
+    RUN_KEYS,
+    RUNS,
+    PageForms,
+    key_path,
+    page_forms,
+    run_problem,
+    through,
+)
 from _lib.libraries import (
     FOLDER,
     FOUNDATIONS,
@@ -592,10 +601,13 @@ def _at_lock(finding: Finding, piece: pl.Piece) -> Finding:
 
 
 def default_clashes(held: Held, library: Library, env: pl.LibraryEnv) -> list[Finding]:
-    """Each arrangement field of a pattern of the library version that its list's default
-    component, the `draw` of a part that repeats over the list, also declares as a field or
-    an option (DEC-010 points 2 and 9). The pattern chose both, so the clash is the
-    pattern's to mend, at the arrangement field in its file. Each component of the version
+    """What each pattern of the library version declares for a list against the list's
+    default component, the `draw` of a part that repeats over the list, a drawing of a
+    top's layout included. An arrangement field or an end field the default component also
+    declares as a field or an option is read by neither (`arrangement-clash`, `end-clash`;
+    DEC-010 points 2 and 9, DEC-011 point 8). A list of ties whose default component takes
+    no ends draws no tie by default (`tie-default`, DEC-011 points 1 and 8). The pattern
+    chose both, so each is the pattern's to mend, in its file. Each component of the version
     is read through `env`, which reads the default component from the versions the library
     is checked alone with. A component that cannot be read, and a default that names none,
     are the scene's to report."""
@@ -607,45 +619,84 @@ def default_clashes(held: Held, library: Library, env: pl.LibraryEnv) -> list[Fi
         component = ctx.component(f"{library.name}/{path.stem}")
         if component is None:
             continue
-        for listed, draw, name, what in _arrangement_claimed(ctx, component):
-            found.append(
-                Finding(
-                    "arrangement-clash",
-                    FAILS,
-                    f"`{name}` is an arrangement field of `{listed}`, and `{draw}`, which "
-                    f"draws its items by default, declares it as {what}: neither reads it on "
-                    "an item",
-                    file=path.relative_to(held.root).as_posix(),
-                    where=f"lists.{listed}.arrangement.{name}",
-                    fix="rename the arrangement field, or draw the list with another "
-                    "component, in a version of its own",
-                    library=library.label,
-                )
+        file = path.relative_to(held.root).as_posix()
+
+        def fails(code: str, where: str, message: str, fix: str, file: str = file) -> Finding:
+            return Finding(
+                code, FAILS, message, file=file, where=where, fix=fix, library=library.label
             )
+
+        for at, part, listed, draw, drawn, declared in _list_defaults(ctx, component):
+            for name in declared.arrangement:
+                what = _declared_as(drawn, name)
+                if what:
+                    found.append(
+                        fails(
+                            "arrangement-clash",
+                            f"{at}lists.{listed}.arrangement.{name}",
+                            f"`{name}` is an arrangement field of `{listed}`, and `{draw}`, which "
+                            f"draws its items by default, declares it as {what}: neither reads "
+                            "it on an item",
+                            "rename the arrangement field, or draw the list with another "
+                            "component, in a version of its own",
+                        )
+                    )
+            if declared.ends is None:
+                continue
+            if not drawn.takes_ends:
+                found.append(
+                    fails(
+                        "tie-default",
+                        f"{at}parts.{part}.draw",
+                        f"`{draw}` draws the ties of `{listed}` by default, and takes no ends: "
+                        "every item of a list of ties is a tie",
+                        "draw the list with a component that takes ends, in a version of its own",
+                    )
+                )
+            for name in declared.ends:
+                what = _declared_as(drawn, name)
+                if what:
+                    found.append(
+                        fails(
+                            "end-clash",
+                            f"{at}lists.{listed}.ends",
+                            f"`{name}` is an end field of `{listed}`, and `{draw}`, which draws "
+                            f"its ties by default, declares it as {what}: neither reads it, so "
+                            "no tie it draws has that end",
+                            "rename the end field, or draw the list with another component, "
+                            "in a version of its own",
+                        )
+                    )
     return found
 
 
-def _arrangement_claimed(
+def _list_defaults(
     ctx: layout.Context, component: layout.Component
-) -> Iterator[tuple[str, str, str, str]]:
-    """Each arrangement field of a list of `component` that the `draw` of a part that
-    repeats over the list declares as a field or an option: the list, the draw, the field,
-    and which the draw declares it as."""
-    for part in component.parts.values():
-        listed, draw = part.spec.get("repeat"), part.spec.get("draw")
-        if part.kind != "repeat" or not isinstance(listed, str):
-            continue
-        if listed not in component.list_fields:
-            continue
-        declared = component.list_fields[listed]
-        drawn = ctx.component(draw) if isinstance(draw, str) else None
-        if drawn is None:
-            continue
-        for name in declared.arrangement:
-            if name in drawn.fields:
-                yield str(listed), str(draw), name, "a field"
-            elif name in drawn.options:
-                yield str(listed), str(draw), name, "an option"
+) -> Iterator[tuple[str, str, str, str, layout.Component, layout.ListFields]]:
+    """Each list that `component`, or the drawing of one of its layouts, declares fields for
+    and a part of it repeats over with a default component that can be read: the prefix of
+    the key path where what it declares lies, the part, the list, the default's name, the
+    default, and what the list declares."""
+    drawings = [("", component)] + [
+        (f"layouts.{name}.", drawing) for name, drawing in sorted(component.drawings.items())
+    ]
+    for at, drawing in drawings:
+        for part in drawing.parts.values():
+            listed, draw = part.spec.get("repeat"), part.spec.get("draw")
+            if part.kind != "repeat" or not isinstance(listed, str):
+                continue
+            if listed not in drawing.list_fields:
+                continue
+            drawn = ctx.component(draw) if isinstance(draw, str) else None
+            if drawn is not None:
+                yield at, part.name, str(listed), str(draw), drawn, drawing.list_fields[listed]
+
+
+def _declared_as(component: layout.Component, name: str) -> str:
+    """What `component` declares `name` as: a field, an option, or nothing."""
+    if name in component.fields:
+        return "a field"
+    return "an option" if name in component.options else ""
 
 
 def kind_of(inside: str) -> str | None:
@@ -989,6 +1040,15 @@ class _Listed:
     component: str | None
 
 
+@dataclasses.dataclass(frozen=True)
+class _Reader:
+    """What reads a mapping of the content, as an end's key path walks it: the fields its
+    component, or a top's layout, declares, and the lists it draws."""
+
+    fields: frozenset[str]
+    repeats: Mapping[str, _Listed]
+
+
 class _Fields:
     """Reads content against the `fields` of the components it fills: the fixed subset of
     JSON Schema format 1 takes (`type`, `properties`, `required`, `items`, `minItems`,
@@ -1016,10 +1076,11 @@ class _Fields:
     ) -> None:
         """A mapping that places the component `use`; where it is an item of the list at
         `list_at`, `listed` says what that list declares. An item's keys are its
-        component's fields and options, the reserved keys, and its list's arrangement
-        fields, each of which takes a word it declares. A key that both its component and
-        its list declare is read by neither (DEC-010 point 2): it is no finding in the
-        content, and lies at the lock (`_clash`)."""
+        component's fields and options, the reserved keys, its list's arrangement fields,
+        each of which takes a word it declares, and, in a list of ties, its list's end
+        fields (`_tie`). A key that both its component and its list declare is read by
+        neither (DEC-010 point 2, DEC-011 point 1): it is no finding in the content, and lies
+        at the lock (`_clash`)."""
         try:
             component = self.env.component(use)
         except KeyError:
@@ -1029,14 +1090,20 @@ class _Fields:
         repeats = self._repeats(component, (use,))
         own = {*(fields.get("properties") or {}), *options}
         arranged = listed.fields.arrangement if listed is not None else {}
-        claimed = own & set(arranged)
-        if arranged:
+        keys = set(listed.fields.keys) if listed is not None else set()
+        claimed = own & keys
+        if keys:
             lead = f"neither `{use}` nor the list `{list_at}` declares a key"
         else:
             lead = f"`{use}` takes no field or option"
-        self._keys(value, {*own, *arranged, *names.RESERVED_PLACING_KEYS}, path, lead)
+        self._keys(value, {*own, *keys, *names.RESERVED_PLACING_KEYS}, path, lead)
         for name in sorted(claimed):
-            self._clash(use, name, path if name in value else "", list_at, arranged[name].default)
+            outcome = (
+                f"the arrangement field takes its default `{arranged[name].default}`"
+                if name in arranged
+                else "the tie lacks that end, and is left out"
+            )
+            self._clash(use, name, path if name in value else "", list_at, outcome)
         self._words(value, path, {n: o for n, o in options.items() if n not in claimed}, use)
         for name, each in arranged.items():
             if name in value and name not in claimed and value[name] not in each.words:
@@ -1076,12 +1143,13 @@ class _Fields:
             f"`{given}` is no word of {what} ({', '.join(map(str, words))}){hint}",
         )
 
-    def _clash(self, use: str, key: str, carried: str, list_at: str, default: str) -> None:
+    def _clash(self, use: str, key: str, carried: str, list_at: str, outcome: str) -> None:
         """A key that both the component `use` and the list at `list_at` declare (DEC-010
-        points 2 and 9). It lies at the piece's lock, which combines the two: where the
-        item at `carried` carries it, it fails; otherwise it states a fact, so the content's
-        author learns of it before writing one, and `_clashes_once` keeps the fact only
-        where no item carries the key."""
+        points 2 and 9, DEC-011 point 1), with what follows on an item that carries it:
+        `outcome`. It lies at the piece's lock, which combines the two: where the item at
+        `carried` carries it, it fails; otherwise it states a fact, so the content's author
+        learns of it before writing one, and `_clashes_once` keeps the fact only where no
+        item carries the key."""
         lock = PurePosixPath(self.file).with_name(pl.PIECE_FILE).as_posix()
         both = f"under this lock, `{use}` and the list `{list_at}` both declare `{key}`"
         if carried:
@@ -1090,7 +1158,7 @@ class _Fields:
                 FAILS,
                 f"{both}, which the item `{carried}` carries in "
                 f"{PurePosixPath(self.file).name}: neither reads it, so `{use}` leaves it "
-                f"unfilled, and the arrangement field takes its default `{default}`",
+                f"unfilled, and {outcome}",
                 file=lock,
                 where="lock",
                 fix="take the key off the item, or move the lock to versions under which the "
@@ -1146,9 +1214,9 @@ class _Fields:
                 schema = {"type": "object", "properties": slots, "required": list(required)}
                 decl = (component.get("layouts") or {}).get(chosen)
                 parts = decl.get("parts") if isinstance(decl, Mapping) else None
-                repeats = (
-                    self._repeats({"parts": parts}, (use,)) if isinstance(parts, Mapping) else {}
-                )
+                lists = decl.get("lists") if isinstance(decl, Mapping) else None
+                drawing = {"parts": parts, "lists": lists}
+                repeats = self._repeats(drawing, (use,)) if isinstance(parts, Mapping) else {}
                 self._object(schema, page, at, schema, repeats, keys_checked=True)
 
     def _component_field(self, value: Any, path: str, list_at: str) -> None:
@@ -1219,7 +1287,13 @@ class _Fields:
             except KeyError:
                 continue  # the scene reports a component that does not exist, or cannot be read
             for theirs, ours in bound.items():
-                if theirs in placed and isinstance(ours, str):
+                # A list of ties is drawn only where its end fields are declared (DEC-011
+                # point 1): the component reports a part that passes one on.
+                if (
+                    theirs in placed
+                    and isinstance(ours, str)
+                    and placed[theirs].fields.ends is None
+                ):
                     inner = placed[theirs]
                     passed = bound.get(inner.component) if inner.component else None
                     given = passed if isinstance(passed, str) else None
@@ -1249,8 +1323,9 @@ class _Fields:
         checked as a list here, and its pages by `_pages`. Each item of a list that
         `repeats` names is read against the component that draws it: the one it names, else
         the one its list's component field names, else the list's default (DEC-010 point
-        1). A list's component field is read by `_component_field`. A key of `unread` is
-        read by neither the component nor the list, so it is judged at the lock alone."""
+        1); a tie's ends also by `_tie`, from `value`, the mapping that holds its list. A
+        list's component field is read by `_component_field`. A key of `unread` is read by
+        neither the component nor the list, so it is judged at the lock alone."""
         properties = schema.get("properties") or {}
         repeats = repeats or {}
         component_fields = {
@@ -1272,17 +1347,166 @@ class _Fields:
                 self._value(properties[key], item, at, root, items=False)
                 field = value.get(listed.component) if listed.component else None
                 named = field.get("use") if isinstance(field, Mapping) else None
+                reader = _Reader(frozenset(properties), repeats)
                 for place, entry in enumerate(item, start=1):
                     if isinstance(entry, Mapping):
                         use = entry.get("use", named if isinstance(named, str) else listed.draw)
+                        entry_at = f"{at}{_item(entry, place)}"
+                        if listed.fields.ends is not None:
+                            by_content = "use" in entry or isinstance(named, str)
+                            self._tie(entry, entry_at, use, by_content, listed, value, reader, path)
                         if isinstance(use, str):
-                            self.placed(use, entry, f"{at}{_item(entry, place)}", listed, at)
+                            self.placed(use, entry, entry_at, listed, at)
             elif key in component_fields:
                 self._component_field(item, at, _join(path, component_fields[key]))
             elif isinstance(item, Mapping) and isinstance(item.get("use"), str):
                 self.placed(item["use"], item, at)
             else:
                 self._value(properties[key], item, at, root)
+
+    def _tie(
+        self,
+        entry: Mapping[str, Any],
+        at: str,
+        use: Any,
+        by_content: bool,
+        listed: _Listed,
+        holder: Mapping[str, Any],
+        reader: _Reader,
+        holder_at: str,
+    ) -> None:
+        """A tie of a list of ties (DEC-011 points 1 to 3 and 8): a component content names
+        for it takes ends (`tie-component`); each end field gives `{item: <key path>}`, with
+        a point's name where it names one (`tie-shape`); each key path leads, from `holder`,
+        the mapping that holds the list, at `holder_at`, through what content holds and the
+        components that draw it, to an item (`tie-path`); and an end names no tie, the two
+        ends never one item, and neither leads through the other (`tie-ends`). A default
+        component that takes no ends is the pattern's to mend, and is judged there. Where an
+        end field is also a field or an option of the tie's component, the lock reports it
+        (`_clash`), and no end of it is read here."""
+        claimed: set[str] = set()
+        if isinstance(use, str):
+            try:
+                component = self.env.component(use)
+            except KeyError:
+                component = None  # the scene reports a component there is none of
+            if component is not None:
+                fields = component.get("fields")
+                properties = fields.get("properties") if isinstance(fields, Mapping) else None
+                claimed = {*(properties or {}), *(component.get("options") or {})}
+                if by_content and component.get("ends") is not True:
+                    self._fail(
+                        "tie-component",
+                        at,
+                        f"`{use}` takes no ends, and draws a tie of `{holder_at or 'the top'}`: "
+                        "every item of a list of ties is a tie",
+                    )
+        paths: dict[str, str] = {}
+        for field_name in listed.fields.ends or ():
+            if field_name in claimed:
+                continue
+            end_at = _join(at, field_name)
+            end = entry.get(field_name)
+            if (
+                not isinstance(end, Mapping)
+                or not isinstance(end.get("item"), str)
+                or set(end) - set(layout.END_KEYS)
+                or ("point" in end and not names.is_name(end["point"]))
+            ):
+                given = "nothing" if end is None else f"`{end}`"
+                self._fail(
+                    "tie-shape",
+                    end_at,
+                    f"the end field `{field_name}` gives {given}: an end takes "
+                    "`{item: <key path>}`, with `point: <name>` where it ends at a point",
+                )
+                continue
+            reached = self._end_path(end["item"], holder, reader)
+            if isinstance(reached, str):
+                self._fail("tie-path", _join(end_at, "item"), f"`{end['item']}` {reached}")
+            elif reached:
+                self._fail(
+                    "tie-ends",
+                    _join(end_at, "item"),
+                    f"`{end['item']}` names a tie: a tie joins two items, never a line",
+                )
+            else:
+                paths[field_name] = end["item"]
+        if len(paths) == 2:
+            first, second = paths.values()
+            if through(first, second):
+                same = "names one item" if first == second else "leads through the other"
+                self._fail(
+                    "tie-ends",
+                    at,
+                    f"one of the tie's ends {same}: `{first}` and `{second}`; a tie joins two "
+                    "items, neither inside the other",
+                )
+
+    def _end_path(self, text: str, holder: Mapping[str, Any], reader: _Reader) -> str | bool:
+        """Where the key path `text` leads from `holder`, read by `reader` (DEC-011 point
+        3): why it leads to no item, else whether that item is a tie. Each key is a field
+        of the component that draws the mapping, where one does; each step into a list
+        names an item by its id, and only there. A mapping no component draws is read by
+        its keys alone."""
+        steps = key_path(text)
+        if steps is None:
+            return (
+                "is no key path: the content file's keys joined by `.`, each item by its id "
+                "as `<list>[<id>]`"
+            )
+        mapping: Any = holder
+        current: _Reader | None = reader
+        tie = False
+        for place, (key, item_id) in enumerate(steps):
+            last = place == len(steps) - 1
+            if not isinstance(mapping, Mapping):
+                return f"steps into `{key}` below what is no mapping"
+            if current is not None and key not in current.fields:
+                close = nearest(key, sorted(current.fields))
+                hint = f"; did you mean `{close}`?" if close else ""
+                return f"names `{key}`, which no component on the way declares{hint}"
+            if key not in mapping:
+                return f"names `{key}`, which the content does not give"
+            value = mapping[key]
+            if item_id is None:
+                if isinstance(value, list):
+                    return f"steps into the list `{key}` with no id: name its item as `[<id>]`"
+                if last:
+                    return f"ends at `{key}`, which is no item of a list"
+                mapping, tie = value, False
+                current = self._reader_of(value.get("use") if isinstance(value, Mapping) else None)
+                continue
+            if not isinstance(value, list):
+                return f"names the item `[{item_id}]` of `{key}`, which is no list"
+            entry = next(
+                (e for e in value if isinstance(e, Mapping) and e.get("id") == item_id), None
+            )
+            if entry is None:
+                return f"names `[{item_id}]`, which the list `{key}` does not hold"
+            drawn = current.repeats.get(key) if current is not None else None
+            tie = drawn is not None and drawn.fields.ends is not None
+            if drawn is None:
+                use = None
+            else:
+                field = mapping.get(drawn.component) if drawn.component else None
+                named = field.get("use") if isinstance(field, Mapping) else None
+                use = entry.get("use", named if isinstance(named, str) else drawn.draw)
+            mapping, current = entry, self._reader_of(use)
+        return tie
+
+    def _reader_of(self, use: Any) -> _Reader | None:
+        """What reads a mapping that places the component `use`: its fields and the lists it
+        draws; None where it names no component that can be read."""
+        if not isinstance(use, str):
+            return None
+        try:
+            component = self.env.component(use)
+        except KeyError:
+            return None
+        fields = component.get("fields")
+        properties = fields.get("properties") if isinstance(fields, Mapping) else None
+        return _Reader(frozenset(properties or {}), self._repeats(component, (use,)))
 
     def _value(
         self, schema: Any, value: Any, path: str, root: Mapping[str, Any], *, items: bool = True
