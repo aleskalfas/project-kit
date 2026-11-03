@@ -159,7 +159,7 @@ Defined in [TERM-fixer](../glossary.md#term-fixer--fixer).
 
 **Why:** A merge may leave [artefacts](../../core/glossary.md#term-artefact--artefact) of the [default branch](../../core/glossary.md#term-default-branch--default-branch) out of date, and a person must [answer](../../core/glossary.md#term-answer--answer) each one. An agent that owns the [artefact type](../../core/glossary.md#term-artefact-type--artefact-type) of an out-of-date artefact can propose its answer, but only where the person chose to let it. So each fixer starts only where the [project](../../core/glossary.md#term-project--project) granted it, and it only proposes ([DEC-056](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md)).
 
-A fixer is an agent a [capability](../../core/glossary.md#term-capability--capability), or the project, declares for one artefact type. After a merge, a command starts each fixer the project granted on the default branch's out-of-date artefacts of its type. The fixer proposes an answer for each artefact, and a person decides each answer (DEC-056 points 1 to 3).
+A fixer is an agent a [capability](../../core/glossary.md#term-capability--capability), or the project, declares for one artefact type. After a merge, a command starts each fixer the project granted on the default branch's out-of-date artefacts of its artefact type. The fixer proposes an answer for each artefact, and a person decides each answer (DEC-056 points 1 to 3).
 
 **Attributes:**
 
@@ -168,8 +168,8 @@ A fixer is an agent a [capability](../../core/glossary.md#term-capability--capab
 
 **Relations:**
 
-- A capability declares it for the artefact types it owns, and the project may declare one for any type (DEC-056 point 1).
-- A command starts it on the artefacts of its type that the default branch left out of date, and on nothing else ([DEC-056 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)).
+- A capability declares it for the artefact types it owns, and the project may declare one for any artefact type (DEC-056 point 1).
+- A command starts it on the default branch's out-of-date artefacts of its artefact type, and on nothing else ([DEC-056 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)).
 
 **States:** A fixer is unanswered until the person is asked about it. The person's reply grants it or refuses it, and a revoke records a refusal. A grant counts once its [change](../../core/glossary.md#term-change--change) is on the default branch (DEC-056 point 2).
 

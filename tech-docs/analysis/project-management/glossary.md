@@ -235,7 +235,7 @@ TERM-fixer:
   name: fixer
   noun-forms: [fixers]
   status: active
-  definition: "agent declared for one artefact type, which a command starts, where the project granted it, to propose answers for out-of-date artefacts of that type"
+  definition: "agent declared for one artefact type, which a command starts, where the project granted it, to propose answers for out-of-date artefacts of that artefact type"
   pkit:
     friction:
       anchors:
@@ -405,7 +405,7 @@ TERM-ownership:
   name: ownership
   noun-forms: [ownerships]
   status: active
-  definition: "instance's mark on an issue it owns, which under a topology names its seat and clone's key, counting until it lapses or the seat's release"
+  definition: "instance's mark on an owned issue, naming under a topology a seat and clone's key, counting until the mark lapses or that seat is released"
   pkit:
     friction:
       anchors:
