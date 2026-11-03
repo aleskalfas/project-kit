@@ -347,7 +347,7 @@ libraries:
 
 The released versions and the record lie outside the version being built, and each library's apart from every other's. So a release changes no file of the version being built. Only whoever maintains the capability releases a version, by a release of its own. A release of the capability releases none (DEC-013 point 1).
 
-Every change to a version the capability ships reaches a project that brings it in. So it ships as at least a patch of the capability, as [`libraries/README.md`](libraries/README.md) asks of whoever changes it (DEC-013 point 4).
+Every change to a version the capability ships reaches a project that brings it in. So it comes with a new version of the capability, at least a patch (DEC-013 point 4).
 
 ### The foundations
 
