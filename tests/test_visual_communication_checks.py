@@ -1,9 +1,10 @@
 """The check's findings (visual-communication DEC-002 point 4, DEC-003 point 9, DEC-004
 points 8, 9 and 11, DEC-005 points 9 and 14): the lock, the ids and fields of the content,
-contrast as drawn, the losses a renderer's declaration predicts, the document the validator
-reads, a component it cannot read, a top that names no component, the notations a piece
-names and the concepts its content names (DEC-004 point 10), and an error it does not
-expect on one piece. The command around it is `test_visual_communication_check.py`."""
+an item of a list a part passes on under another name read against the component that
+draws it, contrast as drawn, the losses a renderer's declaration predicts, the document the
+validator reads, a component it cannot read, a top that names no component, the notations
+a piece names and the concepts its content names (DEC-004 point 10), and an error it does
+not expect on one piece. The command around it is `test_visual_communication_check.py`."""
 
 from __future__ import annotations
 
@@ -797,3 +798,67 @@ def test_a_lock_that_lacks_a_notation_the_piece_names_is_incomplete(tmp_path: Pa
         "lock-incomplete",
         "the lock does not name `test-notation`, which the piece uses",
     )
+
+
+# --- a list a part passes on under another name -------------------------------------------------
+
+LISTED = {"type": "array", "items": {"type": "object"}}
+
+
+def passing(about: str, passed: dict[str, str], fields: dict[str, Any], use: str) -> str:
+    """A local component whose part `p` places `use`, passing each of its `fields` on to
+    it under the name `passed` gives it."""
+    return yaml_text(
+        bound(
+            "component",
+            status="experimental",
+            about=about,
+            fields={"type": "object", "properties": fields},
+            parts={"p": {"use": use, "fields": passed, "width": "=:width"}},
+            preferred={"height": "=p.height"},
+        )
+    )
+
+
+def test_an_item_of_a_list_passed_on_is_read_against_the_component_that_draws_it(
+    tmp_path: Path,
+) -> None:
+    """The flow passes its `stages` on to a frame as `rows`, which passes them on to the
+    steps as `steps`. A stage drawn by the shot passes its `shots` on to the callout as
+    `pictures`."""
+    root = drawing_project(tmp_path)
+    components = root / PIECE_FOLDER / "components"
+    write(
+        components / "flow.yaml",
+        passing("Stages.", {"rows": "stages"}, {"stages": LISTED}, "piece/frame"),
+    )
+    write(
+        components / "frame.yaml",
+        passing("Rows.", {"steps": "rows"}, {"rows": LISTED}, "tests/steps"),
+    )
+    point = {"type": "object", "properties": {"item": {}, "point": {}}}
+    shot = {"shots": LISTED, "says": {"type": "string"}, "at": point}
+    passed = {"pictures": "shots", "label": "says", "at": "at"}
+    write(components / "shot.yaml", passing("A shot.", passed, shot, "tests/callout"))
+    note = {
+        "id": "note",
+        "use": "piece/shot",
+        "shots": [{"id": "square"}, {"outptu": "square"}],
+        "says": "Here",
+        "at": {"item": "square", "point": "tip"},
+    }
+    stages = [{"id": "plan", "haed": "A"}, {"head": "B", "extar": 1}, note]
+    write_content(root, body={"use": "piece/flow", "stages": stages})
+
+    found = checks.content_findings(project_of(root))
+
+    assert [(f.code, f.where) for f in found] == [
+        ("content-key", "body.stages[plan].haed"),
+        ("content-required", "body.stages[plan].head"),
+        ("content-key", "body.stages#2.extar"),
+        ("content-required", "body.stages[note].shots[square].output"),
+        ("content-key", "body.stages[note].shots#2.outptu"),
+        ("content-required", "body.stages[note].shots#2.output"),
+    ]
+    assert found[0].message == "`tests/card` takes no field or option `haed`; did you mean `head`?"
+    assert {f.file for f in found} == {CONTENT}

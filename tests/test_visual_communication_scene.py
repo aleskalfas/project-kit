@@ -12,7 +12,10 @@ produced picture with a label at the point the picture exposes.
 - each property's source, colours kept as role names, and an image holding its
   variants by key and its points;
 - a text's record: lines, line height, measured height, font file and hash;
-- a missing font, or a character no family measures, refused before layout.
+- a missing font, or a character no family measures, refused before layout;
+- under a part that passes a list on under another name: each content source names the
+  keys the content file writes, and a field no part passes on is the placing
+  component's.
 """
 
 from __future__ import annotations
@@ -22,7 +25,7 @@ from typing import Any
 
 import pytest
 
-from tests.visual_engine import FAMILY, FONT, draw, env, frame, text, top
+from tests.visual_engine import FAMILY, FONT, block, draw, env, frame, text, top
 
 CONTENT = {
     "body": {
@@ -259,3 +262,91 @@ def test_a_character_no_family_measures_refuses_the_scene_naming_it() -> None:
 
     with pytest.raises(text.MissingGlyph, match=r"U\+4E2D.*figure/caption"):
         figure(content)
+
+
+# --- a list a part passes on under another name ---------------------------------------------
+
+LISTED = {"type": "array", "items": {"type": "object"}}
+
+#: A flow that passes its `stages` on to the steps as `steps`, and a stage that passes its
+#: `shots`, `says` and `at` on to the callout as `pictures`, `label` and `at`.
+PASSING = {
+    "lab/flow": block(
+        {"p": {"use": "tests/steps", "fields": {"steps": "stages"}, "width": "=:width"}},
+        fields={"stages": LISTED},
+        preferred={"height": "=p.height"},
+    ),
+    "lab/shot": block(
+        {
+            "p": {
+                "use": "tests/callout",
+                "fields": {"pictures": "shots", "label": "says", "at": "at"},
+                "width": "=:width",
+            }
+        },
+        fields={"shots": LISTED, "says": {"type": "string"}, "at": {"type": "object"}},
+        preferred={"height": "=p.height"},
+    ),
+}
+
+STAGES = {
+    "body": {
+        "use": "lab/flow",
+        "stages": [
+            {"id": "plan", "head": "Plan the work"},
+            {"head": "Build it"},
+            {
+                "id": "note",
+                "use": "lab/shot",
+                "shots": [{"id": "square", "output": "square"}],
+                "says": "Here",
+                "at": {"item": "square", "point": "tip"},
+            },
+        ],
+    },
+    "caption": "Three stages, passed on to the steps.",
+}
+
+
+def test_a_source_under_a_part_that_passes_a_list_on_names_the_keys_the_content_writes() -> None:
+    result = figure(STAGES, components=PASSING)
+
+    assert result.findings == []
+    sources = {}
+    for trace, key in (
+        ("steps[plan]/head", "text"),
+        ("steps#2/head", "text"),
+        ("steps[note]/p/pictures[square]/image", "output"),
+        ("steps[note]/p/label", "text"),
+        ("steps[note]/p", "options.at"),
+    ):
+        element = result.scene.find(f"figure/body/p/{trace}")
+        assert element is not None, trace
+        sources[trace] = element.sources[key]
+    assert sources == {
+        "steps[plan]/head": "content:body.stages[plan].head",
+        "steps#2/head": "content:body.stages#2.head",
+        "steps[note]/p/pictures[square]/image": "content:body.stages[note].shots[square].output",
+        "steps[note]/p/label": "content:body.stages[note].says",
+        "steps[note]/p": "content:body.stages[note].at",
+    }
+
+
+def test_a_field_the_content_leaves_out_names_its_key_and_one_no_part_passes_on_does_not() -> None:
+    """A field a part passes on that the content leaves out names the key the content file
+    would write. A field the part does not pass on has no key in the content file: the
+    component whose part placed it gives it, and gives nothing."""
+    shot = PASSING["lab/shot"]
+    parts = {"p": {**shot["parts"]["p"], "fields": {"pictures": "shots", "at": "at"}}}
+    unpassed = {**PASSING, "lab/shot": {**shot, "parts": parts}}
+    note = {key: value for key, value in STAGES["body"]["stages"][2].items() if key != "says"}
+    left_out = {**STAGES, "body": {"use": "lab/flow", "stages": [note]}}
+    label = "figure/body/p/steps[note]/p/label"
+
+    for content, components, source in (
+        (left_out, PASSING, "content:body.stages[note].says"),
+        (STAGES, unpassed, "default:lab/shot"),
+    ):
+        element = figure(content, components=components).scene.find(label)
+        assert element is not None
+        assert (element.properties["text"], element.sources["text"]) == ("", source)
