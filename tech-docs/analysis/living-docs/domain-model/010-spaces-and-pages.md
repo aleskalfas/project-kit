@@ -41,7 +41,7 @@ classDiagram
   DocumentationSpace : entry point
   DocumentationSpace : places
   class SpaceDefinition["Space definition"]
-  SpaceDefinition : pin on LDOC
+  SpaceDefinition : inheritance pin on LDOC
   SpaceDefinition : scope
   SpaceDefinition : own rules
   class Page
@@ -121,7 +121,7 @@ A space definition is the rule set that says which rules a documentation space's
 
 **Attributes:**
 
-- its pin on `LDOC`, whose major decides when a new major of `LDOC` starts binding through it ([DEC-001 point 2](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content))
+- its [inheritance pin](../../core/glossary.md#term-inheritance-pin--inheritance-pin) on `LDOC`, whose major decides when a new major of `LDOC` starts binding through it ([DEC-001 point 2](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content))
 - its scope, which selects the documentation space's pages (DEC-001 point 2)
 - the space's own rules, such as the user space's [rule](../../core/glossary.md#term-rule--rule) that [reader](../glossary.md#term-reader--reader) paths stay unbroken ([DEC-001 point 3](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#3-what-the-shared-rules-require))
 
@@ -244,7 +244,7 @@ A captured source is a file the project keeps for one text outside the repositor
 
 - Its file holds what identifies the text and the version read, and nothing else (DEC-001 point 4).
 - Nothing fetches the text it names (DEC-001 point 4).
-- A name no file captures is a dead anchor (DEC-001 point 4).
+- A name no file captures is a [dead anchor](../../core/glossary.md#term-dead-anchor--dead-anchor) (DEC-001 point 4).
 
 ## Unclassified document
 

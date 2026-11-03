@@ -89,7 +89,7 @@ A revalidation reviews some analysis [artefacts](../../core/glossary.md#term-art
 
 **Attributes:**
 
-- its trigger: planned, drift, scheduled, close or onboarding ([DEC-001 point 5](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation))
+- its trigger: `planned`, `drift`, `scheduled`, `close` or `onboarding` ([DEC-001 point 5](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation))
 - what it reviews against: a proposed design, or the code (DEC-001 point 5)
 - the artefacts it covers, each with its revalidation outcome (DEC-001 point 5)
 
