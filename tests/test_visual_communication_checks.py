@@ -1,7 +1,8 @@
 """The check's findings (visual-communication DEC-002 point 4, DEC-003 point 9, DEC-004
 points 8, 9 and 11, DEC-005 points 9 and 14): the lock, the ids and fields of the content,
 contrast as drawn, the losses a renderer's declaration predicts, the document the validator
-reads, a component it cannot read, a top that names no component, and an error it does not
+reads, a component it cannot read, a top that names no component, the notations a piece
+names and the concepts its content names (DEC-004 point 10), and an error it does not
 expect on one piece. The command around it is `test_visual_communication_check.py`."""
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from tests.test_visual_communication_pipeline import (
     PIECE,
     PIECE_FOLDER,
     drawing_project,
+    system_project,
     write_content,
     write_picture,
 )
@@ -575,6 +577,7 @@ def test_the_deadline_is_read_from_the_environment(value: str, deadline: float |
         ("libraries/tests/1.0.0/library.yaml", "library"),
         ("libraries/tests/1.0.0/components/card.yaml", "component"),
         ("libraries/foundations/1.0.0/roles.yaml", "roles"),
+        ("libraries/test-notation/1.0.0/notation.yaml", "notation"),
         ("pieces/flow/piece.yaml", "piece"),
         ("pieces/flow/content.en.yaml", "content"),
         ("pieces/flow/findings.yaml", "findings"),
@@ -663,3 +666,134 @@ def test_a_top_that_names_no_component_is_reported_at_its_place_in_the_piece(
     ]
     assert (level, checks.place(unknown)) == ("fails", f"{PIECE_FILE}#top")
     assert unknown.message == "the piece's top names no component `tests/nothing`"
+
+
+# --- notations and concepts ---------------------------------------------------------------------
+
+NOTATION = "visual/libraries/test-notation/1.0.0"
+SYSTEM_CONTENT = "visual/pieces/system/content.en.yaml"
+
+
+def failing(report: Any) -> list[tuple[str, str, str]]:
+    return [(f.code, checks.place(f), f.message) for f, level in report.judged if level == "fails"]
+
+
+def write_concepts(root: Path, **concepts: Any) -> None:
+    write(root / NOTATION / "notation.yaml", yaml_text(bound("notation", concepts=concepts)))
+
+
+def test_the_test_notation_and_the_concepts_its_content_names_fail_nothing(
+    tmp_path: Path,
+) -> None:
+    assert failing(checks.check(system_project(tmp_path))) == []
+
+
+def test_a_concept_that_maps_to_a_value_or_no_declared_family_fails_in_the_notation(
+    tmp_path: Path,
+) -> None:
+    root = system_project(tmp_path)
+    write_concepts(
+        root,
+        person={"colour": "#8250df"},
+        service="blue",
+        store={"colour": "teal"},
+    )
+
+    found = failing(checks.check(root))
+
+    never = "a concept maps to a colour family the foundations declare, never to a value"
+    families = "`neutral`, `blue`, `green`, `orange`, `purple`, `red`"
+    assert found == [
+        (
+            "concept-shape",
+            f"{NOTATION}/notation.yaml#concepts.person",
+            f"the concept `person` maps to `#8250df`, which is no colour family's name: {never}",
+        ),
+        (
+            "concept-shape",
+            f"{NOTATION}/notation.yaml#concepts.service",
+            f"the concept `service` is not `{{colour: <family>}}`: {never}",
+        ),
+        (
+            "concept-shape",
+            f"{NOTATION}/notation.yaml#concepts.store",
+            f"the concept `store` maps to `teal`, which is no colour family the foundations "
+            f"declare: {families}",
+        ),
+    ]
+
+
+def test_a_library_that_is_no_notation_or_holds_none_fails_once_where_it_lies(
+    tmp_path: Path,
+) -> None:
+    kind = system_project(tmp_path / "kind")
+    library = kind / NOTATION / "library.yaml"
+    library.write_text(library.read_text().replace("kind: notation", "kind: components"))
+    absent = system_project(tmp_path / "absent")
+    (absent / NOTATION / "notation.yaml").unlink()
+    unparsed = system_project(tmp_path / "unparsed")
+    write(unparsed / NOTATION / "notation.yaml", "concepts: [\n")
+
+    assert failing(checks.check(kind)) == [
+        (
+            "notation-kind",
+            f"{NOTATION}/library.yaml#kind",
+            "test-notation@1.0.0 is not a notation (`kind: components`), yet a piece names it "
+            "under `notations`",
+        )
+    ]
+    assert failing(checks.check(absent)) == [
+        (
+            "notation-unreadable",
+            f"{NOTATION}/notation.yaml",
+            "test-notation@1.0.0 holds no `notation.yaml`",
+        )
+    ]
+    # The binding pass reads the file, and reports it once.
+    assert [code for code, _, _ in failing(checks.check(unparsed))] == ["file-unreadable"]
+    alone = failing(checks.check(unparsed, only="system"))
+    assert [(code, place) for code, place, _ in alone] == [
+        ("notation-unreadable", f"{NOTATION}/notation.yaml")
+    ]
+
+
+def test_a_concept_the_piece_s_notations_do_not_hold_fails_in_the_content(
+    tmp_path: Path,
+) -> None:
+    root = system_project(tmp_path)
+    content = root / SYSTEM_CONTENT
+    text = content.read_text()
+    content.write_text(
+        text.replace("concept: test-notation/person", "concept: test-notation/actor").replace(
+            "concept: test-notation/store", "concept: other/store"
+        )
+    )
+
+    assert failing(checks.check(root)) == [
+        (
+            "unknown-concept",
+            f"{SYSTEM_CONTENT}#figure/body/items[store]",
+            "figure/body/items[store]: the concept `other/store` comes from `other`, a notation "
+            "the piece does not name under `notations`",
+        ),
+        (
+            "unknown-concept",
+            f"{SYSTEM_CONTENT}#figure/body/items[user]",
+            "figure/body/items[user]: the notation test-notation@1.0.0 holds no concept `actor`",
+        ),
+    ]
+
+
+def test_a_lock_that_lacks_a_notation_the_piece_names_is_incomplete(tmp_path: Path) -> None:
+    root = system_project(tmp_path)
+    piece = root / "visual/pieces/system/piece.yaml"
+    piece.write_text(piece.read_text().replace("  test-notation: 1.0.0\n", ""))
+
+    [finding] = checks.lock_findings(
+        pl.Held(root, "visual"), pl.read_piece(root, "visual", "system")
+    )
+
+    assert (finding.code, finding.message) == (
+        "lock-incomplete",
+        "the lock does not name `test-notation`, which the piece uses",
+    )

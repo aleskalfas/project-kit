@@ -1,0 +1,19 @@
+# A notation's concepts, `libraries/<notation>/<version>/notation.yaml` in the location
+# (visual-communication DEC-001 point 5, DEC-004 point 10): the concepts of one subject,
+# each mapped to `{colour: <family>}`, a colour family the foundations declare, never to a
+# value. Content names a concept read with the notation's name, `<notation>/<concept>`.
+#
+# The body below is the reference instance.
+
+pkit_schema: visual-communication:notation
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+concepts:
+  person:
+    colour: purple
+  service:
+    colour: blue
+  store:
+    colour: green

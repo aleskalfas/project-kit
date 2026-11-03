@@ -55,7 +55,7 @@ LIST = f"{FOLDER}/libraries.yaml"
 SHIPPED_LIBRARIES = SHIPPED / "libraries"
 
 #: The kinds of library format 1 reads.
-KINDS = ("components", "brand")
+KINDS = ("components", "brand", "notation")
 
 _SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 
