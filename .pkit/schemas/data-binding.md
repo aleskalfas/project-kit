@@ -133,13 +133,15 @@ Two things make these references differ from the references `pkit schemas valida
   }
   ```
 
-**The scope is the folder validated.** A namespace's pool of ids is the union of every file in scope bound to that namespace. In scope means under the folder that `pkit data validate` was pointed at.
+**The scope is the folder validated.** A namespace's pool of ids is the union of every file in scope bound to that namespace. In scope means under the folder that `pkit data validate` was pointed at. In `pkit validate`'s `data` member, the scope is every bound file of the repository.
 
 - **Isolation comes from what is validated.** Validate one instance's folder, and only its data is in scope. Validate a parent folder, and a shared file under it serves every instance below.
 - **A file's place within the scope changes nothing.** A reference never resolves by position, and no file shadows another, since the pool is a union.
 
 **What fails:**
 
+- **A value at a marked field that is no `[<namespace>:<id>]` token** is an error.
+- **A token in another namespace than the field's mark declares** is an error.
 - **A dangling id** is an error: the namespace has a pool in scope, and the id is not in it.
 - **A duplicate id** across the files of one namespace in scope is an error, since the pool is ambiguous.
 - **A namespace with no bound file in scope** gives a warning, and fails nothing. Data written step by step often names a sibling file that does not exist yet.

@@ -137,6 +137,7 @@ It refuses unknown keys at every level the backbone owns, and takes no version k
 A component's `package.yaml`: every field in use, and the `connections`, `docs` and `friction` blocks. Its required fields are those COR-017 asks of every component.
 
 - **Unknown keys** are refused at every level, as for the rest of the class, each with the nearest known key. The lifecycle reference's "Strict on unknown keys" records when and why the schema, first shipped permissive, became strict.
+- **What binds a file to it:** its place, as the `package.yaml` at the root of a component the project registers. Unlike the backbone's other shapes, it carries a `schema_version` of its own.
 - **What applies it:** `project_kit.package_validate`, with its repository checks. `pkit validate`'s `packages` pass runs it, and so does the pre-flight of `register` ([the lifecycle reference, "Validation: the package schema"](../lifecycle/README.md#validation-the-package-schema)).
 
 ### `rule-set.schema.json`
@@ -144,7 +145,7 @@ A component's `package.yaml`: every field in use, and the `connections`, `docs` 
 A rule-set file's front matter: the set's name, version, inheritance and scope, each rule's machine fields, and the parts of its rules that checks enforce.
 
 - **Unknown keys** are refused at every level. The shape carries no version key of its own.
-- **What applies it:** `pkit validate`'s `rule-sets` pass, `project_kit.rule_sets`. The pass adds the checks COR-051 asks for, and the container rule inside every rule ("Rule-set files" below).
+- **What applies it:** `pkit validate`'s `rule-sets` pass, `project_kit.rule_sets`. The pass adds the checks COR-051 asks for, and the container rule inside every rule. This area's README lists them, under "What the pass checks".
 
 ### `filler.schema.json`
 
@@ -295,7 +296,7 @@ Artefacts are looked for only in the declared places:
 - **With `location`,** `path` lies inside that entry of the capability's `docs.locations`. Without one, `path` is relative to the repository's root.
 - **A `type`** names the type the place's artefacts take ("A place may give a type" below).
 
-**Where a location lies** is read one way, by every reader of a capability's locations: the readers of the documentation roots, and this walk (`project_kit.docs_roots.read_capability_locations`).
+**Where a location lies** is read one way, by every reader of a capability's locations: the readers of the documentation roots, and this walk.
 
 - **A recorded location wins:** one recorded for the name in `.pkit/capabilities/<name>/project/docs-locations.yaml` ([COR-049](../decisions/core/COR-049-documentation-roots.md) point 5).
 - **Otherwise** the entry, `{path, root?}`, lies at `path` under the internal documentation root, or under the user root with `root: user`.
@@ -317,7 +318,7 @@ Artefacts are looked for only in the declared places:
 
 **A component's held documents are never artefacts** (COR-050 point 1). A capability may declare, in its `friction.held` list, folders of documents that belong to it but are not artefacts. An example is a log of the reviews it carried out, such as software-analysis's revalidation records.
 
-- **Its shape:** `{location, path}`. A held folder names the location it lies within, and is a folder there. Or it is a glob of folders at one depth whose last segment is plain, such as `*/revalidations`, never `**`.
+- **Its shape:** `{location, path, description?}`. A held folder names the location it lies within, and is a folder there. Or it is a glob of folders at one depth whose last segment is plain, such as `*/revalidations`, never `**`.
 - **How it is read:** it is resolved and matched as a capability's place is. A glob holds every file beneath each folder it names.
 - **What it takes out:** no place walks a file it holds, whether a root's, another component's, the project's or its own component's. So neither measure counts such a file.
 - **What discovery does with one:** it lists the file with its owner, and with whether `exclude` leaves it out. Its owner then counts an excluded file no more than the measures count an excluded artefact. Discovery reads only its front matter, where a friction block anywhere is a validation finding (below).
@@ -430,7 +431,7 @@ Each of these fails `pkit validate`, in either mode, and names its fix (COR-050 
 - **A place matching a synced copy** (`synced-place`): a declared place, the project's or a capability's, one of whose matches arrives as a copy. "Where artefacts are looked for" above says what a copy is. It is reported against its declaration, `.pkit/project/config.yaml` or the `package.yaml`, with a JSON Pointer to the entry. It names the synced matches, and is reported and counted as a place not walked is.
 - **A capability's surface entry not read.** `friction.surface` is not a list, or an entry in it is not a path or a glob. It is reported against its `package.yaml`, with a JSON Pointer to the entry, or to `friction.surface` itself. It is reported and counted as a place not walked is.
 - **A capability's held folder that holds nothing.** It holds nothing, so the places matching its documents read them as artefacts. It is reported whenever declared, dormant or not, against its `package.yaml` and a JSON Pointer to the entry. `pkit friction artefacts` names why, in the folder's `skipped`. It is one of these:
-  - one not in its shape `{location, path}`. It has no `location`, or a `**` or a glob in its last segment. Or its path leaves its location, or names a location `docs.locations` does not declare.
+  - one not in its shape `{location, path, description?}`. It has no `location`, or a `**` or a glob in its last segment. Or its path leaves its location, or names a location `docs.locations` does not declare.
   - `friction.held` not a list (`malformed-held`)
   - one leaving the repository through its location or a link (`held-outside-repository`)
 
@@ -454,7 +455,7 @@ Each of these fails `pkit validate`, in either mode, and names its fix (COR-050 
   - **With no answer file at all,** the project's answers have not moved. One error says so (`answers-not-moved`), in place of one for each artefact.
   - **In a file the project receives by sync,** it is a report, since the project cannot mend it there.
   - **Its entries** are also judged for a dangling deferral or revisit, and for a repeated one, below.
-- **A dangling deferral:** in such a block, a `deferred[].anchor` that matches no anchor of the artefact, by kind and value. The pointer carries the entry's index as written.
+- **A dangling deferral** (`dangling-deferral`): in such a block, a `deferred[].anchor` that matches no anchor of the artefact, by kind and value. The pointer carries the entry's index as written.
 - **A dangling revisit** (`dangling-revisit`): in such a block, a `revisited[].anchor` that no link of the artefact's places takes as a target.
 - **A revisit repeated** (`duplicate-revisit`): an entry for a target an earlier entry names. Each pointer carries the entry's index as written (COR-050 point 16).
   - **With no link at all:** where no place of the artefact declares a link, the entries are reported, never failed (below). That happens after the capability that declared it is uninstalled.
@@ -633,7 +634,7 @@ An answer on what is gone is reported, never failed ("What the pass warns of and
 
 A rule set (COR-051) is one Markdown file. Its front matter holds the data, and its body one section for each rule. `backbone/rule-set.schema.json` fixes the data's shape. `pkit validate` applies it in its `rule-sets` pass, `project_kit.rule_sets`.
 
-This section gives the file's shape: its front matter, its body and its ids. Where rule-set files lie, and how their rules bind, are in this area's README, under "Rule-set files".
+This section gives the file's shape: its front matter, its body and its ids. Where rule-set files lie, the checks of their pass, and how their rules bind, are in this area's README, under "Rule-set files".
 
 ### The front matter
 

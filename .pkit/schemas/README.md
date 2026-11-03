@@ -22,7 +22,7 @@ pkit:
         - src/project_kit/friction_discovery.py
         - src/project_kit/working_tree.py
         - .pkit/lifecycle/ownership.py
-      record: [COR-010, COR-017, COR-018, COR-019, COR-023, COR-029, COR-030, COR-047, COR-048, "COR-049#5", "COR-049#6", COR-051, COR-056, COR-068, COR-069, COR-070, ADR-056, ADR-057, ADR-075, ADR-076, ADR-077]
+      record: [COR-010, COR-017, COR-018, COR-019, COR-023, COR-029, COR-030, COR-047, COR-048, "COR-049#1", "COR-049#5", "COR-049#6", COR-051, COR-056, COR-068, COR-069, COR-070, ADR-056, ADR-057, ADR-075, ADR-076, ADR-077]
       artefact:
         - RS-OPS-019
         - RS-PM-001
@@ -30,6 +30,20 @@ pkit:
         - .pkit/schemas/backbone-files.md
         - .pkit/schemas/shape-patterns.md
         - .pkit/schemas/data-binding.md
+        - .pkit/schemas/backbone-files.md#what-holds-for-every-backbone-file-schema
+        - .pkit/schemas/backbone-files.md#the-schemas-that-ship
+        - .pkit/schemas/backbone-files.md#the-container
+        - .pkit/schemas/backbone-files.md#the-friction-block
+        - .pkit/schemas/backbone-files.md#answer-files
+        - .pkit/schemas/backbone-files.md#rule-set-files
+        - .pkit/schemas/shape-patterns.md#envelope-every-schema
+        - .pkit/schemas/shape-patterns.md#reusable-fragments-via-defs
+        - .pkit/schemas/data-binding.md#1-the-pkitschema-field-recommended-authoritative
+        - .pkit/schemas/data-binding.md#2-per-schema-bindsto-fallback
+        - .pkit/schemas/data-binding.md#resolution-order
+        - .pkit/schemas/data-binding.md#schema-version-cross-check
+        - .pkit/schemas/data-binding.md#cross-file-references-in-adopter-data-x-pkit-reference-namespace-cor-029
+        - .pkit/decisions/README.md#two-further-id-spaces
         - .pkit/cli/README.md#schemas-validate-path
         - .pkit/cli/README.md#data-validate-path
         - .pkit/cli/README.md#new-schema-owner-name---collection-form-form---collection-name-key---no-namespace
@@ -39,6 +53,7 @@ pkit:
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#rule-sets-generate
         - .pkit/cli/README.md#rule-set-commands
+        - .pkit/cli/README.md#friction-artefacts---at-rev---json
         - .pkit/cli/README.md#rule-sets-reach-path---at-rev---preview---json
         - .pkit/cli/README.md#rule-sets-altered---base-ref---head-rev---json
         - .pkit/decisions/README.md#the-acceptance-gate
@@ -50,9 +65,9 @@ pkit:
 
 # Schemas
 
-<a id="when-to-reach-for-schemas"></a>
+A schema is a YAML data file paired with a JSON Schema companion that declares its shape. Code reads its rules and data, kept apart from that code ([COR-018](../decisions/core/COR-018-capability-schemas.md)). This page holds the pair, its conventions, the references between schemas, the tooling, the layout, and what a rule set is beyond its file's shape. Three pages beside it hold the rest ("The pages beside this one" below).
 
-A schema is a YAML data file paired with a JSON Schema companion that declares its shape. Code reads its rules and data, kept apart from that code ([COR-018](../decisions/core/COR-018-capability-schemas.md)). This page holds the pair, its conventions, the references between schemas, the tooling and the layout. Three pages beside it hold the rest ("The pages beside this one" below).
+<a id="when-to-reach-for-schemas"></a>
 
 Why schemas exist, and how people use them, is in [the schemas guide](https://github.com/aleskalfas/project-kit/blob/latest/docs/schemas/README.md).
 
@@ -99,7 +114,7 @@ source:             # optional — only when the schema distills from an externa
 
 - **`schema_version: <int>` is the first key, always.** The integer is the schema's own version, and the code that reads the schema switches on it when the shape changes.
 - **`source:` is an optional block** that records where the schema came from, when it distills an outside specification. An example is a methodology kept in another repository. Leave the block out when the schema is its own source of truth.
-- **Field names use `snake_case`,** as the methodology's other YAML does, such as `schema_version` and `requires_backbone`.
+- **Field names use `snake_case`,** such as `schema_version`, `requires_backbone` and `backend_state`.
 - **Identifier values use `kebab-case`,** as the methodology's slugs do, such as `github-sub-issues` and `claude-code`.
 - **Prose of several lines uses a block scalar** (`|`).
 - **Comments at the top** say in plain prose what the schema is for and where it comes from. A comment beside a field stands only where the field's name does not say what it is for.
@@ -196,7 +211,7 @@ Where a mapping's keys name another namespace, the companion carries that namesp
 
 ### Validating the token shape
 
-The companion checks a token's shape with a `pattern` constraint. The general form is defined once, as the `reference_token` fragment of `_defs/refs.schema.json`:
+The companion checks a token's shape with a `pattern` constraint. The general form is defined once, as the `reference_token` fragment of `_defs/refs.schema.json` ([`shape-patterns.md`, "Reusable fragments via `$defs`"](shape-patterns.md#reusable-fragments-via-defs)):
 
 ```json
 {
@@ -361,7 +376,7 @@ A file is a rule-set file because of where it is, and nothing in the file binds 
 |---|---|---|
 | `.pkit/rule-sets/` | the backbone's method rule sets, its loaded set `OPS` among them | `backbone:<SET>` |
 | `.pkit/capabilities/<name>/rule-sets/` | an installed capability's method rule sets, shipped, versioned and synced with it | `<name>:<SET>` |
-| `rule-sets/` under the internal documentation root (`docs/rule-sets/` by default, COR-049) | the project's rule sets | bare, `<SET>` |
+| `rule-sets/` under the internal documentation root (`docs/rule-sets/` by default, [COR-049](../decisions/core/COR-049-documentation-roots.md)) | the project's rule sets | bare, `<SET>` |
 | any declared place, the project's or a capability's, whose path has a `rule-sets` segment | more project rule sets, wherever the project keeps them | bare |
 
 - **Which files:** every Markdown file in or beneath such a folder is a rule-set file, except its `README.md`, which is the folder's signpost.
@@ -455,7 +470,7 @@ A rule is cited as `RS-<SET>-NNN`, or `RS-<SET>-NNN#<point>` for an extension po
 - **`pkit refs validate`** resolves every citation of a rule in an agent's or a skill's body, except a loaded set's. The check under "Citing an operational rule" reads that one.
 - **`pkit refs lookup <citation>`** prints where the rule lives ([the decision-record specification, "Looking a citation up"](../decisions/README.md#looking-a-citation-up)).
 - **`refs.schema.json#/$defs/rule_citation`** checks the citation's shape in data.
-- **`pkit decisions validate`** reports a rule id claimed twice across the rule sets.
+- **`pkit decisions validate`** reports a rule id claimed twice across the rule sets ([the decision-record specification, "Two further id-spaces"](../decisions/README.md#two-further-id-spaces)).
 
 #### Citing an operational rule
 
@@ -540,9 +555,9 @@ The pinned major is a version relation. It is checked and reported with the othe
 
 #### Where an accepted rule binds
 
-The backbone answers, for each artefact, which accepted rules bind on it, with one function over one state, `rule_sets.reach` (COR-051 point 7). Validation, the reading commands and every other reader take that one answer.
+The backbone answers, for each artefact, which accepted rules bind on it, with one walk over one state (COR-051 point 7). Validation, the reading commands and every other reader take that one answer.
 
-- **A route** starts at a set of the project's own whose scope selects the artefact, as `in_scope_of` names it.
+- **A route** starts at a set of the project's own whose scope selects the artefact. `pkit friction artefacts --json` names such sets on each artefact, as its `in_scope_of`.
   - **It follows** what the set inherits, pin by pin.
   - **It passes** only through sets whose own scope, where they have one, also selects the artefact. So an inherited rule binds within the scope of the set that inherits it.
   - **A set with no scope** binds only through the sets that inherit it. A parent with a scope of its own keeps it.
@@ -573,7 +588,7 @@ A tree without the rule-set schema, one recorded before the schema landed, skips
 
 - **Judgment, for agents and reviewers** (COR-051 points 5 and 7): whether a quoted reason supports its rule. Whether an inheriting set contradicts or relaxes what it inherits, beyond the mechanical checks.
 - **The friction checks:** whether the anchor of a filling rule resolves, and whether it carries friction. This pass asks only that the anchor names the rule filled.
-- **The registry of anchor kinds:** how a registered resolver is run, and the answer it gives, for anchors and sources alike. A source goes through the same registry, verdict and run as an anchor: `registered_anchor_kinds`, `unresolved_kind_reason` and `AnchorKinds` in `project_kit.friction_discovery`.
+- **The registry of anchor kinds:** how a registered resolver is run, and the answer it gives, for anchors and sources alike. A source goes through the same registry, verdict and run as an anchor.
 
 ## Tooling expectations
 
@@ -592,7 +607,7 @@ A schema is worth what the tools that read its companion make of it. A project t
 
 ```
 .pkit/schemas/
-├── README.md                  # this file — the mechanism, its conventions, the references
+├── README.md                  # this file — the mechanism, its conventions, the references, rule sets
 ├── backbone-files.md          # the backbone file schemas, the container, the friction block, answer and rule-set files
 ├── shape-patterns.md          # the common shape patterns
 ├── data-binding.md            # how adopter data binds to a schema
@@ -614,7 +629,7 @@ This area is a home of schemas in its own right: the core's, whose owner name is
 
 - **What it holds:** the pairs that belong to the core rather than to a capability. Examples are the permission model's catalogs and profiles, the harness requirements ([COR-047](../decisions/core/COR-047-harness-requirement-declaration.md)), and the shape of each adapter's answers to them.
 - **Its place among the homes:** it sits beside each installed capability's `schemas/` ([COR-017](../decisions/core/COR-017-capability-pattern.md)), and every schemas verb walks it first.
-- **`_defs/`** holds the JSON Schema fragments that each capability, and each adopter project, refers to by `$ref`. A new shared pattern lands as a further entry of `refs.schema.json`'s `$defs`. A coherent group of patterns may earn a sibling file of its own.
+- **`_defs/`** holds the JSON Schema fragments that each capability, and each adopter project, refers to by `$ref`. A new shared pattern lands as a further entry of `refs.schema.json`'s `$defs` ([`shape-patterns.md`](shape-patterns.md#reusable-fragments-via-defs)). A coherent group of patterns may earn a sibling file of its own.
 - **What ships:** the whole folder, to every project, refreshed by each sync.
 
 ## Adopting the schemas mechanism

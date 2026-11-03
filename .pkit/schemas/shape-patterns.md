@@ -30,8 +30,8 @@ The structural shapes that recur across schemas, each with the JSON Schema idiom
 
 Every schema's YAML opens with the same envelope: `schema_version`, an optional `source`, then the domain's fields.
 
-- **One definition.** The `source` envelope is defined once, as the `source` fragment of `_defs/refs.schema.json`.
-- **Every companion refers to it** by `$ref`, so every schema shares one envelope shape. The stamp writes that `$ref` into each companion it stamps.
+- **One fragment for `source`.** The `source` block is defined once, as the `source` fragment of `_defs/refs.schema.json`. A companion whose schema takes a `source` refers to it by `$ref`, so each such schema shares one shape for it. The stamp writes that `$ref` into each companion it stamps.
+- **No fragment for `schema_version`.** A companion declares it itself. The stamp declares it as the constant of the schema's version.
 
 ## Entry collections with stable ids
 

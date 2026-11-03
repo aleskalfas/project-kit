@@ -22,6 +22,7 @@ pkit:
         - src/project_kit/declared_rule_sets.py
         - src/project_kit/cli.py
         - .pkit/schemas/README.md
+        - .pkit/schemas/backbone-files.md
       record:
         - COR-051#2
         - COR-051#3
