@@ -203,6 +203,25 @@ def test_a_write_that_fails_in_its_place_takes_back_every_step_before_it(
     assert sorted(path.name for path in tmp_path.iterdir()) == sorted(before)
 
 
+def test_an_interrupt_between_two_steps_takes_back_every_step_before_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    change = change_of(tmp_path)
+    before = tree(tmp_path)
+    replace = files.os.replace
+
+    def interrupted(source: Any, target: Any) -> None:
+        if Path(target).name == "record.yaml":
+            raise KeyboardInterrupt
+        replace(source, target)
+
+    monkeypatch.setattr(files.os, "replace", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        change.commit()
+    assert tree(tmp_path) == before
+    assert sorted(path.name for path in tmp_path.iterdir()) == sorted(before)
+
+
 def test_a_step_that_cannot_be_taken_back_is_named(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

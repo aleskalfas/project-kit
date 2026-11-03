@@ -270,6 +270,11 @@ class Change:
             assert step is not None
             left = self._take_back(taken)
             raise WriteFailed(self.root, step.target, exc, left, done=step.done) from exc
+        except BaseException:
+            # An interrupt, or any other error, between two steps takes the run back too,
+            # then goes on as it came.
+            self._take_back(taken)
+            raise
 
     def _make_folders(self, folder: Path) -> None:
         """Make `folder`, and each folder above it that is missing, keeping each one made."""
