@@ -41,6 +41,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#layouts
         - .pkit/capabilities/visual-communication/components.md#placing-a-component-use-and-slot
         - .pkit/capabilities/visual-communication/components.md#primitives
+        - .pkit/capabilities/visual-communication/components.md#sources
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/components.md#values-states-and-colour
         - .pkit/capabilities/visual-communication/components.md#what-an-element-asks-for-and-what-it-gets
@@ -103,7 +104,7 @@ A few findings that lie in a library folder name no version, and always fail: `l
 
 - **A label,** a short name of what was found, such as `text-overflow`. Each label is in the tables below.
 - **A location:** `<file>#<where>`, or `<file>` where nothing within the file is named, or `.` where no file is. The file is relative to the project root. `<where>` is one of:
-  - a key path in a YAML file: its keys joined by `.`, an item of a list as `[<id>]`, or as `#<place>` from 1 where it has no id, such as `body.steps[plan].head`;
+  - a key path in a YAML file, written as a content source's path is ([sources](components.md#sources)), such as `body.steps[plan].head`;
   - a key path in a component's file, such as `parts.head.height`;
   - a trace id of the scene, such as `figure/body/steps[plan]/head` ([trace ids](components.md#trace-ids));
   - a token path of a brand, such as `space.5`.

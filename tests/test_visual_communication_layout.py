@@ -19,7 +19,9 @@ in memory and read through an in-memory `Env` (`tests/visual_engine.py`):
   a component that gets less than it asks for; a component, role, picture, colour
   family member or concept that is not there; an item option no single part repeats over;
 - what cannot be drawn: a top that names no component, which lies in the piece; a
-  component whose file cannot be read, a finding in that file alone.
+  component whose file cannot be read, a finding in that file alone;
+- a list a `use` part passes on under another name, two levels deep: each item's
+  sources name the keys the content file writes.
 """
 
 from __future__ import annotations
@@ -859,3 +861,56 @@ def test_a_concept_its_notation_cannot_read_takes_the_family_it_would_have_had()
 
     assert result.findings == []
     assert painted(result, "a") == ("surface", "default:lab/top")
+
+
+# --- a list a part passes on under another name -------------------------------------------
+
+LISTED = {"type": "array", "items": {"type": "object"}}
+
+
+def pattern(name: str, draw: str) -> dict[str, Any]:
+    """A component that draws each item of its list `name` with `draw`, in a column."""
+    return block({name: {"repeat": name, "draw": draw, "column": {}}}, fields={name: LISTED})
+
+
+def passing(theirs: str, ours: str, use: str) -> dict[str, Any]:
+    """The part `p`, which passes the list `ours` on to `use` as `theirs`."""
+    return {"p": {"use": use, "fields": {theirs: ours}}}
+
+
+def renaming() -> dict[str, dict[str, Any]]:
+    """A top that passes its list `steps` on to a frame as `lines`, which passes it on to
+    a pattern of groups as `rows`. Each group passes its own list `subs` on to a pattern
+    of swatches as `items`."""
+    return {
+        **coloured(),
+        **lab(
+            top=top(passing("lines", "steps", "lab/frame"), fields={"steps": LISTED}),
+            frame=block(passing("rows", "lines", "lab/groups"), fields={"lines": LISTED}),
+            groups=pattern("rows", "lab/group"),
+            group=block(passing("items", "subs", "lab/swatches"), fields={"subs": LISTED}),
+            swatches=pattern("items", "lab/swatch"),
+        ),
+    }
+
+
+def test_an_item_of_a_list_passed_on_under_another_name_is_named_by_the_content_s_keys() -> None:
+    content = {
+        "steps": [
+            {"id": "a", "subs": [{"id": "x", "concept": "sys/store"}, {"state": "marked"}]},
+            {"subs": [{"override": {"b": "line"}}]},
+        ]
+    }
+
+    result = draw(content, components=renaming(), families=FAMILIES, concepts=CONCEPTS)
+
+    fills = {}
+    for trace in ("rows[a]/p/items[x]", "rows[a]/p/items#2", "rows#2/p/items#1"):
+        element = result.scene.find(f"top/p/p/{trace}/b")
+        assert element is not None, trace
+        fills[trace] = (element.properties.get("fill"), element.sources.get("fill"))
+    assert fills == {
+        "rows[a]/p/items[x]": ("accent", "content:steps[a].subs[x].concept"),
+        "rows[a]/p/items#2": ("accent", "content:steps[a].subs#2.state"),
+        "rows#2/p/items#1": ("line", "content:steps#2.subs#1.override.b"),
+    }

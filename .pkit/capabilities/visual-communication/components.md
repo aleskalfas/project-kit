@@ -332,9 +332,9 @@ Every element carries its *trace*, an id that comes from the path of instances, 
 
 Each drawn property names its source in `sources`:
 
-- **`content:<field path>`:** a field of the content, such as `content:body.steps[plan].head`. The path joins the content's field names with `.`, each item as `[<id>]` or `#<place>`. It names the list field, where a trace id names the `repeat` part.
+- **`content:<field path>`:** a field of the content, such as `content:body.steps[plan].head`. The path names the keys the content file writes, joined by `.`, an item of a list as `[<id>]`, or as `#<place>` from 1 where it has no id. It names the list field, where a trace id names the `repeat` part. Under a `use` part that passes a field on under another name, at any depth, it keeps the name the content file writes.
 - **`option:<name>`:** a value a switch on that option chose.
-- **`default:<library>/<component>`:** the component's own value.
+- **`default:<library>/<component>`:** the component's own value. A field that a `use` part does not pass on is the placing component's, which gives it nothing.
 - **`role:<token path>`:** a formula that reads one role and nothing else, such as `"=@space.2"`, or a text's typography role.
 - **`engine`:** a value the engine computed, such as a text's measured height or an item's frame, or one the component leaves to the engine's default, such as `text-anchor` on a text that gives none.
 

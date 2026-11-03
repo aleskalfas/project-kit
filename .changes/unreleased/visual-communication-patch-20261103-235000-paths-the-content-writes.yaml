@@ -1,0 +1,18 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Under a `use` part that passes a field on under another name, at any
+  depth, a scene's content sources name the keys the content file writes
+  (#2556). Such a source named the placed component's own name for the
+  field, such as `content:items[a].head` where the content file writes
+  `steps`, and names `content:steps[a].head`; a finding that quotes a
+  source, such as `text-overflow`, follows. A field that a `use` part does
+  not pass on takes the source `default:` of the component whose part placed
+  it, where it named a key the content file cannot hold. The check reads
+  each item of such a list against the component that draws it, as it reads
+  an item of a component's own list, where it read the item against its
+  list's schema alone: a key that component does not declare, or a required
+  field the item lacks, is a finding at the item's key path. Trace ids are
+  unchanged.
