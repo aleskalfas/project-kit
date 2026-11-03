@@ -64,6 +64,7 @@ REFERENCE = {
   --font--heading: "Source Sans Pro Semibold";
   --line: #d0d7de;
   --size--figure: 960px;
+  --size--slide: 1280px;
   --space--1: 4px;
   --space--2: 8px;
   --space--3: 16px;

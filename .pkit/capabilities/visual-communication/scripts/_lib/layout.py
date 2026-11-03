@@ -17,9 +17,16 @@
 - `parts`: drawn in order (below);
 - `exposes`: the parts a component that places it may read. An exposed image part
   exposes its picture's points too, as parts of zero size of the component itself;
-- `layouts`, on a top component: one layout in format 1, `{<layout>: {slots: {<field>:
-  {pages: true}?}}}`. What a slot of pages places is a page. A top component with no slot
-  of pages is a page alone, and part of the page that holds it (DEC-005 point 5).
+- `layouts`, on a top component. Format 1's form is one layout, `{<layout>: {slots:
+  {<field>: {pages: true}?}}}`, whose slots name fields of the top and whose drawing is
+  the top's parts. What a slot of pages places is a page. A top component with no slot of
+  pages is a page alone, and part of the page that holds it (DEC-005 point 5). A top whose
+  layouts are its pages' forms (DEC-010 point 5) marks one list field of its own
+  `x-pkit-pages: true`, holds no parts, and declares each layout as `{slots: {<slot>:
+  <field schema>}, required: [<slot>, ...], parts: {...}}`: the fields a page in it
+  fills, and the layout's own drawing, its default (DEC-009 point 1). Each page names its
+  layout with `layout`, or its component with `use`, and is drawn as a page of its own,
+  as large as the top asks to be.
 
 **A part** is one of:
 
@@ -143,6 +150,13 @@ COMPONENT_KEYS = (
 #: The key of a switch, which no option takes as a word.
 SWITCH = "by"
 
+#: The key by which a page of a top whose layouts are its pages' forms names its layout,
+#: which the format fixes on such a page alone (DEC-010 point 5).
+LAYOUT = "layout"
+
+#: The mark of the field that holds such a top's pages.
+PAGES = "x-pkit-pages"
+
 #: The engine's mark for a member of the instance's colour family.
 FAMILY = ":colour."
 
@@ -191,6 +205,47 @@ def _is_list(schema: Any) -> bool:
     types that holds `array`, such as `[array, null]`."""
     kind = schema.get("type") if isinstance(schema, Mapping) else None
     return kind == "array" or (isinstance(kind, list) and "array" in kind)
+
+
+@dataclass(frozen=True)
+class PageForms:
+    """What a top whose layouts are its pages' forms declares of its pages (DEC-010 point
+    5): the fields it marks as holding them, one where it is well formed, and each
+    layout's slots, by name with the schema of what a page fills each with, and the slots
+    a page in it must fill."""
+
+    fields: tuple[str, ...]
+    layouts: Mapping[str, tuple[Mapping[str, Any], tuple[str, ...]]]
+
+
+def page_forms(data: Any) -> PageForms | None:
+    """What a component's data declares of its pages, where its layouts are its pages'
+    forms: it marks a field `x-pkit-pages: true`, or a layout of it holds a drawing of its
+    own, its `parts`. None where neither holds, as of every component format 1 accepted.
+    The engine and the check of the content both read a page so."""
+    if not isinstance(data, Mapping):
+        return None
+    fields = data.get("fields")
+    properties = fields.get("properties") if isinstance(fields, Mapping) else None
+    properties = properties if isinstance(properties, Mapping) else {}
+    marked = tuple(
+        name
+        for name, schema in properties.items()
+        if isinstance(schema, Mapping) and schema.get(PAGES) is True
+    )
+    layouts = data.get("layouts")
+    layouts = layouts if isinstance(layouts, Mapping) else {}
+    if not marked and not any(isinstance(d, Mapping) and "parts" in d for d in layouts.values()):
+        return None
+    declared = {}
+    for name, decl in layouts.items():
+        slots = decl.get("slots") if isinstance(decl, Mapping) else None
+        required = decl.get("required") if isinstance(decl, Mapping) else None
+        declared[name] = (
+            slots if isinstance(slots, Mapping) else {},
+            tuple(str(slot) for slot in required) if isinstance(required, list) else (),
+        )
+    return PageForms(marked, declared)
 
 
 # --- components ---------------------------------------------------------------------------
@@ -245,8 +300,16 @@ class Component:
         self.parts: dict[str, Part] = {}
         self.formulas: dict[str, fm.Formula | None] = {}
         self.repeats_over: dict[str, str] = {}
+        # Format 1's slots of pages.
         self.pages: frozenset[str] = frozenset()
         self.top = "layouts" in data
+        # A top whose layouts are its pages' forms: the field it marks as holding its
+        # pages, and each layout's own drawing, a component that draws one page.
+        self.forms = False
+        self.pages_field: str | None = None
+        self.drawings: dict[str, Component] = {}
+        # The layout this component draws, where it is a top's own drawing of one.
+        self.layout: str | None = None
         self._ctx = ctx
         self._value_dims: dict[str, int | None] = {}
         self._roles_reported: set[str] = set()
@@ -307,7 +370,9 @@ class Component:
                     "over which not exactly one part repeats",
                 )
         if self.top:
-            self._read_layouts(data.get("layouts"))
+            self._read_layouts(data)
+        elif any(isinstance(s, Mapping) and PAGES in s for s in self.fields.values()):
+            self._shape("fields", f"marks a field `{PAGES}`, and declares no layouts")
 
     def _read_options(self, options: Mapping[str, Any]) -> None:
         for name, decl in options.items():
@@ -456,9 +521,18 @@ class Component:
             return
         self._shape(where, "`when` takes a field, or `{<option>: [<word>, ...]}`")
 
-    def _read_layouts(self, layouts: Any) -> None:
+    def _read_layouts(self, data: Mapping[str, Any]) -> None:
+        layouts = data.get("layouts")
+        forms = page_forms(data)
+        if forms is not None:
+            self._read_forms(data, forms)
+            return
         if not isinstance(layouts, Mapping) or len(layouts) != 1:
-            self._shape("layouts", "a top component declares one layout in format 1")
+            self._shape(
+                "layouts",
+                "a top component declares one layout, unless its layouts are its pages' "
+                "forms, each with its own drawing",
+            )
             return
         pages = set()
         for layout, decl in layouts.items():
@@ -472,6 +546,109 @@ class Component:
                 if isinstance(slot_decl, Mapping) and slot_decl.get("pages") is True:
                     pages.add(slot)
         self.pages = frozenset(pages)
+
+    def _read_forms(self, data: Mapping[str, Any], forms: PageForms) -> None:
+        """A top whose layouts are its pages' forms (DEC-010 point 5): one list field of its
+        own marked as holding its pages, no parts of its own, and for each layout its slots
+        and its own drawing (DEC-009 point 1). Each drawing is read as a component of its
+        own that draws one page: its fields are the layout's slots and the top's other
+        fields, and it shares the top's options, states, colour, values and size (DEC-009
+        point 5). What it finds lies in the top's file, its parts' under
+        `layouts.<layout>`."""
+        self.forms = True
+        if len(forms.fields) != 1:
+            marked = ", ".join(f"`{name}`" for name in forms.fields) or "none"
+            self._shape(
+                "fields",
+                f"a top whose layouts are its pages' forms marks one field `{PAGES}: true`, "
+                f"the list of its pages; it marks {marked}",
+            )
+        elif forms.fields[0] not in self.lists:
+            self._shape(
+                f"fields.properties.{forms.fields[0]}",
+                f"the field `{forms.fields[0]}` holds pages, and is no list field",
+            )
+        else:
+            self.pages_field = forms.fields[0]
+        if self.parts:
+            self._shape(
+                "parts",
+                "a top whose layouts are its pages' forms draws nothing around its pages: "
+                "each layout's `parts` draw a whole page",
+            )
+        shared = ("options", "states", "colour", "values", "preferred")
+        others = {name: s for name, s in self.fields.items() if name not in forms.fields}
+        layouts = data.get("layouts")
+        if not isinstance(layouts, Mapping) or not layouts:
+            self._shape("layouts", "a top whose layouts are its pages' forms declares no layouts")
+            return
+        for layout, decl in layouts.items():
+            where = f"layouts.{layout}"
+            slots, required = forms.layouts[layout]
+            if not isinstance(decl, Mapping) or not isinstance(decl.get("slots"), Mapping):
+                self._shape(where, f"the layout `{layout}` declares no slots")
+            for slot, schema in slots.items():
+                self._read_slot(f"{where}.slots.{slot}", layout, slot, schema)
+                if slot in others:
+                    self._shape(
+                        f"{where}.slots.{slot}",
+                        f"the slot `{slot}` is also a field of the top, which the layout's "
+                        "drawing takes too",
+                    )
+            for slot in required:
+                if slot not in slots:
+                    self._shape(f"{where}.required", f"requires `{slot}`, which is no slot of it")
+            parts = decl.get("parts") if isinstance(decl, Mapping) else None
+            if not isinstance(parts, Mapping):
+                self._shape(
+                    where,
+                    f"the layout `{layout}` has no drawing of its own: each layout of a top "
+                    "whose layouts are its pages' forms draws a page with its `parts`",
+                )
+                continue
+            fields = {
+                **others,
+                **{
+                    slot: {k: v for k, v in s.items() if k != PAGES}
+                    if isinstance(s, Mapping)
+                    else s
+                    for slot, s in slots.items()
+                },
+            }
+            drawing = Component(
+                self.use,
+                {
+                    **{key: data[key] for key in shared if key in data},
+                    "fields": {"type": "object", "properties": fields},
+                    "parts": parts,
+                },
+                self._ctx,
+            )
+            drawing.layout = layout
+            for code, at, message in drawing.issues:
+                at = f"{where}.{at}" if at == "parts" or at.startswith("parts.") else at
+                if (code, at, message) not in self.issues:
+                    self.issues.append((code, at, message))
+            self.drawings[layout] = drawing
+
+    def _read_slot(self, where: str, layout: str, slot: str, schema: Any) -> None:
+        """A slot of a layout that is a page's form: a page's field, so no reserved key's
+        name nor `layout`, and never a list of pages, which would be a page inside a
+        page."""
+        if slot == LAYOUT:
+            self._shape(
+                where,
+                f"the layout `{layout}` declares a slot `{LAYOUT}`, the key by which a page "
+                "names its layout",
+            )
+        elif slot in names.RESERVED_PLACING_KEYS:
+            self._shape(where, f"the slot `{slot}` takes a reserved key's name")
+        if isinstance(schema, Mapping) and (schema.get("pages") is True or PAGES in schema):
+            self._shape(
+                where,
+                f"the slot `{slot}` holds pages in a layout that is a page's form: a page "
+                "inside a page",
+            )
 
     # -- values, which may switch on an option
 
@@ -865,17 +1042,26 @@ class Instance:
         # The instance whose part placed it with what it was given, where no content did.
         self._placer = None if by_content else parent
         self._sources = dict(sources or {})
-        # What a slot of pages places is a page. A top component with no slot of pages is
-        # a page alone, and part of the page that holds it (DEC-005 point 5).
+        # What a slot of pages places is a page, and so is each page a top whose layouts
+        # are its pages' forms holds. A top component with no slot of pages is a page
+        # alone, and part of the page that holds it (DEC-005 point 5); a top whose layouts
+        # are its pages' forms is none.
         inside = any(above.is_page for above in self._ancestors())
-        self.is_page = through_pages or (component.top and not component.pages and not inside)
+        alone = component.top and not component.pages and not component.forms
+        self.is_page = through_pages or (alone and not inside)
         if self.is_page and inside:
             self._note("page-in-page", f"{trace}: {component.use} is a page inside a page")
-        self._read_options()
+        if component.layout is not None and parent is not None:
+            # A page in a layout gives no option: its drawing takes the top's (DEC-009
+            # point 5).
+            self.options, self.option_sources = dict(parent.options), dict(parent.option_sources)
+        else:
+            self._read_options()
         self.family, self.family_source = self._colour(place_colour)
         self._read_overrides()
         for name, each in component.parts.items():
             self.nodes[name] = self._build(each)
+        self.pages: list[Instance] = self._build_pages() if component.forms else []
 
     # -- findings
 
@@ -1270,8 +1456,70 @@ class Instance:
             instance.position = len(node.items)
             node.items.append(instance)
 
+    def _build_pages(self) -> list[Instance]:
+        """The pages of a top whose layouts are its pages' forms, in the content's order
+        (DEC-010 point 5), each placed by the top and as large as it. A page that names its
+        layout is drawn by that layout's drawing (DEC-009 point 1); one that names its
+        component by `use`, by that component, as a page. A page that is no mapping, or
+        repeats an id, or names a component there is none of, is left out, and reported.
+        One that names neither, or a layout the top does not declare, is left out, and the
+        check of the content reports it. Its trace is the top's, the field and its id, or
+        its place where it has no id, as an item's; so is its key path."""
+        name = self.component.pages_field
+        listed = self.given.get(name) if name is not None else None
+        path = self.field_path(name) if name is not None else None
+        pages: list[Instance] = []
+        seen: set[str] = set()
+        for index, page in enumerate(listed if isinstance(listed, list) else [], start=1):
+            key = page.get("id") if isinstance(page, Mapping) else None
+            step = f"[{key}]" if key is not None else f"#{index}"
+            at = f"{self.trace}/{name}{step}"
+            if not isinstance(page, Mapping) or key in seen:
+                self._note(
+                    "content-shape",
+                    f"{at}: a page of `{name}` is no mapping, or repeats its id",
+                    where=at,
+                    given=str(name),
+                )
+                continue
+            if key is not None:
+                seen.add(key)
+            if "use" in page:
+                use = page["use"]
+                component = self.ctx.component(use) if isinstance(use, str) else None
+                if component is None and not self.ctx.unreadable(use):
+                    self.ctx.report("unknown-component", f"{at}: no component `{use}`", where=at)
+            else:
+                component = self.component.drawings.get(page.get(LAYOUT))
+            if component is None:
+                continue
+            given, sources = dict(page), {}
+            if component.layout is not None:
+                # Its drawing takes the top's other fields, as the top was given them.
+                for other in self.component.fields:
+                    if other != name and other in self.given and other not in page:
+                        given[other], sources[other] = (
+                            self.given[other],
+                            self.source_of_field(other),
+                        )
+            pages.append(
+                Instance(
+                    self.ctx,
+                    component,
+                    given,
+                    trace=at,
+                    content_path=None if path is None else f"{path}{step}",
+                    sources=sources,
+                    parent=self,
+                    part=str(name),
+                    through_pages=True,
+                )
+            )
+        return pages
+
     def texts(self) -> list[tuple[str, Node]]:
-        """Every text this instance and those below it draw, with its trace id."""
+        """Every text this instance and those below it draw, its pages' included, with its
+        trace id."""
         found = []
         for name, node in self.nodes.items():
             if not node.present:
@@ -1280,6 +1528,8 @@ class Instance:
                 found.append((f"{self.trace}/{name}", node))
             for child in ([node.child] if node.child else []) + node.items:
                 found.extend(child.texts())
+        for page in self.pages:
+            found.extend(page.texts())
         return found
 
     # -- cells
@@ -1384,9 +1634,12 @@ class Instance:
 
     def _size(self, size: str) -> float:
         """The size this instance gets: from its parent's part or list, or, at the top,
-        the size it asks for."""
+        the size it asks for. A page of a top whose layouts are its pages' forms gets the
+        top's size."""
         if self.parent is None:
             return self.get("preferred", size)
+        if self.parent.component.forms and self.part_name == self.parent.component.pages_field:
+            return self.parent.get("size", size)
         if self.is_item:
             part = self.parent.nodes[self.part_name].part
             axis = "main" if size == part.main else "cross"

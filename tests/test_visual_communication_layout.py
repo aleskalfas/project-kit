@@ -21,7 +21,10 @@ in memory and read through an in-memory `Env` (`tests/visual_engine.py`):
 - what cannot be drawn: a top that names no component, which lies in the piece; a
   component whose file cannot be read, a finding in that file alone;
 - a list a `use` part passes on under another name, two levels deep: each item's
-  sources name the keys the content file writes.
+  sources name the keys the content file writes;
+- a top whose layouts are its pages' forms, as the foundations' deck: each page drawn by
+  its layout's own drawing, or by the component it names, as a page of its own; what
+  its shape may not be; format 1's tops read as before.
 """
 
 from __future__ import annotations
@@ -914,3 +917,234 @@ def test_an_item_of_a_list_passed_on_under_another_name_is_named_by_the_content_
         "rows[a]/p/items#2": ("accent", "content:steps[a].subs#2.state"),
         "rows#2/p/items#1": ("line", "content:steps#2.subs#1.override.b"),
     }
+
+
+# --- a top whose layouts are its pages' forms (#2558) ------------------------------------------
+
+#: A deck of the foundations: a cover, a slide with a picture, and a page the figure draws.
+DECK = {
+    "slides": [
+        {
+            "id": "cover",
+            "layout": "cover",
+            "title": "Building with AI",
+            "subtitle": "The way the project decided",
+            "author": "A. K.",
+            "link": "example.org",
+        },
+        {
+            "id": "rules",
+            "layout": "slide",
+            "title": "Where permissions come from",
+            "lead": "From the rules the project keeps.",
+            "visual": {"use": "tests/steps", "steps": [{"id": "a", "head": "Ask"}]},
+            "limit": "A deny stops only what it can tell.",
+            "footer": "In project-kit.",
+        },
+        {"layout": "slide", "title": "How it fits"},
+    ]
+}
+
+
+def test_each_page_is_drawn_by_its_layouts_own_drawing_as_a_page_of_its_own() -> None:
+    result = draw(DECK, use="foundations/deck")
+
+    assert result.findings == []
+    assert result.scene.pages == ["deck/slides[cover]", "deck/slides[rules]", "deck/slides#3"]
+    # Each page lies at the top's origin, as large as the top: a slide's width, 16 by 9.
+    for page in ("deck", *result.scene.pages):
+        assert frame(result, page) == (0.0, 0.0, 1280.0, 720.0), page
+    # Each part that places a slot is named after it, so a slot keeps its trace id.
+    for slot in ("title", "subtitle", "author", "link"):
+        assert result.scene.find(f"deck/slides[cover]/{slot}") is not None, slot
+    for slot in ("title", "lead", "visual", "limit", "footer"):
+        assert result.scene.find(f"deck/slides[rules]/{slot}") is not None, slot
+    assert result.scene.find("deck/slides[rules]/visual/steps[a]") is not None
+    # The slide leaves out what its page does not fill.
+    assert result.scene.find("deck/slides#3/lead") is None
+
+
+def test_a_pages_trace_id_and_its_contents_source_name_its_place_in_the_list() -> None:
+    result = draw(DECK, use="foundations/deck")
+
+    title = result.scene.find("deck/slides[rules]/title")
+    untitled = result.scene.find("deck/slides#3/title")
+    assert title is not None and untitled is not None
+    assert title.sources["text"] == "content:slides[rules].title"
+    assert untitled.sources["text"] == "content:slides#3.title"
+    assert title.sources["x"] == "default:foundations/deck"
+
+
+def test_a_page_that_names_its_component_is_drawn_by_it_as_a_page() -> None:
+    content = {
+        "slides": [
+            DECK["slides"][0],
+            {"id": "flow", "use": "foundations/figure", "body": {"use": "tests/steps"}},
+        ]
+    }
+
+    result = draw(content, use="foundations/deck")
+
+    assert result.findings == []
+    assert result.scene.pages == ["deck/slides[cover]", "deck/slides[flow]"]
+    flow = result.scene.find("deck/slides[flow]")
+    assert flow is not None and flow.properties["component"] == "foundations/figure"
+    assert frame(result, "deck/slides[flow]") == (0.0, 0.0, 1280.0, 720.0)
+
+
+def test_a_page_that_names_no_layout_of_its_top_is_left_out_for_the_content_check() -> None:
+    content = {"slides": [{"id": "a", "title": "A"}, {"id": "b", "layout": "cvoer"}]}
+
+    result = draw(content, use="foundations/deck")
+
+    assert result.scene.pages == []
+    assert result.findings == []
+
+
+def forms_top(**keys: Any) -> dict[str, Any]:
+    """A top whose layouts are its pages' forms: `pages` holds its pages, and its layout
+    `one` draws a page's `head` in the colour its option `tone` names. `keys` add to it
+    or replace its defaults."""
+    return {
+        "status": "experimental",
+        "about": "A top whose layouts are its pages' forms.",
+        "fields": {
+            "type": "object",
+            "properties": keys.pop(
+                "fields",
+                {"pages": {"type": "array", "items": {"type": "object"}, "x-pkit-pages": True}},
+            ),
+        },
+        "options": {"tone": ["plain", "loud"]},
+        "layouts": keys.pop(
+            "layouts",
+            {
+                "one": {
+                    "slots": {"head": {"type": "string"}},
+                    "required": ["head"],
+                    "parts": {
+                        "head": {
+                            "text": {
+                                "content": "head",
+                                "style": "type.body",
+                                "fill": {"by": "tone", "plain": "text-primary", "loud": "accent"},
+                            },
+                            "width": "=:width",
+                        }
+                    },
+                }
+            },
+        ),
+        "preferred": {"width": "=@size.figure", "height": "=@space.4"},
+        **keys,
+    }
+
+
+def test_a_pages_drawing_takes_the_tops_options_and_its_other_fields() -> None:
+    fields = {
+        "pages": {"type": "array", "items": {"type": "object"}, "x-pkit-pages": True},
+        "note": {"type": "string"},
+    }
+    layouts = forms_top()["layouts"]
+    layouts["one"]["parts"]["note"] = label("note", y="=head.bottom", width="=:width")
+    component = forms_top(fields=fields, layouts=layouts)
+    content = {
+        "tone": "loud",
+        "note": "Said once.",
+        "pages": [{"id": "a", "layout": "one", "head": "A"}],
+    }
+
+    result = draw(content, components=lab(top=component))
+
+    assert result.findings == []
+    head = result.scene.find("top/pages[a]/head")
+    note = result.scene.find("top/pages[a]/note")
+    assert head is not None and note is not None
+    assert (head.properties["fill"], head.sources["fill"]) == ("accent", "option:tone")
+    assert result.scene.find("top/pages[a]").sources["options.tone"] == "content:tone"
+    assert (note.properties["text"], note.sources["text"]) == ("Said once.", "content:note")
+
+
+def issues(data: dict[str, Any]) -> list[tuple[str, str]]:
+    """What the engine finds in a component's shape, by code and key path."""
+    component = layout.Component("lab/x", data, layout.Context(FakeEnv(), "en"))
+    return [(code, where) for code, where, _ in component.issues]
+
+
+SHAPE = "component-shape"
+PAGES_FIELD = {"type": "array", "items": {"type": "object"}, "x-pkit-pages": True}
+
+
+def test_a_top_whose_layouts_are_its_pages_forms_reads_with_no_issue() -> None:
+    assert issues(forms_top()) == []
+
+
+def with_layout(**changes: Any) -> dict[str, dict[str, Any]]:
+    """The layouts of `forms_top`, the layout `one` changed by `changes`, a key whose
+    value is `...` removed."""
+    one = {**forms_top()["layouts"]["one"], **changes}
+    return {"one": {key: value for key, value in one.items() if value is not ...}}
+
+
+def test_a_top_that_marks_no_field_as_holding_its_pages_or_two_is_refused() -> None:
+    none = forms_top(fields={"pages": {"type": "array", "items": {"type": "object"}}})
+    two = forms_top(fields={"pages": PAGES_FIELD, "more": PAGES_FIELD})
+    text = forms_top(fields={"pages": {"type": "string", "x-pkit-pages": True}})
+
+    assert issues(none) == [(SHAPE, "fields")]
+    assert issues(two) == [(SHAPE, "fields")]
+    assert issues(text) == [(SHAPE, "fields.properties.pages")]
+    assert (
+        "it marks none"
+        in layout.Component("lab/x", none, layout.Context(FakeEnv(), "en")).issues[0][2]
+    )
+
+
+def test_a_slot_named_layout_or_a_reserved_key_or_holding_pages_is_refused() -> None:
+    def slot(name: str, schema: dict[str, Any]) -> dict[str, Any]:
+        return forms_top(layouts=with_layout(slots={"head": {"type": "string"}, name: schema}))
+
+    assert issues(slot("layout", {"type": "string"})) == [(SHAPE, "layouts.one.slots.layout")]
+    assert issues(slot("state", {"type": "string"})) == [(SHAPE, "layouts.one.slots.state")]
+    assert issues(slot("inner", PAGES_FIELD)) == [(SHAPE, "layouts.one.slots.inner")]
+
+
+def test_each_layout_has_its_own_drawing_and_the_top_draws_nothing_around_its_pages() -> None:
+    layouts = {**forms_top()["layouts"], "two": {"slots": {"head": {"type": "string"}}}}
+
+    assert issues(forms_top(layouts=layouts)) == [(SHAPE, "layouts.two")]
+    assert issues(forms_top(parts={"b": box()})) == [(SHAPE, "parts")]
+    assert issues(forms_top(layouts=with_layout(required=["body"]))) == [
+        (SHAPE, "layouts.one.required")
+    ]
+
+
+def test_a_slot_that_is_also_a_field_of_the_top_is_refused() -> None:
+    fields = {"pages": PAGES_FIELD, "head": {"type": "string"}}
+
+    assert issues(forms_top(fields=fields)) == [(SHAPE, "layouts.one.slots.head")]
+
+
+def test_a_layouts_drawing_is_read_as_the_tops_and_its_issues_lie_under_the_layout() -> None:
+    layouts = with_layout(parts={"head": label("headline", width="=:width")})
+
+    assert issues(forms_top(layouts=layouts)) == [(SHAPE, "layouts.one.parts.head.text.content")]
+
+
+def test_a_component_that_marks_a_field_of_pages_and_declares_no_layouts_is_refused() -> None:
+    data = block({"b": box()}, fields={"pages": PAGES_FIELD})
+
+    assert issues(data) == [(SHAPE, "fields")]
+
+
+def test_format_1s_tops_read_as_before_and_one_may_declare_a_field_named_layout() -> None:
+    """A top with one layout has no layout a page names, so `layout` stays a field it may
+    declare."""
+    figure = top({"l": label("layout", width="=:width")}, fields={"layout": {"type": "string"}})
+
+    result = draw({"layout": "Wide"}, components=lab(top=figure))
+
+    assert result.findings == []
+    assert result.scene.pages == ["top"]
+    shown = result.scene.find("top/l")
+    assert shown is not None and shown.properties["text"] == "Wide"

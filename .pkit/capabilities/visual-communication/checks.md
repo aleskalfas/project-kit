@@ -155,14 +155,15 @@ These follow DEC-003 point 9, and `library-name` DEC-004 point 7. A lock finding
 
 ### Content against components
 
-Each content file is read against the `fields` and `options` of each component it fills ([fields](components.md#fields), [content files](files.md#content-files)). Each finding fails, at `<piece>/content.<language>.yaml#<key path>`.
+Each content file is read against the `fields` and `options` of each component it fills, and each page of a top whose layouts are its pages' forms against the layout it names ([fields](components.md#fields), [layouts](components.md#layouts), [content files](files.md#content-files)). Each finding fails, at `<piece>/content.<language>.yaml#<key path>`.
 
 | Label | What it means | What to do |
 |---|---|---|
 | `id-shape` | An id is not of the id shape. | Write an id of that shape. |
 | `id-twice` | An id appears twice in one list. | Make each id unique in its list. |
 | `id-languages` | A list lacks ids it holds in the piece's first language, or holds ids it lacks there. The message names each. The order is free: a translation may order a list's items its own way. An id twice in one list is `id-twice`. | Give each item the same id in every language ([content files](files.md#content-files)). |
-| `content-key` | A key that is no field or option of the component, and no reserved key ([content files](files.md#content-files)). The message names the nearest known key, where one is close. | Rename or remove the key. |
+| `content-key` | A key that is no field or option of the component, and no reserved key; on a page in a layout, a key that is no slot of its layout, no `layout` and no reserved key ([content files](files.md#content-files)). The message names the nearest known key, where one is close. | Rename or remove the key. |
+| `content-layout` | A page of a top whose layouts are its pages' forms names neither a layout, with `layout`, nor a component, with `use`; or it names a layout its top does not declare. The message names the top's layouts, and the nearest, where one is close. | Name one of the top's layouts, or the component that draws the page. |
 | `content-required` | A required field is missing. | Add the field. |
 | `content-type` | A value is of another type than the field's. | Change the value. |
 | `content-value` | A value is not one the field's `enum` or `const` allows. | Change the value. |
@@ -212,14 +213,14 @@ Each fails, unless its row says otherwise.
 
 | Label | What it means | Where it points |
 |---|---|---|
-| `component-shape` | A component holds a key, a part, an option or an exposed name its format does not allow ([a component's file](components.md#a-components-file)). | the component, `#<key path>` |
+| `component-shape` | A component holds a key, a part, an option or an exposed name its format does not allow ([a component's file](components.md#a-components-file)). Or a top whose layouts are its pages' forms breaks their shape, such as marking no field as holding its pages, or two, naming a slot `layout`, or leaving a layout without its own drawing ([layouts](components.md#layouts)). | the component, `#<key path>` |
 | `two-owners` | A text part gives a `height`, which its measured text sets ([primitives](components.md#primitives)). | the component |
 | `formula-unreadable`, `formula-reach`, `formula-dimension`, `unknown-role` | A formula cannot be read, reads what it may not reach, has dimensions that disagree, or reads a role the brand gives no value ([errors](components.md#errors)). | the component |
 | `unknown-component` | The piece's top, a part or an item names no component. A component whose file is present and cannot be read is `component-unreadable`, and what names it takes no finding. | the top's, `<piece>/piece.yaml#top`; a part's or an item's, the content or the component that names it, `#<trace>` |
 | `component-unreadable` | A component's file is present and cannot be read: the message gives the reader's error, or says the file is not a mapping ([how the files are read](files.md#how-the-files-are-read)). Nothing is drawn where it is placed. The check leaves it out where a `file-unreadable` or `binding` finding names the file. | the component's file |
-| `not-top` | The piece's top declares no layouts. | the top's component |
+| `not-top` | The piece's top declares no layouts, neither one for the whole top nor its pages' forms ([layouts](components.md#layouts)). | the top's component |
 | `places-itself` | A component places itself, directly or through others ([placing a component](components.md#placing-a-component-use-and-slot)). | the component |
-| `page-in-page` | A slot of pages lies inside a page, so what it places is a page inside a page. A top component with no slot of pages is part of the page that holds it, never a page inside it ([layouts](components.md#layouts)). | the content, `#<trace>` |
+| `page-in-page` | A slot of pages, or a top whose layouts are its pages' forms, lies inside a page, so each page it holds is a page inside a page. A top component with no slot of pages is part of the page that holds it, never a page inside it ([layouts](components.md#layouts)). | the content, `#<trace>` |
 | `option-word`, `option-missing`, `unknown-item`, `unknown-state`, `override`, `content-shape` | What a component was given does not fit it: a word its option does not take, a missing option that names an item, an item no list holds, a state it does not declare, an `override` that names no painted part or no role, a field of the wrong shape. | the content, a value a part passed on from it included; else the component whose part gave it, or left it out |
 | `loop` | References make a loop. The message names every element in it. | the component |
 | `no-size` | A component asks for no size and is given none, or a list shares its size equally and is given none. | the component |
