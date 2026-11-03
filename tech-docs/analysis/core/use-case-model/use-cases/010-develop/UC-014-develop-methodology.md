@@ -81,7 +81,7 @@ pkit:
 7. The system runs each [adapter](../../../glossary.md#term-adapter--adapter)'s merge delivery into the files its harness reads, such as `claude-code`'s into `.claude/settings.json` and `CLAUDE.md`. Each adapter deploys the skills and agent definitions as edited. The system also does these ([ADR-065 point 11](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#11-each-writer-of-a-project-owned-path-is-named-and-each-owner-of-derivable-state)):
    - it renders `.pkit/.gitignore`
    - it makes the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace), `.agent-workspace/`
-   - it sets up each [query command](../../../glossary.md#term-query-command--query-command) a [capability](../../../glossary.md#term-capability--capability) registers
+   - it sets up each command a [capability](../../../glossary.md#term-capability--capability) registers
 8. The system prints `Self-host sync complete (deploy primitives re-run).`
 
 **Variants:**

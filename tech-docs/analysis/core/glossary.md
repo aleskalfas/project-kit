@@ -424,7 +424,7 @@ TERM-dependency-gate:
   name: dependency gate
   noun-forms: [dependency gates]
   status: active
-  definition: "check, made before an install or a version transition writes, that the capabilities it would leave meet each other's ranges and mandatory connections"
+  definition: "check, made before an install or a version transition writes, that the capabilities that step would leave meet each other's ranges and mandatory connections"
   pkit:
     friction:
       anchors:
