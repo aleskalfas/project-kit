@@ -13,6 +13,9 @@ pkit:
     anchors:
       path:
         - src/project_kit/router.py
+        - src/project_kit/install.py
+        - src/project_kit/upgrade.py
+        - scripts/latest_tag.py
         - tests/test_install.py
         - tests/test_latest_tag.py
         - tests/test_router.py

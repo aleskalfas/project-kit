@@ -1,0 +1,128 @@
+answers:
+  - artefact: tech-docs/analysis/software-analysis/domain-model/010-analyses-and-use-cases.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+    revalidated:
+      at: 2026-11-03T03:13:11Z
+      outcome: updated
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/010-set-up/UC-047-onboard-documents.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+    revalidated:
+      at: 2026-11-03T03:13:16Z
+      outcome: updated
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/020-write/UC-046-review-page-as-reader.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+    revalidated:
+      at: 2026-11-03T03:13:20Z
+      outcome: updated
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/030-keep-current/UC-045-propose-page-fix.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+    revalidated:
+      at: 2026-11-03T03:13:25Z
+      outcome: updated
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/010-set-up/UC-043-set-up-space.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+    revalidated:
+      at: 2026-11-03T03:13:34Z
+      outcome: unchanged
+      unchanged-because: REQ-024 changed only its Verified by, which now names a space definition's pin on LDOC as its inheritance pin. Its statement, measure and applies-to, which step 15 applies, are as they were.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/020-write/UC-044-write-page.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+    revalidated:
+      at: 2026-11-03T03:13:39Z
+      outcome: unchanged
+      unchanged-because: REQ-024 changed only its Verified by, which now names a space definition's pin on LDOC as its inheritance pin. Its statement, measure and applies-to, which step 12 applies, are as they were.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/journeys/JRN-014-adopt-on-documented-project.md
+    read:
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+    revalidated:
+      at: 2026-11-03T03:13:49Z
+      outcome: unchanged
+      unchanged-because: UC-047 changed only its wording of the declared surface, in an assumption and in variant 11a, and its anchor on living-docs DEC-001 point 3. Its title, steps and variant 8b, on which step 2 and variant 2b rest, are as they were.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/journeys/JRN-015-publish-page-for-reader.md
+    read:
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+    revalidated:
+      at: 2026-11-03T03:13:53Z
+      outcome: unchanged
+      unchanged-because: UC-046 changed only variant 2a's name for the inheritance pin, and the box below variant 4a, which now cites and anchors living-docs DEC-002 points 1, 2 and 5 to 9. Its precondition and variant 7a, on which step 2 and variant 2b rest, are as they were.
+  - artefact: docs/capabilities/living-docs/040-have-a-page-read-as-its-reader.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+    revalidated:
+      at: 2026-11-03T03:14:04Z
+      outcome: unchanged
+      unchanged-because: UC-046 changed only variant 2a's name for the inheritance pin, and the box below variant 4a, which now cites and anchors living-docs DEC-002 points 1, 2 and 5 to 9. The page says nothing of either, and the review it teaches, its outcomes and what the agent leaves to validation are as UC-046's steps still give them.
+  - artefact: docs/capabilities/living-docs/020-bring-in-your-documents.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+    revalidated:
+      at: 2026-11-03T03:14:08Z
+      outcome: unchanged
+      unchanged-because: UC-047 changed only its wording of the declared surface, in an assumption and in variant 11a, and its anchor on living-docs DEC-001 point 3, which its postcondition already cited. The plan, its gate and the checks the page teaches are as UC-047's steps still give them.
+  - artefact: docs/capabilities/living-docs/050-fix-a-stale-page.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T232455Z-c8529620.yaml
+    revalidated:
+      at: 2026-11-03T03:14:21Z
+      outcome: unchanged
+      unchanged-because: UC-045 changed only its assumption on who decides a page's answer, which now names the delegate a person named beside the person, and its anchor on COR-064 point 1, which already allowed that. No step or variant the page teaches changed. The page's 'you decide it' leaves the delegate unmentioned, as it did before this change, which made none of its statements untrue.
+  - artefact: docs/capabilities/living-docs/README.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+    revalidated:
+      at: 2026-11-03T03:14:25Z
+      outcome: unchanged
+      unchanged-because: UC-045's assumption now names the delegate a person named beside the person who decides a page's answer, UC-046 names the inheritance pin and cites the points of living-docs DEC-002 its box rests on, and UC-047 names the declared surface and anchors living-docs DEC-001 point 3. No step or variant the guide summarises changed. Its 'You decide every other answer' leaves the delegate unmentioned, as it did before this change, which made none of its statements untrue.
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+    revalidated:
+      at: 2026-11-03T03:14:30Z
+      outcome: unchanged
+      unchanged-because: UC-080 and UC-081 now name the link target, the revisit entry and the revalidation answer by the core's terms, where they said target, entry and revalidation. What the docs-reviewer checks, and who decides each answer a change was not asked for, which the guide teaches, are as they were.

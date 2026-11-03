@@ -1,0 +1,13 @@
+answers:
+  - artefact: .pkit/process/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261027T152454Z-63ed08af.yaml
+      - 20261103T003147Z-452efc9b.yaml
+      - 20261103T005444Z-7994390f.yaml
+      - 20261103T014109Z-bd846f15.yaml
+      - 20261103T020421Z-0bcddb3a.yaml
+      - 20261103T023611Z-a9448c1a.yaml
+    revalidated:
+      at: 2026-11-03T03:10:13Z
+      outcome: updated

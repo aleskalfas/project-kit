@@ -170,7 +170,7 @@ Defined in [TERM-release-tag](../glossary.md#term-release-tag--release-tag).
 
 **Why:** A [project](../glossary.md#term-project--project) records the [version](../glossary.md#term-version--version) of the content it holds, and that record is sound only where a version names one content ([PRJ-004](../../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)). Only a CLI installed from a commit a release tag names gives that. A CLI installed from any other commit may hold newer files than its version says (PRJ-004).
 
-A release tag is the annotated git tag `v<version>` on the commit that lands a new [backbone](../glossary.md#term-backbone--backbone) version, such as `v2.0.0`. A machine installs that version's CLI from the [distribution](../glossary.md#term-distribution--distribution)'s URL at that tag. The release tags are the versions, and `latest` only points at the highest of them.
+A release tag is the annotated git tag `v<version>` on the commit that lands a new [backbone](../glossary.md#term-backbone--backbone) version, such as `v2.0.0`. A machine installs that version's CLI from the [distribution](../glossary.md#term-distribution--distribution)'s URL at that tag. Each release tag names one version, and `latest` only points at the highest release tag.
 
 **Attributes:**
 
