@@ -37,7 +37,7 @@ A *formula* computes one number in a component's data.
 ### 2. Layout operators arrange, and connectors route simply
 
 - **Repetition** draws a component once for each item of a list in the content.
-- **Layout operators** stack elements, align them, distribute them and give them equal sizes. They reach a list's first item, its last, or an item by its id. Their names follow CSS's flexible layout where the meanings match.
+- **Layout operators** stack elements, align them, distribute them and give them equal sizes, or sizes in proportion to the share each item's weight gives it, equal sizes being the case where every share is the same (refinement per [visual-communication:DEC-010-list-item-fields]). They reach a list's first item, its last, or an item by its id. Their names follow CSS's flexible layout where the meanings match.
 - **No operator chooses, filters or sorts items by what they hold.** The content's order and the declared options decide how items are arranged. An arrangement field sets how the pattern sizes or places its item, and never chooses, filters or sorts (refinement per [visual-communication:DEC-010-list-item-fields]).
 - **Connectors** join named elements, straight, with corners or curved, with their ends spread evenly. They never route around obstacles.
 - **A layout no operator computes,** such as a graph's, is work outside the engine (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 8). A new operator is added when a need recurs, and built and tested once ([visual-communication:DEC-001-visual-communication-discipline] point 4).
