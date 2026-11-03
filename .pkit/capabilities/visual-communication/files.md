@@ -55,7 +55,7 @@ pkit:
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/notation.yaml
         - tests/fixtures/visual-communication/libraries/test-parts/1.0.0/roles.yaml
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012", "visual-communication:DEC-013"]
+      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012", "visual-communication:DEC-013", "visual-communication:DEC-014"]
 ---
 
 # The files of the visual work
@@ -319,7 +319,7 @@ open: [accent, space]
 | `name` | The library's name. It matches the folder's. |
 | `version` | Its version, `X.Y.Z` with X at least 1. It matches the folder's. A major release carries a breaking change, a minor one an addition or a change of look, a patch a fix (DEC-003 point 1). |
 | `kind` | `components`, a component library; `brand`; or `notation` ([Notations](#notations)). |
-| `needs-release` | The oldest release of the capability whose tools and fields it uses. A version that needs a newer release than the installed one, the `version` of the capability's `package.yaml`, cannot be read. |
+| `needs-release` | The release of the capability the version needs. A released version names the capability's version current at its release, and a version being built names any release the installed capability reads. A version that names a newer release than the installed one, the `version` of the capability's `package.yaml`, cannot be read. |
 | `builds-on` | Each library it builds on, as `{name, major}`, the major an integer from 1. |
 | `dtcg` | A brand's DTCG version, `"2025.10"`, quoted, since YAML reads `2025.10` as a number. |
 | `resolver` | A brand's Resolver document, a path within its version folder. |
