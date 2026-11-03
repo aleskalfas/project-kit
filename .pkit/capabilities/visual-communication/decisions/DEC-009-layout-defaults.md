@@ -1,7 +1,7 @@
 ---
 id: DEC-009
 title: A top component draws each of its layouts, as a default that a brand may replace
-status: proposed
+status: accepted
 date: 2026-11-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
