@@ -119,7 +119,7 @@ Every name in the file takes the capability's name shape ([files](files.md)). Th
 - **`$ref`:** a reference that starts with `#/`, read within the component's own `fields`.
 - **`additionalProperties`:** only `false`. Leaving it out means the same.
 
-A field whose `type` is `array`, or a list of types that holds it, such as `[array, null]`, is a *list field*. A `repeat` part draws its items, and an option may name one of them. How content is judged against `fields` is in [checks](checks.md#content-against-components) <!-- unanchored: names where it is described; that page anchors this one -->.
+A field whose `type` is `array`, or a list of types that holds it, such as `[array, null]`, is a *list field*. A `repeat` part draws its items, and an option may name one of them. How content is judged against `fields` is in *checks*.
 
 ### Options
 
@@ -239,7 +239,7 @@ A formula is refused with a message that names it and says why, such as "the for
 - **Its dimensions disagree,** or it gives another dimension than its key needs.
 - **It reads a role** the brand gives no value, a length in a unit other than `px`, or a role that is neither a length nor a number.
 
-It finds these when it computes the scene: a division by zero, `:index` or `:count` in a component that is no item, a path to an exposed part, a point or an item that is missing, and a loop. A value that cannot be computed is zero. The check reports each problem as a finding ([checks](checks.md#scenes) <!-- unanchored: names where it is described; that page anchors this one -->).
+It finds these when it computes the scene: a division by zero, `:index` or `:count` in a component that is no item, a path to an exposed part, a point or an item that is missing, and a loop. A value that cannot be computed is zero. The check reports each problem as a finding (*checks*).
 
 ## Layout operators and drawing primitives
 
@@ -260,7 +260,7 @@ A primitive's properties lie in its own mapping, under SVG's names.
 - **A paint,** `fill` or `stroke`, is a colour role's token path, `:colour.<member>`, or a switch. `stroke-width` and `rx` are formulas that give a length.
 - **A text** shows the field `content` names, in the typography role `style` names. Its height is always its measured text's: a text that gives a `height` is reported as a value with two owners. With a `width`, its lines are broken to that width; without one, each paragraph is one line, and the text is as wide as its widest. `text-anchor` is `start`, the default, `middle` or `end`: where each line stands in the text's width.
 - **A line's frame** comes from its ends: it starts at the lesser of the two `x` and of the two `y`, and is as wide and as tall as the distance between them.
-- **An image** shows the produced output that the field `produced` names ([outputs](outputs.md#produced-pictures) <!-- unanchored: names where it is described; that page anchors this one -->). It needs a `width`. Where it gives no `height`, its height keeps the picture's proportions. The picture is drawn whole, centred, as large as its frame allows, and its points are mapped into the frame the same way. The variants of one picture share one pixel size and the same points, and the engine reads the first variant key in order. An output the piece lacks is not drawn, and is reported.
+- **An image** shows the produced output that the field `produced` names (*outputs*). It needs a `width`. Where it gives no `height`, its height keeps the picture's proportions. The picture is drawn whole, centred, as large as its frame allows, and its points are mapped into the frame the same way. The variants of one picture share one pixel size and the same points, and the engine reads the first variant key in order. An output the piece lacks is not drawn, and is reported.
 
 ### Placing a component: `use` and `slot`
 
@@ -305,7 +305,7 @@ The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, `sea
 
 A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. An `image` adds `output`, `preserveAspectRatio` (`xMidYMid meet`), `variants` by key with each file and pixel size, and `points` mapped into its frame.
 
-Colours stay role names. A renderer takes their values from the brand's resolved values, so one scene serves every mode of the value axes ([outputs](outputs.md#the-svg-renderer) <!-- unanchored: names where it is described; that page anchors this one -->). This is the first step's head in a scene of the figure, trimmed:
+Colours stay role names. A renderer takes their values from the brand's resolved values, so one scene serves every mode of the value axes (*outputs*). This is the first step's head in a scene of the figure, trimmed:
 
 ```json
 {"type": "text", "id": "figure/body/steps[plan]/head",

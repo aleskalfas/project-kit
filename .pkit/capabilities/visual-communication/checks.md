@@ -67,7 +67,7 @@ pkit:
 
 # What the check reports
 
-`pkit visual check` judges a project's visual work and draws nothing. Each problem it finds is a *finding*. `pkit validate` runs the same check as one of its members. What the command reads, prints and exits with is under [Commands](README.md#pkit-visual-check-piece) <!-- unanchored: names where it is described; that page anchors this one --> in the README. The examples come from the capability's test files: the test brand `test-brand` and the test library `tests` exist for the tests only.
+`pkit visual check` judges a project's visual work and draws nothing. Each problem it finds is a *finding*. `pkit validate` runs the same check as one of its members. What the command reads, prints and exits with is under *Commands* in the README. The examples come from the capability's test files: the test brand `test-brand` and the test library `tests` exist for the tests only.
 
 ## Contents
 
