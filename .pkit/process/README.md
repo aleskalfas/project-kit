@@ -89,7 +89,7 @@ The substrate gives every process two guarantees ([COR-033](../decisions/core/CO
   - why it is there
   - how it got there
   - what it may do next
-- **The status view's two renderings:** a narrative for people, and a structured form for agents and machines.
+- **The status view's two renderings:** a narrative for people, and a structured form for agents and machines ([the engine page, "The operations"](engine.md#the-operations)).
 
 ## Gate-checkability (the load-bearing rule)
 

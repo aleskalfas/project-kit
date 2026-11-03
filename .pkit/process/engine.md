@@ -28,11 +28,11 @@ The backbone exposes the engine as the `process` command group of `pkit`. Each c
 | `cascade` | Resolves the cascade fold the process declares, outside any gated transition, and prints it, narrative or `--json`. A wrapper reads it to combine the fold with gates of its own |
 | `health` | Walks every declared hand-off contract ([COR-042](../decisions/core/COR-042-process-health.md)), and reports missed hand-offs: upstream subjects at their trigger with no downstream counterpart |
 
-- **`--subject <id>`** names the subject of a keyed process ([COR-032](../decisions/core/COR-032-keyed-process-subjects.md)). A singleton process takes none.
+- **`--subject <id>`** names the subject of a keyed process ([COR-032](../decisions/core/COR-032-keyed-process-subjects.md)). A singleton process ignores it.
 - **`move`'s `--from`:** what it names, and when to give it, is the process README's "Seam-ordering contract".
 - **`move`'s `--reason`** says why the caller took the move. An instance is the justification for overriding a gate the binding lets it bypass, or a move that one subject's move caused in another. It is recorded on the entry's `reason` as given, and no verdict reads it.
 - **`health`** takes no subject. It runs outside the engine's runtime, reports only, and is deterministic. It prints narrative or `--json`, and exits non-zero on any miss or any indeterminate finding.
-  - Its flags, `--process` and `--interpretation-only`, are the CLI reference's.
+  - Its flags are the CLI reference's.
 - **`cascade`** exits 1 when the fold is not open, or when the process declares none.
 - **`--actor <login>`** names the actor whose gates are checked. `status` and `can-move` take `operator` without it, and `move` takes the caller's `gh` login. A wrapper names one actor on each call, or a sign-off gate can give two verdicts.
 - **A transition's `authorisation`** names who may take the move. The engine does not enforce it, and the caller does. The engine reads it only to tell an `awaiting-human` wait, and where a `prompt` goes.

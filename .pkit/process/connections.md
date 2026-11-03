@@ -259,7 +259,7 @@ The engine's runtime never reads `depends_on`, and each other reader is bounded 
   - **the schema,** which checks its shape: a well-formed `upstream` address, `relation` and `mode` from their closed sets, and a `why`. A `mandatory` mark comes only with a reason.
   - **the render,** outside the engine, which reads the declarations alone
   - **the health check,** outside the runtime and report-only, which reads the entries that carry the optional `handoff` contract, and nothing else
-  - **the capability lifecycle,** install, upgrade and uninstall, which reads the `mandatory` mark alone. It reads the mark from the package's generated copy ("The generated `depends-on` list" below), only to check that the upstream definition exists.
+  - **the capability lifecycle,** install, upgrade and uninstall, which reads the `mandatory` mark alone. It reads the mark from the package's generated copy ("The generated `depends-on` list" below). It reads it only to check that the upstream definition exists, at a compatible interface version where the entry names one.
 - **Entries with neither a contract nor a mark** are evaluated by nothing. That is one level more inert than invariants ([COR-035](../decisions/core/COR-035-process-invariants.md)).
 - **A malformed entry** stays a lint error at authoring time, in schema validation, never a gate that fails closed. It cannot affect whether any subject may move.
 - **A contract that cannot be interpreted** at health time is reported indeterminate, never silently green ([COR-042](../decisions/core/COR-042-process-health.md)). An instance is an upstream address that does not resolve, or a trigger state the upstream does not declare.

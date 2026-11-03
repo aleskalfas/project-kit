@@ -34,7 +34,7 @@ What a process definition declares, field by field, and how the engine reads eac
 Each field of the shape is marked core or deferred ([COR-033](../decisions/core/COR-033-process-substrate.md) point 5).
 
 - **Core:** shipped, and read by the engine.
-- **Deferred:** a named extension point, designed into the shape now. The engine builds it only when a real binding needs it, and it then gains a decision of its own.
+- **Deferred:** a named extension point, designed into the shape now. The engine builds it only when a real binding needs it, and the extension point then gains a decision of its own.
 
 ## The fields
 
@@ -146,7 +146,7 @@ A process declares `subject.cardinality`, which is `singleton` or `keyed`.
 - **`keyed`** ([COR-032](../decisions/core/COR-032-keyed-process-subjects.md)): many units under one definition, each at its own position, such as one for each issue. The engine works on one subject identifier it is given:
   - It resolves that subject's position, validates and executes that subject's moves, and writes that subject's journal.
   - It passes the identifier to every predicate it runs, as the predicate's first argument.
-  - The identifier is required, with no singleton default. Each of the engine's operations on one of its subjects must be given `--subject <id>`, and fails with a clear error without it.
+  - The identifier is required, with no singleton default. Each operation on one of its subjects must be given the identifier, and fails with a clear error without it ([the engine page, "The operations"](engine.md#the-operations)).
   - A keyed subject may declare a descriptive `key`, naming what identifies a unit, such as `issue-number`. The engine does not interpret it.
   - A subject identifier must be safe to use in the path of that subject's journal. The singleton's `_` is refused as a keyed subject's identifier.
 
@@ -262,7 +262,7 @@ What is not reported, and why the member is needed:
 - **The shape contract's schema** states the one-mode rule too, so the authoring stamps' lint and an editor see it.
 - **A capability's companion schema** may restate the process block, as project-management's does, and the shape contract does not reach it. That is why the `process` member is the check that covers every definition.
 
-### What it shows
+### What a classifier's failure shows
 
 The states of a classifier that gives no answer carry the one cause, and the one tail of what the predicate wrote on standard error.
 
@@ -374,7 +374,7 @@ process:
   - A violation is shown on the status view. An agent reading status sees it on every read, and a binding's wrapper declines what follows.
   - The engine's `validate` operation reports it too ([the engine page, "The operations"](engine.md#the-operations)).
   - A violation does not block moves, fail transitions or remediate. A binding that wants a hard gate everywhere writes it as a gate predicate.
-  - The status narrative shows only violations, to stay short. `status --json` and `validate` carry the full set.
+  - The status narrative shows only violations, to stay short. `status --json` and `validate` carry the full set ([the engine page, "The operations"](engine.md#the-operations)).
 - **Determinism kept.** An invariant is a predicate over reality, like a detection predicate, so the engine stays a deterministic validator.
 - **The open region's boundary.** A region-scoped invariant shows on status as the reason the region's exit gate is shut. The boundary is enforced by composing the gate, not by blocking moves: the exit gate's predicate checks the region's conditions. So invariants report, and the exit gate checks.
 - **Deferred,** each for a decision of its own when a binding needs it ([COR-035](../decisions/core/COR-035-process-invariants.md)):

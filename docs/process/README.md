@@ -49,7 +49,7 @@ pkit:
 
 # Processes
 
-A process is a staged, gated journey that your capability defines over its own subjects, such as a page going from draft to published. The backbone's engine runs it: it reads where each subject stands, and checks each gated move. This guide, for a capability's author, says why a capability takes a process, and how to author one, connect it and write its checks. What an agent needs, such as each field of a definition, is in [the process reference](../../.pkit/process/README.md).
+A process is a staged, gated journey that your capability defines over its own subjects, such as a page going from draft to published. The backbone's engine runs it, reading where each subject stands and checking each gated move. This guide, for a capability's author, says why a capability takes a process, and how to author one, connect it and write its checks. What an agent needs, such as each field of a definition, is in [the process reference](../../.pkit/process/README.md).
 
 ## Contents
 
@@ -128,7 +128,7 @@ The alternative is your capability's own code: a status kept in a file, and a sc
 | Where each subject stands | ❌ A status you store and keep in step | ✅ Read from your files on each call |
 | A check not written yet | ❌ Whatever your code does without it | ✅ It fails, and the engine refuses each move resting on it |
 | A gate that needs someone else's sign-off | ❌ Your code checks who signed, or does not | ✅ The engine refuses the actor who signed |
-| Why a subject is where it is, and what it may do next | ❌ A view you write | ✅ `pkit process status`, as text or as JSON |
+| Why a subject is where it is, and what it may do next | ❌ A view you write | ✅ `pkit process status`, [as text or as JSON](../../.pkit/process/engine.md#the-operations) |
 | Another process that waits on yours | ❌ It names your code | ✅ It can name your role, and the wiring graph draws the link |
 | Setup | ✅ None beyond your code | ❌ Registering your capability, and a script for each check |
 | The cost of a check | ✅ A function call | ❌ A program the engine starts on each call, [bounded at 30 seconds](../../.pkit/process/README.md#the-predicate-runner-engine-contract) |
@@ -187,8 +187,8 @@ Give your capability a process by having your agent run the `process` skill. The
 
 What the skill asks, and what each answer stamps ([the CLI reference, `process new`](../../.pkit/cli/README.md#process-new-capabilityprocess-id-flags)):
 
-- **What is the subject?** One journey, or many, such as one for each issue. Many is `--cardinality keyed`, and each command on one of its subjects then takes the subject's id as `--subject` ([the shape page, "Subject cardinality"](../../.pkit/process/shape.md#subject-cardinality-core)).
-- **What does each state mean?** Each `--state` takes an id and a meaning, which `pkit process status` shows. Where two states' checks can both hold, the state declared first is where the subject is ([the shape page, "Position: the precedence rule"](../../.pkit/process/shape.md#position-the-precedence-rule)).
+- **What is the subject?** One journey, or many, such as one for each issue. Many is `--cardinality keyed` ([the shape page, "Subject cardinality"](../../.pkit/process/shape.md#subject-cardinality-core)). Each command on one of its subjects then takes the subject's id as `--subject` ([the engine page, "The operations"](../../.pkit/process/engine.md#the-operations)).
+- **What does each state mean?** Each `--state` takes an id and a meaning, which `pkit process status` shows ([the shape page, "The fields"](../../.pkit/process/shape.md#the-fields)). Where two states' checks can both hold, the state declared first is where the subject is ([the shape page, "Position: the precedence rule"](../../.pkit/process/shape.md#position-the-precedence-rule)).
 - **Which moves exist?** Each `--transition` names three things:
   - its states
   - its trigger
@@ -261,7 +261,7 @@ Process interpretability  (authoring check — indeterminates only; misses are n
 ```
 
 - **The role, not the capability.** Neither the announcement's definition nor `site`'s package names `doc-review`. The wiring graph shows the connection reaching `doc-review`'s process through the role, as its active provider.
-- **Whichever capability provides the role.** A connection by role reaches the process that the role's active provider offers at that point ([the connections page, "Addressing an upstream by role"](../../.pkit/process/connections.md#addressing-an-upstream-by-role)). Where two installed capabilities provide the role, validation fails, and names the command that selects one.
+- **Whichever capability provides the role.** A connection by role reaches the process that the role's active provider offers at that point ([the connections page, "Addressing an upstream by role"](../../.pkit/process/connections.md#addressing-an-upstream-by-role)). Where two installed capabilities provide the role, validation fails, and names the command that selects one ([the CLI reference, `validate`](../../.pkit/cli/README.md#validate)).
 - **The connection makes nothing wait.** The engine never reads it, and it moves no subject. A gate of the announcement's own, with a check you write, makes it wait for the page. The connection's relation is then `gates-on-readiness` ([the connections page, "The relations"](../../.pkit/process/connections.md#the-relations)).
 - **Mark a connection mandatory** with `--mandatory <reason>`, where the upstream must exist. Installing or upgrading the waiting capability is then refused while it is missing ([the connections page, "The mandatory mark"](../../.pkit/process/connections.md#the-mandatory-mark)).
 - **A hand-off contract** asks whether each upstream subject at its trigger has a counterpart downstream ([COR-042](../../.pkit/decisions/core/COR-042-process-health.md)). It adds two checks to write. Until they are written, `pkit process health` reports the contract indeterminate, with `--interpretation-only` as the fence shows, and without it too. Once they are written, `pkit process health` reports each hand-off missed.
