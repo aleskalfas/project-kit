@@ -15,7 +15,9 @@ produced picture with a label at the point the picture exposes.
 - a missing font, or a character no family measures, refused before layout;
 - under a part that passes a list on under another name: each content source names the
   keys the content file writes, and a field no part passes on is the placing
-  component's.
+  component's;
+- a top whose layouts are its pages' forms: the scene's `pages` names each page in
+  order, each a group of the top at its origin, as large as the top.
 """
 
 from __future__ import annotations
@@ -350,3 +352,34 @@ def test_a_field_the_content_leaves_out_names_its_key_and_one_no_part_passes_on_
         element = figure(content, components=components).scene.find(label)
         assert element is not None
         assert (element.properties["text"], element.sources["text"]) == ("", source)
+
+
+# --- a top whose layouts are its pages' forms (#2558) ------------------------------------------
+
+DECK = {
+    "slides": [
+        {"id": "cover", "layout": "cover", "title": "Building with AI"},
+        {"id": "rules", "layout": "slide", "title": "Where permissions come from"},
+        {"layout": "slide", "title": "How it fits"},
+    ]
+}
+
+
+def test_a_decks_scene_names_each_page_in_order_each_a_group_of_the_top() -> None:
+    result = draw(DECK, use="foundations/deck")
+    tree = result.scene.to_dict()
+
+    assert result.findings == []
+    assert tree["pages"] == ["deck/slides[cover]", "deck/slides[rules]", "deck/slides#3"]
+    deck = tree["children"][0]
+    assert "page" not in deck
+    assert (deck["sources"]["width"], deck["sources"]["height"]) == (
+        "role:size.slide",
+        "default:foundations/deck",
+    )
+    pages = [child for child in deck["children"] if child.get("page")]
+    assert [page["id"] for page in pages] == tree["pages"]
+    for page in pages:
+        assert page["component"] == "foundations/deck"
+        assert (page["x"], page["y"], page["width"], page["height"]) == (0, 0, 1280, 720)
+        assert {page["sources"][key] for key in ("x", "y", "width", "height")} == {"engine"}

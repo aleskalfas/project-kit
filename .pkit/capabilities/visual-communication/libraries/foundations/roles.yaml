@@ -35,6 +35,7 @@ roles:
   space.4: {type: dimension}
   stroke.thin: {type: dimension}
   size.figure: {type: dimension}
+  size.slide: {type: dimension}
   font.body: {type: fontFamily}
   font.heading: {type: fontFamily}
   type.body: {type: typography}

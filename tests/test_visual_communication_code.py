@@ -117,7 +117,7 @@ def test_a_run_writes_the_code_and_its_record_beside_it(root: Path) -> None:
 
 #: The tokens the CSS writer writes of the test brand: the shared roles but the typographies,
 #: the colours of the foundations' six colour families among them.
-WRITTEN = 32
+WRITTEN = 33
 
 
 def test_the_record_fingerprints_the_declaration_each_value_written_and_the_writer(

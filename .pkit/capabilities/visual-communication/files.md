@@ -52,7 +52,7 @@ pkit:
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/notation.yaml
         - tests/fixtures/visual-communication/libraries/test-parts/1.0.0/roles.yaml
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007", "visual-communication:DEC-008"]
+      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-010"]
 ---
 
 # The files of the visual work
@@ -235,7 +235,7 @@ The render writes the lock into `piece.yaml` as text, as a top-level block mappi
 
 ### Content files
 
-A content file, `content.<language>.yaml`, holds what the piece shows in one language. It names no position, size, colour or font. It chooses only among what its libraries declare: components, options, states, concepts and roles (DEC-001 point 3). A second language is a second file of the same shape, with the same ids. The content from the capability's tests for the piece above:
+A content file, `content.<language>.yaml`, holds what the piece shows in one language. It names no position, size, colour or font. It chooses only among what its libraries declare: components, layouts, options, states, concepts and roles (DEC-001 point 3). A second language is a second file of the same shape, with the same ids. The content from the capability's tests for the piece above:
 
 ```yaml
 pkit_schema: visual-communication:content
@@ -253,6 +253,7 @@ caption: The flow.
 - **The top** holds the fields of the piece's top component: `foundations/figure` takes `body` and `caption`.
 - **A mapping with `use`** places the component it names. Its other keys are that component's fields and options, and the reserved keys. A field the component fills through a slot, as the figure's `body`, takes such a mapping.
 - **A list the component repeats** holds items, each a mapping. The component names the component that draws each item, `tests/card` for `tests/steps`. An item may name its own with `use`.
+- **A page of a top whose layouts are its pages' forms** is a mapping in the list the top marks as holding its pages, `slides` for the foundations' `deck`. It names one of the top's layouts with `layout`, and holds that layout's slots and the reserved keys, nothing else: `{id: cover, layout: cover, title: Building with AI}`. Or it names the component that draws it with `use`, and its other keys are that component's. Every page names one or the other, and none takes a layout by default (DEC-010 point 5). How a layout declares its slots is in *Components*.
 - **`use: piece/<name>`** names a local component, `components/<name>.yaml` in the piece's folder.
 - **An option** takes one word from the list the component declares, such as `spacing: wide` on `tests/steps`. An option that names an item takes `{item: <id>}`, or `{item: <id>, point: <name>}` for a point the item exposes.
 - **`state`** names a state the component declares, such as `state: marked`.
@@ -260,7 +261,7 @@ caption: The flow.
 - **`concept`** names what the component it places stands for: a concept of a notation the piece names, as `<notation>/<concept>`, such as `concept: test-notation/store` ([Notations](#notations)). The concept gives the component its colour family; how a component paints with its family is in *Components*.
 - **An id** marks an item, or another component the content places, that another part of the piece names (DEC-001 point 3). It is unique in its list. Each list holds the same ids in every language as in the source language, in any order.
 
-Each key must be a field or an option of the component, or a reserved key. How a component declares its fields, options, states, slots and lists is in *Components*.
+Each key must be a field or an option of the component, or a reserved key. A key of a page in a layout must be a slot of that layout, `layout`, or a reserved key. How a component declares its fields, options, states, layouts, slots and lists is in *Components*.
 
 ## The library folder
 
@@ -327,9 +328,12 @@ The capability ships the foundations at `.pkit/capabilities/visual-communication
 
 - `library.yaml`;
 - `roles.yaml`, the shared roles, axes, colour families and contrast pairs that every library shares (DEC-004 points 2, 7 and 8);
-- `components/figure.yaml`, the top component `figure`, for a figure in a documentation page. The top components the capability ships are the foundations' (DEC-007 point 1).
+- `components/figure.yaml`, the top component `figure`, for a figure in a documentation page;
+- `components/deck.yaml`, the top component `deck`, for a presentation: each of its slides is a page, in its layout `cover` or `slide`, or drawn by the component it names.
 
-Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`; the dimensions `space.1` to `space.4`, `stroke.thin` and `size.figure`; the font families `font.body` and `font.heading`; and the typographies `type.body` and `type.heading`.
+The top components the capability ships are the foundations' (DEC-007 point 1).
+
+Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`; the dimensions `space.1` to `space.4`, `stroke.thin`, `size.figure` and `size.slide`, a slide's width; the font families `font.body` and `font.heading`; and the typographies `type.body` and `type.heading`.
 
 They declare six colour families: `neutral`, `blue`, `green`, `orange`, `purple` and `red` (DEC-004 point 10). Each has three members: `fill`, the colour of what it paints; `line`, its edge; and `text`, the text on its fill. Each member is a shared colour role of the family's own, `family.<family>.<member>`, such as `family.blue.fill`, with no default, so a brand gives each a value. Each family's text and fill are a pair at the level `text`.
 

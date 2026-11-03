@@ -58,7 +58,7 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 
 - **The commands** `pkit visual …`, also reachable as `pkit visual-communication …`. Each is described under [Commands](#commands).
 - **The file formats,** format 1: a schema for each kind of file a piece, a library or a command writes, under `schemas/`. Each file names its schema in its first lines ([The binding](files.md#the-binding)), so `pkit validate` checks its shape.
-- **The foundations library,** under `libraries/foundations/`: a few shared roles, two axes, six colour families and the `figure` component ([The foundations](files.md#the-foundations)). Its version is not released yet, so it may change in any release of the capability.
+- **The foundations library,** under `libraries/foundations/`: a few shared roles, two axes, six colour families, and two top components: `figure`, for a figure, and `deck`, for a presentation ([The foundations](files.md#the-foundations)). Its version is not released yet, so it may change in any release of the capability.
 - **Two plugins:** the SVG renderer, which draws the previews and the exports, and the CSS code writer, which writes a brand out as CSS variables ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [Written code](outputs.md#written-code)).
 - **The check,** the `visual-communication:check` member of `pkit validate`.
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.

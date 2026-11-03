@@ -82,6 +82,7 @@ from _lib.findings import (
     as_read,
 )
 from _lib.findings import loss_finding as _loss_finding
+from _lib.layout import LAYOUT, PageForms, page_forms
 from _lib.libraries import (
     FOLDER,
     FOUNDATIONS,
@@ -813,8 +814,9 @@ def _lists(value: Any, path: str) -> Iterator[tuple[str, list[Any]]]:
 def content_findings(project: pl.Project) -> list[Finding]:
     """Each content file against the components it fills (DEC-001 point 3, DEC-002 point
     4): a key no component declares as a field or an option, a required field missing, a
-    value of another type, a word an option does not take; the nearest known key or word
-    named."""
+    value of another type, a word an option does not take, a page that names no layout of
+    its top or one its top does not declare (DEC-010 point 5); the nearest known key, word
+    or layout named."""
     found: list[Finding] = []
     piece = project.piece
     for language, content in piece.contents.items():
@@ -857,7 +859,58 @@ class _Fields:
                     f"`{value[name]}` is no word of the option `{name}` of `{use}` "
                     f"({', '.join(map(str, option))}){hint}",
                 )
-        self._object(fields, value, path, fields, repeats, keys_checked=True)
+        forms = page_forms(component) if isinstance(component.get("layouts"), Mapping) else None
+        self._object(fields, value, path, fields, repeats, keys_checked=True, forms=forms)
+        if forms is None:
+            return
+        for name in forms.fields:
+            if isinstance(value.get(name), list):
+                self._pages(use, component, forms, value[name], _join(path, name))
+
+    def _pages(
+        self,
+        use: str,
+        component: Mapping[str, Any],
+        forms: PageForms,
+        pages: list[Any],
+        path: str,
+    ) -> None:
+        """The pages of a top whose layouts are its pages' forms (DEC-010 point 5): each a
+        mapping that names one of the top's layouts with `layout` and fills its slots, or
+        places the component it names with `use`."""
+        for place, page in enumerate(pages, start=1):
+            at = f"{path}{_item(page, place)}"
+            if not isinstance(page, Mapping):
+                self._fail("content-type", at, f"the page holds {_type_name(page)}, not object")
+            elif isinstance(page.get("use"), str):
+                self.placed(page["use"], page, at)
+            elif LAYOUT not in page:
+                self._fail(
+                    "content-layout",
+                    at,
+                    f"the page names neither a layout of `{use}` with `{LAYOUT}` "
+                    f"({', '.join(forms.layouts)}) nor a component with `use`",
+                )
+            elif page[LAYOUT] not in forms.layouts:
+                close = nearest(str(page[LAYOUT]), sorted(forms.layouts))
+                hint = f"; did you mean `{close}`?" if close else ""
+                self._fail(
+                    "content-layout",
+                    _join(at, LAYOUT),
+                    f"`{use}` has no layout `{page[LAYOUT]}` ({', '.join(forms.layouts)}){hint}",
+                )
+            else:
+                chosen = page[LAYOUT]
+                slots, required = forms.layouts[chosen]
+                known = {*slots, LAYOUT, *names.RESERVED_PLACING_KEYS}
+                self._keys(page, known, at, f"the layout `{chosen}` of `{use}` takes no slot")
+                schema = {"type": "object", "properties": slots, "required": list(required)}
+                decl = (component.get("layouts") or {}).get(chosen)
+                parts = decl.get("parts") if isinstance(decl, Mapping) else None
+                repeats = (
+                    self._repeats({"parts": parts}, (use,)) if isinstance(parts, Mapping) else {}
+                )
+                self._object(schema, page, at, schema, repeats, keys_checked=True)
 
     def _repeats(self, component: Mapping[str, Any], chain: tuple[str, ...]) -> dict[str, Any]:
         """Each list field of `component` that a part draws, with the component its `draw`
@@ -900,7 +953,10 @@ class _Fields:
         repeats: Mapping[str, Any] | None = None,
         *,
         keys_checked: bool = False,
+        forms: PageForms | None = None,
     ) -> None:
+        """`value` against the object `schema`. A field `forms` marks as holding pages is
+        checked as a list here, and its pages by `_pages`."""
         properties = schema.get("properties") or {}
         if not keys_checked:
             self._keys(value, set(properties), path, "no field is named")
@@ -912,7 +968,9 @@ class _Fields:
                 continue
             at = _join(path, key)
             draw = (repeats or {}).get(key)
-            if draw is not None and isinstance(item, list):
+            if forms is not None and key in forms.fields:
+                self._value(properties[key], item, at, root, items=False)
+            elif draw is not None and isinstance(item, list):
                 self._value(properties[key], item, at, root, items=False)
                 for place, entry in enumerate(item, start=1):
                     if isinstance(entry, Mapping):

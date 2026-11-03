@@ -212,6 +212,13 @@
         "value": 960,
         "unit": "px"
       }
+    },
+    "slide": {
+      "$description": "The width of a slide.",
+      "$value": {
+        "value": 1280,
+        "unit": "px"
+      }
     }
   },
   "stroke": {

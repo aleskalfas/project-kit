@@ -1,7 +1,8 @@
 """The check's findings (visual-communication DEC-002 point 4, DEC-003 point 9, DEC-004
 points 8, 9 and 11, DEC-005 points 9 and 14): the lock, the ids and fields of the content,
 an item of a list a part passes on under another name read against the component that
-draws it, contrast as drawn, the losses a renderer's declaration predicts, the document the
+draws it, a page read against the layout or the component it names (DEC-010 point 5),
+contrast as drawn, the losses a renderer's declaration predicts, the document the
 validator reads, a component it cannot read, a top that names no component, the notations
 a piece names and the concepts its content names (DEC-004 point 10), and an error it does
 not expect on one piece. The command around it is `test_visual_communication_check.py`."""
@@ -1043,3 +1044,139 @@ def test_a_version_that_names_majors_no_versions_fit_cannot_be_checked_alone(
     [(missing, level)] = judged(report, "alone-missing")
     assert (level, missing.library) == ("fails", "")
     assert checks.place(missing) == "visual/libraries/libraries.yaml#libraries.test-parts"
+
+
+# --- a top whose layouts are its pages' forms (#2558) ------------------------------------------
+
+#: A deck's pages in each language: a cover, and two slides, one with a picture.
+SLIDES = {
+    "en": [
+        ("Building with AI", "The way the project decided", "Where permissions come from"),
+        "In project-kit.",
+    ],
+    "cs": [
+        ("Stavíme s AI", "Tak, jak projekt rozhodl", "Odkud se berou oprávnění"),
+        "V project-kitu.",
+    ],
+}
+
+
+STEPS = {"use": "tests/steps", "steps": [{"id": "ask", "head": "Ask"}]}
+
+
+def slides(language: str) -> list[dict[str, Any]]:
+    (title, subtitle, rules), footer = SLIDES[language]
+    return [
+        {"id": "cover", "layout": "cover", "title": title, "subtitle": subtitle, "author": "A. K."},
+        {
+            "id": "rules",
+            "layout": "slide",
+            "title": rules,
+            "visual": STEPS,
+            "footer": footer,
+        },
+        {"id": "fits", "layout": "slide", "title": "AI"},
+    ]
+
+
+def deck_project(tmp_path: Path, **pages: list[Any]) -> Path:
+    """The foundations' deck as the piece's top, in English and Czech: `slides` in each
+    language, or the language's own pages where `pages` gives them."""
+    root = drawing_project(tmp_path, top="foundations/deck", picture=False, languages=["en", "cs"])
+    for language in ("en", "cs"):
+        given = pages.get(language, slides(language))
+        write(
+            root / PIECE_FOLDER / f"content.{language}.yaml",
+            yaml_text(bound("content", slides=given)),
+        )
+    return root
+
+
+def test_a_deck_of_a_cover_and_slides_in_two_languages_draws_each_page_in_its_layout(
+    tmp_path: Path,
+) -> None:
+    project = project_of(deck_project(tmp_path))
+
+    assert checks.content_findings(project) == []
+    scenes = dict(project.scenes())
+    assert list(scenes) == ["en", "cs"]
+    for language, result in scenes.items():
+        assert result.findings == [], language
+        assert result.scene.pages == [
+            "deck/slides[cover]",
+            "deck/slides[rules]",
+            "deck/slides[fits]",
+        ]
+        title = result.scene.find("deck/slides[cover]/title")
+        assert title is not None and title.sources["text"] == "content:slides[cover].title"
+    shown = [scenes[language].scene.find("deck/slides[rules]/title") for language in scenes]
+    assert [element.properties["text"] for element in shown if element is not None] == [
+        "Where permissions come from",
+        "Odkud se berou oprávnění",
+    ]
+
+
+def test_each_page_is_judged_against_its_layout_or_the_component_it_names(
+    tmp_path: Path,
+) -> None:
+    pages = [
+        {"id": "a", "title": "A"},
+        {"id": "b", "layout": "slied", "title": "B"},
+        {"id": "c", "layout": "slide", "titel": "C"},
+        {"id": "d", "layout": "cover", "title": "D", "lead": "Not on a cover."},
+        {"id": "e", "layout": "slide", "title": 5},
+        {
+            "id": "f",
+            "use": "foundations/figure",
+            "layout": "slide",
+            "body": STEPS,
+        },
+        "A page.",
+    ]
+    root = deck_project(tmp_path, en=pages, cs=pages)
+
+    found = [f for f in checks.content_findings(project_of(root)) if f.file == CONTENT]
+
+    assert [(f.code, f.where, f.message) for f in found] == [
+        (
+            "content-layout",
+            "slides[a]",
+            "the page names neither a layout of `foundations/deck` with `layout` (cover, "
+            "slide) nor a component with `use`",
+        ),
+        (
+            "content-layout",
+            "slides[b].layout",
+            "`foundations/deck` has no layout `slied` (cover, slide); did you mean `slide`?",
+        ),
+        (
+            "content-key",
+            "slides[c].titel",
+            "the layout `slide` of `foundations/deck` takes no slot `titel`; did you mean `title`?",
+        ),
+        ("content-required", "slides[c].title", "the field `title` is required"),
+        (
+            "content-key",
+            "slides[d].lead",
+            "the layout `cover` of `foundations/deck` takes no slot `lead`",
+        ),
+        ("content-type", "slides[e].title", "the field holds an integer, not string"),
+        (
+            "content-key",
+            "slides[f].layout",
+            "`foundations/figure` takes no field or option `layout`",
+        ),
+        ("content-type", "slides#7", "the page holds a string, not object"),
+    ]
+
+
+def test_a_page_carries_its_layout_the_reserved_keys_and_its_slots_alone(
+    tmp_path: Path,
+) -> None:
+    """A field of the deck is no slot of a page, and `layout` is the page's own key."""
+    pages = [{"id": "a", "layout": "slide", "title": "A", "state": "done", "slides": []}]
+    root = deck_project(tmp_path, en=pages, cs=pages)
+
+    found = [f for f in checks.content_findings(project_of(root)) if f.file == CONTENT]
+
+    assert [(f.code, f.where) for f in found] == [("content-key", "slides[a].slides")]

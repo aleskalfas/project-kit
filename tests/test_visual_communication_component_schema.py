@@ -25,6 +25,7 @@ DEFS = SCHEMA["$defs"]
 
 COMPONENTS = [
     FOUNDATIONS / "components" / "figure.yaml",
+    FOUNDATIONS / "components" / "deck.yaml",
     *sorted((FIXTURES / "libraries" / "tests" / "1.0.0" / "components").glob("*.yaml")),
     SCHEMAS / "component.yaml",
 ]
@@ -239,3 +240,52 @@ def test_format_1_is_stricter_than_the_engine_where_the_engine_reads_nothing(
     data = changed(path, value)
     assert problems(data) != [], case
     assert engine_issues(data) == [], case
+
+
+# --- a top whose layouts are its pages' forms (#2558) ------------------------------------------
+
+
+def forms(**layouts: Any) -> dict[str, Any]:
+    """The reference instance as a top whose layouts are its pages' forms: `tags` marked
+    as holding its pages, no parts of its own, and `layouts`."""
+    data = changed("layouts", layouts)
+    data["fields"]["properties"]["tags"]["x-pkit-pages"] = True
+    data["fields"]["properties"]["tags"]["items"] = {"type": "object"}
+    del data["parts"], data["exposes"], data["preferred"]
+    return data
+
+
+DRAWN = {
+    "slots": {"head": {"type": "string", "x-pkit-prose": True}},
+    "required": ["head"],
+    "parts": {"head": {"text": {"content": "head", "style": "type.body"}}},
+}
+
+
+def test_a_top_may_declare_several_layouts_each_with_its_own_drawing() -> None:
+    data = forms(cover=DRAWN, slide=DRAWN)
+    assert problems(data) == []
+    assert engine_issues(data) == []
+
+
+@pytest.mark.parametrize(
+    ("case", "layouts"),
+    [
+        ("a layout without its drawing", {"cover": DRAWN, "slide": {"slots": DRAWN["slots"]}}),
+        ("a slot named `layout`", {"cover": {**DRAWN, "slots": {"layout": {}}, "required": []}}),
+        ("a slot named as a reserved key", {"cover": {**DRAWN, "slots": {"use": {}}}}),
+        (
+            "a slot that holds pages",
+            {"cover": {**DRAWN, "slots": {**DRAWN["slots"], "more": {"x-pkit-pages": True}}}},
+        ),
+        ("a slot of format 1's shape", {"cover": {**DRAWN, "slots": {"head": {"pages": True}}}}),
+        ("a required slot of format 1", {"cover": {"slots": {}, "required": ["head"]}}),
+    ],
+    ids=lambda value: value if isinstance(value, str) else "",
+)
+def test_the_schema_refuses_a_page_form_the_engine_refuses(
+    case: str, layouts: dict[str, Any]
+) -> None:
+    data = forms(**layouts)
+    assert problems(data) != [], case
+    assert engine_issues(data) != [], case

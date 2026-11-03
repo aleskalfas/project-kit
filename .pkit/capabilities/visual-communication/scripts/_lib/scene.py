@@ -15,7 +15,9 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   points, mapped into the image's frame.
 - **Traces.** Each element's id is its trace: the path of instances, parts and items
   from the top, joined by `/`; an item is `<list>[<id>]`, or `<list>#<place>` (from 1)
-  where it has no id. Each drawn property names its source: `content:<field path>`,
+  where it has no id. A page of a top whose layouts are its pages' forms is traced as an
+  item of the field that holds the pages, `<field>[<id>]`, and lies at the top's origin,
+  as large as the top. Each drawn property names its source: `content:<field path>`,
   `option:<name>`, `default:<library>/<component>`, `role:<token path>` or `engine`. A
   value the component leaves to the engine, such as a text's `text-anchor` where it gives
   none, is the engine's.
@@ -182,6 +184,11 @@ class _Emitter:
         for name, node in instance.nodes.items():
             if node.present:
                 element.children.append(self.part(instance, name, node))
+        # The pages of a top whose layouts are its pages' forms, each at the top's origin.
+        for page in instance.pages:
+            element.children.append(
+                self.group(page, (0.0, 0.0), (ENGINE, ENGINE), (ENGINE, ENGINE))
+            )
         for size, gets, asks in attempt(instance.shortfalls, []):
             self._short(instance.trace, size, gets, asks)
         return element
