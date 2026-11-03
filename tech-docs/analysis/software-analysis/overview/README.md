@@ -1,6 +1,6 @@
 # Overview of the analysis of software-analysis
 
-<!-- pkit:overview reads=5 fingerprint=sha256:1f2f16eb793d9f466093eaedcd9561c35eb83a6435b6e8f3ae066aff427c8a38 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:712b94b1d26b7c4972e0b158a7b3a81275d6860a48f7f54e4d466a59625af4ca -->
 
 [Software analysis keeps actors, use cases, journeys and terms true as the software changes](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md).
 
@@ -18,7 +18,7 @@ Describe a project in its analysis, each kind of artefact in the parts the proje
 
 - [010 — Analyses, use cases and their ids](../domain-model/010-analyses-and-use-cases.md)
 - [020 — Revalidations and what they find](../domain-model/020-revalidations.md)
-- [030 — Kinds and their structures](../domain-model/030-kinds-and-structures.md)
+- [030 — Kinds and their declared structures](../domain-model/030-kinds-and-structures.md)
 
 **Its requirements:** none.
 
@@ -40,7 +40,7 @@ Keep the analysis true as the project changes, revised before a change is built 
 
 - [010 — Analyses, use cases and their ids](../domain-model/010-analyses-and-use-cases.md)
 - [020 — Revalidations and what they find](../domain-model/020-revalidations.md)
-- [030 — Kinds and their structures](../domain-model/030-kinds-and-structures.md)
+- [030 — Kinds and their declared structures](../domain-model/030-kinds-and-structures.md)
 
 **Its requirements:** none.
 
@@ -70,7 +70,7 @@ Each view of the domain model explains a group of related concepts:
 
 - [010 — Analyses, use cases and their ids](../domain-model/010-analyses-and-use-cases.md)
 - [020 — Revalidations and what they find](../domain-model/020-revalidations.md)
-- [030 — Kinds and their structures](../domain-model/030-kinds-and-structures.md)
+- [030 — Kinds and their declared structures](../domain-model/030-kinds-and-structures.md)
 
 ### Requirements in no area
 

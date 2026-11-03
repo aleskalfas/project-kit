@@ -1,0 +1,193 @@
+answers:
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-102-hand-out-pdf.md
+    revalidated:
+      at: 2026-11-03T03:42:33Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+    revalidated:
+      at: 2026-11-03T03:45:43Z
+      outcome: unchanged
+      unchanged-because: "The page as it stands, its notations, concepts and colour families as #2509 wrote them, holds against DEC-004 point 7's pointer to DEC-009, which changes nothing it states, and against this change's edits. It describes format 1's files: an item names its own component with use, a key must be a field or an option of its component or a reserved key, the reserved words, and a draft's lock moving to versions that fit together. The edits to DEC-001 point 6, DEC-002 points 3 and 4 and DEC-003 point 8 add a list's component field, arrangement fields, pages in a layout with the key layout, and a clash of keys on an item. Format 1 holds none of them (DEC-010 point 8), and the pages describe them with #2501 T3 and T9."
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    read:
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T000900Z-bed893e8.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+    revalidated:
+      at: 2026-11-03T03:45:48Z
+      outcome: unchanged
+      unchanged-because: "The page as it stands, an instance's colour family by its concept as #2509 wrote it, holds against DEC-004 point 7's pointer to DEC-009, which changes nothing it states, and against this change's edits. It describes format 1's components: a pattern names each item's component in draw and an item may name its own, the options a component declares, and a top's one layout whose slot marked pages: true holds pages. The edits to DEC-001 point 6 and DEC-005 points 1, 2 and 5 add a list's component field, an arrangement field given on each item, and pages a marked field holds in a top whose pages each take one of its layouts. Format 1 holds none of them (DEC-010 point 8), and the page describes them with #2501 T3 and T9. The edit to DEC-003 point 8 touches nothing the page states."
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261102T233447Z-d3a48320.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+    revalidated:
+      at: 2026-11-03T03:42:55Z
+      outcome: unchanged
+      unchanged-because: The page describes the renderers, exports, produced pictures and written code. It states nothing of the strict reading of keys, the reserved keys, how a component chooses or how a top declares its pages, which the edits to DEC-002 points 3 and 4 and DEC-005 points 1, 2 and 5 change. Its pages are counted from the scene, whichever field declared them.
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T233447Z-d3a48320.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+    revalidated:
+      at: 2026-11-03T03:45:53Z
+      outcome: unchanged
+      unchanged-because: "The page as it stands, the notation findings #2509 added included, holds against DEC-004 point 7's pointer to DEC-009, which changes nothing it states, and against this change's edits. It lists format 1's findings: content-key for a key that is no field, option or reserved key, the lock findings, and page-in-page for a slot of pages inside a page. The edits to DEC-002 points 3 and 4, DEC-003 point 8 and DEC-005 points 1, 2 and 5 add arrangement fields, pages in a layout, a clash of keys on an item and a marked field of pages. No format 1 file holds them (DEC-010 point 8), and their findings come with #2501 T3 and T9."
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T233447Z-d3a48320.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+    revalidated:
+      at: 2026-11-03T03:45:59Z
+      outcome: unchanged
+      unchanged-because: "The README as it stands, with #2509's sentence linking where brands, notations and producers are said not to ship, holds against DEC-004 point 7's pointer to DEC-009, which changes nothing it states, and against this change's edits. It says a render moves a draft's lock to the newest versions that fit together, and the edit to DEC-003 point 8 adds a clash of keys on an item to what does not fit, which no format 1 file holds (DEC-010 point 8). It states nothing of a list's component, an item's keys, the reserved keys, how a component chooses or how pages are declared, which the edits to DEC-001, DEC-002 and DEC-005 change."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-draft
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+    revalidated:
+      at: 2026-11-03T03:43:13Z
+      outcome: unchanged
+      unchanged-because: The definition says a draft's lock moves at each drawing to the newest library versions present within its major numbers, unless a person pinned it. The edit to DEC-003 point 8 adds a clash of keys on an item to the versions that do not fit together for a piece. What a draft is, and who moves its lock, stay as the definition says.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-final
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+    revalidated:
+      at: 2026-11-03T03:43:18Z
+      outcome: unchanged
+      unchanged-because: The definition says a final piece was handed out, its lock never moves again, and its exports are kept as handed out. The edit to DEC-003 point 8 adds a clash of keys on an item to the versions that do not fit together, and changes nothing of a final piece.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-pinned
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+    revalidated:
+      at: 2026-11-03T03:43:22Z
+      outcome: unchanged
+      unchanged-because: The definition says a pinned lock moves only when a person moves it, never at each drawing. The edit to DEC-003 point 8 adds a clash of keys on an item to the versions that do not fit together, and changes nothing of a pin.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-published
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+    revalidated:
+      at: 2026-11-03T03:43:27Z
+      outcome: unchanged
+      unchanged-because: The definition says a published piece's lock moves only through a reviewed change that shows the piece before and after. The edit to DEC-003 point 8 adds a clash of keys on an item to the versions that do not fit together, and changes nothing of who moves a published lock.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-option
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+    revalidated:
+      at: 2026-11-03T03:43:32Z
+      outcome: unchanged
+      unchanged-because: The definition says an option is a choice a library component declares, made where a piece uses it from the values the component lists. The edit to DEC-001 point 6 narrows naming another component for a whole list to the lists whose pattern declares a field for it, and changes nothing of options.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-093-build-presentation.md
+    revalidated:
+      at: 2026-11-03T03:43:41Z
+      outcome: unchanged
+      unchanged-because: Step 3 names a library component for each slide's picture, and the use case names none for a whole list, which the edit to DEC-001 point 6 narrows. Variant 4a refuses a key that no library component the content fills declares. The edit to DEC-002 point 3 adds keys a list's pattern or a page's layout declares, which that sentence still covers. The edit to DEC-003 point 8 adds a clash of keys to what does not fit, and step 4 and variant 1b say only that a new draft takes the newest versions and a copy starts pinned.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-094-put-figure-in-page.md
+    revalidated:
+      at: 2026-11-03T03:43:47Z
+      outcome: unchanged
+      unchanged-because: Variant 2a says a diagram is a page alone, and part of a page inside a slide, which DEC-005 point 5 states as before. Its edit adds a marked field that holds the pages of a top whose pages each take one of its layouts. The edit to DEC-003 point 8 adds a clash of keys to what does not fit, and the figure's draft and published lock move as the use case states.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-095-draw-views-of-system.md
+    revalidated:
+      at: 2026-11-03T03:43:52Z
+      outcome: unchanged
+      unchanged-because: Step 4 gives each element its look from its concept, and variant 5a leaves a final view as it was handed out. The edit to DEC-001 point 6 narrows naming a component for a whole list, and the edit to DEC-003 point 8 adds a clash of keys to what does not fit. Neither touches what the use case states.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-096-add-visual-as-data.md
+    revalidated:
+      at: 2026-11-03T03:43:58Z
+      outcome: unchanged
+      unchanged-because: A local component repeats, lines up and sizes its parts with the engine's tools, its options are declared, and a piece moves its lock after a before-and-after. The edits to DEC-005 points 1 and 2 let an option be an arrangement field each item gives, and add no tool. The edit to DEC-001 point 6 narrows naming a component for a whole list, and the edit to DEC-003 point 8 adds a clash of keys to what does not fit. None changes what the use case states.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-103-improve-library-component.md
+    revalidated:
+      at: 2026-11-03T03:44:03Z
+      outcome: unchanged
+      unchanged-because: Steps 4 and 5 and variants 4a to 4c move each piece's lock by its state, a draft's within its major number. The edit to DEC-003 point 8 adds a clash of keys on an item to the versions that do not fit together, which a draft's render holds back, as it holds back versions point 8 already kept from fitting. Who moves each lock, and the guarantees, stay as stated.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-106-build-brand-on-brand.md
+    revalidated:
+      at: 2026-11-03T03:44:08Z
+      outcome: unchanged
+      unchanged-because: Variant 5a says no lock fits two major numbers of one library, which DEC-003 point 8 states as before. Its edit adds a clash of keys on an item to what does not fit, and changes nothing a brand built on a brand does.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-109-take-in-shared-library.md
+    revalidated:
+      at: 2026-11-03T03:44:14Z
+      outcome: unchanged
+      unchanged-because: "Step 3 and variant 3a refuse a library version the installed capability cannot read, which the edit to DEC-002 point 3 leaves as it was: it adds only the keys an item's list and a page's layout declare. The edit to DEC-003 point 8 adds a clash of keys to what does not fit, and variants 6a, 6b and 6e still move each lock by the piece's state."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-110-add-library-component.md
+    revalidated:
+      at: 2026-11-03T03:44:18Z
+      outcome: unchanged
+      unchanged-because: Variant 1a declares a component's options and gives its colours roles, and variant 4a moves the piece after a before-and-after. The edit to DEC-001 point 6 narrows naming a component for a whole list, and the edit to DEC-003 point 8 adds a clash of keys to what does not fit. Neither changes what the use case states.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/journeys/JRN-011-move-component-into-library.md
+    revalidated:
+      at: 2026-11-03T03:44:23Z
+      outcome: unchanged
+      unchanged-because: Step 3 rests on a copy of a final piece starting as a draft with its lock pinned, which DEC-003 point 8 states as before. Its edit adds a clash of keys on an item to the versions that do not fit together, and changes nothing of a pin.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/journeys/JRN-010-give-talk.md
+    revalidated:
+      at: 2026-11-03T03:45:18Z
+      outcome: unchanged
+      unchanged-because: UC-102 gained, in its sources for step 2, that a field the kind marks says which items are pages where each page takes one of the kind's layouts. The journey's step 5 hands UC-102 the content with the board's edits taken back, and the PDF is still written from the content, never from the board. Which field declares the pages changes nothing of that hand-over.
