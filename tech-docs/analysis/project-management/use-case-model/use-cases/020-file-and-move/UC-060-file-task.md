@@ -30,6 +30,7 @@ pkit:
     anchors:
       path:
         - .pkit/capabilities/project-management/scripts/create-issue.py
+        - .pkit/capabilities/project-management/scripts/link-parent.py
         - .pkit/capabilities/project-management/scripts/_lib/title_rules.py
         - .pkit/capabilities/project-management/scripts/_lib/body_parent_ref.py
         - .pkit/capabilities/project-management/scripts/_lib/body_rules.py

@@ -25,12 +25,18 @@ pkit:
         - .pkit/capabilities/project-management/scripts/start-work.py
         - .pkit/capabilities/project-management/scripts/handoff-issue.py
         - .pkit/capabilities/project-management/scripts/_lib/instance_ownership.py
+        - .pkit/capabilities/project-management/scripts/_lib/instance_claims.py
+        - .pkit/capabilities/project-management/scripts/done-work.py
+        - .pkit/capabilities/project-management/scripts/edit-issue.py
+        - .pkit/capabilities/project-management/scripts/move-issue.py
       record:
+        - project-management:DEC-035
         - project-management:DEC-035#3
         - project-management:DEC-035#4
         - project-management:DEC-035#6
         - project-management:DEC-035#8
         - project-management:DEC-043#3
+        - project-management:DEC-059
         - project-management:DEC-059#6
         - project-management:DEC-059#9
         - project-management:DEC-014
@@ -48,6 +54,7 @@ pkit:
         - COR-051#4
         - COR-066#1
         - COR-066#2
+        - ADR-041
       artefact:
         - ACT-worker-agent
         - REQ-061
