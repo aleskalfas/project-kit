@@ -10,13 +10,14 @@ in memory and read through an in-memory `Env` (`tests/visual_engine.py`):
   of an item's point; list fields, which may also be null;
 - the operators `row` and `column`: `gap`, `align-items`, `justify-content`, equal sizes;
 - colour families, whose members the foundations map to roles; states and `override`;
+  a concept's family, ahead of a list's, a component's and a container's;
 - formulas: dimensions checked when a component is read, `:index` and `:count` over the
   items drawn, steps into a list;
 - pages: a diagram is a page alone, and part of the page that holds it;
 - what is refused: a loop, naming every element in it; two owners of a value; division
   by zero; a component that places itself, except over its items; a page inside a page;
-  a component that gets less than it asks for; a component, role, picture or colour
-  family member that is not there; an item option no single part repeats over;
+  a component that gets less than it asks for; a component, role, picture, colour
+  family member or concept that is not there; an item option no single part repeats over;
 - what cannot be drawn: a top that names no component, which lies in the piece; a
   component whose file cannot be read, a finding in that file alone.
 """
@@ -776,3 +777,85 @@ def test_a_component_whose_file_cannot_be_read_is_a_finding_in_that_file_alone()
         assert unreadable.extra == {"component": "lab/broken"}
         assert "unknown-component" not in codes(result)
     assert placed.scene.find("top/p") is None
+
+
+# --- concepts ------------------------------------------------------------------------------
+
+#: The concepts the piece's notations hold in these tests: each to its colour family, or to
+#: None where its notation cannot read it.
+CONCEPTS = {"sys/store": "red", "sys/user": "blue", "sys/lost": None}
+
+
+def swatches(*items: dict[str, Any], **environment: Any) -> Any:
+    """The scene of swatches a `repeat` part of colour `blue` draws over `items`."""
+    parts = {"items": {"repeat": "items", "draw": "lab/swatch", "colour": "blue", "row": {}}}
+    fields = {"items": {"type": "array", "items": {"type": "object"}}}
+    components = {**coloured(), **lab(top=top(parts, fields=fields))}
+    environment = {"families": FAMILIES, "concepts": CONCEPTS, **environment}
+    return draw({"items": list(items)}, components=components, **environment)
+
+
+def painted(result: Any, item: str) -> tuple[str, str]:
+    element = result.scene.find(f"top/items[{item}]/b")
+    assert element is not None
+    return element.properties.get("fill"), element.sources.get("fill")
+
+
+def test_an_item_takes_its_concept_s_family_else_its_place_s_and_a_state_changes_either() -> None:
+    result = swatches(
+        {"id": "plain"},
+        {"id": "store", "concept": "sys/store"},
+        {"id": "marked", "state": "marked"},
+        {"id": "user", "concept": "sys/user", "state": "marked"},
+        {"id": "quiet", "concept": "sys/store", "state": "quiet"},
+    )
+
+    assert result.findings == []
+    assert painted(result, "plain") == ("surface", "default:lab/top")
+    assert painted(result, "store") == ("accent", "content:items[store].concept")
+    assert painted(result, "marked") == ("accent", "content:items[marked].state")
+    assert painted(result, "user") == ("accent", "content:items[user].state")
+    assert painted(result, "quiet") == ("accent", "content:items[quiet].concept")
+
+
+def test_a_concept_comes_before_the_component_s_family_and_its_container_s() -> None:
+    environment = {"families": FAMILIES, "concepts": CONCEPTS}
+    slot = top({"s": {"slot": "body"}}, fields={"body": {"type": "object"}}, colour="blue")
+    container = {**coloured(), **lab(top=slot)}
+    named = {"body": {"use": "lab/swatch", "concept": "sys/store"}}
+
+    own = draw(named, components=coloured(colour="blue"), **environment)
+    contained = draw(named, components=container, **environment)
+    inherited = draw({"body": {"use": "lab/swatch"}}, components=container, **environment)
+
+    assert fill(inherited)[0] == "surface"
+    for result in (own, contained):
+        assert result.findings == []
+        assert fill(result) == ("accent", "content:body.concept")
+
+
+def test_a_concept_the_notations_do_not_hold_is_a_finding_and_the_family_falls_back() -> None:
+    unnamed = swatches({"id": "a", "concept": "other/store"})
+    absent = swatches({"id": "a", "concept": "sys/queue"})
+    malformed = swatches({"id": "a", "concept": "store"})
+
+    assert finding(unnamed, "unknown-concept").message == (
+        "top/items[a]: the piece names no notation `other`"
+    )
+    assert finding(absent, "unknown-concept").message == (
+        "top/items[a]: the notation `sys` holds no concept `queue`"
+    )
+    assert finding(malformed, "unknown-concept").message == (
+        "top/items[a]: `concept` takes `<notation>/<concept>`, not `store`"
+    )
+    for result in (unnamed, absent, malformed):
+        refused = finding(result, "unknown-concept")
+        assert (refused.where, refused.library) == ("top/items[a]", "")
+        assert painted(result, "a") == ("surface", "default:lab/top")
+
+
+def test_a_concept_its_notation_cannot_read_takes_the_family_it_would_have_had() -> None:
+    result = swatches({"id": "a", "concept": "sys/lost"})
+
+    assert result.findings == []
+    assert painted(result, "a") == ("surface", "default:lab/top")

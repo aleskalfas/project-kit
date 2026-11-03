@@ -15,19 +15,23 @@ and 11, DEC-005 points 9, 13 and 14, DEC-006 point 8).
 - the brand each piece locks, and its findings: open roles, fonts, declared pairs;
 - the name of each library a piece locks, against the top groups of the shared roles of
   the foundations it locks (DEC-004 points 7 and 11);
+- each notation a piece names, against the colour families of the foundations it locks:
+  a library that is no notation, a file that cannot be read, a concept that maps to no
+  colour family the foundations declare (DEC-004 points 10 and 11);
 - the ids in each content file, and each content file against the fields and options of
   the components it fills, the nearest known key named.
 
 **Scene findings** (`scene_findings`): what computing a piece's scenes finds, in every
 language: the engine's own (overflow, a component that gets less than it asks for, two
-owners of a value, a loop, a missing exposed part or point, a page inside a page), a
-produced picture that is missing, contrast as drawn, a colour role the brand lacks, each
-loss of the renderers that draw the piece that nobody accepted, and the components it uses
-that are experimental or deprecated. A render keeps them in the piece's `findings.yaml`,
-keyed by a fingerprint of every file they were computed from. The check reads that record
-while its key verifies, and computes the scenes now otherwise. It computes no more once
-the validator's bound (`PKIT_COMMAND_DEADLINE`) is near: each piece left fails as not
-checked, naming `pkit visual render <piece>`.
+owners of a value, a loop, a missing exposed part or point, a page inside a page, a
+concept the piece's notations do not hold), a produced picture that is missing, contrast
+as drawn, a colour role the brand lacks, each loss of the renderers that draw the piece
+that nobody accepted, and the components it uses that are experimental or deprecated. A
+render keeps them in the piece's `findings.yaml`, keyed by a fingerprint of every file
+they were computed from. The check reads that record while its key verifies, and computes
+the scenes now otherwise. It computes no more once the validator's bound
+(`PKIT_COMMAND_DEADLINE`) is near: each piece left fails as not checked, naming
+`pkit visual render <piece>`.
 
 **An error the check does not expect** on one piece, such as one the engine raises on data
 it does not guard against, stops that piece alone: it fails as `unexpected-error`, naming
@@ -55,7 +59,7 @@ from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from _lib import code, fingerprint, framing, location, names, tokens
+from _lib import code, fingerprint, framing, location, names, notations, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.files import FileError, binding_problem, nearest, read_bound, schema_of
@@ -186,6 +190,7 @@ class _Run:
         self.unbound: set[str] = set()
         self.brands: set[str] = set()
         self.named: set[str] = set()
+        self.notations: set[str] = set()
         self.as_released: dict[tuple[str, Version], bool] = {}
         self.counts = {"pieces": 0, "read": 0, "computed": 0, "unchecked": 0}
 
@@ -329,6 +334,7 @@ class _Run:
             return
         self._brand_findings(piece.brand, project.lock[piece.brand], project.brand.findings)
         self._library_names(project)
+        self._notation_findings(project)
         self.found.extend(content_findings(project))
         produced = _produced_findings(self.root, self.location, piece)
         self.found.extend(produced)
@@ -364,6 +370,17 @@ class _Run:
                         library=label,
                     )
                 )
+
+    def _notation_findings(self, project: pl.Project) -> None:
+        """The findings of each notation the piece names, once for each version and
+        foundations: a notation is read against the colour families of the foundations the
+        piece locks (DEC-004 points 10 and 11). A file the binding pass already reports is
+        not reported again (one owner per finding, DEC-002 point 6)."""
+        against = project.label(pl.FOUNDATIONS)
+        for notation in project.notations.values():
+            if f"{notation.label} {against}" not in self.notations:
+                self.notations.add(f"{notation.label} {against}")
+                self.found.extend(f for f in notation.findings if f.file not in self.unbound)
 
     def _scenes(self, project: pl.Project, unmade: set[str]) -> None:
         piece = project.piece
@@ -411,6 +428,8 @@ def kind_of(inside: str) -> str | None:
             return "library"
         if within == ["roles.yaml"]:
             return "roles"
+        if within == [notations.FILE]:
+            return "notation"
         if len(within) == 2 and within[0] == pl.COMPONENTS:
             return "component"
         return None

@@ -10,6 +10,8 @@ explains:
   - TERM-role
   - TERM-data-point
   - TERM-process
+  - TERM-process-subject
+  - TERM-install-plan
 pkit:
   friction:
     anchors:
@@ -37,6 +39,8 @@ pkit:
         - TERM-role
         - TERM-data-point
         - TERM-process
+        - TERM-process-subject
+        - TERM-install-plan
 ---
 
 # VIEW-capabilities-areas-and-connection-points — Capabilities, areas and connection points
@@ -48,7 +52,7 @@ A [capability](../glossary.md#term-capability--capability) packages one discipli
 ```mermaid
 classDiagram
   accTitle: Capabilities, areas and connection points
-  accDescr: A capability is a component a project chooses to install. A component declares a range on the backbone, and a capability may declare a range on another capability. An area is a slice of a project's .pkit tree that needs no install. A capability provides roles, and under a role it defines connection points, which other components fill, depend on or subscribe to. A data point is the kind of connection point that takes data in. A capability also defines processes, and a connection point may offer one for others to depend on. A capability may ship operational rules of its own.
+  accDescr: A capability is a component a project chooses to install. A component declares a range on the backbone, and a capability may declare a range on another capability. An area is a slice of a project's .pkit tree that needs no install. A capability provides roles, and under a role it defines connection points, which other components fill, depend on or subscribe to. A data point is the kind of connection point that takes data in. A capability also defines processes, each moving process subjects of one kind through its states, and a connection point may offer one for others to depend on. A capability may ship operational rules of its own. An install plan predicts the connections a capability's install would make and break.
   class Component["Component"]
   class Backbone["Backbone"]
   class Project["Project"]
@@ -69,6 +73,8 @@ classDiagram
   class Process["Process"]
   Process : states
   Process : moves and their conditions
+  class ProcessSubject["Process subject"]
+  class InstallPlan["Install plan"]
   class OperationalRule["Operational rule"]
   Capability --|> Component
   Project o-- Capability : installs
@@ -82,6 +88,8 @@ classDiagram
   DataPoint --|> ConnectionPoint
   Capability "1" --> "*" Process : defines
   ConnectionPoint ..> Process : offers, where its kind is a process
+  Process "1" --> "*" ProcessSubject : moves through its states
+  InstallPlan ..> Capability : predicts the connections of
   Capability ..> OperationalRule : may ship
 ```
 
@@ -276,9 +284,9 @@ A data point is a declared interface through which the [capability](../glossary.
 
 Defined in [TERM-process](../glossary.md#term-process--process).
 
-**Why:** Several disciplines move their subjects through stages, and each needs to know where a subject stands and which move it may make next ([COR-033](../../../../.pkit/decisions/core/COR-033-process-substrate.md)). An engine built once in the [backbone](../glossary.md#term-backbone--backbone) tells each discipline, in one way, where a subject stands and whether it may move. Each [capability](../glossary.md#term-capability--capability) keeps its own stages (COR-033).
+**Why:** Several disciplines move what they handle through stages, and each needs to know where each thing stands and which move it may make next ([COR-033](../../../../.pkit/decisions/core/COR-033-process-substrate.md)). An engine built once in the [backbone](../glossary.md#term-backbone--backbone) tells each discipline, in one way, where a [process subject](../glossary.md#term-process-subject--process-subject) stands and whether it may move. Each [capability](../glossary.md#term-capability--capability) keeps its own stages (COR-033).
 
-A process is the course a capability declares for one kind of subject of its discipline. It gives the states the subject can be in, and the moves between them, each with its condition. The backbone's engine reads where a subject stands from what it observes, on each check. project-management's `issue-lifecycle` is one.
+A process is the course a capability declares for one kind of process subject of its discipline. It gives the states a process subject can be in, and the moves between them, each with its condition. The backbone's engine reads where a process subject stands from what it observes, on each check. project-management's `issue-lifecycle` is one.
 
 **Attributes:**
 
@@ -297,8 +305,54 @@ A process is the course a capability declares for one kind of subject of its dis
 
 **Always true:**
 
-- The engine reads a subject's state from what it observes, never from a stored label ([COR-033 P3](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p3--the-engine-is-a-deterministic-validator-and-a-self-explaining-memory)).
-- A script that fails, or prints nothing the engine can read, never counts as a pass. The engine then cannot tell where the subject stands, and allows no move ([COR-044 point 2](../../../../.pkit/decisions/core/COR-044-process-authoring-layer.md#2-the-teeth-actor-is-a-new-core-agent-owner-scoped) and COR-033 P5).
+- The engine reads a process subject's state from what it observes, never from a stored label ([COR-033 P3](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p3--the-engine-is-a-deterministic-validator-and-a-self-explaining-memory)).
+- A script that fails, or prints nothing the engine can read, never counts as a pass. The engine then cannot tell where the process subject stands, and allows no move ([COR-044 point 2](../../../../.pkit/decisions/core/COR-044-process-authoring-layer.md#2-the-teeth-actor-is-a-new-core-agent-owner-scoped) and COR-033 P5).
+
+## Process subject
+
+Defined in [TERM-process-subject](../glossary.md#term-process-subject--process-subject).
+
+**Why:** A discipline needs to know where each thing it handles stands, and which move it may make next ([COR-033](../../../../.pkit/decisions/core/COR-033-process-substrate.md)). Where it stands must be definite, so it comes from what can be observed, never from a label someone wrote ([COR-033 P3](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p3--the-engine-is-a-deterministic-validator-and-a-self-explaining-memory)).
+
+A process subject is one thing of the kind a [process](../glossary.md#term-process--process) is declared for, such as one issue. The process moves it through its states. The [backbone](../glossary.md#term-backbone--backbone)'s engine reads which state it is in from what it observes, and `pkit process status` says so.
+
+**Attributes:**
+
+- the state it is in, read on each check (COR-033 P3)
+
+**Relations:**
+
+- It belongs to the kind one process is declared for, within one [capability](../glossary.md#term-capability--capability)'s discipline ([COR-033 P1](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p1--vocabulary-one-substrate-two-altitudes)).
+- It moves between the process's states only by a move whose condition holds ([COR-033 P4](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p4--gates-must-be-checkable)).
+
+**States:** The states of its process.
+
+**Always true:**
+
+- Its state is what a live check finds, over any label or journal entry (COR-033 P3).
+
+## Install plan
+
+Defined in [TERM-install-plan](../glossary.md#term-install-plan--install-plan).
+
+**Why:** Nothing showed, before a [capability](../glossary.md#term-capability--capability) was installed, what it would connect to in a given [project](../glossary.md#term-project--project) ([COR-053](../../../../.pkit/decisions/core/COR-053-connection-points.md)).
+
+An install plan is a dry run that predicts, from what a capability declares, the connections its [install](../glossary.md#term-install--install) would make and break. The [backbone](../glossary.md#term-backbone--backbone) works it out exactly as it works out the live connections, so the plan matches what the install would do. `pkit capabilities install <name> --plan` prints one.
+
+**Attributes:**
+
+- the connections the install would make and break, and the conflicts to resolve, such as a [role](../glossary.md#term-role--role) another installed capability provides already ([COR-053 point 8](../../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly))
+
+**Relations:**
+
+- It predicts one install of one capability (COR-053 point 8).
+- It reads the capability's [connection points](../glossary.md#term-connection-point--connection-point) and roles from what the capability declares, with nothing installed (COR-053 point 8).
+
+**States:** None.
+
+**Always true:**
+
+- The same means that work out the live connections work out the install plan, so it predicts them exactly (COR-053 point 8).
 
 ## What is built on these concepts
 
@@ -409,3 +463,13 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
 - [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
+
+**Process subject:**
+
+- [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
+- [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
+
+**Install plan:**
+
+- [UC-024 — See what a capability would connect to before I install it](../use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md)
+- [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)

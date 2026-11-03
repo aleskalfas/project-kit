@@ -4,8 +4,8 @@ title: Where an allow and a deny conflict, the deny wins
 status: active
 statement: Where one grant allows a call and another denies it, the permission model denies the call.
 measure: A call that a deny grant matches is denied, even where an allow grant matches it too. The order of the layers and their grants changes no decision.
-applies-to: Every decision of the permission model, for every subject, over the guardrails, the capabilities' grants, the active profile and the project's own grants.
-obligation: v1:sha256:cffaa74876df667a2e1176bb1211b8ebf126c55afd263bfa4743f688e1d56397
+applies-to: Every decision of the permission model, for every grant subject, over the guardrails, the capabilities' grants, the active profile and the project's own grants.
+obligation: v1:sha256:941201489a900903c07bd85dfbedebec84a1b6fb1c466f0dcb29979ab49bb7fb
 actors:
   - ACT-adopter
   - ACT-operator
