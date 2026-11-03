@@ -113,7 +113,7 @@ Without a piece named, each run judges, in order: the configuration, the locatio
 
 `pkit visual check <piece>` judges that piece alone: the binding of its own files, and all of the above for it. It judges neither the library folder, nor its list, nor written code.
 
-Some findings stop a piece. A piece that cannot be read is judged no further. A lock with a finding stops it before its brand. A brand that cannot be read, or a mode the brand lacks, stops it before its content, its produced pictures and its scenes. The summary counts such a piece as not checked.
+Some findings stop a piece. A piece that cannot be read is judged no further. A lock with a finding stops it before its brand. A brand that cannot be read, or a mode the brand lacks, stops it before its content, its produced pictures and its scenes. An error the check does not expect stops the piece where it arises (`unexpected-error`), and the check goes on to the next piece. The summary counts such a piece as not checked.
 
 Where the configuration records no location and the default folder holds no visual work, the summary says so, and only the configuration is judged. Where the configuration records a location that is refused or missing, or an empty `location:`, the check reports `location`, and judges nothing but the configuration.
 
@@ -131,6 +131,7 @@ In the tables, `<piece>/` is the piece's folder, `<location>/pieces/<piece>/`, a
 | `binding` | The file names no schema, or another schema than its name and place call for. A file at another format number is the core's data validation's to report. | fails | the file | Write the binding the message names ([the binding](files.md#the-binding)). |
 | `piece-missing` | `pkit visual check <piece>` names a piece the location does not hold. | fails | `<location>/pieces` | Name a piece of the location. |
 | `piece-unreadable` | `piece.yaml` or a content file cannot be read as a piece: a field of the wrong shape, a language with no content file, or a mode the brand lacks. Not reported where a `binding` finding names one of the piece's files. | fails | `<piece>/piece.yaml` | The message names the file and the field. |
+| `unexpected-error` | The check of a piece stopped on an error it does not expect, such as one the engine raises on data it does not guard against. The message names the error. | fails | `<piece>/piece.yaml` | Mend what the error names in the piece's files or the components they use. Where none is at fault, report the error as a fault of the capability. |
 
 ### Libraries and locks
 
@@ -201,7 +202,8 @@ Each fails, unless its row says otherwise.
 | `component-shape` | A component holds a key, a part, an option or an exposed name its format does not allow ([a component's file](components.md#a-components-file)). | the component, `#<key path>` |
 | `two-owners` | A text part gives a `height`, which its measured text sets ([primitives](components.md#primitives)). | the component |
 | `formula-unreadable`, `formula-reach`, `formula-dimension`, `unknown-role` | A formula cannot be read, reads what it may not reach, has dimensions that disagree, or reads a role the brand gives no value ([errors](components.md#errors)). | the component |
-| `unknown-component` | The piece's top, a part or an item names no component. | the content or the component that names it, `#<trace>` |
+| `unknown-component` | The piece's top, a part or an item names no component. A component whose file is present and cannot be read is `component-unreadable`, and what names it takes no finding. | the top's, `<piece>/piece.yaml#top`; a part's or an item's, the content or the component that names it, `#<trace>` |
+| `component-unreadable` | A component's file is present and cannot be read: the message gives the reader's error, or says the file is not a mapping ([how the files are read](files.md#how-the-files-are-read)). Nothing is drawn where it is placed. The check leaves it out where a `file-unreadable` or `binding` finding names the file. | the component's file |
 | `not-top` | The piece's top declares no layouts. | the top's component |
 | `places-itself` | A component places itself, directly or through others ([placing a component](components.md#placing-a-component-use-and-slot)). | the component |
 | `page-in-page` | A slot of pages lies inside a page, so what it places is a page inside a page. A top component with no slot of pages is part of the page that holds it, never a page inside it ([layouts](components.md#layouts)). | the content, `#<trace>` |

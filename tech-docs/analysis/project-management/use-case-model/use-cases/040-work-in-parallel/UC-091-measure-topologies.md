@@ -18,6 +18,10 @@ pkit:
         - project-management:DEC-049#2
         - project-management:DEC-003
         - project-management:DEC-059#9
+        - COR-001
+        - COR-010
+        - COR-053#8
+        - COR-059#3
 ---
 
 # UC-091 — Measure one topology against another on comparable work
@@ -39,7 +43,7 @@ pkit:
 1. The adopter has each [topology](../../../glossary.md#term-topology--topology) work on comparable work, until all of that work has landed.
 2. The adopter reads, for each topology, when each [pull request](../../../../core/glossary.md#term-pull-request--pull-request) opened and when that pull request merged.
 3. The adopter counts the review rounds of each pull request from the pull request's [verdicts](../../../glossary.md#term-verdict--verdict), since each verdict names the [head](../../../../core/glossary.md#term-head--head) reviewed ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
-4. Where the [project](../../../../core/glossary.md#term-project--project) set its [audit comments](../../../glossary.md#term-audit-comment--audit-comment) to `full`, the adopter reads each write the agents made, with the write's versions ([DEC-049 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md#2-github-comments-are-a-configurable-provenance-stamped-projection-with-three-intensities)).
+4. Where the [project](../../../../core/glossary.md#term-project--project) set its [audit comments](../../../glossary.md#term-audit-comment--audit-comment) to `full`, the adopter reads each write the agents made, with the write's [versions](../../../../core/glossary.md#term-version--version) ([DEC-049 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md#2-github-comments-are-a-configurable-provenance-stamped-projection-with-three-intensities)).
 5. The adopter compares the topologies on these figures.
 
 **Variants:** None.
@@ -57,7 +61,7 @@ What the adopter needs here that no accepted record decides yet:
   - the topologies run one after the other on comparable backlogs
   - one backlog split between the topologies
 - **What else to record:**
-  - the topology and the [seat](../../../glossary.md#term-seat--seat) behind each event. An ownership names its seat ([project-management DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)), and no other event names a seat
+  - the topology and the [seat](../../../glossary.md#term-seat--seat) behind each event. An [ownership](../../../glossary.md#term-ownership--ownership) names its seat ([project-management DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)), and no other event names a seat
   - the time from a plan's approval to its last merge
   - the person's own time
   - the tokens each agent spends

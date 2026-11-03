@@ -23,6 +23,16 @@ pkit:
         - project-management:DEC-014
         - project-management:DEC-046#1
         - project-management:DEC-055#3
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#3
+        - COR-050#6
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
       artefact:
         - ACT-planner
 ---

@@ -4,7 +4,7 @@ name: Planning agent
 status: active
 summary: "An AI agent of a topology that slices a project's work and files the work for the other agents, and builds none of the work."
 needs:
-  - Plan my planner's intent into Tasks that one agent can each finish, ordered where one Task needs another Task's work.
+  - File the Tasks of my planner's approved plan with no owner, so that the agents of the seats that build take them.
 pkit:
   friction:
     anchors:
@@ -21,7 +21,7 @@ pkit:
 
 # ACT-planning-agent — Planning agent
 
-An AI agent of a topology that slices a project's work and files the work for the other agents, and builds none of the work. The planning agent plans on the planner's direction, and files nothing before the planner approves the plan ([DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)). The planning agent files the work with no [owner](../../glossary.md#term-owner--owner), so the work joins the ready Tasks that every [seat](../../glossary.md#term-seat--seat) shares ([DEC-059 point 7](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)). Where the [topology](../../glossary.md#term-topology--topology) declares [pools](../../glossary.md#term-pool--pool), the planning agent files into the [Milestones](../../glossary.md#term-milestone--milestone) the planner gives, and the work joins their pools ([DEC-061 point 1](../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)).
+An AI agent of a topology that slices a project's work and files the work for the other agents, and builds none of the work. The planning agent plans on the planner's direction, and files nothing before the planner approves the plan ([DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)). The planning agent files the work with no [owner](../../glossary.md#term-owner--owner), so the work joins the [ready Tasks](../../glossary.md#term-ready-task--ready-task) that every [seat](../../glossary.md#term-seat--seat) shares ([DEC-059 point 7](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)). Where the [topology](../../glossary.md#term-topology--topology) declares [pools](../../glossary.md#term-pool--pool), the planning agent files into the [Milestones](../../glossary.md#term-milestone--milestone) the planner gives, and the work joins their pools ([DEC-061 point 1](../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)).
 
 **Role holders:** an agent that follows the `pm` [skill](../../../core/glossary.md#term-skill--skill)'s `batch-plan` procedure, such as the project-manager agent ([DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 

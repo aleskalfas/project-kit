@@ -29,6 +29,10 @@ while its key verifies, and computes the scenes now otherwise. It computes no mo
 the validator's bound (`PKIT_COMMAND_DEADLINE`) is near: each piece left fails as not
 checked, naming `pkit visual render <piece>`.
 
+**An error the check does not expect** on one piece, such as one the engine raises on data
+it does not guard against, stops that piece alone: it fails as `unexpected-error`, naming
+the error, and the check goes on to the next piece.
+
 **Severity** is computed when a finding is read: a failing finding in a released library
 version asks for attention instead, naming the library's owner (`findings.as_read`).
 Whether a version is released is read from the list. A released version whose folder no
@@ -239,9 +243,31 @@ class _Run:
             names_ = [only]
         for name in names_:
             self.counts["pieces"] += 1
-            self._piece(name)
+            counted = dict(self.counts)
+            try:
+                self._piece(name)
+            except location.GitFailed:
+                raise  # the location's files cannot be listed: `files-unlisted`, in `check`
+            except Exception as exc:
+                # The last resort: an error no finding reports stops this piece alone.
+                self.counts = {**counted, "unchecked": counted["unchecked"] + 1}
+                self.add(self._unexpected(name, exc))
         if only is None:
             self.found.extend(_code_findings(self.root, self.location))
+
+    def _unexpected(self, name: str, error: Exception) -> Finding:
+        """The finding of a piece whose check stopped on an error it does not expect, such as
+        one the engine raises on data it does not guard against. The check owed an answer
+        and gave none, so it fails (DEC-002 point 7)."""
+        said = f"{type(error).__name__}: {error}" if str(error) else type(error).__name__
+        return Finding(
+            "unexpected-error",
+            FAILS,
+            f"the check of `{name}` stopped on an error it does not expect: {said}",
+            file=f"{self.location}/{pl.PIECES}/{name}/{pl.PIECE_FILE}",
+            fix="mend what the error names in the piece's files or the components they use; "
+            "where none is at fault, report the error as a fault of the capability",
+        )
 
     # -- bindings
 
@@ -344,9 +370,7 @@ class _Run:
         stored = read_findings_record(self.root, self.held, piece)
         if stored is not None:
             self.counts["read"] += 1
-            self.found.extend(
-                rooted(finding, piece) for finding in stored if not _said(finding, unmade)
-            )
+            self._scene_findings(piece, stored, unmade)
             return
         if self.deadline is not None and time.time() > self.deadline - MARGIN:
             self.counts["unchecked"] += 1
@@ -362,9 +386,15 @@ class _Run:
             )
             return
         self.counts["computed"] += 1
-        self.found.extend(
-            rooted(finding, piece) for finding in computed(project) if not _said(finding, unmade)
-        )
+        self._scene_findings(piece, computed(project), unmade)
+
+    def _scene_findings(self, piece: pl.Piece, found: Sequence[Finding], unmade: set[str]) -> None:
+        """A piece's scene findings, each file relative to the project root, and each that
+        only repeats another finding of the run left out (`_said`)."""
+        for finding in found:
+            placed = rooted(finding, piece)
+            if not _said(placed, unmade, self.unbound):
+                self.add(placed)
 
 
 def kind_of(inside: str) -> str | None:
@@ -436,10 +466,14 @@ def _unmade(produced: Sequence[Finding]) -> set[str]:
     }
 
 
-def _said(finding: Finding, unmade: set[str]) -> bool:
-    """Whether a scene finding only repeats what a producer's finding says: a picture the
-    scene could not draw, of an output already reported as having none (one owner per
-    finding, DEC-002 point 6)."""
+def _said(finding: Finding, unmade: set[str], unbound: set[str]) -> bool:
+    """Whether a scene finding, its file relative to the project root, only repeats what
+    another finding of the run says (one owner per finding, DEC-002 point 6): a picture the
+    scene could not draw, of an output a producer's finding already reports as having none;
+    a component whose file the binding pass already reports (`file-unreadable`, `binding`),
+    a file of `unbound`."""
+    if finding.code == "component-unreadable":
+        return finding.file in unbound
     return finding.code == "missing-picture" and any(
         f"`{output}`" in finding.message for output in unmade
     )
@@ -633,7 +667,7 @@ class _Fields:
         try:
             component = self.env.component(use)
         except KeyError:
-            return  # the scene reports a component that does not exist
+            return  # the scene reports a component that does not exist, or cannot be read
         fields = component.get("fields") if isinstance(component.get("fields"), Mapping) else {}
         options = component.get("options") if isinstance(component.get("options"), Mapping) else {}
         repeats = {
@@ -910,13 +944,16 @@ def scene_findings(
 
 
 def _placed(finding: Finding, content: str, project: pl.Project) -> Finding:
-    """An engine finding placed in the file a person edits to mend it: the file of the
-    component it names (`component`), the piece's own in its `components/` and a library's
-    in the locked version's; with none, the content file. A missing picture gets why, and
-    the command that makes it."""
+    """An engine finding placed in the file a person edits to mend it: the piece's own file
+    where it lies in what the piece names (`piece`), its top; the file of the component it
+    names (`component`), the piece's own in its `components/` and a library's in the locked
+    version's; with neither, the content file. A missing picture gets why, and the command
+    that makes it."""
     library, _, name = str(finding.extra.get("component") or "").partition("/")
     versioned, _, version = finding.library.partition("@")
-    if library == names.PIECE and name:
+    if finding.extra.get("piece"):
+        finding = dataclasses.replace(finding, library="", file=pl.PIECE_FILE)
+    elif library == names.PIECE and name:
         finding = dataclasses.replace(finding, library="", file=f"{pl.COMPONENTS}/{name}.yaml")
     elif library == versioned and name and version:
         finding = dataclasses.replace(finding, file=f"{pl.COMPONENTS}/{name}.yaml")

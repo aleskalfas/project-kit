@@ -30,6 +30,7 @@ from tests.test_visual_communication_pipeline import (
     write_content,
     write_picture,
 )
+from tests.visual_communication_project import importable
 
 check, render, svg, seam, framing = load(
     "visual-communication", "check.py", "render.py", "plugins.svg", "plugins.seam", "framing"
@@ -47,7 +48,7 @@ LONG_WORD = "Unbreakable" * 40
 def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """The renderer stands in for the import a render makes when it draws, and the test
     producer is registered, for the length of the test."""
-    monkeypatch.setitem(sys.modules, "_lib.plugins.svg", svg)
+    importable(monkeypatch, svg)
     producer.register(seam)
     yield
     seam.unregister(producer.NAME)

@@ -76,7 +76,6 @@ fingerprint no longer verifies asks for attention, and so on.
 
 from __future__ import annotations
 
-import io
 import json
 import math
 import platform
@@ -88,13 +87,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ruamel.yaml import YAML
-from ruamel.yaml.scalarstring import SingleQuotedScalarString
-
-from _lib import fingerprint, keys, libraries, tokens, values
+from _lib import fingerprint, keys, libraries, records, tokens, values
 from _lib import location as loc
 from _lib.files import FORMAT, FileError, nearest, read_bound, refuse_links, schema_of, write_whole
 from _lib.findings import ATTENTION, FAILS, Finding, accepted, loss_finding
+from _lib.libraries import FOUNDATIONS
 from _lib.names import is_name, is_token_path
 from _lib.plugins import seam
 from _lib.reading import ReadError, load_yaml, sha256
@@ -112,8 +109,7 @@ RECORD = "record.yaml"
 #: Where a producer's hand-over and its run's output lie, local to each clone.
 HANDOVER = f"{LOCAL}/handover"
 
-#: The library that declares the shared roles, and the location's folder of fonts.
-FOUNDATIONS = "foundations"
+#: The location's folder of fonts.
 FONTS = "fonts"
 
 #: The keyword that marks a producer's input as a role, with the DTCG type it takes.
@@ -570,19 +566,11 @@ def record_of(plan: Plan, checked: Checked) -> dict[str, Any]:
 
 def record_text(record: Mapping[str, Any]) -> str:
     """The record as YAML, its time quoted, which reads back as `record`."""
-    data = dict(record)
-    recorded = record["recorded"]
-    data["recorded"] = {**recorded, "time": SingleQuotedScalarString(recorded["time"])}
-    writer = YAML()
-    writer.indent(mapping=2, sequence=4, offset=2)
-    writer.width = 4096
-    writer.representer.ignore_aliases = lambda *_: True
-    stream = io.StringIO()
-    writer.dump(data, stream)
-    text = (
-        f"# Written by `{PRODUCE}`, never by hand: what the picture was made from, its "
-        f"variants and its exposed points.\n" + stream.getvalue()
+    comment = (
+        f"Written by `{PRODUCE}`, never by hand: what the picture was made from, its "
+        f"variants and its exposed points."
     )
+    text = records.text(records.quoted_time(record), [comment], apart=False)
     if load_yaml(text) != record:
         raise AssertionError("the record does not read back as it was written")
     return text

@@ -17,6 +17,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/names.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
         - .pkit/capabilities/visual-communication/scripts/_lib/reading.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/records.py
         - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/keys.py
