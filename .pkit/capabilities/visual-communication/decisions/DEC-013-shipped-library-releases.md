@@ -1,7 +1,7 @@
 ---
 id: DEC-013
 title: A shipped library is released on its own, as a release of the capability carried it
-status: proposed
+status: accepted
 date: 2026-11-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
