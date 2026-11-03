@@ -17,6 +17,13 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   (DEC-012 points 4 and 7).
 - **An image of a produced output** holds the output's variants by key and its exposed
   points, mapped into the image's frame.
+- **A line** holds its two ends, `x1 y1 x2 y2`, and an arrowhead at either, `marker-start`
+  and `marker-end`, where it draws one. A tie's connector also holds, where its route
+  turns, every point of it, `points`, its ends first and last, and `attached`: for each
+  end, the trace id of the element it meets with the side it meets, or the image part
+  and the point it ends at (DEC-011 point 1). Its ends' sources are the end fields that
+  name them. A connector whose route cannot be computed, such as one through a loop, is
+  left out, its finding recorded.
 - **Traces.** Each element's id is its trace: the path of instances, parts and items
   from the top, joined by `/`; an item is `<list>[<id>]`, or `<list>#<place>` (from 1)
   where it has no id. A page of a top whose layouts are its pages' forms is traced as an
@@ -42,7 +49,16 @@ from typing import Any
 from _lib import formula as fm
 from _lib.env import Env
 from _lib.findings import ATTENTION, Finding
-from _lib.layout import TOLERANCE, Context, Instance, Node, TextRun, place_top
+from _lib.layout import (
+    ENDS,
+    ENDS_OF_LINE,
+    TOLERANCE,
+    Context,
+    Instance,
+    Node,
+    TextRun,
+    place_top,
+)
 from _lib.text import MEASURED, Broken, paragraphs
 
 #: Lengths are rounded to this many decimal places of a px.
@@ -52,6 +68,9 @@ PLACES = 2
 FIT = "xMidYMid meet"
 
 ENGINE = "engine"
+
+#: A line's arrowheads, each drawn where it is not `none`.
+MARKERS = ("marker-start", "marker-end")
 
 
 def length(value: float) -> float:
@@ -187,8 +206,9 @@ class _Emitter:
             element.set("page", True)
             self.pages.append(instance.trace)
         for name, node in instance.nodes.items():
-            if node.present:
-                element.children.append(self.part(instance, name, node))
+            drawn = self.part(instance, name, node) if node.present else None
+            if drawn is not None:
+                element.children.append(drawn)
         # The pages of a top whose layouts are its pages' forms, each at the top's origin.
         for page in instance.pages:
             element.children.append(
@@ -218,8 +238,14 @@ class _Emitter:
             value = self.ctx.attempt(lambda k=key: instance.get("part", node.part.name, k), 0.0)
             element.set(key, length(value), self._source(instance, node, key))
 
-    def part(self, instance: Instance, name: str, node: Node) -> Element:
+    def part(self, instance: Instance, name: str, node: Node) -> Element | None:
+        """The element a part draws. None for a tie's connector whose route cannot be
+        computed, such as one through a loop: it is left out, so no line is drawn to a
+        guessed place, and its finding was recorded where its ends were computed."""
         kind = node.part.kind
+        if kind == "line" and "connect" in node.part.spec:
+            if not self.ctx.attempt(lambda: instance.get("route", name), []):
+                return None
         if node.child is not None:
             attempt = self.ctx.attempt
             place = tuple(
@@ -268,14 +294,43 @@ class _Emitter:
         self._lengths(element, instance, node, ("stroke-width", "rx"))
 
     def _line(self, element: Element, instance: Instance, node: Node) -> None:
-        name = node.part.name
-        for end in ("x1", "y1", "x2", "y2"):
-            value = self.ctx.attempt(lambda e=end: instance.get("part", name, e), 0.0)
-            element.set(
-                end, length(value), instance.source(f"parts.{name}.{end}", node.part.spec.get(end))
-            )
+        name, spec = node.part.name, node.part.spec
+        if "connect" in spec:
+            self._connector(element, instance, node)
+        else:
+            for end in ENDS_OF_LINE:
+                value = self.ctx.attempt(lambda e=end: instance.get("part", name, e), 0.0)
+                element.set(
+                    end, length(value), instance.source(f"parts.{name}.{end}", spec.get(end))
+                )
         self._paints(element, instance, node, ("stroke",))
         self._lengths(element, instance, node, ("stroke-width",))
+        for prop in MARKERS:
+            if prop in node.part.props:
+                where, raw = f"parts.{name}.line.{prop}", node.part.props[prop]
+                word = instance.word(where, raw, "none")
+                if word != "none":
+                    element.set(prop, word, instance.source(where, raw))
+
+    def _connector(self, element: Element, instance: Instance, node: Node) -> None:
+        """A tie's connector (DEC-011 point 1): its ends, each from the end field that names
+        it, every point of its route where it turns, and which element each end meets,
+        and where (DEC-005 points 2 and 5). Its route is computed: `part` leaves out a
+        connector whose route is not."""
+        name = node.part.name
+        route = instance.get("route", name)
+        sources = {which: instance.ends[which].source for which in ENDS}
+        for end, (x, y) in (("1", route[0]), ("2", route[-1])):
+            which = "start" if end == "1" else "end"
+            element.set(f"x{end}", length(x), sources[which])
+            element.set(f"y{end}", length(y), sources[which])
+        if len(route) > 2:
+            element.set("points", [{"x": length(x), "y": length(y)} for x, y in route], ENGINE)
+        attached = self.ctx.attempt(lambda: instance.attached(name), {})
+        if attached:
+            element.set("attached", attached)
+            for which in attached:
+                element.sources[f"attached.{which}"] = sources[which]
 
     def _text(self, element: Element, instance: Instance, node: Node) -> None:
         name, props = node.part.name, node.part.props
@@ -424,6 +479,8 @@ class _Emitter:
             )
             group = self.group(item, (frame[0], frame[1]), (ENGINE, ENGINE), (ENGINE, ENGINE))
             element.children.append(group)
+        if instance.component.ties(part) is not None:
+            return  # each tie lies in the part's whole frame, asking for none
         cross = "height" if part.main == "width" else "width"
         for axis, size in (("main", part.main), ("cross", cross)):
             if size in part.spec:

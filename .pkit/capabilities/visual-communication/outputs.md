@@ -32,7 +32,7 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/produced-record.schema.json
         - .pkit/capabilities/visual-communication/schemas/code.schema.json
         - .pkit/capabilities/visual-communication/schemas/code-record.schema.json
-      record: ["visual-communication:DEC-002", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-012"]
+      record: ["visual-communication:DEC-002", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-011", "visual-communication:DEC-012"]
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -76,7 +76,8 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 ### Versions
 
 - **A plugin's own version,** `X.Y.Z`, is apart from the capability's. It rises when the same input could give another output. Reference outputs pinned to it in the capability's tests catch a change made without a new version (DEC-005 point 9).
-- **The seam's version** is 2. A plugin's declaration names the seam version it reads, and the capability refuses a plugin of another version. Version 2 hands a renderer a text's runs, each with its own paint and fonts ([What a scene holds](components.md#what-a-scene-holds)). What a producer and a code writer are handed and return is as version 1 had it.
+- **The seam's version** is 3. A plugin's declaration names the seam version it reads, and the capability refuses a plugin of another version. Version 2 hands a renderer a text's runs, each with its own paint and fonts ([What a scene holds](components.md#what-a-scene-holds)). Version 3 hands it a line's arrowheads, and a tie's connector with its points and the elements its ends meet (DEC-011). What a producer and a code writer are handed and return is as version 1 had it.
+- **What rose with ties.** The seam rose to 3, since a renderer must read a line's new properties. The SVG renderer stays at 1.0.1, and the CSS code writer at 1.0.0. A scene of seam 2 holds no arrowhead and no connector, and each draws it as before.
 - **The document of values** that producers and code writers read has its own version, 1 ([The hand-over](#the-hand-over)).
 - **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1.
 - **None of these versions** is the format number of the files a project keeps.
@@ -111,10 +112,10 @@ An entry matches a loss by its `plugin` and its `what` alone. The command that r
 
 The `svg` renderer draws a scene as SVG files: one for each page, each language and each combination of modes the piece names. The previews and the exports are its files.
 
-- **Elements.** A group is drawn as `<g>`, a box as `<rect>`, an ellipse as `<ellipse>`, a line as `<line>`, a text as `<text>` and an image as `<image>`. Every element carries its trace id as `data-id`. A group a component drew names it as `data-component`, and its library's version, if any, as `data-version`, the page's own group included.
+- **Elements.** A group is drawn as `<g>`, a box as `<rect>`, an ellipse as `<ellipse>`, a line as `<line>`, a text as `<text>` and an image as `<image>`. A tie's connector whose route turns is drawn as `<polyline>`, through each of its points. Every element carries its trace id as `data-id`. A connector names the elements its ends meet, `data-start` and `data-end`. A group a component drew names it as `data-component`, and its library's version, if any, as `data-version`, the page's own group included.
 - **The file.** The `<svg>` element names the piece, the page's trace id, the language, the combination's key, and the renderer with its version: `data-piece`, `data-page`, `data-language`, `data-key`, `data-renderer`.
 - **Colours.** A colour stays a role in the scene. The renderer takes its value from the brand's resolved values in the combination it draws, as `#rrggbb`, with a `fill-opacity` or `stroke-opacity` where the colour is translucent.
-- **Shapes and text.** A box's stroke lies inside its frame. Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. The `<text>` takes the font and the paint of the text's first run. Each run that looks otherwise, in its family, size, weight or paint, is drawn in a `<tspan>` of its own that names all four. So a text of one run is drawn as it was before runs.
+- **Shapes and text.** A box's stroke lies inside its frame. An arrowhead is a `<marker>` that the page's `<defs>` holds once for each colour it is drawn in. It is a triangle five strokes long, its tip at the line's end, in the line's stroke. Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. The `<text>` takes the font and the paint of the text's first run. Each run that looks otherwise, in its family, size, weight or paint, is drawn in a `<tspan>` of its own that names all four. So a text of one run is drawn as it was before runs.
 - **Pictures.** A produced picture is embedded as PNG data: the variant that serves the combination drawn ([Variants](#variants)).
 - **Fonts.** Each font the page draws in, for each family and weight a run is drawn in, is embedded as an `@font-face` rule, from the brand's committed font file, never from the machine's fonts, cut down to the characters drawn in it. The renderer draws in the brand's default font profile. A family's name is written as a CSS string in double quotes, in its `@font-face` rule and in each text's `font-family`. A `"` or a `\` takes a `\` before it. Each `<`, `>` and `&`, each control character and each character XML 1.0 does not allow is written as the escape of its code point: a `\`, the code point in hexadecimal, and a space. So no name a brand gives can end the drawing's `<style>` element, or leave the file malformed XML.
 - **The same bytes.** Lengths are written to 1/100 px, and attributes in one order, so the same scene and values give the same file.
@@ -125,10 +126,12 @@ A *preview* is a render for a person to look at, which `pkit visual render` draw
 
 ### What the SVG renderer loses
 
-Before it draws, the capability compares each scene with the renderer's declaration. An element of a type the declaration does not name is `refused`, and left out of the file. A property the declaration does not name for its type is `left-out`. The declaration names every primitive and property a scene of format 1 holds, so this finds no loss in format 1. While it draws, the renderer reports two losses of its own, both `left-out`:
+Before it draws, the capability compares each scene with the renderer's declaration. An element of a type the declaration does not name is `refused`, and left out of the file. A property the declaration does not name for its type is `left-out`. The declaration names every primitive and property a scene of format 1 holds, so this finds no loss in format 1. While it draws, the renderer reports three losses of its own. Two are `left-out`:
 
 - **a fill or a stroke** whose role has no colour under the brand in the combination drawn, a run's fill included. A fill is then `none`. A library's role the brand gives no value is drawn at its default ([`roles.yaml`](files.md#rolesyaml)), so it is lost only where its chain of defaults reaches no colour.
 - **an image** whose produced picture has no variant for the combination drawn.
+
+The third is `refused`: a line that holds neither its ends nor its points, which is left out of the file. Every line of a scene the engine computes holds its ends ([What a scene holds](components.md#what-a-scene-holds)).
 
 ## Exports
 

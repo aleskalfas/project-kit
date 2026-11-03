@@ -72,7 +72,13 @@ def test_each_kind_of_part_takes_the_keys_the_engine_reads(kind: str) -> None:
     part = DEFS[f"{kind}-part"]
     assert part["additionalProperties"] is False
     assert set(part["properties"]) == {kind, "when", *engine.PART_KEYS[kind]}
-    assert set(part["required"]) == {kind, *engine.REQUIRED.get(kind, ())}
+    required = set(part["required"])
+    if kind == "line":
+        # A line gives its ends, or connects its component's (DEC-011 point 1).
+        given, connects = part["oneOf"]
+        required |= set(given["required"])
+        assert connects["required"] == ["connect"]
+    assert required == {kind, *engine.REQUIRED.get(kind, ())}
 
 
 @pytest.mark.parametrize("kind", engine.PRIMITIVES)
@@ -83,9 +89,13 @@ def test_each_primitive_takes_the_properties_the_engine_reads(kind: str) -> None
     assert set(properties.get("required", ())) == set(engine.REQUIRED_PROPERTIES.get(kind, ()))
 
 
+#: The properties of words that share one definition of their words.
+SHARED = {"marker-start": "marker", "marker-end": "marker"}
+
+
 @pytest.mark.parametrize("prop", sorted(engine.WORDS))
 def test_each_property_of_words_takes_the_engines_words(prop: str) -> None:
-    (words, _switch) = DEFS[f"{prop}-value"]["anyOf"]
+    (words, _switch) = DEFS[f"{SHARED.get(prop, prop)}-value"]["anyOf"]
     assert words["enum"] == list(engine.WORDS[prop])
 
 
@@ -176,7 +186,6 @@ def repeat(**more: Any) -> dict[str, Any]:
 @pytest.mark.parametrize(
     ("case", "part"),
     [
-        ("a list arranged by neither operator", {k: v for k, v in repeat().items() if k != "row"}),
         ("a list arranged by both operators", repeat(column={})),
         ("an operator setting it does not take", repeat(row={"wrap": "yes"})),
         ("a list drawn by no component", {k: v for k, v in repeat().items() if k != "draw"}),
@@ -339,3 +348,88 @@ def test_the_schema_refuses_a_lists_fields_the_engine_refuses(
     data = listing(tags=entry)
     assert problems(data) != [], case
     assert engine_issues(data) != [], case
+
+
+# --- ties (#2561) ------------------------------------------------------------------------------
+
+
+def tying(**lists: Any) -> dict[str, Any]:
+    """The reference instance as a pattern that draws each tie of its list `links` with
+    `lab/arrow`, between the end fields its `lists` gives, `from` and `to` by default."""
+    data = copy.deepcopy(reference())
+    data["fields"]["properties"]["links"] = {"type": "array", "items": {"type": "object"}}
+    data["parts"]["links"] = {"repeat": "links", "draw": "lab/arrow"}
+    data["lists"] = lists or {"links": {"ends": ["from", "to"]}}
+    return data
+
+
+def arrow(**line: Any) -> dict[str, Any]:
+    """A component that takes ends and connects them, its line's part changed by `line`."""
+    part = {"line": {"stroke": "line", "marker-end": "arrow"}, "connect": "corners", **line}
+    return {
+        "pkit_schema": "visual-communication:component",
+        "schema_version": 1,
+        "status": "experimental",
+        "about": "An arrow between two items.",
+        "ends": True,
+        "parts": {"l": {k: v for k, v in part.items() if v is not ...}},
+    }
+
+
+def test_a_pattern_declares_a_list_of_ties_and_a_component_takes_ends() -> None:
+    assert problems(tying()) == []
+    assert engine_issues(tying()) == []
+    assert problems(arrow()) == []
+    assert engine_issues(arrow()) == []
+    switched = {**arrow(connect={"by": "shape", "flat": "straight", "bent": "corners"})}
+    switched["options"] = {"shape": ["flat", "bent"]}
+    assert problems(switched) == []
+    assert engine_issues(switched) == []
+
+
+def test_a_list_of_ties_is_arranged_by_neither_operator_and_any_other_list_by_one() -> None:
+    """Whether a list holds ties crosses keys, so the engine alone refuses a list that is
+    arranged by neither operator and holds no ties."""
+    neither = changed("parts.extra", {k: v for k, v in repeat().items() if k != "row"})
+    assert problems(neither) == []
+    assert engine_issues(neither) != []
+
+
+@pytest.mark.parametrize(
+    ("case", "data"),
+    [
+        ("`ends` other than true", {**arrow(), "ends": False}),
+        ("one end field", tying(links={"ends": ["from"]})),
+        ("three end fields", tying(links={"ends": ["from", "to", "via"]})),
+        ("an end field twice", tying(links={"ends": ["from", "from"]})),
+        ("an end field that is no name", tying(links={"ends": ["from", "To"]})),
+        ("an end field with a reserved key's name", tying(links={"ends": ["from", "use"]})),
+        ("a connector that gives an end of its own", arrow(x1="=0")),
+        ("a connector of a word it does not take", arrow(connect="bent")),
+        (
+            "an arrowhead of a word it does not take",
+            arrow(line={"stroke": "line", "marker-end": "dot"}),
+        ),
+        ("a line with neither its ends nor `connect`", arrow(connect=...)),
+    ],
+    ids=lambda value: value if isinstance(value, str) else "",
+)
+def test_the_schema_refuses_ties_the_engine_refuses(case: str, data: dict[str, Any]) -> None:
+    assert problems(data) != [], case
+    assert engine_issues(data) != [], case
+
+
+def test_a_layout_that_draws_a_page_declares_a_list_of_ties_among_its_slots() -> None:
+    board = {
+        "slots": {"steps": {"type": "array"}, "links": {"type": "array"}},
+        "lists": {"links": {"ends": ["from", "to"]}},
+        "parts": {
+            "steps": {"repeat": "steps", "draw": "lab/tag", "row": {}},
+            "links": {"repeat": "links", "draw": "lab/arrow"},
+        },
+    }
+    assert problems(forms(board=board)) == []
+    assert engine_issues(forms(board=board)) == []
+    # A layout of format 1, which draws no page, takes no `lists`.
+    lists = {"slots": {"text": {"pages": True}}, "lists": {"text": {"ends": ["from", "to"]}}}
+    assert problems(changed("layouts", {"frame": lists})) != []

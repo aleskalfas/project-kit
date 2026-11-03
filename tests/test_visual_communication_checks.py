@@ -9,7 +9,10 @@ field and arrangement fields, a key both an item's component and its list declar
 lock, a pattern's clash with its default component checked alone (DEC-010 points 1 to 4
 and 9), an error it does not expect on one piece, and a field's list of runs: read
 against its run styles, skipped by the check of ids, each run measured against the fill
-under it (DEC-012 points 1, 3 and 8). The command around it is
+under it (DEC-012 points 1, 3 and 8). A tie's component, the shape of its ends and their
+key paths, read in the content; an end the scene does not find, reported at its tie; a
+list of ties whose default takes no ends, or declares an end field, checked alone
+(DEC-011 point 8). The command around it is
 `test_visual_communication_check.py`."""
 
 from __future__ import annotations
@@ -1545,6 +1548,302 @@ def test_a_pattern_whose_newest_version_clashes_with_its_default_fails_checked_a
     assert clash.fix == (
         "rename the arrangement field, or draw the list with another component, in a "
         "version of its own"
+    )
+
+
+# --- ties (DEC-011) -----------------------------------------------------------------------------
+
+#: A pattern of cards, a slot and groups, which ties them with `piece/arrow` from `from` to
+#: `to`; `kind` is its list of ties' component field, and `hidden` a list it draws only
+#: where `shown` is given.
+NET = local(
+    about="Cards tied to each other.",
+    fields={
+        "type": "object",
+        "properties": {
+            "cards": LISTED,
+            "side": {"type": "object"},
+            "groups": LISTED,
+            "hidden": LISTED,
+            "shown": {"type": "string"},
+            "kind": {"type": "object"},
+            "links": LISTED,
+        },
+    },
+    lists={"links": {"component": "kind", "ends": ["from", "to"]}},
+    parts={
+        "cards": {
+            "repeat": "cards",
+            "draw": "tests/card",
+            "width": "=@space.4 * 4",
+            "column": {"align-items": "stretch"},
+        },
+        "side": {"slot": "side", "x": "=@space.4 * 5", "width": "=@space.4 * 4"},
+        "groups": {
+            "repeat": "groups",
+            "draw": "piece/column",
+            "x": "=@space.4 * 10",
+            "width": "=@space.4 * 4",
+            "row": {"sizes": "equal"},
+        },
+        "hidden": {
+            "repeat": "hidden",
+            "draw": "tests/card",
+            "when": "shown",
+            "width": "=@space.4 * 4",
+            "column": {"align-items": "stretch"},
+        },
+        "links": {"repeat": "links", "draw": "piece/arrow"},
+    },
+    preferred={"height": "=@space.4 * 6"},
+)
+
+#: Cards in a column, as wide as it is given.
+COLUMN = local(
+    about="Cards in a column.",
+    fields={"type": "object", "properties": {"items": LISTED}},
+    parts={
+        "items": {
+            "repeat": "items",
+            "draw": "tests/card",
+            "width": "=:width",
+            "column": {"align-items": "stretch"},
+        }
+    },
+    preferred={"height": "=items.height"},
+)
+
+#: A component that takes ends, and draws an arrow with corners between them.
+ARROW = local(
+    about="An arrow between two items.",
+    ends=True,
+    parts={"l": {"line": {"stroke": "line", "marker-end": "arrow"}, "connect": "corners"}},
+)
+
+
+def tie(key: str, start: Any, end: Any, **more: Any) -> dict[str, Any]:
+    return {"id": key, "from": start, "to": end, **more}
+
+
+def at(path: str, **more: Any) -> dict[str, Any]:
+    return {"item": path, **more}
+
+
+def net_project(tmp_path: Path, *links: dict[str, Any], **body: Any) -> Path:
+    """The drawing project with no picture, whose body is `piece/net` with two cards, a
+    column in its slot, a group of one card and `links`, and `body`."""
+    root = drawing_project(tmp_path, picture=False)
+    write(root / LOCAL / "net.yaml", NET)
+    write(root / LOCAL / "column.yaml", COLUMN)
+    write(root / LOCAL / "arrow.yaml", ARROW)
+    given = {
+        "use": "piece/net",
+        "cards": [{"id": "a", "head": "A"}, {"id": "b", "head": "B"}],
+        "side": {"use": "piece/column", "items": [{"id": "x", "head": "X"}]},
+        "groups": [{"id": "g", "items": [{"id": "w", "head": "W"}]}],
+        "hidden": [{"id": "h", "head": "H"}],
+        "links": list(links),
+        **body,
+    }
+    write_content(root, body=given)
+    return root
+
+
+def test_ties_into_the_patterns_lists_a_slot_and_a_list_a_component_draws_fail_nothing(
+    tmp_path: Path,
+) -> None:
+    root = net_project(
+        tmp_path,
+        tie("ab", at("cards[a]"), at("cards[b]")),
+        tie("ax", at("cards[a]"), at("side.items[x]")),
+        tie("bw", at("cards[b]"), at("groups[g].items[w]")),
+    )
+
+    report = checks.check(root, only=PIECE)
+
+    assert not report.failed()
+    assert {f.code for f, _ in report.judged} == {"component-experimental"}
+
+
+def test_a_ties_component_shape_and_key_paths_are_judged_in_the_content(tmp_path: Path) -> None:
+    root = net_project(
+        tmp_path,
+        tie("t1", at("cards[a]"), at("cards[b]"), use="piece/column"),
+        tie("t2", "cards[a]", at("cards[b]", via="x")),
+        {"id": "t3", "to": at("cards[b]")},
+        tie("t4", at("cards[z]"), at("cardz[a]")),
+        tie("t5", at("cards"), at("side[x]")),
+        tie("t6", at("links[t1]"), at("cards[a]")),
+        tie("t7", at("cards[a]"), at("cards[a]")),
+        tie("t8", at("groups[g]"), at("groups[g].items[w]")),
+        tie("t9", at("cards[a]", point="Tip"), at("cards[a]..head")),
+        tie("t10", at("cards[a].head[x]"), at("side"), via="x"),
+    )
+
+    found = checks.content_findings(project_of(root))
+
+    assert sorted((f.code, f.where) for f in found) == [
+        ("content-key", "body.links[t10].via"),
+        ("tie-component", "body.links[t1]"),
+        ("tie-ends", "body.links[t6].from.item"),
+        ("tie-ends", "body.links[t7]"),
+        ("tie-ends", "body.links[t8]"),
+        ("tie-path", "body.links[t10].from.item"),
+        ("tie-path", "body.links[t10].to.item"),
+        ("tie-path", "body.links[t4].from.item"),
+        ("tie-path", "body.links[t4].to.item"),
+        ("tie-path", "body.links[t5].from.item"),
+        ("tie-path", "body.links[t5].to.item"),
+        ("tie-path", "body.links[t9].to.item"),
+        ("tie-shape", "body.links[t2].from"),
+        ("tie-shape", "body.links[t2].to"),
+        ("tie-shape", "body.links[t3].from"),
+        ("tie-shape", "body.links[t9].from"),
+    ]
+    said = {(f.code, f.where): f.message for f in found}
+    assert said[("tie-component", "body.links[t1]")] == (
+        "`piece/column` takes no ends, and draws a tie of `body`: every item of a list of "
+        "ties is a tie"
+    )
+    assert said[("tie-shape", "body.links[t3].from")] == (
+        "the end field `from` gives nothing: an end takes `{item: <key path>}`, with "
+        "`point: <name>` where it ends at a point"
+    )
+    assert said[("tie-path", "body.links[t4].from.item")] == (
+        "`cards[z]` names `[z]`, which the list `cards` does not hold"
+    )
+    assert said[("tie-path", "body.links[t4].to.item")] == (
+        "`cardz[a]` names `cardz`, which no component on the way declares; did you mean `cards`?"
+    )
+    assert said[("tie-path", "body.links[t5].from.item")] == (
+        "`cards` steps into the list `cards` with no id: name its item as `[<id>]`"
+    )
+    assert said[("tie-path", "body.links[t5].to.item")] == (
+        "`side[x]` names the item `[x]` of `side`, which is no list"
+    )
+    assert said[("tie-path", "body.links[t10].to.item")] == (
+        "`side` ends at `side`, which is no item of a list"
+    )
+    assert said[("tie-ends", "body.links[t6].from.item")] == (
+        "`links[t1]` names a tie: a tie joins two items, never a line"
+    )
+    assert said[("tie-ends", "body.links[t7]")] == (
+        "one of the tie's ends names one item: `cards[a]` and `cards[a]`; a tie joins two "
+        "items, neither inside the other"
+    )
+    assert "leads through the other" in said[("tie-ends", "body.links[t8]")]
+    assert {f.file for f in found} == {CONTENT}
+
+
+def test_a_ties_component_its_list_names_takes_ends_and_an_end_field_it_declares_clashes(
+    tmp_path: Path,
+) -> None:
+    """The component field names the column, which takes no ends; then an arrow that
+    declares `to` as a field, which neither reads at the lock."""
+    root = net_project(
+        tmp_path, tie("ab", at("cards[a]"), at("cards[b]")), kind={"use": "piece/column"}
+    )
+
+    [found] = checks.content_findings(project_of(root))
+
+    assert (found.code, found.where) == ("tie-component", "body.links[ab]")
+
+    claiming = local(
+        about="An arrow that takes a field `to`.",
+        ends=True,
+        fields={"type": "object", "properties": {"to": {"type": "object"}}},
+        parts={"l": {"line": {"stroke": "line"}, "connect": "straight"}},
+    )
+    write(root / LOCAL / "claiming.yaml", claiming)
+    write_content(
+        root,
+        body={
+            "use": "piece/net",
+            "cards": [{"id": "a", "head": "A"}, {"id": "b", "head": "B"}],
+            "links": [tie("ab", at("cards[a]"), at("cards[b]"), use="piece/claiming")],
+        },
+    )
+
+    [clash] = checks.content_findings(project_of(root))
+
+    assert (clash.code, checks.place(clash)) == ("item-clash", f"{PIECE_FILE}#lock")
+    assert clash.message.endswith("leaves it unfilled, and the tie lacks that end, and is left out")
+
+
+def test_an_end_drawn_nowhere_is_reported_in_the_content_at_its_tie(tmp_path: Path) -> None:
+    root = net_project(
+        tmp_path,
+        tie("ab", at("cards[a]"), at("cards[b]")),
+        tie("ah", at("cards[a]"), at("hidden[h]")),
+    )
+
+    report = checks.check(root, only=PIECE)
+
+    assert report.failed()
+    [(lost, level)] = judged(report, "end-not-found")
+    assert (level, checks.place(lost)) == ("fails", f"{CONTENT}#body.links[ah].to")
+    assert lost.message == (
+        "figure/body/links[ah]: the end `hidden[h]` is drawn nowhere below "
+        "`figure/body`, and an end is found only once"
+    )
+    assert lost.fix == (
+        "name an item drawn once on the tie's page, or change the content's options; or "
+        "move the lock to versions under which the end is found"
+    )
+
+
+#: A pattern of the test library that ties its tags, which take no ends and declare `label`.
+NETS = {
+    "about": "Tags tied to each other.",
+    "fields": {"type": "object", "properties": {"tags": LISTED, "links": LISTED}},
+    "lists": {"links": {"ends": ["label", "to"]}},
+    "parts": {
+        "tags": {"repeat": "tags", "draw": "test-parts/tag", "row": {}},
+        "links": {"repeat": "links", "draw": "test-parts/tag"},
+    },
+}
+
+#: A deck of the test library whose one layout ties its tags with its tags.
+BOARD = {
+    "about": "A deck whose pages tie their tags.",
+    "fields": {
+        "type": "object",
+        "properties": {"pages": {**LISTED, "x-pkit-pages": True}},
+    },
+    "layouts": {
+        "board": {
+            "slots": {"tags": LISTED, "links": LISTED},
+            "lists": {"links": {"ends": ["from", "to"]}},
+            "parts": {
+                "tags": {"repeat": "tags", "draw": "test-parts/tag", "row": {}},
+                "links": {"repeat": "links", "draw": "test-parts/tag"},
+            },
+        }
+    },
+    "preferred": {"width": "=@space.4 * 10", "height": "=@space.4 * 5"},
+}
+
+
+def test_a_list_of_ties_whose_default_takes_no_ends_fails_checked_alone(tmp_path: Path) -> None:
+    root = parts_project(tmp_path)
+    parts_minor(root, {})
+    components = root / PARTS_FOLDER / "1.1.0" / "components"
+    write(components / "nets.yaml", local(**NETS))
+    write(components / "board.yaml", local(**BOARD))
+
+    report = checks.check(root)
+
+    defaults = sorted(checks.place(f) for f, _ in judged(report, "tie-default"))
+    assert defaults == [
+        f"{PARTS_FOLDER}/1.1.0/components/board.yaml#layouts.board.parts.links.draw",
+        f"{PARTS_FOLDER}/1.1.0/components/nets.yaml#parts.links.draw",
+    ]
+    [(clash, level)] = judged(report, "end-clash")
+    assert (level, clash.library) == ("fails", "test-parts@1.1.0")
+    assert checks.place(clash) == f"{PARTS_FOLDER}/1.1.0/components/nets.yaml#lists.links.ends"
+    assert clash.message == (
+        "`label` is an end field of `links`, and `test-parts/tag`, which draws its ties by "
+        "default, declares it as a field: neither reads it, so no tie it draws has that end"
     )
 
 

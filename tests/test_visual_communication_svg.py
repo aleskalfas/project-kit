@@ -6,7 +6,9 @@ gives another output for the same scene and values raises the version, and chang
 with it (DEC-005 point 9). The font a text embeds is pinned by the characters its subset
 holds, not by its bytes, which are fontTools'. A text of one run is drawn as it was
 before runs (DEC-012 point 7), so runs left the version as it was; a text of several runs
-draws each run that looks otherwise than its first in a span of its own.
+draws each run that looks otherwise than its first in a span of its own. A line with no
+arrowhead and no corners is drawn as it was before ties (DEC-011), so ties left it too;
+a tie's connector with corners is a polyline, and an arrowhead a marker in its colour.
 """
 
 from __future__ import annotations
@@ -63,7 +65,7 @@ def scene(*children: dict[str, Any], width: float = 200, height: float = 100) ->
         "lock": {"foundations": "1.0.0"},
         "language": "en",
         "size-key": "default",
-        "seam": 2,
+        "seam": 3,
         "pages": ["figure"],
         "children": [page],
     }
@@ -141,6 +143,95 @@ def test_shapes_are_drawn_as_pinned_for_version_1_0_1() -> None:
         'stroke-opacity="0.25" stroke-width="1.5"/>'
         "</g></g></svg>\n"
     )
+
+
+#: A tie's connector with corners and an arrowhead at its end, and a straight line with an
+#: arrowhead at both ends, in another colour.
+TIES = scene(
+    element(
+        "line",
+        "figure/links[ab]/l",
+        x=10,
+        y=20,
+        width=100,
+        height=40,
+        x1=10,
+        y1=20,
+        x2=110,
+        y2=60,
+        points=[{"x": 10, "y": 20}, {"x": 60, "y": 20}, {"x": 60, "y": 60}, {"x": 110, "y": 60}],
+        attached={
+            "start": {"id": "figure/steps[a]", "side": "right"},
+            "end": {"id": "figure/steps[b]", "side": "left"},
+        },
+        stroke="ink",
+        **{"stroke-width": 2, "marker-end": "arrow"},
+    ),
+    element(
+        "line",
+        "figure/rule",
+        x=0,
+        y=90,
+        width=200,
+        height=0,
+        x1=0,
+        y1=90,
+        x2=200,
+        y2=90,
+        stroke="shade",
+        **{"marker-start": "arrow", "marker-end": "arrow"},
+    ),
+)
+
+
+def test_a_connector_and_its_arrowheads_are_drawn_as_pinned_for_version_1_0_1() -> None:
+    drawn = draw(TIES)
+    assert drawn.losses == []
+    [page] = drawn.pages
+    assert page.svg == (
+        HEAD + "<defs><style>text{white-space:pre}</style>"
+        '<marker id="pkit-arrow-end-000000" viewBox="0 0 10 10" refX="10" refY="5" '
+        'markerWidth="5" markerHeight="5" orient="auto">'
+        '<path d="M0,0L10,5L0,10z" fill="#000000"/></marker>'
+        '<marker id="pkit-arrow-end-000000-025" viewBox="0 0 10 10" refX="10" refY="5" '
+        'markerWidth="5" markerHeight="5" orient="auto">'
+        '<path d="M0,0L10,5L0,10z" fill="#000000" fill-opacity="0.25"/></marker>'
+        '<marker id="pkit-arrow-start-000000-025" viewBox="0 0 10 10" refX="0" refY="5" '
+        'markerWidth="5" markerHeight="5" orient="auto">'
+        '<path d="M10,0L0,5L10,10z" fill="#000000" fill-opacity="0.25"/></marker>'
+        "</defs>"
+        '<g data-id="figure" data-component="foundations/figure" data-version="1.0.0">'
+        '<polyline data-id="figure/links[ab]/l" data-start="figure/steps[a]" '
+        'data-end="figure/steps[b]" points="10,20 60,20 60,60 110,60" fill="none" '
+        'stroke="#000000" stroke-width="2" marker-end="url(#pkit-arrow-end-000000)"/>'
+        '<line data-id="figure/rule" x1="0" y1="90" x2="200" y2="90" stroke="#000000" '
+        'stroke-opacity="0.25" marker-start="url(#pkit-arrow-start-000000-025)" '
+        'marker-end="url(#pkit-arrow-end-000000-025)"/>'
+        "</g></svg>\n"
+    )
+    # The same scene gives the same file.
+    assert draw(TIES).pages[0].svg == page.svg
+    ElementTree.fromstring(page.svg)
+
+
+def test_a_line_with_no_stroke_draws_no_arrowhead() -> None:
+    bare = scene(
+        element(
+            "line",
+            "figure/rule",
+            x=0,
+            y=0,
+            width=10,
+            height=0,
+            x1=0,
+            y1=0,
+            x2=10,
+            y2=0,
+            **{"marker-end": "arrow"},
+        )
+    )
+    [page] = draw(bare).pages
+    assert "marker" not in page.svg
 
 
 def run(words: str, **look: Any) -> dict[str, Any]:
@@ -277,6 +368,28 @@ def test_what_it_cannot_draw_is_a_loss_in_the_seams_form() -> None:
     assert "figure/arrow" not in page
     assert '<rect data-id="figure/odd" x="0" y="0" width="10" height="10" fill="none"/>' in page
     assert "figure/missing" not in page
+
+
+def test_a_line_that_holds_neither_its_ends_nor_its_points_is_refused() -> None:
+    # As a connector the engine could not route once was: its frame, its paint, no ends.
+    endless = element(
+        "line", "figure/links[ab]/l", x=0, y=0, width=0, height=0, stroke="ink",
+        **{"marker-end": "arrow"},
+    )  # fmt: skip
+    halved = element("line", "figure/half", x=0, y=0, width=10, height=0, x1=0, y1=0)
+
+    drawn = draw(scene(endless, halved, element("box", "figure/b", x=0, y=0, width=5, height=5)))
+
+    why = "the line holds neither its ends, `x1 y1 x2 y2`, nor its points"
+    assert [loss.as_dict() for loss in drawn.losses] == [
+        {"plugin": "svg", "what": "figure/links[ab]/l", "did": "refused", "why": why},
+        {"plugin": "svg", "what": "figure/half", "did": "refused", "why": why},
+    ]
+    page = drawn.pages[0].svg
+    assert "figure/links[ab]/l" not in page and "figure/half" not in page
+    assert "<marker" not in page  # an arrowhead of a line left out is not defined
+    assert '<rect data-id="figure/b"' in page
+    ElementTree.fromstring(page)
 
 
 def test_a_colour_rounds_half_up_and_keeps_its_alpha() -> None:

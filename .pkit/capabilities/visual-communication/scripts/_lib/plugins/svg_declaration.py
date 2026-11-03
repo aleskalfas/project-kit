@@ -23,7 +23,7 @@ DECLARATION = {
     "name": "svg",
     "kind": "renderer",
     "version": "1.0.1",
-    "seam": 2,
+    "seam": 3,
     "module": "svg",
     "about": "An SVG file for each page, language and combination of modes.",
     "profile": "default",
@@ -36,7 +36,22 @@ DECLARATION = {
         ),
         "box": dict.fromkeys((*_FRAME, "fill", "stroke", "stroke-width", "rx"), DRAWS),
         "ellipse": dict.fromkeys((*_FRAME, "fill", "stroke", "stroke-width"), DRAWS),
-        "line": dict.fromkeys((*_FRAME, "x1", "y1", "x2", "y2", "stroke", "stroke-width"), DRAWS),
+        "line": dict.fromkeys(
+            (
+                *_FRAME,
+                "x1",
+                "y1",
+                "x2",
+                "y2",
+                "stroke",
+                "stroke-width",
+                "marker-start",
+                "marker-end",
+                "points",
+                "attached",
+            ),
+            DRAWS,
+        ),
         "text": dict.fromkeys(
             (
                 *_FRAME,

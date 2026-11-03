@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "component.schema.json",
   "title": "A component — visual-communication capability",
-  "description": "Formal shape of a component of a library (DEC-001 points 4 and 6, DEC-005 points 1 to 3): its status and what it is about, the fields of content it takes, its options, states, colour, values, the size it prefers, its parts, the fields of each list it repeats over, the parts it exposes, and the layouts of a top component, which may be its pages' forms. `fields` is a fixed subset of JSON Schema 2020-12. Each part is exactly one kind, with the keys that kind takes; a value is a formula or a switch on an option of words. What crosses keys, such as a formula's references and dimensions, a switch naming every word of its option, or a field a part names, or a list's fields naming a list a part of its own repeats over, the engine checks when it reads the component. Document-shaped schema. Companion per COR-018.",
+  "description": "Formal shape of a component of a library (DEC-001 points 4 and 6, DEC-005 points 1 to 3): its status and what it is about, the fields of content it takes, its options, states, colour, values, the size it prefers, its parts, the fields of each list it repeats over, the parts it exposes, whether it takes ends, and the layouts of a top component, which may be its pages' forms. `fields` is a fixed subset of JSON Schema 2020-12. Each part is exactly one kind, with the keys that kind takes; a value is a formula or a switch on an option of words. What crosses keys, such as a formula's references and dimensions, a switch naming every word of its option, or a field a part names, or a list's fields naming a list a part of its own repeats over, the engine checks when it reads the component. Document-shaped schema. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
@@ -111,7 +111,7 @@
       }
     },
     "lists": {
-      "description": "The fields of each list a `repeat` part of its own repeats over, by the list field (DEC-010 points 1 to 4): the field of an item that names the component drawing it, and the item's arrangement fields. The list of a top's pages takes none.",
+      "description": "The fields of each list a `repeat` part of its own repeats over, by the list field (DEC-010 points 1 to 4, DEC-011 point 1): the field of an item that names the component drawing it, the item's arrangement fields, and, for a list of ties, its two end fields. The list of a top's pages takes none.",
       "type": "object",
       "propertyNames": {
         "$ref": "defs.schema.json#/$defs/name"
@@ -127,6 +127,10 @@
       "items": {
         "$ref": "defs.schema.json#/$defs/name"
       }
+    },
+    "ends": {
+      "description": "Whether it takes ends (DEC-011 point 1): drawn as a tie, its pattern gives it two, which its formulas read as `{start}` and `{end}`, and a line with `connect` joins.",
+      "const": true
     },
     "layouts": {
       "description": "A top component's layouts, by name: one, whose slots name the top's fields; or, where the layouts are the forms its pages take, one or more, each drawing a page with its own parts.",
@@ -572,6 +576,74 @@
         "$ref": "#/$defs/sizes-value"
       }
     },
+    "marker-value": {
+      "description": "`marker-start`, `marker-end`: the arrowhead at that end of a line, one of none, arrow, the first the default; or a switch of them on an option of words.",
+      "anyOf": [
+        {
+          "enum": [
+            "none",
+            "arrow"
+          ]
+        },
+        {
+          "$ref": "#/$defs/marker-switch"
+        }
+      ]
+    },
+    "marker-switch": {
+      "description": "A switch of `marker` words on an option of words.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words the value switches on.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/marker-value"
+      }
+    },
+    "connect-value": {
+      "description": "`connect`: how a connector runs between its component's two ends, straight or with corners; or a switch of them on an option of words.",
+      "anyOf": [
+        {
+          "enum": [
+            "straight",
+            "corners"
+          ]
+        },
+        {
+          "$ref": "#/$defs/connect-switch"
+        }
+      ]
+    },
+    "connect-switch": {
+      "description": "A switch of `connect` words on an option of words.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words the value switches on.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/connect-value"
+      }
+    },
     "when": {
       "description": "When a part is drawn: while a field of the content is filled, or while an option of words takes one of the words named.",
       "anyOf": [
@@ -641,7 +713,7 @@
       ]
     },
     "list-fields": {
-      "description": "The fields of a list's items (DEC-010 points 1 to 4): `component`, a field of the component's own, holding no list and placed by no part, whose value names the component of each item that names none of its own; and `arrangement`, the item's arrangement fields by name, each an option of words that the list's component sets, which a component that draws an item declares under no key of its own. The list takes one weight at most.",
+      "description": "The fields of a list's items (DEC-010 points 1 to 4, DEC-011 point 1): `component`, a field of the component's own, holding no list and placed by no part, whose value names the component of each item that names none of its own; `arrangement`, the item's arrangement fields by name, each an option of words that the list's component sets, which a component that draws an item declares under no key of its own; and `ends`, a list of ties' two end fields, where each tie starts and where it ends. The list takes one weight at most.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -673,6 +745,32 @@
           },
           "additionalProperties": {
             "$ref": "#/$defs/arrangement-field"
+          }
+        },
+        "ends": {
+          "description": "The list's two end fields, in order: the field of each tie that names the item it starts at, and the one it ends at. Each is a name, no reserved key's, and no arrangement field of the list.",
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "allOf": [
+              {
+                "$ref": "defs.schema.json#/$defs/name"
+              },
+              {
+                "not": {
+                  "enum": [
+                    "id",
+                    "use",
+                    "concept",
+                    "state",
+                    "override",
+                    "pkit"
+                  ]
+                }
+              }
+            ]
           }
         }
       }
@@ -729,7 +827,7 @@
       }
     },
     "layout": {
-      "description": "A layout of a top component. In format 1 its slots name the top's fields. In a layout that is a page's form, each slot is the schema of a field the page fills, which `x-pkit-runs` may mark as a field of runs, `required` names the slots a page must fill, and `parts` draw the page.",
+      "description": "A layout of a top component. In format 1 its slots name the top's fields. In a layout that is a page's form, each slot is the schema of a field the page fills, which `x-pkit-runs` may mark as a field of runs, `required` names the slots a page must fill, `lists` declares the fields of each list among its slots that its parts repeat over, as a pattern does, and `parts` draw the page.",
       "type": "object",
       "required": [
         "slots"
@@ -750,6 +848,16 @@
             "$ref": "defs.schema.json#/$defs/name"
           },
           "uniqueItems": true
+        },
+        "lists": {
+          "description": "The fields of each list among the slots that a part of the layout repeats over, by the slot (DEC-010 point 5, DEC-011 point 5).",
+          "type": "object",
+          "propertyNames": {
+            "$ref": "defs.schema.json#/$defs/name"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/list-fields"
+          }
         },
         "parts": {
           "description": "The parts that draw a page in this layout, by name, drawn in order.",
@@ -802,8 +910,17 @@
       },
       "else": {
         "not": {
-          "required": [
-            "required"
+          "anyOf": [
+            {
+              "required": [
+                "required"
+              ]
+            },
+            {
+              "required": [
+                "lists"
+              ]
+            }
           ]
         },
         "properties": {
@@ -894,6 +1011,12 @@
         },
         "stroke-width": {
           "$ref": "#/$defs/number-value"
+        },
+        "marker-start": {
+          "$ref": "#/$defs/marker-value"
+        },
+        "marker-end": {
+          "$ref": "#/$defs/marker-value"
         }
       }
     },
@@ -1016,14 +1139,10 @@
       }
     },
     "line-part": {
-      "description": "A line, from `x1 y1` to `x2 y2`.",
+      "description": "A line, from `x1 y1` to `x2 y2`; or, in a component that takes ends, a connector between them, `connect`, which sets its ends.",
       "type": "object",
       "required": [
-        "line",
-        "x1",
-        "y1",
-        "x2",
-        "y2"
+        "line"
       ],
       "additionalProperties": false,
       "properties": {
@@ -1044,8 +1163,55 @@
         },
         "y2": {
           "$ref": "#/$defs/number-value"
+        },
+        "connect": {
+          "$ref": "#/$defs/connect-value"
         }
-      }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "x1",
+            "y1",
+            "x2",
+            "y2"
+          ],
+          "not": {
+            "required": [
+              "connect"
+            ]
+          }
+        },
+        {
+          "required": [
+            "connect"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "x1"
+                ]
+              },
+              {
+                "required": [
+                  "y1"
+                ]
+              },
+              {
+                "required": [
+                  "x2"
+                ]
+              },
+              {
+                "required": [
+                  "y2"
+                ]
+              }
+            ]
+          }
+        }
+      ]
     },
     "image-part": {
       "description": "An image of a produced output: its height keeps the picture's proportions where none is given.",
@@ -1154,7 +1320,7 @@
       }
     },
     "repeat-part": {
-      "description": "A component drawn for each item of a list, arranged in a row or a column.",
+      "description": "A component drawn for each item of a list, arranged in a row or a column; or, over a list of ties, each tie drawn in the part's whole frame, with neither.",
       "type": "object",
       "required": [
         "repeat",
@@ -1196,18 +1362,12 @@
           "$ref": "#/$defs/number-value"
         }
       },
-      "oneOf": [
-        {
-          "required": [
-            "row"
-          ]
-        },
-        {
-          "required": [
-            "column"
-          ]
-        }
-      ]
+      "not": {
+        "required": [
+          "row",
+          "column"
+        ]
+      }
     },
     "part": {
       "description": "A part: exactly one of a primitive (`box ellipse text line image`) or a placing (`use slot repeat`), with its place, its size and `when`.",
