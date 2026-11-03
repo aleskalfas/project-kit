@@ -1,0 +1,275 @@
+answers:
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T07:31:53Z
+      outcome: unchanged
+      unchanged-because: The definition says content is what a piece shows, such as its titles, texts and lists, kept as data apart from how the piece looks, and its distinction says content holds none of the layout. The edits to DEC-001 point 3 let a field a component marks hold a list of runs, each naming a word of a style its field declares, and let content choose among those words; a run names what it is, never a look, which its component gives. So content stays data apart from its look, and the term holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-model
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T07:32:04Z
+      outcome: unchanged
+      unchanged-because: The definition says a model is a file of a subject's elements and their relations, written once for several pieces to draw from, and its distinction sets it apart from the content of one piece. The edits to DEC-001 point 3 add a field's runs, which hold no ids and may differ between languages, and leave as it was the shared content a piece reads from a source it names, so the term holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-option
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T07:32:08Z
+      outcome: unchanged
+      unchanged-because: The definition says an option is a choice a library component declares, made where a piece uses it from the values the component lists. The edit to DEC-001 point 6 adds a run's concept, which gives the run its colour before that of what shows the text, and a state that changes that colour replaces the run's; it changes nothing of a component's options, and a run's style word is a word its field declares, not an option, so the term holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-piece
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+    revalidated:
+      at: 2026-11-03T07:32:13Z
+      outcome: unchanged
+      unchanged-because: The definition says a piece is a visual item that keeps its content as data and takes its look from libraries, and the example has one piece in English and Czech. The edits to DEC-001 point 3 let a field hold runs, which may differ in number, order and style between languages while each language keeps the same fields and ids; a run's style is a word whose look a library gives, so what a piece is holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-093-build-presentation.md
+    read:
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T053645Z-9b958b41.yaml
+    revalidated:
+      at: 2026-11-03T07:32:26Z
+      outcome: unchanged
+      unchanged-because: "Steps 2 and 3 fill a library component's fields with the slide's content, and the edits to DEC-001 points 3 and 6 add that a field the component marks may hold runs, whose style words content chooses among and whose concept colours the run, which is still filling what the component declares. Variant 4a refuses a key no file's schema or component declares, which the edit to DEC-002 point 3 leaves as it was: it adds only a run's three keys and a list of runs in a marked field to what is known. Step 5 and variant 5a rest on each text measured from committed fonts and never shrunk, which the edit to DEC-005 point 4 keeps while measuring each run in its own role."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-094-put-figure-in-page.md
+    read:
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T053645Z-9b958b41.yaml
+    revalidated:
+      at: 2026-11-03T07:32:30Z
+      outcome: unchanged
+      unchanged-because: "Steps 1 and 2 start a piece that names its brand and notations, as DEC-001 point 3 states as before; its edit adds a field's runs, and changes nothing of how a piece starts or what it names. Variant 2a rests on a diagram being a page alone, and part of a page inside a slide, which the edit to DEC-005 point 5 leaves as it was: it touches only what a text holds, its runs each with their role, paint and fonts, and its line height."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-095-draw-views-of-system.md
+    read:
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T053645Z-9b958b41.yaml
+    revalidated:
+      at: 2026-11-03T07:32:34Z
+      outcome: unchanged
+      unchanged-because: Steps 1 and 2 and variant 2a rest on shared content a piece reads from a source it names, and on an element a view names carrying a stable id. The edit to DEC-001 point 3 adds a field's runs, which carry no ids, and touches neither. Step 4 rests on an element taking its colour from the concept it names, which DEC-001 point 6 states as before; its edit adds a run's concept, which colours one run of a text, and changes nothing of an element's look.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-096-add-visual-as-data.md
+    read:
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T053645Z-9b958b41.yaml
+    revalidated:
+      at: 2026-11-03T07:32:47Z
+      outcome: unchanged
+      unchanged-because: Steps 1 to 3 have a local component say as data how its parts repeat, line up and take their sizes, and step 2 takes every colour and font from a role. The edit to DEC-005 point 1 lets a part that draws a text choose its typography role and paint by a run's style, a declared choice like an option's, and adds no tool and no fixed value. The edit to DEC-001 point 6 adds a run's concept colour, and variant 4c's declared options and lock moves stay as stated.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-109-take-in-shared-library.md
+    read:
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T053645Z-9b958b41.yaml
+    revalidated:
+      at: 2026-11-03T07:32:51Z
+      outcome: unchanged
+      unchanged-because: "Step 3 and variant 3a refuse a library version the installed capability cannot read, which the edit to DEC-002 point 3 leaves as it was: it adds a run's keys, text, style and concept, and a list of runs in a field its component marks, to what the strict reading takes. A library whose components mark fields of runs needs the release that reads them, as any library names the oldest release it needs."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-110-add-library-component.md
+    read:
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T053645Z-9b958b41.yaml
+    revalidated:
+      at: 2026-11-03T07:32:55Z
+      outcome: unchanged
+      unchanged-because: "Step 2 draws a library component once with each value of each of its options, and the sources summarise DEC-007 point 3's bar, already leaving out its renders in languages that stress text. The edit to DEC-007 point 3 adds a render of each word of each field's run styles, which asks something only of a component that has a field of runs; no component has one until #2501 T6 builds runs, so what the step and its summary state still holds. Variant 1a's declared options and roles stay as DEC-001 point 6 states them, whose edit adds only a run's concept colour."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-098-switch-brand-or-mode.md
+    revalidated:
+      at: 2026-11-03T07:33:07Z
+      outcome: unchanged
+      unchanged-because: Step 2 and the guarantee keep the content as it was when the brand changes. The edits to DEC-001 point 3 let a field hold runs that name words of styles their field declares, whose look the component gives, so another brand restyles every run with no content changed. Variant 1b measures each text again for a mode that alters sizes, which the edit to DEC-005 point 4 keeps, measuring each run in its own typography role. Variant 3a's picture made elsewhere stays as DEC-001 point 3 states it.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-099-draw-through-renderer.md
+    revalidated:
+      at: 2026-11-03T07:33:12Z
+      outcome: unchanged
+      unchanged-because: Step 2 and variant 2d measure each text in the fonts the brand sets for the renderer's font profile. The edit to DEC-005 point 4 has the engine shape each run, a span in one style, in pieces of one font each, and break a paragraph across its runs, each measured in its own typography role, still by that profile, so what the use case states of measuring and reporting what does not fit holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-100-take-back-edits.md
+    revalidated:
+      at: 2026-11-03T07:33:16Z
+      outcome: unchanged
+      unchanged-because: Steps 2 to 4 trace each edit to the content field it came from, and report an edit that cannot be placed, as DEC-001 point 3 states as before. Its edit adds a field's runs, which carry no ids, and changes nothing of how a part traces back to its field; how an edit that splits or joins runs comes back is left to the record of taking edits back, which the use case's later slice decides.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-101-give-second-language.md
+    revalidated:
+      at: 2026-11-03T07:33:28Z
+      outcome: unchanged
+      unchanged-because: Step 2 adds content for the new language with the same structure as the source language's, page by page, and the sources rest on a second content of the same shape with the same ids. The edit to DEC-001 point 3 says a second language's content has the same shape in its fields and ids, and that a field's runs, its value, may differ in number, order and style between languages, as its text does; the structure the step names stays the same. Steps 5 and 6 measure each text in its own language and report what does not fit, which the edit to DEC-005 point 4 keeps, measuring each run in its own typography role.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-102-hand-out-pdf.md
+    read:
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T053645Z-9b958b41.yaml
+    revalidated:
+      at: 2026-11-03T07:33:32Z
+      outcome: unchanged
+      unchanged-because: Steps 1 to 3 rest on a piece declaring the files it is handed out as, which the edit to DEC-001 point 3 leaves as it was. Step 2 and variant 2c rest on a slot or a field the kind marks declaring pages, and on a PDF's alternative text, reading order and structure, which DEC-005 point 5 states as before; its edit touches only what a text holds, its runs each with their typography role, paint and fonts, and its line height.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/journeys/JRN-010-give-talk.md
+    read:
+      - 20261103T034233Z-dfe66d95.yaml
+    revalidated:
+      at: 2026-11-03T07:33:37Z
+      outcome: unchanged
+      unchanged-because: Step 2's hand-over rests on a second language being a second content of the same shape, with the same ids, which the edit to DEC-001 point 3 states as the same shape in its fields and ids, a field's runs free to differ as its text does; the presentation still passes to the translation whole. Step 3's hand-over rests on each text measured in its own language by the renderer's font profile, which the edit to DEC-005 point 4 keeps, measuring each run in its own typography role.
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061953Z-d4a5779f.yaml
+    revalidated:
+      at: 2026-11-03T07:35:14Z
+      outcome: unchanged
+      unchanged-because: "Judged on the combined state: the page as main holds it, after pkit visual add's change (add copies a shipped library into the location and lists it), after its Notations section came to link piece.yaml, The lock, Content files and Shapes in place of its recaps, and after the advice of add's refusal on a quoted key in the list of libraries; after the edits stating DEC-010 (a list's component field, arrangement fields that take a word, a paged top's layout key and slots, versions that clash on an item's key) and DEC-011 (a tie's end fields as known keys, an end's key path and the marks' jobs, versions that lose a tie's end); together with this change's edits stating DEC-012 (DEC-001 points 3 and 6: a field a component marks may hold runs, content chooses among their style words, a list of runs holds no items and no ids, a field's runs may differ between languages, a run's concept colours it; DEC-002 points 3 and 4: a run's known keys, keys the format fixes on a run, no key kept free there, no path mark in a run style's word; DEC-004 point 8: each run measured against the fill under it; DEC-007 point 3: reference renders draw each run word once). The page describes format 1's files: a content file's fields, lists of items with ids unique in each list and the same in every language, the reserved words, the name and id shapes, fonts measured from their files, a draft's lock moving to versions that fit together, and where add writes. Format 1 holds no component field, arrangement field, paged top, tie or field of runs, and none of the edits changes what add writes, how a format 1 file is read or how its lock moves, so every statement holds; the pages describe the new fields with #2501 T3, T6, T8 and T9."
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    read:
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T000900Z-bed893e8.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T061953Z-d4a5779f.yaml
+    revalidated:
+      at: 2026-11-03T07:35:25Z
+      outcome: unchanged
+      unchanged-because: "Judged on the combined state: the page as main holds it, after pkit visual add's change, after files.md's Notations section came to link its sections in place of its recaps, and after the advice of add's refusal on a quoted key, none of which changed what components.md reads in files.md; after the edits stating DEC-010 (a list's component field, arrangement fields that take a word, weights, a paged top's layout key and slots) and DEC-011 (a tie's ends given its component and read by key path through no exposed part, a connector at a picture's point by an end field); together with this change's edits stating DEC-012 (DEC-001 points 3 and 6: fields of runs, their style words and a run's concept colour; DEC-004 point 8: each run measured against the fill under it; DEC-005 points 1, 4 and 5: a text part choosing a run's typography role and paint by its style, a run shaped in pieces of one font each and lines broken across runs, the scene's runs each with their role, paint and fonts and a text's line height the greatest of its runs' roles; DEC-007 point 3: reference renders draw each run word once). The page describes format 1's components: references through exposed parts, a step into a list as list[id], options, one colour family for an instance, trace ids, a text in the typography role style names, each run of text in one family shaped with HarfBuzz, one line height and baseline, and lines broken by UAX #14 and the language's rules. Format 1 builds no component field, arrangement field, weight, paged top, tie or field of runs, so a text is one run in one style and every statement holds; the page describes them with #2501 T3, T6, T8 and T9."
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261102T233447Z-d3a48320.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061953Z-d4a5779f.yaml
+    revalidated:
+      at: 2026-11-03T07:35:35Z
+      outcome: unchanged
+      unchanged-because: "Judged on the combined state: the page as main holds it, after pkit visual add's change, after it came to say a family's name is written as a CSS string in double quotes and to name each section's page, and after svg.py and css.py gained only comments pointing to each other; after the edits stating DEC-010 (nothing an output is made from for a format 1 piece) and DEC-011 (a connector ending at a picture's exposed point by a tie's end field); together with this change's edits stating DEC-012 (DEC-002 points 3 and 4: a run's known keys and the keys the format fixes on a run, no key kept free there; DEC-005 points 1, 4 and 5: a text part choosing a run's role and paint by its style, a run shaped in pieces of one font each and lines broken across runs, the scene's runs each with their typography role, paint and fonts, and a text's line height). The page describes the renderers, which draw each line of a text as the engine broke it in the fonts its scene names, a label placed at a picture's exposed point by an option, the exports, produced pictures and written code. Format 1's scene holds no tie and no run, so the SVG renderer draws every text and label as before; ties come with #2501 T8, and a renderer that reads a run's paint and fonts comes with the seam's new version in #2501 T6."
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T233447Z-d3a48320.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T001520Z-23bfebf3.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T011639Z-18e1793b.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+      - 20261103T020650Z-937df1c9.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T061953Z-d4a5779f.yaml
+    revalidated:
+      at: 2026-11-03T07:35:45Z
+      outcome: unchanged
+      unchanged-because: "Judged on the combined state: the page as main holds it, after pkit visual add's change and the CLI reference's process row, after brand-unreadable came to name the version its folder holds and ask for attention in a released one and the page came to name each section's page, and after the advice of add's refusal on a quoted key in files.md; after the edits stating DEC-010 (a list's component field, arrangement fields, a paged top's layout key and slots, versions that clash on an item's key) and DEC-011 (a tie's end fields as known keys, an end's key path and the marks' jobs, versions that lose a tie's end); together with this change's edits stating DEC-012 (DEC-002 points 3 and 4: a run's known keys, a list of runs holding no ids, keys the format fixes on a run, no path mark in a run style's word; DEC-004 point 8: each run measured against the fill under it, at its own size and weight; DEC-005 points 1, 4 and 5: a run's role and paint chosen by its style, measured and held in its own role). The page lists format 1's findings: content-key, id-twice and id-languages on lists of items, the lock findings, contrast-drawn measuring each text at its size and weight, the text findings, and a finding's location as a file, # and a key path. Format 1 holds no component field, arrangement field, paged top, tie or field of runs, so each text is one run and no finding it lists changes; the new findings come with #2501 T3, T6, T8 and T9."
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T105732Z-50026bac.yaml
+      - 20261102T233447Z-d3a48320.yaml
+      - 20261102T234130Z-95370f54.yaml
+      - 20261102T234136Z-3f4432e8.yaml
+      - 20261102T234228Z-7ff1f619.yaml
+      - 20261102T235003Z-d628ab1e.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T001520Z-23bfebf3.yaml
+      - 20261103T002257Z-b8724720.yaml
+      - 20261103T005406Z-bb85ec4f.yaml
+      - 20261103T005815Z-87a9ded4.yaml
+      - 20261103T011639Z-18e1793b.yaml
+      - 20261103T015507Z-383fe852.yaml
+      - 20261103T015949Z-e65e7e24.yaml
+      - 20261103T020650Z-937df1c9.yaml
+      - 20261103T021240Z-ab12fa36.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T032457Z-0a6f8235.yaml
+      - 20261103T034233Z-dfe66d95.yaml
+      - 20261103T042826Z-25461bf0.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T060141Z-262ce9d0.yaml
+      - 20261103T061846Z-e38a0a5c.yaml
+      - 20261103T061953Z-d4a5779f.yaml
+    revalidated:
+      at: 2026-11-03T07:35:56Z
+      outcome: unchanged
+      unchanged-because: "Judged on the combined state: the README as main holds it, after pkit visual add's change and the CLI reference's process row, after it came to link add in step 1 of Drawing a piece to the command's own section, and after the advice of add's refusal on a quoted key in files.md, which the README does not give; after the edits stating DEC-010 and DEC-011, of which it meets only DEC-003 point 8's versions that clash on an item's key or lose a tie's end, which narrow the versions a moving draft takes; together with this change's edits stating DEC-012 (DEC-001 points 3 and 6: fields of runs, their style words and a run's concept colour; DEC-002 points 3 and 4: a run's known keys and the keys the format fixes on a run; DEC-004 point 8: each run measured against the fill under it; DEC-005 points 1, 4 and 5: a run's role and paint chosen by its style, shaped, broken and held in its own role; DEC-007 point 3: reference renders draw each run word once). The README says what the capability ships, that a piece keeps its content as data and its libraries give its look, that add copies a shipped library and lists it, and that a render moves a draft's lock to the newest versions that fit together; no format 1 file holds a clash, a tie or a field of runs, and it states nothing of a list's fields, ties, a run's keys or its measure, so it holds, and the pages describe them with #2501 T3, T6, T8 and T9."

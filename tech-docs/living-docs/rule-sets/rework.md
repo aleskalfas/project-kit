@@ -1,6 +1,6 @@
 ---
 rule-set: REWORK
-version: 3.7.0
+version: 3.8.0
 inherits: [living-docs:LDOC@1, WRITE@2]
 scope:
   paths:
@@ -33,6 +33,11 @@ scope:
     - .pkit/schemas/shape-patterns.md
     - .pkit/schemas/data-binding.md
     - docs/schemas/README.md
+    - .pkit/process/README.md
+    - .pkit/process/shape.md
+    - .pkit/process/engine.md
+    - .pkit/process/connections.md
+    - docs/process/README.md
   types: [living-docs:page]
 rules:
   RS-REWORK-001:

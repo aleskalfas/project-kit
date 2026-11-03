@@ -18,6 +18,7 @@ pkit:
         - src/project_kit/friction_report.py
         - src/project_kit/friction_discovery.py
         - src/project_kit/friction_since.py
+        - scripts/friction_report_body.py
         - tests/test_friction_check.py
         - tests/test_friction_repository.py
         - tests/test_friction_report.py

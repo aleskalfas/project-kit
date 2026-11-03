@@ -1,0 +1,8 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    read:
+      - 20261102T234136Z-3f4432e8.yaml
+    revalidated:
+      at: 2026-11-03T00:09:00Z
+      outcome: unchanged
+      unchanged-because: "files.md changed in this pull request only in where its own facts live: no brand ships now has its home in Brands, its links to the pages after it stay italic names, and it anchors the libraries folder; what components.md says of files.md's foundations, reserved words and shapes still holds"

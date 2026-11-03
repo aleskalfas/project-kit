@@ -15,6 +15,7 @@ pkit:
   friction:
     anchors:
       record:
+        - project-management:DEC-035
         - project-management:DEC-035#1
         - project-management:DEC-035#7
         - project-management:DEC-043#4

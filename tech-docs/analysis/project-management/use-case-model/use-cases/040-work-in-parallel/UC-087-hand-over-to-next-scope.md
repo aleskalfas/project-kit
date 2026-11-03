@@ -28,6 +28,7 @@ pkit:
       record:
         - project-management:DEC-005
         - project-management:DEC-012
+        - project-management:DEC-025
         - project-management:DEC-026
         - project-management:DEC-035#3
         - project-management:DEC-035#4

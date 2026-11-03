@@ -24,7 +24,7 @@ pkit:
 
 # REQ-028 · Quality · The router never fails a command over a version pin it cannot resolve
 
-**Verified by:** Tests of the router find that an unresolvable [version pin](../../../glossary.md#term-version-pin--version-pin), or a missing `uvx`, leaves the command to the installed CLI, with a warning. They find the warning said once per command. They also find that it says when the installed CLI is older than the version pin, and never calls a newer one older.
+**Verified by:** Tests of the [router](../../../glossary.md#term-router--router) find that an unresolvable [version pin](../../../glossary.md#term-version-pin--version-pin), or a missing `uvx`, leaves the command to the installed CLI, with a warning. They find the warning said once per command. They also find that it says when the installed CLI is older than the version pin, and never calls a newer one older.
 
 **Rationale:** The operator runs each [project](../../../glossary.md#term-project--project) at its [version pin](../../../glossary.md#term-version-pin--version-pin), and needs the command to run when the pinned [release](../../../glossary.md#term-release--release) cannot be fetched, such as offline. [ADR-039 D2](../../../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#d2--graceful-degradation-is-mandatory) makes this mandatory: "a degraded-but-running command beats a broken one". The warning tells the operator plainly that the [system](../../../glossary.md#term-system--system) fell back, since the output may not match the pinned [methodology](../../../glossary.md#term-methodology--methodology).
 

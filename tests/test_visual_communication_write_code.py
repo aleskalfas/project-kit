@@ -18,10 +18,12 @@ from tests.visual_communication_project import (
     TEST_BRAND,
     bound,
     copy_library,
+    importable,
     project,
     write,
     yaml_text,
 )
+from tests.visual_communication_writes import FULL, failing
 
 script, css = load("visual-communication", "write-code.py", "plugins.css")
 
@@ -32,9 +34,9 @@ LOCK = {"foundations": "1.0.0", "test-brand": "1.0.0"}
 
 @pytest.fixture(autouse=True)
 def _writer_importable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The command imports its writer when it runs; `load` keeps no `_lib` in
-    `sys.modules`, so the writer it loaded with the script stands in for that import."""
-    monkeypatch.setitem(sys.modules, "_lib.plugins.css", css)
+    """The writer stands in for the import the command makes when it runs it, for the
+    length of the test."""
+    importable(monkeypatch, css)
 
 
 def declare(root: Path, **fields: object) -> None:
@@ -122,6 +124,18 @@ def test_it_refuses_a_lock_that_does_not_hold_and_writes_nothing(root: Path) -> 
     shown = run(root, "brand-css")
     assert shown.returncode == 1
     assert "the lock names no version of `foundations`" in shown.stderr
+    assert not (root / "web").exists()
+
+
+def test_a_write_that_fails_is_an_error_naming_the_file_and_leaves_nothing(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with monkeypatch.context() as patch:
+        failing(patch, write={"brand.css.record.yaml"})
+        shown = run(root, "brand-css")
+    assert shown.returncode == 1
+    assert shown.stdout == ""
+    assert shown.stderr == f"error: web/brand.css.record.yaml could not be written: {FULL}\n"
     assert not (root / "web").exists()
 
 

@@ -5,10 +5,12 @@
   of that format. Format 1 declares `svg`: one file for each page, language and
   combination. A piece with no page in one of its languages is refused.
 - **A number for each run.** Version `N` is one more than the highest the piece's
-  `exports.yaml` records, shared by every file the run makes; each file is named
-  `<piece>.v<N>.<language>.<key>.<format>`, and a piece of more than one page adds the
-  page's number, from 1: `<piece>.v<N>.<language>.<key>.<n>.<format>`. The files lie in
-  the clone's local exports folder, never committed; no export overwrites another.
+  `exports.yaml` records or a file in the piece's exports folder carries, shared by every
+  file the run makes; each file is named `<piece>.v<N>.<language>.<key>.<format>`, and a
+  piece of more than one page adds the page's number, from 1:
+  `<piece>.v<N>.<language>.<key>.<n>.<format>`. The files lie in the clone's local exports
+  folder, never committed; no export overwrites another, and a file a failed run left
+  there refuses no later run.
 - **No stale output.** A run stops on a produced picture whose record no longer verifies,
   naming what changed, unless the person names it to be used as it is; it stops on a
   picture that is missing whatever is named. Naming an output the piece does not declare
@@ -19,9 +21,11 @@
   the renderers' versions, each produced output the scenes used with the version used
   (the `value` of its record's fingerprint, by which the check knows it), and those used
   while stale (DEC-006 point 7).
-- **Refused before any write.** Everything that can refuse a run, a file of its number
-  already in the exports folder and a file reached through a link included, is checked
-  by `plan`, so a refused run writes nothing.
+- **Refused before any write.** Everything that can refuse a run, a file reached through
+  a link included, is checked by `plan`, so a refused run writes nothing.
+- **Written as one change.** The files, then the record (`write`): where a write fails,
+  every file is put back as it was before the run, the files the run wrote removed, or
+  each it could not put back is named.
 """
 
 from __future__ import annotations
@@ -33,15 +37,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ruamel.yaml.scalarstring import SingleQuotedScalarString
-
-from _lib import fingerprint, framing
+from _lib import fingerprint, framing, records
 from _lib import pipeline as pl
 from _lib.env import MissingFont
-from _lib.files import FileError, read_bound
+from _lib.files import Change
 from _lib.libraries import installed_release
 from _lib.plugins import seam
-from _lib.reading import ReadError, sha256
+from _lib.reading import sha256
 from _lib.root import LOCAL
 from _lib.scene import SceneResult
 
@@ -51,10 +53,11 @@ RENDERERS = {"svg": "svg"}
 #: Where each piece's exports lie, relative to the project root.
 FOLDER = f"{LOCAL}/exports"
 
+#: The comment that opens the record, a line each.
 HEADER = (
-    "The record of the piece's exports (visual-communication DEC-006 point 7): each\n"
-    "numbered export, the fingerprint of what it was made from, each file it made with its\n"
-    "hash, and what is only recorded. `pkit visual export` rewrites it; commit it."
+    "The record of the piece's exports (visual-communication DEC-006 point 7): each",
+    "numbered export, the fingerprint of what it was made from, each file it made with its",
+    "hash, and what is only recorded. `pkit visual export` rewrites it; commit it.",
 )
 
 
@@ -97,8 +100,8 @@ def recorded_versions(piece: pl.Piece) -> list[dict[str, Any]]:
     if not path.is_file():
         return []
     try:
-        data = read_bound(path, "exports")
-    except (ReadError, FileError) as exc:
+        data = records.read(path, "exports")
+    except records.RecordError as exc:
         raise pl.Refused(f"{exc}: mend it before the next export") from exc
     versions = data.get("versions")
     if not isinstance(versions, list) or not all(
@@ -175,7 +178,7 @@ def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None 
             f"<output>` for each, or name it with `--use-stale <output>` to export it as it is"
         )
     versions = recorded_versions(piece)
-    number = max((int(entry["version"]) for entry in versions), default=0) + 1
+    number = next_number(piece, versions)
     files = _drawn(project, results, number)
     sources = pl.findings_key_sources(
         project.root, project.held, piece, project.lock, sorted(project.env.fonts_read)
@@ -205,6 +208,19 @@ def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None 
     planned = Planned(piece, number, files, [*versions, entry], used_stale, not_stale)
     writable(planned)
     return planned
+
+
+def next_number(piece: pl.Piece, versions: Sequence[Mapping[str, Any]]) -> int:
+    """The number of the piece's next export: one more than the highest that the record's
+    `versions` name or a file of the piece's exports folder carries, so no export
+    overwrites another, and a file a failed run could not remove refuses no later run."""
+    numbered = re.compile(rf"^{re.escape(piece.name)}\.v([0-9]+)\.")
+    taken = [int(entry["version"]) for entry in versions]
+    folder = piece.root / FOLDER / piece.name
+    if folder.is_dir():
+        names = (numbered.match(path.name) for path in folder.iterdir())
+        taken += [int(found.group(1)) for found in names if found is not None]
+    return max(taken, default=0) + 1
 
 
 def used_versions(project: pl.Project) -> dict[str, str]:
@@ -246,16 +262,9 @@ def _drawn(
 
 
 def writable(planned: Planned) -> None:
-    """Raise Refused where a planned export could not be written: a file of its number lies
-    in the exports folder already, or a file it writes is reached through a link."""
+    """Raise Refused where a planned export could not be written: a file it writes is
+    reached through a link."""
     piece = planned.piece
-    taken = sorted(name for name in planned.files if (planned.folder / name).exists())
-    if taken:
-        raise pl.Refused(
-            f"{FOLDER}/{piece.name}/ holds {', '.join(taken)} already, from an export "
-            f"{piece.file(pl.EXPORTS_FILE)} does not record: move it away, since no export "
-            f"overwrites another"
-        )
     for path in (
         *(planned.folder / name for name in planned.files),
         piece.folder / pl.EXPORTS_FILE,
@@ -263,26 +272,19 @@ def writable(planned: Planned) -> None:
         pl.writable(piece.root, path)
 
 
-def write(planned: Planned) -> None:
-    """Write a planned export's files, then its record. Raises Refused, writing nothing,
-    where it could not be written (`writable`), which `plan` already checked."""
+def write(planned: Planned, change: Change) -> None:
+    """Write a planned export's files, then its record, as the next steps of `change`, and
+    take it. Raises Refused, writing nothing, where it could not be written (`writable`),
+    which `plan` already checked; WriteFailed where a write fails, every file then
+    put back as it was before the run, or named."""
     piece = planned.piece
     writable(planned)
     for name, text in planned.files.items():
-        pl.write_file(piece.root, planned.folder / name, text.encode("utf-8"))
+        change.write(planned.folder / name, text.encode("utf-8"))
     record = {
         "pkit_schema": "visual-communication:exports",
         "schema_version": 1,
-        "versions": [_quoted_time(entry) for entry in planned.versions],
+        "versions": [records.quoted_time(entry) for entry in planned.versions],
     }
-    pl.write_file(
-        piece.root, piece.folder / pl.EXPORTS_FILE, pl.yaml_text(record, HEADER).encode("utf-8")
-    )
-
-
-def _quoted_time(entry: Mapping[str, Any]) -> dict[str, Any]:
-    """A version as the record writes it: its time quoted, as commands write times."""
-    recorded = dict(entry.get("recorded") or {})
-    if isinstance(recorded.get("time"), str):
-        recorded["time"] = SingleQuotedScalarString(recorded["time"])
-    return {**entry, "recorded": recorded}
+    change.write(piece.folder / pl.EXPORTS_FILE, records.text(record, HEADER).encode("utf-8"))
+    change.commit()

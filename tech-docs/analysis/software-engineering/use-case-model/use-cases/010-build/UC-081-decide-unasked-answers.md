@@ -68,7 +68,7 @@ pkit:
 
 1. The agent finds an answer the change check did not ask of the change (COR-050 points [3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and [16](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)). It may be:
    - an answer on an artefact the change check did not ask about, or for a debt the whole-repository check reports
-   - a revisit entry for a target the change asks no revisit of, or one whose outcome alone changed
+   - a revisit entry for a link target the change asks no revisit of, or one whose outcome alone changed
    - a reason for having no anchors
 2. The agent writes none of these answers (`software-engineer.md`).
 3. The agent names each in its hand-off, for the developer, or the delegate a person named, to decide (`software-engineer.md`).

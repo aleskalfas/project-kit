@@ -22,9 +22,11 @@ own script reuses the same steps.
 7. **The checks:** each variant's file is a PNG of the declared pixel size; every variant
    exposes the same points; the variants one scene holds keep each point at one place;
    each point lies within the pixels.
-8. **Only then** are the variants moved into the piece's `produced/<output>/<key>.png`,
-   a variant file left from before removed, and `produced/<output>/record.yaml` written
-   (schema `produced-record`). Every check that can refuse, the files it keeps reached
+8. **Only then** are the variants written into the piece's `produced/<output>/<key>.png`,
+   then `produced/<output>/record.yaml` (schema `produced-record`), and a variant file
+   left from before removed, as one change with the location's record: where a write
+   fails, the variants and the record are as they were before the run, or each the run
+   could not put back is named. Every check that can refuse, the files it keeps reached
    through a link included, runs before the location is recorded, so a refused run
    writes nothing in the location, and records no location.
 
@@ -76,7 +78,6 @@ fingerprint no longer verifies asks for attention, and so on.
 
 from __future__ import annotations
 
-import io
 import json
 import math
 import platform
@@ -88,13 +89,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ruamel.yaml import YAML
-from ruamel.yaml.scalarstring import SingleQuotedScalarString
-
-from _lib import fingerprint, keys, libraries, tokens, values
+from _lib import fingerprint, keys, libraries, records, tokens, values
 from _lib import location as loc
-from _lib.files import FORMAT, FileError, nearest, read_bound, refuse_links, schema_of, write_whole
+from _lib.files import (
+    FORMAT,
+    Change,
+    FileError,
+    WriteFailed,
+    nearest,
+    read_bound,
+    refuse_links,
+    schema_of,
+)
 from _lib.findings import ATTENTION, FAILS, Finding, accepted, loss_finding
+from _lib.libraries import FOUNDATIONS
 from _lib.names import is_name, is_token_path
 from _lib.plugins import seam
 from _lib.reading import ReadError, load_yaml, sha256
@@ -112,8 +120,7 @@ RECORD = "record.yaml"
 #: Where a producer's hand-over and its run's output lie, local to each clone.
 HANDOVER = f"{LOCAL}/handover"
 
-#: The library that declares the shared roles, and the location's folder of fonts.
-FOUNDATIONS = "foundations"
+#: The location's folder of fonts.
 FONTS = "fonts"
 
 #: The keyword that marks a producer's input as a role, with the DTCG type it takes.
@@ -241,7 +248,8 @@ class Produced:
 def produce(root: Path, where: loc.ForWriting, piece: str, output: str) -> Produced:
     """Run the producer a piece declares for `output`, in the location `where`, and keep
     its picture. Raises Refused, writing nothing in the location; loc.LocationRefused when
-    the location cannot be recorded."""
+    the location cannot be recorded; WriteFailed where a write fails, every file in the
+    location then as it was before the run, or named."""
     before = plan(root, where.path, piece, output)
     runnable(before)
     handed = handover(before)
@@ -257,9 +265,10 @@ def produce(root: Path, where: loc.ForWriting, piece: str, output: str) -> Produ
         )
     checked = check(before, out, result)
     keepable(root, before)
-    said = loc.record(root, where.path) if where.record else None
-    record, removed = keep(root, before, out, checked)
-    shutil.rmtree(out)
+    change = Change(root)
+    said = loc.record(change, where)
+    record, removed = keep(root, before, out, checked, change)
+    shutil.rmtree(out, ignore_errors=True)
     return Produced(before, record, removed, said, checked.losses)
 
 
@@ -356,22 +365,28 @@ def handover(plan: Plan) -> dict[str, Any]:
 
 
 def write_handover(root: Path, plan: Plan, handed: Mapping[str, Any]) -> Path:
-    """Write the hand-over under the capability's local folder; returns its path."""
+    """Write the hand-over under the capability's local folder; returns its path. Raises
+    WriteFailed where it cannot be written."""
     target = root / HANDOVER / plan.piece / f"{plan.output}.json"
     _refuse_links(root, target)
-    target.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(handed, indent=2, ensure_ascii=False) + "\n"
-    write_whole(target, text.encode("utf-8"))
+    change = Change(root)
+    change.write(target, text.encode("utf-8"))
+    change.commit()
     return target
 
 
 def run_folder(root: Path, plan: Plan) -> Path:
-    """The folder the producer writes into, under the capability's local folder, emptied."""
+    """The folder the producer writes into, under the capability's local folder, emptied.
+    Raises WriteFailed where it cannot be."""
     out = root / HANDOVER / plan.piece / plan.output
     _refuse_links(root, out)
-    if out.exists():
-        shutil.rmtree(out)
-    out.mkdir(parents=True)
+    try:
+        if out.exists():
+            shutil.rmtree(out)
+        out.mkdir(parents=True)
+    except OSError as exc:
+        raise WriteFailed(root, out, exc, done="emptied") from exc
     return out
 
 
@@ -518,24 +533,31 @@ def keepable(root: Path, plan: Plan) -> None:
         _refuse_links(root, target / name)
 
 
-def keep(root: Path, plan: Plan, out: Path, checked: Checked) -> tuple[Path, tuple[str, ...]]:
-    """Move the variants into the piece's `produced/<output>/`, write the record, and
-    remove a variant file left from before; returns the record's path and what was
-    removed. Raises Refused, writing nothing, where `keepable` refuses."""
+def keep(
+    root: Path, plan: Plan, out: Path, checked: Checked, change: Change
+) -> tuple[Path, tuple[str, ...]]:
+    """Write the variants into the piece's `produced/<output>/`, then the record, and
+    remove a variant file left from before, as the next steps of `change`, and take it;
+    returns the record's path and what was removed. Raises Refused, writing nothing, where
+    `keepable` refuses; WriteFailed where a write fails, the variants and the record then
+    as they were before the run, or named."""
     target = plan.folder / PRODUCED / plan.output
     wanted = {f"{key}.png" for key in plan.variants}
     keepable(root, plan)
-    target.mkdir(parents=True, exist_ok=True)
     for name in sorted(wanted):
-        write_whole(target / name, (out / name).read_bytes())
+        change.write(target / name, (out / name).read_bytes())
     record = target / RECORD
-    write_whole(record, record_text(record_of(plan, checked)).encode("utf-8"))
-    removed = []
-    for path in sorted(target.iterdir()):
-        if path.suffix == ".png" and path.is_file() and path.name not in wanted:
-            path.unlink()
-            removed.append(path.name)
-    return record, tuple(removed)
+    change.write(record, record_text(record_of(plan, checked)).encode("utf-8"))
+    held = sorted(target.iterdir()) if target.is_dir() else []
+    removed = tuple(
+        path.name
+        for path in held
+        if path.suffix == ".png" and path.is_file() and path.name not in wanted
+    )
+    for name in removed:
+        change.remove(target / name)
+    change.commit()
+    return record, removed
 
 
 def record_of(plan: Plan, checked: Checked) -> dict[str, Any]:
@@ -570,19 +592,11 @@ def record_of(plan: Plan, checked: Checked) -> dict[str, Any]:
 
 def record_text(record: Mapping[str, Any]) -> str:
     """The record as YAML, its time quoted, which reads back as `record`."""
-    data = dict(record)
-    recorded = record["recorded"]
-    data["recorded"] = {**recorded, "time": SingleQuotedScalarString(recorded["time"])}
-    writer = YAML()
-    writer.indent(mapping=2, sequence=4, offset=2)
-    writer.width = 4096
-    writer.representer.ignore_aliases = lambda *_: True
-    stream = io.StringIO()
-    writer.dump(data, stream)
-    text = (
-        f"# Written by `{PRODUCE}`, never by hand: what the picture was made from, its "
-        f"variants and its exposed points.\n" + stream.getvalue()
+    comment = (
+        f"Written by `{PRODUCE}`, never by hand: what the picture was made from, its "
+        f"variants and its exposed points."
     )
+    text = records.text(records.quoted_time(record), [comment], apart=False)
     if load_yaml(text) != record:
         raise AssertionError("the record does not read back as it was written")
     return text

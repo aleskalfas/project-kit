@@ -69,6 +69,7 @@ pkit:
         - docs/skills/README.md#why-they-exist
         - docs/decisions/README.md#why-they-exist
         - docs/schemas/README.md#why-they-exist
+        - docs/process/README.md#why-they-exist
         - .pkit/capabilities/project-management/README.md#
         - .pkit/capabilities/software-engineering/README.md#
         - .pkit/capabilities/evidence/README.md#
@@ -428,6 +429,7 @@ The friction check asks nothing of your documents until you declare where they l
 - **Skills, explained:** [`docs/skills/README.md`](docs/skills/README.md) — why recurring work becomes a skill, and how to write your own.
 - **Decision records, explained:** [`docs/decisions/README.md`](docs/decisions/README.md) — why to keep your decisions as records a person accepts, and how to record, accept and refine one.
 - **Schemas, explained:** [`docs/schemas/README.md`](docs/schemas/README.md) — why your configuration, your rule sets and your capability's data are checked against schemas, and how to declare, write and check each.
+- **Processes, explained:** [`docs/process/README.md`](docs/process/README.md) — why to give your capability a process the engine runs and checks, and how to author one, connect it and write its checks.
 - **Adopting / navigating the methodology:** [`.pkit/README.md`](.pkit/README.md) — maps every area. The foundational pattern is in [`.pkit/decisions/README.md`](.pkit/decisions/README.md).
 - **The command surface:** [`.pkit/cli/README.md`](.pkit/cli/README.md).
 - **Working on project-kit itself:** [`CONTRIBUTING.md`](CONTRIBUTING.md).

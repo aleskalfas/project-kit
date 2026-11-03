@@ -7,6 +7,7 @@ pkit:
       path:
         - .pkit/capabilities/visual-communication/package.yaml
         - .pkit/capabilities/visual-communication/scripts/status.py
+        - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/produce.py
         - .pkit/capabilities/visual-communication/scripts/export.py
@@ -17,8 +18,11 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/names.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
         - .pkit/capabilities/visual-communication/scripts/_lib/reading.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/records.py
         - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/notations.py
         - .pkit/capabilities/visual-communication/scripts/_lib/keys.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
@@ -33,23 +37,29 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/libraries.schema.json
         - .pkit/capabilities/visual-communication/schemas/library.schema.json
         - .pkit/capabilities/visual-communication/schemas/roles.schema.json
+        - .pkit/capabilities/visual-communication/schemas/notation.schema.json
         - .pkit/capabilities/visual-communication/libraries/foundations/library.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/roles.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
+        - .pkit/capabilities/visual-communication/libraries/**
         - tests/visual_communication_project.py
         - tests/test_visual_communication_pipeline.py
         - tests/test_visual_communication_layout.py
+        - tests/test_visual_communication_tokens.py
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/steps.yaml
         - tests/fixtures/visual-communication/libraries/test-brand/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/test-brand/1.0.0/test-brand.resolver.json
         - tests/fixtures/visual-communication/libraries/test-brand/1.0.0/tokens/base.tokens.json
         - tests/fixtures/visual-communication/libraries/test-brand/1.0.0/tokens/palette.tokens.json
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007"]
+        - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/library.yaml
+        - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/notation.yaml
+        - tests/fixtures/visual-communication/libraries/test-parts/1.0.0/roles.yaml
+      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012", "visual-communication:DEC-013", "visual-communication:DEC-014"]
 ---
 
 # The files of the visual work
 
-Where a project's visual work lies, what each of its files holds, and who writes each one. The examples come from the shipped foundations library and from the capability's test files. The test brand `test-brand` and the test library `tests` exist for the tests only: no brand ships.
+Where a project's visual work lies, what each of its files holds, and who writes each one. The examples come from the shipped foundations library and from the capability's test files. The test brand `test-brand`, the test libraries `tests` and `test-parts` and the test notation `test-notation` exist for the tests only.
 
 ## Contents
 
@@ -60,6 +70,7 @@ Where a project's visual work lies, what each of its files holds, and who writes
 - [A piece](#a-piece)
 - [The library folder](#the-library-folder)
 - [Brands](#brands)
+- [Notations](#notations)
 - [Keys of combinations](#keys-of-combinations)
 <!-- /pkit:contents -->
 
@@ -84,7 +95,7 @@ A `location:` line with no value, such as `location:` alone or `location: null`,
 
 ### How a command finds it
 
-- **A command that writes in the location** (`render`, `produce`, `export`) reads `location:`. Where none is recorded, it takes `visual/` if that folder is absent, holds no file, or holds the marker. It records `visual` before its first write in the location. Otherwise it refuses, naming the folder.
+- **A command that writes in the location** (`add`, `render`, `produce`, `export`) reads `location:`. Where none is recorded, it takes `visual/` if that folder is absent, holds no file, or holds the marker. It records `visual` before its first write in the location. Otherwise it refuses, naming the folder.
 - **`--location <path>`** names the location where none is recorded. The path is relative to the working directory, or absolute. The command records it. `--location visual` confirms the default.
 - **With a location recorded,** a command refuses a `--location` that names another folder. It also refuses when the recorded folder is missing.
 - **The check and the commands that only read** take the recorded location. With none recorded, they take `visual/` only where it holds the marker; otherwise there is no visual work. A recorded location whose folder is missing fails.
@@ -97,13 +108,14 @@ The commands list the location's files as git sees them: tracked files, and untr
 
 ## What the location holds
 
-The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file, a library version or a declaration. The table names the schema each file binds to (see [The binding](#the-binding)).
+The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration. Nor does any command change a library version: `pkit visual add` copies a version the capability ships, whole, into a folder of its own, and never over a version the library folder holds. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through that command (DEC-003 point 5). The table names the schema each file binds to (see [The binding](#the-binding)).
 
 | File, in the location | Schema | Written by |
 |---|---|---|
-| `libraries/libraries.yaml` | `libraries` | a person; no command writes it |
+| `libraries/libraries.yaml` | `libraries` | a person; `pkit visual add` lists each version it copies |
 | `libraries/<library>/<version>/library.yaml` | `library` | the library's owner |
 | `libraries/<library>/<version>/roles.yaml` | `roles` | the library's owner |
+| `libraries/<library>/<version>/notation.yaml` | `notation` | the library's owner |
 | `libraries/<library>/<version>/components/<component>.yaml` | `component` | the library's owner |
 | a brand's token files, Resolver document and fonts | none: DTCG, or a font's own format | the brand's owner |
 | `pieces/<piece>/piece.yaml` | `piece` | a person; `pkit visual render` rewrites its `lock` alone |
@@ -138,6 +150,7 @@ The code that `pkit visual write-code` writes lies where its declaration names, 
 | id | `^[A-Za-z][A-Za-z0-9_-]*$`, and none of `y n yes no on off true false null` in any case | an item, or another component content places, that something names |
 | language | `^[a-z]{2,3}(-[a-z0-9]{2,8})*$` | a language of a piece, such as `en` or `pt-br`; always lower-case |
 | use | `<library>/<component>`, or `piece/<component>` | a component, read with its library; never a version |
+| concept | `<notation>/<concept>` | a concept of a notation, read with the notation; never a version |
 | version | `X.Y.Z`, X at least 1 | a library version |
 | release | `X.Y.Z` | a release of the capability |
 
@@ -148,7 +161,7 @@ So a name holds no `.`, `/` or `#`, and starts with a letter, so YAML never read
 - **In every mapping that places a component,** an item included: `id`, `use`, `concept`, `state` and `override`. No component declares a field of these names, so each means the same everywhere (DEC-002 point 4).
 - **`pkit`** is kept for the methodology's container, at a content file's top and in every mapping that places a component. No component declares a field of that name, and the capability never reads or writes anything under it (DEC-002 point 4).
 - **At a file's top:** `pkit_schema` and `schema_version`, the binding.
-- **Library names:** no library takes `piece`, the word by which `use` names the piece itself, nor `component`, the token group of component tokens, which holds no shared role. Nor does a library take the name of a top group of the shared roles, such as `space` or `font` (DEC-004 point 7).
+- **Library names:** no library takes `piece`, the word by which `use` names the piece itself, nor `component`, the token group of component tokens, which holds no shared role. Nor does a library take the name of a top group of the shared roles, such as `space`, `font` or `family` (DEC-004 point 7).
 
 ### The binding
 
@@ -159,7 +172,7 @@ pkit_schema: visual-communication:piece
 schema_version: 1
 ```
 
-The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `library`, `component`, `roles`, `libraries`, `produced-record`, `code-record`, `findings`, `exports` and `code`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
+The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `library`, `component`, `roles`, `notation`, `libraries`, `produced-record`, `code-record`, `findings`, `exports` and `code`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
 
 No path binds a file, and the capability writes no line that points an editor at a schema (DEC-002 point 3). The core's data validation checks each bound file's shape against the schema it names. The check finds the configuration, and each file of the location's table that has a schema, by its name and place. It reports one whose binding is missing or names another schema (*What the check reports*). Token files, the Resolver document, fonts and pictures carry no binding: each keeps its own format.
 
@@ -199,23 +212,24 @@ lock:
 |---|---|---|
 | `top` | yes | The piece's top component, as a use. |
 | `brand` | yes | The brand the piece is drawn in, by its library's name. |
+| `notations` | no | The notations its content names concepts from, each by its library's name, once ([Notations](#notations)). |
 | `languages` | yes | The languages of its content, each once. The first is its source language. Each has its `content.<language>.yaml`. |
 | `audience` | yes | Who the piece is for, in words. |
 | `shown` | yes | Where the piece is shown, in words. |
 | `explains` | yes | `true` where the piece explains, rather than only shows. |
-| `exports` | yes | The formats an export makes (*What is made from a piece*). |
+| `exports` | yes | The formats an export makes (*Exports* in *What is made from a piece*). |
 | `state` | yes | The piece's stage of life. Format 1 takes `draft` alone. |
 | `modes` | no | For each axis, the modes the piece is drawn in. An axis it leaves out is drawn in its default. |
 | `pinned` | no | `true` pins the lock. |
-| `produced` | no | Each picture a producer makes for the piece (*What is made from a piece*). |
-| `accept-losses` | no | The losses of a plugin a person accepted (*What is made from a piece*). |
+| `produced` | no | Each picture a producer makes for the piece (*Declaring a produced output* in *What is made from a piece*). |
+| `accept-losses` | no | The losses of a plugin a person accepted (*Accepting a loss* in *What is made from a piece*). |
 | `lock` | no | The version of each library the piece uses. A render writes it. |
 
 ### The lock
 
-A piece's *lock* names one version of each library it uses, those they build on included (DEC-001 point 7). A piece uses its top's library, its brand, and each library its content names in a `use`, other than `piece`. Through `builds-on`, it also uses every library those build on. The lock must name `foundations`, since a brand's values are read against the foundations' roles. The test brand brings it in: it builds on `foundations` 1.
+A piece's *lock* names one version of each library it uses, those they build on included (DEC-001 point 7). A piece uses its top's library, its brand, each notation it names, and each library its content names in a `use`, other than `piece`. Through `builds-on`, it also uses every library those build on. The lock must name `foundations`, since a brand's values are read against the foundations' roles. The test brand brings it in: it builds on `foundations` 1.
 
-**A draft** that is not pinned moves its lock at each render (DEC-003 point 8). The render takes the newest versions the location holds that the installed capability reads and that fit together. It stays within the major each library's locked version has, the library's *line*. A library the lock does not name yet takes its newest version of any major that fits. The render tries the newest versions first, and backs off library by library. Where no combination fits, it refuses and names the conflict, such as two libraries that build on two majors of one library: a piece locks one version of each library. A library the piece no longer uses leaves the lock. A draft may lock a version not yet released. To take a new major on purpose, write a version of that major in the lock; the next render moves within it.
+**A draft** that is not pinned moves its lock at each render (DEC-003 point 8). The render takes the newest versions the location holds that the installed capability reads and that fit together. It stays within the major each library's locked version has, the library's *line*. A library the lock does not name yet takes its newest version of any major that fits. The render tries the newest versions first, and backs off library by library. Where no combination fits, it refuses and names the conflict, such as two libraries that build on two majors of one library: a piece locks one version of each library. The search tries at most 10 000 versions; past that bound it refuses too, naming the libraries it was choosing among. Name the line of each in the lock, or take the versions no piece needs out of the library folder, and render again. A library the piece no longer uses leaves the lock. A draft may lock a version not yet released. To take a new major on purpose, write a version of that major in the lock; the next render moves within it.
 
 **A pinned draft,** `pinned: true`, keeps its lock: a render checks it and never changes it. The lock must name every library the piece uses, each a version the location holds and the installed capability reads, and they must fit together. A pinned piece with no lock is refused: unpin it for its first render. To move a pinned lock, change it by hand, or unpin the piece and render it.
 
@@ -223,7 +237,7 @@ The render writes the lock into `piece.yaml` as text, as a top-level block mappi
 
 ### Content files
 
-A content file, `content.<language>.yaml`, holds what the piece shows in one language. It names no position, size, colour or font. It chooses only among what its libraries declare: components, options, states and roles (DEC-001 point 3). A second language is a second file of the same shape, with the same ids. The content from the capability's tests for the piece above:
+A content file, `content.<language>.yaml`, holds what the piece shows in one language. It names no position, size, colour or font. It chooses only among what its libraries declare: components, layouts, options, states, concepts, roles and the words of a field's run styles (DEC-001 point 3). A second language is a second file of the same shape, with the same ids. A field's runs are its value, so their number, order and styles may differ between languages, as its text does. The content from the capability's tests for the piece above:
 
 ```yaml
 pkit_schema: visual-communication:content
@@ -239,16 +253,19 @@ caption: The flow.
 ```
 
 - **The top** holds the fields of the piece's top component: `foundations/figure` takes `body` and `caption`.
-- **A mapping with `use`** places the component it names. Its other keys are that component's fields and options, and the reserved keys. A field the component fills through a slot, as the figure's `body`, takes such a mapping.
-- **A list the component repeats** holds items, each a mapping. The component names the component that draws each item, `tests/card` for `tests/steps`. An item may name its own with `use`.
+- **A mapping with `use`** places the component it names. Its other keys are that component's fields and options, and the reserved keys. A field the component fills through a slot, as the figure's `body`, takes such a mapping. So does a list's *component field*, where the component that repeats over the list declares one, though it places nothing there: it names the component that draws each item of the list that names none (DEC-010 point 1). It gives words for that component's options, and perhaps `concept`, `state` and `override`, and no id and no field of that component, since an id names one thing and a field holds what one item shows.
+- **A list the component repeats** holds items, each a mapping. The component names the component that draws an item by default, `tests/card` for `tests/steps`. Where the list has a component field, the component it names draws each item that names none, and the item takes each key the field gives that it does not give itself. An item may name its own with `use`, and then takes nothing from the field. An item may also give its list's *arrangement fields*, each one of the words the component declares for it, such as `span: wide`; an item that leaves one out takes its first word (DEC-010 points 2 and 3).
+- **A page of a top whose layouts are its pages' forms** is a mapping in the list the top marks as holding its pages, `slides` for the foundations' `deck`. It names one of the top's layouts with `layout`, and holds that layout's slots and the reserved keys, nothing else: `{id: cover, layout: cover, title: Building with AI}`. Or it names the component that draws it with `use`, and its other keys are that component's. Every page names one or the other, and none takes a layout by default (DEC-010 point 5). How a layout declares its slots is in *Components*.
 - **`use: piece/<name>`** names a local component, `components/<name>.yaml` in the piece's folder.
 - **An option** takes one word from the list the component declares, such as `spacing: wide` on `tests/steps`. An option that names an item takes `{item: <id>}`, or `{item: <id>, point: <name>}` for a point the item exposes.
+- **A tie's ends.** In a list of ties, every item is a tie, and gives both of its list's end fields (DEC-011 points 1 to 3). Each takes the shape of an option that names an item: `{item: <key path>}`, or `{item: <key path>, point: <name>}`. The *key path* starts at a field of the mapping that holds the tie's list. It names each field that leads to the item, joined by `.`, and in each list the item by its id, as `[<id>]`. It writes the keys the content file writes, so a component that passes a list on under another name changes nothing in it. `right[groups].groups[project-management].items[doc-check]` names an item of a list inside a component that the list `right` holds. An end never names a tie, the two ends never name one item, and neither leads through the other. An end's quotes in a flow mapping are in *Components*.
 - **`state`** names a state the component declares, such as `state: marked`.
 - **`override`** points a painted part of the component at another role, by its token path, never at a value. `override: {b: accent}` paints the part `b` with `accent`.
-- **`concept`** is reserved.
+- **`concept`** names what the component it places stands for: a concept of a notation the piece names, as `<notation>/<concept>`, such as `concept: test-notation/store` ([Notations](#notations)). The concept gives the component its colour family; how a component paints with its family is in *Components*.
+- **A field of runs,** one its component marks as taking runs (*Components*), takes text, as any field of text does, or a list of *runs*: spans of its text, each in a style of its own (DEC-012 point 1). A run is text, set in the field's first style, or a mapping of `text`, which holds text, and perhaps `style`, one of the words of the field's run styles, and `concept`, written as above, which gives the run its colour family. The format fixes these three keys on a run, which places no component, so a run holds no other key and no reserved key binds it. The runs' texts are joined as written, with nothing between them. The field is filled where one of its runs holds text. A run carries no id: a list of runs holds runs, not items, so no rule of ids reaches it. A terminal's line, its command in the field's first style: `line: [{text: "$ ", style: prompt}, pkit visual render deck, {text: "  # draws every page", style: comment}]`.
 - **An id** marks an item, or another component the content places, that another part of the piece names (DEC-001 point 3). It is unique in its list. Each list holds the same ids in every language as in the source language, in any order.
 
-Each key must be a field or an option of the component, or a reserved key. How a component declares its fields, options, states, slots and lists is in *Components*.
+Each key of a mapping that places a component must be a field or an option of that component, an arrangement field or an end field of its list where the mapping is an item, or a reserved key. A key that both an item's component and its list declare is read by neither (DEC-010 point 2, DEC-011 point 1). A key of a page in a layout must be a slot of that layout, `layout`, or a reserved key. How a component declares its fields, options, states, layouts, slots and lists is in *Components*.
 
 ## The library folder
 
@@ -273,8 +290,10 @@ libraries:
 ```
 
 - **`source.kind`** is `shipped`, `project` or `repository`. A `repository` source names its `url` and `ref`; the others name neither.
-- **`versions`** maps each version to `released: true` or `false`. A released version carries `hash`, its fingerprint over every file of its folder (*What the check reports*). A version not released carries none.
+- **`versions`** maps each version to `released: true` or `false`. A released version carries `hash`, its fingerprint over every file of its folder (*The fingerprint* in *What the check reports*). A version not released carries none.
 - **One library to a name:** a second library of one name is refused (DEC-003 point 4).
+
+`pkit visual add` lists each shipped version it copies, `released: false`. Where the location holds no list, it writes one whole, under a comment that says what the file is. Otherwise it adds the version as text: a library the list does not name yet goes last under `libraries`, and a new version of a shipped library last under its `versions`. Where that mapping's entries lie on the lines below its key, the command writes the new entry as block lines at their indent. Where the mapping is written in flow on its key's line, such as `versions: {}`, it writes the entry in flow before the closing brace. Every other byte of the file stays: comments, order, line endings and a byte-order mark. Where the result would not read back as the list with that version added, the command refuses: write `libraries`, and the library's `versions`, as block mappings. Where a key on the way, `libraries`, the library's name or `versions`, is written in quotes, the refusal names it instead, to be written without them.
 
 ### `library.yaml`
 
@@ -298,54 +317,111 @@ open: [accent, space]
 |---|---|
 | `name` | The library's name. It matches the folder's. |
 | `version` | Its version, `X.Y.Z` with X at least 1. It matches the folder's. A major release carries a breaking change, a minor one an addition or a change of look, a patch a fix (DEC-003 point 1). |
-| `kind` | `components`, a component library, or `brand`. |
-| `needs-release` | The oldest release of the capability whose tools and fields it uses. A version that needs a newer release than the installed one, the `version` of the capability's `package.yaml`, cannot be read. |
+| `kind` | `components`, a component library; `brand`; or `notation` ([Notations](#notations)). |
+| `needs-release` | The release of the capability the version needs. A released version names the capability's version current at its release, and a version being built names any release the installed capability reads. A version that names a newer release than the installed one, the `version` of the capability's `package.yaml`, cannot be read. |
 | `builds-on` | Each library it builds on, as `{name, major}`, the major an integer from 1. |
 | `dtcg` | A brand's DTCG version, `"2025.10"`, quoted, since YAML reads `2025.10` as a number. |
 | `resolver` | A brand's Resolver document, a path within its version folder. |
 | `open` | A brand's open roles ([Open roles](#open-roles)). |
 
-Every field is required, `builds-on: []` included. `dtcg`, `resolver` and `open` are required of a brand, and refused in a component library.
+Every field is required, `builds-on: []` included. `dtcg`, `resolver` and `open` are required of a brand, and refused in a component library or a notation.
+
+### The libraries the capability ships
+
+The capability's own folder, `.pkit/capabilities/visual-communication/`, keeps for each library it ships (DEC-013 point 2):
+
+- **The version being built,** `libraries/<library>/`, under a name that names no version. Every change to the library goes into it, so a change of its number moves no file. The libraries the capability ships are those with a version being built.
+- **Each released version,** whole, as it was released, at `releases/<library>/<version>/`. Its release adds the folder, and nothing later renames, removes or changes a file in it.
+- **The library's record,** `releases/<library>/releases.yaml`, beside its released versions. A library with no released version has no record.
+
+The record is a list of libraries that holds the one library, in the shape of a location's list ([The list, `libraries.yaml`](#the-list-librariesyaml)). It names the source `shipped`, and each released version with `released: true` and its `hash`. The hash is the fingerprint over every file of the released version, its `library.yaml` with the release it needs included.
+
+```yaml
+pkit_schema: visual-communication:libraries
+schema_version: 1
+libraries:
+  foundations:
+    source: {kind: shipped}
+    versions:
+      1.0.0: {released: true, hash: {form: 1, hash: sha256, format: 1, value: …, inputs: […]}}
+```
+
+The released versions and the record lie outside the version being built, and each library's apart from every other's. So a release changes no file of the version being built. Only whoever maintains the capability releases a version, by a release of its own. A release of the capability releases none (DEC-013 point 1).
+
+Every change to a version the capability ships reaches a project that brings it in. So it comes with a new version of the capability, at least a patch (DEC-013 point 4).
 
 ### The foundations
 
-The capability ships the foundations at `.pkit/capabilities/visual-communication/libraries/foundations/`: version 1.0.0, of kind `components`, needing release 0.1.0, building on nothing, and not yet released. A piece reads them from the library folder alone, so the project copies the folder whole to `libraries/foundations/1.0.0/` and lists it with `source: {kind: shipped}`. No command copies it. The foundations hold:
+The capability ships the foundations' version being built at `.pkit/capabilities/visual-communication/libraries/foundations/` ([The libraries the capability ships](#the-libraries-the-capability-ships)): version 1.0.0, of kind `components`, needing release 0.1.0, building on nothing, and not yet released. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the folder whole to `libraries/foundations/1.0.0/` and lists it with `source: {kind: shipped}` ([What the location holds](#what-the-location-holds)). The foundations hold:
 
 - `library.yaml`;
 - `roles.yaml`, the shared roles, axes, colour families and contrast pairs that every library shares (DEC-004 points 2, 7 and 8);
-- `components/figure.yaml`, the top component `figure`, for a figure in a documentation page. The top components the capability ships are the foundations' (DEC-007 point 1).
+- `components/figure.yaml`, the top component `figure`, for a figure in a documentation page;
+- `components/deck.yaml`, the top component `deck`, for a presentation: each of its slides is a page, in its layout `cover` or `slide`, or drawn by the component it names.
 
-Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`; the dimensions `space.1` to `space.4`, `stroke.thin` and `size.figure`; the font families `font.body` and `font.heading`; and the typographies `type.body` and `type.heading`. They declare no colour family.
+The top components the capability ships are the foundations' (DEC-007 point 1).
+
+Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`; the dimensions `space.1` to `space.4`, `stroke.thin`, `size.figure` and `size.slide`, a slide's width; the font families `font.body` and `font.heading`; and the typographies `type.body` and `type.heading`.
+
+They declare six colour families: `neutral`, `blue`, `green`, `orange`, `purple` and `red` (DEC-004 point 10). Each has three members: `fill`, the colour of what it paints; `line`, its edge; and `text`, the text on its fill. Each member is a shared colour role of the family's own, `family.<family>.<member>`, such as `family.blue.fill`, with no default, so a brand gives each a value. Each family's text and fill are a pair at the level `text`.
 
 ### `roles.yaml`
 
-From the foundations, trimmed:
+A library's `roles.yaml` declares its roles. The foundations declare the *shared roles*, which every library shares, with the axes, the colour families and the pairs. Another library of components may declare roles of its own. From the foundations, trimmed:
 
 ```yaml
 pkit_schema: visual-communication:roles
 schema_version: 1
 roles:
   text-primary: {type: color}
+  family.blue.fill: {type: color}
+  family.blue.line: {type: color}
+  family.blue.text: {type: color}
   space.1: {type: dimension}
   type.body: {type: typography}
 axes:
   colour-scheme: {kind: value, modes: [light, dark], default: light}
   contrast: {kind: value, modes: [standard, high], default: standard}
-families: {}
+families:
+  blue: {fill: family.blue.fill, line: family.blue.line, text: family.blue.text}
 pairs:
   - {text: text-primary, under: background, level: text}
+  - {text: family.blue.text, under: family.blue.fill, level: text}
 ```
 
-- **`roles`** maps each role's token path to its `type`: `color`, `dimension`, `fontFamily`, `fontWeight`, `number` or `typography`. A role carries no value: a brand gives it one. A role's `default`, `{<role>}`, aliases an older role of the same type that has no default of its own (DEC-004 point 7). A role is never also a group of other roles.
-- **`axes`** maps each axis to its `kind`, `value` or `size`; its `modes`, two or more, each once; and its `default`, one of them.
-- **`families`** maps each colour family to its members, each naming a colour role.
-- **`pairs`** lists the colour roles that must contrast (DEC-004 point 8): `text` drawn on `under`, at a WCAG `level`. `text` needs 4.5, `large-text` and `marks` need 3. The capability measures each pair, under each brand, in every combination of the axes, and the check reports a pair below its level (*What the check reports*).
+- **`roles`** maps each role's token path to its `type`: `color`, `dimension`, `fontFamily`, `fontWeight`, `number` or `typography`. A role carries no value: a brand gives it one. A role may carry a `default`, `{<role>}`, which it takes wherever no brand gives it a value. A shared role's default aliases an older role of the same type that has no default of its own (DEC-004 point 7). A role is never also a group of other roles.
+- **`axes`** maps each axis to its `kind`, `value` or `size`; its `modes`, two or more, each once; and its `default`, one of them. The foundations alone declare axes.
+- **`families`** maps each colour family to its members, each naming a colour role. A notation maps a concept to a family by its name ([Notations](#notations)). The foundations alone declare families.
+- **`pairs`** lists the colour roles that must contrast (DEC-004 point 8): `text` drawn on `under`, at a WCAG `level`. `text` needs 4.5, `large-text` and `marks` need 3. The capability measures each pair, under each brand, in every combination of the axes, and the check reports a pair below its level (*Brands, tokens and contrast* in *What the check reports*).
 
-The capability reads the `roles.yaml` of the foundations alone.
+The capability reads the `roles.yaml` of the foundations, and of each other library of kind `components` it resolves with them: each library a piece's lock or a declaration of written code names, and each library a version checked alone is resolved with (*What each run judges* in *What the check reports*). A brand's `roles.yaml` is not read: format 1 has no brand's own roles.
+
+**A library's own roles.** A library other than the foundations declares its *own roles* and their pairs alone (DEC-004 point 7, DEC-008 point 1). The capability's test library `test-parts`:
+
+```yaml
+roles:
+  test-parts.ink: {type: color, default: '{text-primary}'}
+  test-parts.paper: {type: color, default: '{background}'}
+  test-parts.note: {type: color, default: '{test-parts.ink}'}
+  test-parts.gap: {type: dimension, default: '{space.2}'}
+  test-parts.warning: {type: color}
+pairs:
+  - {text: test-parts.ink, under: test-parts.paper, level: text}
+  - {text: test-parts.warning, under: test-parts.paper, level: large-text}
+```
+
+- **Its roles lie under its name,** as `test-parts.ink` does, never under `component`, the group of component tokens.
+- **A default aliases a role the library names** (DEC-008 point 3): another of its own roles, or a role of a library it builds on, the shared roles included where it builds on `foundations`. It is of the role's type, and is never a value or a component token. A chain of defaults ends, never in a loop.
+- **A default lies below every brand's value** (DEC-008 point 1). The capability merges a brand's sources over the defaults, then resolves the aliases, so a default follows the value the brand gives the role it aliases. `test-parts.note` takes the brand's `text-primary` through `test-parts.ink`, wherever the brand gives neither its own value.
+- **A role with no default** takes a value only from a brand, as `test-parts.warning` does. A role whose chain of defaults ends at one, rather than at a shared role, has no value under a brand that gives none along it. Only a role whose chain ends at a shared role draws under every brand.
+- **Each pair names one of its own roles.** At its defaults, each of the library's own roles replaced by the role its default aliases, a pair falls on one that the foundations, the library or a library it builds on declares, in either order, at a level that needs as much contrast or more (DEC-008 point 6). `test-parts.ink` on `test-parts.paper` falls on the foundations' `text-primary` on `background`. Under a brand, a library's pair is measured only where the brand's values reach it: a value the brand gives a library's role along either role's chain of defaults. It is then measured in every combination where both roles have a value.
+- **It declares no `axes` and no `families`,** which are the foundations' alone. What is wrong in the file stops nothing: a role or a pair that cannot be read is left out, and reported.
 
 ## Brands
 
 A *brand* is a library of kind `brand`: it holds values (DEC-001 point 5). It keeps them as design tokens in the DTCG format, version 2025.10, and its modes as one Resolver document (DEC-004 point 1). The capability reads the subset of DTCG below, and refuses the rest. The test brand's `library.yaml` is shown under [`library.yaml`](#libraryyaml).
+
+No brand ships with the capability. A project writes its own, and keeps it in its library folder as it keeps any library ([The library folder](#the-library-folder)).
 
 ### Token files
 
@@ -407,11 +483,39 @@ The Resolver document holds `version` (`2025.10`), `sets`, `modifiers` and `reso
 - **A modifier** is a shared axis. Its `contexts` hold one list of sources for each mode of the axis. Its `default` is the axis's default.
 - **`resolutionOrder`** names each set and each modifier once, as `{"$ref": "#/sets/<name>"}` or `{"$ref": "#/modifiers/<name>"}`. A later source wins.
 
-For each combination of modes, the capability merges the brand's sources in resolution order, over the shared roles' defaults, then resolves the aliases. A brand built on another merges its sources over its base's tokens instead ([Open roles](#open-roles)). Every shared role must have a value of its declared type in every combination. The brand *exports* the shared roles. Its other tokens, such as a palette its roles alias, are private. They lie in groups of their own, outside the top groups of the shared roles.
+For each combination of modes, the capability merges the brand's sources in resolution order, over the roles' defaults, then resolves the aliases. A brand built on another merges its sources over its base's tokens instead ([Open roles](#open-roles)). Every shared role must have a value of its declared type in every combination. The brand *exports* the shared roles, and each role of a library it names that it gives a value ([A library's roles](#a-librarys-roles)). Its other tokens, such as a palette its roles alias, are private. They lie in groups of their own, outside the top groups of the shared roles.
 
 ### Fonts
 
 A `fontFamily` token names each family's font file in the capability's extension key, `pkit.visual-communication`, as `font.body` does above. `files` maps each family to a file of the brand's version folder, or to `{"hash": "sha256:<hex>"}`. A family named by its hash is a font the brand may not ship. The project commits it in the location's `fonts/`, where the capability finds it by the hash of its bytes (DEC-004 point 9). `measure` is `file`: the font is measured from its file. A font file is committed unchanged with its licence, where its licence allows (DEC-004 point 9).
+
+### A library's roles
+
+A brand reaches the own roles of a library, to give one a value, open it or alias it, only where it names that library in its `builds-on`, by the major of the version it is resolved with (DEC-008 point 4). So every piece that uses the brand locks that library too ([The lock](#the-lock)).
+
+- **What it owes a library it names:** a value, in every combination, to each of the library's roles that has no default. Each token it holds under the library's name gives one of the library's roles a value of its type. A token there that names none of its roles, or is of another type, gives nothing, and is a finding.
+- **Where it names none,** the library is at its defaults under the brand ([`roles.yaml`](#rolesyaml)). A token the brand holds under the library's name stays private, and gives the library nothing. An alias to one of the library's roles fails.
+- **What it exports:** beside the shared roles, each role of a library it names that it, or its base, gives a value (DEC-008 point 5). A role it leaves at its default is not exported: its name is the library's, kept by the library's major.
+
+The test brand itself builds on `foundations` alone. The capability's tests build a copy of it that names `test-parts`, with this `builds-on` and these tokens:
+
+```yaml
+builds-on:
+  - {name: foundations, major: 1}
+  - {name: test-parts, major: 1}
+```
+
+```json
+{
+  "test-parts": {
+    "$type": "color",
+    "ink": {"$value": "{scheme.strong-ink}"},
+    "warning": {"$value": "{scheme.ink}"}
+  }
+}
+```
+
+It gives `test-parts.warning`, which has no default, a value, and changes `test-parts.ink`. `test-parts.note` follows the brand's ink through its default, and `test-parts.paper` stays at its default, the brand's `background`.
 
 ### Open roles
 
@@ -424,14 +528,15 @@ builds-on:
 open: [accent]
 ```
 
-A brand's `open` lists the roles that a brand built on it may give values: roles it exports, or groups of them by whole segments of their paths. Each entry names a shared role, or a group of them, such as `space`. The test brand opens `accent` and `space`.
+A brand's `open` lists the roles that a brand built on it may give values: roles it exports, or groups of them by whole segments of their paths. Each entry names a shared role, a role of a library the brand names, or a group of them, such as `space`. The test brand opens `accent` and `space`.
 
 The capability reads the base first, at the version the lock names, and its own base before it. In each combination of modes:
 
 - **The base's tokens come first,** then the brand's own sources, in its resolution order. The aliases are resolved after the merge.
 - **A value the brand gives an open role wins** in the combinations its sources cover, and the base's value holds elsewhere. Every token that aliases the role follows the merged value, the base's tokens included. The test edition gives `accent` a value in the dark colour scheme and at high contrast, so the test brand's accent holds in the light scheme at standard contrast.
 - **A value for a role the base does not open** fails, and the base's value holds.
-- **An alias reaches only the shared roles and the brand's own tokens.** An alias to a token the base keeps private fails. Each brand's private tokens are its own, so a palette of one name in the base and in the brand never meets.
+- **A library's role** takes the brand's value only where both the brand and its base name the library, and the base opens the role (DEC-008 point 4). A base opens a role of a library it names, whether it gives the role a value or not. A base that names no library leaves the library at its defaults for every brand built on it.
+- **An alias reaches only the shared roles, the roles of the libraries the brand names, and the brand's own tokens.** An alias to a token the base keeps private fails. Each brand's private tokens are its own, so a palette of one name in the base and in the brand never meets.
 - **The brand varies values on its base's axes,** by their names and modes, in its own Resolver document. A modifier for another axis, a context for another mode, or another default fails.
 - **Each link of a chain narrows.** A base may build on a brand in turn. A brand's `open` names only roles its base opens to it. An entry that names more fails, and opens only what the base opens.
 
@@ -444,6 +549,29 @@ An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* 
 - **A brand varies an axis** through a modifier of its Resolver document. It may leave out an axis it does not vary. It adds no axis of its own, and changes no default.
 - **A value axis** changes only colours. A mode of a value axis that changes another value fails.
 - **A piece** chooses the modes it is drawn in under its `modes`.
+
+## Notations
+
+A *notation* is a library of kind `notation`: the concepts of one subject, each mapped to a colour family the foundations declare (DEC-004 point 10). It maps a concept to a family, never to a value, so each brand colours the concept its own way. Its version folder holds its `library.yaml`, which builds on the foundations, and its `notation.yaml`. The test notation, `test-notation`, names the parts of a system.
+
+No notation ships with the capability. A project writes its own, and keeps it in its library folder as it keeps any library ([The library folder](#the-library-folder)).
+
+### `notation.yaml`
+
+The test notation's:
+
+```yaml
+pkit_schema: visual-communication:notation
+schema_version: 1
+concepts:
+  person: {colour: purple}
+  service: {colour: blue}
+  store: {colour: green}
+```
+
+- **`concepts`** maps each concept, by its name, to `{colour: <family>}`, one of the colour families of the foundations the piece locks ([The foundations](#the-foundations)). It holds at least one concept. A concept that maps to a value, to a role or to a family the foundations do not declare is refused (*What the check reports*).
+
+How a piece names the notations it uses is under [`piece.yaml`](#pieceyaml), how its lock takes them under [The lock](#the-lock), and how its content names a concept under [Content files](#content-files) and [Shapes](#shapes).
 
 ## Keys of combinations
 

@@ -4,7 +4,11 @@ what it draws, and what it reports it lost.
 The reference outputs below are pinned to the renderer's version, 1.0.1. A change that
 gives another output for the same scene and values raises the version, and changes them
 with it (DEC-005 point 9). The font a text embeds is pinned by the characters its subset
-holds, not by its bytes, which are fontTools'.
+holds, not by its bytes, which are fontTools'. A text of one run is drawn as it was
+before runs (DEC-012 point 7), so runs left the version as it was; a text of several runs
+draws each run that looks otherwise than its first in a span of its own. A line with no
+arrowhead and no corners is drawn as it was before ties (DEC-011), so ties left it too;
+a tie's connector with corners is a polyline, and an arrowhead a marker in its colour.
 """
 
 from __future__ import annotations
@@ -27,6 +31,7 @@ svg, svg_declaration, seam = load(
 )
 
 FONT = TEST_BRAND / "fonts" / "SourceSansPro-Regular.otf"
+SEMIBOLD = TEST_BRAND / "fonts" / "SourceSansPro-Semibold.otf"
 
 COLOURS = {
     "surface": {"components": [1, 1, 1], "alpha": 1},
@@ -60,7 +65,7 @@ def scene(*children: dict[str, Any], width: float = 200, height: float = 100) ->
         "lock": {"foundations": "1.0.0"},
         "language": "en",
         "size-key": "default",
-        "seam": 1,
+        "seam": 3,
         "pages": ["figure"],
         "children": [page],
     }
@@ -140,6 +145,121 @@ def test_shapes_are_drawn_as_pinned_for_version_1_0_1() -> None:
     )
 
 
+#: A tie's connector with corners and an arrowhead at its end, and a straight line with an
+#: arrowhead at both ends, in another colour.
+TIES = scene(
+    element(
+        "line",
+        "figure/links[ab]/l",
+        x=10,
+        y=20,
+        width=100,
+        height=40,
+        x1=10,
+        y1=20,
+        x2=110,
+        y2=60,
+        points=[{"x": 10, "y": 20}, {"x": 60, "y": 20}, {"x": 60, "y": 60}, {"x": 110, "y": 60}],
+        attached={
+            "start": {"id": "figure/steps[a]", "side": "right"},
+            "end": {"id": "figure/steps[b]", "side": "left"},
+        },
+        stroke="ink",
+        **{"stroke-width": 2, "marker-end": "arrow"},
+    ),
+    element(
+        "line",
+        "figure/rule",
+        x=0,
+        y=90,
+        width=200,
+        height=0,
+        x1=0,
+        y1=90,
+        x2=200,
+        y2=90,
+        stroke="shade",
+        **{"marker-start": "arrow", "marker-end": "arrow"},
+    ),
+)
+
+
+def test_a_connector_and_its_arrowheads_are_drawn_as_pinned_for_version_1_0_1() -> None:
+    drawn = draw(TIES)
+    assert drawn.losses == []
+    [page] = drawn.pages
+    assert page.svg == (
+        HEAD + "<defs><style>text{white-space:pre}</style>"
+        '<marker id="pkit-arrow-end-000000" viewBox="0 0 10 10" refX="10" refY="5" '
+        'markerWidth="5" markerHeight="5" orient="auto">'
+        '<path d="M0,0L10,5L0,10z" fill="#000000"/></marker>'
+        '<marker id="pkit-arrow-end-000000-025" viewBox="0 0 10 10" refX="10" refY="5" '
+        'markerWidth="5" markerHeight="5" orient="auto">'
+        '<path d="M0,0L10,5L0,10z" fill="#000000" fill-opacity="0.25"/></marker>'
+        '<marker id="pkit-arrow-start-000000-025" viewBox="0 0 10 10" refX="0" refY="5" '
+        'markerWidth="5" markerHeight="5" orient="auto">'
+        '<path d="M10,0L0,5L10,10z" fill="#000000" fill-opacity="0.25"/></marker>'
+        "</defs>"
+        '<g data-id="figure" data-component="foundations/figure" data-version="1.0.0">'
+        '<polyline data-id="figure/links[ab]/l" data-start="figure/steps[a]" '
+        'data-end="figure/steps[b]" points="10,20 60,20 60,60 110,60" fill="none" '
+        'stroke="#000000" stroke-width="2" marker-end="url(#pkit-arrow-end-000000)"/>'
+        '<line data-id="figure/rule" x1="0" y1="90" x2="200" y2="90" stroke="#000000" '
+        'stroke-opacity="0.25" marker-start="url(#pkit-arrow-start-000000-025)" '
+        'marker-end="url(#pkit-arrow-end-000000-025)"/>'
+        "</g></svg>\n"
+    )
+    # The same scene gives the same file.
+    assert draw(TIES).pages[0].svg == page.svg
+    ElementTree.fromstring(page.svg)
+
+
+def test_a_line_with_no_stroke_draws_no_arrowhead() -> None:
+    bare = scene(
+        element(
+            "line",
+            "figure/rule",
+            x=0,
+            y=0,
+            width=10,
+            height=0,
+            x1=0,
+            y1=0,
+            x2=10,
+            y2=0,
+            **{"marker-end": "arrow"},
+        )
+    )
+    [page] = draw(bare).pages
+    assert "marker" not in page.svg
+
+
+def run(words: str, **look: Any) -> dict[str, Any]:
+    """A run of `words` in the look `look` gives, Source Sans Pro by default."""
+    families = look.pop("font-family", ["Source Sans Pro"])
+    return {
+        "text": words,
+        "style": "type.body",
+        "font-family": families,
+        "font-size": 16,
+        **look,
+        "fonts": [{"family": family, "file": FONT.name, "sha256": "pinned"} for family in families],
+        "measured": "file",
+        "sources": {},
+    }
+
+
+def line(paragraph: int, baseline: float, *spans: tuple[int, str, float]) -> dict[str, Any]:
+    """A line of `paragraph`, of `spans`, each a run's place, its text and its width."""
+    return {
+        "text": "".join(text for _, text, _ in spans),
+        "width": sum(width for _, _, width in spans),
+        "baseline": baseline,
+        "paragraph": paragraph,
+        "spans": [{"run": at, "text": text, "width": width} for at, text, width in spans],
+    }
+
+
 TITLE = element(
     "text",
     "figure/title",
@@ -147,21 +267,10 @@ TITLE = element(
     y=5,
     width=100,
     height=40,
-    fill="ink",
-    style="type.heading",
     text="Plan & <do> it",
-    lines=[{"text": "Plan & <do>", "width": 80}, {"text": "it", "width": 9}],
-    fonts=[{"family": "Source Sans Pro", "file": FONT.name, "sha256": "pinned-by-the-scene"}],
-    baseline=15.2,
-    measured="file",
-    **{
-        "text-anchor": "middle",
-        "font-family": ["Source Sans Pro"],
-        "font-size": 16,
-        "font-weight": 600,
-        "line-height": 20,
-        "measured-height": 40,
-    },
+    paragraphs=[[run("Plan & <do> it", fill="ink", style="type.heading", **{"font-weight": 600})]],
+    lines=[line(0, 15.2, (0, "Plan & <do>", 80)), line(0, 15.2, (0, "it", 9))],
+    **{"text-anchor": "middle", "line-height": 20, "measured-height": 40},
 )
 
 
@@ -261,6 +370,28 @@ def test_what_it_cannot_draw_is_a_loss_in_the_seams_form() -> None:
     assert "figure/missing" not in page
 
 
+def test_a_line_that_holds_neither_its_ends_nor_its_points_is_refused() -> None:
+    # As a connector the engine could not route once was: its frame, its paint, no ends.
+    endless = element(
+        "line", "figure/links[ab]/l", x=0, y=0, width=0, height=0, stroke="ink",
+        **{"marker-end": "arrow"},
+    )  # fmt: skip
+    halved = element("line", "figure/half", x=0, y=0, width=10, height=0, x1=0, y1=0)
+
+    drawn = draw(scene(endless, halved, element("box", "figure/b", x=0, y=0, width=5, height=5)))
+
+    why = "the line holds neither its ends, `x1 y1 x2 y2`, nor its points"
+    assert [loss.as_dict() for loss in drawn.losses] == [
+        {"plugin": "svg", "what": "figure/links[ab]/l", "did": "refused", "why": why},
+        {"plugin": "svg", "what": "figure/half", "did": "refused", "why": why},
+    ]
+    page = drawn.pages[0].svg
+    assert "figure/links[ab]/l" not in page and "figure/half" not in page
+    assert "<marker" not in page  # an arrowhead of a line left out is not defined
+    assert '<rect data-id="figure/b"' in page
+    ElementTree.fromstring(page)
+
+
 def test_a_colour_rounds_half_up_and_keeps_its_alpha() -> None:
     assert svg.colour_text({"components": [0.5, 1 / 255 / 2, 1], "alpha": 0.5}) == (
         "#8001ff",
@@ -324,14 +455,10 @@ def named(families: list[str]) -> dict[str, Any]:
         y=0,
         width=100,
         height=20,
-        fill="ink",
-        style="type.body",
         text="Aa",
-        lines=[{"text": "Aa", "width": 20}],
-        fonts=[{"family": family, "file": FONT.name, "sha256": "pinned"} for family in families],
-        baseline=15,
-        measured="file",
-        **{"font-family": families, "font-size": 16, "line-height": 20, "measured-height": 20},
+        paragraphs=[[run("Aa", fill="ink", **{"font-family": families})]],
+        lines=[line(0, 15, (0, "Aa", 20))],
+        **{"line-height": 20, "measured-height": 20},
     )
 
 
@@ -377,3 +504,106 @@ def test_every_name_a_brand_may_give_draws_as_itself() -> None:
     assert style.text is not None
     assert css_strings(style.text) == [every]
     assert css_strings(text.get("font-family", "")) == [every]
+
+
+# --- runs ---------------------------------------------------------------------------------------
+
+#: A line of three runs: the middle one in the semibold family, larger and in the accent.
+SAID = element(
+    "text",
+    "figure/said",
+    x=0,
+    y=0,
+    width=200,
+    height=30,
+    text="Say <it> now",
+    paragraphs=[
+        [
+            run("Say ", fill="ink"),
+            run(
+                "<it>",
+                fill="accent",
+                style="type.heading",
+                **{
+                    "font-family": ["Source Sans Pro Semibold"],
+                    "font-size": 24,
+                    "font-weight": 600,
+                },
+            ),
+            run(" now", fill="ink"),
+        ]
+    ],
+    lines=[line(0, 21.5, (0, "Say ", 30), (1, "<it>", 40), (2, " now", 30))],
+    **{"line-height": 30, "measured-height": 30},
+)
+
+
+def drawn_runs(*children: dict[str, Any]) -> Any:
+    files = {"Source Sans Pro": FONT, "Source Sans Pro Semibold": SEMIBOLD}
+    return svg.render(
+        scene(*children), key="default", colours=COLOURS, font_file=files.__getitem__, pictures={}
+    )
+
+
+def test_a_run_that_looks_otherwise_is_drawn_in_a_span_of_its_own_as_pinned() -> None:
+    drawn = drawn_runs(SAID)
+    assert drawn.losses == []
+    [page] = drawn.pages
+    shown = re.sub(r"base64,[A-Za-z0-9+/=]+\)", "base64,…)", page.svg)
+    assert shown == (
+        HEAD + "<defs><style>"
+        '@font-face{font-family:"Source Sans Pro";font-weight:400;'
+        "src:url(data:font/otf;base64,…) format('opentype');}"
+        '@font-face{font-family:"Source Sans Pro Semibold";font-weight:600;'
+        "src:url(data:font/otf;base64,…) format('opentype');}"
+        "text{white-space:pre}</style></defs>"
+        '<g data-id="figure" data-component="foundations/figure" data-version="1.0.0">'
+        '<text data-id="figure/said" xml:space="preserve" '
+        'font-family="&quot;Source Sans Pro&quot;" font-size="16" fill="#000000">'
+        '<tspan x="0" y="21.5">Say '
+        '<tspan font-family="&quot;Source Sans Pro Semibold&quot;" font-size="24" '
+        'font-weight="600" fill="#4080bf" fill-opacity="1">&lt;it&gt;</tspan> now</tspan>'
+        "</text></g></svg>\n"
+    )
+    assert drawn_runs(SAID).pages == drawn.pages
+
+
+def test_each_font_a_run_draws_in_is_embedded_with_the_characters_drawn_in_it() -> None:
+    [page] = drawn_runs(SAID).pages
+    held = []
+    for data in re.findall(r"base64,([A-Za-z0-9+/=]+)\)", page.svg):
+        cmap = TTFont(io.BytesIO(base64.b64decode(data))).getBestCmap()
+        assert cmap is not None
+        held.append({chr(code) for code in cmap})
+    regular, semibold = held
+    # Each subset holds a space too, as every subset the renderer makes does.
+    assert regular == set("Say now")
+    assert semibold == set("<it> ")
+
+
+def test_a_run_painted_with_a_role_the_brand_gives_no_colour_is_a_loss() -> None:
+    lost = element(
+        "text",
+        "figure/lost",
+        x=0,
+        y=0,
+        width=200,
+        height=20,
+        text="ab",
+        paragraphs=[[run("a", fill="ink"), run("b", fill="no-such-role")]],
+        lines=[line(0, 15, (0, "a", 10), (1, "b", 10))],
+        **{"line-height": 20, "measured-height": 20},
+    )
+    drawn = drawn_runs(lost)
+    assert [loss.as_dict() for loss in drawn.losses] == [
+        {
+            "plugin": "svg",
+            "what": "figure/lost",
+            "did": "left-out",
+            "why": "the brand gives the role `no-such-role` of its fill no colour in `default`",
+        }
+    ]
+    assert (
+        '<tspan font-family="&quot;Source Sans Pro&quot;" font-size="16" font-weight="400" '
+        'fill="none">b</tspan>' in drawn.pages[0].svg
+    )

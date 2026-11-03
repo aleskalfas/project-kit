@@ -1,13 +1,13 @@
 """Written code (visual-communication DEC-002 point 1, DEC-005 points 7 to 9, DEC-006 points 4,
 5 and 8): the declaration and where its code may go, a run that writes the code and its
-record, and what the check finds about them. Run in this process, in a project in the
-test's own folder, from the shipped foundations and the test brand."""
+record, what a write that fails leaves, and what the check finds about them. Run in this
+process, in a project in the test's own folder, from the shipped foundations and the test
+brand."""
 
 from __future__ import annotations
 
 import json
 import os
-import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -18,12 +18,16 @@ from tests.in_process import load
 from tests.visual_communication_project import (
     FOUNDATIONS,
     TEST_BRAND,
+    TEST_EDITION,
+    TEST_PARTS,
     bound,
     copy_library,
+    importable,
     project,
     write,
     yaml_text,
 )
+from tests.visual_communication_writes import FULL, failing
 
 code, css, seam, files, fingerprint, reading, findings_ = load(
     "visual-communication",
@@ -44,10 +48,9 @@ TYPOGRAPHY = ("type.body", "type.heading")
 
 @pytest.fixture(autouse=True)
 def _writer_importable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A run imports its writer when it runs (`seam.implementation`). `load` keeps no
-    `_lib` in `sys.modules` once it returns, so the writer it loaded with `code` stands
-    in for that import, for the test's length."""
-    monkeypatch.setitem(sys.modules, "_lib.plugins.css", css)
+    """The writer stands in for the import a run makes when it runs it, for the length of
+    the test."""
+    importable(monkeypatch, css)
 
 
 def declare(root: Path, name: str = NAME, **fields: Any) -> Path:
@@ -112,6 +115,11 @@ def test_a_run_writes_the_code_and_its_record_beside_it(root: Path) -> None:
     assert "  time: '2026-11-02T10:30:00Z'\n" in text
 
 
+#: The tokens the CSS writer writes of the test brand: the shared roles but the typographies,
+#: the colours of the foundations' six colour families among them.
+WRITTEN = 33
+
+
 def test_the_record_fingerprints_the_declaration_each_value_written_and_the_writer(
     root: Path,
 ) -> None:
@@ -123,7 +131,7 @@ def test_the_record_fingerprints_the_declaration_each_value_written_and_the_writ
     read = {(i["value"], i["key"]) for i in identities if "value" in i}
     tokens_written = {path for path, _ in read}
     assert not tokens_written & set(TYPOGRAPHY)
-    assert len(tokens_written) == 14
+    assert len(tokens_written) == WRITTEN
     assert read == {
         (path, key)
         for path in tokens_written
@@ -134,7 +142,7 @@ def test_the_record_fingerprints_the_declaration_each_value_written_and_the_writ
             "colour-scheme.dark+contrast.high",
         )
     }
-    assert len(entries) == 2 + 14 * 4
+    assert len(entries) == 2 + WRITTEN * 4
 
 
 def test_a_prefix_opens_every_name(root: Path) -> None:
@@ -430,3 +438,83 @@ def test_each_finding_has_a_level_and_names_its_file(root: Path) -> None:
         assert finding.level in findings_.LEVELS
         assert finding.file
         assert finding.fix
+
+
+# --- what a failed run leaves -------------------------------------------------------------------
+
+
+def written_files(root: Path) -> dict[str, bytes]:
+    return {path.name: path.read_bytes() for path in sorted((root / "web").iterdir())}
+
+
+@pytest.mark.parametrize("file", ["brand.css", "brand.css.record.yaml"])
+def test_a_write_that_fails_leaves_the_code_and_its_record_as_they_were(
+    root: Path, monkeypatch: pytest.MonkeyPatch, file: str
+) -> None:
+    run(root)
+    declare(root, prefix="brand")
+    before = written_files(root)
+    with monkeypatch.context() as patch:
+        failing(patch, write={file})
+        with pytest.raises(files.WriteFailed) as failed:
+            run(root)
+    assert str(failed.value) == f"web/{file} could not be written: {FULL}"
+    assert written_files(root) == before
+    assert found(root) == [("code-stale", "fails")]
+
+
+def test_a_failed_first_run_writes_neither_the_code_nor_its_record(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with monkeypatch.context() as patch:
+        failing(patch, write={"brand.css.record.yaml"})
+        with pytest.raises(files.WriteFailed):
+            run(root)
+    assert not (root / "web").exists()
+    assert found(root) == [("code-not-written", "fact")]
+
+
+def test_code_a_failed_run_could_not_take_back_is_named_and_never_read_as_edited(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with monkeypatch.context() as patch:
+        failing(patch, write={"brand.css.record.yaml"}, remove={"brand.css"})
+        with pytest.raises(files.WriteFailed) as failed:
+            run(root)
+    assert str(failed.value).endswith(
+        "these could not be put back as they were before the run: web/brand.css"
+    )
+    assert found(root) == [("code-record-missing", "fails")]
+
+
+# --- the libraries the lock names (DEC-008 point 5) ---------------------------------------------
+
+
+def test_code_holds_each_role_of_a_library_its_lock_names_at_the_brands_value_or_default(
+    root: Path,
+) -> None:
+    copy_library(root, TEST_PARTS, "test-parts", "1.0.0")
+    declare(root, lock={**LOCK, "test-parts": "1.0.0"})
+    planned = code.plan(root, "visual", code.read(root, "visual", NAME))
+    tokens_ = planned.document["tokens"]
+    assert tokens_["test-parts.note"]["values"] == tokens_["text-primary"]["values"]
+    assert "test-parts.warning" not in tokens_
+    assert planned.document["lock"]["test-parts"] == "1.0.0"
+    run(root)
+    assert b"  --test-parts--gap: 8px;\n" in (root / "web/brand.css").read_bytes()
+
+
+def test_code_of_a_brand_built_on_a_base_reads_the_base_its_lock_names(root: Path) -> None:
+    copy_library(root, TEST_EDITION, "test-edition", "1.0.0")
+    declare(root, brand="test-edition", lock={**LOCK, "test-edition": "1.0.0"})
+    planned = code.plan(root, "visual", code.read(root, "visual", NAME))
+    assert planned.document["tokens"]["space.4"]["values"]["default"] == {
+        "value": 40,
+        "unit": "px",
+    }
+
+
+def test_a_library_the_lock_names_that_the_project_does_not_hold_is_refused(root: Path) -> None:
+    declare(root, lock={**LOCK, "test-parts": "1.0.0"})
+    with pytest.raises(code.CodeRefused, match=r"test-parts@1\.0\.0, which the project does not"):
+        run(root)

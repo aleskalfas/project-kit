@@ -15,6 +15,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/command_runner.py
+        - src/project_kit/default_branch.py
         - tests/test_command_runner.py
         - tests/test_friction_anchor_kinds.py
         - tests/test_validators.py
@@ -23,6 +24,7 @@ pkit:
       record:
         - COR-050#2
         - COR-050#12
+        - COR-055
         - COR-055#6
         - COR-052#6
         - COR-054#4

@@ -36,6 +36,7 @@ pkit:
         - COR-050#5
         - COR-050#6
         - COR-050#13
+        - COR-064#1
         - COR-009
         - ADR-061#3
         - PRJ-002#D1
@@ -68,7 +69,7 @@ pkit:
 - The [project](../../../../core/glossary.md#term-project--project) has living-docs installed, or registered in place where living-docs is developed, and the [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys its `living-docs` [agent definition](../../../../core/glossary.md#term-agent-definition--agent-definition) ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md), [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-031](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md)).
 - A [change](../../../../core/glossary.md#term-change--change) modified what one of the [page](../../../glossary.md#term-page--page)'s anchors names, and the core's [friction](../../../../core/glossary.md#term-friction--friction) checks name the page stale or deferred. That is the [change check](../../../../core/glossary.md#term-change-check--change-check), the [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check) or its [debt](../../../../core/glossary.md#term-debt--debt) listing ([COR-050 point 5](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#5-when-an-anchor-has-changed-and-what-answers-it)).
 - The history at hand reaches the page's last [answer](../../../../core/glossary.md#term-answer--answer), as the friction checks need it (COR-050 point 5).
-- The answer a page carries is a person's decision. The developer gives it once the diff is applied, as `core:UC-002` describes ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
+- The answer a page carries is a person's decision, or that of the delegate a person named. The developer gives it once the diff is applied, as `core:UC-002` describes ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and [COR-064 point 1](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#1-the-answers-a-delegate-decides)).
 - Where the project grants the agent the page type, a work-tracking [capability](../../../../core/glossary.md#term-capability--capability)'s command may start it with nobody watching. That capability passes the run its brief, gathers the [proposals](../../../glossary.md#term-proposal--proposal), and applies the ones the person accepts (project-management DEC-056 points [3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers) and [6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)).
 - Nothing at run time confines the agent to the [agent workspace](../../../../core/glossary.md#term-agent-workspace--agent-workspace). Its definition grants no tool that edits a file in place and owns no path, but its Write and its Bash reach any file (COR-013).
 
@@ -104,7 +105,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** the agent knows nothing of capture scripts, and judges such a page as any other. DEC-002 point 5 decides that the fixer of pages holds a page flagged through its capture script, and #1812 tracks it.
 
-- **4d.** The page is deferred. The proposal answers the change the deferral put off, and the answer it names keeps no deferral.
+- **4d.** The page is deferred. The proposal answers the change the [deferral](../../../../core/glossary.md#term-deferral--deferral) put off, and the answer it names keeps no deferral.
 - **4e.** A statement rests on console output that only a new run of its fence can tell. The agent runs nothing, and holds the page with one question for the developer ([DEC-002 point 6](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-002-visual-elements.md#6-console-output)).
 
 > [!WARNING]

@@ -1,7 +1,8 @@
 """`pkit visual produce <piece> <output>` (visual-communication DEC-006 points 1 to 5): the
 command around the framing (`test_visual_communication_framing.py`), run in this process
 with the producer kept for the tests registered, and once as a process of its own, where
-no test registers it, so the command refuses it as unknown (DEC-005 point 12)."""
+no test registers it, so the command refuses it as unknown (DEC-005 point 12); and what a
+write that fails leaves."""
 
 from __future__ import annotations
 
@@ -16,6 +17,7 @@ from tests import visual_communication_producer as producer
 from tests.in_process import load, run_main
 from tests.visual_communication_producer import OUTPUT, PIECE, producing_project
 from tests.visual_communication_project import CAPABILITY, CONFIG
+from tests.visual_communication_writes import FULL, failing
 
 script, seam = load("visual-communication", "produce.py", "plugins.seam")
 
@@ -108,6 +110,47 @@ def test_a_location_refused_is_named(tmp_path: Path) -> None:
     shown = run(root, PIECE, OUTPUT, "--location", ".pkit/art")
     assert shown.returncode == 1
     assert "lies under `.pkit/`" in shown.stderr
+
+
+# --- what a failed run leaves -------------------------------------------------------------------
+
+
+def produced(root: Path) -> dict[str, bytes]:
+    """Every file of the output's folder, with its bytes."""
+    folder = root / PRODUCED
+    return {path.name: path.read_bytes() for path in sorted(folder.iterdir())}
+
+
+@pytest.mark.parametrize("file", ["record.yaml", "default.png"])
+def test_a_write_that_fails_leaves_the_variants_and_their_record_as_they_were(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, file: str
+) -> None:
+    root = producing_project(tmp_path, modes={"colour-scheme": ["dark"]})
+    assert run(root, PIECE, OUTPUT).returncode == 0
+    piece = root / "visual" / "pieces" / PIECE / "piece.yaml"
+    text = piece.read_text(encoding="utf-8").replace("- dark", "- light")
+    piece.write_text(text.replace("64", "32"), encoding="utf-8")
+    before = produced(root)
+    with monkeypatch.context() as patch:
+        failing(patch, write={file})
+        shown = run(root, PIECE, OUTPUT)
+    assert shown.returncode == 1
+    assert shown.stdout == ""
+    assert shown.stderr == f"error: {PRODUCED}/{file} could not be written: {FULL}\n"
+    assert produced(root) == before
+    assert run(root, PIECE, OUTPUT).returncode == 0
+    assert sorted(produced(root)) == ["default.png", "record.yaml"]
+
+
+def test_a_failed_first_run_records_no_location(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = producing_project(tmp_path)
+    with monkeypatch.context() as patch:
+        failing(patch, write={"record.yaml"})
+        assert run(root, PIECE, OUTPUT).returncode == 1
+    assert not (root / CONFIG).exists()
+    assert not (root / "visual" / "pieces" / PIECE / "produced").exists()
 
 
 @pytest.mark.process(

@@ -9,7 +9,6 @@ import json
 import re
 import shutil
 import subprocess
-import sys
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -24,9 +23,11 @@ from tests.test_visual_communication_pipeline import (
     PIECE_FOLDER,
     TESTS,
     drawing_project,
+    write_content,
     write_picture,
 )
-from tests.visual_communication_project import CONFIG, write_list
+from tests.visual_communication_project import CONFIG, importable, write_list
+from tests.visual_communication_writes import FULL, failing
 
 script, svg, seam, framing, files, reading, pl = load(
     "visual-communication",
@@ -41,6 +42,7 @@ script, svg, seam, framing, files, reading, pl = load(
 
 PREVIEWS = ".pkit/capabilities/visual-communication/project/local/previews/flow"
 FINDINGS = f"{PIECE_FOLDER}/findings.yaml"
+TESTS_FOLDER = "visual/libraries/tests/1.0.0"
 LOCATION = (
     f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
     f"to move the work, move the folder and change the `location:` line there"
@@ -49,10 +51,9 @@ LOCATION = (
 
 @pytest.fixture(autouse=True)
 def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """A run imports its renderer when it draws (`seam.implementation`); `load` keeps no
-    `_lib` in `sys.modules`, so the renderer it loaded stands in for that import. The test
-    producer is registered for the length of the test."""
-    monkeypatch.setitem(sys.modules, "_lib.plugins.svg", svg)
+    """The renderer stands in for the import a run makes when it draws, and the test
+    producer is registered, for the length of the test."""
+    importable(monkeypatch, svg)
     producer.register(seam)
     yield
     seam.unregister(producer.NAME)
@@ -336,3 +337,103 @@ def test_a_piece_the_location_lacks_is_refused(tmp_path: Path) -> None:
     shown = run(root, "other")
     assert shown.returncode == 1
     assert "the location holds no piece `other`" in shown.stderr
+
+
+def test_a_component_whose_file_cannot_be_read_is_reported_at_that_file(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    (root / TESTS_FOLDER / "components" / "broken.yaml").write_text("parts: [\n", encoding="utf-8")
+    write_content(root, body={"use": "tests/broken"})
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    said = (
+        f"fails: {TESTS_FOLDER}/components/broken.yaml: the component `tests/broken` cannot be "
+        f"read: does not parse as YAML: "
+    )
+    assert [line for line in shown.stdout.splitlines() if line.startswith(said)]
+    assert "unknown-component" not in shown.stdout
+    kept = reading.read_yaml(root / FINDINGS)["findings"]
+    [entry] = [e for e in kept if e["code"] == "component-unreadable"]
+    assert (entry["level"], entry["file"], entry["library"], entry["where"]) == (
+        "fails",
+        "components/broken.yaml",
+        "tests@1.0.0",
+        "",
+    )
+    assert "unknown-component" not in [e["code"] for e in kept]
+    assert str(tmp_path) not in entry["message"]
+
+
+# --- what a failed render leaves ----------------------------------------------------------------
+
+
+def state(root: Path) -> dict[str, bytes | None]:
+    """The files a render writes, with their bytes, or None where one is absent."""
+    paths = [CONFIG, f"{PIECE_FOLDER}/piece.yaml", FINDINGS]
+    found: dict[str, bytes | None] = {
+        rel: (root / rel).read_bytes() if (root / rel).exists() else None for rel in paths
+    }
+    folder = root / PREVIEWS
+    for path in sorted(folder.iterdir()) if folder.is_dir() else []:
+        found[path.relative_to(root).as_posix()] = path.read_bytes()
+    return found
+
+
+def rendered_once(tmp_path: Path) -> Path:
+    """The piece rendered once, its location then unrecorded again, a newer `tests` held,
+    so the next render moves its lock, and its first step's text changed, so the next
+    render draws other previews."""
+    root = drawing_project(tmp_path)
+    write_picture(root, framing)
+    assert run(root, PIECE).returncode == 0
+    (root / CONFIG).unlink()
+    newer_tests(root)
+    write_content(root, head="Plan the work again.")
+    return root
+
+
+def test_a_key_that_refuses_once_the_lock_is_chosen_leaves_every_file_as_it_was(
+    tmp_path: Path,
+) -> None:
+    root = rendered_once(tmp_path)
+    (root / PIECE_FOLDER / "notes.yaml").write_text(
+        "pkit_schema: visual-communication:content\nschema_version: 2\n", encoding="utf-8"
+    )
+    before = state(root)
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stdout == ""
+    assert shown.stderr.startswith("error: the findings record's key cannot be taken: ")
+    assert "notes.yaml is at format 2" in shown.stderr
+    assert state(root) == before
+
+
+@pytest.mark.parametrize("file", ["flow.en.colour-scheme.dark.svg", "findings.yaml"])
+def test_a_write_that_fails_leaves_the_previews_and_every_record_as_they_were(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, file: str
+) -> None:
+    root = rendered_once(tmp_path)
+    before = state(root)
+    with monkeypatch.context() as patch:
+        failing(patch, write={file})
+        shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stdout == ""
+    folder = PIECE_FOLDER if file == "findings.yaml" else PREVIEWS
+    assert shown.stderr == f"error: {folder}/{file} could not be written: {FULL}\n"
+    assert state(root) == before
+    assert run(root, PIECE).returncode == 0
+    assert state(root) != before
+
+
+def test_an_old_preview_is_removed_only_once_the_new_ones_are_written(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = rendered_once(tmp_path)
+    path = root / PIECE_FOLDER / "piece.yaml"
+    path.write_text(path.read_text(encoding="utf-8").replace("    - dark\n", ""), encoding="utf-8")
+    before = state(root)
+    failing(monkeypatch, write={"flow.en.default.svg"})
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert sorted(previews(root)) == ["flow.en.colour-scheme.dark.svg", "flow.en.default.svg"]
+    assert state(root) == before

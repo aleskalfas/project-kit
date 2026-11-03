@@ -91,6 +91,9 @@ friction:
     - {path: .pkit/lifecycle/README.md, type: living-docs:page}
     - {path: .pkit/permissions/README.md, type: living-docs:page}
     - {path: .pkit/process/README.md, type: living-docs:page}
+    - {path: .pkit/process/shape.md, type: living-docs:page}
+    - {path: .pkit/process/engine.md, type: living-docs:page}
+    - {path: .pkit/process/connections.md, type: living-docs:page}
     - {path: .pkit/rules/README.md, type: living-docs:page}
     - {path: .pkit/schemas/README.md, type: living-docs:page}
     - {path: .pkit/schemas/backbone-files.md, type: living-docs:page}

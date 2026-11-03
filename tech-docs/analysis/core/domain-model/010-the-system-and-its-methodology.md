@@ -5,6 +5,8 @@ status: active
 explains:
   - TERM-system
   - TERM-harness
+  - TERM-harness-requirement
+  - TERM-instruction-file
   - TERM-decision-record
   - TERM-point
   - TERM-scratchpad-note
@@ -24,10 +26,14 @@ pkit:
         - COR-047
         - COR-051
         - COR-058
+        - COR-070#2
+        - ADR-076#2
         - PRJ-011
       artefact:
         - TERM-system
         - TERM-harness
+        - TERM-harness-requirement
+        - TERM-instruction-file
         - TERM-decision-record
         - TERM-point
         - TERM-scratchpad-note
@@ -43,16 +49,20 @@ A way of working that only a few people know cannot be handed on, and one writte
 
 The methodology is that way of working, written down as [decision records](../glossary.md#term-decision-record--decision-record), rules, [operational rules](../glossary.md#term-operational-rule--operational-rule) and conventions. Decision records keep the reasons, and their points, like rules, keep names that never move. The [acceptance gate](../glossary.md#term-acceptance-gate--acceptance-gate) lets work build only on decision records and rules already accepted. Operational rules hold the instructions every session loads, and conventions are agreed ways of working.
 
-The [system](../glossary.md#term-system--system) is the software that ships the methodology and enforces it. A [harness](../glossary.md#term-harness--harness) hosts the sessions where the methodology is used.
+The [system](../glossary.md#term-system--system) is the software that ships the methodology and enforces it. A [harness](../glossary.md#term-harness--harness) hosts the sessions where the methodology is used, and loads an [instruction file](../glossary.md#term-instruction-file--instruction-file) into each. The methodology states what it relies on a harness to do as [harness requirements](../glossary.md#term-harness-requirement--harness-requirement).
 
 Some questions are too large for a decision record at first, and the work that maps them needs a home of its own ([COR-012](../../../../.pkit/decisions/core/COR-012-scratchpad-notes.md)). A [scratchpad note](../glossary.md#term-scratchpad-note--scratchpad-note) holds that work, binding nothing, until it produces decision records or other documents, or is dropped.
 
 ```mermaid
 classDiagram
   accTitle: The system and its methodology
-  accDescr: The system ships and enforces the methodology. The methodology is made of decision records, rules, operational rules and conventions. A decision record holds points. A scratchpad note may produce decision records. Work builds only on accepted decision records and rules, as the acceptance gate says. A harness loads the operational rules through its include.
+  accDescr: The system ships and enforces the methodology. The methodology is made of decision records, rules, operational rules and conventions, and states harness requirements. A harness meets each harness requirement or not. A decision record holds points. A scratchpad note may produce decision records. Work builds only on accepted decision records and rules, as the acceptance gate says. A harness loads an instruction file into each session, and the instruction file includes the operational rules.
   class System["System"]
   class Harness["Harness"]
+  class HarnessRequirement["Harness requirement"]
+  HarnessRequirement : observation point
+  class InstructionFile["Instruction file"]
+  InstructionFile : includes
   class Methodology["Methodology"]
   class DecisionRecord["Decision record"]
   DecisionRecord : id
@@ -76,7 +86,10 @@ classDiagram
   ScratchpadNote ..> DecisionRecord : may produce
   AcceptanceGate ..> DecisionRecord : admits only accepted
   AcceptanceGate ..> Rule : admits only accepted
-  Harness ..> OperationalRule : loads
+  Methodology --> HarnessRequirement : states
+  Harness ..> HarnessRequirement : meets or not
+  Harness --> InstructionFile : loads into each session
+  InstructionFile ..> OperationalRule : includes
 ```
 
 ```mermaid
@@ -129,19 +142,68 @@ A harness is an external tool that hosts working sessions and runs the tool call
 
 **Attributes:**
 
-- its include: the line in its instruction file that pulls another file into each session, as `@.pkit/rules/core.md` does
+- its include: the line in its [instruction file](../glossary.md#term-instruction-file--instruction-file) that pulls another file into each session, as `@.pkit/rules/core.md` does
 
 **Relations:**
 
 - Its include loads the [operational rules](../glossary.md#term-operational-rule--operational-rule) into each session it hosts.
 - It is no part of the [system](../glossary.md#term-system--system).
+- The methodology states what it relies on a harness to do as [harness requirements](../glossary.md#term-harness-requirement--harness-requirement), which a harness meets or not ([COR-047 point 1](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#1-requirements-are-stated-as-observable-behaviour-never-in-a-harnesss-vocabulary)).
+
+**States:** None.
+
+**Always true:** None.
+
+## Harness requirement
+
+Defined in [TERM-harness-requirement](../glossary.md#term-harness-requirement--harness-requirement).
+
+**Why:** The [methodology](../glossary.md#term-methodology--methodology)'s design relied on how a [harness](../glossary.md#term-harness--harness) behaves, and that reliance lived only in the reasoning behind it ([COR-047](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)). Configuration that removed such a behaviour went unnoticed, and its failure often read as a correct result (COR-047).
+
+A harness requirement is a behaviour the methodology needs of any harness, stated so that one can observe whether it holds. It names no key, flag or tool of one harness. `delegated-result-complete` is one: a delegated agent's result reaches the session that delegated it whole.
+
+**Attributes:**
+
+- its name, such as `delegated-result-complete`
+- the behaviour it names, in terms any harness could meet ([COR-047 point 1](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#1-requirements-are-stated-as-observable-behaviour-never-in-a-harnesss-vocabulary))
+- where one can see whether it holds, such as from configuration, or only from within a running session ([COR-047 point 4](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#4-every-requirement-names-its-observation-point-what-cannot-be-observed-is-reported-not-passed))
+
+**Relations:**
+
+- The methodology states it (COR-047 point 1).
+- Whether a harness meets it is graded, never a plain yes or no. The grades tell apart a harness that cannot meet it from one that meets it at a cost ([COR-047 point 2](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
 
 **States:** None.
 
 **Always true:**
 
-- What the methodology needs of a harness is stated as behaviour one can observe, never in any harness's own vocabulary ([COR-047 point 1](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#1-requirements-are-stated-as-observable-behaviour-never-in-a-harnesss-vocabulary)).
-- A need that no declaration covers for the harness in use is unknown, never met ([COR-047 point 3](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#3-silence-is-indeterminate-never-satisfaction)).
+- It is stated as behaviour one can observe, never in any harness's own vocabulary (COR-047 point 1).
+- Where nothing grades it for the harness in use, it is indeterminate, never met ([COR-047 point 3](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#3-silence-is-indeterminate-never-satisfaction)).
+- Where its observation point cannot be reached, a check reports it as indeterminate, naming what could settle it (COR-047 point 4). It never passes it.
+
+## Instruction file
+
+Defined in [TERM-instruction-file](../glossary.md#term-instruction-file--instruction-file).
+
+**Why:** None.
+
+An instruction file is the document a [harness](../glossary.md#term-harness--harness) loads into each session it hosts, such as Claude Code's `CLAUDE.md`. Through its includes, every session takes in the [operational rules](../glossary.md#term-operational-rule--operational-rule). A repository's own instructions follow the includes.
+
+**Attributes:**
+
+- its includes, each a line that pulls another file into the session, such as `@.pkit/rules/core.md` ([ADR-076 point 2](../../../architecture/decisions/ADR-076-capability-rules-index.md#2-the-backbone-renders-an-index-and-claudemd-includes-it))
+
+**Relations:**
+
+- A harness loads it into each session, from the session's start ([COR-070 point 2](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#2-the-adapter-delivers-the-loaded-file-by-the-route-that-carries-cores-rules)).
+- Its includes load the [methodology](../glossary.md#term-methodology--methodology)'s operational rules first, and the repository's own after them (ADR-076 point 2).
+
+**States:** None.
+
+**Always true:**
+
+- An include it needs is kept present, inserted wherever it is absent (COR-070 point 2).
+- Nothing that keeps its includes present removes or rewrites the text the repository wrote there (COR-070 point 2).
 
 ## Decision record
 
@@ -329,7 +391,7 @@ An operational rule is an instruction that every session loads through the [harn
 
 - their layers
 - how each layer keeps and cites its rules
-- the [capabilities](../glossary.md#term-capability--capability)' rules index
+- how each layer's file reaches a session
 - which layer binds
 
 ## Methodology
@@ -408,6 +470,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-006 — Start working on a project on a new machine](../use-case-model/journeys/JRN-006-start-on-new-machine.md)
 - [REQ-002 · Functional · Project-owned content is written only by the writers records name](../requirements/functional/REQ-002-project-owned-writers.md)
 - [REQ-014 · Functional · A later edit of a documentation root moves no document](../requirements/functional/020-set-up/REQ-014-root-change-moves-nothing.md)
+- [REQ-016 · Constraint · The permission code needs only the operating system's `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
 - [REQ-026 · Quality · An interrupted version transition never reads as finished, and the next one completes it](../requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md)
 - [REQ-028 · Quality · The router never fails a command over a version pin it cannot resolve](../requirements/quality/050-adopt/REQ-028-unresolved-pin-runs-installed.md)
 
@@ -435,6 +498,21 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
 - [JRN-006 — Start working on a project on a new machine](../use-case-model/journeys/JRN-006-start-on-new-machine.md)
+
+**Harness requirement:**
+
+- [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
+- [UC-029 — Get a delegated agent's result back whole](../use-case-model/use-cases/070-work-within-limits/UC-029-get-result-whole.md)
+
+**Instruction file:**
+
+- [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
+- [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
+- [UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's](../use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md)
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
+- [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md)
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
+- [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
 
 **Decision record:**
 

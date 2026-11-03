@@ -1,0 +1,7 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-001, DEC-002 and DEC-003 state in place what DEC-013 decides of them
+  (#2604). The records design ahead: the shipped folder, the command that
+  brings a shipped library in, the check's findings and the release of a
+  shipped version land with #2605 to #2610, so no surface moves yet.

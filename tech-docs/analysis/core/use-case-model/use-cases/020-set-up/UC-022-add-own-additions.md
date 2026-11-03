@@ -80,20 +80,20 @@ pkit:
 > [!WARNING]
 > **Not built yet:** none of those five commands runs such a check. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-5. The system checks that the subject is `all`, `operator` or `agent:<name>`, and finds the [privilege](../../../glossary.md#term-privilege--privilege) in the catalog ([COR-028 point 1](../../../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth)).
-6. The system writes the grant to the project's own grants, `.pkit/permissions/project/grants.yaml`, and prints `granted: <subject> allow <privilege>`. The permission model decides each call with the project's grants beside the methodology's, and a deny wins over an allow ([REQ-013](../../../requirements/functional/020-set-up/REQ-013-deny-wins.md)).
-7. The adopter names, in the agents' [overlay](../../../glossary.md#term-overlay--overlay) `.pkit/agents/project/overlay.yaml`, the paths each placeholder of an [agent definition](../../../glossary.md#term-agent-definition--agent-definition) stands for, such as `<adr-records>` ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
-8. The adopter runs `pkit agents reconcile`. The system lists each category an agent definition refers to that the overlay does not define, with what it would write, and writes nothing.
+5. The system checks that the [grant subject](../../../glossary.md#term-grant-subject--grant-subject) is `all`, `operator` or `agent:<name>`, and finds the [privilege](../../../glossary.md#term-privilege--privilege) in the [permission catalog](../../../glossary.md#term-permission-catalog--permission-catalog) ([COR-028 point 1](../../../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth)).
+6. The system writes the grant to the project's own grants, `.pkit/permissions/project/grants.yaml`, and prints `granted: <subject> allow <privilege>`. The [permission model](../../../glossary.md#term-permission-model--permission-model) decides each call with the project's grants beside the methodology's, and a deny wins over an allow ([REQ-013](../../../requirements/functional/020-set-up/REQ-013-deny-wins.md)).
+7. The adopter names, in the agents' [overlay](../../../glossary.md#term-overlay--overlay) `.pkit/agents/project/overlay.yaml`, the paths each [placeholder](../../../glossary.md#term-placeholder--placeholder) of an [agent definition](../../../glossary.md#term-agent-definition--agent-definition) stands for, such as `<adr-records>` ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
+8. The adopter runs `pkit agents reconcile`. The system lists each [overlay category](../../../glossary.md#term-overlay-category--overlay-category) an agent definition refers to that the overlay does not define, with what it would write, and writes nothing.
 9. The adopter runs `pkit agents reconcile --write`, which is the [consent](../../../glossary.md#term-consent--consent). The system adds each missing category, and never writes over a value the adopter set. It fills a category whose conventional folder exists with that folder.
 10. The adopter runs `pkit sync`.
 11. The system runs each adapter's [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) into the files its harness reads ([COR-002](../../../../../../.pkit/decisions/core/COR-002-merge-delivery.md)). The methodology's baseline settings, the project's side and the entries already in the harness's file are joined, and no entry the project wrote is removed.
-12. The same merge delivery includes `.pkit/rules/project.md` in the harness's instruction file, after the methodology's `.pkit/rules/core.md`, such as in `claude-code`'s `CLAUDE.md`.
+12. The same merge delivery includes `.pkit/rules/project.md` in the harness's [instruction file](../../../glossary.md#term-instruction-file--instruction-file), after the methodology's `.pkit/rules/core.md`, such as in `claude-code`'s `CLAUDE.md`.
 13. Each adapter deploys the agent definitions where its harness reads them, with each placeholder replaced by the paths the overlay gives it (COR-013).
 
 **Variants:**
 
-- **5a.** The subject is none of the three forms, such as `agent:Architect`. The [system](../../../glossary.md#term-system--system) refuses, naming the three forms, and writes nothing. The path rejoins at step 3.
-- **5b.** The catalog holds no such [privilege](../../../glossary.md#term-privilege--privilege). The system refuses with ``privilege '<privilege>' is not in the catalog — run `pkit permissions catalog`.``, and writes nothing. The path rejoins at step 3.
+- **5a.** The [grant subject](../../../glossary.md#term-grant-subject--grant-subject) is none of the three forms, such as `agent:Architect`. The [system](../../../glossary.md#term-system--system) refuses, naming the three forms, and writes nothing. The path rejoins at step 3.
+- **5b.** The [permission catalog](../../../glossary.md#term-permission-catalog--permission-catalog) holds no such [privilege](../../../glossary.md#term-privilege--privilege). The system refuses with ``privilege '<privilege>' is not in the catalog — run `pkit permissions catalog`.``, and writes nothing. The path rejoins at step 3.
 - **5c.** The adopter passes `--scope` for a privilege that takes no scope. The system refuses, and writes nothing. The path rejoins at step 3.
 - **6a.** The [project](../../../glossary.md#term-project--project)'s grants hold one for that subject and privilege already. The system changes it in place, and prints `updated: <subject> <effect> <privilege>`.
 - **6b.** The [grant](../../../glossary.md#term-grant--grant) allows what a [guardrail](../../../glossary.md#term-guardrail--guardrail) or a [capability](../../../glossary.md#term-capability--capability)'s grant denies. The grant is written, and each call that the deny covers stays denied ([REQ-013](../../../requirements/functional/020-set-up/REQ-013-deny-wins.md)).
@@ -103,8 +103,8 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `pkit agents reconcile` takes no `--dry-run`. It previews by default, and writes with `--write`. [COR-004](../../../../../../.pkit/decisions/core/COR-004-cli-surface.md) decides that it offers the flag, and #1884 tracks it.
 
-- **8b.** The [overlay](../../../glossary.md#term-overlay--overlay) defines every category the [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) refer to. The system prints `overlay is complete — every referenced category is defined.`, and the path goes on at step 10.
-- **8c.** The overlay is missing. The system says so, and step 9 creates it from the seed that first [install](../../../glossary.md#term-install--install) writes.
+- **8b.** The [overlay](../../../glossary.md#term-overlay--overlay) defines every [overlay category](../../../glossary.md#term-overlay-category--overlay-category) the [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) refer to. The system prints `overlay is complete — every referenced category is defined.`, and the path goes on at step 10.
+- **8c.** The overlay is missing. The system says so, and step 9 creates it from its template, as first [install](../../../glossary.md#term-install--install) does.
 - **9a.** A category carries writes, such as `process-authoring-targets`. The system fills it with an empty list, so the agent definition deploys with no path to write until the adopter names one.
 - **9b.** A missing category has no conventional folder in the project. The system appends it commented out, for the adopter to set. Until the adopter sets it, the [adapter](../../../glossary.md#term-adapter--adapter) skips each agent definition that needs it, and names `pkit agents adopt <agent>` ([UC-020](../010-develop/UC-020-own-skill-or-agent.md) variant 9a).
 - **10a.** The adopter changed only the [harness](../../../glossary.md#term-harness--harness)'s settings, and runs `pkit merge` instead. The system runs each adapter's [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) of the settings alone, and prints `Merge complete.`.
@@ -116,9 +116,9 @@ pkit:
 **Postconditions:**
 
 - The [project](../../../glossary.md#term-project--project)'s own [operational rules](../../../glossary.md#term-operational-rule--operational-rule), [harness](../../../glossary.md#term-harness--harness) settings, grants and agent paths sit in project-owned files beside the [methodology](../../../glossary.md#term-methodology--methodology)'s. The adopter edited none of the methodology's files ([COR-001](../../../../../../.pkit/decisions/core/COR-001-content-mechanisms.md)).
-- The harness's instruction file includes the project's operational rules after the methodology's, and the harness's settings hold the baseline's entries and the project's own.
-- The permission model decides each call with the project's grants beside the methodology's, and a deny wins over an allow.
-- Each [agent definition](../../../glossary.md#term-agent-definition--agent-definition) whose placeholders the [overlay](../../../glossary.md#term-overlay--overlay) sets is deployed with those paths.
+- The harness's [instruction file](../../../glossary.md#term-instruction-file--instruction-file) includes the project's operational rules after the methodology's, and the harness's settings hold the baseline's entries and the project's own.
+- The [permission model](../../../glossary.md#term-permission-model--permission-model) decides each call with the project's grants beside the methodology's, and a deny wins over an allow.
+- Each [agent definition](../../../glossary.md#term-agent-definition--agent-definition) whose [placeholders](../../../glossary.md#term-placeholder--placeholder) the [overlay](../../../glossary.md#term-overlay--overlay) sets is deployed with those paths.
 
 **Minimal guarantees:**
 

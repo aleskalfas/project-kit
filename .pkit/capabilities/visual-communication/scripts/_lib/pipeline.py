@@ -8,14 +8,19 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
   `content.<language>.yaml` for each language it lists, its local components, and what
   a producer made for it under `produced/<output>/`. `read_piece` reads it.
 - **Its lock** names the version of each library it uses. `needed` gives the libraries
-  the piece names itself: its top's library, its brand and every library its content
-  uses; `libraries.move_lock` adds what they build on. `write_lock` writes a lock into
-  `piece.yaml` as text, every other byte kept.
-- **A project** (`Project`) is a piece under one lock: the foundations' declarations and
-  the brand read from the locked versions, over its base at the version the lock names
-  when it builds on one (DEC-004 point 6), the combinations the piece names, and the
-  `Env` over them. It computes one scene for each language and each key over the size
-  axes; format 1 has no size axis, so that key is always `default`.
+  the piece names itself: its top's library, its brand, its notations and every library
+  its content uses; `libraries.move_lock` adds what they build on. `write_lock` writes a
+  lock into `piece.yaml` as text, every other byte kept.
+- **A project** (`Project`) is a piece under one lock: the scope of the locked versions,
+  the foundations' declarations and the own roles of each component library the lock
+  names (DEC-008 point 1), and the brand read against it, over its base at the version
+  the lock names when it builds on one (DEC-004 point 6), the notations the piece names
+  (DEC-004 point 10), the combinations the piece names, and the `Env` over them. It
+  computes one scene for each language and each key over the size axes; format 1 has no
+  size axis, so that key is always `default`.
+- **A library version checked alone** is read through `LibraryEnv`, an `Env` that no
+  piece or brand stands behind: components from a combination of library versions, and
+  roles from their declarations alone (DEC-008 point 1, DEC-010 point 9).
 - **A produced picture** is read from `produced/<output>/record.yaml`. A missing record,
   or a variant file it names that is missing, makes the picture missing for the engine,
   with the reason kept so the finding names `pkit visual produce <piece> <output>`; it
@@ -26,25 +31,19 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
 
 from __future__ import annotations
 
-import io
 from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from ruamel.yaml import YAML
-
-from _lib import keys, tokens, values
-from _lib.env import PictureInfo
+from _lib import keys, notations, records, tokens, values
+from _lib.env import MissingFont, PictureInfo, UnknownConcept, UnreadableComponent
 from _lib.files import FileError, read_bound, refuse_links, without_binding, write_whole
-from _lib.libraries import FOLDER, Held, Version
+from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, Version
 from _lib.location import files as listed_files
 from _lib.names import PIECE, is_language, is_name, split_use
 from _lib.plugins import seam
-from _lib.reading import ReadError, load_yaml, read_yaml, sha256
+from _lib.reading import ReadError, read_yaml, sha256
 from _lib.scene import SceneResult, compute_scene
-
-#: The library that owns the shared roles, axes, families and pairs (DEC-004 point 7).
-FOUNDATIONS = "foundations"
 
 #: The folder of the location that holds the pieces, one folder each.
 PIECES = "pieces"
@@ -64,8 +63,8 @@ EXPORTS_FILE = "exports.yaml"
 SIZE_KEY = keys.DEFAULT_KEY
 
 
-#: The byte-order mark a file may open with, which a rewrite keeps.
-BOM = "\ufeff"
+#: The byte-order mark a file may open with, which a rewrite of the lock keeps.
+BOM = records.BOM
 
 
 class Refused(Exception):
@@ -129,6 +128,11 @@ class Piece:
         return str(self.data["brand"])
 
     @property
+    def notations(self) -> list[str]:
+        """The notations its content names concepts from, by their libraries' names."""
+        return list(dict.fromkeys(self.data.get("notations") or []))
+
+    @property
     def languages(self) -> list[str]:
         return list(self.data["languages"])
 
@@ -187,6 +191,13 @@ def read_piece(root: Path, location: str, name: str) -> Piece:
     shown = f"{rel}/{PIECE_FILE}"
     _require(isinstance(data.get("top"), str) and _is_use(data["top"]), shown, "top", "a use")
     _require(is_name(data.get("brand")), shown, "brand", "a library's name")
+    named = data.get("notations", [])
+    _require(
+        isinstance(named, list) and all(map(is_name, named)),
+        shown,
+        "notations",
+        "a list of libraries' names",
+    )
     languages = data.get("languages")
     _require(
         isinstance(languages, list) and bool(languages) and all(map(is_language, languages)),
@@ -260,9 +271,9 @@ def uses(value: Any) -> Iterator[str]:
 
 def needed(piece: Piece) -> list[str]:
     """The libraries the piece names itself: the foundations, which hold the shared roles
-    every piece reads, its top's, its brand, and every library its content uses, in name
-    order. What they build on the lock adds."""
-    found = {FOUNDATIONS, piece.brand}
+    every piece reads, its top's, its brand, its notations, and every library its content
+    uses, in name order. What they build on the lock adds."""
+    found = {FOUNDATIONS, piece.brand, *piece.notations}
     for use in [piece.top, *(use for content in piece.contents.values() for use in uses(content))]:
         library = use.partition("/")[0]
         if _is_use(use) and library != PIECE:
@@ -275,46 +286,14 @@ def needed(piece: Piece) -> list[str]:
 
 def lock_text(piece_yaml: str, lock: Mapping[str, str]) -> str:
     """The text of a `piece.yaml` with its top-level `lock` replaced by `lock`, or added at
-    its end, every other byte kept: its comments, its order, its line endings and a
-    byte-order mark. Raises Refused when the text would not read back as it was with that
-    lock."""
-    bom = BOM if piece_yaml.startswith(BOM) else ""
-    body = piece_yaml[len(bom) :]
-    lines = body.splitlines(keepends=True)
-    newline = "\r\n" if lines and lines[0].endswith("\r\n") else "\n"
-    block = [f"lock:{' {}' if not lock else ''}{newline}"]
-    block += [f"  {name}: {lock[name]}{newline}" for name in sorted(lock)]
-    start = next((i for i, line in enumerate(lines) if _is_lock_line(line)), None)
-    if start is None:
-        if lines and not lines[-1].endswith(("\n", "\r")):
-            lines[-1] += newline
-        updated = lines + block
-    else:
-        end = start
-        for index in range(start + 1, len(lines)):
-            line = lines[index]
-            if not line.strip():
-                continue
-            if line[0] not in " \t":
-                break
-            end = index
-        updated = lines[:start] + block + lines[end + 1 :]
-    text = bom + "".join(updated)
+    its end, one library a line in name order, every other byte kept: its comments, its
+    order, its line endings and a byte-order mark (`records.with_mapping`). Raises Refused
+    when the text would not read back as it was with that lock."""
+    ordered = {name: lock[name] for name in sorted(lock)}
     try:
-        before, after = load_yaml(body), load_yaml(text[len(bom) :])
-    except ReadError as exc:
+        return records.with_mapping(piece_yaml, "lock", ordered, each="library")
+    except records.RecordError as exc:
         raise Refused(f"{PIECE_FILE} cannot take the lock as text: {exc}") from exc
-    if not isinstance(before, Mapping) or after != {**before, "lock": dict(lock)}:
-        raise Refused(
-            f"{PIECE_FILE} cannot take the lock as text: write its top-level `lock:` as a block "
-            f"mapping, one library a line"
-        )
-    return text
-
-
-def _is_lock_line(line: str) -> bool:
-    head = line.split("#", 1)[0].rstrip()
-    return head == "lock:" or head.startswith(("lock: ", "lock:\t"))
 
 
 def locked(piece: Piece, lock: Mapping[str, str]) -> bytes | None:
@@ -342,12 +321,15 @@ def write_lock(piece: Piece, lock: Mapping[str, str]) -> bool:
 
 
 class Project:
-    """A piece under one lock: the foundations' declarations and the brand read from the
-    locked versions, the combinations the piece names, and the `Env` the engine reads.
+    """A piece under one lock: the scope of the locked versions (`tokens.Scope`), the
+    brand and the notations the piece names, read from the locked versions, the
+    combinations the piece names, and the `Env` the engine reads. A notation that cannot
+    be read, wholly or in part, keeps its findings (`notations.Notation`), and stops
+    nothing; so does a library's own roles, whose findings the scope keeps.
 
-    Raises Refused when the lock lacks the foundations or the brand, or the piece names a
-    mode its brand lacks; `tokens.TokenError`, carrying its findings, when the
-    declarations or the brand cannot be read."""
+    Raises Refused when the lock lacks the foundations, the brand or a notation, or the
+    piece names a mode its brand lacks; `tokens.TokenError`, carrying its findings, when
+    the foundations' declarations or the brand cannot be read."""
 
     def __init__(self, piece: Piece, lock: Mapping[str, str], held: Held) -> None:
         # Each name and version of the lock becomes a segment of a path below the library
@@ -364,22 +346,31 @@ class Project:
         self.held = held
         self.root = piece.root
         self.location = piece.location
-        roles = self.version_folder(FOUNDATIONS) / "roles.yaml"
-        self.foundations = tokens.read_declarations(
-            roles,
-            library=self.label(FOUNDATIONS),
-            shown=roles.relative_to(self.root).as_posix(),
+        locked = {
+            library: self.root / self.location / FOLDER / library / version
+            for library, version in self.lock.items()
+        }
+        self.scope = tokens.read_scope(
+            {
+                **{name: folder for name, folder in locked.items() if folder.is_dir()},
+                FOUNDATIONS: self.version_folder(FOUNDATIONS),
+            },
+            root=self.root,
         )
+        self.foundations = self.scope.foundations
         self.brand = tokens.read_brand(
             self.version_folder(piece.brand),
-            self.foundations,
+            self.scope,
             fonts=self.root / self.location / FONTS,
             root=self.root,
-            locked={
-                library: self.root / self.location / FOLDER / library / version
-                for library, version in self.lock.items()
-            },
+            locked=locked,
         )
+        self.notations = {
+            name: notations.read_notation(
+                self.version_folder(name), self.foundations.families, root=self.root
+            )
+            for name in piece.notations
+        }
         try:
             self.combinations = keys.combinations(piece.modes, self.brand.axes)
         except keys.BadKey as exc:
@@ -438,7 +429,8 @@ class Project:
 class ProjectEnv:
     """The `Env` the engine reads a project through: components from the locked versions
     and the piece's own folder, roles and fonts from the brand, colour families from the
-    foundations' declarations, produced pictures from their records, and the lock.
+    foundations' declarations, concepts from the notations the piece names, produced
+    pictures from their records, and the lock.
 
     It keeps what the engine asked for that a check needs: why a produced picture is
     missing (`missing`), the records read (`records`), and the font files read from the
@@ -447,6 +439,7 @@ class ProjectEnv:
     def __init__(self, project: Project) -> None:
         self._project = project
         self._components: dict[str, dict[str, Any] | None] = {}
+        self._unreadable: dict[str, str] = {}
         self.missing: dict[str, str] = {}
         self.records: dict[str, Mapping[str, Any]] = {}
         self.fonts_read: set[Path] = set()
@@ -454,20 +447,20 @@ class ProjectEnv:
     def component(self, use: str) -> dict:
         if use not in self._components:
             self._components[use] = self._read_component(use)
+        if use in self._unreadable:
+            raise UnreadableComponent(use, self._unreadable[use])
         found = self._components[use]
         if found is None:
             raise KeyError(use)
         return found
 
     def _read_component(self, use: str) -> dict[str, Any] | None:
-        path = self.component_path(use)
-        if path is None or not path.is_file():
-            return None
-        try:
-            data = read_yaml(path)
-        except ReadError:
-            return None
-        return dict(data) if isinstance(data, Mapping) else None
+        """A component's data; None where there is none, and where its file is present and
+        cannot be read as one, why kept in `_unreadable`."""
+        data, why = read_component(self.component_path(use))
+        if why is not None:
+            self._unreadable[use] = why
+        return data
 
     def component_path(self, use: str) -> Path | None:
         """The file of a component, by its use; None where the lock names no version of its
@@ -486,6 +479,9 @@ class ProjectEnv:
         return folder / COMPONENTS / f"{name}.yaml"
 
     def role(self, token_path: str) -> dict:
+        """The role's value under the brand. Raises tokens.RoleWithoutValue for a role of the
+        scope the brand leaves with none, and tokens.UnknownRole for a path no role holds;
+        both are KeyErrors, as the engine reads them."""
         return self._project.brand.resolve(token_path, {})
 
     def font_file(self, family: str) -> Path:
@@ -555,8 +551,111 @@ class ProjectEnv:
     def family(self, name: str) -> dict[str, str]:
         return dict(self._project.foundations.families[name])
 
+    def concept(self, name: str) -> str | None:
+        named, _, concept = name.partition("/")
+        notation = self._project.notations.get(named)
+        if notation is None:
+            raise UnknownConcept(
+                name,
+                f"the concept `{name}` comes from `{named}`, a notation the piece does not name "
+                f"under `notations`",
+            )
+        try:
+            return notation.family(concept)
+        except KeyError:
+            raise UnknownConcept(
+                name, f"the notation {notation.label} holds no concept `{concept}`"
+            ) from None
+
     def library_version(self, library: str) -> str:
         return self._project.lock[library]
+
+
+def read_component(path: Path | None) -> tuple[dict[str, Any] | None, str | None]:
+    """A component's data from its file at `path`; None where there is no such file. Where
+    the file is present and cannot be read as a component, None and why. The reader names
+    the file by its path on this machine, and why names it by nothing: the finding names
+    it from the piece or the version, so a findings record holds where the work moves."""
+    if path is None or not path.is_file():
+        return None, None
+    try:
+        data = read_yaml(path)
+    except ReadError as exc:
+        return None, str(exc).removeprefix(f"{path}: ")
+    if not isinstance(data, Mapping):
+        return None, "it is not a mapping"
+    return dict(data), None
+
+
+class LibraryEnv:
+    """The `Env` a library version checked alone is read through, which no piece or brand
+    stands behind (DEC-008 point 1, DEC-010 point 9): components from a combination of
+    library versions, such as the one `libraries.newest_of_majors` chooses, and roles from
+    the declarations alone, the scope of those versions (`tokens.Scope`).
+
+    A role's value is a stand-in of the type its declaration gives, of no magnitude: a
+    length of 0 px, the number 0, or, for any other type, a mapping that holds the type
+    alone. So the engine reads a component's formulas, their dimensions included, as under
+    any brand that gives each role a value of its type. It computes no scene: no font,
+    produced picture or concept lies behind it."""
+
+    def __init__(self, versions: Mapping[str, Library], scope: tokens.Scope) -> None:
+        self._versions = dict(versions)
+        self._scope = scope
+        self._components: dict[str, dict[str, Any] | None] = {}
+        self._unreadable: dict[str, str] = {}
+
+    def component(self, use: str) -> dict:
+        if use not in self._components:
+            data, why = read_component(self.component_path(use))
+            self._components[use] = data
+            if why is not None:
+                self._unreadable[use] = why
+        if use in self._unreadable:
+            raise UnreadableComponent(use, self._unreadable[use])
+        found = self._components[use]
+        if found is None:
+            raise KeyError(use)
+        return found
+
+    def component_path(self, use: str) -> Path | None:
+        """The file of a component, by its use; None where the combination holds no version
+        of its library, and for a piece's own component, since no piece stands behind it."""
+        try:
+            library, name = split_use(use)
+        except ValueError:
+            return None
+        version = self._versions.get(library)
+        if library == PIECE or version is None:
+            return None
+        return version.folder / COMPONENTS / f"{name}.yaml"
+
+    def role(self, token_path: str) -> Any:
+        """A stand-in of the role's declared type. Raises tokens.UnknownRole, a KeyError,
+        for a path no declaration of the scope holds."""
+        kind = self._scope.type_of(token_path)
+        if kind == "dimension":
+            return {"value": 0.0, "unit": "px"}
+        if kind == "number":
+            return 0.0
+        return {"$type": kind}
+
+    def font_file(self, family: str) -> Path:
+        raise MissingFont(
+            f"no brand stands behind a library checked alone, so no file measures {family!r}"
+        )
+
+    def picture(self, output: str) -> PictureInfo:
+        raise KeyError(output)
+
+    def family(self, name: str) -> dict[str, str]:
+        return dict(self._scope.families[name])
+
+    def concept(self, name: str) -> str | None:
+        raise UnknownConcept(name, "no piece names a notation where a library is checked alone")
+
+    def library_version(self, library: str) -> str:
+        return str(self._versions[library].version)
 
 
 class _Missing(Exception):
@@ -649,15 +748,8 @@ def recorded_fonts(root: Path, location: str, recorded: Mapping[str, Any]) -> li
 
 def yaml_text(data: Mapping[str, Any], header: str) -> str:
     """A file a command writes whole: `header`, a comment of `# ` lines, then `data` as
-    block YAML, indented as the capability's reference instances are."""
-    yaml = YAML()
-    yaml.indent(mapping=2, sequence=4, offset=2)
-    yaml.width = 4096
-    yaml.representer.ignore_aliases = lambda *_: True
-    stream = io.StringIO()
-    yaml.dump(dict(data), stream)
-    comment = "".join(f"# {line}\n" if line else "#\n" for line in header.splitlines())
-    return f"{comment}\n{stream.getvalue()}"
+    block YAML, set apart by a blank line (`records.text`)."""
+    return records.text(data, header.splitlines())
 
 
 def writable(root: Path, path: Path) -> None:
@@ -667,11 +759,3 @@ def writable(root: Path, path: Path) -> None:
         refuse_links(root, path)
     except FileError as exc:
         raise Refused(str(exc)) from exc
-
-
-def write_file(root: Path, path: Path, data: bytes) -> None:
-    """Write a file a command owns whole, making its folders. Raises Refused where it is
-    reached through a link."""
-    writable(root, path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    write_whole(path, data)
