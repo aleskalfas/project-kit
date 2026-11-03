@@ -14,7 +14,7 @@ The founding record decides what the capability is for and the model every compo
 
 Four facts shape the answer:
 - **A project chooses where its work lies.** One project keeps its visuals beside its documentation, another at the top of its tree. A path fixed in a shipped schema, which is how the core binds a data file by its path (COR-023), cannot follow such a choice.
-- **Not every file is the project's to correct.** The founding record makes every library copy the project's file, and never rewrites a copy that a lock names ([visual-communication:DEC-001-visual-communication-discipline] point 11). A fault inside such a copy is its library owner's to fix. Validation fails a project only for what it can correct in its own files (COR-055 point 1).
+- **Not every file is the project's to correct.** The founding record makes every copy of a library the project's file, and never rewrites a library copy that a lock names ([visual-communication:DEC-001-visual-communication-discipline] point 11). A fault inside such a copy is its library owner's to fix. Validation fails a project only for what it can correct in its own files (COR-055 point 1).
 - **What reads content may grow.** The founding record leaves to a later refinement whether a content file is an artefact, with rules and anchors on its parts ([visual-communication:DEC-001-visual-communication-discipline], Implications). That refinement needs no change of the capability's format only if the format keeps room for it from its first version.
 - **The prototype checked everything at once.** Its check printed every problem and failed on any, whether the piece, a library or the machine caused it ([project-kit#2424](https://github.com/aleskalfas/project-kit/issues/2424)).
 
@@ -95,9 +95,9 @@ Each record of the capability sets the severity of each finding its checks raise
 ### 9. The commands sit in one group, and each says whether it writes
 
 - **One group.** Every command of the capability sits in its one command group (COR-021), which its short alias reaches as `pkit visual`.
-- **Reads or writes.** A command only reads, or writes the project's files. The CLI reference says which, command by command.
+- **Reads or writes.** A command only reads, or writes the project's files. The CLI reference says which, command by command. The release of a version the capability ships also writes the capability's own folder, where the capability is authored (refinement per [visual-communication:DEC-013-shipped-library-releases]).
 - **Named writers.** A command writes only the files a record of the capability names it the writer of, and running it is the consent for them (COR-001). Where a record asks for a person to review a diff, such as a rewrite to a new format, the command writes only on that request.
-- **Never written:** the capability's own folder, and a library copy that a lock names, as the founding record states ([visual-communication:DEC-001-visual-communication-discipline] point 11).
+- **Never written:** the capability's own folder, except by the release of a version it ships, where the capability is authored (refinement per [visual-communication:DEC-013-shipped-library-releases]). A library copy that a lock names is never written either, as the founding record states ([visual-communication:DEC-001-visual-communication-discipline] point 11). Restoring a library copy to its released hash is no rewrite of it (refinement per [visual-communication:DEC-013-shipped-library-releases]).
 
 ## Rationale
 
