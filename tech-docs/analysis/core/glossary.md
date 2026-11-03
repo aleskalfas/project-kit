@@ -290,7 +290,7 @@ TERM-connection:
   noun-forms: [connections]
   other-senses: [network connection]
   status: active
-  definition: "tie, declared in a component's package metadata, to an interface another capability defines: a contribution to its data point, a subscription to its event or a dependency on its process"
+  definition: "tie a component's package metadata declares to another capability's interface: a contribution to a data point, an event subscription or a process dependency"
   pkit:
     friction:
       anchors:
