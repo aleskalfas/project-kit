@@ -3,8 +3,8 @@ and combination of modes (visual-communication DEC-005 points 4, 5, 9 and 10, DE
 point 7).
 
 - **What it draws** is its declaration (`pdf_declaration.py`): every primitive of format
-  1's scene but the path and the image. It draws only what it declares, so the losses the
-  capability reads from the declaration before it runs are the ones it makes.
+  1's scene but the image. It draws only what it declares, so the losses the capability
+  reads from the declaration before it runs are the ones it makes.
 - **Pages.** Each page of the scene, in the scene's order, is a page of the file, as large
   as the page's frame. Each px of the scene is 0.75 pt of the page, CSS's 96 px to the
   inch, as the declaration's `unit` says.
@@ -15,7 +15,9 @@ point 7).
   family a run draws in once in the file, as a CID-keyed font (Type 0, `Identity-H`), its
   program subset to the glyphs the file draws in it, with a map from each glyph back to the
   characters it stands for (`ToUnicode`), so the text can be searched and copied. A CFF
-  font's program is embedded as CFF, a TrueType font's as TrueType. A family's name is
+  font's program is embedded as CFF, a TrueType font's as TrueType. A family whose file
+  holds neither is never embedded: the text drawn in it is left out, in its place, and
+  reported, as a font the renderer cannot draw (DEC-005 point 10). A family's name is
   written as a PDF name (`pdf_name`), so no name a brand gives can end the dictionary that
   holds it, or leave the file malformed.
 - **Text** is drawn as the engine measured it: each of its lines as given, at its own
@@ -570,28 +572,33 @@ class _Document:
             for span in line.get("spans", []):
                 run = runs[span["run"]]
                 pieces += [
-                    (run, font, glyphs) for font, glyphs in self._pieces(element, run, span["text"])
+                    (run, face, font, glyphs)
+                    for face, font, glyphs in self._pieces(element, run, span["text"])
                 ]
-            total = sum(_advance(font, glyphs, run) for run, font, glyphs in pieces)
+            total = sum(_advance(face, glyphs, run) for run, face, _, glyphs in pieces)
             pen = at - {"middle": total / 2, "end": total}.get(anchor, 0.0)
             baseline = y + float(line["baseline"]) + index * step
-            for run, font, glyphs in pieces:
-                size = float(run.get("font-size", 0))
-                paint = self._paint({"id": element["id"], "fill": run.get("fill")}, "fill")
-                parts.append(look.change(self, font, size, paint))
-                parts.append(f"1 0 0 -1 {_point(pen, baseline)} Tm\n")
-                parts.append(_Shown(font, glyphs, size))
-                pen += _advance(font, glyphs, run)
+            for run, face, font, glyphs in pieces:
+                # A piece with no font is left out, and keeps its place in the line.
+                if font is not None:
+                    size = float(run.get("font-size", 0))
+                    paint = self._paint({"id": element["id"], "fill": run.get("fill")}, "fill")
+                    parts.append(look.change(self, font, size, paint))
+                    parts.append(f"1 0 0 -1 {_point(pen, baseline)} Tm\n")
+                    parts.append(_Shown(font, glyphs, size))
+                pen += _advance(face, glyphs, run)
         if not any(isinstance(part, _Shown) for part in parts):
             return []
         return ["q BT\n", *parts, "ET Q\n"]
 
     def _pieces(
         self, element: Mapping[str, Any], run: Mapping[str, Any], text: str
-    ) -> list[tuple[_Font, tuple[Glyph, ...]]]:
+    ) -> list[tuple[_Face, _Font | None, tuple[Glyph, ...]]]:
         """A span of a run in pieces of one font each, each character in the first family
-        of the run's that has it, as the engine measured it, each piece shaped. A family
-        is embedded only where a piece is drawn in it."""
+        of the run's that has it, as the engine measured it, each piece shaped, with the
+        font it is drawn in. A family is embedded only where a piece is drawn in it. One
+        whose file holds neither CFF nor TrueType outlines is never embedded: its pieces
+        have no font, and are a loss (DEC-005 point 10)."""
         families = [(family, self._face(family)) for family in run.get("font-family", [])]
         if not families or not text:
             return []
@@ -602,19 +609,22 @@ class _Document:
                 pieces[-1] = (family, pieces[-1][1] + character)
             else:
                 pieces.append((family, character))
-        shaped = []
+        shaped: list[tuple[_Face, _Font | None, tuple[Glyph, ...]]] = []
         for family, piece in pieces:
-            font = self._font(family)
-            if font.face.outlines is None:
+            face = self._face(family)
+            glyphs = face.shape(piece)
+            if face.outlines is None:
                 self._lose(
                     element["id"],
                     seam.LEFT_OUT,
-                    f"the font file of the family `{family}` holds outlines a PDF does not embed",
+                    f"the font file of the family `{family}` holds neither CFF nor TrueType "
+                    f"outlines, which a PDF embeds",
                 )
+                shaped.append((face, None, glyphs))
                 continue
-            glyphs = font.face.shape(piece)
+            font = self._font(family)
             font.use(glyphs)
-            shaped.append((font, glyphs))
+            shaped.append((face, font, glyphs))
         return shaped
 
     def _face(self, family: str) -> _Face:
@@ -708,9 +718,9 @@ class _Look:
         return " ".join(ops) + "\n" if ops else ""
 
 
-def _advance(font: _Font, glyphs: Sequence[Glyph], run: Mapping[str, Any]) -> float:
+def _advance(face: _Face, glyphs: Sequence[Glyph], run: Mapping[str, Any]) -> float:
     """How far shaped glyphs move the pen at a run's size, in px."""
-    return sum(glyph.advance for glyph in glyphs) * float(run.get("font-size", 0)) / font.face.upem
+    return sum(glyph.advance for glyph in glyphs) * float(run.get("font-size", 0)) / face.upem
 
 
 def _rectangle(x: float, y: float, width: float, height: float, rx: float) -> str:

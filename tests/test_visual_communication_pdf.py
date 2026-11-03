@@ -543,6 +543,53 @@ def test_a_run_painted_with_a_role_the_brand_gives_no_colour_is_a_loss_and_not_s
     assert file.lines(page) == ["ab"]
 
 
+def no_outlines(path: Path) -> Path:
+    """The test font with its CFF table taken out, so it holds no outlines a PDF embeds."""
+    font = TTFont(str(FONT))
+    del font["CFF "]
+    font.save(str(path))
+    return path
+
+
+def test_text_in_a_family_with_no_outlines_is_a_loss_left_out_in_its_place(
+    tmp_path: Path,
+) -> None:
+    def text(first: str) -> dict[str, Any]:
+        return element(
+            "text", "figure/bare", x=0, y=0, width=200, height=20, text="Hi there",
+            paragraphs=[
+                [run("Hi", fill="ink", **{"font-family": [first]}), run(" there", fill="ink")]
+            ],
+            lines=[line(0, 15, (0, "Hi", 14), (1, " there", 40))],
+            **{"line-height": 20, "measured-height": 20},
+        )  # fmt: skip
+
+    bare = no_outlines(tmp_path / "Bare.otf")
+    drawn = draw(scene(text("Bare")), files={"Bare": bare})
+    why = "the font file of the family `Bare` holds neither CFF nor TrueType outlines"
+    assert [loss.as_dict() for loss in drawn.losses] == [
+        {
+            "plugin": "pdf",
+            "what": "figure/bare",
+            "did": "left-out",
+            "why": f"{why}, which a PDF embeds",
+        }
+    ]
+    file, page = page_of(drawn)
+    # The family is not embedded: the file holds one font, the run's that is drawn.
+    [font] = file.fonts(page).values()
+    assert re.findall(r"/BaseFont /\w{6}\+(\S+)", file.value(font)) == ["Source#20Sans#20Pro"]
+    fonts = [value for value, _ in file.objects.values() if "/Subtype /Type0 " in value]
+    assert len(fonts) == 1
+    assert b"/FontFile2" not in drawn.document
+    assert file.lines(page) == [" there"]
+    # The run drawn stays where the engine placed it, after the text left out.
+    placed = r"1 0 0 -1 [-\d.]+ [-\d.]+ Tm"
+    whole, whole_page = page_of(draw(scene(text("Source Sans Pro"))))
+    [_, after] = re.findall(placed, whole.content(whole_page))
+    assert re.findall(placed, file.content(page)) == [after]
+
+
 # --- the declaration ----------------------------------------------------------------------------
 
 

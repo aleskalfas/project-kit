@@ -144,7 +144,7 @@ The `pdf` renderer draws a scene as one PDF file for each language and each comb
 - **Shapes and lines.** A box's stroke lies inside its frame, as in the SVG renderer. Rounded corners and ellipses are cubic Bézier curves. A line, or a tie's connector through each of its points, is stroked with SVG's miter limit. An arrowhead is the SVG renderer's triangle: five strokes long, its tip at the line's end, in the line's stroke.
 - **Colours.** A colour stays a role in the scene. The renderer takes its value from the brand's resolved values in the combination it draws, as DeviceRGB. A translucent colour takes an opacity of its own.
 - **Text.** Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. Each run is drawn in its own font, size and paint. The renderer shapes each span again with HarfBuzz from the committed font file, as the engine shaped it (DEC-005 point 4). It places each glyph at the advance shaped, so kerning is kept.
-- **Fonts.** Each family a run draws in is embedded once in the file, from the brand's committed font file, never from the machine's fonts. It is cut down to the glyphs the file draws in it. Each is a CID-keyed font with a map from each glyph back to its characters, so the text can be searched and copied. A CFF font is embedded as CFF, and a TrueType font as TrueType.
+- **Fonts.** Each family a run draws in is embedded once in the file, from the brand's committed font file, never from the machine's fonts. It is cut down to the glyphs the file draws in it. Each is a CID-keyed font with a map from each glyph back to its characters, so the text can be searched and copied. A CFF font is embedded as CFF, and a TrueType font as TrueType. A font of other outlines is not embedded ([What the PDF renderer loses](#what-the-pdf-renderer-loses)).
 - **A family's name** is written as a PDF name, in the font's dictionaries. Each byte of its UTF-8 that is no regular character, and each `#`, is written as `#` and two hexadecimal digits. A name cannot hold the byte 0, so U+0000 is written as U+FFFD. So no name a brand gives can end the dictionary that holds it.
 - **The file** names its language, `/Lang`, and the renderer with its version, `/Producer`.
 - **The same bytes.** Lengths are written to 1/100 px, colours to 1/10 000, and objects in one order. The streams are not compressed, so no compression library moves a byte. The file holds no date, and its `/ID` is taken from its own bytes. So the same scene and values give the same file on every machine.
@@ -164,7 +164,7 @@ Before it draws, the capability compares each scene with the renderer's declarat
 While it draws, the renderer reports three losses of its own:
 
 - **a fill or a stroke** whose role has no colour under the brand in the combination drawn, `left-out`. It is not drawn, but a run's text is drawn unpainted, so it can still be searched.
-- **a font file** whose outlines are neither CFF nor TrueType, such as CFF2, `left-out`. The text drawn in it is left out.
+- **a font file** whose outlines are neither CFF nor TrueType, such as CFF2, `left-out`. Its family is not embedded, and the text drawn in it is left out, keeping its place in the line. The renderer never draws that text in another font (DEC-005 point 10).
 - **a line** that holds neither its ends nor its points, `refused`, and left out of the file.
 
 ## Exports
