@@ -72,14 +72,14 @@ Configuration and data written by hand are read by code that cannot ask what you
 
 ### What schemas do instead
 
-Schemas answer these problems with the four claims below. The first fence proves the first three, for your configuration, and each later claim links the task whose fence proves the rest.
+Schemas answer these problems with the four claims below. The first block of commands below proves the first three, for your configuration. The third and fourth claims link the tasks whose blocks prove the rest.
 
 - **`pkit config set` refuses a value your configuration's schema refuses, and writes nothing.**
 - **When `pkit config set` creates your configuration file, it writes the line the YAML Language Server reads to find the file's schema.**
 - **`pkit validate` fails on a misspelt key in your configuration or rule set, naming the key you meant** ([Write a rule set of your own](#write-a-rule-set-of-your-own)).
 - **`pkit schemas validate` checks your capability's own data, and `pkit data validate` checks your users' `.yaml` files, each against your capability's schema** ([Give your capability's data a schema](#give-your-capabilitys-data-a-schema)).
 
-Each fence on this page starts from a fresh project where `pkit init` has run.
+Each block of commands on this page, with what each command prints, starts from a fresh project where `pkit init` has run.
 
 Below, you set the friction mode to a value its schema refuses. Then you set the project's name, and add a misspelt key by hand:
 
@@ -104,26 +104,28 @@ $ pkit validate >/dev/null; echo $?
 What the output proves, claim by claim:
 
 - **Refused, nothing written.** The command judged the whole result against the configuration's schema before it asked anything, and wrote no file ([the CLI reference, "config set"](../../.pkit/cli/README.md#config-set-key-value---yes)).
-- **The editor's line.** The first line of the file it created names the schema. An editor that runs [the YAML Language Server](https://github.com/redhat-developer/yaml-language-server), such as VS Code with Red Hat's YAML extension, reads a line of that form. It then checks the file against the schema as you type ([the reference, "Tooling expectations"](../../.pkit/schemas/README.md#tooling-expectations)).
+- **The editor's line.** The first line of the file it created names the schema. An editor that runs [the YAML Language Server](https://github.com/redhat-developer/yaml-language-server) reads a line of that form. It then checks the file against the schema as you type ([the reference, "Tooling expectations"](../../.pkit/schemas/README.md#tooling-expectations)).
 - **Failed, and named.** Validation fails on the unknown key, exits 1, and names the nearest known key. The check of each backbone file schema gives the same message, your rule sets' included ([the reference's page on backbone files](../../.pkit/schemas/backbone-files.md#what-holds-for-every-backbone-file-schema)).
 
 ### Compared with checks in your scripts' code
 
-Your configuration and your rule sets always have their schemas, so this comparison is for the author of a capability. The alternative is to keep your rules in your scripts, and check your users' files in code. An example is a typed model that refuses unknown keys.
+Your configuration and your rule sets always have their schemas, so this comparison is for the author of a capability. A capability keeps each of its schemas as a pair: a YAML file of data, and its companion. The companion is the JSON Schema file that says what the data may hold.
 
-That keeps one language and no second file, and can check any rule across fields. **A schema pair adds a check of your users' files that runs none of your scripts, naming a misspelt key, as [the last task](#give-your-capabilitys-data-a-schema) proves:**
+The alternative is to keep your rules in your scripts, and check your users' files in code. An example is a typed model that refuses unknown keys.
+
+The alternative keeps one language and no second file, and can check any rule across fields. **A schema pair adds a check of your users' files that runs none of your scripts, naming a misspelt key, as [the last task](#give-your-capabilitys-data-a-schema) proves:**
 
 | What you need | Checks in your scripts' code | A schema pair |
 | --- | --- | --- |
 | A user's file checked without running your scripts | ❌ Checked only when a script reads it | ✅ `pkit data validate`, and `pkit validate`'s `data` member |
-| A misspelt key named | ❌ Only where your code looks for one | ✅ Validation names the key you meant |
+| A misspelt key named, with the key you meant | ❌ Refused at best, with no key suggested | ✅ Validation names the key you meant |
 | A rule changed without changing code | ❌ Each rule is code | ✅ The rule is data, and `pkit schemas validate` checks it |
 | A check in the editor | ❌ None | ✅ Where a file names its schema in the editor's line |
 | One language for your checks | ✅ Your code's | ❌ JSON Schema beside your code |
 | A rule across several fields | ✅ Any logic you write | ❌ Only what JSON Schema expresses |
 | Files to keep | ✅ None beside your code | ❌ A companion beside each schema's data |
 | What each user's file carries | ✅ Nothing extra | ❌ `schema_version`, and `pkit_schema:` or a path a glob matches |
-| Which files | ✅ Any format | ❌ `.yaml` files only |
+| Which files are checked | ✅ Any file your code reads | ❌ `.yaml` files, in a folder or in `pkit validate`, and another file only when named |
 
 ### When you do not need one
 
@@ -131,12 +133,12 @@ As the author of a capability, you do not need a schema of your own in these cas
 
 - **The content is a principle, a reason or a judgement,** such as when a rule applies. It belongs in prose, such as a decision record ([the decision records' guide](../decisions/README.md)).
 - **No code reads it.** A schema is worth what a check or a script makes of it. A file only people read gains a second file to keep.
-- **Your users' files are not `.yaml`,** such as Markdown front matter, JSON or `.yml`. No `pkit` check reads them, so check them in your code.
-- **One script reads it, and you want to change the two together.** Keep the check in your code, as the comparison above credits.
+- **Your users' files are not `.yaml`,** such as `.yml`, JSON or Markdown front matter. `pkit validate` and a folder's walk read `.yaml` files alone, and Markdown does not read as YAML. Check them in your code.
+- **One script reads it, and you want to change the two together.** Keep the check in your code, which can hold any rule you write.
 
 ## Which check judges a file
 
-Each file the backbone checks finds its schema by where it lies, and one member of `pkit validate` checks it against that schema. A data file your capability's users write is different: it names its schema, or a glob in the schema names it.
+`pkit validate` runs a set of checks, each a member of it, such as `configuration`. Each file the backbone checks finds its schema by where it lies, and one member checks it against that schema. A data file your capability's users write is different: it names its schema, or a glob in the schema names it.
 
 ```mermaid
 flowchart TD
@@ -169,7 +171,7 @@ Your project's backbone configuration is one file, `.pkit/project/config.yaml`, 
 - **A key that holds a list,** such as your places, `friction.places`: write it in the file by hand. `pkit config set` refuses it, and names the file.
 - **The check:** `pkit validate` reads the whole file in its `configuration` member. It fails on an unknown key or a value the schema refuses, and warns of a place that matches nothing.
 - **No file:** without the file, every key takes its default, and validation passes.
-- **Your internal root and your rule sets:** your own rule sets lie under the internal documentation root, `docs.internal` ([the next task](#write-a-rule-set-of-your-own)). Set it with `pkit config set`, which keeps the sets in its old folder found. Edited by hand, it leaves them behind, and validation fails on each ([the reference, "When the internal root changes"](../../.pkit/schemas/README.md#when-the-internal-root-changes)).
+- **Your internal root and your rule sets:** your own rule sets lie under the internal documentation root, `docs.internal` ([the next task](#write-a-rule-set-of-your-own)). Set it with `pkit config set`, which keeps the sets in the root's old folder found. A root edited by hand leaves them behind, and validation fails on each ([the reference, "When the internal root changes"](../../.pkit/schemas/README.md#when-the-internal-root-changes)).
 
 Below, you set your default branch, and declare your documents' folder as a place. Validation warns until the folder holds a file:
 
@@ -196,16 +198,18 @@ $ pkit validate | grep "config.yaml: "
 
 ## Write a rule set of your own
 
-A rule set is a Markdown file of rules, each with an id, that binds on the files its scope selects. You write your own in `rule-sets/` under your internal documentation root, `docs/rule-sets/` unless you set `docs.internal` ([the first task](#declare-your-backbone-configuration)). This task covers the file's schema. What a rule set is, and how its rules bind, are in [the reference, "Rule-set files"](../../.pkit/schemas/README.md#rule-set-files).
+A rule set is a Markdown file of rules, each with an id. Its rules bind on the documents its scope selects, among those your places hold ([the first task](#declare-your-backbone-configuration)).
 
-- **Where it lies decides it.** Each Markdown file in that folder but its `README.md` is a rule set, and nothing in the file binds it. A sync never reads or writes it.
+You write your own in `rule-sets/` under your internal documentation root, `docs/rule-sets/` unless you set `docs.internal`. This task covers the file's schema. What a rule set is, and how its rules bind, are in [the reference, "Rule-set files"](../../.pkit/schemas/README.md#rule-set-files).
+
+- **Where it lies decides it.** Each Markdown file in that folder but its `README.md` is a rule set, and nothing in the file makes it one. A sync never reads or writes it.
 - **Its front matter** holds the set's name, its own version, its scope and each rule's fields, such as its origin. The reference's page on backbone files gives every key ([its "Rule-set files"](../../.pkit/schemas/backbone-files.md#rule-set-files)).
 - **Its body** holds one section for each rule, headed by the rule's id and title, such as `## RS-STYLE-001 — Answer first`.
 - **A shipped rule set extended:** name it in `inherits`, pinned to its major, such as `living-docs:LDOC@1`, and never edit it.
-- **A new rule** takes no status, so it is proposed, and binds nothing. A person accepts it in the change that adds it ([the reference, "Statuses"](../../.pkit/schemas/README.md#statuses)).
+- **A new rule** takes no status, so it is proposed, and binds nothing. A person accepts it in the change that adds it, and the rule then reads `status: accepted`, with an origin ([the reference, "Statuses"](../../.pkit/schemas/README.md#statuses)).
 - **The check:** `pkit validate` reads every rule set in its `rule-sets` member. It fails on an unknown key, naming the nearest known one. It also fails on an accepted rule with no origin, and on a rule with no section.
 
-Below, you write a rule set with `scope` misspelt. Validation fails and names the fix, and passes once the fix is made:
+Below, you write a rule set with `scope` misspelt. Validation fails and names the fix, and passes once the fix is made. Its count holds the backbone's own set beside yours:
 
 ```console
 $ mkdir -p docs/rule-sets
@@ -230,7 +234,7 @@ Where your capability's users write files of their own, the same schema checks t
 - **Declare the fields** in the companion's `properties`. Declare `pkit_schema` there too, where your users' files carry that field, and `binds_to`, where your schema's YAML lists globs. The stamped companion refuses any key it does not declare.
 - **Check the pair:** `pkit schemas validate` checks every pair against its companion, and every reference between them ([the CLI reference, "schemas validate"](../../.pkit/cli/README.md#schemas-validate-path)).
 - **Bind your users' files:** a user's file names your schema in its `pkit_schema:` field ([the reference's page on binding](../../.pkit/schemas/data-binding.md#1-the-pkit_schema-field-recommended-authoritative)). Or your schema's YAML lists globs of the files it judges, under `binds_to:`. A glob binds only once the project has installed or registered the capability ([the same page](../../.pkit/schemas/data-binding.md#2-per-schema-binds_to-fallback)).
-- **What each user's file carries:** `schema_version`, at your schema's version. A file at another version is refused, with a hint to migrate it ([the same page](../../.pkit/schemas/data-binding.md#schema-version-cross-check)). The editor's line is recommended too, and you write it, since `pkit new schema` writes none for your users.
+- **What each user's file carries:** `schema_version`, at your schema's version. A file at another version is refused, with a hint to migrate it ([the same page](../../.pkit/schemas/data-binding.md#schema-version-cross-check)). The editor's line is recommended too. Whoever writes the file writes it: the user, or a command your capability ships.
 - **Check their files:** `pkit data validate <path>` checks each `.yaml` file under the path against its bound schema ([the same page](../../.pkit/schemas/data-binding.md#pkit-data-validate-path)).
 
 Below, a trip-planning capability gets a schema for a trip. A wrong type in the capability's own data fails `pkit schemas validate`. Then a user's trip file, with one key misspelt, fails `pkit data validate`:
