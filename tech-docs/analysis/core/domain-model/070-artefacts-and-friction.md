@@ -919,7 +919,7 @@ A query command is a script a [component](../glossary.md#term-component--compone
 
 - Its component registers it in its [package metadata](../glossary.md#term-package-metadata--package-metadata) (ADR-057 point 3).
 - The backbone runs it within a time bound of thirty seconds, and stops the whole of what it started past that bound (ADR-057 point 3).
-- An abnormal exit, a timeout or a result the backbone cannot read gives no result, which is never read as an empty one. Each caller then applies its own record's [rule](../glossary.md#term-rule--rule) (ADR-057 point 3).
+- An abnormal exit, a timeout or a result the backbone cannot read gives no result, which is never read as an empty one. Each caller then does what its own [decision record](../glossary.md#term-decision-record--decision-record) decides for that case (ADR-057 point 3).
 
 **States:** None.
 

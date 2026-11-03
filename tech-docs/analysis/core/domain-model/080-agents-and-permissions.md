@@ -227,7 +227,7 @@ A placeholder is a marker such as `<code-paths>` in an agent definition's source
 
 Defined in [TERM-permission-model](../glossary.md#term-permission-model--permission-model).
 
-**Why:** Each [harness](../glossary.md#term-harness--harness) gates what agents may do in its own settings and words, so nobody sees in one file what an agent may do ([COR-028](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). Nor can anyone tell whether a call wrongly blocked comes from a wrong [rule](../glossary.md#term-rule--rule), the wrong layer or a harness that cannot enforce it (COR-028).
+**Why:** Each [harness](../glossary.md#term-harness--harness) gates what agents may do in its own settings and words, so nobody sees in one file what an agent may do ([COR-028](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). Nor can anyone tell whether a call wrongly blocked comes from a wrong [grant](../glossary.md#term-grant--grant), the wrong layer or a harness that cannot enforce it (COR-028).
 
 The permission model states, in the [methodology](../glossary.md#term-methodology--methodology)'s own words, what each [grant subject](../glossary.md#term-grant-subject--grant-subject) may do. It holds the catalog of privileges, the grants and the [guardrails](../glossary.md#term-guardrail--guardrail). Each [adapter](../glossary.md#term-adapter--adapter) realises it in its harness, and reads back what the harness holds, so the two can be compared.
 
