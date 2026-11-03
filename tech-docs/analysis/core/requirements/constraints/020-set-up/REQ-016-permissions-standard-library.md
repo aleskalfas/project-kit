@@ -32,4 +32,4 @@ pkit:
 
 [ADR-014](../../../../../architecture/decisions/ADR-014-macos-sandbox-platform-stance.md) gives the example of `claude-code` on macOS. There `uv` cannot run inside the operating system's [sandbox](../../../glossary.md#term-sandbox--sandbox), while the operating system's `python3` exists in every such sandbox. So the hook runs under the operating system's `python3`, and the code reads YAML through a parser of its own where `ruamel.yaml` is missing.
 
-#1765 may refine ADR-014 points 1 to 3, since the [system](../../../glossary.md#term-system--system) keeps the operating system's sandbox off on macOS.
+#1765 may refine ADR-014 points 1 to 3, since the [system](../../../glossary.md#term-system--system) keeps the operating system's sandbox off on macOS entirely.
