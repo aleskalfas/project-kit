@@ -1,7 +1,7 @@
 ---
 id: DEC-011
 title: A tie names its two ends in fields its pattern declares, each by the keys and ids that lead to its item
-status: proposed
+status: accepted
 date: 2026-11-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
