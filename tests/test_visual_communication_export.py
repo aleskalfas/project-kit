@@ -1,7 +1,7 @@
 """`pkit visual export <piece>` (visual-communication DEC-006 point 7): numbered exports in
 the clone's local folder, never overwriting another; their record, `exports.yaml`; no stale
-or missing produced picture, unless the person names a stale one; and a piece of several
-pages, one file for each page under one number."""
+or missing produced picture, unless the person names a stale one; a piece of several
+pages, one file for each page under one number; and what a write that fails leaves."""
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ from tests.test_visual_communication_pipeline import (
     write_picture,
 )
 from tests.visual_communication_project import CONFIG, SCHEMAS, bound, importable, write, yaml_text
+from tests.visual_communication_writes import FULL, failing
 
 script, exports, svg, seam, framing, files, reading, fingerprint, pl = load(
     "visual-communication",
@@ -257,7 +258,7 @@ def test_a_refusal_exits_1_and_writes_nothing(
     assert not (root / RECORD).exists()
 
 
-def test_a_file_of_the_next_number_left_in_the_folder_is_never_overwritten(
+def test_a_file_the_record_does_not_name_is_never_overwritten_and_refuses_nothing(
     tmp_path: Path,
 ) -> None:
     root = ready(tmp_path)
@@ -265,12 +266,14 @@ def test_a_file_of_the_next_number_left_in_the_folder_is_never_overwritten(
     left.parent.mkdir(parents=True)
     left.write_text("kept\n", encoding="utf-8")
     shown = run(root, PIECE)
-    assert shown.returncode == 1
-    assert "holds flow.v1.en.default.svg already" in shown.stderr
-    assert shown.stdout == ""
+    assert shown.returncode == 0, shown.stderr
     assert left.read_text(encoding="utf-8") == "kept\n"
-    assert not (root / RECORD).exists()
-    assert not (root / CONFIG).exists()
+    assert exported(root) == [
+        "flow.v1.en.default.svg",
+        "flow.v2.en.colour-scheme.dark.svg",
+        "flow.v2.en.default.svg",
+    ]
+    assert [entry["version"] for entry in reading.read_yaml(root / RECORD)["versions"]] == [2]
 
 
 def test_a_record_that_cannot_be_read_stops_the_next_export(tmp_path: Path) -> None:
@@ -438,3 +441,56 @@ def test_every_name_format_1_accepted_still_holds_beside_names_with_a_page_numbe
 )
 def test_a_page_number_counts_from_1_and_comes_once(name: str) -> None:
     assert files.shape_problems(record_naming([name]), "exports") != []
+
+
+# --- what a failed export leaves ----------------------------------------------------------------
+
+
+@pytest.mark.parametrize("file", ["flow.v2.en.colour-scheme.dark.svg", "exports.yaml"])
+def test_a_write_that_fails_removes_the_files_of_the_run_and_keeps_the_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, file: str
+) -> None:
+    root = ready(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    record = (root / RECORD).read_bytes()
+    with monkeypatch.context() as patch:
+        failing(patch, write={file})
+        shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stdout == ""
+    folder = PIECE_FOLDER if file == "exports.yaml" else FOLDER
+    assert shown.stderr == f"error: {folder}/{file} could not be written: {FULL}\n"
+    assert exported(root) == ["flow.v1.en.colour-scheme.dark.svg", "flow.v1.en.default.svg"]
+    assert (root / RECORD).read_bytes() == record
+
+
+def test_a_failed_first_export_records_no_location(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = ready(tmp_path)
+    with monkeypatch.context() as patch:
+        failing(patch, write={"exports.yaml"})
+        assert run(root, PIECE).returncode == 1
+    assert not (root / CONFIG).exists()
+    assert not (root / RECORD).exists()
+    assert not (root / FOLDER).exists()
+
+
+def test_a_file_a_failed_run_could_not_remove_is_named_and_refuses_no_later_export(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = ready(tmp_path)
+    with monkeypatch.context() as patch:
+        failing(patch, write={"exports.yaml"}, remove={"flow.v1.en.default.svg"})
+        shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        f"error: {RECORD} could not be written: {FULL}; these could not be put back as they "
+        f"were before the run: {FOLDER}/flow.v1.en.default.svg\n"
+    )
+    assert exported(root) == ["flow.v1.en.default.svg"]
+    assert not (root / RECORD).exists()
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert shown.stdout.splitlines()[-1] == f"export: version 2 recorded in {RECORD}"
+    assert [entry["version"] for entry in reading.read_yaml(root / RECORD)["versions"]] == [2]

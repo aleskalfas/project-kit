@@ -29,16 +29,16 @@ capability ships, and a piece's lock (DEC-001 point 5, DEC-002 point 3, DEC-003 
   installed capability reads that fit together, within the lines the lock names. It tries
   the newest of each library first, and where two libraries build on two majors of one
   library, it backs off library by library; it refuses, naming the conflict, when none
-  fits. A library the lock does not name yet takes its newest version of any major. A
-  pinned draft's lock never moves: it is checked, never changed.
+  fits. The search stops after `SEARCH_STEPS` steps, each a version tried for one
+  library, and refuses as when none fits, naming the libraries it was choosing. A library
+  the lock does not name yet takes its newest version of any major. A pinned draft's lock
+  never moves: it is checked, never changed.
 """
 
 from __future__ import annotations
 
 import os
 import re
-import shutil
-import tempfile
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from functools import cached_property
@@ -48,12 +48,12 @@ from typing import Any
 from _lib import fingerprint, notations, records
 from _lib.files import (
     FORMAT,
+    Change,
     FileError,
     binding_problem,
     read_bound,
     refuse_links,
     schema_of,
-    write_whole,
 )
 from _lib.findings import FAILS, Finding
 from _lib.location import files as listed_files
@@ -82,6 +82,11 @@ LIST_HEADER = (
 
 #: The kinds of library format 1 reads.
 KINDS = ("components", "brand", "notation")
+
+#: The most versions a search for a draft's lock tries, one library's version a step,
+#: before it stops and refuses: far more than a project of a few versions of each library
+#: takes, and few enough that a render never waits on it.
+SEARCH_STEPS = 10_000
 
 _SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 
@@ -530,30 +535,15 @@ def plan_copy(root: Path, location: str, name: str) -> ShippedCopy:
     )
 
 
-def copy_shipped(planned: ShippedCopy) -> None:
-    """Write a planned copy: the version's files into a folder beside its own, moved into
-    its place whole, then the list. Where a write fails, what was copied is removed and the
-    error raised."""
-    planned.folder.parent.mkdir(parents=True, exist_ok=True)
-    staging = Path(
-        tempfile.mkdtemp(
-            dir=planned.folder.parent, prefix=f".{planned.folder.name}.", suffix=".tmp"
-        )
-    )
-    try:
-        for rel in planned.files:
-            target = staging / rel
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(planned.source / rel, target)
-        os.rename(staging, planned.folder)
-    except BaseException:
-        shutil.rmtree(staging, ignore_errors=True)
-        raise
-    try:
-        write_whole(planned.list_file, planned.list_text.encode("utf-8"))
-    except BaseException:
-        shutil.rmtree(planned.folder, ignore_errors=True)
-        raise
+def copy_shipped(planned: ShippedCopy, change: Change) -> None:
+    """Write a planned copy, as the next steps of `change`, and take it: the version's
+    files copied into a folder beside its own and moved into its place whole, then the
+    list. Raises WriteFailed where a write fails, every file then as it was before the run,
+    the copy removed, or named."""
+    sources = {rel: planned.source / rel for rel in planned.files}
+    change.add_folder(planned.folder, sources)
+    change.write(planned.list_file, planned.list_text.encode("utf-8"))
+    change.commit()
 
 
 def _files_of(folder: Path) -> tuple[str, ...]:
@@ -646,24 +636,46 @@ def move_lock(
     A draft's lock moves to the newest combination that fits within the lines `lock`
     names; a first lock, or a library the lock does not name yet, takes the newest version
     of any major. A pinned draft's lock is returned as it is once it is checked. Raises
-    LockRefused, naming the conflict or what the project lacks."""
+    LockRefused, naming the conflict or what the project lacks, or the libraries the
+    search was choosing where it stops at its bound (`SEARCH_STEPS`)."""
     roots = sorted(set(roots))
     if pinned:
         return _checked_pinned(held, roots, lock)
     search = _Search(held, lock or {})
-    found = search.run(roots)
+    try:
+        found = search.run(roots)
+    except _Stopped as stopped:
+        named = ", ".join(f"`{name}`" for name in stopped.choosing)
+        raise LockRefused(
+            f"the search for versions that fit together stopped at its bound, "
+            f"{SEARCH_STEPS} versions tried, choosing among those of {named}: name the "
+            f"line of each in the lock, or take the versions no piece needs out of the "
+            f"library folder"
+        ) from None
     if found is None:
         raise LockRefused(search.conflict or "no versions the project holds fit together")
     return {name: str(found[name].version) for name in sorted(found)}
 
 
+class _Stopped(Exception):
+    """A search for a lock that reached its bound; `choosing` names the libraries it had
+    reached, in name order."""
+
+    def __init__(self, choosing: Sequence[str]) -> None:
+        super().__init__(", ".join(choosing))
+        self.choosing = tuple(choosing)
+
+
 class _Search:
-    """The newest combination that fits, backing off library by library."""
+    """The newest combination that fits, backing off library by library, within
+    `SEARCH_STEPS` versions tried."""
 
     def __init__(self, held: Held, lock: Mapping[str, str]) -> None:
         self.held = held
         self.lock = lock
         self.conflict: str | None = None
+        self.steps = 0
+        self.reached: set[str] = set()
 
     def _note(self, conflict: str) -> None:
         if self.conflict is None:
@@ -701,11 +713,13 @@ class _Search:
         return readable
 
     def run(self, roots: list[str]) -> dict[str, Library] | None:
+        """The combination found, or None where none fits. Raises _Stopped at the bound."""
         return self._step({}, list(roots))
 
     def _step(self, chosen: dict[str, Library], pending: list[str]) -> dict[str, Library] | None:
         if not pending:
             return chosen
+        self.reached.update(pending)
         name, rest = pending[0], pending[1:]
         wanted = {
             (library.label, need.major)
@@ -731,6 +745,9 @@ class _Search:
                 f"that fits"
             )
         for library in fitting:
+            self.steps += 1
+            if self.steps > SEARCH_STEPS:
+                raise _Stopped(sorted(self.reached))
             clash = next(
                 (
                     need

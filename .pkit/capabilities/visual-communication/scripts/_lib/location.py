@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from _lib import config_text
-from _lib.files import is_of_format
+from _lib.files import Change, is_of_format
 from _lib.reading import ReadError, read_yaml
 from _lib.root import CONFIG
 
@@ -214,17 +214,25 @@ def for_writing(root: Path, given: str | None = None, cwd: Path | None = None) -
     )
 
 
-def record(root: Path, location: str) -> str:
-    """Record `location` in the configuration, every other byte kept, and say what was
-    recorded and where to change it (COR-049 point 5). Raises LocationRefused."""
+def record(change: Change, where: ForWriting) -> str | None:
+    """Add to `change`, as its next step, the write that records the location `where`
+    names in the configuration, every other byte kept, where the command records it; and
+    return what the command says once the change is taken, naming where to change it
+    (COR-049 point 5), or None. Writes nothing, so a command learns before its first write
+    that it cannot record the location. Raises LocationRefused."""
+    if not where.record:
+        return None
     try:
-        config_text.record(root, KEY, location)
+        text = config_text.recording(change.root, KEY, where.path)
     except config_text.ConfigRefused as exc:
         raise LocationRefused(str(exc)) from exc
-    origin = " (the default, at the repository's top)" if location == DEFAULT else ""
+    if text is None:
+        return None
+    change.write(change.root / CONFIG, text.encode("utf-8"))
+    origin = " (the default, at the repository's top)" if where.path == DEFAULT else ""
     return (
-        f"recorded the location `{location}`{origin} in {CONFIG}; to move the work, move the "
-        f"folder and change the `{KEY}:` line there"
+        f"recorded the location `{where.path}`{origin} in {CONFIG}; to move the work, move "
+        f"the folder and change the `{KEY}:` line there"
     )
 
 

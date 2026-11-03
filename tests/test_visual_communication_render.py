@@ -27,6 +27,7 @@ from tests.test_visual_communication_pipeline import (
     write_picture,
 )
 from tests.visual_communication_project import CONFIG, importable, write_list
+from tests.visual_communication_writes import FULL, failing
 
 script, svg, seam, framing, files, reading, pl = load(
     "visual-communication",
@@ -360,3 +361,79 @@ def test_a_component_whose_file_cannot_be_read_is_reported_at_that_file(tmp_path
     )
     assert "unknown-component" not in [e["code"] for e in kept]
     assert str(tmp_path) not in entry["message"]
+
+
+# --- what a failed render leaves ----------------------------------------------------------------
+
+
+def state(root: Path) -> dict[str, bytes | None]:
+    """The files a render writes, with their bytes, or None where one is absent."""
+    paths = [CONFIG, f"{PIECE_FOLDER}/piece.yaml", FINDINGS]
+    found: dict[str, bytes | None] = {
+        rel: (root / rel).read_bytes() if (root / rel).exists() else None for rel in paths
+    }
+    folder = root / PREVIEWS
+    for path in sorted(folder.iterdir()) if folder.is_dir() else []:
+        found[path.relative_to(root).as_posix()] = path.read_bytes()
+    return found
+
+
+def rendered_once(tmp_path: Path) -> Path:
+    """The piece rendered once, its location then unrecorded again, a newer `tests` held,
+    so the next render moves its lock, and its first step's text changed, so the next
+    render draws other previews."""
+    root = drawing_project(tmp_path)
+    write_picture(root, framing)
+    assert run(root, PIECE).returncode == 0
+    (root / CONFIG).unlink()
+    newer_tests(root)
+    write_content(root, head="Plan the work again.")
+    return root
+
+
+def test_a_key_that_refuses_once_the_lock_is_chosen_leaves_every_file_as_it_was(
+    tmp_path: Path,
+) -> None:
+    root = rendered_once(tmp_path)
+    (root / PIECE_FOLDER / "notes.yaml").write_text(
+        "pkit_schema: visual-communication:content\nschema_version: 2\n", encoding="utf-8"
+    )
+    before = state(root)
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stdout == ""
+    assert shown.stderr.startswith("error: the findings record's key cannot be taken: ")
+    assert "notes.yaml is at format 2" in shown.stderr
+    assert state(root) == before
+
+
+@pytest.mark.parametrize("file", ["flow.en.colour-scheme.dark.svg", "findings.yaml"])
+def test_a_write_that_fails_leaves_the_previews_and_every_record_as_they_were(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, file: str
+) -> None:
+    root = rendered_once(tmp_path)
+    before = state(root)
+    with monkeypatch.context() as patch:
+        failing(patch, write={file})
+        shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stdout == ""
+    folder = PIECE_FOLDER if file == "findings.yaml" else PREVIEWS
+    assert shown.stderr == f"error: {folder}/{file} could not be written: {FULL}\n"
+    assert state(root) == before
+    assert run(root, PIECE).returncode == 0
+    assert state(root) != before
+
+
+def test_an_old_preview_is_removed_only_once_the_new_ones_are_written(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = rendered_once(tmp_path)
+    path = root / PIECE_FOLDER / "piece.yaml"
+    path.write_text(path.read_text(encoding="utf-8").replace("    - dark\n", ""), encoding="utf-8")
+    before = state(root)
+    failing(monkeypatch, write={"flow.en.default.svg"})
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert sorted(previews(root)) == ["flow.en.colour-scheme.dark.svg", "flow.en.default.svg"]
+    assert state(root) == before

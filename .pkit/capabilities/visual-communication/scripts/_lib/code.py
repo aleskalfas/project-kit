@@ -20,8 +20,11 @@
   unless the declaration accepts it. The writer gets the rest. The command writes the
   code, then its record: the fingerprint, form 1, over the declaration file, each value
   written in each combination, and the writer's version (`fingerprint.code_record_inputs`);
-  the hash of the code; and what is only recorded. Where the record verifies and the code
-  is what it would write, nothing is written.
+  the hash of the code; and what is only recorded. It writes the two as one change: where
+  a write fails, both are as they were before the run, or each file the run could not put
+  back is named, so the check never reads new code beside its old record as code edited
+  by hand. Where the record verifies and the code is what it would write, nothing is
+  written.
 - **The findings** (DEC-006 points 4 and 8): a record missing beside the code, or naming
   code that is missing, fails; code stale by a value or by its declaration fails, and so
   does code that differs from what was written; code stale only by its writer's version
@@ -46,12 +49,12 @@ from _lib import fingerprint, libraries, records, tokens, values
 from _lib import location as loc
 from _lib.files import (
     FORMAT,
+    Change,
     FileError,
     binding_problem,
     read_bound,
     schema_of,
     shape_problems,
-    write_whole,
 )
 from _lib.findings import ATTENTION, FACT, FAILS, Finding
 from _lib.libraries import FOUNDATIONS
@@ -325,8 +328,10 @@ def plan(root: Path, location: str, declaration: Declaration) -> Plan:
 
 
 def write(root: Path, location: str, name: str, *, now: datetime | None = None) -> Written:
-    """Write the code the declaration `name` asks for, and its record; or nothing, where
-    the record verifies and the code is what the writer writes now. Raises CodeRefused."""
+    """Write the code the declaration `name` asks for, and its record, as one change; or
+    nothing, where the record verifies and the code is what the writer writes now. Raises
+    CodeRefused; WriteFailed where a write fails, the code and its record then as they
+    were before the run, or named."""
     declaration = read(root, location, name)
     planned = plan(root, location, declaration)
     implementation = seam.implementation(declaration.writer)
@@ -356,9 +361,10 @@ def write(root: Path, location: str, name: str, *, now: datetime | None = None) 
         },
     }
     record_text = _record_text(declaration, kept)
-    code.parent.mkdir(parents=True, exist_ok=True)
-    write_whole(code, data)
-    write_whole(record, record_text.encode("utf-8"))
+    change = Change(root)
+    change.write(code, data)
+    change.write(record, record_text.encode("utf-8"))
+    change.commit()
     return Written(declaration.out, declaration.record, changed=True, losses=unaccepted)
 
 
