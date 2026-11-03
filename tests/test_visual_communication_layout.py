@@ -24,7 +24,11 @@ in memory and read through an in-memory `Env` (`tests/visual_engine.py`):
   sources name the keys the content file writes;
 - a top whose layouts are its pages' forms, as the foundations' deck: each page drawn by
   its layout's own drawing, or by the component it names, as a page of its own; what
-  its shape may not be; format 1's tops read as before.
+  its shape may not be; format 1's tops read as before;
+- a list's component field and arrangement fields (DEC-010 points 1 to 4): what draws
+  each item, and the keys and sources an item takes from the field; a row shared by its
+  items' weights, and equal shares as equal sizes; a key both an item's component and
+  its list declare, read by neither; what a pattern may not declare for its lists.
 """
 
 from __future__ import annotations
@@ -1148,3 +1152,205 @@ def test_format_1s_tops_read_as_before_and_one_may_declare_a_field_named_layout(
     assert result.scene.pages == ["top"]
     shown = result.scene.find("top/l")
     assert shown is not None and shown.properties["text"] == "Wide"
+
+
+# --- a list's component field and arrangement fields (#2560) ---------------------------------
+
+#: A weight of three words, whose shares are one, two and four.
+SIZE = {"words": ["one", "two", "four"], "shares": {"one": 1, "two": 2, "four": 4}}
+
+
+def toned() -> dict[str, Any]:
+    """A block whose box paints in the colour its option `tone` names, as large as `chip`."""
+    fill = {"by": "tone", "plain": "surface", "loud": "accent"}
+    return block(
+        {"b": {"box": {"fill": fill}, "width": "=:width", "height": "=:height"}},
+        options={"tone": ["plain", "loud"]},
+        preferred={"width": "=@space.3 * :index", "height": "=@space.3"},
+    )
+
+
+def chosen(**lists: Any) -> dict[str, dict[str, Any]]:
+    """The top of `listed`, whose field `kind` is the component field of its list `items`
+    and whose `lists` adds `lists`; its items drawn by `lab/chip` by default."""
+    components = listed("row", {"gap": "=@space.2"})
+    parts, fields = components["lab/top"]["parts"], {"items": LISTED, "kind": {"type": "object"}}
+    declared = {"items": {"component": "kind"}, **lists}
+    components["lab/top"] = top(parts, fields=fields, lists=declared)
+    return {**components, **lab(toned=toned())}
+
+
+def test_a_lists_component_field_draws_each_item_that_names_none_of_its_own() -> None:
+    content = {
+        "kind": {"use": "lab/toned", "tone": "loud"},
+        "items": [{"id": "a"}, {"id": "b", "tone": "plain"}, {"id": "c", "use": "lab/chip"}],
+    }
+
+    result = draw(content, components=chosen())
+
+    assert result.findings == []
+    drawn = {key: result.scene.find(f"top/items[{key}]") for key in ("a", "b", "c")}
+    assert {key: e.properties["component"] for key, e in drawn.items() if e is not None} == {
+        "a": "lab/toned",
+        "b": "lab/toned",
+        "c": "lab/chip",
+    }
+    # The item's choice first: `b` gives its own `tone`, and `c` takes nothing from the field.
+    assert drawn["a"] is not None and drawn["b"] is not None and drawn["c"] is not None
+    assert drawn["a"].sources["options.tone"] == "content:kind.tone"
+    assert drawn["b"].sources["options.tone"] == "content:items[b].tone"
+    assert "options.tone" not in drawn["c"].sources
+    fills = [result.scene.find(f"top/items[{key}]/b") for key in ("a", "b")]
+    assert [e.properties["fill"] for e in fills if e is not None] == ["accent", "surface"]
+    # The field places nothing.
+    assert result.scene.find("top/kind") is None
+
+
+def test_a_list_whose_component_field_is_empty_draws_its_items_by_its_default() -> None:
+    result = draw(ITEMS, components=chosen())
+
+    assert result.findings == []
+    shown = result.scene.find("top/items[a]")
+    assert shown is not None and shown.properties["component"] == "lab/chip"
+
+
+def test_a_component_field_naming_no_component_draws_no_item_that_names_none() -> None:
+    content = {
+        "kind": {"use": "lab/nothing"},
+        "items": [{"id": "a"}, {"id": "b", "use": "lab/chip"}],
+    }
+
+    result = draw(content, components=chosen())
+
+    assert finding(result, "unknown-component").where == "top/items"
+    assert result.scene.find("top/items[a]") is None
+    assert result.scene.find("top/items[b]") is not None
+
+
+def weighted(sizes: Any = "shares", **geometry: Any) -> dict[str, dict[str, Any]]:
+    """`listed`'s row, its gap @space.2, which shares its length by `sizes`; its list's
+    weight `size` is `SIZE`."""
+    components = listed("row", {"sizes": sizes, "gap": "=@space.2"}, **geometry)
+    components["lab/top"]["lists"] = {"items": {"arrangement": {"size": SIZE}}}
+    return components
+
+
+def test_a_row_shares_its_width_by_its_items_weights_less_the_gaps() -> None:
+    content = {"items": [{"id": "a"}, {"id": "b", "size": "two"}, {"id": "c", "size": "four"}]}
+
+    result = draw(content, components=weighted(width="=@space.4 * 4"))
+
+    # 128 px less two gaps of 8 px, shared one to two to four.
+    assert result.findings == []
+    assert item_frames(result) == [
+        (0.0, 0.0, 16.0, 16.0),
+        (24.0, 0.0, 32.0, 16.0),
+        (64.0, 0.0, 64.0, 16.0),
+    ]
+
+
+def test_items_of_equal_shares_are_drawn_as_equal_sizes_draws_them() -> None:
+    content = {"items": [{"id": key, "size": "two"} for key in ("a", "b", "c")]}
+    width = "=@space.4 * 4"
+
+    shared = draw(content, components=weighted(width=width))
+    equal = draw(content, components=weighted("equal", width=width))
+    unsized = draw(content, components=weighted())
+
+    assert item_frames(shared) == item_frames(equal)
+    assert [f[0] for f in item_frames(shared)] == [0.0, 45.33, 90.67]
+    assert "shares its width by its items' weights" in finding(unsized, "no-size").message
+
+
+def test_a_key_both_an_item_s_component_and_its_list_declare_is_read_by_neither() -> None:
+    """`lab/sized` declares `size` as a field it shows: on its item, `size` fills no field,
+    and the weight takes its default share."""
+    sized = block(
+        {"l": label("size", width="=:width", when="size"), "b": box(width="=:width")},
+        fields={"size": {"type": "string"}},
+        preferred={"width": "=@space.3", "height": "=@space.3"},
+    )
+    components = {**weighted(width="=@space.4 * 4"), **lab(sized=sized)}
+    content = {
+        "items": [
+            {"id": "a", "use": "lab/sized", "size": "four"},
+            {"id": "b", "size": "two"},
+            {"id": "c", "size": "four"},
+        ]
+    }
+
+    result = draw(content, components=components)
+
+    # One, two and four shares: `a` takes the weight's default.
+    assert [f[2] for f in item_frames(result)] == [16.0, 32.0, 64.0]
+    assert result.scene.find("top/items[a]/l") is None
+    assert result.scene.find("top/items[a]/b") is not None
+
+
+def a_pattern(**lists: Any) -> dict[str, Any]:
+    """A pattern of a list `items`, drawn by `lab/chip` in a row, and a field `kind`; its
+    `lists` are `lists`."""
+    parts = {"items": {"repeat": "items", "draw": "lab/chip", "row": {}}}
+    fields = {"items": LISTED, "kind": {"type": "object"}, "title": {"type": "string"}}
+    return block(parts, fields=fields, lists=lists)
+
+
+def test_a_patterns_lists_read_with_no_issue() -> None:
+    declared = {
+        "items": {
+            "component": "kind",
+            "arrangement": {"size": SIZE, "side": {"words": ["left", "right"]}},
+        }
+    }
+
+    assert issues(a_pattern(**declared)) == []
+
+
+def test_what_a_pattern_declares_for_its_lists_is_refused_where_it_does_not_hold() -> None:
+    def refused(**lists: Any) -> list[tuple[str, str]]:
+        return issues(a_pattern(**lists))
+
+    # A list no part repeats over, and a key the entry does not take.
+    assert refused(other={"component": "kind"}) == [(SHAPE, "lists.other")]
+    assert refused(items={"draw": "lab/chip"}) == [(SHAPE, "lists.items.draw")]
+    # A component field that is no field, or a list field.
+    assert refused(items={"component": "kinds"}) == [(SHAPE, "lists.items.component")]
+    assert refused(items={"component": "items"}) == [(SHAPE, "lists.items.component")]
+    # An arrangement field with no word, a word twice, a word no name, or a reserved name.
+    at = "lists.items.arrangement"
+    assert refused(items={"arrangement": {"side": {"words": []}}}) == [(SHAPE, f"{at}.side.words")]
+    twice = {"words": ["left", "left"]}
+    assert refused(items={"arrangement": {"side": twice}}) == [(SHAPE, f"{at}.side.words")]
+    assert refused(items={"arrangement": {"side": {"words": ["by"]}}}) == [
+        (SHAPE, f"{at}.side.words")
+    ]
+    assert refused(items={"arrangement": {"state": {"words": ["on"]}}}) == [(SHAPE, f"{at}.state")]
+    # A weight's shares: one for each word, above zero; and one weight for a list.
+    lacking = {"words": ["one", "two"], "shares": {"one": 1}}
+    zero = {"words": ["one", "two"], "shares": {"one": 1, "two": 0}}
+    assert refused(items={"arrangement": {"size": lacking}}) == [(SHAPE, f"{at}.size.shares")]
+    assert refused(items={"arrangement": {"size": zero}}) == [(SHAPE, f"{at}.size.shares")]
+    assert refused(items={"arrangement": {"size": SIZE, "span": SIZE}}) == [(SHAPE, f"{at}.span")]
+
+
+def test_a_component_field_that_a_part_places_or_passes_on_is_refused() -> None:
+    slotted = a_pattern(items={"component": "kind"})
+    slotted["parts"]["k"] = {"slot": "kind"}
+    passed = a_pattern(items={"component": "kind"})
+    passed["parts"]["p"] = {"use": "lab/chip", "fields": {"kind": "kind"}}
+
+    assert issues(slotted) == [(SHAPE, "lists.items.component")]
+    assert issues(passed) == [(SHAPE, "lists.items.component")]
+
+
+def test_sharing_by_weights_needs_a_weight_of_the_list() -> None:
+    data = a_pattern()
+    data["parts"]["items"]["row"] = {"sizes": "shares"}
+
+    assert issues(data) == [(SHAPE, "parts.items.row.sizes")]
+
+
+def test_a_top_whose_layouts_are_its_pages_forms_declares_no_fields_for_its_pages() -> None:
+    data = forms_top(lists={"pages": {"arrangement": {"size": SIZE}}})
+
+    assert issues(data) == [(SHAPE, "lists.pages")]

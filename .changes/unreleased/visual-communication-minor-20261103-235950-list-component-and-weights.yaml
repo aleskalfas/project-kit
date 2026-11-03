@@ -1,0 +1,25 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A pattern may declare, under `lists`, for each list a `repeat` part of its
+  own repeats over, a component field and the arrangement fields its items
+  carry (#2560, DEC-010). Content gives the component field as it places a
+  component, by `use`, with words for that component's options and perhaps
+  `concept`, `state` and `override`. Each item that names no component of
+  its own is drawn by the component it names and takes each key it gives
+  that the item does not, its source naming the field; an item that names
+  its own takes nothing from it. An arrangement field is
+  `{words: [<word>, ...]}`, the first the default; a weight also gives
+  `shares`, a number above zero for each word, and the new `sizes: shares`
+  of `row` and `column` shares the line among the items in proportion to
+  their shares, less the gaps, as `sizes: equal` where every share is the
+  same. A key both an item's component and its list declare is read by
+  neither. The check reports `content-component`, a word an arrangement
+  field does not take as `content-option`, `item-clash` and the fact
+  `list-clash` at a piece's lock, a pattern's lists of another shape as
+  `component-shape`, and, checking a component library's version alone,
+  `arrangement-clash` where a list's default component declares an
+  arrangement field of its list. Every file format 1 accepted is read and
+  drawn as before.

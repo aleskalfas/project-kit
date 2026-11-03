@@ -54,7 +54,7 @@ The examples come from the foundations' `figure`, which ships, and from `tests`,
 One model binds every component. A pattern, an item component and a block are roles a component plays, not kinds of file (DEC-001 points 4 and 6).
 
 - **A pattern** arranges items. It has a `repeat` part over a list of the content, and decides how its items lie. `tests/steps` is a pattern.
-- **An item component** draws one item of a list. The pattern names it in `draw`. An item may name its own in `use`, a pattern included.
+- **An item component** draws one item of a list. The pattern names its default in `draw`. Content may name another for the whole list, in a field the pattern declares for the list ([Lists](#lists)). An item may name its own in `use`, a pattern included.
 - **A block** is a small component, such as a card, that a pattern draws its items with, or that content places alone (DEC-007 point 1). `tests/card` and `tests/picture` are blocks.
 - **A top component** declares `layouts`. A piece names one as its top ([files](files.md)). The foundations' `figure` is one, with one layout. Their `deck` is one whose layouts are the forms its pages take, a cover and a slide ([Layouts](#layouts)).
 - **A local component** belongs to one piece. Its `use` is `piece/<component>`, and a library component's is `<library>/<component>`. The lock alone says which version of a library is read.
@@ -106,6 +106,7 @@ The file takes these keys and no other:
 | `values` | Its named numbers, each a formula or a switch of formulas. |
 | `preferred` | `width` and `height`, the size it asks for, each a formula. |
 | `parts` | What it draws and places, by name, in drawing order. |
+| `lists` | On a pattern: for each list it repeats over, the field in which content names the list's component, and its items' arrangement fields. |
 | `exposes` | The parts a component that places it may read. |
 | `layouts` | On a top component only: its layouts and their slots, and, where they are its pages' forms, each layout's own drawing. |
 
@@ -181,6 +182,40 @@ The figure draws its caption only when the content gives one:
 ### Switches
 
 A value may be a *switch*: `{by: <option>, <word>: <value>, ...}`. It names an option of words, and gives a value for each of its words, no more and no fewer. A branch may be a switch itself. A paint's branch may be `null`, which paints nothing. A switch serves wherever a part takes a formula, a paint, a style, a word of `text-anchor` or of an operator, or a placed component's option, and in `values` and `preferred`. `values.gap` of `tests/steps` above is a switch.
+
+### Lists
+
+`lists` declares, for each list field that a `repeat` part of the component repeats over, what the items of that list carry for the component, apart from its own fields and options (DEC-010 points 1 to 4). Its entry for a list takes two keys, both optional:
+
+- **`component`:** the list's *component field*, a field of the component's own that holds no list. Content names a component in it as it places one, by `use` ([content files](files.md#content-files)), yet nothing is placed there, so no part places the field or passes it on. Each item that names no component of its own is drawn by the component it names. The item takes each key the field gives that the item does not give itself, and a value it takes names the field as its source ([Sources](#sources)).
+- **`arrangement`:** the items' *arrangement fields*, by name, each `{words: [<word>, ...]}`. An item gives one of the words, and one that leaves the field out takes the first. A name is no reserved key's, and the words follow an option's rules ([Options](#options)). The component reads an arrangement field, and the component that draws the item never does.
+- **A weight** is an arrangement field that also gives `shares`: a number above zero for each of its words, and for no other. A `repeat` part with `sizes: shares` shares its line among the items in proportion to their shares ([Repeating over a list](#repeating-over-a-list-row-and-column)). A list has one weight at most.
+
+A pattern that lets content choose the component of its steps, and give a step twice the width of another, could declare:
+
+```yaml
+fields:
+  type: object
+  properties:
+    steps: {type: array, items: {type: object}}
+    step: {type: object}
+lists:
+  steps:
+    component: step
+    arrangement:
+      span:
+        words: [narrow, wide]
+        shares: {narrow: 1, wide: 2}
+parts:
+  steps:
+    repeat: steps
+    draw: tests/card
+    width: "=:width"
+    row: {gap: "=@space.2", sizes: shares}
+```
+
+- **A key both declare.** Where an item's component declares a field or an option named as an arrangement field of the item's list, neither reads the key on that item. The component's field stays unfilled, and the arrangement field takes its default. The check reports such a key (*checks*).
+- **What is refused** when the component is read: an entry for a list no part of the component repeats over, or for the field that holds a top's pages ([Layouts](#layouts)); a component field that is no field of the component, holds a list, or is placed or passed on by a part; an arrangement field with no word, a word twice, or a reserved key's name; a weight whose shares miss a word, name another, or are not above zero; a second weight; and `sizes: shares` on a part whose list has no weight.
 
 ### Exposes
 
@@ -320,14 +355,14 @@ A primitive's properties lie in its own mapping, under SVG's names.
 
 ### Repeating over a list: `row` and `column`
 
-A `repeat` part draws a component for each item of a list field, in the content's order. Each item is drawn by the component its own `use` names, else by `draw`. An item that is not a mapping, repeats an id, or names no component, is reported and left out. It takes no place among the items drawn, so `:index` and `:count` do not count it, and its trace id keeps its place in the content's list. `colour` gives the items' default colour family.
+A `repeat` part draws a component for each item of a list field, in the content's order. Each item is drawn by the component its own `use` names, else by the one its list's component field names, else by `draw` ([Lists](#lists)). An item that is not a mapping, repeats an id, or names no component, is reported and left out. It takes no place among the items drawn, so `:index` and `:count` do not count it, and its trace id keeps its place in the content's list. `colour` gives the items' default colour family.
 
 The part's *layout operator*, `row` or `column`, lays the items along a line, across or down. Its settings take the names of CSS flexible layout:
 
 | Setting | Takes | Default | What it does |
 |---|---|---|---|
 | `gap` | a formula that gives a length | zero | the space between two items along the line |
-| `sizes` | `own`, `equal` | `own` | `own`: each item takes the size it asks for along the line. `equal`: the items share the part's size along the line, less the gaps, equally. The part must then give that size. |
+| `sizes` | `own`, `equal`, `shares` | `own` | `own`: each item takes the size it asks for along the line. `equal`: the items share the part's size along the line, less the gaps, equally. `shares`: they share it in proportion to the shares their list's weight gives them, and equally where every share is the same ([Lists](#lists)). With `equal` or `shares`, the part must give that size. |
 | `justify-content` | `start`, `center`, `end`, `space-between` | `start` | Where the items lie along a line longer than they ask for. `space-between` widens each gap instead. |
 | `align-items` | `stretch`, `start`, `center`, `end` | `stretch` | `stretch`: each item is as large across as the line, that is the part's size across, else the largest size an item asks for. Otherwise each item takes the size it asks for across, at the start, the centre or the end of the line. |
 
@@ -382,7 +417,7 @@ Every element carries its *trace*, an id that comes from the path of instances, 
 
 Each drawn property names its source in `sources`:
 
-- **`content:<field path>`:** a field of the content, such as `content:body.steps[plan].head`. The path names the keys the content file writes, joined by `.`, an item of a list as `[<id>]`, or as `#<place>` from 1 where it has no id. It names the list field, where a trace id names the `repeat` part. Under a `use` part that passes a field on under another name, at any depth, it keeps the name the content file writes.
+- **`content:<field path>`:** a field of the content, such as `content:body.steps[plan].head`. The path names the keys the content file writes, joined by `.`, an item of a list as `[<id>]`, or as `#<place>` from 1 where it has no id. It names the list field, where a trace id names the `repeat` part. Under a `use` part that passes a field on under another name, at any depth, it keeps the name the content file writes. A value an item takes from its list's component field names that field, such as `content:body.kind.tone`.
 - **`option:<name>`:** a value a switch on that option chose.
 - **`default:<library>/<component>`:** the component's own value. A field that a `use` part does not pass on is the placing component's, which gives it nothing.
 - **`role:<token path>`:** a formula that reads one role and nothing else, such as `"=@space.2"`, or a text's typography role.

@@ -32,13 +32,14 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/svg_declaration.py
         - .pkit/capabilities/visual-communication/schemas/findings.schema.json
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
-      record: ["visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008"]
+      record: ["visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-010"]
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
         - .pkit/capabilities/visual-communication/components.md#breaking-lines
         - .pkit/capabilities/visual-communication/components.md#errors
         - .pkit/capabilities/visual-communication/components.md#fields
         - .pkit/capabilities/visual-communication/components.md#layouts
+        - .pkit/capabilities/visual-communication/components.md#lists
         - .pkit/capabilities/visual-communication/components.md#placing-a-component-use-and-slot
         - .pkit/capabilities/visual-communication/components.md#primitives
         - .pkit/capabilities/visual-communication/components.md#sources
@@ -115,7 +116,7 @@ A few findings that lie in a library folder name no version, and always fail: `l
 
 Without a piece named, each run judges, in order: the configuration, the location, the binding of each file of the capability's format in the location, the library folder and its list, then each library version checked alone, then each piece, then each declaration of written code. For each piece it judges, in order, the ids of its content, its lock, the libraries its lock names read under it (its brand and the own roles of each library of components), the names of those libraries, its notations, its content against the components it fills, its produced pictures and its scenes.
 
-**A version checked alone.** The newest version the project holds of each major of each library is checked alone, once (DEC-005 point 7, DEC-008 point 1). It is resolved with the newest version the project holds of each major it names, and of each major those name. A brand is read over its base, a library's own roles are judged against the libraries it builds on, and the foundations' declarations are read. What a version shows alone lies in that version. A version that names majors no versions fit, or one of which the project holds no version, cannot be checked alone: that is its finding (`alone-majors`, `alone-missing`). An older version of a major is checked only under the locks that name it.
+**A version checked alone.** The newest version the project holds of each major of each library is checked alone, once (DEC-005 point 7, DEC-008 point 1). It is resolved with the newest version the project holds of each major it names, and of each major those name. A brand is read over its base, and the foundations' declarations are read. A component library's own roles are judged against the libraries it builds on. So is each of its patterns, against the default component of each list it declares fields for (`arrangement-clash`, DEC-010 point 9). Its components are read as a piece's are, from the versions it is resolved with, with no piece and no brand behind them, so each role stands for the type it declares. What a version shows alone lies in that version. A version that names majors no versions fit, or one of which the project holds no version, cannot be checked alone: that is its finding (`alone-majors`, `alone-missing`). An older version of a major is checked only under the locks that name it.
 
 **Under a lock.** A piece's lock combines versions, so each version it names is judged at that lock too (DEC-008 point 9). A fault the version shows alone as well lies in the version, and is reported once. A fault only the lock's combination of versions shows lies at the lock, `<piece>/piece.yaml#lock`. It names no version, so its level stands, and its message names the version and the place it was seen in. A fault of the lock itself, such as a base the lock names at another major, names no version either.
 
@@ -143,7 +144,7 @@ In the tables, `<piece>/` is the piece's folder, `<location>/pieces/<piece>/`, a
 
 ### Libraries and locks
 
-These follow DEC-003 point 9, and `library-name` DEC-004 point 7. A lock finding never names a library version, so it always fails.
+These follow DEC-003 point 9, `library-name` DEC-004 point 7, and `arrangement-clash` DEC-010 point 9. A lock finding never names a library version, so it always fails.
 
 | Label | What it means | Level | Where it points | What to do |
 |---|---|---|---|---|
@@ -158,24 +159,28 @@ These follow DEC-003 point 9, and `library-name` DEC-004 point 7. A lock finding
 | `lock-missing` | The piece has no lock yet. | fails | `<piece>/piece.yaml#lock` | Run `pkit visual render <piece>`. |
 | `alone-majors` | A version cannot be checked alone: two of the versions it is resolved with build on two majors of one library, or one builds on it at another major. The message names both. | fails, or asks the library's owner for attention in a released version | `<version>/library.yaml#builds-on` | Name majors that fit together, in a version of its own. |
 | `alone-missing` | A version cannot be checked alone: the project holds no version the capability reads of a major that it, or a library it is resolved with, builds on. | fails | the list, `#libraries.<library>` | Bring in a version of that major, or take the version out. |
+| `arrangement-clash` | A pattern of a version checked alone declares an arrangement field for a list, and the list's default component, which the part that repeats over it names in `draw`, declares a field or an option of that name ([lists](components.md#lists)). Neither reads the key on an item. | fails, or asks the library's owner for attention in a released version | `<version>/components/<pattern>.yaml#lists.<list>.arrangement.<field>` | Rename the arrangement field, or draw the list with another component, in a version of its own. |
 | `lock-version`, `lock-not-held`, `lock-unreadable`, `lock-incomplete`, `lock-majors` | A lock entry is no version; or the lock names a version the project does not hold, or one the installed capability cannot read; or it leaves out a library the piece uses, or one a locked library builds on; or a locked library builds on another major of a library than the lock names. | fails | `<piece>/piece.yaml#lock` | Run `pkit visual render <piece>`, which moves a draft's lock. For a pinned piece, change the lock by hand, or unpin it and render it ([the lock](files.md#the-lock)). |
 
 ### Content against components
 
-Each content file is read against the `fields` and `options` of each component it fills, and each page of a top whose layouts are its pages' forms against the layout it names ([fields](components.md#fields), [layouts](components.md#layouts), [content files](files.md#content-files)). Each finding fails, at `<piece>/content.<language>.yaml#<key path>`.
+Each content file is read against the `fields` and `options` of each component it fills, each item also against what its list declares for it, and each page of a top whose layouts are its pages' forms against the layout it names ([fields](components.md#fields), [lists](components.md#lists), [layouts](components.md#layouts), [content files](files.md#content-files)). Each finding fails, at `<piece>/content.<language>.yaml#<key path>`, but a key that both an item's component and its list declare. That one lies at the piece's lock, `<piece>/piece.yaml#lock`, which combines the two libraries' versions, once for every language of the piece (DEC-010 points 2 and 9): `item-clash` fails, and `list-clash` states a fact.
 
 | Label | What it means | What to do |
 |---|---|---|
 | `id-shape` | An id is not of the id shape. | Write an id of that shape. |
 | `id-twice` | An id appears twice in one list. | Make each id unique in its list. |
 | `id-languages` | A list lacks ids it holds in the piece's first language, or holds ids it lacks there. The message names each. The order is free: a translation may order a list's items its own way. An id twice in one list is `id-twice`. | Give each item the same id in every language ([content files](files.md#content-files)). |
-| `content-key` | A key that is no field or option of the component, and no reserved key; on a page in a layout, a key that is no slot of its layout, no `layout` and no reserved key ([content files](files.md#content-files)). The message names the nearest known key, where one is close. | Rename or remove the key. |
+| `content-key` | A key that is no field or option of the component, no arrangement field of its list where it is an item, and no reserved key; on a list's component field, a key that is no option of the component it names and no reserved key; on a page in a layout, a key that is no slot of its layout, no `layout` and no reserved key ([content files](files.md#content-files)). The message names the nearest known key, where one is close. | Rename or remove the key. |
 | `content-layout` | A page of a top whose layouts are its pages' forms names neither a layout, with `layout`, nor a component, with `use`; or it names a layout its top does not declare. The message names the top's layouts, and the nearest, where one is close. | Name one of the top's layouts, or the component that draws the page. |
 | `content-required` | A required field is missing. | Add the field. |
 | `content-type` | A value is of another type than the field's. | Change the value. |
 | `content-value` | A value is not one the field's `enum` or `const` allows. | Change the value. |
 | `content-count` | A list holds fewer items than `minItems`, or more than `maxItems`. | Add or remove items. |
-| `content-option` | A word the option does not take. The message names the nearest word, where one is close. | Name a word of the option. |
+| `content-option` | A word the option, or an item's arrangement field, does not take. The message names the nearest word, where one is close. | Name a word of the option, or of the arrangement field. |
+| `content-component` | A list's component field names no component with `use`, or gives an id or a field of the component it names. | Name the component with `use`, and give the id and the fields on each item. |
+| `item-clash` | An item carries a key that both its component and its list declare, under the versions the piece locks. Neither reads it: the component's field stays unfilled, and the arrangement field takes its default. | Take the key off the item, or move the lock to versions under which the two do not both declare it. |
+| `list-clash` | A component that draws items of a list declares a key that the list declares too, under the versions the piece locks, and no item carries it, so the content's author learns of the clash before writing the key. | Nothing, until an item needs the key. |
 
 ### Brands, tokens and contrast
 
@@ -229,7 +234,7 @@ Each fails, unless its row says otherwise.
 
 | Label | What it means | Where it points |
 |---|---|---|
-| `component-shape` | A component holds a key, a part, an option or an exposed name its format does not allow ([a component's file](components.md#a-components-file)). Or a top whose layouts are its pages' forms breaks their shape, such as marking no field as holding its pages, or two, naming a slot `layout`, or leaving a layout without its own drawing ([layouts](components.md#layouts)). | the component, `#<key path>` |
+| `component-shape` | A component holds a key, a part, an option or an exposed name its format does not allow ([a component's file](components.md#a-components-file)). Or a pattern declares for its lists what `lists` does not allow, such as fields for a list no part of it repeats over, a component field a part places, or an arrangement field with no word ([lists](components.md#lists)). Or a top whose layouts are its pages' forms breaks their shape, such as marking no field as holding its pages, or two, naming a slot `layout`, leaving a layout without its own drawing, or declaring fields for its list of pages ([layouts](components.md#layouts)). | the component, `#<key path>` |
 | `two-owners` | A text part gives a `height`, which its measured text sets ([primitives](components.md#primitives)). | the component |
 | `formula-unreadable`, `formula-reach`, `formula-dimension`, `unknown-role` | A formula cannot be read, reads what it may not reach, has dimensions that disagree, or reads a role that has no value under the brand ([errors](components.md#errors)). | the component |
 | `unknown-component` | The piece's top, a part or an item names no component. A component whose file is present and cannot be read is `component-unreadable`, and what names it takes no finding. | the top's, `<piece>/piece.yaml#top`; a part's or an item's, the content or the component that names it, `#<trace>` |
@@ -239,7 +244,7 @@ Each fails, unless its row says otherwise.
 | `page-in-page` | A slot of pages, or a top whose layouts are its pages' forms, lies inside a page, so each page it holds is a page inside a page. A top component with no slot of pages is part of the page that holds it, never a page inside it ([layouts](components.md#layouts)). | the content, `#<trace>` |
 | `option-word`, `option-missing`, `unknown-item`, `unknown-state`, `override`, `content-shape` | What a component was given does not fit it: a word its option does not take, a missing option that names an item, an item no list holds, a state it does not declare, an `override` that names no painted part or no role, a field of the wrong shape. | the content, a value a part passed on from it included; else the component whose part gave it, or left it out |
 | `loop` | References make a loop. The message names every element in it. | the component |
-| `no-size` | A component asks for no size and is given none, or a list shares its size equally and is given none. | the component |
+| `no-size` | A component asks for no size and is given none, or a list shares its size equally, or by its items' weights, and is given none. | the component |
 | `division-by-zero` | A formula divides by zero. | the component |
 | `missing-exposed` | A formula reads an exposed part, point or item that is missing. | the component |
 | `no-colour` | A part paints `:colour.<member>`, and the instance has no colour family, from its concept or by default, or has one the foundations do not declare, or one with no such member ([values, states and colour](components.md#values-states-and-colour)). | the component, `#<trace>` |

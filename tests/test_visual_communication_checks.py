@@ -4,8 +4,11 @@ an item of a list a part passes on under another name read against the component
 draws it, a page read against the layout or the component it names (DEC-010 point 5),
 contrast as drawn, the losses a renderer's declaration predicts, the document the
 validator reads, a component it cannot read, a top that names no component, the notations
-a piece names and the concepts its content names (DEC-004 point 10), and an error it does
-not expect on one piece. The command around it is `test_visual_communication_check.py`."""
+a piece names and the concepts its content names (DEC-004 point 10), a list's component
+field and arrangement fields, a key both an item's component and its list declare at the
+lock, a pattern's clash with its default component checked alone (DEC-010 points 1 to 4
+and 9), and an error it does not expect on one piece. The command around it is
+`test_visual_communication_check.py`."""
 
 from __future__ import annotations
 
@@ -1180,3 +1183,249 @@ def test_a_page_carries_its_layout_the_reserved_keys_and_its_slots_alone(
     found = [f for f in checks.content_findings(project_of(root)) if f.file == CONTENT]
 
     assert [(f.code, f.where) for f in found] == [("content-key", "slides[a].slides")]
+
+
+# --- a list's component field and arrangement fields (#2560) ---------------------------------
+
+LOCAL = f"{PIECE_FOLDER}/components"
+
+#: A weight of two words, whose shares are one and two.
+SIZE = {"words": ["one", "two"], "shares": {"one": 1, "two": 2}}
+
+
+def local(**fields: Any) -> str:
+    """A local component of `fields`, as its file holds it."""
+    return yaml_text(bound("component", status="experimental", **fields))
+
+
+def row(**lists: Any) -> str:
+    """A pattern that draws its list `items` in a row shared by the weight `size`, each
+    item drawn by the steps' card by default; `kind` is the list's component field, unless
+    `lists` gives other fields."""
+    return local(
+        about="A row of items.",
+        fields={"type": "object", "properties": {"items": LISTED, "kind": {"type": "object"}}},
+        lists=lists or {"items": {"component": "kind", "arrangement": {"size": SIZE}}},
+        parts={
+            "items": {
+                "repeat": "items",
+                "draw": "tests/card",
+                "width": "=:width",
+                "row": {"gap": "=@space.2", "sizes": "shares", "align-items": "stretch"},
+            }
+        },
+        preferred={"height": "=items.height"},
+    )
+
+
+#: A block that shows its `head`, and declares `size` as a field and `tone` as an option.
+SIZED = local(
+    about="A head, and the size it says.",
+    fields={
+        "type": "object",
+        "required": ["head"],
+        "properties": {"head": {"type": "string"}, "size": {"type": "string"}},
+    },
+    options={"tone": ["plain", "loud"]},
+    parts={
+        "head": {
+            "text": {"content": "head", "style": "type.body", "fill": "text-primary"},
+            "width": "=:width",
+        }
+    },
+    preferred={"height": "=head.bottom"},
+)
+
+
+def row_project(tmp_path: Path, row_text: str | None = None, **body: Any) -> Path:
+    """The drawing project with no picture, whose body is the local `piece/row` (`row()`
+    unless `row_text` gives it) with `body`, beside the local `piece/sized`."""
+    root = drawing_project(tmp_path, picture=False)
+    write(root / LOCAL / "row.yaml", row_text or row())
+    write(root / LOCAL / "sized.yaml", SIZED)
+    write_content(root, body={"use": "piece/row", **body})
+    return root
+
+
+def test_a_list_drawn_by_its_component_field_and_shared_by_weights_fails_nothing(
+    tmp_path: Path,
+) -> None:
+    """Two items take `piece/sized` from the field, and one names the card; the sized
+    block declares `size`, which no item it draws carries, so that is a fact."""
+    root = row_project(
+        tmp_path,
+        kind={"use": "piece/sized", "tone": "loud"},
+        items=[
+            {"id": "a", "head": "A"},
+            {"id": "b", "head": "B", "tone": "plain"},
+            {"id": "c", "use": "tests/card", "head": "C", "size": "two"},
+        ],
+    )
+
+    report = checks.check(root, only=PIECE)
+
+    assert not report.failed()
+    assert {f.code for f, _ in report.judged} == {"component-experimental", "list-clash"}
+
+
+def test_content_is_judged_against_a_lists_component_field_and_arrangement_fields(
+    tmp_path: Path,
+) -> None:
+    root = row_project(
+        tmp_path,
+        kind={"use": "tests/card", "id": "k", "head": "H", "tone": "loud"},
+        items=[
+            {"id": "a", "head": "A", "size": "three"},
+            {"id": "b", "head": "B", "sise": "one"},
+            {"id": "c"},
+        ],
+    )
+
+    found = checks.content_findings(project_of(root))
+
+    assert [(f.code, f.where, f.message) for f in found] == [
+        (
+            "content-component",
+            "body.kind.id",
+            "the component field of the list `body.items` gives an id: it names the "
+            "component of every item, and an id names one thing",
+        ),
+        (
+            "content-component",
+            "body.kind.head",
+            "the component field of the list `body.items` gives `head`, a field of "
+            "`tests/card`: a field holds what one item shows, so each item gives its own",
+        ),
+        ("content-key", "body.kind.tone", "`tests/card` takes no option `tone`"),
+        (
+            "content-option",
+            "body.items[a].size",
+            "`three` is no word of the arrangement field `size` of the list `body.items` "
+            "(one, two)",
+        ),
+        (
+            "content-key",
+            "body.items[b].sise",
+            "neither `tests/card` nor the list `body.items` declares a key `sise`; did you "
+            "mean `size`?",
+        ),
+        ("content-required", "body.items[c].head", "the field `head` is required"),
+    ]
+    assert {f.file for f in found} == {CONTENT}
+
+
+def test_a_component_field_that_names_no_component_fails_and_its_items_take_the_default(
+    tmp_path: Path,
+) -> None:
+    root = row_project(
+        tmp_path,
+        kind={"tone": "loud"},
+        items=[{"id": "a", "head": "A", "tone": "loud"}],
+    )
+
+    found = checks.content_findings(project_of(root))
+
+    assert [(f.code, f.where) for f in found] == [
+        ("content-component", "body.kind"),
+        ("content-key", "body.items[a].tone"),
+    ]
+    assert found[0].message == (
+        "the component field of the list `body.items` names no component: it takes "
+        "`{use: <library>/<component>}`, with words for that component's options"
+    )
+
+
+def test_a_key_both_an_items_component_and_its_list_declare_lies_at_the_lock(
+    tmp_path: Path,
+) -> None:
+    carried = row_project(
+        tmp_path,
+        kind={"use": "piece/sized"},
+        items=[{"id": "a", "head": "A", "size": "two"}, {"id": "b", "head": "B"}],
+    )
+    free = row_project(tmp_path / "free", items=[{"id": "a", "use": "piece/sized", "head": "A"}])
+
+    [item] = checks.content_findings(project_of(carried))
+    [listed] = checks.content_findings(project_of(free))
+
+    assert (item.code, item.level, checks.place(item)) == (
+        "item-clash",
+        "fails",
+        f"{PIECE_FILE}#lock",
+    )
+    assert item.message == (
+        "under this lock, `piece/sized` and the list `body.items` both declare `size`, "
+        "which the item `body.items[a]` carries in content.en.yaml: neither reads it, "
+        "so `piece/sized` leaves it unfilled, and the arrangement field takes its default "
+        "`one`"
+    )
+    assert (listed.code, listed.level, checks.place(listed)) == (
+        "list-clash",
+        "fact",
+        f"{PIECE_FILE}#lock",
+    )
+    assert listed.message == (
+        "under this lock, `piece/sized` and the list `body.items` both declare `size`: "
+        "neither would read it on an item of the list that `piece/sized` draws"
+    )
+
+
+def test_a_clash_at_the_lock_is_said_once_across_the_pieces_languages(tmp_path: Path) -> None:
+    root = row_project(tmp_path, items=[{"id": "a", "use": "piece/sized", "head": "A"}])
+    piece = root / PIECE_FILE
+    piece.write_text(
+        piece.read_text(encoding="utf-8").replace("- en\n", "- en\n  - cs\n"), encoding="utf-8"
+    )
+    carried = [{"id": "a", "use": "piece/sized", "head": "A", "size": "one"}]
+    write_content(root, "cs", body={"use": "piece/row", "items": carried})
+
+    found = checks.content_findings(project_of(root))
+
+    assert [(f.code, f.level) for f in found] == [("item-clash", "fails")]
+
+
+def test_what_a_pattern_declares_for_its_lists_fails_in_its_file(tmp_path: Path) -> None:
+    lists = {"other": {"component": "kind"}, "items": {"arrangement": {"size": {"words": []}}}}
+    root = row_project(tmp_path, row_text=row(**lists), items=[{"id": "a", "head": "A"}])
+
+    report = checks.check(root, only=PIECE)
+
+    shapes = [(checks.place(f), level) for f, level in report.judged if f.code == "component-shape"]
+    assert shapes == [
+        (f"{LOCAL}/row.yaml#lists.items.arrangement.size.words", "fails"),
+        (f"{LOCAL}/row.yaml#lists.other", "fails"),
+        (f"{LOCAL}/row.yaml#parts.items.row.sizes", "fails"),
+    ]
+
+
+ROWS = {
+    "about": "Tags in a row.",
+    "fields": {"type": "object", "properties": {"tags": LISTED}},
+    "lists": {"tags": {"arrangement": {"label": {"words": ["short", "long"]}}}},
+    "parts": {"tags": {"repeat": "tags", "draw": "test-parts/tag", "row": {}}},
+}
+
+
+def test_a_pattern_whose_newest_version_clashes_with_its_default_fails_checked_alone(
+    tmp_path: Path,
+) -> None:
+    """The tag that draws the pattern's items declares `label` as a field."""
+    root = parts_project(tmp_path)
+    parts_minor(root, {})
+    write(root / PARTS_FOLDER / "1.1.0" / "components" / "rows.yaml", local(**ROWS))
+
+    report = checks.check(root)
+
+    [(clash, level)] = judged(report, "arrangement-clash")
+    assert (level, clash.library) == ("fails", "test-parts@1.1.0")
+    assert checks.place(clash) == (
+        f"{PARTS_FOLDER}/1.1.0/components/rows.yaml#lists.tags.arrangement.label"
+    )
+    assert clash.message == (
+        "`label` is an arrangement field of `tags`, and `test-parts/tag`, which draws its "
+        "items by default, declares it as a field: neither reads it on an item"
+    )
+    assert clash.fix == (
+        "rename the arrangement field, or draw the list with another component, in a "
+        "version of its own"
+    )
