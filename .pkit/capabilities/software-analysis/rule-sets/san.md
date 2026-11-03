@@ -1,6 +1,6 @@
 ---
 rule-set: SAN
-version: 1.0.0
+version: 2.0.0
 rules:
   RS-SAN-001:
     status: accepted
@@ -15,20 +15,20 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001#3"]}
   RS-SAN-003:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2", "software-analysis:DEC-001#3", "software-analysis:DEC-001#4"]
   RS-SAN-004:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
         anchors: {record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]}
   RS-SAN-005:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
@@ -46,15 +46,15 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
   RS-SAN-006:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-002"}
     pkit:
       friction:
         anchors:
           record: ["software-analysis:DEC-002#4", "software-analysis:DEC-002#6", "software-analysis:DEC-002#8"]
   RS-SAN-007:
-    status: proposed
-    origin: {date: 2026-10-17, by: "Aleš Kalfas"}
+    status: accepted
+    origin: {date: 2026-10-17, by: "Aleš Kalfas", why: "Analysis written first lets an agent invent what the system must do, and everything after builds on it. Naming each item's source is the defence."}
     pkit:
       friction:
         anchors:
@@ -66,7 +66,7 @@ rules:
             - "software-analysis:DEC-002#6"
             - "software-analysis:DEC-002#8"
   RS-SAN-008:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
@@ -79,7 +79,7 @@ rules:
             - "software-analysis:DEC-003#10"
             - "software-analysis:DEC-004#3"
   RS-SAN-009:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
@@ -89,7 +89,7 @@ rules:
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#12"
   RS-SAN-010:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
@@ -99,28 +99,28 @@ rules:
             - "software-analysis:DEC-001#4"
             - "COR-030"
   RS-SAN-011:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-004"}
     pkit:
       friction:
         anchors:
           record: ["software-analysis:DEC-004#4", "software-analysis:DEC-004#6"]
   RS-SAN-012:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
   RS-SAN-013:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#5"]
   RS-SAN-014:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-005"}
     pkit:
       friction:
