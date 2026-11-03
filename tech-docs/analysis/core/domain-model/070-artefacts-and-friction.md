@@ -1005,7 +1005,7 @@ Package metadata is the file a component ships that declares its [version](../gl
 
 - the component's name, kind and version, and its ranges: on the backbone, and on other [capabilities](../glossary.md#term-capability--capability) ([COR-017](../../../../.pkit/decisions/core/COR-017-capability-pattern.md), [COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md))
 - its commands (COR-021)
-- its connections: the [connection points](../glossary.md#term-connection-point--connection-point) it defines and those it plugs into ([COR-053 point 3](../../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality))
+- its [connections](../glossary.md#term-connection--connection): the [connection points](../glossary.md#term-connection-point--connection-point) it defines and those it plugs into ([COR-053 point 3](../../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality))
 - its places, and its [artefact types](../glossary.md#term-artefact-type--artefact-type) ([COR-050 point 1](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts), [COR-056 point 2](../../../../.pkit/decisions/core/COR-056-artefact-types.md#2-who-declares-it))
 
 **Relations:**

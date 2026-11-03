@@ -316,7 +316,7 @@ Defined in [TERM-dependency-gate](../glossary.md#term-dependency-gate--dependenc
 
 **Why:** A dependency whose interface changed in a way that breaks a [capability](../glossary.md#term-capability--capability) fails silently when that capability runs, at no step of the lifecycle ([COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)). A check at [install](../glossary.md#term-install--install), upgrade and uninstall makes that failure loud there instead (COR-030).
 
-A dependency gate is a check made before an install or a [version transition](../glossary.md#term-version-transition--version-transition) writes anything. The gate checks that the capabilities the install or the transition would leave meet each other's ranges and mandatory connections. A capability that moves against a dependency outside its [range](../glossary.md#term-range--range) is refused. A dependency that moves outside a dependent's range is warned of, and the write goes on only under `--force`.
+A dependency gate is a check made before an install or a [version transition](../glossary.md#term-version-transition--version-transition) writes anything. The gate checks that the capabilities the install or the transition would leave meet each other's ranges and mandatory [connections](../glossary.md#term-connection--connection). A capability that moves against a dependency outside its [range](../glossary.md#term-range--range) is refused. A dependency that moves outside a dependent's range is warned of, and the write goes on only under `--force`.
 
 **Attributes:** None.
 
