@@ -61,3 +61,50 @@ def test_a_key_that_would_not_read_back_is_refused_naming_what_a_line_holds() ->
     original = "names:\n  a: x\n# A comment at the left edge.\n  b: y\nrest: 1\n"
     with pytest.raises(records.RecordError, match="`names:` as a block mapping, one name a line"):
         records.with_mapping(original, "names", {"a": "x"}, each="name")
+
+
+def test_an_entry_is_added_last_to_a_block_mapping_at_its_indent() -> None:
+    original = records.BOM + "a:\r\n    b:  # kept\r\n        c: 1\r\n\r\n# The end.\r\n"
+    assert records.with_entry(original, ["a"], "d", {"e": [1]}, each="item") == (
+        records.BOM
+        + "a:\r\n    b:  # kept\r\n        c: 1\r\n    d:\r\n      e:\r\n        - 1\r\n"
+        + "\r\n# The end.\r\n"
+    )
+
+
+def test_an_entry_is_added_to_a_nested_mapping_the_path_leads_to() -> None:
+    original = "a:\n  b:\n    c:\n      x: 1\n  d:\n    c:\n      y: 2\n"
+    assert records.with_entry(original, ["a", "d", "c"], "z", 3, each="item") == (
+        "a:\n  b:\n    c:\n      x: 1\n  d:\n    c:\n      y: 2\n      z: 3\n"
+    )
+
+
+def test_an_entry_is_added_after_the_last_past_comments_at_any_indent() -> None:
+    original = "a:\n  x: 1\n# At the left edge.\n  y: 2\n# Of b.\nb: 1\n"
+    assert records.with_entry(original, ["a"], "z", 3, each="item") == (
+        "a:\n  x: 1\n# At the left edge.\n  y: 2\n  z: 3\n# Of b.\nb: 1\n"
+    )
+
+
+def test_an_entry_is_added_in_flow_to_a_mapping_written_on_its_key_line() -> None:
+    assert records.with_entry("a: {}  # none\n", ["a"], "b", {"c": 1}, each="item") == (
+        "a: {b: {c: 1}}  # none\n"
+    )
+    assert records.with_entry("a: {x: 1}", ["a"], "b", 2, each="item") == "a: {x: 1, b: 2}"
+
+
+def test_an_entry_the_mapping_holds_already_is_refused() -> None:
+    with pytest.raises(records.RecordError, match="`a` holds `b` already"):
+        records.with_entry("a:\n  b: 1\n", ["a"], "b", 2, each="item")
+
+
+def test_an_entry_where_the_text_does_not_show_the_mapping_is_refused() -> None:
+    refusal = "write `a` as a block mapping, one item an entry"
+    with pytest.raises(records.RecordError, match=f"`a` is not a mapping: {refusal}"):
+        records.with_entry("a: [1]\n", ["a"], "b", 2, each="item")
+    with pytest.raises(records.RecordError, match=f"^{refusal}$"):
+        records.with_entry("a: {\n  x: 1}\n", ["a"], "b", 2, each="item")
+    with pytest.raises(records.RecordError, match=f"^{refusal}$"):
+        records.with_entry("'a':\n  x: 1\n", ["a"], "b", 2, each="item")
+    with pytest.raises(records.RecordError, match=f"^{refusal}$"):
+        records.with_entry("a:\n  {x: 1}\n", ["a"], "b", 2, each="item")

@@ -7,6 +7,7 @@ pkit:
       path:
         - .pkit/capabilities/visual-communication/package.yaml
         - .pkit/capabilities/visual-communication/scripts/status.py
+        - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/produce.py
         - .pkit/capabilities/visual-communication/scripts/export.py
@@ -86,7 +87,7 @@ A `location:` line with no value, such as `location:` alone or `location: null`,
 
 ### How a command finds it
 
-- **A command that writes in the location** (`render`, `produce`, `export`) reads `location:`. Where none is recorded, it takes `visual/` if that folder is absent, holds no file, or holds the marker. It records `visual` before its first write in the location. Otherwise it refuses, naming the folder.
+- **A command that writes in the location** (`add`, `render`, `produce`, `export`) reads `location:`. Where none is recorded, it takes `visual/` if that folder is absent, holds no file, or holds the marker. It records `visual` before its first write in the location. Otherwise it refuses, naming the folder.
 - **`--location <path>`** names the location where none is recorded. The path is relative to the working directory, or absolute. The command records it. `--location visual` confirms the default.
 - **With a location recorded,** a command refuses a `--location` that names another folder. It also refuses when the recorded folder is missing.
 - **The check and the commands that only read** take the recorded location. With none recorded, they take `visual/` only where it holds the marker; otherwise there is no visual work. A recorded location whose folder is missing fails.
@@ -99,11 +100,11 @@ The commands list the location's files as git sees them: tracked files, and untr
 
 ## What the location holds
 
-The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file, a library version or a declaration. The table names the schema each file binds to (see [The binding](#the-binding)).
+The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration. Nor does any command change a library version: `pkit visual add` copies a version the capability ships, whole, into a folder of its own, and never over a version the library folder holds. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through that command (DEC-003 point 5). The table names the schema each file binds to (see [The binding](#the-binding)).
 
 | File, in the location | Schema | Written by |
 |---|---|---|
-| `libraries/libraries.yaml` | `libraries` | a person; no command writes it |
+| `libraries/libraries.yaml` | `libraries` | a person; `pkit visual add` lists each version it copies |
 | `libraries/<library>/<version>/library.yaml` | `library` | the library's owner |
 | `libraries/<library>/<version>/roles.yaml` | `roles` | the library's owner |
 | `libraries/<library>/<version>/components/<component>.yaml` | `component` | the library's owner |
@@ -278,6 +279,8 @@ libraries:
 - **`versions`** maps each version to `released: true` or `false`. A released version carries `hash`, its fingerprint over every file of its folder (*The fingerprint* in *What the check reports*). A version not released carries none.
 - **One library to a name:** a second library of one name is refused (DEC-003 point 4).
 
+`pkit visual add` lists each shipped version it copies, `released: false`. Where the location holds no list, it writes one whole, under a comment that says what the file is. Otherwise it adds the version as text: a library the list does not name yet goes last under `libraries`, and a new version of a shipped library last under its `versions`. Where that mapping's entries lie on the lines below its key, the command writes the new entry as block lines at their indent. Where the mapping is written in flow on its key's line, such as `versions: {}`, it writes the entry in flow before the closing brace. Every other byte of the file stays: comments, order, line endings and a byte-order mark. Where the result would not read back as the list with that version added, the command refuses: write `libraries`, and the library's `versions`, as block mappings.
+
 ### `library.yaml`
 
 The test brand's file:
@@ -311,7 +314,7 @@ Every field is required, `builds-on: []` included. `dtcg`, `resolver` and `open`
 
 ### The foundations
 
-The capability ships the foundations at `.pkit/capabilities/visual-communication/libraries/foundations/`: version 1.0.0, of kind `components`, needing release 0.1.0, building on nothing, and not yet released. A piece reads them from the library folder alone, so the project copies the folder whole to `libraries/foundations/1.0.0/` and lists it with `source: {kind: shipped}`. No command copies it. The foundations hold:
+The capability ships the foundations at `.pkit/capabilities/visual-communication/libraries/foundations/`: version 1.0.0, of kind `components`, needing release 0.1.0, building on nothing, and not yet released. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the folder whole to `libraries/foundations/1.0.0/` and lists it with `source: {kind: shipped}` ([What the location holds](#what-the-location-holds)). The foundations hold:
 
 - `library.yaml`;
 - `roles.yaml`, the shared roles, axes, colour families and contrast pairs that every library shares (DEC-004 points 2, 7 and 8);

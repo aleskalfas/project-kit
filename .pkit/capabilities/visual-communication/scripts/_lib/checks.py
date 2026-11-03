@@ -69,7 +69,7 @@ from _lib.findings import (
     as_read,
 )
 from _lib.findings import loss_finding as _loss_finding
-from _lib.libraries import FOLDER, Held, Version
+from _lib.libraries import FOLDER, Held, Version, kind_within
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml
 from _lib.root import CONFIG
@@ -406,14 +406,7 @@ def kind_of(inside: str) -> str | None:
     if parts == [FOLDER, "libraries.yaml"]:
         return "libraries"
     if parts[0] == FOLDER and len(parts) >= 4:
-        within = parts[3:]
-        if within == ["library.yaml"]:
-            return "library"
-        if within == ["roles.yaml"]:
-            return "roles"
-        if len(within) == 2 and within[0] == pl.COMPONENTS:
-            return "component"
-        return None
+        return kind_within(parts[3:])
     if parts[0] == pl.PIECES and len(parts) >= 3:
         within = parts[2:]
         single = {
