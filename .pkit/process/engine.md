@@ -17,7 +17,7 @@ The operations an agent asks of the process engine, and what each answers or doe
 
 ## The operations
 
-The backbone exposes the engine as the `process` command group of `pkit`. Each core operation but `health` acts on one subject of a process, addressed `<capability>:<process-id>`. `health` walks every declared hand-off contract:
+The backbone exposes the engine as the `process` command group of `pkit`. Each core operation but `health` acts on one subject of a process, addressed `<capability>:<process-id>`, and `health` walks every declared hand-off contract. The operations are these:
 
 | Operation | What it answers or does |
 |---|---|

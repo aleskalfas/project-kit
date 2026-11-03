@@ -6,14 +6,16 @@ body: >
   The process area's README, `.pkit/process/README.md`, becomes the process
   substrate's specification for the AI agent, linking its new guide at
   `latest` (#2494). It keeps the vocabulary, the two guarantees,
-  gate-checkability, the layout, binding a process and the authoring layer.
-  Three pages beside it hold the rest: `shape.md` (the fields, detection
-  modes, waits, invariants and dynamic structure), `engine.md` (the
-  operations, the predicate runner, the seam-ordering contract and the
-  journal) and `connections.md` (composition, the cascade fold and
-  `depends_on`). Every section that moved keeps its old address on the
-  README, and each heading other text names stays there as a heading that
-  links its new home. The `process` skill and the `process-author` agent read
-  the pages beside the README, and the CLI reference links them. The pages now
-  say that the engine reads a predicate's `result` by its truth value, and
-  that a self-clearing wait is journaled at the subject's next move.
+  gate-checkability, the layout, binding a process, the authoring layer,
+  and the engine's contract: the predicate runner, the seam-ordering
+  contract and the journal. Three pages beside it hold the rest: `shape.md`
+  (the fields, detection modes, waits, invariants and dynamic structure),
+  `engine.md` (the engine's operations) and `connections.md` (composition,
+  the cascade fold and `depends_on`). Every section that moved keeps its old
+  address on the README, and "Detection modes", "Cascade" and "depends_on"
+  stay there as headings that link their new homes. The `process` skill and
+  the `process-author` agent read the pages beside the README, and the CLI
+  and lifecycle references point to them. The pages now say that the engine
+  reads a predicate's `result` by its truth value, that a transition's
+  `authorisation` is the caller's to enforce, and that a self-clearing wait
+  is journaled at the subject's next move.

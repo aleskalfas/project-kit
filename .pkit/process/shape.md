@@ -157,7 +157,7 @@ A process declares `subject.cardinality`, which is `singleton` or `keyed`.
 
 - **A position** (core), resolved live.
 - **A derived blocked state** (core): "no legal move", with an optional declared wait, `blocked` ("Blocked" below).
-- **A journal** (optional audit): an append-only record of how the subject got here. It is kept only where the project turns journal logging on, which is off by default. Nothing the engine decides reads it, and the process README's journal section describes its entries.
+- **A journal** (optional audit): an append-only record of how the subject got here. It is kept only where the project turns journal logging on, which is off by default. Nothing the engine decides reads it, and the process README's "An entry" describes its entries.
 
 ## Detection modes (core)
 
@@ -322,7 +322,7 @@ The blocked flag is a derived overlay, recomputed live and never stored as truth
 
 ### The journal of a wait
 
-Where the project keeps a journal, the engine journals a wait as it starts and as it ends ([COR-034](../decisions/core/COR-034-human-pause-gate.md)). The journal is the audit trail, and whether the subject is blocked now is always the live reading, which wins over any journal entry. The process README's journal section says when each entry is written.
+Where the project keeps a journal, the engine journals a wait as it starts and as it ends ([COR-034](../decisions/core/COR-034-human-pause-gate.md)). The journal is the audit trail, and whether the subject is blocked now is always the live reading, which wins over any journal entry. The process README's "Journaling a wait" says when each entry is written.
 
 ### The question on a person's move
 

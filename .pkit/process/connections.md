@@ -330,7 +330,7 @@ The `relation` set annotates only the edges the engine cannot already see.
 
 ### The seam payloads
 
-Both seams of a hand-off contract are commands that the declaring, downstream capability registers ([COR-042](../decisions/core/COR-042-process-health.md)). They run under the predicate runner's ordinary contract, which the process README gives: one subject argument and `--json`, from the repository's root, read-only.
+Both seams of a hand-off contract are commands that the declaring, downstream capability registers ([COR-042](../decisions/core/COR-042-process-health.md)). They run as every predicate does, under the process README's predicate runner, with one subject argument and `--json`.
 
 - **`candidates`** runs with the subject slot carrying the contract's upstream process address, the scope it enumerates. The binding knows the trigger statically, from its own declaration.
   - It returns `{candidates: ["<id>", …]}`.

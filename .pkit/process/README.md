@@ -39,6 +39,7 @@ pkit:
         - .pkit/cli/README.md#process-health---process-addr---interpretation-only---json
         - .pkit/cli/README.md#regenerating-a-capabilitys-depends-on-list
         - .pkit/cli/README.md#validate
+        - .pkit/cli/README.md#configuration-file
 ---
 
 # Process
@@ -246,7 +247,7 @@ The engine resolves position first, by running the detection predicates. Then it
 
 ### Seam-ordering contract (journal-as-intent-log)
 
-A capability's wrapper applies its domain side-effect first, and then journals the move with `--from`. This contract holds for every binding, and orders the side-effect against the engine's journal write.
+A capability's wrapper applies its domain side-effect first, and then calls `move` with `--from`, which journals the move where a journal is kept. This contract holds for every binding, and orders the side-effect against the engine's journal write.
 
 The journal is an intent log, not the source of truth. Live detection is authoritative ([COR-033](../decisions/core/COR-033-process-substrate.md) point 3):
 
@@ -290,7 +291,7 @@ Because detection is authoritative, the seam corrects itself whichever step fail
 The engine can keep an append-only journal for each subject ([COR-033](../decisions/core/COR-033-process-substrate.md) point 7). It holds an entry for each move the engine executes, and for each wait's enter and resume.
 
 - **Audit, not runtime.** Position, gates, invariants and the blocked overlay never read it. So the engine's verdicts are the same with it on or off: where the subject is, whether it may move, and whether it is valid.
-- **The project's choice.** The project declares it in the backbone configuration file, which the CLI reference describes:
+- **The project's choice.** The project declares it in the backbone configuration file ([the CLI reference, "Configuration file"](../cli/README.md#configuration-file)):
 
 ```yaml
 # .pkit/project/config.yaml
@@ -326,8 +327,8 @@ pkit config set process.journal.committed true --yes
 Each line of a journal is one JSON object: a move's entry, or a wait's.
 
 - **A move's entry** holds `ts`, `subject`, `to`, `trigger` and `actor`. It adds `from` where the origin is known, `gate_result` (`pass` or `fail`) where the move has a gate, and `severity` where the transition names one.
-- **`version`:** the pkit version that governed the move.
-- **`reason`:** the one place an entry says why its move was taken, as the caller gave it with `--reason`.
+  - **`version`:** the pkit version that governed the move.
+  - **`reason`:** the one place an entry says why its move was taken, written only where the caller gave `move` a `--reason` ([the engine page, "The operations"](engine.md#the-operations)).
 - **A wait's entry** holds `ts`, `subject` and `event`, `blocked-enter` or `blocked-resume`. It adds `blocked_on`, and `at` and `assignee` where the wait has them.
 
 #### Journaling a wait
