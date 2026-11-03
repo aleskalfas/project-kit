@@ -115,6 +115,7 @@ pkit:
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
         - .pkit/lifecycle/README.md#naming
         - .pkit/process/engine.md
+        - .pkit/process/engine.md#the-operations
         - .pkit/process/connections.md#cascade--fold-one-child-processs-member-outcomes-core
         - .pkit/release/README.md#release-notes--pkit-release-publish-notes-version
 ---

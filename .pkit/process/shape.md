@@ -117,9 +117,21 @@ What a definition must hold, and how its parts are written:
   - a process's `id`, `version`, `subject`, `states` and `transitions`, and a subject's `cardinality`
   - a state's `id`, `meaning` and `detection`, and a detection's `mode` and `predicate`
   - a transition's `from`, `to`, `trigger` and `authorisation`, and a gate's `kind`
-- **Every other field may be left out.** A transition with no `gate` has no check, and any caller may take it.
+- **Every other field is optional,** but a block that is declared carries required fields of its own (below).
+- **A transition with no `gate`** has no check, and the engine lets any caller take it.
 - **A predicate** is `{run: <command>, with: {...}}`. `run` names a command the owning capability registers, and `with`, optional, maps static arguments, which the runner does not pass yet.
 - **An entry** is `true`, an unconditional start, or `{when: <predicate>}`, a start guarded by a predicate.
+
+A block that is declared requires these fields:
+
+- **A predicate:** `run`.
+- **A gate:** `predicate` for `deterministic` and `authorisation-artifact`, and `outcome` for `subprocess-outcome`. A `cascade-outcome` gate takes neither.
+- **`blocked`:** `blocked_on`, and `resume_when` for `awaiting-condition`.
+- **`subprocess`:** `runs`, and `subject` where the inner process is keyed.
+- **`cascade`:** `runs`, `members`, `membership` and `reducer`. The reducer takes `op` and `outcome`, and `threshold` under `count`.
+- **An invariant:** `id`, `check` and `why`.
+- **A `depends_on` entry:** `upstream`, `relation`, `mode` and `why`. A `mandatory` mark takes `reason`, and a `handoff` takes `trigger`, `candidates` and `resolve`.
+- **An `interface`'s inputs and outcomes:** each a `name`.
 
 The connections page describes how the engine reads `subprocess`, `interface`, `cascade` and `depends_on`. The engine page describes how each predicate is run and read.
 

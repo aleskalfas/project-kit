@@ -35,7 +35,7 @@ This page gives the operations an agent asks of the engine, and how the engine r
 
 ## The operations
 
-The backbone exposes the engine as the `process` command group of `pkit`. Its core operations act on a process addressed `<capability>:<process-id>`, each on one subject of it but `health`:
+The backbone exposes the engine as the `process` command group of `pkit`. Each core operation but `health` acts on one subject of a process, addressed `<capability>:<process-id>`. `health` walks every declared hand-off contract:
 
 | Operation | What it answers or does |
 |---|---|
@@ -50,8 +50,7 @@ The backbone exposes the engine as the `process` command group of `pkit`. Its co
 - **`move`'s `--from`** names the state the subject held before the caller applied the move's domain side-effect. The move is validated and journaled from there ("Seam-ordering contract" below).
 - **`move`'s `--reason`** says why the caller took the move. An instance is the justification for overriding a gate the binding lets it bypass, or a move that one subject's move caused in another. It is recorded on the entry's `reason` as given, and no verdict reads it.
 - **`health`** takes no subject. It runs outside the engine's runtime, reports only, and is deterministic. It prints narrative or `--json`, and exits non-zero on any miss or any indeterminate finding.
-  - `--process <address>` scopes it to one process's contracts.
-  - `--interpretation-only` reports only the contracts it cannot interpret, a seam still a stub among them, and counts no miss. It is the authoring check a definition's author runs, scoped to that definition.
+  - Its flags, `--process` and `--interpretation-only`, are the CLI reference's.
 - **`cascade`** exits 1 when the fold is not open, or when the process declares none.
 - **`--actor <login>`** names the actor whose gates are checked. `status` and `can-move` take `operator` without it, and `move` the caller's `gh` login. A wrapper names one actor on each call, or a sign-off gate can give two verdicts.
 - **A transition's `authorisation`** names who may take the move. The engine does not enforce it, and the caller does. The engine reads it only to tell an `awaiting-human` wait, and where a `prompt` goes.
@@ -218,8 +217,8 @@ pkit config set process.journal.committed true --yes
 Each line of a journal is one JSON object: a move's entry, or a wait's.
 
 - **A move's entry** holds `ts`, `subject`, `to`, `trigger` and `actor`. It adds `from` where the origin is known, `gate_result` (`pass` or `fail`) where the move has a gate, and `severity` where the transition names one.
-- **`version`** is the pkit version that governed the move.
-- **`reason`** is the one place an entry says why its move was taken, as the caller gave it with `--reason`.
+- **`version`:** the pkit version that governed the move.
+- **`reason`:** the one place an entry says why its move was taken, as the caller gave it with `--reason`.
 - **A wait's entry** holds `ts`, `subject` and `event`, `blocked-enter` or `blocked-resume`. It adds `blocked_on`, and `at` and `assignee` where the wait has them.
 
 ### Journaling a wait
@@ -227,7 +226,7 @@ Each line of a journal is one JSON object: a move's entry, or a wait's.
 With logging on, a subject's wait is journaled as it starts and as it ends ([COR-034](../decisions/core/COR-034-human-pause-gate.md)). With logging off, the wait is as live and as blocking, nothing records it, and it has no `since`.
 
 - **The entries.** Entering a blocked position appends a `blocked-enter` entry, and leaving it a `blocked-resume` entry. Each is a journal entry, and no other channel emits them. The deferred `hooks` slot will react to these entries once it ships.
-- **`since`,** the wait's age, is read from the open `blocked-enter` entry. `assignee` is carried from the declaration.
+- **`since`:** the wait's age, read from the open `blocked-enter` entry. `assignee` is carried from the declaration.
 - **Only a move journals a wait.** `status` runs predicates live and writes nothing. A `move` compares the wait at the target state it was given with the wait the journal shows open:
   - A move that parks a subject the journal shows unblocked journals `blocked-enter` as it parks. So `since` counts from then, not from when the person finally acts.
   - A move that leaves a wait the journal shows open, onto a position with no wait, journals `blocked-resume`.

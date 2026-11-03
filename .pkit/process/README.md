@@ -117,7 +117,7 @@ A capability binds a process in four steps ([COR-033](../decisions/core/COR-033-
 
 1. Author a process definition as the capability's own instance schema, at `.pkit/capabilities/<capability>/schemas/<process-id>.yaml`. It declares that it conforms to the shape contract, which is `../../../schemas/_defs/process.schema.json` from its folder.
    - Author it through the authoring layer below, not by hand, since the stamps own the file's correctness.
-   - The one exception is a block no stamp writes yet ("Deferred authoring operations" below). Such a block is written into the definition by hand.
+   - The edits no stamp makes yet are listed under "Deferred authoring operations" below.
 2. Drive it through the capability's commands, each named by a verb and a subject, which call the engine ([the engine page, "Seam-ordering contract"](engine.md#seam-ordering-contract-journal-as-intent-log)).
 3. Address the process elsewhere as `<capability>:<process-id>`.
    - A parent embeds it by that address, through a `subprocess` state ([COR-036](../decisions/core/COR-036-process-composition.md)).

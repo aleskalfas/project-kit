@@ -62,6 +62,7 @@ process:
   transitions:
     - from: <subprocess-state>
       to:   <next>
+      trigger: <command>
       authorisation: agent-autonomous
       gate:
         kind: subprocess-outcome             # the ENGINE computes this — no capability predicate
@@ -153,6 +154,7 @@ process:
   transitions:
     - from: <waiting-state>
       to:   <closed>
+      trigger: <command>
       authorisation: agent-autonomous
       gate:
         kind: cascade-outcome            # the ENGINE folds the `cascade` declaration — no predicate, no per-gate outcome
