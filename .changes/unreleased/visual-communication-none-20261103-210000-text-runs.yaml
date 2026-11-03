@@ -1,0 +1,7 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-012 decides how a text's field holds runs, how a run names a style its
+  field declares, and how a run names a concept (#2500). The record designs
+  ahead: the code that draws runs lands in a later pull request, so no
+  surface moves yet.

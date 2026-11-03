@@ -42,6 +42,23 @@ pkit:
         - COR-039#2
         - COR-050#3
         - COR-054#5
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#6
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
+        - COR-028
+        - COR-039
+        - PRJ-004
+        - ADR-063
       artefact:
         - REQ-052
         - REQ-053
@@ -61,7 +78,7 @@ pkit:
 **Assumptions:**
 
 - The [project](../../../../core/glossary.md#term-project--project) has software-analysis installed, or registered in place where software-analysis is developed ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-031](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md)). The [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys the `analysis-author` [skill](../../../../core/glossary.md#term-skill--skill) ([COR-005](../../../../../../.pkit/decisions/core/COR-005-bundle-pattern.md) and [COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
-- The [change](../../../../core/glossary.md#term-change--change)'s design lies in [decision records](../../../../core/glossary.md#term-decision-record--decision-record) and notes in this repository, or in an issue in a tracker ([DEC-001 point 6](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
+- The [change](../../../../core/glossary.md#term-change--change)'s design lies in [decision records](../../../../core/glossary.md#term-decision-record--decision-record) and notes in this repository, or in a work item in a tracker ([DEC-001 point 6](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
 - The [answer](../../../../core/glossary.md#term-answer--answer) each revised [artefact](../../../../core/glossary.md#term-artefact--artefact) carries is recorded with the core's writers, as `core:UC-002` describes ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - The [backbone](../../../../core/glossary.md#term-backbone--backbone) resolves the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), on which the [stamp](../../../../core/glossary.md#term-stamp--stamp) and `pkit analysis check-pointers` locate each commit ([COR-054 point 5](../../../../../../.pkit/decisions/core/COR-054-default-branch.md#5-one-computation-exposed)).
 
@@ -72,7 +89,7 @@ pkit:
 1. The developer reads the [change](../../../../core/glossary.md#term-change--change)'s design. For each [design source](../../../glossary.md#term-design-source--design-source), the developer notes where it lies and a pointer to the text read. The pointer is a commit the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) holds, or the time a tracker's text was read.
 2. The developer finds the [analysis](../../../glossary.md#term-analysis--analysis) [artefacts](../../../../core/glossary.md#term-artefact--artefact) the change touches: the [use cases](../../../glossary.md#term-use-case--use-case) whose steps it changes, and the terms, actors and requirements it names.
 3. For each, the developer judges whether it still holds against the design, and gives it a [revalidation outcome](../../../glossary.md#term-revalidation-outcome--revalidation-outcome) ([DEC-001 point 5](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)).
-4. Where an accepted [decision record](../../../../core/glossary.md#term-decision-record--decision-record) decides a step the code lacks until the change lands, the developer writes the step as that decision record decides. The step takes its box and its entry in `shortfalls`, naming that record and the issue that tracks building it (DEC-001 points [1](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape) and 5).
+4. Where an accepted [decision record](../../../../core/glossary.md#term-decision-record--decision-record) decides a step the code lacks until the change lands, the developer writes the step as that decision record decides. The step takes its box and its entry in `shortfalls`, naming that record and the work item for building it (DEC-001 points [1](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape) and 5).
 5. The developer records each artefact's [answer](../../../../core/glossary.md#term-answer--answer), `updated` where it changed, as `core:UC-002` describes.
 6. The developer runs `pkit analysis new revalidation <slug> --trigger planned`, naming the change, each artefact's `--outcome` and `--because`, each gap's `--gap`, and each design source's `--reviewed-against` ([DEC-001 point 6](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
 7. At its entry, before it writes, the [system](../../../../core/glossary.md#term-system--system) checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
@@ -89,7 +106,7 @@ pkit:
 **Variants:**
 
 - **1a.** A [design source](../../../glossary.md#term-design-source--design-source) lies in this repository and lands with the [revalidation record](../../../glossary.md#term-revalidation-record--revalidation-record), such as a design note. Its pointer is `this change`, and the commit that adds the revalidation record pins it ([DEC-001 point 6](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
-- **1b.** A design source lies outside this repository, such as an issue's body. The revalidation record names it with its link, and its pointer is the time its text was read, in UTC ([DEC-001 point 6](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
+- **1b.** A design source lies outside this repository, such as a work item's body. The revalidation record names it with its link, and its pointer is the time its text was read, in UTC ([DEC-001 point 6](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
 - **1c.** On the path of 1b, the design source lies in another repository. Its pointer may be a commit's full id there, in place of a time ([DEC-001 point 6](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
 - **3a.** Every [artefact](../../../../core/glossary.md#term-artefact--artefact) the [change](../../../../core/glossary.md#term-change--change) touches holds against the design. The revalidation record is written all the same, since a planned [revalidation](../../../glossary.md#term-revalidation--revalidation) always leaves one ([DEC-001 point 6](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
 - **4a.** No accepted [decision record](../../../../core/glossary.md#term-decision-record--decision-record) decides the changed step yet, such as a design still under review. The developer revises no [use case](../../../glossary.md#term-use-case--use-case) ahead of its code. The revalidation record still reviews the design, and each gap names what will resolve it ([DEC-001 point 5](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)).

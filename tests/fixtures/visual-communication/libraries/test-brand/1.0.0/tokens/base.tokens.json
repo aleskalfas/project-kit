@@ -26,6 +26,61 @@
     },
     "strong-paper": {
       "$value": "{palette.white}"
+    },
+    "blue": {
+      "fill": {
+        "$value": "{palette.blue.50}"
+      },
+      "line": {
+        "$value": "{palette.blue.600}"
+      },
+      "text": {
+        "$value": "{palette.blue.800}"
+      }
+    },
+    "green": {
+      "fill": {
+        "$value": "{palette.green.50}"
+      },
+      "line": {
+        "$value": "{palette.green.600}"
+      },
+      "text": {
+        "$value": "{palette.green.800}"
+      }
+    },
+    "orange": {
+      "fill": {
+        "$value": "{palette.orange.50}"
+      },
+      "line": {
+        "$value": "{palette.orange.600}"
+      },
+      "text": {
+        "$value": "{palette.orange.800}"
+      }
+    },
+    "purple": {
+      "fill": {
+        "$value": "{palette.purple.50}"
+      },
+      "line": {
+        "$value": "{palette.purple.600}"
+      },
+      "text": {
+        "$value": "{palette.purple.800}"
+      }
+    },
+    "red": {
+      "fill": {
+        "$value": "{palette.red.50}"
+      },
+      "line": {
+        "$value": "{palette.red.600}"
+      },
+      "text": {
+        "$value": "{palette.red.800}"
+      }
     }
   },
   "background": {
@@ -51,6 +106,76 @@
   "line": {
     "$type": "color",
     "$value": "{scheme.rule}"
+  },
+  "family": {
+    "$description": "The members of the foundations' colour families: the neutral family paints with the surface, the line and the primary text, and each hue with what the colour scheme gives it.",
+    "$type": "color",
+    "neutral": {
+      "fill": {
+        "$value": "{surface}"
+      },
+      "line": {
+        "$value": "{line}"
+      },
+      "text": {
+        "$value": "{text-primary}"
+      }
+    },
+    "blue": {
+      "fill": {
+        "$value": "{scheme.blue.fill}"
+      },
+      "line": {
+        "$value": "{scheme.blue.line}"
+      },
+      "text": {
+        "$value": "{scheme.blue.text}"
+      }
+    },
+    "green": {
+      "fill": {
+        "$value": "{scheme.green.fill}"
+      },
+      "line": {
+        "$value": "{scheme.green.line}"
+      },
+      "text": {
+        "$value": "{scheme.green.text}"
+      }
+    },
+    "orange": {
+      "fill": {
+        "$value": "{scheme.orange.fill}"
+      },
+      "line": {
+        "$value": "{scheme.orange.line}"
+      },
+      "text": {
+        "$value": "{scheme.orange.text}"
+      }
+    },
+    "purple": {
+      "fill": {
+        "$value": "{scheme.purple.fill}"
+      },
+      "line": {
+        "$value": "{scheme.purple.line}"
+      },
+      "text": {
+        "$value": "{scheme.purple.text}"
+      }
+    },
+    "red": {
+      "fill": {
+        "$value": "{scheme.red.fill}"
+      },
+      "line": {
+        "$value": "{scheme.red.line}"
+      },
+      "text": {
+        "$value": "{scheme.red.text}"
+      }
+    }
   },
   "space": {
     "$type": "dimension",
@@ -85,6 +210,13 @@
       "$description": "The width of a figure's page.",
       "$value": {
         "value": 960,
+        "unit": "px"
+      }
+    },
+    "slide": {
+      "$description": "The width of a slide.",
+      "$value": {
+        "value": 1280,
         "unit": "px"
       }
     }

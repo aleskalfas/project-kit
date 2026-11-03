@@ -1,14 +1,15 @@
 """`pkit visual export <piece>` (visual-communication DEC-006 point 7): numbered exports in
-the clone's local folder, never overwriting another; their record, `exports.yaml`; and no
-stale or missing produced picture, unless the person names a stale one."""
+the clone's local folder, never overwriting another; their record, `exports.yaml`; no stale
+or missing produced picture, unless the person names a stale one; a piece of several
+pages, one file for each page under one number; and what a write that fails leaves."""
 
 from __future__ import annotations
 
 import subprocess
-import sys
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from pathlib import Path
 from typing import Any
+from xml.etree import ElementTree
 
 import pytest
 
@@ -21,7 +22,8 @@ from tests.test_visual_communication_pipeline import (
     drawing_project,
     write_picture,
 )
-from tests.visual_communication_project import CONFIG
+from tests.visual_communication_project import CONFIG, SCHEMAS, bound, importable, write, yaml_text
+from tests.visual_communication_writes import FULL, failing
 
 script, exports, svg, seam, framing, files, reading, fingerprint, pl = load(
     "visual-communication",
@@ -44,7 +46,7 @@ RECORD = f"{PIECE_FOLDER}/exports.yaml"
 def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """The renderer stands in for the import a run makes when it draws, and the test
     producer is registered, for the length of the test."""
-    monkeypatch.setitem(sys.modules, "_lib.plugins.svg", svg)
+    importable(monkeypatch, svg)
     producer.register(seam)
     yield
     seam.unregister(producer.NAME)
@@ -95,7 +97,7 @@ def test_each_run_takes_the_next_number_and_records_it(tmp_path: Path) -> None:
     recorded = second["recorded"]
     assert (recorded["state"], recorded["renderers"], recorded["used-stale"]) == (
         "draft",
-        {"svg": "1.0.0"},
+        {"svg": "1.0.1"},
         [],
     )
     assert "time: '" in (root / RECORD).read_text(encoding="utf-8")
@@ -256,7 +258,7 @@ def test_a_refusal_exits_1_and_writes_nothing(
     assert not (root / RECORD).exists()
 
 
-def test_a_file_of_the_next_number_left_in_the_folder_is_never_overwritten(
+def test_a_file_the_record_does_not_name_is_never_overwritten_and_refuses_nothing(
     tmp_path: Path,
 ) -> None:
     root = ready(tmp_path)
@@ -264,12 +266,35 @@ def test_a_file_of_the_next_number_left_in_the_folder_is_never_overwritten(
     left.parent.mkdir(parents=True)
     left.write_text("kept\n", encoding="utf-8")
     shown = run(root, PIECE)
-    assert shown.returncode == 1
-    assert "holds flow.v1.en.default.svg already" in shown.stderr
-    assert shown.stdout == ""
+    assert shown.returncode == 0, shown.stderr
     assert left.read_text(encoding="utf-8") == "kept\n"
-    assert not (root / RECORD).exists()
-    assert not (root / CONFIG).exists()
+    assert exported(root) == [
+        "flow.v1.en.default.svg",
+        "flow.v2.en.colour-scheme.dark.svg",
+        "flow.v2.en.default.svg",
+    ]
+    assert [entry["version"] for entry in reading.read_yaml(root / RECORD)["versions"]] == [2]
+
+
+def test_a_file_of_a_number_under_another_name_moves_the_run_past_that_number(
+    tmp_path: Path,
+) -> None:
+    root = ready(tmp_path)
+    folder = root / FOLDER
+    folder.mkdir(parents=True)
+    left = folder / "flow.v1.en.default.1.svg"
+    left.write_text("kept\n", encoding="utf-8")
+    (folder / "notes.txt").write_text("mine\n", encoding="utf-8")
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert left.read_text(encoding="utf-8") == "kept\n"
+    assert exported(root) == [
+        "flow.v1.en.default.1.svg",
+        "flow.v2.en.colour-scheme.dark.svg",
+        "flow.v2.en.default.svg",
+        "notes.txt",
+    ]
+    assert [entry["version"] for entry in reading.read_yaml(root / RECORD)["versions"]] == [2]
 
 
 def test_a_record_that_cannot_be_read_stops_the_next_export(tmp_path: Path) -> None:
@@ -293,3 +318,200 @@ def test_the_export_fingerprint_changes_with_what_the_scenes_were_computed_from(
     assert run(root, PIECE).returncode == 0
     first, second = reading.read_yaml(root / RECORD)["versions"]
     assert first["fingerprint"] != second["fingerprint"]
+
+
+# --- a piece of several pages -------------------------------------------------------------------
+
+#: The top of a piece of several pages: its slot of pages places each slide as a page of its
+#: own, drawn by the card (the layout tests' deck, as a file).
+DECK = bound(
+    "component",
+    status="experimental",
+    about="A deck whose slides are each a page, drawn by the card.",
+    fields={
+        "type": "object",
+        "required": ["slides"],
+        "properties": {
+            "slides": {
+                "type": "array",
+                "description": "The slides in order.",
+                "items": {"type": "object"},
+            }
+        },
+    },
+    layouts={"slide": {"slots": {"slides": {"pages": True}}}},
+    parts={"slides": {"repeat": "slides", "draw": "tests/card", "width": "=:width", "column": {}}},
+    preferred={"width": "=@size.figure", "height": "=@space.4"},
+)
+
+#: The head of each slide of the deck, in order, in each of its languages.
+SLIDES = {
+    "en": {"one": "Plan the work.", "two": "Build it."},
+    "cs": {"one": "Naplánovat práci.", "two": "Postavit ji."},
+}
+
+#: The files a run of the deck makes as version 1, each with the page it holds: two pages,
+#: in two languages and two colour schemes.
+DECK_FILES = {
+    f"flow.v1.{language}.{key}.{number}.svg": (language, key, f"deck/slides[{slide}]")
+    for language in SLIDES
+    for key in ("default", "colour-scheme.dark")
+    for number, slide in ((1, "one"), (2, "two"))
+}
+
+
+def deck(tmp_path: Path, slides: Mapping[str, Mapping[str, str]] = SLIDES) -> Path:
+    """The piece `flow` as a deck of two pages, ready to export: its top the local
+    component `piece/deck`, in English and Czech, in both colour schemes."""
+    root = drawing_project(tmp_path, picture=False, top="piece/deck", languages=list(slides))
+    write(root / PIECE_FOLDER / "components" / "deck.yaml", yaml_text(DECK))
+    for language, heads in slides.items():
+        items = [{"id": slide, "head": head} for slide, head in heads.items()]
+        text = yaml_text(bound("content", slides=items))
+        write(root / PIECE_FOLDER / f"content.{language}.yaml", text)
+    return root
+
+
+def drawn_as(path: Path) -> tuple[str, str, str]:
+    """The language, the combination's key and the page an exported SVG file names."""
+    svg = ElementTree.fromstring(path.read_text(encoding="utf-8"))
+    return svg.get("data-language", ""), svg.get("data-key", ""), svg.get("data-page", "")
+
+
+def test_a_piece_of_several_pages_exports_each_page_under_one_number(tmp_path: Path) -> None:
+    root = deck(tmp_path)
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert exported(root) == sorted(DECK_FILES)
+    assert [line for line in shown.stdout.splitlines() if line.startswith("export: ")] == [
+        *(f"export: {FOLDER}/{name}" for name in DECK_FILES),
+        f"export: version 1 recorded in {RECORD}",
+    ]
+
+
+def test_each_file_holds_its_page_the_pages_in_order(tmp_path: Path) -> None:
+    root = deck(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    assert {name: drawn_as(root / FOLDER / name) for name in DECK_FILES} == DECK_FILES
+
+
+def test_the_record_names_the_file_of_each_page_with_its_hash(tmp_path: Path) -> None:
+    root = deck(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    record = reading.read_yaml(root / RECORD)
+    assert files.shape_problems(record, "exports") == []
+    [version] = record["versions"]
+    assert version["version"] == 1
+    assert version["files"] == {
+        name: reading.sha256((root / FOLDER / name).read_bytes()) for name in DECK_FILES
+    }
+
+
+def test_a_piece_with_no_page_in_one_language_is_refused_and_writes_nothing(
+    tmp_path: Path,
+) -> None:
+    root = deck(tmp_path, {**SLIDES, "cs": {}})
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        "error: `flow` has no page in `cs`, so the export would hold no file in that language\n"
+    )
+    assert not (root / CONFIG).exists()
+    assert not (root / FOLDER).exists()
+    assert not (root / RECORD).exists()
+
+
+@pytest.mark.parametrize(
+    ("page", "name"),
+    [(None, "flow.v3.en.colour-scheme.dark.svg"), (2, "flow.v3.en.colour-scheme.dark.2.svg")],
+    ids=["one-page", "several-pages"],
+)
+def test_a_file_name_adds_the_page_number_only_where_one_is_given(
+    page: int | None, name: str
+) -> None:
+    assert exports.file_name("flow", 3, "en", "colour-scheme.dark", "svg", page) == name
+
+
+#: Names of exported files as format 1 named them before a piece of several pages exported,
+#: and still names the files of a piece of one page.
+FORMAT_1_NAMES = [
+    "flow.v1.en.default.svg",
+    "flow.v12.en.colour-scheme.dark.svg",
+    "flow.v1.cs.colour-scheme.dark+contrast.high.svg",
+    "release-notes.v2.pt-br.default.svg",
+]
+#: Names of the files of a piece of several pages, each with its page's number.
+PAGED_NAMES = ["flow.v1.en.default.1.svg", "flow.v1.en.colour-scheme.dark.12.svg"]
+
+
+def record_naming(names: list[str]) -> dict[str, Any]:
+    """The reference record of exports, its one version naming `names`."""
+    record = reading.read_yaml(SCHEMAS / "exports.yaml")
+    [version] = record["versions"]
+    version["files"] = {name: "0" * 64 for name in names}
+    return record
+
+
+def test_every_name_format_1_accepted_still_holds_beside_names_with_a_page_number() -> None:
+    assert files.shape_problems(record_naming(FORMAT_1_NAMES + PAGED_NAMES), "exports") == []
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["flow.v1.en.default.0.svg", "flow.v1.en.default.01.svg", "flow.v1.en.default.1.2.svg"],
+)
+def test_a_page_number_counts_from_1_and_comes_once(name: str) -> None:
+    assert files.shape_problems(record_naming([name]), "exports") != []
+
+
+# --- what a failed export leaves ----------------------------------------------------------------
+
+
+@pytest.mark.parametrize("file", ["flow.v2.en.colour-scheme.dark.svg", "exports.yaml"])
+def test_a_write_that_fails_removes_the_files_of_the_run_and_keeps_the_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, file: str
+) -> None:
+    root = ready(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    record = (root / RECORD).read_bytes()
+    with monkeypatch.context() as patch:
+        failing(patch, write={file})
+        shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stdout == ""
+    folder = PIECE_FOLDER if file == "exports.yaml" else FOLDER
+    assert shown.stderr == f"error: {folder}/{file} could not be written: {FULL}\n"
+    assert exported(root) == ["flow.v1.en.colour-scheme.dark.svg", "flow.v1.en.default.svg"]
+    assert (root / RECORD).read_bytes() == record
+
+
+def test_a_failed_first_export_records_no_location(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = ready(tmp_path)
+    with monkeypatch.context() as patch:
+        failing(patch, write={"exports.yaml"})
+        assert run(root, PIECE).returncode == 1
+    assert not (root / CONFIG).exists()
+    assert not (root / RECORD).exists()
+    assert not (root / FOLDER).exists()
+
+
+def test_a_file_a_failed_run_could_not_remove_is_named_and_refuses_no_later_export(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = ready(tmp_path)
+    with monkeypatch.context() as patch:
+        failing(patch, write={"exports.yaml"}, remove={"flow.v1.en.default.svg"})
+        shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        f"error: {RECORD} could not be written: {FULL}; these could not be put back as they "
+        f"were before the run: {FOLDER}/flow.v1.en.default.svg\n"
+    )
+    assert exported(root) == ["flow.v1.en.default.svg"]
+    assert not (root / RECORD).exists()
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert shown.stdout.splitlines()[-1] == f"export: version 2 recorded in {RECORD}"
+    assert [entry["version"] for entry in reading.read_yaml(root / RECORD)["versions"]] == [2]

@@ -1,11 +1,13 @@
 """The pipeline from a project's files to the engine (visual-communication DEC-002 point 5,
-DEC-003 point 9, DEC-005 point 13): a piece read with its content, the lock written into
-`piece.yaml` with every other byte kept, the `Env` over the locked libraries and the
-piece's produced pictures, and the scenes of each language.
+DEC-003 point 9, DEC-004 point 10, DEC-005 point 13): a piece read with its content, the
+lock written into `piece.yaml` with every other byte kept, the `Env` over the locked
+libraries, the notations the piece names and its produced pictures, and the scenes of each
+language.
 
-It also holds the project the render, check and export tests draw: `drawing_project`, the
+It also holds the projects the render, check and export tests draw: `drawing_project`, the
 piece `flow`, a figure of the `tests` library's steps whose last step is a callout over the
-produced picture `square`.
+produced picture `square`; and `system_project`, the piece `system`, a figure of a pattern
+whose nodes take their colour family by concept, by the pattern's and by state.
 """
 
 from __future__ import annotations
@@ -23,6 +25,9 @@ from tests.visual_communication_project import (
     FIXTURES,
     FOUNDATIONS,
     TEST_BRAND,
+    TEST_NOTATION,
+    TEST_PARTS,
+    add_library,
     bound,
     copy_library,
     project,
@@ -196,6 +201,11 @@ def test_a_piece_is_read_with_its_content_in_each_language(tmp_path: Path) -> No
         ),
         pytest.param({"top": "figure"}, "`top` is not a use", id="top"),
         pytest.param({"lock": {"foundations": 1}}, "`lock` is not a mapping", id="lock"),
+        pytest.param(
+            {"notations": "test-notation"},
+            "`notations` is not a list of libraries' names",
+            id="notations",
+        ),
     ],
 )
 def test_a_piece_that_cannot_be_read_is_refused_naming_the_file(
@@ -240,6 +250,12 @@ def test_a_piece_always_needs_the_foundations_whose_roles_every_piece_reads(
 ) -> None:
     piece = piece_of(drawing_project(tmp_path, top="tests/steps", picture=False))
     assert pl.needed(piece) == ["foundations", "test-brand", "tests"]
+
+
+def test_a_piece_needs_each_notation_it_names(tmp_path: Path) -> None:
+    piece = pl.read_piece(system_project(tmp_path), "visual", "system")
+    assert piece.notations == ["test-notation"]
+    assert pl.needed(piece) == ["foundations", "test-brand", "test-notation"]
 
 
 # --- writing the lock ---------------------------------------------------------------------------
@@ -363,6 +379,151 @@ def test_a_lock_naming_a_version_not_held_is_refused(tmp_path: Path) -> None:
         project_of(root)
 
 
+# --- a notation's concepts ----------------------------------------------------------------------
+
+#: A pattern of the piece's own: the parts of a system in a row, each drawn by a node in
+#: the family `orange` unless its concept or its state says otherwise.
+PATTERN = bound(
+    "component",
+    status="experimental",
+    about="The parts of a system in a row, each drawn by a node.",
+    fields={
+        "type": "object",
+        "required": ["items"],
+        "properties": {"items": {"type": "array", "items": {"type": "object"}}},
+    },
+    parts={
+        "items": {
+            "repeat": "items",
+            "draw": "piece/node",
+            "colour": "orange",
+            "width": "=:width",
+            "row": {"gap": "=@space.2", "sizes": "equal", "align-items": "stretch"},
+        }
+    },
+    preferred={"height": "=items.height"},
+)
+
+#: One part of a system: its name on a box, both painted from its colour family.
+NODE = bound(
+    "component",
+    status="experimental",
+    about="One part of a system, its name on a box of its colour family.",
+    fields={
+        "type": "object",
+        "required": ["name"],
+        "properties": {"name": {"type": "string", "x-pkit-prose": True}},
+    },
+    states={"failing": {"colour": "red"}},
+    parts={
+        "box": {
+            "box": {"fill": ":colour.fill", "stroke": ":colour.line"},
+            "width": "=:width",
+            "height": "=:height",
+        },
+        "name": {
+            "text": {"content": "name", "style": "type.body", "fill": ":colour.text"},
+            "x": "=@space.2",
+            "y": "=@space.2",
+            "width": "=:width - 2 * @space.2",
+        },
+    },
+    preferred={"height": "=name.bottom + @space.2"},
+)
+
+#: The nodes of the pattern: a person by its concept, a service by the pattern's family, a
+#: queue by its state, and a store whose state changes its concept's family.
+NODES = [
+    {"id": "user", "name": "User", "concept": "test-notation/person"},
+    {"id": "api", "name": "API"},
+    {"id": "queue", "name": "Queue", "state": "failing"},
+    {"id": "store", "name": "Store", "concept": "test-notation/store", "state": "failing"},
+]
+
+
+def system_project(tmp_path: Path) -> Path:
+    """The foundations, the test brand and the test notation, listed unreleased, and the
+    draft `system`: a figure of the pattern over `NODES`, in both colour schemes."""
+    root = project(tmp_path)
+    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
+    copy_library(root, TEST_NOTATION, "test-notation", "1.0.0")
+    unreleased = {"1.0.0": {"released": False}}
+    write_list(
+        root,
+        {
+            "foundations": {"source": {"kind": "shipped"}, "versions": unreleased},
+            "test-brand": {"source": {"kind": "project"}, "versions": unreleased},
+            "test-notation": {"source": {"kind": "project"}, "versions": unreleased},
+        },
+    )
+    write_piece(
+        root,
+        "system",
+        notations=["test-notation"],
+        modes={"colour-scheme": ["light", "dark"]},
+        lock={"foundations": "1.0.0", "test-brand": "1.0.0", "test-notation": "1.0.0"},
+    )
+    folder = root / "visual" / "pieces" / "system"
+    write(folder / "components" / "pattern.yaml", yaml_text(PATTERN))
+    write(folder / "components" / "node.yaml", yaml_text(NODE))
+    body = {"use": "piece/pattern", "items": NODES}
+    write(folder / "content.en.yaml", yaml_text(bound("content", body=body, caption="A system.")))
+    return root
+
+
+def hex_of(colour: Mapping[str, Any]) -> str:
+    """An sRGB colour of the values document, as its hex code."""
+    return "#" + "".join(f"{round(c * 255):02x}" for c in colour["components"])
+
+
+def test_a_node_takes_its_concept_s_family_else_its_list_s_and_its_state_changes_either(
+    tmp_path: Path,
+) -> None:
+    root = system_project(tmp_path)
+    piece = pl.read_piece(root, "visual", "system")
+    project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+
+    [(_, result)] = project.scenes()
+
+    assert result.findings == []
+    painted = {}
+    for node in NODES:
+        trace = f"figure/body/items[{node['id']}]"
+        box, name = result.scene.find(f"{trace}/box"), result.scene.find(f"{trace}/name")
+        assert box is not None and name is not None
+        [[run]] = name.properties["paragraphs"]
+        assert box.sources["fill"] == box.sources["stroke"] == run["sources"]["fill"]
+        painted[node["id"]] = (box.properties["fill"], box.sources["fill"])
+    assert painted == {
+        "user": ("family.purple.fill", "content:body.items[user].concept"),
+        "api": ("family.orange.fill", "default:piece/pattern"),
+        "queue": ("family.red.fill", "content:body.items[queue].state"),
+        "store": ("family.red.fill", "content:body.items[store].state"),
+    }
+    document = project.values()
+    resolved = {
+        key: {
+            family: [hex_of(pl.colours_at(document, key)[f"family.{family}.{member}"])
+                     for member in ("fill", "line", "text")]
+            for family in ("purple", "orange", "red")
+        }
+        for key in project.keys
+    }  # fmt: skip
+    assert resolved == {
+        "default": {
+            "purple": ["#fbefff", "#8250df", "#512a97"],
+            "orange": ["#fff1e5", "#bc4c00", "#762c00"],
+            "red": ["#ffebe9", "#cf222e", "#82071e"],
+        },
+        "colour-scheme.dark": {
+            "purple": ["#3c1e70", "#a371f7", "#e2c5ff"],
+            "orange": ["#5a1e02", "#db6d28", "#ffc680"],
+            "red": ["#67060c", "#f85149", "#ffc1ba"],
+        },
+    }
+
+
 # --- the findings record's key and the YAML a command writes ------------------------------------
 
 
@@ -388,3 +549,388 @@ def test_yaml_text_writes_a_header_and_no_alias() -> None:
     text = pl.yaml_text({"a": shared, "b": shared}, "One.\nTwo.")
     assert text == "# One.\n# Two.\n\na:\n  x: 1\nb:\n  x: 1\n"
     assert reading.load_yaml(text) == {"a": {"x": 1}, "b": {"x": 1}}
+
+
+# --- a library's own roles (DEC-008) -----------------------------------------------------------
+
+
+def parts_project(tmp_path: Path, warning: bool = False) -> Path:
+    """The foundations, the test brand and the test library with roles of its own, listed
+    unreleased, and the draft `tags`: a figure of the library's tag, under a lock of the
+    three; with `warning`, the tag paints its label with the library's warning, which has
+    no default and which the test brand, naming no library, leaves with no value."""
+    root = project(tmp_path)
+    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
+    parts = copy_library(root, TEST_PARTS, "test-parts", "1.0.0")
+    if warning:
+        tag = parts / "components" / "tag.yaml"
+        tag.write_text(
+            tag.read_text(encoding="utf-8").replace(
+                "fill: test-parts.note", "fill: test-parts.warning"
+            ),
+            encoding="utf-8",
+        )
+    unreleased = {"1.0.0": {"released": False}}
+    write_list(
+        root,
+        {
+            "foundations": {"source": {"kind": "shipped"}, "versions": unreleased},
+            "test-brand": {"source": {"kind": "project"}, "versions": unreleased},
+            "test-parts": {"source": {"kind": "project"}, "versions": unreleased},
+        },
+    )
+    write_piece(
+        root,
+        "tags",
+        modes={"colour-scheme": ["light", "dark"]},
+        lock={"foundations": "1.0.0", "test-brand": "1.0.0", "test-parts": "1.0.0"},
+    )
+    body = {"use": "test-parts/tag", "label": "Ready"}
+    content = bound("content", body=body, caption="A tag.")
+    write(root / "visual" / "pieces" / "tags" / "content.en.yaml", yaml_text(content))
+    return root
+
+
+def tags_project(root: Path) -> Any:
+    piece = pl.read_piece(root, "visual", "tags")
+    return pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+
+
+def test_a_project_reads_the_own_roles_of_each_library_it_locks(tmp_path: Path) -> None:
+    project = tags_project(parts_project(tmp_path))
+    assert set(project.scope.libraries) == {"test-parts"}
+    assert project.foundations is project.scope.foundations
+    assert project.brand.scope is project.scope
+    assert [finding.code for finding in project.scope.findings] == ["role-brand-only"]
+
+
+def test_a_part_reading_a_librarys_roles_draws_them_at_their_defaults(tmp_path: Path) -> None:
+    project = tags_project(parts_project(tmp_path))
+    [(_, result)] = project.scenes()
+    assert result.findings == []
+    box = result.scene.find("figure/body/box")
+    label = result.scene.find("figure/body/label")
+    assert box is not None and label is not None
+    assert box.properties["fill"] == "test-parts.paper"
+    [[run]] = label.properties["paragraphs"]  # a text's paint lies in its runs
+    assert run["fill"] == "test-parts.note"
+    assert project.env.role("test-parts.gap") == project.env.role("space.2")
+
+
+def test_the_values_document_holds_each_role_of_a_locked_library_at_its_default(
+    tmp_path: Path,
+) -> None:
+    project = tags_project(parts_project(tmp_path))
+    document = project.values()
+    held = document["tokens"]
+    assert held["test-parts.note"] == {**held["text-primary"]}
+    assert held["test-parts.gap"]["type"] == "dimension"
+    assert "test-parts.warning" not in held
+    assert document["lock"]["test-parts"] == "1.0.0"
+    assert (
+        pl.colours_at(document, "colour-scheme.dark")["test-parts.paper"]
+        == (pl.colours_at(document, "colour-scheme.dark")["background"])
+    )
+
+
+def test_a_role_with_no_value_under_the_brand_is_none_to_the_engine_or_the_document(
+    tmp_path: Path,
+) -> None:
+    project = tags_project(parts_project(tmp_path, warning=True))
+    with pytest.raises(KeyError) as raised:
+        project.env.role("test-parts.warning")
+    assert type(raised.value).__name__ == "RoleWithoutValue"
+    with pytest.raises(KeyError) as raised:
+        project.env.role("test-parts.nothing")
+    assert type(raised.value).__name__ == "UnknownRole"
+    [(_, result)] = project.scenes()
+    label = result.scene.find("figure/body/label")
+    assert label is not None
+    [[run]] = label.properties["paragraphs"]
+    assert run["fill"] == "test-parts.warning"
+    assert "test-parts.warning" not in project.values()["tokens"]
+
+
+# --- whether versions fit the piece as its lock does (DEC-003 point 8, DEC-010 point 2, DEC-011
+# --- point 4) -----------------------------------------------------------------------------------
+
+#: The two libraries the fit of a draft's versions is judged with: blocks, and the patterns
+#: that draw them, each built on the foundations.
+BLOCKS, PATTERNS = "lab-blocks", "lab-patterns"
+LISTED = {"type": "array", "items": {"type": "object"}}
+V = pl.Version.parse
+
+
+def component_text(**fields: Any) -> str:
+    return yaml_text(bound("component", status="experimental", **fields))
+
+
+def block(**more: Any) -> str:
+    """A block that shows its `head`, with what `more` declares beside."""
+    head = {"text": {"content": "head", "style": "type.body", "fill": "text-primary"}}
+    return component_text(
+        about="A head.",
+        fields={"type": "object", "required": ["head"], "properties": {"head": {"type": "string"}}},
+        parts={"head": {**head, "width": "=:width"}},
+        preferred={"height": "=head.bottom"},
+        **more,
+    )
+
+
+def write_blocks(root: Path, version: str, *, twice: bool = False) -> None:
+    """A version of the blocks: a card; a card that declares the option `size`; an arrow,
+    which takes ends; and a frame, which draws its `cards` where `twice`, so that a list a
+    pattern draws and passes on to it is drawn twice."""
+    components = add_library(root, BLOCKS, version, builds_on={"foundations": 1}) / "components"
+    write(components / "card.yaml", block())
+    write(components / "sized.yaml", block(options={"size": ["small", "large"]}))
+    arrow = {"l": {"line": {"stroke": "line"}, "connect": "straight"}}
+    write(components / "arrow.yaml", component_text(about="An arrow.", ends=True, parts=arrow))
+    cards = {"repeat": "cards", "draw": f"{BLOCKS}/card", "width": "=:width", "column": {}}
+    box = {"box": {"fill": "surface"}, "width": "=:width", "height": "=:height"}
+    frame = component_text(
+        about="A frame of cards.",
+        fields={"type": "object", "properties": {"cards": LISTED}},
+        parts={"cards": cards} if twice else {"box": box},
+        preferred={"height": "=@space.4"},
+    )
+    write(components / "frame.yaml", frame)
+
+
+def write_patterns(root: Path, version: str, *, size: bool = False, frame: bool = False) -> None:
+    """A version of the patterns: a row of items, which declares the arrangement field
+    `size` for them where `size`; and cards tied to each other, which also pass their cards
+    on to the blocks' frame where `frame`."""
+    builds_on = {"foundations": 1, BLOCKS: 1}
+    components = add_library(root, PATTERNS, version, builds_on=builds_on) / "components"
+    items = {"repeat": "items", "draw": f"{BLOCKS}/card", "width": "=:width", "row": {}}
+    arranged = {"items": {"arrangement": {"size": {"words": ["one", "two"]}}}}
+    write(
+        components / "row.yaml",
+        component_text(
+            about="A row of items.",
+            fields={"type": "object", "properties": {"items": LISTED}},
+            parts={"items": items},
+            preferred={"height": "=items.height"},
+            **({"lists": arranged} if size else {}),
+        ),
+    )
+    cards = {"repeat": "cards", "draw": f"{BLOCKS}/card", "width": "=@space.4 * 4", "column": {}}
+    parts: dict[str, Any] = {
+        "cards": cards,
+        "links": {"repeat": "links", "draw": f"{BLOCKS}/arrow"},
+    }
+    if frame:
+        parts["frame"] = {
+            "use": f"{BLOCKS}/frame",
+            "fields": {"cards": "cards"},
+            "x": "=@space.4 * 5",
+            "width": "=@space.4 * 4",
+        }
+    write(
+        components / "net.yaml",
+        component_text(
+            about="Cards tied to each other.",
+            fields={"type": "object", "properties": {"cards": LISTED, "links": LISTED}},
+            lists={"links": {"ends": ["from", "to"]}},
+            parts=parts,
+            preferred={"height": "=@space.4 * 6"},
+        ),
+    )
+
+
+#: A row whose first item names the sized card and gives `size`.
+ROW = {
+    "use": f"{PATTERNS}/row",
+    "items": [
+        {"id": "a", "use": f"{BLOCKS}/sized", "head": "A", "size": "large"},
+        {"id": "b", "head": "B"},
+    ],
+}
+
+#: Two cards and a tie between them.
+NET = {
+    "use": f"{PATTERNS}/net",
+    "cards": [{"id": "a", "head": "A"}, {"id": "b", "head": "B"}],
+    "links": [{"id": "ab", "from": {"item": "cards[a]"}, "to": {"item": "cards[b]"}}],
+}
+
+
+def lab_project(
+    tmp_path: Path,
+    body: Mapping[str, Any],
+    lock: Mapping[str, str] | None,
+    blocks: Mapping[str, bool],
+    patterns: Mapping[str, Mapping[str, bool]],
+    **fields: Any,
+) -> Path:
+    """The draft `flow` of `body` under `lock`, in a project that holds the foundations, the
+    test brand, and each version of the blocks (`write_blocks`, whether its frame draws its
+    cards) and of the patterns (`write_patterns`, with its options) given, all listed."""
+    root = drawing_project(tmp_path, lock=lock, picture=False, **fields)
+    for version, twice in blocks.items():
+        write_blocks(root, version, twice=twice)
+    for version, given in patterns.items():
+        write_patterns(root, version, **given)
+    unreleased = {"released": False}
+    listed = {
+        name: {"source": {"kind": "project"}, "versions": {v: unreleased for v in versions}}
+        for name, versions in ((BLOCKS, blocks), (PATTERNS, patterns))
+    }
+    write_list(
+        root,
+        {
+            "foundations": {"source": {"kind": "shipped"}, "versions": {"1.0.0": unreleased}},
+            "test-brand": {"source": {"kind": "project"}, "versions": {"1.0.0": unreleased}},
+            "tests": {"source": {"kind": "project"}, "versions": {"1.0.0": unreleased}},
+            **listed,
+        },
+    )
+    write_content(root, body=dict(body))
+    return root
+
+
+def lab_lock(blocks: str | None, patterns: str) -> dict[str, str]:
+    """The lock of the lab piece: the foundations, the test brand, and the versions given."""
+    lock = {"foundations": "1.0.0", "test-brand": "1.0.0", PATTERNS: patterns}
+    return lock if blocks is None else {**lock, BLOCKS: blocks}
+
+
+def judged(root: Path, blocks: str, patterns: str, fit: Any = None) -> list[Any]:
+    """What the fit of the piece finds in the combination of its lock's foundations and
+    brand with the versions given."""
+    held = pl.Held(root, "visual")
+    fit = fit or pl.fit(piece_of(root), held)
+    versions = lab_lock(blocks, patterns)
+    return fit({name: held.library(name, V(text)) for name, text in versions.items()})
+
+
+def test_versions_under_which_an_item_carries_a_key_both_declare_do_not_fit(
+    tmp_path: Path,
+) -> None:
+    root = lab_project(
+        tmp_path,
+        ROW,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": False},
+        {"1.0.0": {}, "1.1.0": {"size": True}},
+    )
+
+    [misfit] = judged(root, "1.0.0", "1.1.0")
+
+    assert misfit.rule == "clash"
+    assert misfit.said == (
+        f"the item `body.items[a]` carries `size`, which both its component `{BLOCKS}/sized` "
+        f"and its list declare"
+    )
+    assert misfit.implicates == {"foundations", BLOCKS, PATTERNS}
+    assert judged(root, "1.0.0", "1.0.0") == []
+
+
+@pytest.mark.parametrize(
+    "lock",
+    [
+        pytest.param(lab_lock("1.0.0", "1.1.0"), id="the-lock-shows-it"),
+        pytest.param(lab_lock(None, "1.1.0"), id="a-library-named-for-the-first-time"),
+    ],
+)
+def test_a_clash_the_lock_shows_or_cannot_show_holds_nothing_back(
+    tmp_path: Path, lock: dict[str, str]
+) -> None:
+    root = lab_project(
+        tmp_path,
+        ROW,
+        lock,
+        {"1.0.0": False},
+        {"1.1.0": {"size": True}, "1.2.0": {"size": True}},
+    )
+    assert judged(root, "1.0.0", "1.2.0") == []
+
+
+def test_versions_under_which_a_component_draws_an_ends_list_twice_do_not_fit(
+    tmp_path: Path,
+) -> None:
+    root = lab_project(
+        tmp_path,
+        NET,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": False, "1.1.0": True},
+        {"1.0.0": {"frame": True}},
+    )
+
+    found = judged(root, "1.1.0", "1.0.0")
+
+    assert [(misfit.rule, misfit.said) for misfit in found] == [
+        ("end", "the end `from` of the tie `body.links[ab]` would not be found"),
+        ("end", "the end `to` of the tie `body.links[ab]` would not be found"),
+    ]
+    assert found[0].implicates == {"foundations", BLOCKS, PATTERNS}
+    assert judged(root, "1.0.0", "1.0.0") == []
+
+
+def test_an_end_the_lock_does_not_find_holds_nothing_back(tmp_path: Path) -> None:
+    root = lab_project(
+        tmp_path,
+        NET,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": True, "1.1.0": True},
+        {"1.0.0": {"frame": True}},
+    )
+    assert judged(root, "1.1.0", "1.0.0") == []
+
+
+def test_a_loss_only_both_newest_versions_show_is_found_in_that_combination_alone(
+    tmp_path: Path,
+) -> None:
+    root = lab_project(
+        tmp_path,
+        NET,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": False, "1.1.0": True},
+        {"1.0.0": {}, "1.1.0": {"frame": True}},
+    )
+    fit = pl.fit(piece_of(root), pl.Held(root, "visual"))
+    lost = {
+        (blocks, patterns): [misfit.rule for misfit in judged(root, blocks, patterns, fit)]
+        for blocks in ("1.0.0", "1.1.0")
+        for patterns in ("1.0.0", "1.1.0")
+    }
+    assert lost == {
+        ("1.0.0", "1.0.0"): [],
+        ("1.0.0", "1.1.0"): [],
+        ("1.1.0", "1.0.0"): [],
+        ("1.1.0", "1.1.0"): ["end", "end"],
+    }
+
+
+def test_each_file_a_version_holds_is_read_once_across_the_combinations_judged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = lab_project(
+        tmp_path,
+        NET,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": False, "1.1.0": True},
+        {"1.0.0": {}, "1.1.0": {"frame": True}},
+    )
+    read: list[Path | None] = []
+    reader = pl.read_component
+
+    def counted(path: Path | None) -> Any:
+        read.append(path)
+        return reader(path)
+
+    monkeypatch.setattr(pl, "read_component", counted)
+    fit = pl.fit(piece_of(root), pl.Held(root, "visual"))
+    for blocks in ("1.0.0", "1.1.0"):
+        for patterns in ("1.0.0", "1.1.0"):
+            judged(root, blocks, patterns, fit)
+
+    assert len(read) == len(set(read)) > 0
+    assert root / f"visual/libraries/{BLOCKS}/1.1.0/components/frame.yaml" in read
+
+
+def test_a_piece_with_no_lock_yet_has_no_fit_to_judge(tmp_path: Path) -> None:
+    root = lab_project(tmp_path, ROW, None, {"1.0.0": False}, {"1.0.0": {}})
+    assert pl.fit(piece_of(root), pl.Held(root, "visual")) is None

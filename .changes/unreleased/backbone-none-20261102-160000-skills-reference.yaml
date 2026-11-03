@@ -1,0 +1,11 @@
+component: backbone
+kind: none
+body: >
+  The skills area's README, `.pkit/skills/README.md`, becomes a reference for
+  the AI agent, linking its new guide at `latest` (#2456). It keeps what an
+  agent acts on: the layout, the front matter, a skill's body, the composite
+  form, the acceptance gate a skill declares, the pairing with a command,
+  the deployment and how a skill is added. It names `metadata.wraps_command`
+  where the skills carry it, and `pkit sync` as the way to deploy a skill
+  again. Each renamed or dropped heading keeps its old address, and no
+  command, path or format changes, so no surface moves.

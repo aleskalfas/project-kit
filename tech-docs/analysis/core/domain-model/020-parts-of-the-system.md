@@ -11,6 +11,8 @@ explains:
   - TERM-storyboard
   - TERM-stamp
   - TERM-adapter
+  - TERM-support-declaration
+  - TERM-deploy-mark
   - TERM-install
   - TERM-project
 pkit:
@@ -27,10 +29,9 @@ pkit:
         - COR-016
         - COR-017
         - COR-025
-        - COR-028#2
+        - COR-047
         - COR-047#2
         - COR-047#3
-        - PRJ-002#D2
       artefact:
         - TERM-version
         - TERM-backbone
@@ -40,6 +41,8 @@ pkit:
         - TERM-storyboard
         - TERM-stamp
         - TERM-adapter
+        - TERM-support-declaration
+        - TERM-deploy-mark
         - TERM-install
         - TERM-project
 ---
@@ -53,7 +56,7 @@ The [backbone](../glossary.md#term-backbone--backbone) ships whole, at one versi
 ```mermaid
 classDiagram
   accTitle: Parts of the system, and projects
-  accDescr: The system is made of the backbone and components, each with a version of its own. A component declares which backbone versions it works with. An adapter is a component that serves one harness and deploys skills and agent definitions there. A storyboard scripts the dialogue an agent definition follows. A stamp pairs with a skill. Install adds the backbone or a component to a repository. A project is a repository the system is installed into, holding the methodology's files.
+  accDescr: The system is made of the backbone and components, each with a version of its own. A component declares which backbone versions it works with. An adapter is a component that serves one harness and deploys skills and agent definitions there, leaving its deploy mark on each copy. Its support declaration grades how far that harness meets each harness requirement. A storyboard scripts the dialogue an agent definition follows. A stamp pairs with a skill. Install adds the backbone or a component to a repository. A project is a repository the system is installed into, holding the methodology's files.
   class System["System"]
   class Harness["Harness"]
   class Methodology["Methodology"]
@@ -70,6 +73,11 @@ classDiagram
   Storyboard : scenarios
   class Stamp["Stamp"]
   class Adapter["Adapter"]
+  class SupportDeclaration["Support declaration"]
+  SupportDeclaration : grades
+  SupportDeclaration : harness version bound
+  class HarnessRequirement["Harness requirement"]
+  class DeployMark["Deploy mark"]
   class Install["Install"]
   class Project["Project"]
   System *-- Backbone
@@ -81,6 +89,9 @@ classDiagram
   Adapter --> Harness : serves one
   Adapter ..> Skill : deploys
   Adapter ..> AgentDefinition : deploys
+  Adapter --> SupportDeclaration : makes for its harness
+  SupportDeclaration ..> HarnessRequirement : grades each
+  Adapter ..> DeployMark : leaves on each copy
   Storyboard ..> AgentDefinition : scripts the dialogue of
   Stamp -- Skill : pairs with
   Install ..> Backbone : adds
@@ -123,7 +134,6 @@ A version is a number of the form major.minor.patch that names one state of a to
 **Always true:**
 
 - The backbone and every component use semantic versioning (COR-010).
-- Which segment moves is a person's judgement of the effect, never read from a commit's type ([PRJ-002 D2](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
 
 ## Backbone
 
@@ -291,20 +301,60 @@ An adapter is a [component](../glossary.md#term-component--component) that carri
 **Attributes:**
 
 - its [version](../glossary.md#term-version--version), and the [backbone](../glossary.md#term-backbone--backbone) versions it works with, as any component has
-- a support declaration: for each need the methodology states of a harness, how far its harness meets it ([COR-047 point 2](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version))
+- its [support declaration](../glossary.md#term-support-declaration--support-declaration) for its harness ([COR-047 point 2](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version))
 
 **Relations:**
 
 - It is a kind of component, and serves one harness ([COR-005](../../../../.pkit/decisions/core/COR-005-bundle-pattern.md)).
-- It deploys skills and agent definitions where its harness looks for them (COR-006).
+- It deploys skills and agent definitions where its harness looks for them (COR-006). It leaves its [deploy mark](../glossary.md#term-deploy-mark--deploy-mark) on each copy it places.
+
+**States:** None.
+
+**Always true:** None.
+
+## Support declaration
+
+Defined in [TERM-support-declaration](../glossary.md#term-support-declaration--support-declaration).
+
+**Why:** With no list of what a [harness](../glossary.md#term-harness--harness) must supply, adapting the [methodology](../glossary.md#term-methodology--methodology) to another one left gaps unseen ([COR-047](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)). What was missing was an obligation on each [adapter](../glossary.md#term-adapter--adapter) to grade its harness honestly, where "I cannot tell" differs from "all is well" (COR-047).
+
+A support declaration is an adapter's grading of how far its harness meets each [harness requirement](../glossary.md#term-harness-requirement--harness-requirement). Its author may bound it by the harness versions it holds for. Claude Code's grades `delegated-result-complete` as `at-cost`.
+
+**Attributes:**
+
+- a grade for each harness requirement, telling apart a harness that cannot meet it from one meeting it at a cost ([COR-047 point 2](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version))
+- where its author sets one, a bound on the harness versions a grade holds for (COR-047 point 2)
+
+**Relations:**
+
+- An adapter makes it for its own harness (COR-047 point 2).
+- It grades the harness requirements the methodology states (COR-047 point 2).
 
 **States:** None.
 
 **Always true:**
 
-- A need its support declaration does not cover is unknown, never met ([COR-047 point 3](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#3-silence-is-indeterminate-never-satisfaction)).
-- A bound on the harness versions its declaration holds for is never widened by itself, only by an author who tested it (COR-047 point 2).
-- It enforces the permission model in its harness, and the model, never the harness's settings, is the source of truth ([COR-028 point 2](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
+- Every adapter grades with the same labels, so the grades stay comparable across harnesses (COR-047 point 2).
+- A harness requirement it leaves out is indeterminate, never met ([COR-047 point 3](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#3-silence-is-indeterminate-never-satisfaction)).
+- A bound on the harness versions is never widened by itself, only by an author who tested the claim (COR-047 point 2).
+
+## Deploy mark
+
+Defined in [TERM-deploy-mark](../glossary.md#term-deploy-mark--deploy-mark).
+
+**Why:** None.
+
+A deploy mark is the sign an [adapter](../glossary.md#term-adapter--adapter) leaves on each copy it places for its [harness](../glossary.md#term-harness--harness), such as a comment line. By it, the adapter's later runs recognise their own copies. A later run removes or rewrites only a copy that carries it, so the [project](../glossary.md#term-project--project)'s own files stay (`.pkit/adapters/README.md`).
+
+**Attributes:** None.
+
+**Relations:**
+
+- An adapter leaves it on each copy of a [skill](../glossary.md#term-skill--skill) or an [agent definition](../glossary.md#term-agent-definition--agent-definition) it places for its harness.
+
+**States:** None.
+
+**Always true:** None.
 
 ## Install
 
@@ -363,10 +413,10 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-003 — Declare what my change means for the next release](../use-case-model/use-cases/030-change/UC-003-declare-changeset.md)
 - [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
 - [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md)
-- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
-- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
-- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/050-adopt/UC-012-report-problem.md)
-- [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/050-adopt/UC-013-link-reports.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/040-release/UC-011-migrate-component-change.md)
+- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/060-report/UC-012-report-problem.md)
+- [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/060-report/UC-013-link-reports.md)
 - [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
 - [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
 - [UC-018 — Know my capability is ready to share](../use-case-model/use-cases/010-develop/UC-018-check-shareable.md)
@@ -377,7 +427,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-024 — See what a capability would connect to before I install it](../use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md)
 - [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md)
 - [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md)
-- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/020-set-up/UC-031-keep-per-machine-choices.md)
+- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/070-work-within-limits/UC-031-keep-per-machine-choices.md)
 - [UC-048 — Put the system's CLI on my machine at a release](../use-case-model/use-cases/050-adopt/UC-048-install-cli.md)
 - [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
 - [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md)
@@ -401,13 +451,14 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 - [UC-003 — Declare what my change means for the next release](../use-case-model/use-cases/030-change/UC-003-declare-changeset.md)
 - [UC-004 — Know before I push that my change passes my project's checks](../use-case-model/use-cases/030-change/UC-004-check-before-push.md)
-- [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/030-change/UC-006-gate-merges.md)
+- [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
+- [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/020-set-up/UC-006-gate-merges.md)
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md)
 - [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
 - [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md)
-- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
-- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
-- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/050-adopt/UC-012-report-problem.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/040-release/UC-011-migrate-component-change.md)
+- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/060-report/UC-012-report-problem.md)
 - [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
 - [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
 - [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
@@ -418,11 +469,11 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
 - [UC-025 — Choose which installed capability provides a role](../use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md)
 - [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md)
-- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md)
-- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/020-set-up/UC-030-work-unprompted.md)
-- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/020-set-up/UC-031-keep-per-machine-choices.md)
-- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md)
-- [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/020-set-up/UC-033-find-why-prompted.md)
+- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/070-work-within-limits/UC-028-keep-intermediate-files.md)
+- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/070-work-within-limits/UC-030-work-unprompted.md)
+- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/070-work-within-limits/UC-031-keep-per-machine-choices.md)
+- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md)
+- [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/070-work-within-limits/UC-033-find-why-prompted.md)
 - [UC-034 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-034-land-change.md)
 - [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
 - [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
@@ -436,15 +487,15 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
 - [JRN-007 — Upgrade one capability, and re-pin its rule set](../use-case-model/journeys/JRN-007-upgrade-one-capability.md)
 - [JRN-008 — Release a breaking backbone change with its migration](../use-case-model/journeys/JRN-008-release-breaking-backbone-change.md)
-- [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/030-change/REQ-001-migration-runs-again.md)
+- [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/040-release/REQ-001-migration-runs-again.md)
 - [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
 - [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-008 · Constraint · Until #1600 is done, the only area or adapter a change may add is `rule-sets`, and none may be removed](../requirements/constraints/010-develop/REQ-008-areas-held.md)
 - [REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`](../requirements/quality/REQ-009-preview-before-change.md)
 - [REQ-010 · Functional · A command that propagates content under another version than the project records stops](../requirements/functional/REQ-010-stop-under-another-version.md)
-- [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/030-change/REQ-017-backbone-migration-safe.md)
-- [REQ-018 · Quality · A reading command of the friction group prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
-- [REQ-019 · Functional · Each reading document of the friction group carries its version, and a reader refuses one it does not know](../requirements/functional/030-change/REQ-019-reading-document-versioned.md)
+- [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/040-release/REQ-017-backbone-migration-safe.md)
+- [REQ-018 · Quality · A reading command of `pkit friction` prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
+- [REQ-019 · Functional · Each reading document of `pkit friction` carries its version, and a reader refuses one it does not know](../requirements/functional/030-change/REQ-019-reading-document-versioned.md)
 - [REQ-026 · Quality · An interrupted version transition never reads as finished, and the next one completes it](../requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md)
 - [REQ-029 · Functional · A version transition resolves compatibility across components before it writes anything](../requirements/functional/050-adopt/REQ-029-compatibility-before-write.md)
 
@@ -453,12 +504,14 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-003 — Declare what my change means for the next release](../use-case-model/use-cases/030-change/UC-003-declare-changeset.md)
 - [UC-004 — Know before I push that my change passes my project's checks](../use-case-model/use-cases/030-change/UC-004-check-before-push.md)
 - [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
+- [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md)
 - [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
 - [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md)
-- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
-- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/040-release/UC-011-migrate-component-change.md)
 - [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
 - [UC-018 — Know my capability is ready to share](../use-case-model/use-cases/010-develop/UC-018-check-shareable.md)
+- [UC-021 — Declare my project's backbone configuration once, and have it validated](../use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md)
 - [UC-025 — Choose which installed capability provides a role](../use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md)
 - [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
 - [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
@@ -470,19 +523,19 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-003 — Deliver a change](../use-case-model/journeys/JRN-003-deliver-change.md)
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
 - [JRN-009 — Release a breaking change of my component with its migration](../use-case-model/journeys/JRN-009-release-breaking-component-change.md)
-- [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/030-change/REQ-001-migration-runs-again.md)
+- [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/040-release/REQ-001-migration-runs-again.md)
 - [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`](../requirements/quality/REQ-009-preview-before-change.md)
 - [REQ-014 · Functional · A later edit of a documentation root moves no document](../requirements/functional/020-set-up/REQ-014-root-change-moves-nothing.md)
-- [REQ-018 · Quality · A reading command of the friction group prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
-- [REQ-019 · Functional · Each reading document of the friction group carries its version, and a reader refuses one it does not know](../requirements/functional/030-change/REQ-019-reading-document-versioned.md)
+- [REQ-018 · Quality · A reading command of `pkit friction` prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
+- [REQ-019 · Functional · Each reading document of `pkit friction` carries its version, and a reader refuses one it does not know](../requirements/functional/030-change/REQ-019-reading-document-versioned.md)
 - [REQ-029 · Functional · A version transition resolves compatibility across components before it writes anything](../requirements/functional/050-adopt/REQ-029-compatibility-before-write.md)
 
 **Skill:**
 
-- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
-- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
-- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/050-adopt/UC-012-report-problem.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/040-release/UC-011-migrate-component-change.md)
+- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/060-report/UC-012-report-problem.md)
 - [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
 - [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
 - [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
@@ -526,7 +579,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
 - [JRN-006 — Start working on a project on a new machine](../use-case-model/journeys/JRN-006-start-on-new-machine.md)
-- [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/030-change/REQ-017-backbone-migration-safe.md)
+- [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/040-release/REQ-017-backbone-migration-safe.md)
 
 **Storyboard:**
 
@@ -535,8 +588,8 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 **Stamp:**
 
 - [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
-- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
-- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/040-release/UC-011-migrate-component-change.md)
 - [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
 - [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
 - [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
@@ -550,9 +603,9 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md)
 - [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md)
-- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
-- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
-- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/050-adopt/UC-012-report-problem.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/040-release/UC-011-migrate-component-change.md)
+- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/060-report/UC-012-report-problem.md)
 - [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
 - [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
 - [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
@@ -563,12 +616,12 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
 - [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md)
 - [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md)
-- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md)
-- [UC-029 — Get a delegated agent's result back whole](../use-case-model/use-cases/020-set-up/UC-029-get-result-whole.md)
-- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/020-set-up/UC-030-work-unprompted.md)
-- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/020-set-up/UC-031-keep-per-machine-choices.md)
-- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md)
-- [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/020-set-up/UC-033-find-why-prompted.md)
+- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/070-work-within-limits/UC-028-keep-intermediate-files.md)
+- [UC-029 — Get a delegated agent's result back whole](../use-case-model/use-cases/070-work-within-limits/UC-029-get-result-whole.md)
+- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/070-work-within-limits/UC-030-work-unprompted.md)
+- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/070-work-within-limits/UC-031-keep-per-machine-choices.md)
+- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md)
+- [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/070-work-within-limits/UC-033-find-why-prompted.md)
 - [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
 - [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
 - [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md)
@@ -578,7 +631,18 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
 - [JRN-009 — Release a breaking change of my component with its migration](../use-case-model/journeys/JRN-009-release-breaking-component-change.md)
 - [REQ-008 · Constraint · Until #1600 is done, the only area or adapter a change may add is `rule-sets`, and none may be removed](../requirements/constraints/010-develop/REQ-008-areas-held.md)
-- [REQ-016 · Constraint · The permission model's code needs only the system `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
+- [REQ-016 · Constraint · The permission code needs only the operating system's `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
+
+**Support declaration:**
+
+- [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
+- [UC-029 — Get a delegated agent's result back whole](../use-case-model/use-cases/070-work-within-limits/UC-029-get-result-whole.md)
+- [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
+
+**Deploy mark:**
+
+- [UC-020 — Turn recurring work into my project's own skill or agent definition](../use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md)
+- [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md)
 
 **Install:**
 
@@ -606,13 +670,13 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-003 — Declare what my change means for the next release](../use-case-model/use-cases/030-change/UC-003-declare-changeset.md)
 - [UC-004 — Know before I push that my change passes my project's checks](../use-case-model/use-cases/030-change/UC-004-check-before-push.md)
 - [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
-- [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/030-change/UC-006-gate-merges.md)
+- [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/020-set-up/UC-006-gate-merges.md)
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md)
 - [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
-- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
-- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
-- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/050-adopt/UC-012-report-problem.md)
-- [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/050-adopt/UC-013-link-reports.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/040-release/UC-011-migrate-component-change.md)
+- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/060-report/UC-012-report-problem.md)
+- [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/060-report/UC-013-link-reports.md)
 - [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
 - [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
 - [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
@@ -626,12 +690,12 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-025 — Choose which installed capability provides a role](../use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md)
 - [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md)
 - [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md)
-- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md)
-- [UC-029 — Get a delegated agent's result back whole](../use-case-model/use-cases/020-set-up/UC-029-get-result-whole.md)
-- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/020-set-up/UC-030-work-unprompted.md)
-- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/020-set-up/UC-031-keep-per-machine-choices.md)
-- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md)
-- [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/020-set-up/UC-033-find-why-prompted.md)
+- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/070-work-within-limits/UC-028-keep-intermediate-files.md)
+- [UC-029 — Get a delegated agent's result back whole](../use-case-model/use-cases/070-work-within-limits/UC-029-get-result-whole.md)
+- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/070-work-within-limits/UC-030-work-unprompted.md)
+- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/070-work-within-limits/UC-031-keep-per-machine-choices.md)
+- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md)
+- [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/070-work-within-limits/UC-033-find-why-prompted.md)
 - [UC-034 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-034-land-change.md)
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
 - [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
@@ -654,7 +718,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-007 — Upgrade one capability, and re-pin its rule set](../use-case-model/journeys/JRN-007-upgrade-one-capability.md)
 - [JRN-008 — Release a breaking backbone change with its migration](../use-case-model/journeys/JRN-008-release-breaking-backbone-change.md)
 - [JRN-009 — Release a breaking change of my component with its migration](../use-case-model/journeys/JRN-009-release-breaking-component-change.md)
-- [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/030-change/REQ-001-migration-runs-again.md)
+- [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/040-release/REQ-001-migration-runs-again.md)
 - [REQ-002 · Functional · Project-owned content is written only by the writers records name](../requirements/functional/REQ-002-project-owned-writers.md)
 - [REQ-003 · Constraint · The backbone's CLI runs on Python 3.11 or later](../requirements/constraints/REQ-003-python-floor.md)
 - [REQ-004 · Quality · A check never reads a missing result as one that found nothing](../requirements/quality/REQ-004-missing-answer-never-clean.md)
@@ -664,7 +728,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [REQ-010 · Functional · A command that propagates content under another version than the project records stops](../requirements/functional/REQ-010-stop-under-another-version.md)
 - [REQ-012 · Functional · The system asks the operator before its command changes another repository](../requirements/functional/REQ-012-ask-before-another-repository.md)
 - [REQ-015 · Functional · A declared documentation root that does not exist yet warns rather than fails](../requirements/functional/REQ-015-missing-root-warns.md)
-- [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/030-change/REQ-017-backbone-migration-safe.md)
+- [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/040-release/REQ-017-backbone-migration-safe.md)
 - [REQ-026 · Quality · An interrupted version transition never reads as finished, and the next one completes it](../requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md)
 - [REQ-027 · Quality · The version pin holds the old one or the new one, never part, and an upgrade writes it last](../requirements/quality/050-adopt/REQ-027-pin-whole-written-last.md)
 - [REQ-028 · Quality · The router never fails a command over a version pin it cannot resolve](../requirements/quality/050-adopt/REQ-028-unresolved-pin-runs-installed.md)

@@ -36,13 +36,14 @@ from tests.visual_communication_project import (
 NAME = "square"
 VERSION = "1.0.0"
 
-#: Its declaration, in seam 1's form: two inputs, each a colour role, the first required;
-#: and what it needs beyond the project's files, which is nothing.
+#: Its declaration, in the seam's form, which version 2 left as version 1 wrote it for a
+#: producer: two inputs, each a colour role, the first required; and what it needs beyond
+#: the project's files, which is nothing.
 DECLARATION: dict[str, Any] = {
     "name": NAME,
     "kind": "producer",
     "version": VERSION,
-    "seam": 1,
+    "seam": 3,
     "inputs": {
         "type": "object",
         "description": "What the square is painted with.",

@@ -15,14 +15,18 @@ builds-on:
       - {id: TERM-debt, name: debt}
       - {id: TERM-decision-record, name: decision record}
       - {id: TERM-default-branch, name: default branch}
+      - {id: TERM-deferral, name: deferral}
       - {id: TERM-finding, name: finding}
       - {id: TERM-head, name: head}
       - {id: TERM-link-target, name: link target}
       - {id: TERM-methodology, name: methodology}
+      - {id: TERM-permission-model, name: permission model}
       - {id: TERM-project, name: project}
       - {id: TERM-pull-request, name: pull request}
+      - {id: TERM-revalidation-answer, name: revalidation answer}
       - {id: TERM-reviewer, name: reviewer}
       - {id: TERM-revisit, name: revisit}
+      - {id: TERM-revisit-entry, name: revisit entry}
       - {id: TERM-rule, name: rule}
       - {id: TERM-rule-set, name: rule set}
       - {id: TERM-trigger-field, name: trigger field}
@@ -44,9 +48,11 @@ builds-on:
     terms:
       - {id: TERM-authorisation, name: authorisation}
       - {id: TERM-bypass, name: bypass}
+      - {id: TERM-feature, name: Feature}
       - {id: TERM-issue, name: issue}
       - {id: TERM-merge-gate, name: merge gate}
       - {id: TERM-required-reviewer, name: required reviewer}
+      - {id: TERM-task, name: Task}
       - {id: TERM-verdict, name: verdict}
 TERM-code-review-panel:
   name: code-review panel
@@ -64,6 +70,7 @@ TERM-code-review-panel:
           - software-engineering:DEC-002#1
           - software-engineering:DEC-002#3
           - project-management:DEC-032#D1
+          - project-management:DEC-032#D2
 TERM-conventions-corpus:
   name: conventions corpus
   status: active
@@ -92,6 +99,18 @@ TERM-hand-off:
         record:
           - software-engineering:DEC-001#4
           - COR-050#3
+TERM-walking-skeleton:
+  name: walking skeleton
+  status: active
+  definition: "Task building one thin path of new work end to end, whose merged code sets the conventions that work's other Tasks share"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/software-engineering/agents/software-engineer.md
+        record:
+          - software-engineering:DEC-004#1
+          - project-management:DEC-060#2
 ---
 
 # Glossary
@@ -111,14 +130,18 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [debt](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-debt--debt)
   - **Term:** [decision record](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-decision-record--decision-record)
   - **Term:** [default branch](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-default-branch--default-branch)
+  - **Term:** [deferral](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-deferral--deferral)
   - **Term:** [finding](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-finding--finding)
   - **Term:** [head](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-head--head)
   - **Term:** [link target](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-link-target--link-target)
   - **Term:** [methodology](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-methodology--methodology)
+  - **Term:** [permission model](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-permission-model--permission-model)
   - **Term:** [project](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-project--project)
   - **Term:** [pull request](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-pull-request--pull-request)
+  - **Term:** [revalidation answer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-revalidation-answer--revalidation-answer)
   - **Term:** [reviewer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-reviewer--reviewer)
   - **Term:** [revisit](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-revisit--revisit)
+  - **Term:** [revisit entry](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-revisit-entry--revisit-entry)
   - **Term:** [rule](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-rule--rule)
   - **Term:** [rule set](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-rule-set--rule-set)
   - **Term:** [trigger field](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-trigger-field--trigger-field)
@@ -129,12 +152,14 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Actor:** [AI agent](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md)
   - **Actor:** [Merge authoriser](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-merge-authoriser.md)
     - Have a reviewer other than their writer check a change's answers, so no merge I authorise rests on an answer that does not hold.
-- **From project-management at 2.0.0:** its terms of reviewing a pull request and merging it. No release holds project-management's analysis yet, so the links name the next release, 2.0.0, rather than software-engineering's floor of project-management, 0.54.0.
+- **From project-management at 2.0.0:** its terms of planning work into Tasks, reviewing a pull request and merging it. No release holds project-management's analysis yet, so the links name the next release, 2.0.0, rather than software-engineering's floor of project-management, 0.55.0.
   - **Term:** [authorisation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-authorisation--authorisation)
   - **Term:** [bypass](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-bypass--bypass)
+  - **Term:** [Feature](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-feature--feature)
   - **Term:** [issue](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-issue--issue)
   - **Term:** [merge gate](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-merge-gate--merge-gate)
   - **Term:** [required reviewer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-required-reviewer--required-reviewer)
+  - **Term:** [Task](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-task--task)
   - **Term:** [verdict](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-verdict--verdict)
 
 ## TERM-code-review-panel — code-review panel
@@ -164,3 +189,13 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **A process's hand-off:** the point where one process's subject passes to another process. A connection may declare that point checkable ([COR-042](../../../.pkit/decisions/core/COR-042-process-health.md)). A process's hand-off is no report to a person.
 - **The pull request's description:** what the change's author writes for its reviewers and for the merge authoriser. A hand-off goes to the person the agent works for.
+
+## TERM-walking-skeleton — walking skeleton
+
+**Example:** each Task of new reporting work would lay out its code alone. A walking skeleton builds one report end to end first. The `software-engineer` agent writes the layout the skeleton settles into the conventions corpus, in the skeleton's change.
+
+**Distinctions:**
+
+- **Foundation:** the Feature that comes first where the Tasks of new work would share a choice nothing settles. Its Tasks hold the records of the architectural choices, then the walking skeleton (project-management DEC-060 points [1](../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md#1-a-choice-that-tasks-would-share-and-nothing-settles-calls-for-a-foundation) and [2](../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md#2-the-foundation-is-one-feature-built-one-task-at-a-time)).
+- **Slice:** a Task of the new work, planned once the foundation is done, against the accepted records and the skeleton's code ([project-management DEC-060 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md#3-the-first-plan-files-the-foundation-and-the-second-plans-the-slices)).
+- **The first slice:** where one agent builds all the work in order, the person may fold the skeleton into it. The first slice's merged code then sets the conventions (project-management DEC-060 point 2).

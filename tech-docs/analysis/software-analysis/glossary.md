@@ -19,7 +19,9 @@ builds-on:
       - {id: TERM-component, name: component}
       - {id: TERM-debt, name: debt}
       - {id: TERM-decision-record, name: decision record}
+      - {id: TERM-declared-surface, name: declared surface}
       - {id: TERM-default-branch, name: default branch}
+      - {id: TERM-deferral, name: deferral}
       - {id: TERM-documentation-root, name: documentation root}
       - {id: TERM-friction, name: friction}
       - {id: TERM-head, name: head}
@@ -55,7 +57,7 @@ builds-on:
 TERM-analysis:
   name: analysis
   status: active
-  definition: "account of what one component must do and for whom, kept as anchored artefacts under the project's internal documentation root"
+  definition: "account of what one separately developed and versioned software unit must do and for whom, kept as anchored artefacts under the project's internal documentation root"
   pkit:
     friction:
       anchors:
@@ -64,6 +66,8 @@ TERM-analysis:
           - .pkit/capabilities/software-analysis/scripts/_lib/analyses.py
         record:
           - software-analysis:DEC-001#2
+          - COR-049#1
+          - COR-050#1
 TERM-artefact-kind:
   name: artefact kind
   noun-forms: [artefact kinds]
@@ -76,6 +80,8 @@ TERM-artefact-kind:
           - .pkit/capabilities/software-analysis/schemas/artefact-kinds.yaml
         record:
           - software-analysis:DEC-001#1
+          - COR-050#2
+          - COR-050#14
 TERM-candidate:
   name: candidate
   noun-forms: [candidates]
@@ -90,6 +96,7 @@ TERM-candidate:
         record:
           - software-analysis:DEC-001#1
           - software-analysis:DEC-001#9
+          - COR-050#1
 TERM-declared-structure:
   name: declared structure
   noun-forms: [declared structures]
@@ -117,6 +124,7 @@ TERM-design-source:
           - .pkit/capabilities/software-analysis/scripts/_lib/pointers.py
         record:
           - software-analysis:DEC-001#6
+          - COR-009#1
 TERM-freed-id:
   name: freed id
   noun-forms: [freed ids]
@@ -129,6 +137,7 @@ TERM-freed-id:
           - .pkit/capabilities/software-analysis/scripts/_lib/numbering.py
         record:
           - software-analysis:DEC-001#3
+          - COR-005
 TERM-hint:
   name: hint
   status: active
@@ -141,6 +150,7 @@ TERM-hint:
           - .pkit/capabilities/software-analysis/scripts/_lib/placeholder.py
         record:
           - software-analysis:DEC-001#1
+          - COR-005
 TERM-revalidation:
   name: revalidation
   noun-forms: [revalidations]
@@ -152,6 +162,7 @@ TERM-revalidation:
         record:
           - software-analysis:DEC-001#4
           - software-analysis:DEC-001#5
+          - COR-050#1
 TERM-revalidation-outcome:
   name: revalidation outcome
   noun-forms: [revalidation outcomes]
@@ -165,6 +176,7 @@ TERM-revalidation-outcome:
           - .pkit/capabilities/software-analysis/scripts/_lib/answers.py
         record:
           - software-analysis:DEC-001#5
+          - COR-050#1
 TERM-revalidation-proposal:
   name: revalidation proposal
   noun-forms: [revalidation proposals]
@@ -177,6 +189,7 @@ TERM-revalidation-proposal:
           - .pkit/capabilities/software-analysis/agents/analysis-resolver/analysis-resolver.md
         record:
           - software-analysis:DEC-001#5
+          - COR-050#1
 TERM-revalidation-record:
   name: revalidation record
   status: active
@@ -189,6 +202,7 @@ TERM-revalidation-record:
           - .pkit/capabilities/software-analysis/scripts/_lib/revalidation.py
         record:
           - software-analysis:DEC-001#6
+          - COR-050#1
 TERM-shortfall:
   name: shortfall
   noun-forms: [shortfalls]
@@ -215,6 +229,7 @@ TERM-tightening:
           - .pkit/capabilities/software-analysis/scripts/_lib/project_structure.py
         record:
           - software-analysis:DEC-001#1
+          - COR-051#1
 TERM-use-case:
   name: use case
   noun-forms: [use cases]
@@ -251,7 +266,9 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [component](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-component--component)
   - **Term:** [debt](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-debt--debt)
   - **Term:** [decision record](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-decision-record--decision-record)
+  - **Term:** [declared surface](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-declared-surface--declared-surface)
   - **Term:** [default branch](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-default-branch--default-branch)
+  - **Term:** [deferral](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-deferral--deferral)
   - **Term:** [documentation root](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-documentation-root--documentation-root)
   - **Term:** [friction](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-friction--friction)
   - **Term:** [head](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-head--head)
@@ -286,7 +303,7 @@ Explained in [VIEW-analyses-and-use-cases](domain-model/010-analyses-and-use-cas
 
 **Distinctions:**
 
-- **Documentation for users:** what the [system](../core/glossary.md#term-system--system) does and how to use it, for whoever receives a [component](../core/glossary.md#term-component--component). An analysis is internal documentation for those who develop its component, and never ships with it ([DEC-001 point 2](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them)).
+- **Documentation for users:** what the [system](../core/glossary.md#term-system--system) does and how to use it, for whoever receives a unit of software. An analysis is internal documentation for those who develop the unit it describes, and never ships with that unit ([DEC-001 point 2](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them)).
 - **Decisions and architecture:** how the system is built to do what it must, and why. An analysis states what the system must do, and points at them by anchors, never the reverse ([DEC-001 point 11](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#11-scope-boundary-and-how-the-analysis-meets-the-solution)).
 - **Testing:** running the software to see whether it does what a description says. An analysis is judged by reading, and runs nothing ([DEC-001 point 7](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#7-revalidation-is-not-testing)).
 
@@ -305,7 +322,7 @@ Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.m
 
 Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.md#candidate).
 
-**Example:** on a brownfield [project](../core/glossary.md#term-project--project), an agent derives the term `invoice` from the billing code and a record, and stamps it. The developer confirms it before it is committed. On adoption, the adopter fills a [use case](#term-use-case--use-case) with a real case of the project, to judge the parts of that [artefact kind](#term-artefact-kind--artefact-kind).
+**Example:** on a [project](../core/glossary.md#term-project--project) that has code and decisions already, an agent derives the term `invoice` from the billing code and a record, and stamps it. The developer confirms it before it is committed. On adoption, the adopter fills a [use case](#term-use-case--use-case) with a real case of the project, to judge the parts of that [artefact kind](#term-artefact-kind--artefact-kind).
 
 **Distinctions:**
 
@@ -407,13 +424,13 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 Explained in [VIEW-revalidations](domain-model/020-revalidations.md#shortfall).
 
-**Example:** step 2 of an export's [use case](#term-use-case--use-case) signs each file, as an accepted architecture record decides. The box below it says the file is written unsigned, and names the issue that tracks the signing, as its entry in `shortfalls` does.
+**Example:** step 2 of an export's [use case](#term-use-case--use-case) signs each file, as an accepted architecture record decides. The box below it says the file is written unsigned, and names the work item that tracks the signing, as its entry in `shortfalls` does.
 
 **Distinctions:**
 
 - **A regression no record decides:** a step the [system](../core/glossary.md#term-system--system) no longer carries out, with no accepted record behind it. It keeps its words and takes no box, and its [revalidation](#term-revalidation--revalidation) names the defect ([DEC-001 point 5](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)).
 - **A step the code alone gives:** a step no accepted record decides. It follows the code, and never takes a box ([DEC-001 point 1](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)).
-- **The issue:** the work item that tracks building the step. The [change](../core/glossary.md#term-change--change) that builds the step removes the box, in the [pull request](../core/glossary.md#term-pull-request--pull-request) that closes the issue (DEC-001 point 1).
+- **Its work item:** what a tracker keeps for building the step. The [change](../core/glossary.md#term-change--change) that builds the step removes the box, in the [pull request](../core/glossary.md#term-pull-request--pull-request) that closes the work item (DEC-001 point 1).
 
 ## TERM-tightening — tightening
 

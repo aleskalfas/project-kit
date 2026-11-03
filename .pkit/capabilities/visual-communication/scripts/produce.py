@@ -25,14 +25,17 @@ program this machine lacks, is refused before it runs.
 
 A piece with no lock yet is refused: run `pkit visual render <piece>` first. The command
 writes in the location, so where none is recorded it records the location at its first
-write (DEC-002 point 1); `--location <path>` names it.
+write (DEC-002 point 1); `--location <path>` names it. It writes the variants, then the
+record, then removes the variant files left from before, as one change: a write that
+fails leaves the variants, their record and the configuration as they were before the run.
 
 Usage:
   pkit visual produce <piece> <output> [--location <path>]
 
 Exit codes:
   0  produced: the variants and their record written
-  1  refused: nothing written in the location
+  1  refused: nothing written in the location. Or a write failed: it names the file, and
+     every file is as it was before the run, or each it could not put back is named
 """
 
 from __future__ import annotations
@@ -46,6 +49,7 @@ sys.path.insert(0, str(_HERE))
 
 from _lib import framing
 from _lib import location as loc
+from _lib.files import WriteFailed
 from _lib.findings import loss_said
 from _lib.root import project_root
 
@@ -66,7 +70,7 @@ def main() -> int:
     try:
         where = loc.for_writing(root, args.location)
         done = framing.produce(root, where, args.piece, args.output)
-    except (framing.Refused, loc.LocationRefused, loc.GitFailed) as exc:
+    except (framing.Refused, loc.LocationRefused, loc.GitFailed, WriteFailed) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     if done.location is not None:

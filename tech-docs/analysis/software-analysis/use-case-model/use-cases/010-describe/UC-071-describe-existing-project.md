@@ -54,6 +54,24 @@ pkit:
         - COR-050#6
         - COR-050#8
         - COR-050#14
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#3
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
+        - COR-028
+        - COR-039
+        - PRJ-004
+        - ADR-063
+        - software-analysis:DEC-001#3
       artefact:
         - REQ-050
         - REQ-051
@@ -74,7 +92,7 @@ pkit:
 **Assumptions:**
 
 - The [project](../../../../core/glossary.md#term-project--project) has software-analysis installed, or registered in place where software-analysis is developed ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-031](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md)). The [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys the `analysis-author` [skill](../../../../core/glossary.md#term-skill--skill) ([COR-005](../../../../../../.pkit/decisions/core/COR-005-bundle-pattern.md) and [COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
-- The core's [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check) measures the declared surface that no [artefact](../../../../core/glossary.md#term-artefact--artefact) anchors. It lists apart each artefact whose reason for having no anchors a person accepted (COR-050 points [1](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts), [8](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#8-two-measures-not-failures) and [14](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#14-project-settings)).
+- The core's [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check) measures the [declared surface](../../../../core/glossary.md#term-declared-surface--declared-surface) that no [artefact](../../../../core/glossary.md#term-artefact--artefact) anchors. It lists apart each artefact whose reason for having no anchors a person accepted (COR-050 points [1](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts), [8](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#8-two-measures-not-failures) and [14](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#14-project-settings)).
 - An artefact new in a [change](../../../../core/glossary.md#term-change--change) counts as revalidated there ([COR-050 point 6](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)).
 
 **Trigger:** The developer starts describing a [project](../../../../core/glossary.md#term-project--project) that has code, documents and decisions, which its [analysis](../../../glossary.md#term-analysis--analysis) does not describe yet.
@@ -82,8 +100,8 @@ pkit:
 **Main path:**
 
 1. The developer asks an AI agent to describe the [project](../../../../core/glossary.md#term-project--project), following the `analysis-author` [skill](../../../../core/glossary.md#term-skill--skill)'s `build-analysis.md`.
-2. The agent runs the [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check), and reads the surface the project declares its [analysis](../../../glossary.md#term-analysis--analysis) ought to cover. The project declares the surface in the [friction](../../../../core/glossary.md#term-friction--friction) key of its [backbone configuration](../../../../core/glossary.md#term-backbone-configuration--backbone-configuration). Where none is declared, the agent asks the developer for one, and derives no [candidate](../../../glossary.md#term-candidate--candidate) until the project declares one ([DEC-001 point 9](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#9-brownfield-onboarding)).
-3. The agent derives candidates from the code, the existing documents and the project's decisions, in the order of DEC-001 point 12. It starts with the terms, then the domain-model views where the analysis keeps them, then the actors.
+2. The agent runs the [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check), and reads the [declared surface](../../../../core/glossary.md#term-declared-surface--declared-surface), what the project declares its [analysis](../../../glossary.md#term-analysis--analysis) ought to cover. The project declares that surface in the [friction](../../../../core/glossary.md#term-friction--friction) key of its [backbone configuration](../../../../core/glossary.md#term-backbone-configuration--backbone-configuration). Where none is declared, the agent asks the developer for one, and derives no [candidate](../../../glossary.md#term-candidate--candidate) until the project declares one ([DEC-001 point 9](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#9-brownfield-onboarding)).
+3. The agent derives candidates from the code, the existing documents and the project's decisions, in the order of [software-analysis DEC-001 point 12](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#12-an-analysis-is-built-from-its-concepts-up). It starts with the terms, then the domain-model views where the analysis keeps them, then the actors.
 4. The agent stamps each candidate with `pkit analysis new`, anchored with `--path` and `--record` to what it is drawn from.
 5. At its entry, before it writes, the [system](../../../../core/glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
@@ -93,9 +111,9 @@ pkit:
 6. The system gives a [use case](../../../glossary.md#term-use-case--use-case), a journey or a requirement the next free number, past every number the [default branch](../../../../core/glossary.md#term-default-branch--default-branch)'s history gave ([REQ-051](../../../requirements/functional/REQ-051-id-names-one-artefact.md)). It writes the candidate whole, and rewrites the analysis's overview.
 7. The agent fills each part as its [hint](../../../glossary.md#term-hint--hint) says, then runs `pkit analysis link` and `pkit analysis validate --preview`. The system links each id the candidate names to that id's [artefact](../../../../core/glossary.md#term-artefact--artefact) ([DEC-001 point 14](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#14-a-mention-of-an-artefact-by-its-id-links-to-it)). It holds each candidate to its kind's [declared structure](../../../glossary.md#term-declared-structure--declared-structure) where the format [rule](../../../../core/glossary.md#term-rule--rule) binds, and reports what a proposed rule would find ([REQ-053](../../../requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md)).
 8. The agent shows the developer each candidate, with the code, the document or the record it is drawn from. The developer confirms it, and only a confirmed candidate is committed (DEC-001 point 9 and [REQ-050](../../../requirements/functional/REQ-050-agent-proposes.md)).
-9. The agent goes on with the requirements that bind the whole system, then the use cases, then the journeys ([DEC-001 point 12](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#12-an-analysis-is-built-from-its-concepts-up)). It stamps each as in step 4, and shows it to the developer as in step 8.
-10. Where an accepted [decision record](../../../../core/glossary.md#term-decision-record--decision-record) decides behaviour the code lacks, the candidate use case describes it as the decision record decides. The step takes its box and its entry in `shortfalls`, naming that record and the issue that tracks building it (DEC-001 points [1](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape) and 9).
-11. The agent runs the whole-repository check again, and ends onboarding only once the check measures the declared surface covered (DEC-001 point 9). Every artefact of the analysis is then anchored, or carries a reason a person accepted.
+9. The agent goes on with the requirements that bind the whole system, then the use cases, then the journeys (DEC-001 point 12). It stamps each as in step 4, and shows it to the developer as in step 8.
+10. Where an accepted [decision record](../../../../core/glossary.md#term-decision-record--decision-record) decides behaviour the code lacks, the candidate use case describes it as the decision record decides. The step takes its box and its entry in `shortfalls`, naming that record and the work item for building it (DEC-001 points [1](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape) and 9).
+11. The agent runs the whole-repository check again, and finishes describing the project only once the check measures the declared surface covered (DEC-001 point 9). Every artefact of the analysis is then anchored, or carries a reason a person accepted.
 12. The developer runs `pkit analysis check-numbers`, which passes, and commits the confirmed candidates.
 
 **Variants:**
@@ -121,9 +139,9 @@ pkit:
 - **6a.** The stamp refuses, such as for an id already held, an actor or a requirement not in force, or a title still holding a placeholder. It writes nothing, and says why (`stamp.py`). The agent mends the request, and the path rejoins at step 4.
 - **6b.** The overview cannot be drawn in full. The stamp warns, naming `pkit analysis overview`, and writes the candidate all the same.
 - **8a.** The developer rejects a candidate, or corrects it. The agent revises the candidate, or deletes it before it is committed, so a deleted one takes no id.
-- **11a.** Declared surface stays uncovered, or an [artefact](../../../../core/glossary.md#term-artefact--artefact) has neither anchors nor an accepted reason. The path rejoins at step 3, for what the measures name.
+- **11a.** [Declared surface](../../../../core/glossary.md#term-declared-surface--declared-surface) stays uncovered, or an [artefact](../../../../core/glossary.md#term-artefact--artefact) has neither anchors nor an accepted reason. The path rejoins at step 3, for what the measures name.
 
-**Postconditions:** The [analysis](../../../glossary.md#term-analysis--analysis) describes the [project](../../../../core/glossary.md#term-project--project) from its concepts up, each [artefact](../../../../core/glossary.md#term-artefact--artefact) confirmed by the developer. The declared surface is covered, and every artefact is anchored or carries a reason a person accepted ([DEC-001 point 9](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#9-brownfield-onboarding)).
+**Postconditions:** The [analysis](../../../glossary.md#term-analysis--analysis) describes the [project](../../../../core/glossary.md#term-project--project) from its concepts up, each [artefact](../../../../core/glossary.md#term-artefact--artefact) confirmed by the developer. The [declared surface](../../../../core/glossary.md#term-declared-surface--declared-surface) is covered, and every artefact is anchored or carries a reason a person accepted ([DEC-001 point 9](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#9-brownfield-onboarding)).
 
 **Minimal guarantees:**
 

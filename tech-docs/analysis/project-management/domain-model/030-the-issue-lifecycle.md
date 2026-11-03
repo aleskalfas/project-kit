@@ -8,6 +8,7 @@ explains:
   - TERM-cascade
   - TERM-audit-comment
   - TERM-bypass
+  - TERM-journal
 pkit:
   friction:
     anchors:
@@ -19,6 +20,7 @@ pkit:
         - project-management:DEC-046
         - project-management:DEC-049
         - project-management:DEC-055#3
+        - project-management:DEC-061#6
         - project-management:DEC-062#5
       artefact:
         - TERM-issue-lifecycle
@@ -26,18 +28,21 @@ pkit:
         - TERM-cascade
         - TERM-audit-comment
         - TERM-bypass
+        - TERM-journal
 ---
 
 # VIEW-the-issue-lifecycle — The issue lifecycle
 
 An agent makes most of an [issue](../glossary.md#term-issue--issue)'s moves, but scheduling and ending the work are commitments a person must authorise. A person authorises a move back from In Progress too, since that move settles what becomes of the scheduling. Without fixed states, and a way for the issues above to follow, what the agent does is not deterministic ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
-The [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) fixes the states and the moves between them. An [authorisation](../glossary.md#term-authorisation--authorisation) is a person's decision on a move they hold. The [cascade](../glossary.md#term-cascade--cascade) brings the issues above along with each move. A [bypass](../glossary.md#term-bypass--bypass) overrides a check with a person's reason, which an [audit comment](../glossary.md#term-audit-comment--audit-comment) records.
+The [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) fixes the states and the moves between them. An [authorisation](../glossary.md#term-authorisation--authorisation) is a person's decision on a move they hold. The [cascade](../glossary.md#term-cascade--cascade) brings the issues above along with each move. A [bypass](../glossary.md#term-bypass--bypass) overrides a check with a person's reason, which an [audit comment](../glossary.md#term-audit-comment--audit-comment) records where the [project](../../core/glossary.md#term-project--project) keeps audit comments.
+
+Where the project keeps a [journal](../glossary.md#term-journal--journal), each move goes into it.
 
 ```mermaid
 classDiagram
   accTitle: The issue lifecycle
-  accDescr: An issue moves through the issue lifecycle's states. A move the lifecycle leaves to a person needs an authorisation, given for that issue, and a bypass gives one for a move refused by default. An audit comment records a bypass's reason. Each move of an issue brings about the cascade on the issues above it.
+  accDescr: An issue moves through the issue lifecycle's states. A move the lifecycle leaves to a person needs an authorisation, given for that issue, and a bypass gives one for a move refused by default. Where the project keeps audit comments, an audit comment records a bypass's reason. Each move of an issue brings about the cascade on the issues above it. Where the project keeps a journal, the journal records each move.
   class IssueLifecycle["Issue lifecycle"] {
     states
     moves
@@ -51,12 +56,17 @@ classDiagram
     reason
   }
   class AuditComment["Audit comment"]
+  class Journal {
+    entries
+    committed or not
+  }
   class Issue
   Issue "*" --> "1" IssueLifecycle : moves through
   Authorisation "*" --> "1" Issue : given for a move of
   Cascade "*" --> "*" Issue : moves the issues above
   Bypass ..> Authorisation : gives, for a move refused by default
   AuditComment "0..1" --> "1" Bypass : records the reason of
+  Journal "0..1" ..> IssueLifecycle : records each move through
 ```
 
 ```mermaid
@@ -121,7 +131,7 @@ stateDiagram-v2
 
 **Always true:**
 
-- Where the substrate map binds the state to the board, an open issue stands where its card's Status places it ([DEC-062 point 5](../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#5-where-the-map-puts-state-on-the-board-the-boards-status-is-the-source-of-an-open-issues-position)). A closed issue is Done whatever its card says. Elsewhere, where a board's Status column and the issue disagree, the state the issue carries wins (DEC-006).
+- Where the [substrate map](../glossary.md#term-substrate-map--substrate-map) binds the state to the board, an open issue stands where its card's Status places it ([DEC-062 point 5](../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#5-where-the-map-puts-state-on-the-board-the-boards-status-is-the-source-of-an-open-issues-position)). A closed issue is Done whatever its card says. Elsewhere, where a board's Status column and the issue disagree, the state the issue carries wins (DEC-006).
 - A parent issue never enters Review. It reaches Done only by its own close, once its children are done (DEC-006).
 
 ## Authorisation
@@ -183,9 +193,11 @@ The cascade is what one issue's move does to the issues above it. Moving forward
 
 Defined in [TERM-audit-comment](../glossary.md#term-audit-comment--audit-comment).
 
-**Why:** The timeline already records each label added or removed, so a comment that only restates a move adds nothing. A comment carries what the timeline cannot: why a person overrode a check, and which version made an edit ([DEC-049](../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
+**Why:** The timeline already records each label added or removed, so a comment that only restates a move adds nothing. A comment carries what the timeline cannot: why a person overrode a check, and which [version](../../core/glossary.md#term-version--version) made an edit ([DEC-049](../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
 
-An audit comment is one the system posts on an [issue](../glossary.md#term-issue--issue) or a [pull request](../../core/glossary.md#term-pull-request--pull-request). At the default setting it records each [bypass](../glossary.md#term-bypass--bypass), and each move back from In Progress, with its reason. At the fullest setting it records each write the system governs too.
+An audit comment is one project-management posts on an [issue](../glossary.md#term-issue--issue) or a [pull request](../../core/glossary.md#term-pull-request--pull-request). It records a person's reason or [consent](../../core/glossary.md#term-consent--consent) for a write project-management governs.
+
+At the default setting it records each [bypass](../glossary.md#term-bypass--bypass), and each move back from In Progress, with its reason. It also records the consent that a write setting a [Task](../glossary.md#term-task--task)'s [Milestone](../glossary.md#term-milestone--milestone) may need ([DEC-061 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). At the fullest setting it records each write project-management governs too.
 
 **Attributes:**
 
@@ -208,9 +220,9 @@ An audit comment is one the system posts on an [issue](../glossary.md#term-issue
 
 Defined in [TERM-bypass](../glossary.md#term-bypass--bypass).
 
-**Why:** Some checks guard what may happen with an explicit justification, rather than what must never happen. A bypass lets a person override such a check with a reason. The reason is posted before the write, so it survives a step that fails ([DEC-014](../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
+**Why:** Some checks guard what may happen with an explicit justification, rather than what must never happen. A bypass lets a person override such a check with a reason. Where the [project](../../core/glossary.md#term-project--project) keeps [audit comments](../glossary.md#term-audit-comment--audit-comment), the reason is posted before the write, so it survives a step that fails ([DEC-014](../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
 
-A bypass overrides one check that refuses by default, such as scheduling an [issue](../glossary.md#term-issue--issue) with no [Milestone](../glossary.md#term-milestone--milestone). The person gives the reason with the command, and the system records it before it goes on.
+A bypass overrides one check that refuses by default, such as scheduling an [issue](../glossary.md#term-issue--issue) with no [Milestone](../glossary.md#term-milestone--milestone). The person gives the reason with the command, and, where the project keeps audit comments, project-management records the reason before the command goes on.
 
 **Attributes:**
 
@@ -219,7 +231,7 @@ A bypass overrides one check that refuses by default, such as scheduling an [iss
 
 **Relations:**
 
-- An [audit comment](../glossary.md#term-audit-comment--audit-comment) records its reason, before the write it allows (DEC-014).
+- Where the project keeps audit comments, an audit comment records its reason, before the write it allows (DEC-014).
 - It is how a person authorises a move that the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) refuses unless a person overrides it ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
 **States:** None.
@@ -228,6 +240,31 @@ A bypass overrides one check that refuses by default, such as scheduling an [iss
 
 - A bypass with no reason is refused (DEC-014).
 - A check that guards what must never happen takes no bypass. Only an operator's `--force` overrides it ([DEC-046 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-046-override-flag-convention.md#2---force--the-operators-override-of-a-hard-reject-finding-or-a-hard-precondition)).
+
+## Journal
+
+Defined in [TERM-journal](../glossary.md#term-journal--journal).
+
+**Why:** A [project](../../core/glossary.md#term-project--project) may want one record of every move the [system](../../core/glossary.md#term-system--system) governs that is complete and never silently loses a move. Where the project keeps a journal, the journal is that record, and GitHub's comments and timeline only project it ([DEC-049 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md#1-where-the-canonical-audit-trail-lives-follows-the-projects-journal-setting)).
+
+A journal is the record the [backbone](../../core/glossary.md#term-backbone--backbone)'s engine appends of each move of a [process](../../core/glossary.md#term-process--process), such as an [issue](../glossary.md#term-issue--issue)'s move through the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle). The project turns the journal on in its configuration, and it is off by default (DEC-049 point 1). Where the project commits the journal, the journal is shared and reviewed like any committed file.
+
+**Attributes:**
+
+- an entry for each move, with who made it and the [version](../../core/glossary.md#term-version--version) that made it (DEC-049 point 1)
+- whether the project commits it (DEC-049 point 1)
+
+**Relations:**
+
+- Each move of an issue goes into it, with the move's reason, where the project keeps it (DEC-049 point 1).
+- Where it is kept, the [audit comments](../glossary.md#term-audit-comment--audit-comment) and the timeline project it, and stand as no record of their own (DEC-049 point 1).
+
+**States:** None.
+
+**Always true:**
+
+- A move that fails to go into the journal is surfaced, and never dropped silently (DEC-049 point 1).
+- Where the backbone's engine cannot run, a command reads where the issue stands itself, and warns that the move went into no journal ([DEC-033](../../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
 
 ## What is built on these concepts
 
@@ -271,5 +308,10 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 **Bypass:**
 
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md)
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md)
 - [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
 - [REQ-042 · Functional · A move a person holds is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)
+
+**Journal:**
+
+- [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md)

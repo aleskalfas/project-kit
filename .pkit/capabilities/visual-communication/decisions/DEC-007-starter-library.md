@@ -47,7 +47,7 @@ The starter is planned to cover the jobs visuals commonly do, not only those one
 A component enters the starter as experimental, the status that the record of change over time defines ([visual-communication:DEC-003-change-over-time] point 7), with no use needed first. It enters once it has:
 - its job, the established form it follows and that form's source
 - its fields and its options, each option a word from a declared list
-- its reference renders, each value of each option drawn once, with the combinations the evidence uses
+- its reference renders, each value of each option drawn once, and each word of each field's run styles drawn once (refinement per [visual-communication:DEC-012-text-runs]), with the combinations the evidence uses
 - renders in languages that stress text, such as long compound words and diacritics, beyond the languages of its first project
 - a review
 

@@ -14,14 +14,18 @@
   run alike (`as_written`), so a run leaves such code as it is.
 - **The lock is the declaration's,** which a person moves on purpose (DEC-005 point 7).
   The command reads the brand at the versions it names, and never moves it.
-- **A run** resolves every token the brand exports in every combination of its axes
-  (the values document, version 1), and knows its losses before the writer runs: each
-  token of a type the writer's declaration has no form for is left out, and reported
-  unless the declaration accepts it. The writer gets the rest. The command writes the
-  code, then its record: the fingerprint, form 1, over the declaration file, each value
-  written in each combination, and the writer's version (`fingerprint.code_record_inputs`);
-  the hash of the code; and what is only recorded. Where the record verifies and the code
-  is what it would write, nothing is written.
+- **A run** resolves every token the brand exports, and every other role of the
+  component libraries the lock names at the brand's value or its default (DEC-008 point
+  5), in every combination of its axes (the values document, version 1), and knows its
+  losses before the writer runs: each token of a type the writer's declaration has no
+  form for is left out, and reported unless the declaration accepts it. The writer gets
+  the rest. The command writes the code, then its record: the fingerprint, form 1, over
+  the declaration file, each value written in each combination, and the writer's version
+  (`fingerprint.code_record_inputs`); the hash of the code; and what is only recorded. It
+  writes the two as one change: where a write fails, both are as they were before the
+  run, or each file the run could not put back is named, so the check never reads new
+  code beside its old record as code edited by hand. Where the record verifies and the
+  code is what it would write, nothing is written.
 - **The findings** (DEC-006 points 4 and 8): a record missing beside the code, or naming
   code that is missing, fails; code stale by a value or by its declaration fails, and so
   does code that differs from what was written; code stale only by its writer's version
@@ -35,7 +39,6 @@ Reads the location's files; imports a code writer only when it runs.
 
 from __future__ import annotations
 
-import io
 import platform
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -43,18 +46,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from _lib import fingerprint, libraries, tokens, values
+from _lib import fingerprint, libraries, records, tokens, values
 from _lib import location as loc
 from _lib.files import (
     FORMAT,
+    Change,
     FileError,
     binding_problem,
     read_bound,
     schema_of,
     shape_problems,
-    write_whole,
 )
 from _lib.findings import ATTENTION, FACT, FAILS, Finding
+from _lib.libraries import FOUNDATIONS
 from _lib.names import is_name
 from _lib.plugins import seam
 from _lib.reading import ReadError, load_yaml, read_yaml, sha256
@@ -64,9 +68,6 @@ FOLDER = "code"
 
 #: What follows `out` in the name of the record beside the code.
 RECORD_SUFFIX = ".record.yaml"
-
-#: The library whose `roles.yaml` declares the shared roles and axes a brand gives values.
-FOUNDATIONS = "foundations"
 
 #: Who acts on a finding that asks for attention.
 WHO = "the project, which keeps the declaration"
@@ -328,8 +329,10 @@ def plan(root: Path, location: str, declaration: Declaration) -> Plan:
 
 
 def write(root: Path, location: str, name: str, *, now: datetime | None = None) -> Written:
-    """Write the code the declaration `name` asks for, and its record; or nothing, where
-    the record verifies and the code is what the writer writes now. Raises CodeRefused."""
+    """Write the code the declaration `name` asks for, and its record, as one change; or
+    nothing, where the record verifies and the code is what the writer writes now. Raises
+    CodeRefused; WriteFailed where a write fails, the code and its record then as they
+    were before the run, or named."""
     declaration = read(root, location, name)
     planned = plan(root, location, declaration)
     implementation = seam.implementation(declaration.writer)
@@ -359,15 +362,19 @@ def write(root: Path, location: str, name: str, *, now: datetime | None = None) 
         },
     }
     record_text = _record_text(declaration, kept)
-    code.parent.mkdir(parents=True, exist_ok=True)
-    write_whole(code, data)
-    write_whole(record, record_text.encode("utf-8"))
+    change = Change(root)
+    change.write(code, data)
+    change.write(record, record_text.encode("utf-8"))
+    change.commit()
     return Written(declaration.out, declaration.record, changed=True, losses=unaccepted)
 
 
 def _brand(root: Path, location: str, declaration: Declaration) -> tokens.Brand:
-    """The declaration's brand, read at the versions its lock names, against the shared
-    roles of the foundations it locks. Raises CodeRefused."""
+    """The declaration's brand, read at the versions its lock names, over its base when it
+    builds on one, against the roles of the libraries the lock names: the shared roles of
+    the foundations it locks, and the own roles of each component library it locks, which
+    the code then holds at the brand's values or their defaults (DEC-008 point 5). Raises
+    CodeRefused."""
     held = libraries.Held(root, location)
     reached = _check_lock(held, declaration)
     brand_version = libraries.Version.parse(declaration.lock[declaration.brand])
@@ -380,19 +387,18 @@ def _brand(root: Path, location: str, declaration: Declaration) -> tokens.Brand:
             f"{declaration.file}: the brand {declaration.brand} builds on no `{FOUNDATIONS}`, "
             f"which declares the roles it gives values"
         )
-    version = libraries.Version.parse(declaration.lock[FOUNDATIONS])
-    folder = held.folders[FOUNDATIONS][version]
+    folders = {
+        name: held.folders[name][libraries.Version.parse(version)]
+        for name, version in declaration.lock.items()
+    }
     try:
-        shared = tokens.read_declarations(
-            folder / "roles.yaml",
-            library=f"{FOUNDATIONS}@{version}",
-            shown=(folder / "roles.yaml").relative_to(root).as_posix(),
-        )
+        scope = tokens.read_scope(folders, root=root)
         return tokens.read_brand(
-            held.folders[declaration.brand][brand_version],
-            shared,
+            folders[declaration.brand],
+            scope,
             fonts=root / location / "fonts",
             root=root,
+            locked=folders,
         )
     except tokens.TokenError as exc:
         raise CodeRefused(
@@ -402,10 +408,13 @@ def _brand(root: Path, location: str, declaration: Declaration) -> tokens.Brand:
 
 def _check_lock(held: libraries.Held, declaration: Declaration) -> set[str]:
     """The libraries the code needs, the brand and every library it builds on, once the
-    lock is checked to name each at a version the project holds and the capability reads,
-    fitting together. Raises CodeRefused, naming the first fault."""
+    lock is checked to name each, and every other library it names, at a version the
+    project holds and the capability reads, fitting together: the code holds the roles of
+    each library the lock names (DEC-008 point 5). Raises CodeRefused, naming the first
+    fault."""
     lock, file = declaration.lock, declaration.file
-    pending, seen = [declaration.brand], set()
+    pending, seen = [declaration.brand, *sorted(lock)], set()
+    found: dict[str, libraries.Library] = {}
     needs: list[tuple[libraries.Library, libraries.BuildsOn]] = []
     while pending:
         name = pending.pop(0)
@@ -431,7 +440,7 @@ def _check_lock(held: libraries.Held, declaration: Declaration) -> set[str]:
             raise CodeRefused(
                 f"{file}: the lock names {name}@{version}, which cannot be read: {why}"
             )
-        library = held.library(name, version)
+        library = found[name] = held.library(name, version)
         for need in library.builds_on:
             needs.append((library, need))
             pending.append(need.name)
@@ -442,7 +451,13 @@ def _check_lock(held: libraries.Held, declaration: Declaration) -> set[str]:
                 f"{file}: the lock does not fit: {library.label} builds on `{need.name}` "
                 f"{need.major}, but the lock names {need.name}@{locked}"
             )
-    return seen
+    reached, todo = set(), [declaration.brand]
+    while todo:
+        name = todo.pop()
+        if name not in reached:
+            reached.add(name)
+            todo.extend(need.name for need in found[name].builds_on)
+    return reached
 
 
 def as_written(code: Path) -> bytes:
@@ -457,13 +472,11 @@ def _up_to_date(code: Path, record: Path, taken: Mapping[str, Any], data: bytes)
     if not (code.is_file() and record.is_file()):
         return False
     try:
-        kept = read_yaml(record)
-    except ReadError:
+        kept = records.read(record, "code-record")
+    except records.RecordError:
         return False
     return (
-        isinstance(kept, Mapping)
-        and binding_problem(kept, "code-record") is None
-        and kept.get("fingerprint") == taken
+        kept.get("fingerprint") == taken
         and kept.get("sha256") == sha256(data)
         and as_written(code) == data
     )
@@ -472,25 +485,11 @@ def _up_to_date(code: Path, record: Path, taken: Mapping[str, Any], data: bytes)
 def _record_text(declaration: Declaration, record: Mapping[str, Any]) -> str:
     """The record as YAML, its time quoted, read back to be sure it holds what was meant.
     Raises CodeRefused otherwise."""
-    from ruamel.yaml import YAML
-    from ruamel.yaml.scalarstring import SingleQuotedScalarString
-
-    shown = {
-        **record,
-        "recorded": {
-            **record["recorded"],
-            "time": SingleQuotedScalarString(record["recorded"]["time"]),
-        },
-    }
-    dumper = YAML()
-    dumper.indent(mapping=2, sequence=4, offset=2)
-    dumper.width = 4096
-    stream = io.StringIO()
-    dumper.dump(shown, stream)
-    text = (
-        f"# The record of the code `{declaration.command}` writes to {declaration.out}: "
-        f"write it again, never edit it.\n{stream.getvalue()}"
+    comment = (
+        f"The record of the code `{declaration.command}` writes to {declaration.out}: "
+        f"write it again, never edit it."
     )
+    text = records.text(records.quoted_time(record), [comment], apart=False)
     if load_yaml(text, declaration.record) != record:
         raise CodeRefused(f"the record {declaration.record} does not read back as it was meant")
     return text

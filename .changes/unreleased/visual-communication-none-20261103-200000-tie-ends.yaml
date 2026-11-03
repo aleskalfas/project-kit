@@ -1,0 +1,7 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-011 decides how a tie names its two ends, when they are items of a
+  sibling list or of a list a nested component draws (#2499). The record
+  designs ahead: the code that draws ties lands in a later pull request, so
+  no surface moves yet.

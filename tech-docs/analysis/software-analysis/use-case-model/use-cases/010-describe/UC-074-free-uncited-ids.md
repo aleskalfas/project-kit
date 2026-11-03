@@ -22,6 +22,21 @@ pkit:
         - COR-031
         - COR-054#3
         - COR-054#5
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#3
+        - COR-050#6
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
+        - COR-013
+        - COR-024
+        - COR-044#2
+        - COR-057#5
+        - COR-068
       artefact:
         - REQ-050
         - REQ-051
@@ -51,7 +66,7 @@ pkit:
    - a [friction](../../../../core/glossary.md#term-friction--friction) [anchor](../../../../core/glossary.md#term-anchor--anchor), in this repository or another
    - a [revalidation record](../../../glossary.md#term-revalidation-record--revalidation-record), or an evidence entry
    - code, a test, or a page anchored to the [artefact](../../../../core/glossary.md#term-artefact--artefact)
-   - a work item's list of the [use cases](../../../glossary.md#term-use-case--use-case) it serves, or an open issue or [pull request](../../../../core/glossary.md#term-pull-request--pull-request) that names the id
+   - a work item's list of the [use cases](../../../glossary.md#term-use-case--use-case) it serves, or another open work item or [pull request](../../../../core/glossary.md#term-pull-request--pull-request) that names the id
 2. The developer finds nothing that cites them.
 3. The developer deletes the artefacts' files in one commit, and lands it on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch).
 4. The developer adds an entry under `numbering.freed-by` in `.pkit/capabilities/software-analysis/project/config.yaml`. The entry names that commit by its full id, and lists the ids ([DEC-001 point 3](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers)).

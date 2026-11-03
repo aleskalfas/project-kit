@@ -8,9 +8,18 @@ combination of modes (visual-communication DEC-005 points 4, 5, 9 and 10).
   values in the combination it draws (`colours`), as `#rrggbb` with an opacity where the
   colour is translucent. A role with no colour there is left out, and reported.
 - **Fonts** are embedded as `@font-face` from the brand's committed files, never the
-  machine's: each family's file subset to the characters the page draws in it.
-- **Text** is drawn as the engine measured it: each of its lines as given, at its
-  baseline, anchored at the start, the middle or the end of the text's width.
+  machine's: each family's file subset to the characters the page draws in it. A family's
+  name is written as a CSS string (`css_string`), so no name a brand gives can end the
+  style element, start another element, or leave the file malformed XML.
+- **Text** is drawn as the engine measured it: each of its lines as given, at its own
+  baseline, anchored at the start, the middle or the end of the text's width. The
+  `<text>` takes the font and the paint of the text's first run; each span of a run that
+  looks otherwise is a `<tspan>` with its own (DEC-012). A text of one run is drawn as
+  format 1 drew it.
+- **A line** whose route turns, a tie's connector, is a `<polyline>` through its points,
+  and names the elements its ends meet (`data-start`, `data-end`). An arrowhead is a
+  marker the page defines once for each colour a line draws one in. A line that holds
+  neither its ends nor its points is refused, and left out.
 - **A produced picture** is embedded as the variant that serves the combination drawn;
   where the record maps the combination to none, the picture is left out, and reported.
 - **Every element carries its trace id** (`data-id`), and a group the component that drew
@@ -39,6 +48,12 @@ from fontTools.ttLib import TTFont
 
 from _lib.plugins import seam
 from _lib.plugins.svg_declaration import DECLARATION
+
+#: A line's two ends, each of which may carry an arrowhead.
+ENDS = ("start", "end")
+
+#: Where a line's two ends lie, as a scene holds them.
+ENDS_OF_LINE = ("x1", "y1", "x2", "y2")
 
 NAME: str = DECLARATION["name"]
 VERSION: str = DECLARATION["version"]
@@ -101,6 +116,34 @@ def number(value: Any) -> str:
     return f"{rounded:.2f}".rstrip("0")
 
 
+def css_string(name: str) -> str:
+    """A name as a CSS string between double quotes: `"` and `\\` escaped, and as the
+    escape of its code point each character that could end the style element or start
+    another (`<`, `>`, `&`), each control character, and each character XML 1.0 does not
+    allow. So any name reaches the file as one name, and the file stays well-formed XML."""
+    # The CSS code writer's `_quoted` (`plugins/css.py`) writes a family name the same way,
+    # escaping less. It is kept apart so that the CSS writer's output and version do not
+    # move: a change to how either writes a CSS string is weighed for the other too.
+    out = []
+    for char in name:
+        if char in ('"', "\\"):
+            out.append("\\" + char)
+        elif char in "<>&" or not _plain(char):
+            out.append(f"\\{ord(char):x} ")
+        else:
+            out.append(char)
+    return '"' + "".join(out) + '"'
+
+
+def _plain(char: str) -> bool:
+    """Whether a character is neither a control character (U+0000 to U+001F, U+007F to
+    U+009F) nor one XML 1.0 does not allow (a surrogate, U+FFFE, U+FFFF)."""
+    code = ord(char)
+    return not (
+        code < 0x20 or 0x7F <= code <= 0x9F or 0xD800 <= code <= 0xDFFF or code in (0xFFFE, 0xFFFF)
+    )
+
+
 def _find(elements: list[Mapping[str, Any]], trace: str) -> Mapping[str, Any] | None:
     stack = list(reversed(elements))
     while stack:
@@ -109,6 +152,11 @@ def _find(elements: list[Mapping[str, Any]], trace: str) -> Mapping[str, Any] | 
             return element
         stack.extend(reversed(element.get("children", [])))
     return None
+
+
+def _families(run: Mapping[str, Any]) -> str:
+    """A run's font families, as the value of `font-family`."""
+    return ", ".join(css_string(family) for family in run.get("font-family", []))
 
 
 def _attributes(pairs: list[tuple[str, Any]]) -> str:
@@ -138,6 +186,8 @@ class _Canvas:
         self.pictures = pictures
         self.losses: list[seam.Loss] = []
         self._faces: dict[tuple[str, int], set[str]] = {}
+        # Each arrowhead marker the page draws, by its id: which end, its colour, opacity.
+        self._arrows: dict[str, tuple[str, str, str | None]] = {}
 
     def _lose(self, what: str, did: str, why: str) -> None:
         loss = seam.Loss(NAME, what, did, why)
@@ -148,6 +198,7 @@ class _Canvas:
 
     def page(self, element: Mapping[str, Any]) -> str:
         self._faces = {}
+        self._arrows = {}
         body = "".join(self._element(child) for child in element.get("children", []))
         width, height = number(element["width"]), number(element["height"])
         head = _attributes(
@@ -171,7 +222,8 @@ class _Canvas:
             ]
         )
         style = f"<style>{self._font_faces()}text{{white-space:pre}}</style>"
-        return f"<svg {head}><defs>{style}</defs><g {group}>{body}</g></svg>\n"
+        defs = f"{style}{self._arrow_markers()}"
+        return f"<svg {head}><defs>{defs}</defs><g {group}>{body}</g></svg>\n"
 
     def _element(self, element: Mapping[str, Any]) -> str:
         kind = element.get("type")
@@ -254,44 +306,117 @@ class _Canvas:
         return f"<ellipse {attributes}/>"
 
     def _line(self, element: Mapping[str, Any]) -> str:
+        """A line, or a tie's connector: a `<polyline>` through its points where its route
+        turns, which names the elements its ends meet (`data-start`, `data-end`). An
+        arrowhead is a marker in the line's stroke colour. A line that holds neither its
+        ends nor its points is refused, as an element the renderer does not draw is."""
+        points = element.get("points")
+        if not points and any(end not in element for end in ENDS_OF_LINE):
+            self._lose(
+                element["id"],
+                seam.REFUSED,
+                f"the line holds neither its ends, `{' '.join(ENDS_OF_LINE)}`, nor its points",
+            )
+            return ""
+        attached = element.get("attached") or {}
+        stroke = self._stroke(element)
+        shape = (
+            [("points", " ".join(f"{number(p['x'])},{number(p['y'])}" for p in points))]
+            if points
+            else [(end, number(element[end])) for end in ENDS_OF_LINE]
+        )
         attributes = _attributes(
             [
                 ("data-id", element["id"]),
-                *((end, number(element[end])) for end in ("x1", "y1", "x2", "y2")),
-                *self._stroke(element),
+                *((f"data-{which}", attached[which]["id"]) for which in ENDS if which in attached),
+                *shape,
+                ("fill", "none") if points else ("fill", None),
+                *stroke,
+                *self._markers(element, stroke),
             ]
         )
-        return f"<line {attributes}/>"
+        return f"<polyline {attributes}/>" if points else f"<line {attributes}/>"
+
+    def _markers(
+        self, element: Mapping[str, Any], stroke: list[tuple[str, Any]]
+    ) -> list[tuple[str, Any]]:
+        """The arrowheads a line draws, each a marker the page defines once for its colour.
+        A line with no stroke draws none."""
+        paint = dict(stroke)
+        if "stroke" not in paint:
+            return []
+        found = []
+        for which in ENDS:
+            if element.get(f"marker-{which}") == "arrow":
+                colour, alpha = paint["stroke"], paint.get("stroke-opacity")
+                key = f"{which}-{colour.lstrip('#')}" + (f"-{alpha}" if alpha else "")
+                marker = f"pkit-arrow-{key.replace('.', '')}"
+                self._arrows[marker] = (which, colour, alpha)
+                found.append((f"marker-{which}", f"url(#{marker})"))
+        return found
 
     def _text(self, element: Mapping[str, Any]) -> str:
         x, width = float(element["x"]), float(element["width"])
         anchor = element.get("text-anchor", "start")
         at = {"start": x, "middle": x + width / 2, "end": x + width}.get(anchor, x)
-        top = float(element["y"]) + float(element["baseline"])
+        y = float(element["y"])
         step = float(element["line-height"])
-        weight = element.get("font-weight")
-        families = list(element.get("font-family", []))
-        drawn = "".join(line["text"] for line in element.get("lines", []))
-        for face in element.get("fonts", []):
-            mark = (face["family"], int(weight) if isinstance(weight, (int, float)) else NORMAL)
-            self._faces.setdefault(mark, set()).update(drawn)
-        spans = "".join(
-            f"<tspan {_attributes([('x', number(at)), ('y', number(top + index * step))])}>"
-            f"{escape(line['text'], quote=False)}</tspan>"
-            for index, line in enumerate(element.get("lines", []))
-        )
+        paragraphs = element.get("paragraphs") or [[{}]]
+        first = paragraphs[0][0] if paragraphs[0] else {}
+        for runs in paragraphs:
+            for run in runs:
+                for face in run.get("fonts", []):
+                    self._faces.setdefault(self._face(face, run), set())
+        lines = []
+        for index, line in enumerate(element.get("lines", [])):
+            runs = paragraphs[line.get("paragraph", 0)]
+            drawn = []
+            for span in line.get("spans", []):
+                run = runs[span["run"]]
+                for face in run.get("fonts", []):
+                    self._faces[self._face(face, run)].update(span["text"])
+                shown = escape(span["text"], quote=False)
+                look = self._look(element, run, first)
+                drawn.append(f"<tspan {_attributes(look)}>{shown}</tspan>" if look else shown)
+            place = [("x", number(at)), ("y", number(y + float(line["baseline"]) + index * step))]
+            lines.append(f"<tspan {_attributes(place)}>{''.join(drawn)}</tspan>")
+        weight = first.get("font-weight")
         attributes = _attributes(
             [
                 ("data-id", element["id"]),
                 ("xml:space", "preserve"),
-                ("font-family", ", ".join(f"'{family}'" for family in families)),
-                ("font-size", number(element["font-size"])),
+                ("font-family", _families(first)),
+                ("font-size", number(first.get("font-size", 0))),
                 ("font-weight", weight if weight not in (None, NORMAL) else None),
                 ("text-anchor", anchor if anchor != "start" else None),
-                *self._paint(element, "fill"),
+                *self._paint({"id": element["id"], "fill": first.get("fill")}, "fill"),
             ]
         )
-        return f"<text {attributes}>{spans}</text>"
+        return f"<text {attributes}>{''.join(lines)}</text>"
+
+    def _face(self, face: Mapping[str, Any], run: Mapping[str, Any]) -> tuple[str, int]:
+        """The `@font-face` a run draws a font in: its family, at the run's weight."""
+        weight = run.get("font-weight")
+        return face["family"], int(weight) if isinstance(weight, (int, float)) else NORMAL
+
+    def _look(
+        self, element: Mapping[str, Any], run: Mapping[str, Any], first: Mapping[str, Any]
+    ) -> list[tuple[str, Any]]:
+        """The font and the paint of a run that looks otherwise than the text's first run,
+        each written whole; none where it looks the same."""
+        keys = ("font-family", "font-size", "font-weight", "fill")
+        if all(run.get(key) == first.get(key) for key in keys):
+            return []
+        weight = run.get("font-weight")
+        paint = self._paint({"id": element["id"], "fill": run.get("fill")}, "fill")
+        if len(paint) == 2 and paint[1][1] is None:
+            paint[1] = ("fill-opacity", "1")  # the text's own opacity is not the run's
+        return [
+            ("font-family", _families(run)),
+            ("font-size", number(run.get("font-size", 0))),
+            ("font-weight", weight if weight is not None else NORMAL),
+            *paint,
+        ]
 
     def _image(self, element: Mapping[str, Any]) -> str:
         output = element.get("output")
@@ -318,6 +443,30 @@ class _Canvas:
         )
         return f"<image {attributes}/>"
 
+    # -- arrowheads
+
+    def _arrow_markers(self) -> str:
+        """The arrowhead markers the page draws, in the order of their ids: a triangle as
+        long as five strokes are wide, its tip at the line's end, pointing away from the
+        line."""
+        markers = []
+        for marker, (which, colour, alpha) in sorted(self._arrows.items()):
+            tip, shape = ("10", "M0,0L10,5L0,10z") if which == "end" else ("0", "M10,0L0,5L10,10z")
+            attributes = _attributes(
+                [
+                    ("id", marker),
+                    ("viewBox", "0 0 10 10"),
+                    ("refX", tip),
+                    ("refY", "5"),
+                    ("markerWidth", "5"),
+                    ("markerHeight", "5"),
+                    ("orient", "auto"),
+                ]
+            )
+            fill = _attributes([("d", shape), ("fill", colour), ("fill-opacity", alpha)])
+            markers.append(f"<marker {attributes}><path {fill}/></marker>")
+        return "".join(markers)
+
     # -- fonts
 
     def _font_faces(self) -> str:
@@ -326,7 +475,7 @@ class _Canvas:
             characters = "".join(sorted(self._faces[(family, weight)]))
             data, form, mime = _subset(self.font_file(family), characters)
             faces.append(
-                f"@font-face{{font-family:'{family}';font-weight:{weight};"
+                f"@font-face{{font-family:{css_string(family)};font-weight:{weight};"
                 f"src:url(data:{mime};base64,{data}) format('{form}');}}"
             )
         return "".join(faces)

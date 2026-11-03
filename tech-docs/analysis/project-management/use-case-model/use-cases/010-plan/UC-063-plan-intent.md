@@ -27,6 +27,8 @@ pkit:
         - .pkit/capabilities/project-management/scripts/_lib/use_case_task.py
         - .pkit/capabilities/project-management/scripts/_lib/use_case_citations.py
         - .pkit/capabilities/project-management/scripts/edit-issue.py
+        - .pkit/capabilities/project-management/scripts/create-issue.py
+        - .pkit/capabilities/project-management/scripts/promote-issue.py
         - .pkit/capabilities/project-management/schemas/use-cases.schema.json
       record:
         - project-management:DEC-014
@@ -49,6 +51,12 @@ pkit:
         - COR-053
         - COR-039
         - ADR-034#1
+        - COR-044#2
+        - COR-057#5
+        - COR-068
+        - COR-028
+        - PRJ-004
+        - ADR-063
       artefact:
         - ACT-planner
         - REQ-040
@@ -69,9 +77,9 @@ pkit:
 
 **Assumptions:**
 
-- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the adapter deploys the `project-manager` agent and the `pm` [skill](../../../../core/glossary.md#term-skill--skill) ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md) and [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
-- Where a [component](../../../../core/glossary.md#term-component--component) fills the use-case [data point](../../../../core/glossary.md#term-data-point--data-point), the backbone resolves it, with the [use-case entries](../../../glossary.md#term-use-case-entry--use-case-entry) settled on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) ([COR-052](../../../../../../.pkit/decisions/core/COR-052-slots.md) and [COR-053](../../../../../../.pkit/decisions/core/COR-053-connection-points.md)). Which component fills it, and how, is that component's.
-- The harness lets the agent hand the plan to the critic and the architect for review ([COR-024](../../../../../../.pkit/decisions/core/COR-024-critic-and-architect-agents.md)).
+- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys the `project-manager` agent and the `pm` [skill](../../../../core/glossary.md#term-skill--skill) ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md) and [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
+- Where a [component](../../../../core/glossary.md#term-component--component) fills the use-case [data point](../../../../core/glossary.md#term-data-point--data-point), the [backbone](../../../../core/glossary.md#term-backbone--backbone) resolves it, with the [use-case entries](../../../glossary.md#term-use-case-entry--use-case-entry) settled on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) ([COR-052](../../../../../../.pkit/decisions/core/COR-052-slots.md) and [COR-053](../../../../../../.pkit/decisions/core/COR-053-connection-points.md)). Which component fills it, and how, is that component's.
+- The [harness](../../../../core/glossary.md#term-harness--harness) lets the agent hand the plan to the critic and the architect for review ([COR-024](../../../../../../.pkit/decisions/core/COR-024-critic-and-architect-agents.md)).
 
 **Trigger:** The planner gives the agent an intent, with the reference material that frames it.
 
@@ -90,12 +98,12 @@ pkit:
 > **Not built yet:** filing an issue and writing its body are two calls. A body refused after its issue is filed leaves the template's body there. [DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md) decides that no issue is left half filed, and #1761 tracks it.
 
 9. The agent attaches each issue the plan schedules to its Milestone with `pkit pm promote-issue <n> --milestone <M>`. The planner's approval of the plan is the command's reason ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md), DEC-029 and `batch-plan.md`). That approval covers putting a Task into a pool only where the approved plan named the Task's Milestone and that Milestone's pool (DEC-061 point 6).
-10. The agent reports each issue it filed, with its number and its link.
+10. The agent lists each issue it filed, with its number and its link.
 
 **Variants:**
 
 - **3a.** Nothing fills the [data point](../../../../core/glossary.md#term-data-point--data-point). The agent skips the step, and the plan names no [use-case entry](../../../glossary.md#term-use-case-entry--use-case-entry) ([DEC-054 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#3-the-states-the-rule-distinguishes)).
-- **3b.** The data point cannot be read, such as in a clone that never fetched the [default branch](../../../../core/glossary.md#term-default-branch--default-branch). The agent says why, and plans without the step. It never takes that outcome for an empty set ([DEC-054 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#3-the-states-the-rule-distinguishes)).
+- **3b.** The data point cannot be read, such as in a [clone](../../../glossary.md#term-clone--clone) that never fetched the [default branch](../../../../core/glossary.md#term-default-branch--default-branch). The agent says why, and plans without the step. It never takes that outcome for an empty set ([DEC-054 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#3-the-states-the-rule-distinguishes)).
 - **3c.** Only part of the data point resolved. The agent walks what the data point holds, and names the filler that gave nothing. The gaps it finds are shown as possible ones ([DEC-054 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#3-the-states-the-rule-distinguishes)).
 - **4a.** The data point holds no entry, and the plan builds work that touches what users do. The plan opens with a [Task](../../../glossary.md#term-task--task) to describe what users do with the software, and only that work depends on it ([DEC-054 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#5-the-planning-step)).
 - **4b.** The planner declined that Task earlier the same day, in this checkout. The agent leaves it out, and says when it was declined ([DEC-054 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#5-the-planning-step)).
@@ -103,7 +111,7 @@ pkit:
 - **7b.** The planner revises the Task of variant 4a away. Once the plan is approved, the agent keeps the decline with `pkit pm decline-use-case-task`, until the next day ([DEC-054 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#5-the-planning-step)). The path goes on at step 8.
 - **7c.** The planner cancels the plan. The agent files nothing, and the use case ends ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 - **8a.** A filing is refused. The agent stops, says which [issue](../../../glossary.md#term-issue--issue) failed and why, and proposes a fix to the planner. What it filed before stays filed (`batch-plan.md`).
-- **8b.** A body cites a use-case entry the data point does not hold. The system warns, and the agent mends the body and writes it again ([DEC-054 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#4-the-rule)).
+- **8b.** A body cites a use-case entry the data point does not hold. The [system](../../../../core/glossary.md#term-system--system) warns, and the agent mends the body and writes it again ([DEC-054 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#4-the-rule)).
 - **9a.** The approved plan named no [pool](../../../glossary.md#term-pool--pool) for a Task's [Milestone](../../../glossary.md#term-milestone--milestone), which is in a pool. `promote-issue` asks the planner for [consent](../../../../core/glossary.md#term-consent--consent) to the pool, and off a terminal it refuses ([DEC-061 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). The agent asks the planner, and never gives that consent for the planner.
 
 **Postconditions:** Each [issue](../../../glossary.md#term-issue--issue) of the approved plan is filed under its parent, with its value on each [classification axis](../../../glossary.md#term-classification-axis--classification-axis) and the [use-case entries](../../../glossary.md#term-use-case-entry--use-case-entry) it serves. The planner saw every issue of the plan before any was filed.

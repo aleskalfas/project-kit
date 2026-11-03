@@ -1,0 +1,37 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md
+    read:
+      - moved-abc944d997af.yaml
+    revalidated:
+      at: 2026-11-02T13:07:28Z
+      outcome: unchanged
+      unchanged-because: "Only its anchors changed: they now name COR-068, COR-024, COR-057 point 5 and COR-044 point 2, behind its loaded rules, its reviewer agents and the process-author, as its text says."
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-component-author.md
+    read:
+      - moved-55249d16bb02.yaml
+    revalidated:
+      at: 2026-11-02T13:07:35Z
+      outcome: unchanged
+      unchanged-because: "Only its anchors changed: they now name COR-017, COR-053, COR-033 and ADR-040 point 5, behind the extension points and the compatibility claim its text names."
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-developer.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+    revalidated:
+      at: 2026-11-02T13:07:41Z
+      outcome: unchanged
+      unchanged-because: "Only its anchors changed: they now name COR-051 point 4 and COR-066 points 1 and 2, behind the acceptance gate every change passes, as its text says."
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-merge-authoriser.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+    revalidated:
+      at: 2026-11-02T13:07:47Z
+      outcome: unchanged
+      unchanged-because: "Only its anchors changed: they now name COR-051 point 4 and COR-066 points 1 and 3, behind the acceptance its text gives this person."
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-methodology-maintainer.md
+    read:
+      - 20261027T013912Z-adb73078.yaml
+    revalidated:
+      at: 2026-11-02T13:07:52Z
+      outcome: unchanged
+      unchanged-because: "Only its anchors changed: they now name PRJ-008 and ADR-047 point 3, behind the reports this actor receives, as its text says."

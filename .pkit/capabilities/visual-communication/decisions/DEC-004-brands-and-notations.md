@@ -90,13 +90,13 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 - **A component token's default aliases a role, never a value.** So a component library holds no raw value, and no brand has to give the token a value.
 - **A shared role the foundations add after their first version** carries a default that aliases an older role. Every brand already released still gives it a value.
 - **A base may open a component token alone,** so a brand built on it restyles that one part without changing the shared role everywhere. A component declares one only where a brand needs to differ.
-- **How far a brand reaches into a component.** A brand reaches a component only through the roles it names and the component tokens it declares. So a component that names a role for its corners, its strokes or its fonts lets each brand draw them its own way. Its parts, their arrangement and its options stay the component's.
+- **How far a brand reaches into a component** (refinement per [visual-communication:DEC-009-layout-defaults]). A brand reaches a component only through the roles it names and the component tokens it declares. So a component that names a role for its corners, its strokes or its fonts lets each brand draw them its own way. Its parts, their arrangement and its options stay the component's.
 
 ### 8. Pairs of colours that must contrast
 
 - **Declared pairs.** The foundations declare the pairs of shared colour roles that must contrast, such as body text on a surface. Each pair names the contrast it must reach, by WCAG's levels for text and for other marks. A library declares the pairs that involve its own roles.
 - **Checked in every combination of the axes that change a colour.**
-- **Checked as drawn.** The engine also measures each text a scene draws against the fill under it, at WCAG's level for the text's size, in every combination the piece is drawn in. Content may point a part at another role (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 6), which no declared pair foresees. A text its component marks as decorative is not measured. Nor is a text over a picture, which a reviewer judges.
+- **Checked as drawn.** The engine also measures each text a scene draws against the fill under it, at WCAG's level for the text's size, in every combination the piece is drawn in. It measures each run of a text, a span set in one style, against the fill under that run, at the run's own size and weight (refinement per [visual-communication:DEC-012-text-runs]). Content may point a part at another role (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 6), which no declared pair foresees. A text its component marks as decorative is not measured. Nor is a text over a picture, which a reviewer judges.
 
 ### 9. Fonts come from committed files, and a missing font refuses the render
 

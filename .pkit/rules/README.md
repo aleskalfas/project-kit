@@ -15,6 +15,7 @@ pkit:
       record: [COR-001, COR-014, "COR-051#5", "COR-051#6", "COR-066#1", COR-068, COR-069, COR-070, ADR-075, ADR-076, ADR-077]
       artefact:
         - .pkit/schemas/README.md#rule-set-files
+        - .pkit/schemas/backbone-files.md#rule-set-files
         - .pkit/decisions/README.md#rule-sets--a-separate-family-with-the-same-guarantees
         - .pkit/lifecycle/README.md#the-capabilities-rules-index
         - .pkit/lifecycle/README.md#what-a-step-newly-binds
@@ -154,7 +155,7 @@ How a rule reads:
 
 The project may convert its plain `project.md` into a loaded set of its own, when it chooses. Until then the file is loaded as it stands. Nothing checks its numbers, its origins or a citation such as "project rule 4" (COR-068 point 7). The steps:
 
-1. Write the set as a rule-set file in `rule-sets/` under the internal documentation root, `docs/rule-sets/` by default. Give it a name of its own and `loaded: true`, and copy the rules into it, one section per rule, `### RS-<SET>-NNN — Title`. Keep each rule's number. The folder, its default and the form of a rule's heading are the schemas reference's ([Rule-set files](../schemas/README.md#rule-set-files)).
+1. Write the set as a rule-set file in `rule-sets/` under the internal documentation root, `docs/rule-sets/` by default. Give it a name of its own and `loaded: true`, and copy the rules into it, one section per rule, `### RS-<SET>-NNN — Title`. Keep each rule's number. The schemas reference gives the folder and its default ([Rule-set files](../schemas/README.md#rule-set-files)), and its page on backbone files gives a rule heading's form ([Rule-set files](../schemas/backbone-files.md#rule-set-files)).
 2. If the configuration sets `rule-sets.plain-file-budget`, move its value into the set as `budget`, beside `loaded: true`, and remove the key. The budget then sits beside the rules that need its room, and `pkit validate` warns of a key left behind.
 3. Give each rule its origin: the record that decides it, or the decider's words (COR-051 point 5). Only the project knows who decided each rule and why, so no command or migration converts the file. Take the decider's words from the person who decided the rule, and never write them yourself.
 4. Give a rule the status `accepted` only once a person accepts it, in the change that converts the file ([COR-066](../decisions/core/COR-066-accepted-before-landing.md) point 1). A rule with no status is proposed, and binds nothing.

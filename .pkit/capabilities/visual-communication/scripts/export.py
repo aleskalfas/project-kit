@@ -11,10 +11,12 @@
 """visual-communication capability — export: a numbered export of a piece, and its record
 (DEC-006 point 7).
 
-Makes each format the piece declares under `exports`, in each of its languages and each
-combination of modes it names, from the scene, under the lock its `piece.yaml` holds. The
-run takes the next number of the piece's `exports.yaml`, and every file it makes carries
-it: `<piece>.v<N>.<language>.<key>.svg`, in
+Makes each format the piece declares under `exports`, one file for each page, each of its
+languages and each combination of modes it names, from the scene, under the lock its
+`piece.yaml` holds. The run takes the piece's next number, past every version its
+`exports.yaml` records and every file of its exports folder, and every file it makes
+carries it: `<piece>.v<N>.<language>.<key>.svg`, and for a piece of more
+than one page `<piece>.v<N>.<language>.<key>.<n>.svg`, its page's number from 1, in
 `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the
 clone and never committed. It then records the version in `exports.yaml`: the fingerprint
 of every file its scenes were computed from, each file's hash, and when, in which state,
@@ -29,14 +31,16 @@ missing, and on a piece with no lock yet, which `pkit visual render` writes.
 It writes in the location, so where the configuration records none it takes `visual/` and
 records it before its first write, or the path `--location` names. Every check that can
 refuse runs before that first write, so a refused export writes nothing, the location
-included.
+included. It writes the files, then `exports.yaml`, as one change: a write that fails
+removes the files the run wrote, and leaves the record and the configuration as they were.
 
 Usage:
   pkit visual export <piece> [--use-stale <output>]... [--location <path>]
 
 Exit codes:
   0  exported and recorded
-  1  refused: nothing is written
+  1  refused: nothing is written. Or a write failed: it names the file, and every file is
+     as it was before the run, or each it could not put back is named
 """
 
 from __future__ import annotations
@@ -48,7 +52,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import checks, exports, libraries, location, tokens
+from _lib import checks, exports, files, libraries, location, tokens
 from _lib import pipeline as pl
 from _lib.root import project_root
 
@@ -71,7 +75,12 @@ def main() -> int:
     root = project_root()
     try:
         return _export(root, args.piece, args.use_stale, args.location)
-    except (pl.Refused, location.LocationRefused, location.GitFailed) as exc:
+    except (
+        pl.Refused,
+        location.LocationRefused,
+        location.GitFailed,
+        files.WriteFailed,
+    ) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
@@ -90,9 +99,11 @@ def _export(root: Path, name: str, use_stale: list[str], given: str | None) -> i
         said = "; ".join(finding.message for finding in exc.findings)
         raise pl.Refused(f"the brand of `{name}` cannot be read: {said}") from exc
     planned = exports.plan(project, use_stale=use_stale)
-    if where.record:
-        print(location.record(root, where.path))
-    exports.write(planned)
+    change = files.Change(root)
+    said = location.record(change, where)
+    exports.write(planned, change)
+    if said is not None:
+        print(said)
     for file in planned.files:
         print(f"export: {exports.FOLDER}/{name}/{file}")
     for output in planned.used_stale:

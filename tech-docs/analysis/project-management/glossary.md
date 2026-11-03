@@ -3,8 +3,14 @@ builds-on:
   - analysis: core
     version: 2.0.0
     terms:
+      - {id: TERM-adapter, name: adapter}
       - {id: TERM-agent-definition, name: agent definition}
+      - {id: TERM-anchor, name: anchor}
       - {id: TERM-answer, name: answer}
+      - {id: TERM-answer-file, name: answer file}
+      - {id: TERM-artefact, name: artefact}
+      - {id: TERM-artefact-type, name: artefact type}
+      - {id: TERM-backbone, name: backbone}
       - {id: TERM-base, name: base}
       - {id: TERM-capability, name: capability}
       - {id: TERM-change, name: change}
@@ -12,20 +18,28 @@ builds-on:
       - {id: TERM-component, name: component}
       - {id: TERM-consent, name: consent}
       - {id: TERM-data-point, name: data point}
+      - {id: TERM-decision-record, name: decision record}
       - {id: TERM-default-branch, name: default branch}
       - {id: TERM-distribution, name: distribution}
       - {id: TERM-finding, name: finding}
+      - {id: TERM-harness, name: harness}
       - {id: TERM-head, name: head}
+      - {id: TERM-install, name: install}
       - {id: TERM-methodology, name: methodology}
+      - {id: TERM-package-metadata, name: package metadata}
       - {id: TERM-process, name: process}
       - {id: TERM-project, name: project}
       - {id: TERM-pull-request, name: pull request}
       - {id: TERM-report, name: report}
+      - {id: TERM-revalidation-answer, name: revalidation answer}
       - {id: TERM-reviewer, name: reviewer}
       - {id: TERM-role, name: role}
       - {id: TERM-rule, name: rule}
+      - {id: TERM-scratchpad-note, name: scratchpad note}
       - {id: TERM-skill, name: skill}
+      - {id: TERM-system, name: system}
       - {id: TERM-validation, name: validation}
+      - {id: TERM-version, name: version}
     actors:
       - id: ACT-adopter
         name: Adopter
@@ -52,15 +66,20 @@ TERM-audit-comment:
   name: audit comment
   noun-forms: [audit comments]
   status: active
-  definition: "message project-management posts to record why a person set a check aside, or, at the project's fullest setting, each write it governs"
+  definition: "message project-management posts recording a person's reason or consent for a write project-management governs, or at the project's fullest setting each governed write"
   pkit:
     friction:
       anchors:
         path:
           - .pkit/capabilities/project-management/scripts/_lib/audit.py
+          - .pkit/capabilities/project-management/scripts/edit-issue.py
+          - .pkit/capabilities/project-management/scripts/_lib/pools.py
         record:
           - project-management:DEC-049
           - project-management:DEC-014
+          - project-management:DEC-061#6
+          - COR-001
+          - COR-010
 TERM-authorisation:
   name: authorisation
   noun-forms: [authorisations]
@@ -90,10 +109,22 @@ TERM-batch-plan:
           - project-management:DEC-029
           - project-management:DEC-054#3
           - project-management:DEC-061#6
+TERM-builder-agent:
+  name: builder agent
+  noun-forms: [builder agents]
+  status: active
+  definition: "assistant the build command starts in a fresh session for one worker's Task, in a sandboxed clone of its own, seeing only the Task's brief"
+  pkit:
+    friction:
+      anchors:
+        record:
+          - project-management:DEC-063#1
+          - project-management:DEC-063#3
+          - project-management:DEC-063#4
 TERM-bypass:
   name: bypass
   status: active
-  definition: "override of a check that refuses by default, made by a person with an explicit reason, which an audit comment records before the write"
+  definition: "override of a check that refuses by default, made with a person's explicit reason, recorded before the write where the project keeps audit comments"
   pkit:
     friction:
       anchors:
@@ -102,6 +133,8 @@ TERM-bypass:
         record:
           - project-management:DEC-014
           - project-management:DEC-046#1
+          - COR-001
+          - COR-010
 TERM-cascade:
   name: cascade
   status: active
@@ -133,7 +166,7 @@ TERM-classification-axis:
   name: classification axis
   noun-forms: [classification axes]
   status: active
-  definition: "dimension along which every issue takes one value, from a fixed set or the project's own, carried as a label or a board field"
+  definition: "dimension giving every issue one value, from a fixed set or the project's own, carried where a substrate map puts it, by default a label"
   pkit:
     friction:
       anchors:
@@ -141,6 +174,27 @@ TERM-classification-axis:
           - .pkit/capabilities/project-management/schemas/classification.yaml
         record:
           - project-management:DEC-012
+          - project-management:DEC-036#1
+          - project-management:DEC-036#2
+          - COR-001
+          - COR-010
+TERM-clone:
+  name: clone
+  noun-forms: [clones]
+  status: active
+  definition: "working copy of a project's repository on one machine, which keeps the number, key and seat it takes in a file it never commits"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/instance_identity.py
+        record:
+          - project-management:DEC-035#1
+          - project-management:DEC-058#5
+          - project-management:DEC-059#4
+          - project-management:DEC-059#6
+          - COR-001
+          - COR-010
 TERM-close-trigger:
   name: close trigger
   noun-forms: [close triggers]
@@ -177,6 +231,32 @@ TERM-feature:
           - .pkit/capabilities/project-management/schemas/issue-types.yaml
         record:
           - project-management:DEC-004
+TERM-fixer:
+  name: fixer
+  noun-forms: [fixers]
+  status: active
+  definition: "agent declared for one artefact type, which a command starts, where the project granted it, to propose answers for out-of-date artefacts of that artefact type"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/fixers.py
+          - .pkit/capabilities/project-management/scripts/fix-drift.py
+          - .pkit/capabilities/project-management/scripts/grant-fixer.py
+        record:
+          - project-management:DEC-056#1
+          - project-management:DEC-056#2
+          - COR-056#1
+          - COR-056#2
+          - COR-056#3
+          - COR-056#5
+          - project-management:DEC-056#3
+          - COR-050#1
+          - COR-050#3
+          - COR-050#4
+          - COR-062#1
+          - COR-001
+          - COR-010
 TERM-instance:
   name: instance
   noun-forms: [instances]
@@ -193,6 +273,8 @@ TERM-instance:
           - project-management:DEC-045#1
           - project-management:DEC-058#5
           - project-management:DEC-059#6
+          - COR-001
+          - COR-010
 TERM-issue:
   name: issue
   status: active
@@ -219,6 +301,44 @@ TERM-issue-lifecycle:
           - project-management:DEC-006
           - project-management:DEC-033
           - project-management:DEC-062#5
+          - COR-033
+          - COR-044
+          - COR-053#2
+TERM-journal:
+  name: journal
+  noun-forms: [journals]
+  status: active
+  definition: "record the backbone's engine appends of each move of a process, with who made it, kept only where the project turns it on"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/move_journal.py
+        record:
+          - project-management:DEC-049#1
+          - project-management:DEC-033
+          - COR-033#P7
+          - COR-033
+          - COR-044
+          - COR-053#2
+          - COR-059#1
+          - COR-001
+          - COR-010
+TERM-kind-of-work:
+  name: kind of work
+  noun-forms: [kinds of work]
+  status: active
+  definition: "value an issue takes on the `type` classification axis, such as `bug`, `docs` or `test`, which sets the prefix a Task's title opens with"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/schemas/classification.yaml
+          - .pkit/capabilities/project-management/scripts/_lib/title_rules.py
+        record:
+          - project-management:DEC-012
+          - project-management:DEC-011
+          - project-management:DEC-059#7
 TERM-merge-gate:
   name: merge gate
   status: active
@@ -233,6 +353,10 @@ TERM-merge-gate:
           - project-management:DEC-028
           - project-management:DEC-007
           - project-management:DEC-026
+          - COR-009#1
+          - COR-009#2
+          - COR-009#3
+          - COR-009#5
 TERM-milestone:
   name: Milestone
   noun-forms: [Milestones]
@@ -259,6 +383,8 @@ TERM-milestone-category:
           - .pkit/capabilities/project-management/scripts/create-milestone.py
         record:
           - project-management:DEC-016
+          - COR-001
+          - COR-010
 TERM-owner:
   name: owner
   noun-forms: [owners]
@@ -274,6 +400,22 @@ TERM-owner:
           - project-management:DEC-035#2
           - project-management:DEC-035#6
           - project-management:DEC-043
+          - project-management:DEC-059#9
+TERM-ownership:
+  name: ownership
+  noun-forms: [ownerships]
+  status: active
+  definition: "instance's mark on an issue it owns, counting until the mark lapses or, under a topology, the seat the mark names is released"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/instance_claims.py
+          - .pkit/capabilities/project-management/scripts/_lib/instance_ownership.py
+        record:
+          - project-management:DEC-035#2
+          - project-management:DEC-035#3
+          - project-management:DEC-043#3
           - project-management:DEC-059#9
 TERM-parent-reference:
   name: parent reference
@@ -299,6 +441,21 @@ TERM-pool:
           - .pkit/capabilities/project-management/scripts/_lib/pools.py
         record:
           - project-management:DEC-061
+TERM-ready-task:
+  name: ready Task
+  noun-forms: [ready Tasks]
+  status: active
+  definition: "issue for one unit of work, in Backlog with no owner and no open dependency, or In Progress under an ownership that no longer counts"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/next-task.py
+          - .pkit/capabilities/project-management/scripts/_lib/task_pool.py
+        record:
+          - project-management:DEC-059#7
+          - project-management:DEC-059#9
+          - project-management:DEC-005
 TERM-required-reviewer:
   name: required reviewer
   noun-forms: [required reviewers]
@@ -314,6 +471,17 @@ TERM-required-reviewer:
           - project-management:DEC-032#D1
           - project-management:DEC-032#D2
           - project-management:DEC-027
+          - COR-009#1
+          - COR-009#2
+          - COR-009#3
+          - COR-009#5
+          - COR-001
+          - COR-010
+          - COR-017
+          - COR-026
+          - COR-031
+          - COR-050#3
+          - COR-050#6
 TERM-scope:
   name: scope
   status: active
@@ -321,26 +489,39 @@ TERM-scope:
   pkit:
     friction:
       anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/topology.py
+          - .pkit/capabilities/project-management/scripts/_lib/task_pool.py
         record:
           - project-management:DEC-045#3
           - project-management:DEC-059#7
           - project-management:DEC-018
           - project-management:DEC-061#1
           - project-management:DEC-061#5
+          - COR-001
+          - COR-010
 TERM-seat:
   name: seat
   noun-forms: [seats]
   status: active
-  definition: "place in a topology, held by one clone, saying whether the clone's agent plans, builds or does both, and which agent definition that agent follows"
+  definition: "topology's place, held by at most one clone, saying whether that clone's agent plans, builds or does both, and which agent definition the agent follows"
   pkit:
     friction:
       anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/topology.py
+          - .pkit/capabilities/project-management/scripts/take-seat.py
+          - .pkit/capabilities/project-management/scripts/release-seat.py
         record:
           - project-management:DEC-045#1
           - project-management:DEC-045#3
           - project-management:DEC-059#2
           - project-management:DEC-059#4
           - project-management:DEC-029
+          - COR-006
+          - COR-013#1
+          - COR-013#2
+          - COR-013#5
 TERM-state-issue:
   name: state issue
   noun-forms: [state issues]
@@ -349,14 +530,35 @@ TERM-state-issue:
   pkit:
     friction:
       anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/state_issues.py
         record:
           - project-management:DEC-058
           - project-management:DEC-043#3
           - project-management:DEC-043#4
+TERM-substrate-map:
+  name: substrate map
+  noun-forms: [substrate maps]
+  status: active
+  definition: "file of the project's own that says, for each classification axis and an issue's state, which part of GitHub carries it, or that none does"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/schemas/substrate-map.yaml
+          - .pkit/capabilities/project-management/schemas/substrate-map.schema.json
+          - .pkit/capabilities/project-management/scripts/_lib/axis_labels.py
+        record:
+          - project-management:DEC-036#1
+          - project-management:DEC-036#2
+          - project-management:DEC-062#4
+          - project-management:DEC-062#5
+          - COR-001
+          - COR-010
 TERM-task:
   name: Task
   status: active
-  definition: "issue for one unit of implementation work, which one pull request delivers"
+  definition: "issue for one unit of work, which one pull request delivers or, where the work is no pull request, a completed close ends"
   pkit:
     friction:
       anchors:
@@ -364,6 +566,10 @@ TERM-task:
           - .pkit/capabilities/project-management/schemas/issue-types.yaml
         record:
           - project-management:DEC-004
+          - COR-009#1
+          - COR-009#2
+          - COR-009#3
+          - COR-009#5
 TERM-topology:
   name: topology
   noun-forms: [topologies]
@@ -372,11 +578,15 @@ TERM-topology:
   pkit:
     friction:
       anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/topology.py
         record:
           - project-management:DEC-045
           - project-management:DEC-059#1
           - project-management:DEC-059#2
           - project-management:DEC-008
+          - COR-001
+          - COR-010
 TERM-umbrella:
   name: Umbrella
   status: active
@@ -392,7 +602,7 @@ TERM-use-case-entry:
   name: use-case entry
   noun-forms: [use-case entries]
   status: active
-  definition: "item a component fills into a data point of the work-tracking role, naming one goal the project's software serves, by its id, title and status"
+  definition: "item a component or the project fills into a work-tracking data point, naming one goal the project's software serves, by its id, title and status"
   pkit:
     friction:
       anchors:
@@ -401,6 +611,16 @@ TERM-use-case-entry:
           - .pkit/capabilities/project-management/scripts/_lib/use_case_citations.py
         record:
           - project-management:DEC-054#1
+          - COR-010
+          - COR-052#1
+          - COR-052#2
+          - COR-052#3
+          - COR-052#6
+          - COR-053#2
+          - COR-061#1
+          - COR-053#1
+          - COR-053#7
+          - COR-001
 TERM-verdict:
   name: verdict
   noun-forms: [verdicts]
@@ -414,6 +634,17 @@ TERM-verdict:
           - .pkit/capabilities/project-management/scripts/_lib/verdict_freshness.py
         record:
           - project-management:DEC-028
+          - COR-024
+          - COR-050#3
+          - COR-057#1
+          - COR-057#3
+          - COR-064#4
+          - COR-057#5
+          - COR-009#1
+          - COR-009#2
+          - COR-009#3
+          - COR-009#5
+          - COR-050#6
 TERM-workstream:
   name: workstream
   noun-forms: [workstreams]
@@ -428,15 +659,23 @@ TERM-workstream:
         record:
           - project-management:DEC-018
           - project-management:DEC-012
+          - COR-001
+          - COR-010
 ---
 
 # Glossary
 
 The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
 
-- **From core at 2.0.0:** the areas up to `030-change`. No release holds the core's analysis yet, so the links name the next release, 2.0.0, rather than project-management's floor, 1.144.0.
+- **From core at 2.0.0:** the areas up to `030-change`, at project-management's floor. The core's glossary at 2.0.0 holds no answer file and no revalidation answer, which the core defined after that release.
+  - **Term:** [adapter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-adapter--adapter)
   - **Term:** [agent definition](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-agent-definition--agent-definition)
+  - **Term:** [anchor](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-anchor--anchor)
   - **Term:** [answer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-answer--answer)
+  - **Term:** [answer file](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-answer-file--answer-file)
+  - **Term:** [artefact](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-artefact--artefact)
+  - **Term:** [artefact type](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-artefact-type--artefact-type)
+  - **Term:** [backbone](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-backbone--backbone)
   - **Term:** [base](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-base--base)
   - **Term:** [capability](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-capability--capability)
   - **Term:** [change](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-change--change)
@@ -444,20 +683,28 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [component](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-component--component)
   - **Term:** [consent](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-consent--consent)
   - **Term:** [data point](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-data-point--data-point)
+  - **Term:** [decision record](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-decision-record--decision-record)
   - **Term:** [default branch](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-default-branch--default-branch)
   - **Term:** [distribution](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-distribution--distribution)
   - **Term:** [finding](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-finding--finding)
+  - **Term:** [harness](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-harness--harness)
   - **Term:** [head](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-head--head)
+  - **Term:** [install](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-install--install)
   - **Term:** [methodology](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-methodology--methodology)
+  - **Term:** [package metadata](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-package-metadata--package-metadata)
   - **Term:** [process](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-process--process)
   - **Term:** [project](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-project--project)
   - **Term:** [pull request](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-pull-request--pull-request)
   - **Term:** [report](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-report--report)
+  - **Term:** [revalidation answer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-revalidation-answer--revalidation-answer)
   - **Term:** [reviewer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-reviewer--reviewer)
   - **Term:** [role](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-role--role)
   - **Term:** [rule](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-rule--rule)
+  - **Term:** [scratchpad note](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-scratchpad-note--scratchpad-note)
   - **Term:** [skill](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-skill--skill)
+  - **Term:** [system](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-system--system)
   - **Term:** [validation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-validation--validation)
+  - **Term:** [version](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-version--version)
   - **Actor:** [Adopter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-adopter.md)
     - Set up my project's topology in the project's committed configuration, so that every clone reads the same seats from the default branch.
     - Measure one topology against another on comparable work, by figures GitHub holds.
@@ -479,7 +726,7 @@ Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#
 
 **Distinctions:**
 
-- **The timeline:** GitHub's own record of each label added or removed, with who did it and when. An audit comment adds what the timeline cannot: the reason, and the version that made the edit ([DEC-049](../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
+- **The timeline:** GitHub's own record of each label added or removed, with who did it and when. An audit comment adds what the timeline cannot: the reason, and the [version](../core/glossary.md#term-version--version) that made the edit ([DEC-049](../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
 - **The journal:** the core's record of each move of a [process](../core/glossary.md#term-process--process), kept where the [project](../core/glossary.md#term-project--project) turns it on. Where it is kept, it is the canonical record, and the comments project it ([DEC-049 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md#1-where-the-canonical-audit-trail-lives-follows-the-projects-journal-setting)).
 
 ## TERM-authorisation — authorisation
@@ -505,6 +752,17 @@ Explained in [VIEW-batch-planning](domain-model/050-batch-planning.md#batch-plan
 - **The `batch-plan` procedure:** the sub-procedure of the `pm` [skill](../core/glossary.md#term-skill--skill) that the agent follows to draft a batch plan, ask for its approval and file it ([DEC-029](../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 - **Filing:** what the agent does once the person approves the batch plan. It files each [issue](#term-issue--issue) through the [capability](../core/glossary.md#term-capability--capability)'s own commands, which check it as they file it (DEC-029).
 
+## TERM-builder-agent — builder agent
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#builder-agent).
+
+**Example:** the worker of the [seat](#term-seat--seat) `api-worker` starts #1712, and the build command starts a builder agent on a brief written from #1712. The builder agent ends with its commits, and the worker pushes them and opens the [pull request](../core/glossary.md#term-pull-request--pull-request).
+
+**Distinctions:**
+
+- **Worker agent:** the actor whose seat holds the [Task](#term-task--task). The worker agent writes to GitHub and pushes, and a builder agent does neither ([DEC-063 point 4](../../../.pkit/capabilities/project-management/decisions/DEC-063-task-builder.md#4-the-builder-runs-in-a-sandboxed-clone-of-its-own-under-rules-that-leave-the-seats-writes-to-the-seat)).
+- **Helper agent:** an agent a lead agent starts for a Task of the lead's [scope](#term-scope--scope). A helper agent acts as the lead's [instance](#term-instance--instance), and a builder agent acts as no instance ([DEC-059 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
+
 ## TERM-bypass — bypass
 
 Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#bypass).
@@ -520,7 +778,7 @@ Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#
 
 Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#cascade).
 
-**Example:** `start-work 1712` moves #1712 to In Progress. The cascade brings the [EPIC](#term-epic--epic) #1643 from Backlog to In Progress too, and journals the step with the reason `forward cascade from #1712: backlog → in-progress`.
+**Example:** `start-work 1712` moves #1712 to In Progress. The cascade brings the [EPIC](#term-epic--epic) #1643 from Backlog to In Progress too, and [journals](#term-journal--journal) the step with the reason `forward cascade from #1712: backlog → in-progress`.
 
 **Distinctions:**
 
@@ -547,8 +805,21 @@ Explained in [VIEW-classification-of-issues](domain-model/020-classification-of-
 
 **Distinctions:**
 
-- **Type of an issue:** [EPIC](#term-epic--epic), [Feature](#term-feature--feature), [Umbrella](#term-umbrella--umbrella) or [Task](#term-task--task), which places the [issue](#term-issue--issue) in the hierarchy. The `type` axis gives its kind of work instead, such as `bug` or `docs` ([DEC-004](../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-012](../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
-- **Label:** GitHub's tag on an issue. It always carries the `type` axis, and carries the other two where no board field does (DEC-012).
+- **Type of an issue:** [EPIC](#term-epic--epic), [Feature](#term-feature--feature), [Umbrella](#term-umbrella--umbrella) or [Task](#term-task--task), which places the [issue](#term-issue--issue) in the hierarchy. The `type` axis gives its [kind of work](#term-kind-of-work--kind-of-work) instead, such as `bug` or `docs` ([DEC-004](../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-012](../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
+- **Label:** GitHub's tag on an issue. With no [substrate map](#term-substrate-map--substrate-map), it always carries the `type` axis, and carries the other two where no board field does (DEC-012 and [DEC-036 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#2-activation-is-emergent-not-a-global-mode-flag)).
+
+## TERM-clone — clone
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#clone).
+
+**Example:** a person keeps two clones of a [project](../core/glossary.md#term-project--project) on one laptop. One clone takes the [seat](#term-seat--seat) `api-worker` and generates its key. The other takes no seat, so it marks no [issue](#term-issue--issue).
+
+**Distinctions:**
+
+- **Instance:** a clone with a number, typed into it or taken from its seat. A clone with no number is no [instance](#term-instance--instance) ([DEC-035 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)).
+- **Session:** one run of an AI agent in a clone. A session ends or dies, and the clone keeps its number, its key and its seat.
+- **Linked worktree:** a further working tree of a clone. Whether a linked worktree reads its clone's identity is not decided yet ([DEC-059 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) and #1140).
+- **Git's clone:** the same working copy, by git's name for it. The term adds what the [system](../core/glossary.md#term-system--system) keeps in the copy: a number, a key and a seat.
 
 ## TERM-close-trigger — close trigger
 
@@ -583,13 +854,25 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 - **Umbrella:** an [issue](#term-issue--issue) that groups related work by a theme, and claims nothing. It may hold Features, and a Feature never holds an [Umbrella](#term-umbrella--umbrella) ([DEC-004](../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-005](../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 - **EPIC:** an issue that states an outcome spanning several quarters. A Feature sits under one or under an Umbrella, or straight under a [Milestone](#term-milestone--milestone) where the project skips the [EPIC](#term-epic--epic) (DEC-004).
-- **Capability:** the core's word for a [component](../core/glossary.md#term-component--component) a project chooses to install. project-management's records say that a Feature claims "a [capability](../core/glossary.md#term-capability--capability)", meaning a piece of functionality in any component (DEC-004).
+- **Capability:** the core's word for a [component](../core/glossary.md#term-component--component) a project chooses to [install](../core/glossary.md#term-install--install). project-management's records say that a Feature claims "a [capability](../core/glossary.md#term-capability--capability)", meaning a piece of functionality in any component (DEC-004).
+
+## TERM-fixer — fixer
+
+Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge.md#fixer).
+
+**Example:** software-analysis declares `analysis-resolver` the fixer of its use cases, and the [project](../core/glossary.md#term-project--project) grants it. After #1712's [pull request](../core/glossary.md#term-pull-request--pull-request) merges, `pkit pm fix-drift` starts `analysis-resolver` on [UC-084](use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md), which the merge left out of date.
+
+**Distinctions:**
+
+- **Reviewer:** reports on a [change](../core/glossary.md#term-change--change) before it merges. A fixer works after a merge, on what the [default branch](../core/glossary.md#term-default-branch--default-branch) left out of date.
+- **Answer:** the statement that settles an [artefact](../core/glossary.md#term-artefact--artefact). A fixer only proposes one, which waits until a person, or the delegate they named, decides it ([DEC-056 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)).
+- **An agent a person starts:** a person may start any agent by hand, in a session of their own. Only a granted fixer starts through the command ([DEC-056 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)).
 
 ## TERM-instance — instance
 
 Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#instance).
 
-**Example:** `set-instance 2` makes a clone instance 2 of the instances of the clone's person. A session that starts in that clone after a crash works as instance 2 again.
+**Example:** `set-instance 2` makes a [clone](#term-clone--clone) instance 2 of the instances of the clone's person. A session that starts in that clone after a crash works as instance 2 again.
 
 **Distinctions:**
 
@@ -620,7 +903,31 @@ Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#
 
 - **Process:** the core's word for any declared course of a subject through states. The issue lifecycle is the [process](../core/glossary.md#term-process--process) project-management defines for issues, which the core's engine checks ([DEC-033](../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
 - **Review:** the state of a [Task](#term-task--task) whose pull request is open. A parent [issue](#term-issue--issue) never enters it, and goes from In Progress to Done by its own close ([DEC-006](../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
-- **A board's Status column:** where a [project](../core/glossary.md#term-project--project)'s substrate map binds the state to its Projects v2 board, the source of where an open issue stands ([DEC-062 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#5-where-the-map-puts-state-on-the-board-the-boards-status-is-the-source-of-an-open-issues-position)). Elsewhere it is a projection of the state, and the state the issue itself carries wins where the two disagree (DEC-006).
+- **A board's Status column:** where a [project](../core/glossary.md#term-project--project)'s [substrate map](#term-substrate-map--substrate-map) binds the state to its Projects v2 board, the source of where an open issue stands ([DEC-062 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#5-where-the-map-puts-state-on-the-board-the-boards-status-is-the-source-of-an-open-issues-position)). Elsewhere it is a projection of the state, and the state the issue itself carries wins where the two disagree (DEC-006).
+
+## TERM-journal — journal
+
+Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#journal).
+
+**Example:** in a [project](../core/glossary.md#term-project--project) that turns its journal on, `start-work 1712` appends the move of #1712 to In Progress. The [cascade](#term-cascade--cascade)'s move of the [EPIC](#term-epic--epic) #1643 follows it, with the reason `forward cascade from #1712: backlog → in-progress`.
+
+**Distinctions:**
+
+- **Audit comment:** a comment on GitHub that carries a reason, or the [versions](../core/glossary.md#term-version--version) of a write. Where the journal is kept, the journal is the canonical record, and the comments project it ([DEC-049 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md#1-where-the-canonical-audit-trail-lives-follows-the-projects-journal-setting)).
+- **The timeline:** GitHub's own record of each label added or removed. Where no journal is kept, the timeline is the canonical record (DEC-049 point 1).
+- **A journal kept in one clone:** one the project does not commit. It records only the moves made from that [clone](#term-clone--clone), and goes with the clone (DEC-049 point 1).
+
+## TERM-kind-of-work — kind of work
+
+Explained in [VIEW-classification-of-issues](domain-model/020-classification-of-issues.md#kind-of-work).
+
+**Example:** #1712's kind of work is `docs`, so its label is `type:docs` and its title opens with `[Docs]`. A testing [seat](#term-seat--seat)'s [scope](#term-scope--scope) names the kind of work `test`.
+
+**Distinctions:**
+
+- **Type of an issue:** [EPIC](#term-epic--epic), [Feature](#term-feature--feature), [Umbrella](#term-umbrella--umbrella) or [Task](#term-task--task), which places the [issue](#term-issue--issue) in the hierarchy. An EPIC, a Feature and an Umbrella always take the kind of work `feature` ([DEC-004](../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-012](../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
+- **Workstream:** the long-lived area an issue belongs to, the value of another axis. A scope may name [workstreams](#term-workstream--workstream) and kinds of work alike ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
+- **A discipline:** a sort of work, such as design, that no kind of work carries yet. No record decides how a Task carries one (DEC-059 point 7).
 
 ## TERM-merge-gate — merge gate
 
@@ -668,7 +975,19 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#owner).
 - **Assignee:** the GitHub account an [issue](#term-issue--issue) is assigned to. One person's instances all share the assignee, so the owner pairs the assignee with one instance ([DEC-035 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#2-ownership-is-carried-by-a-marker-paired-with-the-assignee)).
 - **A lock:** a hold that no one else can take at the same moment. GitHub offers no lock, so two instances may both take one issue at once. The higher-numbered instance then gives the issue up (DEC-035 point 6).
 - **A file's owner:** the [methodology](../core/glossary.md#term-methodology--methodology) or the [project](../core/glossary.md#term-project--project), under the core's [rule](../core/glossary.md#term-rule--rule) that every file has one owner. A file's owner has nothing to do with an issue.
-- **A seat's holder:** the clone that holds a [seat](#term-seat--seat). The seat's [state issue](#term-state-issue--state-issue) shows which clone that is. An owner holds an issue of work, and a holder holds a seat ([DEC-058 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)).
+- **A seat's holder:** the [clone](#term-clone--clone) that holds a [seat](#term-seat--seat). The seat's [state issue](#term-state-issue--state-issue) shows which clone that is. An owner holds an issue of work, and a holder holds a seat ([DEC-058 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)).
+
+## TERM-ownership — ownership
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#ownership).
+
+**Example:** `start-work 1712`, run in the [clone](#term-clone--clone) that holds the [seat](#term-seat--seat) `api-worker`, writes an ownership of #1712. It names `api-worker`, the seat's number and the clone's key. Once the seat is released, the ownership no longer counts.
+
+**Distinctions:**
+
+- **Owner:** the [instance](#term-instance--instance) an [issue](#term-issue--issue) belongs to. An ownership makes that instance the [owner](#term-owner--owner), and may lapse or stop counting while the instance goes on ([DEC-035 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#2-ownership-is-carried-by-a-marker-paired-with-the-assignee) and [DEC-059 point 9](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
+- **A seat's holder:** the clone that holds a seat, which the seat's [state issue](#term-state-issue--state-issue) shows. An ownership marks an issue of work instead ([DEC-058 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)).
+- **Claim:** the code's word for an ownership. The analysis writes *ownership* for the same thing.
 
 ## TERM-parent-reference — parent reference
 
@@ -690,9 +1009,20 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#pool).
 **Distinctions:**
 
 - **Scope:** what narrows one seat's own work, and reserves nothing for that seat. A pool reserves its work for the seats that serve the pool, and a seat's [scope](#term-scope--scope) narrows what its pools hold ([DEC-061 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)).
-- **The shared pool:** the ready Tasks that every seat shares where the topology declares no pool ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)). Where the topology declares pools, each seat that builds takes from its own pools instead.
-- **Milestone:** the container that holds one line of work. A Milestone joins a pool by its `Pool:` line, and a pool holds the lines of work of its open Milestones (DEC-061 point 2).
-- **Workstream:** a long-lived area that classifies issues. A pool says which seats take a line of work, and changes as a person marks new Milestones.
+- **The shared pool:** the [ready Tasks](#term-ready-task--ready-task) that every seat shares where the topology declares no pool ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)). Where the topology declares pools, each seat that builds takes from its own pools instead.
+- **Milestone:** the container whose work joins a pool. A Milestone joins a pool by its `Pool:` line, and a pool holds the work of its open Milestones (DEC-061 point 2).
+- **Workstream:** a long-lived area that classifies issues. A pool says which seats take a Milestone's work, and changes as a person marks new Milestones.
+
+## TERM-ready-task — ready Task
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#ready-task).
+
+**Example:** #1712 is in Backlog with no [owner](#term-owner--owner), and its `## Dependencies` section names only #1700, which is closed. So #1712 is a ready Task, and `pkit pm next-task` may start it.
+
+**Distinctions:**
+
+- **A Task in Backlog:** scheduled, yet not ready while an [instance](#term-instance--instance) owns it or its dependencies name an open [issue](#term-issue--issue). A [Task](#term-task--task) in Backlog that a worker's own instance owns comes first for that worker (`next-task.py`).
+- **The shared pool:** the ready Tasks every [seat](#term-seat--seat) shares where the [topology](#term-topology--topology) declares no [pool](#term-pool--pool) ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)). Where it declares pools, a seat takes only the ready Tasks of its pools ([DEC-061 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#5-a-seat-that-builds-chooses-its-work-only-from-its-pools)).
 
 ## TERM-required-reviewer — required reviewer
 
@@ -709,22 +1039,22 @@ Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge
 
 Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#scope).
 
-**Example:** a worker agent whose [seat](#term-seat--seat)'s scope is the [workstream](#term-workstream--workstream) `api` takes Tasks from `api`. A worker agent whose seat has no scope takes from all the [project](../core/glossary.md#term-project--project)'s ready Tasks. Where the [topology](#term-topology--topology) declares [pools](#term-pool--pool), such an agent takes from all the ready Tasks of its seat's pools. A testing seat's scope names the kind of work `test` ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-061 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#5-a-seat-that-builds-chooses-its-work-only-from-its-pools)).
+**Example:** a worker agent whose [seat](#term-seat--seat)'s scope is the [workstream](#term-workstream--workstream) `api` takes Tasks from `api`. A worker agent whose seat has no scope takes from all the [project](../core/glossary.md#term-project--project)'s [ready Tasks](#term-ready-task--ready-task). Where the [topology](#term-topology--topology) declares [pools](#term-pool--pool), such an agent takes from all the ready Tasks of its seat's pools. A testing seat's scope names the [kind of work](#term-kind-of-work--kind-of-work) `test` ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-061 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#5-a-seat-that-builds-chooses-its-work-only-from-its-pools)).
 
 **Distinctions:**
 
 - **Workstream:** a long-lived area that classifies issues. A scope may name workstreams, and never changes them ([DEC-045 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#3-instances-reference-workstreams-1many-they-never-rebind-the-taxonomy)).
 - **Pool:** a set of open [Milestones](#term-milestone--milestone) whose work only the seats that serve the pool take. A pool reserves its work for those seats, and a scope narrows what its seat's pools hold ([DEC-061 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)).
 - **Kind of work:** the value a [Task](#term-task--task) takes on the `type` [classification axis](#term-classification-axis--classification-axis), such as `test`. A scope may name kinds of work, and never changes them (DEC-059 point 7).
-- **Instance:** the clone an agent works in. The scope says which work the agent takes, and the [instance](#term-instance--instance)'s number says which clone the agent works in.
-- **The scope of a set of rules:** what selects the artefacts a [rule](../core/glossary.md#term-rule--rule) set's rules bind on ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). Such a scope is no part of a topology.
+- **Instance:** the [clone](#term-clone--clone) an agent works in. The scope says which work the agent takes, and the [instance](#term-instance--instance)'s number says which clone the agent works in.
+- **The scope of a set of rules:** what selects the [artefacts](../core/glossary.md#term-artefact--artefact) a [rule](../core/glossary.md#term-rule--rule) set's rules bind on ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). Such a scope is no part of a topology.
 - **The scope of a grant:** where an entry of the permission model allows or denies a privilege ([COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). Such a scope is no part of a topology either.
 
 ## TERM-seat — seat
 
 Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#seat).
 
-**Example:** the seat `api-worker` says that its agent builds, and that this agent follows the project-manager agent's definition. A clone that takes the seat works under the name `api-worker`, and the clone's agent builds Tasks.
+**Example:** the seat `api-worker` says that its agent builds, and that this agent follows the project-manager agent's definition. A [clone](#term-clone--clone) that takes the seat works under the name `api-worker`, and the clone's agent builds Tasks.
 
 **Distinctions:**
 
@@ -737,13 +1067,25 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#seat).
 
 Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#state-issue).
 
-**Example:** the [seat](#term-seat--seat) `api-worker` has a state issue. A comment on the state issue records each clone that takes or releases the seat. The state issue's description names the clone that holds the seat now.
+**Example:** the [seat](#term-seat--seat) `api-worker` has a state issue. A comment on the state issue records each [clone](#term-clone--clone) that takes or releases the seat. The state issue's description names the clone that holds the seat now.
 
 **Distinctions:**
 
 - **Issue:** an item of work, filed as one of four types. A state issue holds no work. A state issue takes none of the four types, and sits under no parent ([DEC-058 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#3-it-sits-outside-the-work-hierarchy-and-the-lifecycle)).
 - **The owner's comment log:** the comments on an [issue](#term-issue--issue) of work that record the issue's [owner](#term-owner--owner), with a summary in the issue's description (DEC-043 points [3](../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#3-in-comment-mode-the-source-of-truth-is-a-per-instance-append-only-ownership-event-log) and [4](../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#4-the-current-owner-is-mirrored-into-the-issue-description-as-a-derived-regenerable-view)). A state issue keeps its own data the same way.
 - **Committed configuration:** what a person reviews before the configuration changes, such as the [topology](#term-topology--topology). A state issue holds what changes while agents work ([DEC-058 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#1-what-a-person-reviews-is-configuration-and-what-changes-at-run-time-is-a-state-issue)).
+
+## TERM-substrate-map — substrate map
+
+Explained in [VIEW-classification-of-issues](domain-model/020-classification-of-issues.md#substrate-map).
+
+**Example:** a [project](../core/glossary.md#term-project--project) whose tracker labels its priorities `P0` to `P2` writes a substrate map. The map remaps the `priority` axis onto those labels, and binds an [issue](#term-issue--issue)'s state to the project's board.
+
+**Distinctions:**
+
+- **The board flag:** says only that the project has a Projects v2 board, and carries no axis. An axis is on the board only where the substrate map puts it there ([DEC-062 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#1-the-flag-says-only-that-a-board-exists)).
+- **No substrate map:** every axis then reads project-management's own labels ([DEC-036 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#2-activation-is-emergent-not-a-global-mode-flag)).
+- **An axis a map leaves out:** unsupported, so the checks that need it warn instead of refusing. The [system](../core/glossary.md#term-system--system) never falls back to writing a label for it (DEC-036 point 2).
 
 ## TERM-task — Task
 
@@ -766,7 +1108,7 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#topology).
 **Distinctions:**
 
 - **DEC-045's topology file:** one person's file, kept on one machine and never committed, that lists the person's [instances](#term-instance--instance) and the workstreams each instance handles ([DEC-045 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#2-a-per-user-machine-local-topology-file--not-committed-not-team-shared)). [DEC-059 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch) overturns that file: a topology is the project's committed configuration.
-- **Seat:** one place in a topology, held by one clone. The topology says nothing of who holds a seat now. The seat's [state issue](#term-state-issue--state-issue) shows the holder.
+- **Seat:** one place in a topology, held by at most one [clone](#term-clone--clone) at a time. The topology says nothing of who holds a seat now. The seat's [state issue](#term-state-issue--state-issue) shows the holder.
 - **Instance:** one clone of the project. The clone takes a seat of the topology by the seat's name, or the first free seat ([DEC-059 point 4](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
 - **Batch plan:** the outline of the issues for one intent. A topology says who works, and a [batch plan](#term-batch-plan--batch-plan) says what is worked on.
 
@@ -785,12 +1127,12 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 Explained in [VIEW-batch-planning](domain-model/050-batch-planning.md#use-case-entry).
 
-**Example:** in project-kit, software-analysis fills the [data point](../core/glossary.md#term-data-point--data-point). One of its entries is `UC-044`, titled "Write a page for the reader it names", `active`, with the path of its file.
+**Example:** in project-kit, software-analysis fills the [data point](../core/glossary.md#term-data-point--data-point). One of its entries is `UC-060`, `active`, with the path of its file. Its title is "File a [Task](#term-task--task) under its parent, its title and body checked as it is filed".
 
 **Distinctions:**
 
 - **Use case:** another [component](../core/glossary.md#term-component--component)'s description of how the software fulfils one goal, with its steps. A use-case entry names one by its id and title, and holds none of its steps ([DEC-054 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#1-the-point)).
-- **A citation in an issue's body:** a line of the body's `## Use cases` section, such as `- UC-044 — Write a page for the reader it names`. It names an entry by its id, and [validation](../core/glossary.md#term-validation--validation) warns where the data point holds no such id ([DEC-054 point 4](../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#4-the-rule)).
+- **A citation in an issue's body:** a line of the body's `## Use cases` section, such as `- UC-060 — File a Task under its parent, its title and body checked as it is filed`. It names an entry by its id, and [validation](../core/glossary.md#term-validation--validation) warns where the data point holds no such id ([DEC-054 point 4](../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#4-the-rule)).
 
 ## TERM-verdict — verdict
 

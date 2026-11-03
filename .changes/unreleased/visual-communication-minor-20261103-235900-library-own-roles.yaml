@@ -1,0 +1,26 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A component library's own roles are read and drawn (#2557, DEC-008). The
+  capability reads the `roles.yaml` of each library of components it
+  resolves, beside the foundations': each role under the library's name,
+  with an optional default that aliases one of its own roles or a role of a
+  library it builds on. A default lies below every brand's value and
+  follows the brand, so a part that reads a library's role draws under any
+  brand. A brand reaches a library's roles only where its `builds-on` names
+  the library by major; built on a base, only where both name it and the
+  base opens the role. It exports the library roles it gives values, and
+  written code, the CSS writer's among it, holds every role of the
+  libraries its lock names, at the brand's value or its default; a brand
+  built on a base is read over the base its lock names. `pkit validate`
+  checks the newest version of each major of each library alone, resolved
+  with the newest version of each major it names: what a version shows
+  alone lies in it, and a fault only a piece's lock shows lies at that
+  lock. New findings: `roles-declaration`, `default-dangling`,
+  `default-loop`, `pair-defaults`, `role-brand-only`,
+  `library-role-missing`, `library-token`, `library-token-private`,
+  `alone-majors` and `alone-missing`. Neither the CSS writer's version nor
+  the values document's version rises, and every file format 1 accepted is
+  read and drawn as before.

@@ -1,10 +1,24 @@
 """The check's findings (visual-communication DEC-002 point 4, DEC-003 point 9, DEC-004
 points 8, 9 and 11, DEC-005 points 9 and 14): the lock, the ids and fields of the content,
-contrast as drawn, the losses a renderer's declaration predicts, and the document the
-validator reads. The command around it is `test_visual_communication_check.py`."""
+an item of a list a part passes on under another name read against the component that
+draws it, a page read against the layout or the component it names (DEC-010 point 5),
+contrast as drawn, the losses a renderer's declaration predicts, the document the
+validator reads, a component it cannot read, a top that names no component, the notations
+a piece names and the concepts its content names (DEC-004 point 10), a list's component
+field and arrangement fields, a key both an item's component and its list declare at the
+lock, a pattern's clash with its default component checked alone (DEC-010 points 1 to 4
+and 9), an error it does not expect on one piece, and a field's list of runs: read
+against its run styles, skipped by the check of ids, each run measured against the fill
+under it (DEC-012 points 1, 3 and 8). A tie's component, the shape of its ends and their
+key paths, read in the content; an end the scene does not find, reported at its tie; a
+list of ties whose default takes no ends, or declares an end field, checked alone
+(DEC-011 point 8). The command around it is
+`test_visual_communication_check.py`."""
 
 from __future__ import annotations
 
+import json
+import shutil
 import time
 from pathlib import Path
 from typing import Any
@@ -18,10 +32,19 @@ from tests.test_visual_communication_pipeline import (
     PIECE,
     PIECE_FOLDER,
     drawing_project,
+    parts_project,
+    system_project,
     write_content,
     write_picture,
 )
-from tests.visual_communication_project import bound, write, write_list, yaml_text
+from tests.visual_communication_project import (
+    TEST_PARTS,
+    bound,
+    copy_library,
+    write,
+    write_list,
+    yaml_text,
+)
 
 checks, pl, framing, seam, findings_, svg_declaration, fingerprint = load(
     "visual-communication",
@@ -285,7 +308,12 @@ def test_content_is_checked_against_the_fields_of_each_component_it_fills(
             "body.steps[note].pictures[square].output",
             "the field `output` is required",
         ),
-        ("content-type", "caption", "the field holds an array, not string"),
+        (
+            "runs-unmarked",
+            "caption",
+            "the field holds a list, and takes text: only a field its component marks "
+            "`x-pkit-runs` takes a list of runs",
+        ),
     ]
     assert {f.file for f in found} == {CONTENT}
 
@@ -313,7 +341,24 @@ COLOURS = {
 KEYS = ["default", "colour-scheme.dark"]
 
 
+def run(fill: str, *, size: float = 16, weight: int = 400, words: str = "Word") -> Any:
+    return {
+        "text": words,
+        "fill": fill,
+        "style": "type.body",
+        "font-family": ["Sans"],
+        "font-size": size,
+        "font-weight": weight,
+    }
+
+
 def text(trace: str, fill: str, *, x: float = 0, size: float = 16, weight: int = 400) -> Any:
+    return runs(trace, [run(fill, size=size, weight=weight)], x=x)
+
+
+def runs(trace: str, given: list[Any], *, x: float = 0) -> Any:
+    """A text of one paragraph, on one line, of the runs `given`, each 40 px wide."""
+    spans = [{"run": n, "text": r["text"], "width": 40} for n, r in enumerate(given)]
     return {
         "type": "text",
         "id": trace,
@@ -321,12 +366,19 @@ def text(trace: str, fill: str, *, x: float = 0, size: float = 16, weight: int =
         "y": 0,
         "width": 100,
         "height": 20,
-        "fill": fill,
-        "font-size": size,
-        "font-weight": weight,
         "line-height": 20,
         "text-anchor": "start",
-        "lines": [{"text": "Word", "width": 40}],
+        "text": "".join(r["text"] for r in given),
+        "paragraphs": [given],
+        "lines": [
+            {
+                "text": "".join(r["text"] for r in given),
+                "width": 40 * len(given),
+                "baseline": 15,
+                "paragraph": 0,
+                "spans": spans,
+            }
+        ],
     }
 
 
@@ -573,6 +625,7 @@ def test_the_deadline_is_read_from_the_environment(value: str, deadline: float |
         ("libraries/tests/1.0.0/library.yaml", "library"),
         ("libraries/tests/1.0.0/components/card.yaml", "component"),
         ("libraries/foundations/1.0.0/roles.yaml", "roles"),
+        ("libraries/test-notation/1.0.0/notation.yaml", "notation"),
         ("pieces/flow/piece.yaml", "piece"),
         ("pieces/flow/content.en.yaml", "content"),
         ("pieces/flow/findings.yaml", "findings"),
@@ -586,3 +639,1329 @@ def test_the_deadline_is_read_from_the_environment(value: str, deadline: float |
 )
 def test_a_files_kind_is_read_from_its_name_and_place(inside: str, kind: str | None) -> None:
     assert checks.kind_of(inside) == kind
+
+
+# --- what the check cannot read, and what it does not expect ------------------------------------
+
+#: A component's file the reader refuses: a flow sequence that never closes.
+UNPARSED = "parts: [\n"
+
+
+def test_an_error_on_one_piece_of_two_fails_it_and_the_next_is_checked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    shutil.copytree(root / PIECE_FOLDER, root / "visual/pieces/also")
+    engine = pl.compute_scene
+
+    def failing(**given: Any) -> Any:
+        if given["piece"] == "also":
+            raise ValueError("a value the engine does not guard against")
+        return engine(**given)
+
+    monkeypatch.setattr(pl, "compute_scene", failing)
+    report = checks.check(root)
+
+    [(unexpected, level)] = [(f, lv) for f, lv in report.judged if f.code == "unexpected-error"]
+    assert level == "fails"
+    assert checks.place(unexpected) == "visual/pieces/also/piece.yaml"
+    assert unexpected.message == (
+        "the check of `also` stopped on an error it does not expect: ValueError: a value the "
+        "engine does not guard against"
+    )
+    assert ("component-experimental", f"{PIECE_FOLDER}/piece.yaml") in {
+        (f.code, f.file) for f, _ in report.judged
+    }
+    assert report.summary == [
+        "2 piece(s) in `visual`: the scenes of 0 read from their findings record, of 1 "
+        "computed now, of 1 not checked."
+    ]
+    labels = [(f["severity"], f["label"]) for f in checks.document(report)["findings"]]
+    assert ("error", "unexpected-error") in labels and ("info", "component-experimental") in labels
+
+
+def test_a_component_whose_file_cannot_be_read_is_reported_at_that_file(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    broken = "visual/libraries/tests/1.0.0/components/broken.yaml"
+    write(root / broken, UNPARSED)
+    write_content(root, body={"use": "tests/broken"})
+
+    alone = checks.check(root, only=PIECE)
+    whole = checks.check(root)
+
+    [(unreadable, level)] = [(f, lv) for f, lv in alone.judged if f.file == broken]
+    assert (unreadable.code, level, checks.place(unreadable)) == (
+        "component-unreadable",
+        "fails",
+        broken,
+    )
+    assert unreadable.message.startswith(
+        "the component `tests/broken` cannot be read: does not parse as YAML: "
+    )
+    assert str(tmp_path) not in unreadable.message
+    # The whole check reads the file in its binding pass, which reports it once.
+    assert [f.code for f, _ in whole.judged if f.file == broken] == ["file-unreadable"]
+    for report in (alone, whole):
+        assert "unknown-component" not in [f.code for f, _ in report.judged]
+
+
+def test_a_top_that_names_no_component_is_reported_at_its_place_in_the_piece(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, picture=False, top="tests/nothing")
+    [(unknown, level)] = [
+        (f, lv) for f, lv in checks.check(root, only=PIECE).judged if f.code == "unknown-component"
+    ]
+    assert (level, checks.place(unknown)) == ("fails", f"{PIECE_FILE}#top")
+    assert unknown.message == "the piece's top names no component `tests/nothing`"
+
+
+# --- notations and concepts ---------------------------------------------------------------------
+
+NOTATION = "visual/libraries/test-notation/1.0.0"
+SYSTEM_CONTENT = "visual/pieces/system/content.en.yaml"
+
+
+def failing(report: Any) -> list[tuple[str, str, str]]:
+    return [(f.code, checks.place(f), f.message) for f, level in report.judged if level == "fails"]
+
+
+def write_concepts(root: Path, **concepts: Any) -> None:
+    write(root / NOTATION / "notation.yaml", yaml_text(bound("notation", concepts=concepts)))
+
+
+def test_the_test_notation_and_the_concepts_its_content_names_fail_nothing(
+    tmp_path: Path,
+) -> None:
+    assert failing(checks.check(system_project(tmp_path))) == []
+
+
+def test_a_concept_that_maps_to_a_value_or_no_declared_family_fails_in_the_notation(
+    tmp_path: Path,
+) -> None:
+    root = system_project(tmp_path)
+    write_concepts(
+        root,
+        person={"colour": "#8250df"},
+        service="blue",
+        store={"colour": "teal"},
+    )
+
+    found = failing(checks.check(root))
+
+    never = "a concept maps to a colour family the foundations declare, never to a value"
+    families = "`neutral`, `blue`, `green`, `orange`, `purple`, `red`"
+    assert found == [
+        (
+            "concept-shape",
+            f"{NOTATION}/notation.yaml#concepts.person",
+            f"the concept `person` maps to `#8250df`, which is no colour family's name: {never}",
+        ),
+        (
+            "concept-shape",
+            f"{NOTATION}/notation.yaml#concepts.service",
+            f"the concept `service` is not `{{colour: <family>}}`: {never}",
+        ),
+        (
+            "concept-shape",
+            f"{NOTATION}/notation.yaml#concepts.store",
+            f"the concept `store` maps to `teal`, which is no colour family the foundations "
+            f"declare: {families}",
+        ),
+    ]
+
+
+def test_a_library_that_is_no_notation_or_holds_none_fails_once_where_it_lies(
+    tmp_path: Path,
+) -> None:
+    kind = system_project(tmp_path / "kind")
+    library = kind / NOTATION / "library.yaml"
+    library.write_text(library.read_text().replace("kind: notation", "kind: components"))
+    absent = system_project(tmp_path / "absent")
+    (absent / NOTATION / "notation.yaml").unlink()
+    unparsed = system_project(tmp_path / "unparsed")
+    write(unparsed / NOTATION / "notation.yaml", "concepts: [\n")
+
+    assert failing(checks.check(kind)) == [
+        (
+            "notation-kind",
+            f"{NOTATION}/library.yaml#kind",
+            "test-notation@1.0.0 is not a notation (`kind: components`), yet a piece names it "
+            "under `notations`",
+        )
+    ]
+    assert failing(checks.check(absent)) == [
+        (
+            "notation-unreadable",
+            f"{NOTATION}/notation.yaml",
+            "test-notation@1.0.0 holds no `notation.yaml`",
+        )
+    ]
+    # The binding pass reads the file, and reports it once.
+    assert [code for code, _, _ in failing(checks.check(unparsed))] == ["file-unreadable"]
+    alone = failing(checks.check(unparsed, only="system"))
+    assert [(code, place) for code, place, _ in alone] == [
+        ("notation-unreadable", f"{NOTATION}/notation.yaml")
+    ]
+
+
+def test_a_concept_the_piece_s_notations_do_not_hold_fails_in_the_content(
+    tmp_path: Path,
+) -> None:
+    root = system_project(tmp_path)
+    content = root / SYSTEM_CONTENT
+    text = content.read_text()
+    content.write_text(
+        text.replace("concept: test-notation/person", "concept: test-notation/actor").replace(
+            "concept: test-notation/store", "concept: other/store"
+        )
+    )
+
+    assert failing(checks.check(root)) == [
+        (
+            "unknown-concept",
+            f"{SYSTEM_CONTENT}#figure/body/items[store]",
+            "figure/body/items[store]: the concept `other/store` comes from `other`, a notation "
+            "the piece does not name under `notations`",
+        ),
+        (
+            "unknown-concept",
+            f"{SYSTEM_CONTENT}#figure/body/items[user]",
+            "figure/body/items[user]: the notation test-notation@1.0.0 holds no concept `actor`",
+        ),
+    ]
+
+
+def test_a_lock_that_lacks_a_notation_the_piece_names_is_incomplete(tmp_path: Path) -> None:
+    root = system_project(tmp_path)
+    piece = root / "visual/pieces/system/piece.yaml"
+    piece.write_text(piece.read_text().replace("  test-notation: 1.0.0\n", ""))
+
+    [finding] = checks.lock_findings(
+        pl.Held(root, "visual"), pl.read_piece(root, "visual", "system")
+    )
+
+    assert (finding.code, finding.message) == (
+        "lock-incomplete",
+        "the lock does not name `test-notation`, which the piece uses",
+    )
+
+
+# --- a list a part passes on under another name -------------------------------------------------
+
+LISTED = {"type": "array", "items": {"type": "object"}}
+
+
+def passing(about: str, passed: dict[str, str], fields: dict[str, Any], use: str) -> str:
+    """A local component whose part `p` places `use`, passing each of its `fields` on to
+    it under the name `passed` gives it."""
+    return yaml_text(
+        bound(
+            "component",
+            status="experimental",
+            about=about,
+            fields={"type": "object", "properties": fields},
+            parts={"p": {"use": use, "fields": passed, "width": "=:width"}},
+            preferred={"height": "=p.height"},
+        )
+    )
+
+
+def test_an_item_of_a_list_passed_on_is_read_against_the_component_that_draws_it(
+    tmp_path: Path,
+) -> None:
+    """The flow passes its `stages` on to a frame as `rows`, which passes them on to the
+    steps as `steps`. A stage drawn by the shot passes its `shots` on to the callout as
+    `pictures`."""
+    root = drawing_project(tmp_path)
+    components = root / PIECE_FOLDER / "components"
+    write(
+        components / "flow.yaml",
+        passing("Stages.", {"rows": "stages"}, {"stages": LISTED}, "piece/frame"),
+    )
+    write(
+        components / "frame.yaml",
+        passing("Rows.", {"steps": "rows"}, {"rows": LISTED}, "tests/steps"),
+    )
+    point = {"type": "object", "properties": {"item": {}, "point": {}}}
+    shot = {"shots": LISTED, "says": {"type": "string"}, "at": point}
+    passed = {"pictures": "shots", "label": "says", "at": "at"}
+    write(components / "shot.yaml", passing("A shot.", passed, shot, "tests/callout"))
+    note = {
+        "id": "note",
+        "use": "piece/shot",
+        "shots": [{"id": "square"}, {"outptu": "square"}],
+        "says": "Here",
+        "at": {"item": "square", "point": "tip"},
+    }
+    stages = [{"id": "plan", "haed": "A"}, {"head": "B", "extar": 1}, note]
+    write_content(root, body={"use": "piece/flow", "stages": stages})
+
+    found = checks.content_findings(project_of(root))
+
+    assert [(f.code, f.where) for f in found] == [
+        ("content-key", "body.stages[plan].haed"),
+        ("content-required", "body.stages[plan].head"),
+        ("content-key", "body.stages#2.extar"),
+        ("content-required", "body.stages[note].shots[square].output"),
+        ("content-key", "body.stages[note].shots#2.outptu"),
+        ("content-required", "body.stages[note].shots#2.output"),
+    ]
+    assert found[0].message == "`tests/card` takes no field or option `haed`; did you mean `head`?"
+    assert {f.file for f in found} == {CONTENT}
+
+
+# --- a library's own roles, and the versions checked alone (DEC-008 points 1 and 9) ----------
+
+BRAND_FOLDER = "visual/libraries/test-brand/1.0.0"
+PARTS_FOLDER = "visual/libraries/test-parts"
+TAGS_FILE = "visual/pieces/tags/piece.yaml"
+
+#: The test library's warning, which has no default, at the brand's ink.
+WARNING = {"warning": {"$type": "color", "$value": "{scheme.ink}"}}
+
+
+def add_tokens(root: Path, given: dict[str, Any]) -> None:
+    """`given` under `test-parts` in the project's test brand's base tokens."""
+    path = root / BRAND_FOLDER / "tokens" / "base.tokens.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["test-parts"] = given
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def name_parts(root: Path, given: dict[str, Any] | None = None) -> None:
+    """The project's test brand names `test-parts` 1, and gives it `given`, by default its
+    warning a value."""
+    library = root / BRAND_FOLDER / "library.yaml"
+    library.write_text(
+        library.read_text(encoding="utf-8").replace(
+            "  - {name: foundations, major: 1}\n",
+            "  - {name: foundations, major: 1}\n  - {name: test-parts, major: 1}\n",
+        ),
+        encoding="utf-8",
+    )
+    add_tokens(root, WARNING if given is None else given)
+
+
+def parts_minor(root: Path, roles: dict[str, str]) -> None:
+    """test-parts 1.1.0 beside 1.0.0, its `roles.yaml` changed by `roles` (old: new), both
+    listed unreleased."""
+    folder = copy_library(root, TEST_PARTS, "test-parts", "1.1.0")
+    library = folder / "library.yaml"
+    library.write_text(
+        library.read_text(encoding="utf-8").replace("version: 1.0.0", "version: 1.1.0"),
+        encoding="utf-8",
+    )
+    text = (folder / "roles.yaml").read_text(encoding="utf-8")
+    for old, new in roles.items():
+        assert old in text
+        text = text.replace(old, new)
+    (folder / "roles.yaml").write_text(text, encoding="utf-8")
+    unreleased = {"released": False}
+    write_list(
+        root,
+        {
+            "foundations": {"source": {"kind": "shipped"}, "versions": {"1.0.0": unreleased}},
+            "test-brand": {"source": {"kind": "project"}, "versions": {"1.0.0": unreleased}},
+            "test-parts": {
+                "source": {"kind": "project"},
+                "versions": {"1.0.0": unreleased, "1.1.0": unreleased},
+            },
+        },
+    )
+
+
+def judged(report: Any, code: str) -> list[tuple[Any, str]]:
+    return [(finding, level) for finding, level in report.judged if finding.code == code]
+
+
+def test_a_librarys_own_roles_are_checked_alone_their_findings_in_its_version(
+    tmp_path: Path,
+) -> None:
+    report = checks.check(parts_project(tmp_path))
+    assert not report.failed()
+    [(finding, level)] = judged(report, "role-brand-only")
+    assert level == "fact"
+    assert checks.place(finding) == f"{PARTS_FOLDER}/1.0.0/roles.yaml#roles.test-parts.warning"
+    assert finding.library == "test-parts@1.0.0"
+
+
+def test_a_brands_finding_against_a_library_it_names_lies_in_its_version_once(
+    tmp_path: Path,
+) -> None:
+    root = parts_project(tmp_path)
+    name_parts(root, {})
+    other = root / "visual/pieces/other"
+    shutil.copytree(root / "visual/pieces/tags", other)
+    report = checks.check(root)
+    [(finding, level)] = judged(report, "library-role-missing")
+    assert level == "fails"
+    assert finding.library == "test-brand@1.0.0"
+    assert (finding.where, finding.file) == ("test-parts.warning", f"{BRAND_FOLDER}/")
+
+
+def test_a_brand_checked_alone_is_resolved_with_the_newest_minor_of_each_major_it_names(
+    tmp_path: Path,
+) -> None:
+    root = parts_project(tmp_path)
+    name_parts(root)
+    parts_minor(
+        root,
+        {
+            "  test-parts.warning: {type: color}\n": (
+                "  test-parts.warning: {type: color}\n  test-parts.mark: {type: color}\n"
+            )
+        },
+    )
+    report = checks.check(root)
+    [(finding, level)] = judged(report, "library-role-missing")
+    assert (finding.library, finding.where, level) == (
+        "test-brand@1.0.0",
+        "test-parts.mark",
+        "fails",
+    )
+    assert {f.library for f, _ in judged(report, "role-brand-only")} == {
+        "test-parts@1.0.0",
+        "test-parts@1.1.0",
+    }
+    assert judged(checks.check(root, only="tags"), "library-role-missing") == []
+
+
+def test_a_fault_only_a_lock_shows_lies_at_that_lock_and_fails(tmp_path: Path) -> None:
+    root = parts_project(tmp_path)
+    name_parts(root, {})
+    parts_minor(
+        root,
+        {
+            "  test-parts.warning: {type: color}\n": (
+                "  test-parts.warning: {type: color, default: '{accent}'}\n"
+            )
+        },
+    )
+    for report in (checks.check(root), checks.check(root, only="tags")):
+        [(finding, level)] = judged(report, "library-role-missing")
+        assert level == "fails"
+        assert (finding.file, finding.where, finding.library) == (TAGS_FILE, "lock", "")
+        assert finding.message.startswith(
+            f"under this lock, test-brand@1.0.0 shows what it does not alone ({BRAND_FOLDER}/, "
+            "`test-parts.warning`): the brand names `test-parts`"
+        )
+
+
+def test_a_token_under_a_library_a_piece_locks_that_the_brand_does_not_name_asks_attention(
+    tmp_path: Path,
+) -> None:
+    root = parts_project(tmp_path)
+    add_tokens(root, {"ink": {"$type": "color", "$value": "{scheme.ink}"}})
+    report = checks.check(root)
+    assert not report.failed()
+    [(finding, level)] = judged(report, "library-token-private")
+    assert level == "attention"
+    assert (finding.file, finding.where, finding.library) == (TAGS_FILE, "lock", "")
+    assert finding.who == "the owner of the brand test-brand"
+
+
+def test_a_version_that_names_majors_no_versions_fit_cannot_be_checked_alone(
+    tmp_path: Path,
+) -> None:
+    root = parts_project(tmp_path)
+    name_parts(root)
+    library = root / PARTS_FOLDER / "1.0.0" / "library.yaml"
+    library.write_text(
+        library.read_text(encoding="utf-8").replace(
+            "{name: foundations, major: 1}", "{name: foundations, major: 2}"
+        ),
+        encoding="utf-8",
+    )
+    report = checks.check(root)
+    [(majors, level)] = judged(report, "alone-majors")
+    assert level == "fails"
+    assert checks.place(majors) == f"{BRAND_FOLDER}/library.yaml#builds-on"
+    assert "test-parts@1.0.0 builds on `foundations` 2" in majors.message
+    [(missing, level)] = judged(report, "alone-missing")
+    assert (level, missing.library) == ("fails", "")
+    assert checks.place(missing) == "visual/libraries/libraries.yaml#libraries.test-parts"
+
+
+# --- a part that reads a library's role with no value (DEC-008 points 8 and 9) -----------------
+
+TAG_FILE = f"{PARTS_FOLDER}/1.0.0/components/tag.yaml"
+
+
+def replaced(path: Path, changes: dict[str, str]) -> None:
+    """`path`, each text of `changes` replaced by its new text."""
+    text = path.read_text(encoding="utf-8")
+    for old, new in changes.items():
+        assert old in text
+        text = text.replace(old, new)
+    path.write_text(text, encoding="utf-8")
+
+
+def tag_reads(root: Path, spacing: str, typography: str) -> None:
+    """The project's test tag places its label at the spacing role `spacing`, and sets its
+    text in the typography role `typography`."""
+    replaced(
+        root / TAG_FILE,
+        {'x: "=@test-parts.gap"': f'x: "=@{spacing}"', "style: type.body": f"style: {typography}"},
+    )
+
+
+def reads_unvalued(root: Path) -> None:
+    """The project's test library declares a spacing and a typography with no default, and
+    its tag reads both, which only a brand that names the library gives values."""
+    replaced(
+        root / PARTS_FOLDER / "1.0.0" / "roles.yaml",
+        {
+            "  test-parts.warning: {type: color}\n": (
+                "  test-parts.warning: {type: color}\n"
+                "  test-parts.inset: {type: dimension}\n"
+                "  test-parts.type: {type: typography}\n"
+            )
+        },
+    )
+    tag_reads(root, "test-parts.inset", "test-parts.type")
+
+
+def test_a_part_reading_a_library_role_with_no_value_lies_at_the_lock_that_combines_them(
+    tmp_path: Path,
+) -> None:
+    root = parts_project(tmp_path)
+    reads_unvalued(root)
+    for report in (checks.check(root), checks.check(root, only="tags")):
+        found = judged(report, "unknown-role")
+        assert [(checks.place(f), f.library, level) for f, level in found] == [
+            (f"{TAGS_FILE}#lock", "", "fails")
+        ] * 2
+        assert sorted(f.message for f, _ in found) == [
+            f"under this lock, {part} reads `@test-parts.{role}`, a role of test-parts@1.0.0 "
+            "that has no value: its chain of defaults reaches none, and the brand does not "
+            "name `test-parts` to give it one"
+            for part, role in (
+                ("`test-parts/tag`, at `parts.label.x`,", "inset"),
+                ("the text `figure/body/label` of `test-parts/tag`", "type"),
+            )
+        ]
+        assert all("lock a brand that names `test-parts`" in f.fix for f, _ in found)
+
+
+def test_a_part_reading_a_library_role_with_no_value_takes_no_finding_where_the_brand_names_it(
+    tmp_path: Path,
+) -> None:
+    root = parts_project(tmp_path)
+    reads_unvalued(root)
+    name_parts(root)
+    report = checks.check(root)
+    assert judged(report, "unknown-role") == []
+    missing = judged(report, "library-role-missing")
+    assert sorted((f.where, f.library, level) for f, level in missing) == [
+        ("test-parts.inset", "test-brand@1.0.0", "fails"),
+        ("test-parts.type", "test-brand@1.0.0", "fails"),
+    ]
+
+
+def test_a_role_no_library_declares_is_still_found_in_the_component(tmp_path: Path) -> None:
+    root = parts_project(tmp_path)
+    tag_reads(root, "test-parts.nothing", "test-parts.none")
+    found = judged(checks.check(root, only="tags"), "unknown-role")
+    assert sorted((checks.place(f), f.library, level) for f, level in found) == [
+        (f"{TAG_FILE}#@test-parts.nothing", "test-parts@1.0.0", "fails"),
+        (f"{TAG_FILE}#figure/body/label", "test-parts@1.0.0", "fails"),
+    ]
+
+
+# --- a top whose layouts are its pages' forms (#2558) ------------------------------------------
+
+#: A deck's pages in each language: a cover, and two slides, one with a picture.
+SLIDES = {
+    "en": [
+        ("Building with AI", "The way the project decided", "Where permissions come from"),
+        "In project-kit.",
+    ],
+    "cs": [
+        ("Stavíme s AI", "Tak, jak projekt rozhodl", "Odkud se berou oprávnění"),
+        "V project-kitu.",
+    ],
+}
+
+
+STEPS = {"use": "tests/steps", "steps": [{"id": "ask", "head": "Ask"}]}
+
+
+def slides(language: str) -> list[dict[str, Any]]:
+    (title, subtitle, rules), footer = SLIDES[language]
+    return [
+        {"id": "cover", "layout": "cover", "title": title, "subtitle": subtitle, "author": "A. K."},
+        {
+            "id": "rules",
+            "layout": "slide",
+            "title": rules,
+            "visual": STEPS,
+            "footer": footer,
+        },
+        {"id": "fits", "layout": "slide", "title": "AI"},
+    ]
+
+
+def deck_project(tmp_path: Path, **pages: list[Any]) -> Path:
+    """The foundations' deck as the piece's top, in English and Czech: `slides` in each
+    language, or the language's own pages where `pages` gives them."""
+    root = drawing_project(tmp_path, top="foundations/deck", picture=False, languages=["en", "cs"])
+    for language in ("en", "cs"):
+        given = pages.get(language, slides(language))
+        write(
+            root / PIECE_FOLDER / f"content.{language}.yaml",
+            yaml_text(bound("content", slides=given)),
+        )
+    return root
+
+
+def test_a_deck_of_a_cover_and_slides_in_two_languages_draws_each_page_in_its_layout(
+    tmp_path: Path,
+) -> None:
+    project = project_of(deck_project(tmp_path))
+
+    assert checks.content_findings(project) == []
+    scenes = dict(project.scenes())
+    assert list(scenes) == ["en", "cs"]
+    for language, result in scenes.items():
+        assert result.findings == [], language
+        assert result.scene.pages == [
+            "deck/slides[cover]",
+            "deck/slides[rules]",
+            "deck/slides[fits]",
+        ]
+        title = result.scene.find("deck/slides[cover]/title")
+        assert title is not None and title.sources["text"] == "content:slides[cover].title"
+    shown = [scenes[language].scene.find("deck/slides[rules]/title") for language in scenes]
+    assert [element.properties["text"] for element in shown if element is not None] == [
+        "Where permissions come from",
+        "Odkud se berou oprávnění",
+    ]
+
+
+def test_each_page_is_judged_against_its_layout_or_the_component_it_names(
+    tmp_path: Path,
+) -> None:
+    pages = [
+        {"id": "a", "title": "A"},
+        {"id": "b", "layout": "slied", "title": "B"},
+        {"id": "c", "layout": "slide", "titel": "C"},
+        {"id": "d", "layout": "cover", "title": "D", "lead": "Not on a cover."},
+        {"id": "e", "layout": "slide", "title": 5},
+        {
+            "id": "f",
+            "use": "foundations/figure",
+            "layout": "slide",
+            "body": STEPS,
+        },
+        "A page.",
+    ]
+    root = deck_project(tmp_path, en=pages, cs=pages)
+
+    found = [f for f in checks.content_findings(project_of(root)) if f.file == CONTENT]
+
+    assert [(f.code, f.where, f.message) for f in found] == [
+        (
+            "content-layout",
+            "slides[a]",
+            "the page names neither a layout of `foundations/deck` with `layout` (cover, "
+            "slide) nor a component with `use`",
+        ),
+        (
+            "content-layout",
+            "slides[b].layout",
+            "`foundations/deck` has no layout `slied` (cover, slide); did you mean `slide`?",
+        ),
+        (
+            "content-key",
+            "slides[c].titel",
+            "the layout `slide` of `foundations/deck` takes no slot `titel`; did you mean `title`?",
+        ),
+        ("content-required", "slides[c].title", "the field `title` is required"),
+        (
+            "content-key",
+            "slides[d].lead",
+            "the layout `cover` of `foundations/deck` takes no slot `lead`",
+        ),
+        ("content-type", "slides[e].title", "the field holds an integer, not string"),
+        (
+            "content-key",
+            "slides[f].layout",
+            "`foundations/figure` takes no field or option `layout`",
+        ),
+        ("content-type", "slides#7", "the page holds a string, not object"),
+    ]
+
+
+def test_a_page_carries_its_layout_the_reserved_keys_and_its_slots_alone(
+    tmp_path: Path,
+) -> None:
+    """A field of the deck is no slot of a page, and `layout` is the page's own key."""
+    pages = [{"id": "a", "layout": "slide", "title": "A", "state": "done", "slides": []}]
+    root = deck_project(tmp_path, en=pages, cs=pages)
+
+    found = [f for f in checks.content_findings(project_of(root)) if f.file == CONTENT]
+
+    assert [(f.code, f.where) for f in found] == [("content-key", "slides[a].slides")]
+
+
+# --- a list's component field and arrangement fields (#2560) ---------------------------------
+
+LOCAL = f"{PIECE_FOLDER}/components"
+
+#: A weight of two words, whose shares are one and two.
+SIZE = {"words": ["one", "two"], "shares": {"one": 1, "two": 2}}
+
+
+def local(**fields: Any) -> str:
+    """A local component of `fields`, as its file holds it."""
+    return yaml_text(bound("component", status="experimental", **fields))
+
+
+def row(**lists: Any) -> str:
+    """A pattern that draws its list `items` in a row shared by the weight `size`, each
+    item drawn by the steps' card by default; `kind` is the list's component field, unless
+    `lists` gives other fields."""
+    return local(
+        about="A row of items.",
+        fields={"type": "object", "properties": {"items": LISTED, "kind": {"type": "object"}}},
+        lists=lists or {"items": {"component": "kind", "arrangement": {"size": SIZE}}},
+        parts={
+            "items": {
+                "repeat": "items",
+                "draw": "tests/card",
+                "width": "=:width",
+                "row": {"gap": "=@space.2", "sizes": "shares", "align-items": "stretch"},
+            }
+        },
+        preferred={"height": "=items.height"},
+    )
+
+
+#: A block that shows its `head`, and declares `size` as a field and `tone` as an option.
+SIZED = local(
+    about="A head, and the size it says.",
+    fields={
+        "type": "object",
+        "required": ["head"],
+        "properties": {"head": {"type": "string"}, "size": {"type": "string"}},
+    },
+    options={"tone": ["plain", "loud"]},
+    parts={
+        "head": {
+            "text": {"content": "head", "style": "type.body", "fill": "text-primary"},
+            "width": "=:width",
+        }
+    },
+    preferred={"height": "=head.bottom"},
+)
+
+
+def row_project(tmp_path: Path, row_text: str | None = None, **body: Any) -> Path:
+    """The drawing project with no picture, whose body is the local `piece/row` (`row()`
+    unless `row_text` gives it) with `body`, beside the local `piece/sized`."""
+    root = drawing_project(tmp_path, picture=False)
+    write(root / LOCAL / "row.yaml", row_text or row())
+    write(root / LOCAL / "sized.yaml", SIZED)
+    write_content(root, body={"use": "piece/row", **body})
+    return root
+
+
+def test_a_list_drawn_by_its_component_field_and_shared_by_weights_fails_nothing(
+    tmp_path: Path,
+) -> None:
+    """Two items take `piece/sized` from the field, and one names the card; the sized
+    block declares `size`, which no item it draws carries, so that is a fact."""
+    root = row_project(
+        tmp_path,
+        kind={"use": "piece/sized", "tone": "loud"},
+        items=[
+            {"id": "a", "head": "A"},
+            {"id": "b", "head": "B", "tone": "plain"},
+            {"id": "c", "use": "tests/card", "head": "C", "size": "two"},
+        ],
+    )
+
+    report = checks.check(root, only=PIECE)
+
+    assert not report.failed()
+    assert {f.code for f, _ in report.judged} == {"component-experimental", "list-clash"}
+
+
+def test_content_is_judged_against_a_lists_component_field_and_arrangement_fields(
+    tmp_path: Path,
+) -> None:
+    root = row_project(
+        tmp_path,
+        kind={"use": "tests/card", "id": "k", "head": "H", "tone": "loud"},
+        items=[
+            {"id": "a", "head": "A", "size": "three"},
+            {"id": "b", "head": "B", "sise": "one"},
+            {"id": "c"},
+        ],
+    )
+
+    found = checks.content_findings(project_of(root))
+
+    assert [(f.code, f.where, f.message) for f in found] == [
+        (
+            "content-component",
+            "body.kind.id",
+            "the component field of the list `body.items` gives an id: it names the "
+            "component of every item, and an id names one thing",
+        ),
+        (
+            "content-component",
+            "body.kind.head",
+            "the component field of the list `body.items` gives `head`, a field of "
+            "`tests/card`: a field holds what one item shows, so each item gives its own",
+        ),
+        ("content-key", "body.kind.tone", "`tests/card` takes no option `tone`"),
+        (
+            "content-option",
+            "body.items[a].size",
+            "`three` is no word of the arrangement field `size` of the list `body.items` "
+            "(one, two)",
+        ),
+        (
+            "content-key",
+            "body.items[b].sise",
+            "neither `tests/card` nor the list `body.items` declares a key `sise`; did you "
+            "mean `size`?",
+        ),
+        ("content-required", "body.items[c].head", "the field `head` is required"),
+    ]
+    assert {f.file for f in found} == {CONTENT}
+
+
+def test_a_component_field_that_names_no_component_fails_and_its_items_take_the_default(
+    tmp_path: Path,
+) -> None:
+    root = row_project(
+        tmp_path,
+        kind={"tone": "loud"},
+        items=[{"id": "a", "head": "A", "tone": "loud"}],
+    )
+
+    found = checks.content_findings(project_of(root))
+
+    assert [(f.code, f.where) for f in found] == [
+        ("content-component", "body.kind"),
+        ("content-key", "body.items[a].tone"),
+    ]
+    assert found[0].message == (
+        "the component field of the list `body.items` names no component: it takes "
+        "`{use: <library>/<component>}`, with words for that component's options"
+    )
+
+
+def test_a_key_both_an_items_component_and_its_list_declare_lies_at_the_lock(
+    tmp_path: Path,
+) -> None:
+    carried = row_project(
+        tmp_path,
+        kind={"use": "piece/sized"},
+        items=[{"id": "a", "head": "A", "size": "two"}, {"id": "b", "head": "B"}],
+    )
+    free = row_project(tmp_path / "free", items=[{"id": "a", "use": "piece/sized", "head": "A"}])
+
+    [item] = checks.content_findings(project_of(carried))
+    [listed] = checks.content_findings(project_of(free))
+
+    assert (item.code, item.level, checks.place(item)) == (
+        "item-clash",
+        "fails",
+        f"{PIECE_FILE}#lock",
+    )
+    assert item.message == (
+        "under this lock, `piece/sized` and the list `body.items` both declare `size`, "
+        "which the item `body.items[a]` carries in content.en.yaml: neither reads it, "
+        "so `piece/sized` leaves it unfilled, and the arrangement field takes its default "
+        "`one`"
+    )
+    assert (listed.code, listed.level, checks.place(listed)) == (
+        "list-clash",
+        "fact",
+        f"{PIECE_FILE}#lock",
+    )
+    assert listed.message == (
+        "under this lock, `piece/sized` and the list `body.items` both declare `size`: "
+        "neither would read it on an item of the list that `piece/sized` draws"
+    )
+
+
+def test_a_clash_at_the_lock_is_said_once_across_the_pieces_languages(tmp_path: Path) -> None:
+    root = row_project(tmp_path, items=[{"id": "a", "use": "piece/sized", "head": "A"}])
+    piece = root / PIECE_FILE
+    piece.write_text(
+        piece.read_text(encoding="utf-8").replace("- en\n", "- en\n  - cs\n"), encoding="utf-8"
+    )
+    carried = [{"id": "a", "use": "piece/sized", "head": "A", "size": "one"}]
+    write_content(root, "cs", body={"use": "piece/row", "items": carried})
+
+    found = checks.content_findings(project_of(root))
+
+    assert [(f.code, f.level) for f in found] == [("item-clash", "fails")]
+
+
+def test_what_a_pattern_declares_for_its_lists_fails_in_its_file(tmp_path: Path) -> None:
+    lists = {"other": {"component": "kind"}, "items": {"arrangement": {"size": {"words": []}}}}
+    root = row_project(tmp_path, row_text=row(**lists), items=[{"id": "a", "head": "A"}])
+
+    report = checks.check(root, only=PIECE)
+
+    shapes = [(checks.place(f), level) for f, level in report.judged if f.code == "component-shape"]
+    assert shapes == [
+        (f"{LOCAL}/row.yaml#lists.items.arrangement.size.words", "fails"),
+        (f"{LOCAL}/row.yaml#lists.other", "fails"),
+        (f"{LOCAL}/row.yaml#parts.items.row.sizes", "fails"),
+    ]
+
+
+ROWS = {
+    "about": "Tags in a row.",
+    "fields": {"type": "object", "properties": {"tags": LISTED}},
+    "lists": {"tags": {"arrangement": {"label": {"words": ["short", "long"]}}}},
+    "parts": {"tags": {"repeat": "tags", "draw": "test-parts/tag", "row": {}}},
+}
+
+
+def test_a_pattern_whose_newest_version_clashes_with_its_default_fails_checked_alone(
+    tmp_path: Path,
+) -> None:
+    """The tag that draws the pattern's items declares `label` as a field."""
+    root = parts_project(tmp_path)
+    parts_minor(root, {})
+    write(root / PARTS_FOLDER / "1.1.0" / "components" / "rows.yaml", local(**ROWS))
+
+    report = checks.check(root)
+
+    [(clash, level)] = judged(report, "arrangement-clash")
+    assert (level, clash.library) == ("fails", "test-parts@1.1.0")
+    assert checks.place(clash) == (
+        f"{PARTS_FOLDER}/1.1.0/components/rows.yaml#lists.tags.arrangement.label"
+    )
+    assert clash.message == (
+        "`label` is an arrangement field of `tags`, and `test-parts/tag`, which draws its "
+        "items by default, declares it as a field: neither reads it on an item"
+    )
+    assert clash.fix == (
+        "rename the arrangement field, or draw the list with another component, in a "
+        "version of its own"
+    )
+
+
+# --- ties (DEC-011) -----------------------------------------------------------------------------
+
+#: A pattern of cards, a slot and groups, which ties them with `piece/arrow` from `from` to
+#: `to`; `kind` is its list of ties' component field, and `hidden` a list it draws only
+#: where `shown` is given.
+NET = local(
+    about="Cards tied to each other.",
+    fields={
+        "type": "object",
+        "properties": {
+            "cards": LISTED,
+            "side": {"type": "object"},
+            "groups": LISTED,
+            "hidden": LISTED,
+            "shown": {"type": "string"},
+            "kind": {"type": "object"},
+            "links": LISTED,
+        },
+    },
+    lists={"links": {"component": "kind", "ends": ["from", "to"]}},
+    parts={
+        "cards": {
+            "repeat": "cards",
+            "draw": "tests/card",
+            "width": "=@space.4 * 4",
+            "column": {"align-items": "stretch"},
+        },
+        "side": {"slot": "side", "x": "=@space.4 * 5", "width": "=@space.4 * 4"},
+        "groups": {
+            "repeat": "groups",
+            "draw": "piece/column",
+            "x": "=@space.4 * 10",
+            "width": "=@space.4 * 4",
+            "row": {"sizes": "equal"},
+        },
+        "hidden": {
+            "repeat": "hidden",
+            "draw": "tests/card",
+            "when": "shown",
+            "width": "=@space.4 * 4",
+            "column": {"align-items": "stretch"},
+        },
+        "links": {"repeat": "links", "draw": "piece/arrow"},
+    },
+    preferred={"height": "=@space.4 * 6"},
+)
+
+#: Cards in a column, as wide as it is given.
+COLUMN = local(
+    about="Cards in a column.",
+    fields={"type": "object", "properties": {"items": LISTED}},
+    parts={
+        "items": {
+            "repeat": "items",
+            "draw": "tests/card",
+            "width": "=:width",
+            "column": {"align-items": "stretch"},
+        }
+    },
+    preferred={"height": "=items.height"},
+)
+
+#: A component that takes ends, and draws an arrow with corners between them.
+ARROW = local(
+    about="An arrow between two items.",
+    ends=True,
+    parts={"l": {"line": {"stroke": "line", "marker-end": "arrow"}, "connect": "corners"}},
+)
+
+
+def tie(key: str, start: Any, end: Any, **more: Any) -> dict[str, Any]:
+    return {"id": key, "from": start, "to": end, **more}
+
+
+def at(path: str, **more: Any) -> dict[str, Any]:
+    return {"item": path, **more}
+
+
+def net_project(tmp_path: Path, *links: dict[str, Any], **body: Any) -> Path:
+    """The drawing project with no picture, whose body is `piece/net` with two cards, a
+    column in its slot, a group of one card and `links`, and `body`."""
+    root = drawing_project(tmp_path, picture=False)
+    write(root / LOCAL / "net.yaml", NET)
+    write(root / LOCAL / "column.yaml", COLUMN)
+    write(root / LOCAL / "arrow.yaml", ARROW)
+    given = {
+        "use": "piece/net",
+        "cards": [{"id": "a", "head": "A"}, {"id": "b", "head": "B"}],
+        "side": {"use": "piece/column", "items": [{"id": "x", "head": "X"}]},
+        "groups": [{"id": "g", "items": [{"id": "w", "head": "W"}]}],
+        "hidden": [{"id": "h", "head": "H"}],
+        "links": list(links),
+        **body,
+    }
+    write_content(root, body=given)
+    return root
+
+
+def test_ties_into_the_patterns_lists_a_slot_and_a_list_a_component_draws_fail_nothing(
+    tmp_path: Path,
+) -> None:
+    root = net_project(
+        tmp_path,
+        tie("ab", at("cards[a]"), at("cards[b]")),
+        tie("ax", at("cards[a]"), at("side.items[x]")),
+        tie("bw", at("cards[b]"), at("groups[g].items[w]")),
+    )
+
+    report = checks.check(root, only=PIECE)
+
+    assert not report.failed()
+    assert {f.code for f, _ in report.judged} == {"component-experimental"}
+
+
+def test_a_ties_component_shape_and_key_paths_are_judged_in_the_content(tmp_path: Path) -> None:
+    root = net_project(
+        tmp_path,
+        tie("t1", at("cards[a]"), at("cards[b]"), use="piece/column"),
+        tie("t2", "cards[a]", at("cards[b]", via="x")),
+        {"id": "t3", "to": at("cards[b]")},
+        tie("t4", at("cards[z]"), at("cardz[a]")),
+        tie("t5", at("cards"), at("side[x]")),
+        tie("t6", at("links[t1]"), at("cards[a]")),
+        tie("t7", at("cards[a]"), at("cards[a]")),
+        tie("t8", at("groups[g]"), at("groups[g].items[w]")),
+        tie("t9", at("cards[a]", point="Tip"), at("cards[a]..head")),
+        tie("t10", at("cards[a].head[x]"), at("side"), via="x"),
+    )
+
+    found = checks.content_findings(project_of(root))
+
+    assert sorted((f.code, f.where) for f in found) == [
+        ("content-key", "body.links[t10].via"),
+        ("tie-component", "body.links[t1]"),
+        ("tie-ends", "body.links[t6].from.item"),
+        ("tie-ends", "body.links[t7]"),
+        ("tie-ends", "body.links[t8]"),
+        ("tie-path", "body.links[t10].from.item"),
+        ("tie-path", "body.links[t10].to.item"),
+        ("tie-path", "body.links[t4].from.item"),
+        ("tie-path", "body.links[t4].to.item"),
+        ("tie-path", "body.links[t5].from.item"),
+        ("tie-path", "body.links[t5].to.item"),
+        ("tie-path", "body.links[t9].to.item"),
+        ("tie-shape", "body.links[t2].from"),
+        ("tie-shape", "body.links[t2].to"),
+        ("tie-shape", "body.links[t3].from"),
+        ("tie-shape", "body.links[t9].from"),
+    ]
+    said = {(f.code, f.where): f.message for f in found}
+    assert said[("tie-component", "body.links[t1]")] == (
+        "`piece/column` takes no ends, and draws a tie of `body`: every item of a list of "
+        "ties is a tie"
+    )
+    assert said[("tie-shape", "body.links[t3].from")] == (
+        "the end field `from` gives nothing: an end takes `{item: <key path>}`, with "
+        "`point: <name>` where it ends at a point"
+    )
+    assert said[("tie-path", "body.links[t4].from.item")] == (
+        "`cards[z]` names `[z]`, which the list `cards` does not hold"
+    )
+    assert said[("tie-path", "body.links[t4].to.item")] == (
+        "`cardz[a]` names `cardz`, which no component on the way declares; did you mean `cards`?"
+    )
+    assert said[("tie-path", "body.links[t5].from.item")] == (
+        "`cards` steps into the list `cards` with no id: name its item as `[<id>]`"
+    )
+    assert said[("tie-path", "body.links[t5].to.item")] == (
+        "`side[x]` names the item `[x]` of `side`, which is no list"
+    )
+    assert said[("tie-path", "body.links[t10].to.item")] == (
+        "`side` ends at `side`, which is no item of a list"
+    )
+    assert said[("tie-ends", "body.links[t6].from.item")] == (
+        "`links[t1]` names a tie: a tie joins two items, never a line"
+    )
+    assert said[("tie-ends", "body.links[t7]")] == (
+        "one of the tie's ends names one item: `cards[a]` and `cards[a]`; a tie joins two "
+        "items, neither inside the other"
+    )
+    assert "leads through the other" in said[("tie-ends", "body.links[t8]")]
+    assert {f.file for f in found} == {CONTENT}
+
+
+def test_a_ties_component_its_list_names_takes_ends_and_an_end_field_it_declares_clashes(
+    tmp_path: Path,
+) -> None:
+    """The component field names the column, which takes no ends; then an arrow that
+    declares `to` as a field, which neither reads at the lock."""
+    root = net_project(
+        tmp_path, tie("ab", at("cards[a]"), at("cards[b]")), kind={"use": "piece/column"}
+    )
+
+    [found] = checks.content_findings(project_of(root))
+
+    assert (found.code, found.where) == ("tie-component", "body.links[ab]")
+
+    claiming = local(
+        about="An arrow that takes a field `to`.",
+        ends=True,
+        fields={"type": "object", "properties": {"to": {"type": "object"}}},
+        parts={"l": {"line": {"stroke": "line"}, "connect": "straight"}},
+    )
+    write(root / LOCAL / "claiming.yaml", claiming)
+    write_content(
+        root,
+        body={
+            "use": "piece/net",
+            "cards": [{"id": "a", "head": "A"}, {"id": "b", "head": "B"}],
+            "links": [tie("ab", at("cards[a]"), at("cards[b]"), use="piece/claiming")],
+        },
+    )
+
+    [clash] = checks.content_findings(project_of(root))
+
+    assert (clash.code, checks.place(clash)) == ("item-clash", f"{PIECE_FILE}#lock")
+    assert clash.message.endswith("leaves it unfilled, and the tie lacks that end, and is left out")
+
+
+def test_an_end_drawn_nowhere_is_reported_in_the_content_at_its_tie(tmp_path: Path) -> None:
+    root = net_project(
+        tmp_path,
+        tie("ab", at("cards[a]"), at("cards[b]")),
+        tie("ah", at("cards[a]"), at("hidden[h]")),
+    )
+
+    report = checks.check(root, only=PIECE)
+
+    assert report.failed()
+    [(lost, level)] = judged(report, "end-not-found")
+    assert (level, checks.place(lost)) == ("fails", f"{CONTENT}#body.links[ah].to")
+    assert lost.message == (
+        "figure/body/links[ah]: the end `hidden[h]` is drawn nowhere below "
+        "`figure/body`, and an end is found only once"
+    )
+    assert lost.fix == (
+        "name an item drawn once on the tie's page, or change the content's options; or "
+        "move the lock to versions under which the end is found"
+    )
+
+
+#: A pattern of the test library that ties its tags, which take no ends and declare `label`.
+NETS = {
+    "about": "Tags tied to each other.",
+    "fields": {"type": "object", "properties": {"tags": LISTED, "links": LISTED}},
+    "lists": {"links": {"ends": ["label", "to"]}},
+    "parts": {
+        "tags": {"repeat": "tags", "draw": "test-parts/tag", "row": {}},
+        "links": {"repeat": "links", "draw": "test-parts/tag"},
+    },
+}
+
+#: A deck of the test library whose one layout ties its tags with its tags.
+BOARD = {
+    "about": "A deck whose pages tie their tags.",
+    "fields": {
+        "type": "object",
+        "properties": {"pages": {**LISTED, "x-pkit-pages": True}},
+    },
+    "layouts": {
+        "board": {
+            "slots": {"tags": LISTED, "links": LISTED},
+            "lists": {"links": {"ends": ["from", "to"]}},
+            "parts": {
+                "tags": {"repeat": "tags", "draw": "test-parts/tag", "row": {}},
+                "links": {"repeat": "links", "draw": "test-parts/tag"},
+            },
+        }
+    },
+    "preferred": {"width": "=@space.4 * 10", "height": "=@space.4 * 5"},
+}
+
+
+def test_a_list_of_ties_whose_default_takes_no_ends_fails_checked_alone(tmp_path: Path) -> None:
+    root = parts_project(tmp_path)
+    parts_minor(root, {})
+    components = root / PARTS_FOLDER / "1.1.0" / "components"
+    write(components / "nets.yaml", local(**NETS))
+    write(components / "board.yaml", local(**BOARD))
+
+    report = checks.check(root)
+
+    defaults = sorted(checks.place(f) for f, _ in judged(report, "tie-default"))
+    assert defaults == [
+        f"{PARTS_FOLDER}/1.1.0/components/board.yaml#layouts.board.parts.links.draw",
+        f"{PARTS_FOLDER}/1.1.0/components/nets.yaml#parts.links.draw",
+    ]
+    [(clash, level)] = judged(report, "end-clash")
+    assert (level, clash.library) == ("fails", "test-parts@1.1.0")
+    assert checks.place(clash) == f"{PARTS_FOLDER}/1.1.0/components/nets.yaml#lists.links.ends"
+    assert clash.message == (
+        "`label` is an end field of `links`, and `test-parts/tag`, which draws its ties by "
+        "default, declares it as a field: neither reads it, so no tie it draws has that end"
+    )
+
+
+# --- a field of runs (DEC-012) ----------------------------------------------------------------
+
+#: A local component whose `say` takes runs in two styles, and whose `note` takes text.
+SAID = bound(
+    "component",
+    status="experimental",
+    about="A said line.",
+    fields={
+        "type": "object",
+        "properties": {
+            "say": {"type": "string", "x-pkit-runs": ["plain", "strong"]},
+            "note": {"type": "string"},
+        },
+    },
+    parts={
+        "say": {
+            "text": {
+                "content": "say",
+                "style": {"by": "say", "plain": "type.body", "strong": "type.heading"},
+            },
+            "width": "=:width",
+        }
+    },
+)
+
+
+def said_project(tmp_path: Path, **languages: Any) -> Path:
+    """The drawing project with the piece's component `said`, its body placing it with
+    each language's fields."""
+    root = drawing_project(tmp_path, languages=list(languages))
+    write(root / PIECE_FOLDER / "components" / "said.yaml", yaml_text(SAID))
+    for language, fields in languages.items():
+        write_content(root, language, body={"use": "piece/said", **fields})
+    return root
+
+
+def test_a_list_of_runs_is_read_against_the_run_styles_of_its_field(tmp_path: Path) -> None:
+    runs = [
+        "Plain text, ",
+        3,
+        {"text": "a", "stlye": "strong"},
+        {"style": "strong"},
+        {"text": ["b"]},
+        {"text": "c", "style": "strnog"},
+        {"text": "d", "style": "strong", "concept": "flow/queue"},
+    ]
+    root = said_project(tmp_path, en={"say": runs, "note": ["a list"]})
+
+    found = checks.content_findings(project_of(root))
+
+    assert [(f.code, f.where, f.message) for f in found] == [
+        (
+            "run-shape",
+            "body.say#2",
+            "the run holds an integer, not text or a mapping of `text`, `style` and `concept`",
+        ),
+        (
+            "run-key",
+            "body.say#3.stlye",
+            "a run takes no key `stlye`, only `text`, `style` and `concept`; did you mean `style`?",
+        ),
+        ("run-shape", "body.say#4", "the run holds no `text`"),
+        ("run-shape", "body.say#5.text", "the run holds an array in `text`, not text"),
+        (
+            "run-style",
+            "body.say#6.style",
+            "`strnog` is no run style of the field (plain, strong); did you mean `strong`?",
+        ),
+        (
+            "runs-unmarked",
+            "body.note",
+            "the field holds a list, and takes text: only a field its component marks "
+            "`x-pkit-runs` takes a list of runs",
+        ),
+    ]
+    assert {f.file for f in found} == {CONTENT}
+
+
+def test_a_field_of_runs_given_text_or_well_formed_runs_has_no_finding(tmp_path: Path) -> None:
+    runs = ["Plain, ", {"text": "strong", "style": "strong"}, {"text": " and plain"}]
+    root = said_project(tmp_path, en={"say": runs}, cs={"say": "Prostý text"})
+
+    assert checks.content_findings(project_of(root)) == []
+
+
+def test_the_check_of_ids_skips_a_list_of_runs(tmp_path: Path) -> None:
+    """A run carries no id, and a field's runs may differ between languages, so a list of
+    runs takes neither the id rules nor their comparison across languages; a stray `id`
+    on a run is a key the format does not fix on it."""
+    en = {"say": ["A ", {"text": "b", "style": "strong", "id": "yes"}]}
+    root = said_project(tmp_path, en=en, cs={"say": [{"text": "B", "id": "b"}, "a", "c"]})
+
+    assert checks.id_findings(piece_of(root)) == []
+    found = checks.content_findings(project_of(root))
+    assert [(f.code, f.file, f.where) for f in found] == [
+        ("run-key", CONTENT, "body.say#2.id"),
+        ("run-key", f"{PIECE_FOLDER}/content.cs.yaml", "body.say#1.id"),
+    ]
+
+
+def test_each_run_is_measured_against_the_fill_under_it_in_its_own_paint() -> None:
+    scene = page(
+        box("figure/back", "paper"),
+        box("figure/dark", "ink", x=40, width=40),
+        runs("figure/said", [run("ink"), run("ink"), run("paper", size=24), run("ink")]),
+    )
+
+    found = checks.drawn_contrast(scene, COLOURS, KEYS)
+
+    # The second run lies on the ink box, the third on the paper in the paper's own colour;
+    # the first and the last, ink on paper, pass.
+    assert [f.message.split(" has ")[0] + " " + f.message.split("(")[-1] for f in found] == [
+        "`ink` on `ink` `text`)",
+        "`ink` on `ink` `text`)",
+        "`paper` on `paper` `large-text`)",
+        "`paper` on `paper` `large-text`)",
+    ]
+    assert {f.where for f in found} == {"figure/said"}

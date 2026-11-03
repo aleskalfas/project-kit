@@ -7,9 +7,12 @@ explains:
   - TERM-range
   - TERM-area
   - TERM-connection-point
+  - TERM-connection
   - TERM-role
   - TERM-data-point
   - TERM-process
+  - TERM-process-subject
+  - TERM-install-plan
 pkit:
   friction:
     anchors:
@@ -34,9 +37,12 @@ pkit:
         - TERM-range
         - TERM-area
         - TERM-connection-point
+        - TERM-connection
         - TERM-role
         - TERM-data-point
         - TERM-process
+        - TERM-process-subject
+        - TERM-install-plan
 ---
 
 # VIEW-capabilities-areas-and-connection-points — Capabilities, areas and connection points
@@ -48,7 +54,7 @@ A [capability](../glossary.md#term-capability--capability) packages one discipli
 ```mermaid
 classDiagram
   accTitle: Capabilities, areas and connection points
-  accDescr: A capability is a component a project chooses to install. A component declares a range on the backbone, and a capability may declare a range on another capability. An area is a slice of a project's .pkit tree that needs no install. A capability provides roles, and under a role it defines connection points, which other components fill, depend on or subscribe to. A data point is the kind of connection point that takes data in. A capability also defines processes, and a connection point may offer one for others to depend on. A capability may ship operational rules of its own.
+  accDescr: A capability is a component a project chooses to install. A component declares a range on the backbone, and a capability may declare a range on another capability. An area is a slice of a project's .pkit tree that needs no install. A capability provides roles, and under a role it defines connection points. Other components declare connections to them, each a contribution to a data point, a subscription to an event or a dependency on a process, and a connection may carry a mandatory mark with its reason. A data point is the kind of connection point that takes data in. A capability also defines processes, each moving process subjects of one kind through its states, and a connection point may offer one for others to depend on. A capability may ship operational rules of its own. An install plan predicts the connections a capability's install would make and break.
   class Component["Component"]
   class Backbone["Backbone"]
   class Project["Project"]
@@ -62,13 +68,18 @@ classDiagram
   ConnectionPoint : address
   ConnectionPoint : kind
   ConnectionPoint : version
+  class Connection["Connection"]
+  Connection : kind
+  Connection : mandatory mark and its reason
   class Role["Role"]
   Role : qualified name
   class DataPoint["Data point"]
-  DataPoint : combination policy
+  DataPoint : how its fillers combine
   class Process["Process"]
   Process : states
   Process : moves and their conditions
+  class ProcessSubject["Process subject"]
+  class InstallPlan["Install plan"]
   class OperationalRule["Operational rule"]
   Capability --|> Component
   Project o-- Capability : installs
@@ -80,15 +91,20 @@ classDiagram
   Capability "1" --> "*" ConnectionPoint : defines
   Role "1" o-- "*" ConnectionPoint : names
   DataPoint --|> ConnectionPoint
+  Component "1" --> "*" Connection : declares
+  Connection "*" --> "1" ConnectionPoint : ties to
   Capability "1" --> "*" Process : defines
   ConnectionPoint ..> Process : offers, where its kind is a process
+  Process "1" --> "*" ProcessSubject : moves through its states
+  InstallPlan ..> Capability : predicts the install of
+  InstallPlan ..> Connection : lists those the install would make and break
   Capability ..> OperationalRule : may ship
 ```
 
 ```mermaid
 flowchart LR
   accTitle: How a capability comes to connect
-  accDescr: A capability installs only where what it depends on falls within its ranges, and install refuses otherwise. Installed, it provides roles. Where two capabilities provide one role, that is an error until the project selects one. The capability providing a role defines its connection points, and other components connect to each at a version equal to its own, which the backbone resolves and checks. A data point, the kind that takes data in, is filled by a project file, installed capabilities and the providing capability's default. The backbone resolves what it holds. Where fillers overlap, a project file wins over a capability, and a capability over the default.
+  accDescr: A capability installs only where what it depends on falls within its ranges, and install refuses otherwise. Installed, it provides roles. Where two capabilities provide one role, that is an error until the project selects one. The capability providing a role defines its connection points, and other components declare connections to each at a version equal to its own, which the backbone resolves and checks. A data point, the kind that takes data in, is filled by a project file, installed capabilities and the providing capability's default. The backbone resolves what it holds. Where fillers overlap, a project file wins over a capability, and a capability over the default.
   I([A capability is to be installed]) --> K{Its ranges admit what it depends on?}
   K -->|no| N[Install refuses]
   K -->|yes| C[Capability installed]
@@ -96,7 +112,7 @@ flowchart LR
   R -->|two capabilities provide it| E[Error until the project selects one]
   E -->|the project selects one| R
   R -->|its provider defines| P[Connection point]
-  O[Other component] -->|connects at an equal version, which the backbone checks| P
+  O[Other component] -->|declares a connection at an equal version, which the backbone checks| P
   P -->|the kind that takes data in| D[Data point]
   F["Project file, installed capabilities, the default"] -->|fill| D
   D -->|the backbone resolves it, a project file over a capability over the default| H[What the data point holds]
@@ -122,7 +138,7 @@ A capability is a [component](../glossary.md#term-component--component) that pac
 - A project installs it, or registers it where the project authors the capability itself ([COR-031 point D3](../../../../.pkit/decisions/core/COR-031-capability-origin.md#d3--registering-an-incubated-capability-does-not-copy)).
 - It may depend on other capabilities, each through a [range](../glossary.md#term-range--range) ([COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)).
 - It ships the agent definitions its discipline needs ([COR-026](../../../../.pkit/decisions/core/COR-026-agent-placement-by-discipline.md)).
-- It may ship [operational rules](../glossary.md#term-operational-rule--operational-rule) of its own, as one loaded [rule set](../glossary.md#term-rule-set--rule-set) ([COR-070 point 1](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#1-a-capability-ships-at-most-one-loaded-set-and-its-loaded-file-travels-with-it)).
+- It may ship [operational rules](../glossary.md#term-operational-rule--operational-rule) of its own ([COR-070 point 1](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#1-a-capability-ships-at-most-one-loaded-set-and-its-loaded-file-travels-with-it)).
 
 **States:** None.
 
@@ -206,7 +222,7 @@ A connection point is a declared interface that one installed capability defines
 
 - The capability that provides its role defines it (COR-053 point 2).
 - Other components connect to it at a <!-- pkit:not-the-term -->version equal to its own (COR-053 point 5).
-- The [backbone](../glossary.md#term-backbone--backbone) resolves and checks every connection to it ([COR-053 point 7](../../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)).
+- The [backbone](../glossary.md#term-backbone--backbone) resolves and checks every [connection](../glossary.md#term-connection--connection) to it ([COR-053 point 7](../../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)).
 
 **States:** None.
 
@@ -216,11 +232,45 @@ A connection point is a declared interface that one installed capability defines
 - Two of its <!-- pkit:not-the-term -->versions are compatible only when they are equal (COR-053 point 5).
 - The component that offers an event never names those that subscribe to it (COR-053 point 2).
 
+## Connection
+
+Defined in [TERM-connection](../glossary.md#term-connection--connection).
+
+**Why:** The side that needs something knows what it needs, and what the data or the signal means ([COR-053](../../../../.pkit/decisions/core/COR-053-connection-points.md)). So that side declares the connection, and nothing is asked of the other side unless the connection is marked mandatory (COR-053).
+
+A connection is a tie that a [component](../glossary.md#term-component--component) declares in its [package metadata](../glossary.md#term-package-metadata--package-metadata), under `extensions`, to a [connection point](../glossary.md#term-connection-point--connection-point) another [capability](../glossary.md#term-capability--capability) defines. `pkit connections graph` draws each one. A connection does one of three things:
+
+- it contributes to a [data point](../glossary.md#term-data-point--data-point)
+- it subscribes to an event
+- it makes a [process](../glossary.md#term-process--process) depend on another process
+
+**Attributes:**
+
+- its kind, by the key that declares it: `contributes`, `subscribes` or `depends-on` ([COR-053 point 3](../../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality))
+- the address of the connection point it ties to, where a `depends-on` connection may name the upstream process's own address instead ([COR-053 point 2](../../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds))
+- the <!-- pkit:not-the-term -->version of the connection point it targets ([COR-053 point 5](../../../../.pkit/decisions/core/COR-053-connection-points.md#5-versions-per-point-roles-unversioned))
+- optionally a mandatory mark, with its reason ([COR-053 point 6](../../../../.pkit/decisions/core/COR-053-connection-points.md#6-optional-by-default-mandatory-only-with-a-reason-on-the-individual-connection))
+- optionally a description, in prose (COR-053 point 3)
+
+**Relations:**
+
+- A component declares it in its package metadata. The `depends-on` connections are copied there from the process definitions by a command, and never written by hand ([COR-053 point 4](../../../../.pkit/decisions/core/COR-053-connection-points.md#4-depends-on-is-generated-never-hand-written)).
+- The [backbone](../glossary.md#term-backbone--backbone) resolves each one against the connection points of each [role](../glossary.md#term-role--role)'s active provider, and checks it ([COR-053 point 7](../../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)).
+- An [install plan](../glossary.md#term-install-plan--install-plan) lists the connections an [install](../glossary.md#term-install--install) would make, and the conflicts to resolve ([COR-053 point 8](../../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
+
+**States:** None.
+
+**Always true:**
+
+- It is optional unless it carries a mandatory mark, and [validation](../glossary.md#term-validation--validation) rejects a mandatory mark with no reason (COR-053 point 6).
+- It ties only to a connection point whose <!-- pkit:not-the-term -->version equals the one it targets. Otherwise it is inert: it ties to nothing, and validation reports it (COR-053 points 5 and 6).
+- Two mandatory connections facing each other form a cycle, which validation rejects (COR-053 point 6).
+
 ## Role
 
 Defined in [TERM-role](../glossary.md#term-role--role).
 
-**Why:** A connection that names the [capability](../glossary.md#term-capability--capability) at its other end breaks when that capability is replaced ([COR-053](../../../../.pkit/decisions/core/COR-053-connection-points.md)). A role names the job instead, and its publisher qualifies it, so no name is reserved for everyone (COR-053).
+**Why:** A [connection](../glossary.md#term-connection--connection) that names the [capability](../glossary.md#term-capability--capability) at its other end breaks when that capability is replaced ([COR-053](../../../../.pkit/decisions/core/COR-053-connection-points.md)). A role names the job instead, and its publisher qualifies it, so no name is reserved for everyone (COR-053).
 
 A role is a name under which one installed capability provides [connection points](../glossary.md#term-connection-point--connection-point), so that others use them without naming that capability. The publisher that coined the name qualifies it, as in `pkit::documentation`.
 
@@ -253,7 +303,7 @@ A data point is a declared interface through which the [capability](../glossary.
 **Attributes:**
 
 - its address, its schema version and the schema of its data (COR-052 points [1](../../../../.pkit/decisions/core/COR-052-slots.md#1-the-slot-belongs-to-its-consumer) and [5](../../../../.pkit/decisions/core/COR-052-slots.md#5-schemas-and-versions))
-- a combination policy, one of these ([COR-052 point 3](../../../../.pkit/decisions/core/COR-052-slots.md#3-combination-policy-declared-per-slot)):
+- how its fillers combine, one of these ([COR-052 point 3](../../../../.pkit/decisions/core/COR-052-slots.md#3-combination-policy-declared-per-slot)):
   - one filler alone fills it
   - entries merge by id
   - entries merge and any collision fails
@@ -276,9 +326,9 @@ A data point is a declared interface through which the [capability](../glossary.
 
 Defined in [TERM-process](../glossary.md#term-process--process).
 
-**Why:** Several disciplines move their subjects through stages, and each needs to know where a subject stands and which move it may make next ([COR-033](../../../../.pkit/decisions/core/COR-033-process-substrate.md)). An engine built once in the [backbone](../glossary.md#term-backbone--backbone) tells each discipline, in one way, where a subject stands and whether it may move. Each [capability](../glossary.md#term-capability--capability) keeps its own stages (COR-033).
+**Why:** Several disciplines move what they handle through stages, and each needs to know where each thing stands and which move it may make next ([COR-033](../../../../.pkit/decisions/core/COR-033-process-substrate.md)). An engine built once in the [backbone](../glossary.md#term-backbone--backbone) tells each discipline, in one way, where a [process subject](../glossary.md#term-process-subject--process-subject) stands and whether it may move. Each [capability](../glossary.md#term-capability--capability) keeps its own stages (COR-033).
 
-A process is the course a capability declares for one kind of subject of its discipline. It gives the states the subject can be in, and the moves between them, each with its condition. The backbone's engine reads where a subject stands from what it observes, on each check. project-management's `issue-lifecycle` is one.
+A process is the course a capability declares for one kind of process subject of its discipline. It gives the states a process subject can be in, and the moves between them, each with its condition. The backbone's engine reads where a process subject stands from what it observes, on each check. project-management's `issue-lifecycle` is one.
 
 **Attributes:**
 
@@ -297,8 +347,54 @@ A process is the course a capability declares for one kind of subject of its dis
 
 **Always true:**
 
-- The engine reads a subject's state from what it observes, never from a stored label ([COR-033 P3](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p3--the-engine-is-a-deterministic-validator-and-a-self-explaining-memory)).
-- A script that fails, or prints nothing the engine can read, never counts as a pass. The engine then cannot tell where the subject stands, and allows no move ([COR-044 point 2](../../../../.pkit/decisions/core/COR-044-process-authoring-layer.md#2-the-teeth-actor-is-a-new-core-agent-owner-scoped) and COR-033 P5).
+- The engine reads a process subject's state from what it observes, never from a stored label ([COR-033 P3](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p3--the-engine-is-a-deterministic-validator-and-a-self-explaining-memory)).
+- A script that fails, or prints nothing the engine can read, never counts as a pass. The engine then cannot tell where the process subject stands, and allows no move ([COR-044 point 2](../../../../.pkit/decisions/core/COR-044-process-authoring-layer.md#2-the-teeth-actor-is-a-new-core-agent-owner-scoped) and COR-033 P5).
+
+## Process subject
+
+Defined in [TERM-process-subject](../glossary.md#term-process-subject--process-subject).
+
+**Why:** A discipline needs to know where each thing it handles stands, and which move it may make next ([COR-033](../../../../.pkit/decisions/core/COR-033-process-substrate.md)). Where it stands must be definite, so it comes from what can be observed, never from a label someone wrote ([COR-033 P3](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p3--the-engine-is-a-deterministic-validator-and-a-self-explaining-memory)).
+
+A process subject is one thing of the kind a [process](../glossary.md#term-process--process) is declared for, such as one issue. The process moves it through its states. The [backbone](../glossary.md#term-backbone--backbone)'s engine reads which state it is in from what it observes, and `pkit process status` says so.
+
+**Attributes:**
+
+- the state it is in, read on each check (COR-033 P3)
+
+**Relations:**
+
+- It belongs to the kind one process is declared for, within one [capability](../glossary.md#term-capability--capability)'s discipline ([COR-033 P1](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p1--vocabulary-one-substrate-two-altitudes)).
+- It moves between the process's states only by a move whose condition holds ([COR-033 P4](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p4--gates-must-be-checkable)).
+
+**States:** The states of its process.
+
+**Always true:**
+
+- Its state is what a live check finds, over any label or journal entry (COR-033 P3).
+
+## Install plan
+
+Defined in [TERM-install-plan](../glossary.md#term-install-plan--install-plan).
+
+**Why:** Nothing showed, before a [capability](../glossary.md#term-capability--capability) was installed, what it would connect to in a given [project](../glossary.md#term-project--project) ([COR-053](../../../../.pkit/decisions/core/COR-053-connection-points.md)).
+
+An install plan is a dry run that predicts, from what a capability declares, the [connections](../glossary.md#term-connection--connection) its [install](../glossary.md#term-install--install) would make and break. The [backbone](../glossary.md#term-backbone--backbone) works it out exactly as it works out the live connections, so the plan matches what the install would do. `pkit capabilities install <name> --plan` prints one.
+
+**Attributes:**
+
+- the connections the install would make and break, and the conflicts to resolve, such as a [role](../glossary.md#term-role--role) another installed capability provides already ([COR-053 point 8](../../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly))
+
+**Relations:**
+
+- It predicts one install of one capability (COR-053 point 8).
+- It reads the capability's [connection points](../glossary.md#term-connection-point--connection-point) and roles from what the capability declares, with nothing installed (COR-053 point 8).
+
+**States:** None.
+
+**Always true:**
+
+- The same means that work out the live connections work out the install plan, so it predicts them exactly (COR-053 point 8).
 
 ## What is built on these concepts
 
@@ -311,9 +407,9 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md)
 - [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
 - [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md)
-- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
-- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
-- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/050-adopt/UC-012-report-problem.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/040-release/UC-011-migrate-component-change.md)
+- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/060-report/UC-012-report-problem.md)
 - [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
 - [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
 - [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
@@ -327,9 +423,9 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-025 — Choose which installed capability provides a role](../use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md)
 - [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md)
 - [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md)
-- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md)
-- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md)
-- [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/020-set-up/UC-033-find-why-prompted.md)
+- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/070-work-within-limits/UC-028-keep-intermediate-files.md)
+- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md)
+- [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/070-work-within-limits/UC-033-find-why-prompted.md)
 - [UC-034 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-034-land-change.md)
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
 - [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
@@ -376,8 +472,16 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 **Connection point:**
 
 - [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
+- [UC-024 — See what a capability would connect to before I install it](../use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md)
 - [UC-025 — Choose which installed capability provides a role](../use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md)
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
+
+**Connection:**
+
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
+- [UC-024 — See what a capability would connect to before I install it](../use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md)
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
+- [UC-054 — Upgrade one capability on its own](../use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md)
 
 **Role:**
 
@@ -409,3 +513,13 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
 - [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
+
+**Process subject:**
+
+- [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
+- [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
+
+**Install plan:**
+
+- [UC-024 — See what a capability would connect to before I install it](../use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md)
+- [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)

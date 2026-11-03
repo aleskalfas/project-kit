@@ -25,7 +25,7 @@ TERM-citation:
   name: citation
   noun-forms: [citations]
   status: active
-  definition: "token of the form `[ev:<slug>]` that names an evidence record by that record's `id`, in the text of a document"
+  definition: "token of the form `[ev:<slug>]` in the text of a document, whose slug names an evidence record by that record's `id`"
   pkit:
     friction:
       anchors:

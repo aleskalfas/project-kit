@@ -22,7 +22,7 @@ pkit:
         - RS-LDOC-006
         - RS-LDOC-007
         - RS-LDOC-008
-        - .pkit/schemas/README.md#the-friction-block
+        - .pkit/schemas/backbone-files.md#the-friction-block
         - .pkit/cli/README.md#configuration-file
         - .pkit/cli/README.md#config-set-key-value---yes
         - .pkit/schemas/README.md#rule-set-files
@@ -82,7 +82,7 @@ places:                                        # place → space, the place writ
 
 The file's shape is `schemas/config.schema.json`, which `pkit validate` applies.
 
-**Trees a sync copies into a repository are never places.** In a repository where those trees are the authored source, they may be (the lifecycle README, "The ownership predicates"). The backbone's friction validation enforces this for every declared place, the project's or a capability's, as its `synced-place` finding (the schemas README, "The friction block").
+**Trees a sync copies into a repository are never places.** In a repository where those trees are the authored source, they may be (the lifecycle README, "The ownership predicates"). The backbone's friction validation enforces this for every declared place, the project's or a capability's, as its `synced-place` finding. The schemas reference's page on backbone files describes it, under "The friction block".
 
 **Note:** the CLI reference documents the backbone configuration's keys, in ["Configuration file"](../../cli/README.md#configuration-file).
 
