@@ -1,7 +1,7 @@
 ---
 id: DEC-012
 title: A field shown as text may hold runs, each in a style the field declares and perhaps naming a concept
-status: proposed
+status: accepted
 date: 2026-11-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
