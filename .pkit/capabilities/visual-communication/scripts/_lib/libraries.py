@@ -1,7 +1,7 @@
 """The library folder, the list of the project's libraries, versions, the libraries the
 capability ships, a piece's lock, and the versions a library is checked alone with
 (DEC-001 point 5, DEC-002 point 3, DEC-003 points 1, 4, 5, 8 and 9, DEC-004 point 6,
-DEC-005 point 7, DEC-008 point 1, DEC-013 point 2).
+DEC-005 point 7, DEC-008 point 1, DEC-013 point 2, DEC-014 point 5).
 
 - **The library folder** is `libraries/` in the location. Each version a lock may name is
   a folder of its own, `libraries/<name>/<version>/`, holding the version whole with its
@@ -27,7 +27,9 @@ DEC-005 point 7, DEC-008 point 1, DEC-013 point 2).
   (`tokens.read_brand`). The base is one of the libraries the brand builds on, so the
   lock names it as it names the others.
 - **The release a library needs**, `needs-release`, is a release of the capability; the
-  installed capability reads no library that needs a newer one.
+  installed capability reads no library that needs a newer one. That number is no fault
+  in the version, so its finding names no version, and fails released or not: the project
+  corrects it, by upgrading the capability or by removing a version no lock names.
 - **A draft's lock** moves, at each render, to the newest combination of held versions the
   installed capability reads that fit together, within the lines the lock names. It tries
   the newest of each library first, and where two libraries build on two majors of one
@@ -317,7 +319,19 @@ class Held:
         return found
 
     def unreadable(self, name: str, version: Version) -> str | None:
-        """Why the installed capability cannot read a version held, or None."""
+        """Why the installed capability cannot read a version held, or None: a fault in
+        its `library.yaml` (`file_fault`), or a newer release of the capability that it
+        needs (`needs_newer`)."""
+        fault = self.file_fault(name, version)
+        if fault is not None:
+            return fault
+        newer = self.needs_newer(name, version)
+        return f"{newer}: upgrade the capability" if newer is not None else None
+
+    def file_fault(self, name: str, version: Version) -> str | None:
+        """Why a version held cannot be read as its folder names it, or None: its
+        `library.yaml` cannot be read, or names another library or version than its
+        folder. Only its owner corrects that in a released version."""
         try:
             library = self.library(name, version)
         except LibraryError as exc:
@@ -327,14 +341,21 @@ class Held:
                 f"its `library.yaml` says {library.label}, but it lies in the folder of "
                 f"{name}@{version}"
             )
-        if library.needs_release > self.release:
-            needs = ".".join(map(str, library.needs_release))
-            have = ".".join(map(str, self.release))
-            return (
-                f"it needs release {needs} of the capability, and {have} is installed: "
-                f"upgrade the capability"
-            )
         return None
+
+    def needs_newer(self, name: str, version: Version) -> str | None:
+        """The release of the capability a version held needs, where it is newer than the
+        installed one, in words; else None, as for a `library.yaml` that cannot be read.
+        The project corrects it, whether the version is released or not (DEC-014 point 5)."""
+        try:
+            library = self.library(name, version)
+        except LibraryError:
+            return None
+        if library.needs_release <= self.release:
+            return None
+        needs = ".".join(map(str, library.needs_release))
+        have = ".".join(map(str, self.release))
+        return f"it needs release {needs} of the capability, and {have} is installed"
 
     @cached_property
     def listed(self) -> Mapping[str, Any] | None:
@@ -435,15 +456,31 @@ class Held:
                             fix=f"add {version} under `libraries.{name}.versions`",
                         )
                     )
-                why = self.unreadable(name, version)
-                if why is not None:
+                fault = self.file_fault(name, version)
+                newer = None if fault is not None else self.needs_newer(name, version)
+                if fault is not None:
                     found.append(
                         Finding(
                             "library-unreadable",
                             FAILS,
-                            f"the installed capability cannot read {label}: {why}",
+                            f"the installed capability cannot read {label}: {fault}",
                             file=f"{self.location}/{FOLDER}/{where}/library.yaml",
                             library=label,
+                        )
+                    )
+                elif newer is not None:
+                    # The number is no fault in the version, so the finding names no
+                    # version, which a released one would give to its owner: the project
+                    # corrects it, released or not (DEC-014 point 5, DEC-002 point 7).
+                    found.append(
+                        Finding(
+                            "library-unreadable",
+                            FAILS,
+                            f"the installed capability cannot read {label}: {newer}",
+                            file=f"{self.location}/{FOLDER}/{where}/library.yaml",
+                            fix=f"upgrade the capability, or take {label} out of the library "
+                            f"folder and off the list once no lock names it",
+                            who="the project",
                         )
                     )
                 changes = self.hash_changes(name, version)
