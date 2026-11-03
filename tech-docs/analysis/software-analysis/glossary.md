@@ -57,7 +57,7 @@ builds-on:
 TERM-analysis:
   name: analysis
   status: active
-  definition: "account of what one separately developed and versioned software part must do and for whom, kept as anchored artefacts under the project's internal documentation root"
+  definition: "account of what one separately developed and versioned software unit must do and for whom, kept as anchored artefacts under the project's internal documentation root"
   pkit:
     friction:
       anchors:
@@ -303,7 +303,7 @@ Explained in [VIEW-analyses-and-use-cases](domain-model/010-analyses-and-use-cas
 
 **Distinctions:**
 
-- **Documentation for users:** what the [system](../core/glossary.md#term-system--system) does and how to use it, for whoever receives the software. An analysis is internal documentation for those who develop the part it describes, and never ships with that part ([DEC-001 point 2](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them)).
+- **Documentation for users:** what the [system](../core/glossary.md#term-system--system) does and how to use it, for whoever receives the software. An analysis is internal documentation for those who develop the unit it describes, and never ships with that unit ([DEC-001 point 2](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them)).
 - **Decisions and architecture:** how the system is built to do what it must, and why. An analysis states what the system must do, and points at them by anchors, never the reverse ([DEC-001 point 11](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#11-scope-boundary-and-how-the-analysis-meets-the-solution)).
 - **Testing:** running the software to see whether it does what a description says. An analysis is judged by reading, and runs nothing ([DEC-001 point 7](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#7-revalidation-is-not-testing)).
 
