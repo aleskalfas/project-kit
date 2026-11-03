@@ -282,7 +282,7 @@ def test_the_shipped_foundations_and_the_test_brand_lock_together(tmp_path: Path
     root = project(tmp_path)
     copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
-    lock = libraries.move_lock(libraries.Held(root, "visual"), ["foundations", "test-brand"])
+    lock = libraries.move_lock(libraries.Held(root, "visual"), ["foundations", "test-brand"]).lock
     assert lock == {"foundations": "1.0.0", "test-brand": "1.0.0"}
 
 
@@ -298,7 +298,7 @@ def edition_project(tmp_path: Path) -> Path:
 def test_a_brands_lock_names_its_base(tmp_path: Path) -> None:
     root = edition_project(tmp_path)
     roots = ["foundations", "test-edition"]
-    lock = libraries.move_lock(held(root), roots)
+    lock = libraries.move_lock(held(root), roots).lock
     assert lock == {"foundations": "1.0.0", "test-brand": "1.0.0", "test-edition": "1.0.0"}
     without_base = {"foundations": "1.0.0", "test-edition": "1.0.0"}
     with pytest.raises(libraries.LockRefused, match="needs `test-brand`, which its pinned lock"):
@@ -321,7 +321,7 @@ def test_a_first_lock_takes_the_newest_of_each_with_what_it_builds_on(tmp_path: 
     add_library(root, "base", "1.2.0")
     add_library(root, "charts", "1.0.0", builds_on={"base": 1})
     add_library(root, "charts", "2.1.0", builds_on={"base": 1})
-    assert libraries.move_lock(held(root), ["charts"]) == {"base": "1.2.0", "charts": "2.1.0"}
+    assert libraries.move_lock(held(root), ["charts"]).lock == {"base": "1.2.0", "charts": "2.1.0"}
 
 
 def test_a_lock_moves_within_the_lines_it_names(tmp_path: Path) -> None:
@@ -330,7 +330,7 @@ def test_a_lock_moves_within_the_lines_it_names(tmp_path: Path) -> None:
     add_library(root, "base", "1.3.0")
     add_library(root, "base", "2.0.0")
     add_library(root, "extra", "3.0.0")
-    lock = libraries.move_lock(held(root), ["base", "extra"], {"base": "1.0.0"})
+    lock = libraries.move_lock(held(root), ["base", "extra"], {"base": "1.0.0"}).lock
     assert lock == {"base": "1.3.0", "extra": "3.0.0"}
 
 
@@ -338,7 +338,7 @@ def test_a_lock_skips_a_newer_version_the_capability_cannot_read(tmp_path: Path)
     root = project(tmp_path)
     add_library(root, "base", "1.0.0")
     add_library(root, "base", "1.1.0", needs_release="9.0.0")
-    assert libraries.move_lock(held(root), ["base"]) == {"base": "1.0.0"}
+    assert libraries.move_lock(held(root), ["base"]).lock == {"base": "1.0.0"}
 
 
 def test_a_lock_backs_off_library_by_library_where_two_build_on_two_majors(
@@ -350,7 +350,7 @@ def test_a_lock_backs_off_library_by_library_where_two_build_on_two_majors(
     add_library(root, "a", "1.0.0", builds_on={"base": 1})
     add_library(root, "a", "2.0.0", builds_on={"base": 2})
     add_library(root, "b", "1.0.0", builds_on={"base": 1})
-    lock = libraries.move_lock(held(root), ["a", "b"])
+    lock = libraries.move_lock(held(root), ["a", "b"]).lock
     assert lock == {"a": "1.0.0", "b": "1.0.0", "base": "1.0.0"}
 
 
@@ -448,7 +448,7 @@ def pinned_project(tmp_path: Path) -> Path:
 def test_a_pinned_lock_that_fits_never_moves(tmp_path: Path) -> None:
     root = pinned_project(tmp_path)
     lock = {"base": "1.0.0", "charts": "1.0.0"}
-    assert libraries.move_lock(held(root), ["charts"], lock, pinned=True) == lock
+    assert libraries.move_lock(held(root), ["charts"], lock, pinned=True).lock == lock
 
 
 @pytest.mark.parametrize(
@@ -530,3 +530,132 @@ def test_a_major_the_project_holds_no_version_of_is_refused_naming_why(tmp_path:
     with pytest.raises(libraries.LockRefused, match=r"needs release 9\.0\.0") as refused:
         libraries.newest_of_majors(held(root), held(root).library("parts", V("1.0.0")))
     assert not isinstance(refused.value, libraries.MajorsConflict)
+
+
+# --- a search that judges each whole combination (DEC-003 point 8, DEC-010 point 2, DEC-011
+# --- point 4) -----------------------------------------------------------------------------------
+
+
+def two_libraries(tmp_path: Path, *versions: str) -> Path:
+    """`a` and `b`, at each of `versions`."""
+    root = project(tmp_path)
+    for version in versions:
+        add_library(root, "a", version)
+        add_library(root, "b", version)
+    return root
+
+
+class Judging:
+    """A judgement that finds a misfit in each combination `rule` names, implicating the
+    libraries it returns, and keeps each combination it judged, by its versions."""
+
+    def __init__(self, rule: Any) -> None:
+        self.rule = rule
+        self.judged: list[dict[str, str]] = []
+
+    def __call__(self, versions: Any) -> list[Any]:
+        chosen = {name: str(library.version) for name, library in versions.items()}
+        self.judged.append(chosen)
+        implicated = self.rule(chosen)
+        if not implicated:
+            return []
+        return [libraries.Misfit("end", f"a loss under {chosen}", frozenset(implicated))]
+
+
+def test_a_judged_search_backs_off_the_library_a_misfit_implicates_first(tmp_path: Path) -> None:
+    root = two_libraries(tmp_path, "1.0.0", "1.1.0")
+    judge = Judging(lambda chosen: {"a"} if chosen["a"] == "1.1.0" else set())
+
+    moved = libraries.move_lock(held(root), ["a", "b"], {"a": "1.0.0", "b": "1.0.0"}, judge=judge)
+
+    assert moved.lock == {"a": "1.0.0", "b": "1.1.0"}
+    # `b`, chosen last, is not backed off: the misfit does not implicate it.
+    assert judge.judged == [{"a": "1.1.0", "b": "1.1.0"}, {"a": "1.0.0", "b": "1.1.0"}]
+    [held_back] = moved.held_back
+    assert held_back.library.label == "a@1.1.0"
+    assert [misfit.said for misfit in held_back.misfits] == [
+        "a loss under {'a': '1.1.0', 'b': '1.1.0'}"
+    ]
+    assert (moved.below, moved.kept) == ((), "")
+
+
+def test_a_loss_only_both_newest_versions_show_backs_off_the_later_library(
+    tmp_path: Path,
+) -> None:
+    root = two_libraries(tmp_path, "1.0.0", "1.1.0")
+    both = {"a": "1.1.0", "b": "1.1.0"}
+    judge = Judging(lambda chosen: {"a", "b"} if chosen == both else set())
+
+    moved = libraries.move_lock(held(root), ["a", "b"], {"a": "1.0.0", "b": "1.0.0"}, judge=judge)
+
+    assert moved.lock == {"a": "1.1.0", "b": "1.0.0"}
+    assert [each.library.label for each in moved.held_back] == ["b@1.1.0"]
+
+
+def test_a_library_moves_no_lower_than_its_lock_while_versions_at_or_above_fit(
+    tmp_path: Path,
+) -> None:
+    """`b` below its lock would let `a` move up; the search keeps both at or above."""
+    root = two_libraries(tmp_path, "1.0.0", "1.1.0")
+    both = {"a": "1.1.0", "b": "1.1.0"}
+    judge = Judging(lambda chosen: {"a", "b"} if chosen == both else set())
+
+    moved = libraries.move_lock(held(root), ["a", "b"], {"a": "1.0.0", "b": "1.1.0"}, judge=judge)
+
+    assert moved.lock == {"a": "1.0.0", "b": "1.1.0"}
+    assert [each.library.label for each in moved.held_back] == ["a@1.1.0"]
+    assert moved.below == ()
+
+
+def test_a_library_moves_below_its_lock_only_where_nothing_at_or_above_fits_and_says_so(
+    tmp_path: Path,
+) -> None:
+    root = two_libraries(tmp_path, "1.0.0", "1.1.0", "1.2.0")
+    judge = Judging(lambda chosen: {"a"} if chosen["a"] >= "1.1.0" else set())
+
+    moved = libraries.move_lock(held(root), ["a", "b"], {"a": "1.1.0", "b": "1.0.0"}, judge=judge)
+
+    assert moved.lock == {"a": "1.0.0", "b": "1.2.0"}
+    assert moved.below == (
+        "`a` moves below 1.1.0, the version the lock named, to 1.0.0: no versions at or "
+        "above those the lock names fit together",
+    )
+    assert [each.library.label for each in moved.held_back] == ["a@1.2.0", "a@1.1.0"]
+
+    missing = libraries.move_lock(held(root), ["a"], {"a": "1.4.0"})
+    assert missing.lock == {"a": "1.2.0"}
+    assert missing.below == (
+        "`a` moves below 1.4.0, the version the lock named, to 1.2.0: the project holds no "
+        "version 1.4.0 that the installed capability reads",
+    )
+
+
+def test_past_its_bound_of_combinations_judged_the_search_keeps_the_lock_and_says_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every combination is a misfit: after two judged, the search keeps `a` at its lock,
+    and takes the newest of `extra`, which the lock does not name yet."""
+    root = two_libraries(tmp_path, "1.0.0", "1.1.0", "1.2.0", "1.3.0")
+    add_library(root, "extra", "1.0.0")
+    add_library(root, "extra", "2.0.0")
+    monkeypatch.setattr(libraries, "SEARCH_JUDGED", 2)
+    judge = Judging(lambda chosen: {"a"})
+
+    moved = libraries.move_lock(held(root), ["a", "extra"], {"a": "1.0.0"}, judge=judge)
+
+    assert moved.lock == {"a": "1.0.0", "extra": "2.0.0"}
+    assert len(judge.judged) == 2
+    assert moved.kept == (
+        "the search for versions that fit together stopped at its bound, 2 combinations "
+        "judged, choosing among those of `a`, `extra`: the lock is kept, with the newest version "
+        "that fits of each library it does not name yet; move the lock by hand, or take the "
+        "versions no piece needs out of the library folder"
+    )
+    assert moved.held_back == ()
+
+
+def test_a_pinned_lock_is_never_judged(tmp_path: Path) -> None:
+    root = pinned_project(tmp_path)
+    lock = {"base": "1.0.0", "charts": "1.0.0"}
+    judge = Judging(lambda chosen: pytest.fail(f"{chosen} judged"))
+    assert libraries.move_lock(held(root), ["charts"], lock, pinned=True, judge=judge).lock == lock

@@ -1545,6 +1545,11 @@ class Context:
         names it is not at fault, so it takes no finding."""
         return use in self._unreadable
 
+    def asked(self) -> set[str]:
+        """The library of each component read or looked for, found or not, the piece's own
+        left out. No other library's version can change how the piece is placed."""
+        return {use.split("/")[0] for use in self._components} - {names.PIECE}
+
     def role(self, path: str) -> Any:
         """A role's resolved value. Raises `UnvaluedRole` for a library's own role the brand
         leaves with none, and `KeyError` for a path that holds no role."""
@@ -1771,6 +1776,11 @@ class Instance:
         self.tie = tie
         self.end_values: dict[str, Any] = {}
         self.ends: dict[str, TieEnd] = {}
+        # The ties it draws that `find_ends` left out, each with the ends it found.
+        self.left_out: list[Instance] = []
+        # Where it is an item, each key it carries that both its component and its list
+        # declare, which neither reads (DEC-010 point 2).
+        self.clashed: tuple[str, ...] = ()
         # The key path of the mapping in the content file that holds what it was given; None
         # where no mapping does, as where a `use` part placed it: `paths` then holds the key
         # path of each field the part passes on.
@@ -2347,6 +2357,7 @@ class Instance:
                 place_colour=place, through_pages=name in self.component.pages, tie=ties,
             )  # fmt: skip
             instance.position = len(node.items)
+            instance.clashed = tuple(sorted(k for k in claimed & {*declared.keys} if k in item))
             for field_name, each in declared.arrangement.items():
                 word = item.get(field_name)
                 read = field_name not in claimed and word in each.words
@@ -2775,8 +2786,9 @@ class Instance:
         its own ties; then those of the ties below each tie it keeps. Each end is found
         among the instances below this one by the key path of what content gave it
         (`_tie_found`). A tie whose end is not found is left out, and takes no place among
-        the ties drawn. What lies below this instance's own ties still counts while their
-        ends are found, since which of them are left out is what that finding decides."""
+        the ties drawn; `left_out` keeps it, with the ends it found. What lies below this
+        instance's own ties still counts while their ends are found, since which of them
+        are left out is what that finding decides."""
         for child in self.children():
             if child.tie is None:
                 child.find_ends()
@@ -2789,7 +2801,9 @@ class Instance:
             return
         index = self.by_path()
         for node in drawn:
-            kept = [tie for tie in node.items if self._tie_found(tie, index)]
+            kept = []
+            for tie in node.items:
+                (kept if self._tie_found(tie, index) else self.left_out).append(tie)
             for position, tie in enumerate(kept):
                 tie.position = position
             node.items = kept
