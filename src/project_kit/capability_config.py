@@ -27,7 +27,8 @@ its own:
   other than its schema's, is refused, since the schema cannot judge it.
 - **An absent file is created bound to the schema**: the editor directive, then
   `pkit_schema` and `schema_version`, then the key. A file that holds no mapping
-  yet gains the binding before the key.
+  yet gains the binding before the key. A schema that declares no version is
+  refused there, since the binding would name none.
 
 The value is text, written so that every YAML reader, 1.1 or 1.2, reads it back
 as the same text (`_scalar`); a key's segments are words every reader reads as
@@ -316,6 +317,12 @@ def _held(data: Mapping[str, Any], segments: tuple[str, ...], relpath: str) -> A
             return _ABSENT
         if not isinstance(node, Mapping):
             at = ".".join(segments[: depth + 1])
+            if node is None:
+                raise RecordRefused(
+                    f"{relpath} holds an empty value at `{at}`, not a mapping, so "
+                    f"`{'.'.join(segments)}` cannot go under it. Give `{at}` the empty mapping "
+                    f"`{{}}` and record again, or add the key under it by hand"
+                )
             raise RecordRefused(
                 f"{relpath} holds a value at `{at}`, not a mapping, so `{'.'.join(segments)}` "
                 f"cannot go under it; fix that line first"
@@ -336,7 +343,7 @@ def _wanted(
         if was
         else {
             SCHEMA_FIELD: f"{binding.capability}:{binding.schema_name}",
-            VERSION_FIELD: data_validate.schema_version_of(binding),
+            VERSION_FIELD: _schema_version(binding),
         }
     )
     node = wanted
@@ -344,6 +351,21 @@ def _wanted(
         node = node.setdefault(segment, {})
     node[segments[-1]] = value
     return wanted
+
+
+def _schema_version(binding: data_validate.ResolvedBinding) -> int:
+    """The `schema_version` the binding of a file the writer stamps names: the version of
+    the schema the file is written against (COR-023). Refused where the schema's YAML
+    declares none, since the binding would then name no version."""
+    version = data_validate.schema_version_of(binding)
+    if version is None:
+        raise RecordRefused(
+            f"{binding.capability}'s `schemas/{binding.schema_name}.yaml` declares no "
+            f"whole-number `{VERSION_FIELD}`, which a file bound to it names (COR-023), so "
+            f"the writer cannot bind a file to it. Nothing was written; the schema is to "
+            f"declare its version first"
+        )
+    return version
 
 
 def _scalar(value: str) -> str:

@@ -242,6 +242,8 @@ def test_a_dry_run_says_what_it_would_record_and_writes_nothing(repo: AdopterRep
         ((VISUAL, "location", ""), "a recording records a value: VALUE is empty"),
         ((DOCS, "spaces.no.definition", "y"), "the segment 'no' is no word every YAML reader"),
         ((DOCS, "spaces.2nd.definition", "y"), "the segment '2nd' is no word every YAML reader"),
+        ((DOCS, "spaces.Yes.definition", "y"), "the segment 'Yes' is no word every YAML reader"),
+        ((DOCS, "NULL", "y"), "the segment 'NULL' is no word every YAML reader"),
         ((DOCS, "pkit_schema", "software-analysis:config"), "binds the configuration"),
         ((DOCS, "schema_version", "x"), "binds the configuration"),
     ],
@@ -273,6 +275,21 @@ def test_a_value_where_a_mapping_is_needed_is_refused(repo: AdopterRepo) -> None
     assert path.read_bytes() == before
 
 
+def test_an_empty_value_where_a_mapping_is_needed_says_so(repo: AdopterRepo) -> None:
+    """An empty value on the way is refused as one, so a person sees that the empty
+    mapping mends it; recorded under that mapping, the key goes in."""
+    written = f"pkit_schema: {DOCS}:config\nschema_version: 1\nspaces:\n"
+    path = _write(repo, DOCS_CONFIG, written.encode())
+    code, output = _record(DOCS, "spaces.user.definition", "docs/user.md")
+    assert code == 1
+    assert "holds an empty value at `spaces`, not a mapping" in output
+    assert "Give `spaces` the empty mapping `{}` and record again" in output
+    assert path.read_text(encoding="utf-8") == written
+    _write(repo, DOCS_CONFIG, written.replace("spaces:", "spaces: {}").encode())
+    assert _record(DOCS, "spaces.user.definition", "docs/user.md")[0] == 0
+    assert _errors(repo, DOCS_CONFIG) == []
+
+
 def test_a_file_reached_through_a_link_is_refused(repo: AdopterRepo) -> None:
     """A whole-file write would replace the link it was reached by."""
     elsewhere = _write(repo, "elsewhere.yaml", f"pkit_schema: {VISUAL}:config\n".encode())
@@ -282,6 +299,26 @@ def test_a_file_reached_through_a_link_is_refused(repo: AdopterRepo) -> None:
     assert code == 1
     assert f"{VISUAL_CONFIG} is reached through the link {VISUAL_CONFIG}" in output
     assert elsewhere.read_text(encoding="utf-8") == f"pkit_schema: {VISUAL}:config\n"
+
+
+@pytest.mark.parametrize("written", [None, b"# nothing recorded yet\n"])
+def test_a_schema_declaring_no_version_binds_no_file(
+    repo: AdopterRepo, written: bytes | None
+) -> None:
+    """Where the writer would bind the file, absent or holding no mapping yet, a schema
+    that declares no `schema_version` gives the binding no version to name: the key is
+    refused and nothing is written, never `schema_version: null` (COR-023)."""
+    schema = repo.root / f".pkit/capabilities/{VISUAL}/schemas/config.yaml"
+    schema.write_text(
+        schema.read_text(encoding="utf-8").replace("schema_version: 1\n", ""), encoding="utf-8"
+    )
+    path = repo.root / VISUAL_CONFIG
+    if written is not None:
+        _write(repo, VISUAL_CONFIG, written)
+    code, output = _record(VISUAL, "location", "visual")
+    assert code == 1
+    assert f"{VISUAL}'s `schemas/config.yaml` declares no whole-number `schema_version`" in output
+    assert (path.read_bytes() if path.exists() else None) == written
 
 
 # --- the document a script reads -----------------------------------------------------
