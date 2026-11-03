@@ -41,7 +41,7 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/foundations/library.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/roles.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
-        - .pkit/capabilities/visual-communication/libraries/**
+        - .pkit/capabilities/visual-communication/libraries/**/*.yaml
         - tests/visual_communication_project.py
         - tests/test_visual_communication_pipeline.py
         - tests/test_visual_communication_layout.py
