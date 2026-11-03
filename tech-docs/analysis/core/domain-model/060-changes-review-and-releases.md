@@ -359,7 +359,7 @@ An environment block is the part of a report's body that the system builds itsel
 
 **Always true:**
 
-- It holds no path, and names only the capabilities the system ships (ADR-047).
+- It holds no path. By default it names only the capabilities the system ships (ADR-047), and it names another only when asked to.
 
 ## Reviewer
 

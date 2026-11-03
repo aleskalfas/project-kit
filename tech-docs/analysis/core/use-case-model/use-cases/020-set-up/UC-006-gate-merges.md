@@ -131,7 +131,7 @@ pkit:
 
 **Minimal guarantees:**
 
-- An invalid [friction](../../../glossary.md#term-friction--friction) mode fails [validation](../../../glossary.md#term-validation--validation), so enforcement is never switched off silently ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
+- An invalid [friction mode](../../../glossary.md#term-friction-mode--friction-mode) fails [validation](../../../glossary.md#term-validation--validation), so enforcement is never switched off silently ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
 - A [validator](../../../glossary.md#term-validator--validator) that gives no result fails validation, and never passes it ([COR-055 point 6](../../../../../../.pkit/decisions/core/COR-055-validation.md#6-a-validator-that-gives-no-answer-fails)).
 - In enforcing mode, a resolver that gives no result fails the [change check](../../../glossary.md#term-change-check--change-check), which could not judge its [anchor](../../../glossary.md#term-anchor--anchor) (COR-050 points [2](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#2-anchors) and 12).
 - An outdated [base](../../../glossary.md#term-base--base) is reported, and never fails the change check (COR-050 point 12).
