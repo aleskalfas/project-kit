@@ -90,7 +90,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 - **A component token's default aliases a role, never a value.** So a component library holds no raw value, and no brand has to give the token a value.
 - **A shared role the foundations add after their first version** carries a default that aliases an older role. Every brand already released still gives it a value.
 - **A base may open a component token alone,** so a brand built on it restyles that one part without changing the shared role everywhere. A component declares one only where a brand needs to differ.
-- **How far a brand reaches into a component.** A brand reaches a component only through the roles it names and the component tokens it declares. So a component that names a role for its corners, its strokes or its fonts lets each brand draw them its own way. Its parts, their arrangement and its options stay the component's.
+- **How far a brand reaches into a component** (refinement per [visual-communication:DEC-009-layout-defaults]). A brand reaches a component only through the roles it names and the component tokens it declares. So a component that names a role for its corners, its strokes or its fonts lets each brand draw them its own way. Its parts, their arrangement and its options stay the component's.
 
 ### 8. Pairs of colours that must contrast
 
