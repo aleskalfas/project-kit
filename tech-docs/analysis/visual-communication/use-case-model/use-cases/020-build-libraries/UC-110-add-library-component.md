@@ -43,7 +43,7 @@ pkit:
 **Main path:**
 
 1. The developer writes the library component in a library the project owns. The library component states the job it does, the established form it follows with that form's source, and its fields and options.
-2. The system checks the library component, and draws it once with each value of each of its options, and once with each word of the run styles of each of its fields of runs.
+2. The system checks the library component, and draws it once with each value of each of its options. It also draws it once with each run style of each field of runs.
 3. The developer has the library component reviewed against its job and its form, with the drawings of step 2.
 4. The developer gives the library a new library version, in which the library component is experimental.
 5. Later, the developer judges that pieces can rely on the library component, and marks it stable in its file.
