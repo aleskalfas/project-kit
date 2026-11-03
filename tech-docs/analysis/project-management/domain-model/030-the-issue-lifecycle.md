@@ -195,9 +195,9 @@ Defined in [TERM-audit-comment](../glossary.md#term-audit-comment--audit-comment
 
 **Why:** The timeline already records each label added or removed, so a comment that only restates a move adds nothing. A comment carries what the timeline cannot: why a person overrode a check, and which [version](../../core/glossary.md#term-version--version) made an edit ([DEC-049](../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
 
-An audit comment is one the [system](../../core/glossary.md#term-system--system) posts on an [issue](../glossary.md#term-issue--issue) or a [pull request](../../core/glossary.md#term-pull-request--pull-request). It records a person's reason or [consent](../../core/glossary.md#term-consent--consent) for a write project-management governs.
+An audit comment is one project-management posts on an [issue](../glossary.md#term-issue--issue) or a [pull request](../../core/glossary.md#term-pull-request--pull-request). It records a person's reason or [consent](../../core/glossary.md#term-consent--consent) for a write project-management governs.
 
-At the default setting it records each [bypass](../glossary.md#term-bypass--bypass), and each move back from In Progress, with its reason. It also records the consent that a write setting a [Task](../glossary.md#term-task--task)'s [Milestone](../glossary.md#term-milestone--milestone) may need ([DEC-061 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). At the fullest setting it records each write the system governs too.
+At the default setting it records each [bypass](../glossary.md#term-bypass--bypass), and each move back from In Progress, with its reason. It also records the consent that a write setting a [Task](../glossary.md#term-task--task)'s [Milestone](../glossary.md#term-milestone--milestone) may need ([DEC-061 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). At the fullest setting it records each write project-management governs too.
 
 **Attributes:**
 
