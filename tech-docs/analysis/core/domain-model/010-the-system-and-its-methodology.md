@@ -179,7 +179,7 @@ A harness requirement is a behaviour the methodology needs of any harness, state
 
 - It is stated as behaviour one can observe, never in any harness's own vocabulary (COR-047 point 1).
 - Where nothing grades it for the harness in use, it is indeterminate, never met ([COR-047 point 3](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#3-silence-is-indeterminate-never-satisfaction)).
-- Where its observation [point](../glossary.md#term-point--point) cannot be reached, a check reports it as indeterminate, naming what could settle it (COR-047 point 4). It never passes it.
+- Where its observation point cannot be reached, a check reports it as indeterminate, naming what could settle it (COR-047 point 4). It never passes it.
 
 ## Instruction file
 

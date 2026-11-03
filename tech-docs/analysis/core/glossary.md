@@ -916,7 +916,7 @@ TERM-placeholder:
           - COR-013#5
 TERM-point:
   name: point
-  other-senses: [revalidation point, deferral point, extension point, entry point]
+  other-senses: [revalidation point, deferral point, extension point, entry point, observation point]
   status: active
   definition: "numbered or labelled part of a decision record's Decision, whose id names it for good once the record writes it as a heading"
   pkit:
@@ -1091,6 +1091,7 @@ TERM-recorded-version:
           - ADR-065#2
 TERM-release:
   name: release
+  other-senses: [GitHub release]
   status: active
   definition: "set of versions shipped together, named by its backbone version: one of the backbone, and one of each component shipped with it"
   pkit:
@@ -3069,7 +3070,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 **Distinctions:**
 
 - **Report:** the issue an adopter filed. A tracked fix is the issue that resolves it.
-- **A resolved report:** a feedback or a [change](#term-change--change) request whose tracked fixes are all closed. `pkit report inbox --resolved` lists it, and closes it only on a person's word ([PRJ-008](../../../.pkit/decisions/project/PRJ-008-report-command.md)).
+- **A resolved report:** a `feedback` or `change-request` report whose tracked fixes are all closed. `pkit report inbox --resolved` lists it, and closes it only on a person's word ([PRJ-008](../../../.pkit/decisions/project/PRJ-008-report-command.md)).
 
 ## TERM-trigger-field — trigger field
 
