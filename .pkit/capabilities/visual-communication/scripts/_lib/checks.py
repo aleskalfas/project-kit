@@ -1,6 +1,7 @@
 """The check: what the project's visual work breaks, within the project's validation
 (visual-communication DEC-002 points 3, 4, 6 and 7, DEC-003 point 9, DEC-004 points 8, 9
-and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9).
+and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9, DEC-010
+points 1, 2 and 9).
 
 **File-level findings, every run:**
 
@@ -11,11 +12,16 @@ and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9)
 - the library folder and its list (`libraries.Held.findings`);
 - each piece's lock: a version the project does not hold or the capability cannot read,
   a library the piece uses that the lock does not name, libraries that build on another
-  major than the one locked; a piece with no lock yet;
+  major than the one locked; a piece with no lock yet; and, read with the content, a key
+  that both an item's component and its list declare, which fails where an item carries
+  it and is stated as a fact where none does (DEC-010 points 2 and 9);
 - each library version checked alone, once: the newest version the project holds of
   each major of each library, resolved with the newest version the project holds of each
   major it names. A brand is read over its base, a component library's own roles are
-  judged, the foundations' declarations are read. What it shows lies in the version; a
+  judged, and so is each arrangement field of its patterns that its list's default
+  component also declares, the components read through an environment of the engine
+  that no piece or brand stands behind (`pipeline.LibraryEnv`, DEC-010 point 9); the
+  foundations' declarations are read. What it shows lies in the version; a
   version that names majors no versions fit, or one the project holds no version of,
   cannot be checked alone, which is a finding. A check of one piece runs no such pass;
 - the libraries each piece locks, read under its lock: the own roles of each component
@@ -69,7 +75,7 @@ from collections.abc import Collection, Iterator, Mapping, Sequence
 from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 
-from _lib import code, fingerprint, framing, location, names, tokens
+from _lib import code, fingerprint, framing, layout, location, names, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.files import FileError, binding_problem, nearest, read_bound, schema_of
@@ -88,6 +94,7 @@ from _lib.libraries import (
     FOLDER,
     FOUNDATIONS,
     Held,
+    Library,
     LibraryError,
     LockRefused,
     MajorsConflict,
@@ -423,10 +430,12 @@ class _Run:
         """What the library version shows checked alone, worked out once: resolved with the
         newest version the project holds of each major it names (DEC-005 point 7, DEC-008
         point 1). A brand is read over its base, a component library's own roles are
-        judged, the foundations' declarations are read; a notation is checked under each
-        lock alone. Each finding lies in the version. A version that names majors no
-        versions fit, or one of which the project holds no version, cannot be checked
-        alone, which is the finding it shows.
+        judged, and its patterns too, against their lists' default components, read
+        through an environment of the engine that no piece or brand stands behind
+        (`default_clashes`, DEC-010 point 9); the foundations' declarations are read; a
+        notation is checked under each lock alone. Each finding lies in the version. A
+        version that names majors no versions fit, or one of which the project holds no
+        version, cannot be checked alone, which is the finding it shows.
 
         The pass is one each kind of library version joins: what a later record judges of
         a version alone joins its kind's branch here."""
@@ -474,7 +483,9 @@ class _Run:
                 tokens.read_scope(folders, root=self.root)
                 found: Sequence[Finding] = []
             elif library.kind == "components":
-                found = tokens.read_scope(folders, root=self.root).findings_of(name)
+                scope = tokens.read_scope(folders, root=self.root)
+                env = pl.LibraryEnv(chosen, scope)
+                found = [*scope.findings_of(name), *default_clashes(self.held, library, env)]
             elif library.kind == "brand" and FOUNDATIONS in folders:
                 found = tokens.read_brand(
                     library.folder,
@@ -578,6 +589,63 @@ def _at_lock(finding: Finding, piece: pl.Piece) -> Finding:
         or f"move the lock to versions that fit together, or mend {finding.library}",
         library="",
     )
+
+
+def default_clashes(held: Held, library: Library, env: pl.LibraryEnv) -> list[Finding]:
+    """Each arrangement field of a pattern of the library version that its list's default
+    component, the `draw` of a part that repeats over the list, also declares as a field or
+    an option (DEC-010 points 2 and 9). The pattern chose both, so the clash is the
+    pattern's to mend, at the arrangement field in its file. Each component of the version
+    is read through `env`, which reads the default component from the versions the library
+    is checked alone with. A component that cannot be read, and a default that names none,
+    are the scene's to report."""
+    ctx = layout.Context(env, "")
+    found = []
+    for path in held.files(library.name, library.version):
+        if path.parent != library.folder / pl.COMPONENTS or path.suffix != ".yaml":
+            continue
+        component = ctx.component(f"{library.name}/{path.stem}")
+        if component is None:
+            continue
+        for listed, draw, name, what in _arrangement_claimed(ctx, component):
+            found.append(
+                Finding(
+                    "arrangement-clash",
+                    FAILS,
+                    f"`{name}` is an arrangement field of `{listed}`, and `{draw}`, which "
+                    f"draws its items by default, declares it as {what}: neither reads it on "
+                    "an item",
+                    file=path.relative_to(held.root).as_posix(),
+                    where=f"lists.{listed}.arrangement.{name}",
+                    fix="rename the arrangement field, or draw the list with another "
+                    "component, in a version of its own",
+                    library=library.label,
+                )
+            )
+    return found
+
+
+def _arrangement_claimed(
+    ctx: layout.Context, component: layout.Component
+) -> Iterator[tuple[str, str, str, str]]:
+    """Each arrangement field of a list of `component` that the `draw` of a part that
+    repeats over the list declares as a field or an option: the list, the draw, the field,
+    and which the draw declares it as."""
+    for part in component.parts.values():
+        listed, draw = part.spec.get("repeat"), part.spec.get("draw")
+        if part.kind != "repeat" or not isinstance(listed, str):
+            continue
+        if listed not in component.list_fields:
+            continue
+        declared = component.list_fields[listed]
+        drawn = ctx.component(draw) if isinstance(draw, str) else None
+        if drawn is None:
+            continue
+        for name in declared.arrangement:
+            if name in drawn.fields:
+                yield str(listed), str(draw), name, "a field"
+            elif name in drawn.options:
+                yield str(listed), str(draw), name, "an option"
 
 
 def kind_of(inside: str) -> str | None:
@@ -882,7 +950,43 @@ def content_findings(project: pl.Project) -> list[Finding]:
     for language, content in piece.contents.items():
         reader = _Fields(project.env, piece.file(pl.content_file(language)), found)
         reader.placed(piece.top, content, "")
-    return found
+    return _clashes_once(found)
+
+
+#: The findings on a key that both an item's component and its list declare, which lie at
+#: the piece's lock (DEC-010 points 2 and 9): an item carries it, or no item does.
+ITEM_CLASH = "item-clash"
+LIST_CLASH = "list-clash"
+
+
+def _clashes_once(found: list[Finding]) -> list[Finding]:
+    """The content's findings, each clash at the lock reported once across the piece's
+    languages: a key that both a component and a list declare is stated as a fact only
+    where no item of the list that the component draws carries it, in any language."""
+    carried = {f.extra.get("clash") for f in found if f.code == ITEM_CLASH}
+    kept: list[Finding] = []
+    seen: set[tuple[str, str, str, str, str]] = set()
+    for finding in found:
+        if finding.code == LIST_CLASH and finding.extra.get("clash") in carried:
+            continue
+        if finding.code in (ITEM_CLASH, LIST_CLASH):
+            if _mark(finding) in seen:
+                continue
+            seen.add(_mark(finding))
+        kept.append(finding)
+    return kept
+
+
+@dataclasses.dataclass(frozen=True)
+class _Listed:
+    """A list field a component draws, as the check of the content reads its items: the
+    component that draws an item that names none (`draw`), what the component that
+    repeats over it declares for it (DEC-010 points 1 to 4), and the field of this
+    component in which content gives its component field, where content can give it."""
+
+    draw: Any
+    fields: layout.ListFields
+    component: str | None
 
 
 class _Fields:
@@ -902,8 +1006,20 @@ class _Fields:
     def _fail(self, code: str, path: str, message: str) -> None:
         self.found.append(Finding(code, FAILS, message, file=self.file, where=path))
 
-    def placed(self, use: str, value: Mapping[str, Any], path: str) -> None:
-        """A mapping that places the component `use`."""
+    def placed(
+        self,
+        use: str,
+        value: Mapping[str, Any],
+        path: str,
+        listed: _Listed | None = None,
+        list_at: str = "",
+    ) -> None:
+        """A mapping that places the component `use`; where it is an item of the list at
+        `list_at`, `listed` says what that list declares. An item's keys are its
+        component's fields and options, the reserved keys, and its list's arrangement
+        fields, each of which takes a word it declares. A key that both its component and
+        its list declare is read by neither (DEC-010 point 2): it is no finding in the
+        content, and lies at the lock (`_clash`)."""
         try:
             component = self.env.component(use)
         except KeyError:
@@ -911,25 +1027,84 @@ class _Fields:
         fields = component.get("fields") if isinstance(component.get("fields"), Mapping) else {}
         options = component.get("options") if isinstance(component.get("options"), Mapping) else {}
         repeats = self._repeats(component, (use,))
-        known = {*(fields.get("properties") or {}), *options, *names.RESERVED_PLACING_KEYS}
-        self._keys(value, known, path, f"`{use}` takes no field or option")
-        for name, option in options.items():
-            if name in value and isinstance(option, list) and value[name] not in option:
-                close = nearest(str(value[name]), [str(word) for word in option])
-                hint = f"; did you mean `{close}`?" if close else ""
-                self._fail(
-                    "content-option",
+        own = {*(fields.get("properties") or {}), *options}
+        arranged = listed.fields.arrangement if listed is not None else {}
+        claimed = own & set(arranged)
+        if arranged:
+            lead = f"neither `{use}` nor the list `{list_at}` declares a key"
+        else:
+            lead = f"`{use}` takes no field or option"
+        self._keys(value, {*own, *arranged, *names.RESERVED_PLACING_KEYS}, path, lead)
+        for name in sorted(claimed):
+            self._clash(use, name, path if name in value else "", list_at, arranged[name].default)
+        self._words(value, path, {n: o for n, o in options.items() if n not in claimed}, use)
+        for name, each in arranged.items():
+            if name in value and name not in claimed and value[name] not in each.words:
+                self._word(
                     _join(path, name),
-                    f"`{value[name]}` is no word of the option `{name}` of `{use}` "
-                    f"({', '.join(map(str, option))}){hint}",
+                    value[name],
+                    each.words,
+                    f"the arrangement field `{name}` of the list `{list_at}`",
                 )
         forms = page_forms(component) if isinstance(component.get("layouts"), Mapping) else None
-        self._object(fields, value, path, fields, repeats, keys_checked=True, forms=forms)
+        unread = frozenset(name for name in claimed if name in value)
+        self._object(
+            fields, value, path, fields, repeats, keys_checked=True, forms=forms, unread=unread
+        )
         if forms is None:
             return
         for name in forms.fields:
             if isinstance(value.get(name), list):
                 self._pages(use, component, forms, value[name], _join(path, name))
+
+    def _words(
+        self, value: Mapping[str, Any], path: str, options: Mapping[str, Any], use: str
+    ) -> None:
+        """Each option of words `value` gives, against the words the option declares."""
+        for name, option in options.items():
+            if name in value and isinstance(option, list) and value[name] not in option:
+                self._word(
+                    _join(path, name), value[name], option, f"the option `{name}` of `{use}`"
+                )
+
+    def _word(self, path: str, given: Any, words: Sequence[Any], what: str) -> None:
+        close = nearest(str(given), [str(word) for word in words])
+        hint = f"; did you mean `{close}`?" if close else ""
+        self._fail(
+            "content-option",
+            path,
+            f"`{given}` is no word of {what} ({', '.join(map(str, words))}){hint}",
+        )
+
+    def _clash(self, use: str, key: str, carried: str, list_at: str, default: str) -> None:
+        """A key that both the component `use` and the list at `list_at` declare (DEC-010
+        points 2 and 9). It lies at the piece's lock, which combines the two: where the
+        item at `carried` carries it, it fails; otherwise it states a fact, so the content's
+        author learns of it before writing one, and `_clashes_once` keeps the fact only
+        where no item carries the key."""
+        lock = PurePosixPath(self.file).with_name(pl.PIECE_FILE).as_posix()
+        both = f"under this lock, `{use}` and the list `{list_at}` both declare `{key}`"
+        if carried:
+            finding = Finding(
+                ITEM_CLASH,
+                FAILS,
+                f"{both}, which the item `{carried}` carries in "
+                f"{PurePosixPath(self.file).name}: neither reads it, so `{use}` leaves it "
+                f"unfilled, and the arrangement field takes its default `{default}`",
+                file=lock,
+                where="lock",
+                fix="take the key off the item, or move the lock to versions under which the "
+                "item's component and its list do not both declare it",
+            )
+        else:
+            finding = Finding(
+                LIST_CLASH,
+                FACT,
+                f"{both}: neither would read it on an item of the list that `{use}` draws",
+                file=lock,
+                where="lock",
+            )
+        self.found.append(dataclasses.replace(finding, extra={"clash": (list_at, use, key)}))
 
     def _pages(
         self,
@@ -976,17 +1151,64 @@ class _Fields:
                 )
                 self._object(schema, page, at, schema, repeats, keys_checked=True)
 
-    def _repeats(self, component: Mapping[str, Any], chain: tuple[str, ...]) -> dict[str, Any]:
+    def _component_field(self, value: Any, path: str, list_at: str) -> None:
+        """A list's component field (DEC-010 point 1): a mapping that names a component by
+        `use`, with words for its options, and `concept`, `state` and `override`, which the
+        scene reads on each item that takes them. It places nothing, so none of the
+        component's required fields is asked of it, and it gives no id and no field: an id
+        names one thing, and a field holds what one item shows."""
+        what = f"the component field of the list `{list_at}`"
+        if not isinstance(value, Mapping) or not isinstance(value.get("use"), str):
+            self._fail(
+                "content-component",
+                path,
+                f"{what} names no component: it takes `{{use: <library>/<component>}}`, with "
+                "words for that component's options",
+            )
+            return
+        use = value["use"]
+        try:
+            component = self.env.component(use)
+        except KeyError:
+            return  # the scene reports a component that does not exist, or cannot be read
+        fields = component.get("fields") if isinstance(component.get("fields"), Mapping) else {}
+        options = component.get("options") if isinstance(component.get("options"), Mapping) else {}
+        properties = fields.get("properties") or {}
+        for key in value:
+            if key == "id":
+                self._fail(
+                    "content-component",
+                    _join(path, "id"),
+                    f"{what} gives an id: it names the component of every item, and an id "
+                    "names one thing",
+                )
+            elif key in properties:
+                self._fail(
+                    "content-component",
+                    _join(path, str(key)),
+                    f"{what} gives `{key}`, a field of `{use}`: a field holds what one item "
+                    "shows, so each item gives its own",
+                )
+        known = {*properties, *options, *names.RESERVED_PLACING_KEYS}
+        self._keys(value, known, path, f"`{use}` takes no option")
+        self._words(value, path, options, use)
+
+    def _repeats(self, component: Mapping[str, Any], chain: tuple[str, ...]) -> dict[str, _Listed]:
         """Each list field of `component` that a part draws, with the component its `draw`
-        names: a `repeat` part of its own, else, at any depth, one of a component a `use`
-        part places, which the part passes the list on to under another name. `chain`
-        holds the components on the way, so one that places itself ends the search."""
+        names and what the component that repeats over it declares for it under `lists`
+        (DEC-010): a `repeat` part of its own, else, at any depth, one of a component a
+        `use` part places, which the part passes the list on to under another name. The
+        list's component field is the field of `component` that content gives it in: its
+        own, or the one a `use` part passes on as it. `chain` holds the components on the
+        way, so one that places itself ends the search."""
         parts = component.get("parts") or {}
-        repeats = {
-            spec["repeat"]: spec.get("draw")
-            for spec in parts.values()
-            if isinstance(spec, Mapping) and isinstance(spec.get("repeat"), str)
-        }
+        declared = layout.list_fields(component)
+        repeats = {}
+        for spec in parts.values():
+            listed = spec.get("repeat") if isinstance(spec, Mapping) else None
+            if isinstance(listed, str):
+                fields = declared.get(listed, layout.ListFields(None, {}))
+                repeats[listed] = _Listed(spec.get("draw"), fields, fields.component)
         for spec in parts.values():
             use = spec.get("use") if isinstance(spec, Mapping) else None
             bound = spec.get("fields") if isinstance(spec, Mapping) else None
@@ -998,7 +1220,10 @@ class _Fields:
                 continue  # the scene reports a component that does not exist, or cannot be read
             for theirs, ours in bound.items():
                 if theirs in placed and isinstance(ours, str):
-                    repeats.setdefault(ours, placed[theirs])
+                    inner = placed[theirs]
+                    passed = bound.get(inner.component) if inner.component else None
+                    given = passed if isinstance(passed, str) else None
+                    repeats.setdefault(ours, dataclasses.replace(inner, component=given))
         return repeats
 
     def _keys(self, value: Mapping[str, Any], known: set[str], path: str, lead: str) -> None:
@@ -1014,33 +1239,46 @@ class _Fields:
         value: Mapping[str, Any],
         path: str,
         root: Mapping[str, Any],
-        repeats: Mapping[str, Any] | None = None,
+        repeats: Mapping[str, _Listed] | None = None,
         *,
         keys_checked: bool = False,
         forms: PageForms | None = None,
+        unread: frozenset[str] = frozenset(),
     ) -> None:
         """`value` against the object `schema`. A field `forms` marks as holding pages is
-        checked as a list here, and its pages by `_pages`."""
+        checked as a list here, and its pages by `_pages`. Each item of a list that
+        `repeats` names is read against the component that draws it: the one it names, else
+        the one its list's component field names, else the list's default (DEC-010 point
+        1). A list's component field is read by `_component_field`. A key of `unread` is
+        read by neither the component nor the list, so it is judged at the lock alone."""
         properties = schema.get("properties") or {}
+        repeats = repeats or {}
+        component_fields = {
+            listed.component: key for key, listed in repeats.items() if listed.component
+        }
         if not keys_checked:
             self._keys(value, set(properties), path, "no field is named")
         for key in schema.get("required") or []:
             if key not in value:
                 self._fail("content-required", _join(path, key), f"the field `{key}` is required")
         for key, item in value.items():
-            if key not in properties:
+            if key not in properties or key in unread:
                 continue
             at = _join(path, key)
-            draw = (repeats or {}).get(key)
+            listed = repeats.get(key)
             if forms is not None and key in forms.fields:
                 self._value(properties[key], item, at, root, items=False)
-            elif draw is not None and isinstance(item, list):
+            elif listed is not None and isinstance(item, list):
                 self._value(properties[key], item, at, root, items=False)
+                field = value.get(listed.component) if listed.component else None
+                named = field.get("use") if isinstance(field, Mapping) else None
                 for place, entry in enumerate(item, start=1):
                     if isinstance(entry, Mapping):
-                        use = entry.get("use", draw)
+                        use = entry.get("use", named if isinstance(named, str) else listed.draw)
                         if isinstance(use, str):
-                            self.placed(use, entry, f"{at}{_item(entry, place)}")
+                            self.placed(use, entry, f"{at}{_item(entry, place)}", listed, at)
+            elif key in component_fields:
+                self._component_field(item, at, _join(path, component_fields[key]))
             elif isinstance(item, Mapping) and isinstance(item.get("use"), str):
                 self.placed(item["use"], item, at)
             else:

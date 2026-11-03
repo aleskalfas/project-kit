@@ -289,3 +289,53 @@ def test_the_schema_refuses_a_page_form_the_engine_refuses(
     data = forms(**layouts)
     assert problems(data) != [], case
     assert engine_issues(data) != [], case
+
+
+# --- a pattern's lists (#2560) -----------------------------------------------------------------
+
+SPAN = {"words": ["narrow", "wide"], "shares": {"narrow": 1, "wide": 2}}
+
+
+def listing(sizes: str = "own", **lists: Any) -> dict[str, Any]:
+    """The reference instance as a pattern that repeats over its list `tags` in a row of
+    `sizes`, with a field `kind` and the fields of its lists `lists`."""
+    data = changed("parts.tags", repeat(row={"sizes": sizes}))
+    data["fields"]["properties"]["tags"]["items"] = {"type": "object"}
+    data["fields"]["properties"]["kind"] = {"type": "object"}
+    data["lists"] = lists
+    return data
+
+
+def test_a_pattern_declares_a_component_field_and_arrangement_fields_for_a_list() -> None:
+    data = listing("shares", tags={"component": "kind", "arrangement": {"span": SPAN}})
+    assert problems(data) == []
+    assert engine_issues(data) == []
+
+
+@pytest.mark.parametrize(
+    ("case", "entry"),
+    [
+        ("a key the entry does not take", {"draw": "lab/tag"}),
+        ("a component field that is no name", {"component": "Kind"}),
+        ("an arrangement field of no words", {"arrangement": {"span": {"words": []}}}),
+        ("a word twice", {"arrangement": {"span": {"words": ["wide", "wide"]}}}),
+        ("the switch's key as a word", {"arrangement": {"span": {"words": ["by"]}}}),
+        ("a reserved key's name", {"arrangement": {"state": {"words": ["on"]}}}),
+        ("a key an arrangement field does not take", {"arrangement": {"span": {**SPAN, "x": 1}}}),
+        (
+            "a share of zero",
+            {"arrangement": {"span": {**SPAN, "shares": {"narrow": 0, "wide": 1}}}},
+        ),
+        (
+            "a share that is no number",
+            {"arrangement": {"span": {**SPAN, "shares": {"narrow": "1", "wide": 2}}}},
+        ),
+    ],
+    ids=lambda value: value if isinstance(value, str) else "",
+)
+def test_the_schema_refuses_a_lists_fields_the_engine_refuses(
+    case: str, entry: dict[str, Any]
+) -> None:
+    data = listing(tags=entry)
+    assert problems(data) != [], case
+    assert engine_issues(data) != [], case

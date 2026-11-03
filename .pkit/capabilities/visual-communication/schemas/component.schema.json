@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "component.schema.json",
   "title": "A component — visual-communication capability",
-  "description": "Formal shape of a component of a library (DEC-001 points 4 and 6, DEC-005 points 1 to 3): its status and what it is about, the fields of content it takes, its options, states, colour, values, the size it prefers, its parts, the parts it exposes, and the layouts of a top component, which may be its pages' forms. `fields` is a fixed subset of JSON Schema 2020-12. Each part is exactly one kind, with the keys that kind takes; a value is a formula or a switch on an option of words. What crosses keys, such as a formula's references and dimensions, a switch naming every word of its option, or a field a part names, the engine checks when it reads the component. Document-shaped schema. Companion per COR-018.",
+  "description": "Formal shape of a component of a library (DEC-001 points 4 and 6, DEC-005 points 1 to 3): its status and what it is about, the fields of content it takes, its options, states, colour, values, the size it prefers, its parts, the fields of each list it repeats over, the parts it exposes, and the layouts of a top component, which may be its pages' forms. `fields` is a fixed subset of JSON Schema 2020-12. Each part is exactly one kind, with the keys that kind takes; a value is a formula or a switch on an option of words. What crosses keys, such as a formula's references and dimensions, a switch naming every word of its option, or a field a part names, or a list's fields naming a list a part of its own repeats over, the engine checks when it reads the component. Document-shaped schema. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
@@ -108,6 +108,16 @@
       },
       "additionalProperties": {
         "$ref": "#/$defs/part"
+      }
+    },
+    "lists": {
+      "description": "The fields of each list a `repeat` part of its own repeats over, by the list field (DEC-010 points 1 to 4): the field of an item that names the component drawing it, and the item's arrangement fields. The list of a top's pages takes none.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/list-fields"
       }
     },
     "exposes": {
@@ -528,12 +538,13 @@
       }
     },
     "sizes-value": {
-      "description": "`sizes`: one of own, equal, the first the default; or a switch of them on an option of words.",
+      "description": "`sizes`: one of own, equal, shares, the first the default; or a switch of them on an option of words. `shares` shares the line among the items by their list's weight.",
       "anyOf": [
         {
           "enum": [
             "own",
-            "equal"
+            "equal",
+            "shares"
           ]
         },
         {
@@ -628,6 +639,83 @@
           }
         }
       ]
+    },
+    "list-fields": {
+      "description": "The fields of a list's items (DEC-010 points 1 to 4): `component`, a field of the component's own, holding no list and placed by no part, whose value names the component of each item that names none of its own; and `arrangement`, the item's arrangement fields by name, each an option of words that the list's component sets, which a component that draws an item declares under no key of its own. The list takes one weight at most.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "component": {
+          "description": "The field whose value names the component that draws each item of the list naming none of its own.",
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        "arrangement": {
+          "description": "The item's arrangement fields, by name.",
+          "type": "object",
+          "propertyNames": {
+            "allOf": [
+              {
+                "$ref": "defs.schema.json#/$defs/name"
+              },
+              {
+                "not": {
+                  "enum": [
+                    "id",
+                    "use",
+                    "concept",
+                    "state",
+                    "override",
+                    "pkit"
+                  ]
+                }
+              }
+            ]
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/arrangement-field"
+          }
+        }
+      }
+    },
+    "arrangement-field": {
+      "description": "An arrangement field: the words it takes, the first the default; and, for the list's weight, the share of its line that each word gives an item.",
+      "type": "object",
+      "required": [
+        "words"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "words": {
+          "description": "The words it takes, the first the default.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "allOf": [
+              {
+                "$ref": "defs.schema.json#/$defs/name"
+              },
+              {
+                "not": {
+                  "const": "by"
+                }
+              }
+            ]
+          }
+        },
+        "shares": {
+          "description": "The weight's share for each of its words, a number above zero; it names every word and no other.",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "$ref": "defs.schema.json#/$defs/name"
+          },
+          "additionalProperties": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      }
     },
     "state": {
       "description": "A state: the colour family it paints with, or `{}` to keep the instance's.",
@@ -1079,7 +1167,7 @@
           "$ref": "defs.schema.json#/$defs/name"
         },
         "draw": {
-          "description": "The component that draws an item that names none of its own.",
+          "description": "The component that draws an item that names none of its own, where the list declares no component field or the field is not filled.",
           "$ref": "defs.schema.json#/$defs/use"
         },
         "colour": {
