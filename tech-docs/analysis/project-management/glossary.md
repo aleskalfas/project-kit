@@ -9,6 +9,7 @@ builds-on:
       - {id: TERM-answer, name: answer}
       - {id: TERM-answer-file, name: answer file}
       - {id: TERM-artefact, name: artefact}
+      - {id: TERM-artefact-type, name: artefact type}
       - {id: TERM-backbone, name: backbone}
       - {id: TERM-base, name: base}
       - {id: TERM-capability, name: capability}
@@ -234,7 +235,7 @@ TERM-fixer:
   name: fixer
   noun-forms: [fixers]
   status: active
-  definition: "agent declared for one type of artefact, which a command starts, where the project granted it, to propose answers for out-of-date artefacts of that type"
+  definition: "agent declared for one artefact type, which a command starts, where the project granted it, to propose answers for out-of-date artefacts of that type"
   pkit:
     friction:
       anchors:
@@ -245,6 +246,10 @@ TERM-fixer:
         record:
           - project-management:DEC-056#1
           - project-management:DEC-056#2
+          - COR-056#1
+          - COR-056#2
+          - COR-056#3
+          - COR-056#5
           - project-management:DEC-056#3
           - COR-050#1
           - COR-050#3
@@ -669,6 +674,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [answer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-answer--answer)
   - **Term:** [answer file](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-answer-file--answer-file)
   - **Term:** [artefact](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-artefact--artefact)
+  - **Term:** [artefact type](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-artefact-type--artefact-type)
   - **Term:** [backbone](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-backbone--backbone)
   - **Term:** [base](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-base--base)
   - **Term:** [capability](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-capability--capability)
