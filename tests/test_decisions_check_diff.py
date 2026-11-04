@@ -606,6 +606,34 @@ def test_a_record_not_accepted_at_the_branch_point_is_not_listed(repo: GitRepo) 
     assert "accepted record(s) the change alters" not in _run().output
 
 
+def test_a_record_proposed_with_its_edits_to_an_accepted_record_passes_and_once_accepted(
+    repo: GitRepo,
+) -> None:
+    """A change that proposes a record may edit the accepted record it refines, and the
+    edits are accepted with it, in the same change (the decisions README, "The acceptance
+    gate"). The check fails the change neither while the record is proposed nor once it
+    is accepted there, and lists the edits for whoever accepts them both times."""
+    _branch(repo, {RECORD: _record(_points("1", "2"))})
+    added = f"{PROJECT}/PRJ-002-b.md"
+    refined = _point("1") + _point("2", text="Narrowed by PRJ-002, text of") + _point("3")
+    proposed = _record(_points("1"), record_id="PRJ-002").replace(
+        "status: accepted", "status: proposed"
+    )
+    edits = (_Point("2", "altered", "Point 2"), _Point("3", "added", "Point 3"))
+
+    def passes_listing_the_edits() -> None:
+        result = _run()
+        assert result.exit_code == 0, result.output
+        assert "Compared 2 decision record(s)" in result.output
+        assert "0 error(s) and 0 warning(s)" in result.output
+        assert _changed(repo) == [_Change(RECORD, "PRJ-001", edits)]
+
+    repo.commit("propose PRJ-002", {added: proposed, RECORD: _record(refined)})
+    passes_listing_the_edits()
+    repo.commit("accept PRJ-002", {added: _record(_points("1"), record_id="PRJ-002")})
+    passes_listing_the_edits()
+
+
 def test_a_record_in_list_form_is_listed_whole(repo: GitRepo) -> None:
     _branch(repo, {RECORD: _record(_LIST)})
     repo.write({RECORD: _record(_LIST.replace("Two.", "Two, widened."))})

@@ -1317,6 +1317,31 @@ def test_rot_reads_only_accepted_records_and_proposed_grounds(kit_target: Path) 
     assert _resting(kit_target) == []
 
 
+def test_rot_lists_an_edit_citing_a_proposal_until_both_are_accepted_together(
+    kit_target: Path,
+) -> None:
+    """A change that proposes a record may edit the accepted record it refines to cite it,
+    and the edit is accepted with the record, in the same change (the decisions README,
+    "The acceptance gate"). The report lists the edited record while the proposal is
+    discussed, and nothing once the record is accepted there."""
+    project = kit_target / ".pkit" / "decisions" / "project"
+    _record(project / "PRJ-001-base.md", "PRJ-001", "accepted", "### 1. Scope\n\nAll of it.\n")
+    assert _resting(kit_target) == []
+
+    _record(project / "PRJ-002-narrow.md", "PRJ-002", "proposed", "### 1. Narrower\n\nPart.\n")
+    refined = "### 1. Scope\n\nAll of it (refinement per PRJ-002).\n"
+    _record(project / "PRJ-001-base.md", "PRJ-001", "accepted", refined)
+    issues = _resting(kit_target)
+    assert [i.location for i in issues] == [".pkit/decisions/project/PRJ-001-base.md"]
+    assert "'PRJ-002'" in issues[0].diagnosis
+
+    _record(project / "PRJ-002-narrow.md", "PRJ-002", "accepted", "### 1. Narrower\n\nPart.\n")
+    assert _resting(kit_target) == []
+    result = CliRunner().invoke(main, ["refs", "rot"])
+    assert result.exit_code == 0, result.output
+    assert "no rotten references found." in result.output
+
+
 def test_rot_attributes_a_citation_to_the_capability_it_names(kit_target: Path) -> None:
     """A qualified citation, or a bare id after another capability's name, is not the
     citing record's own capability's decision."""
