@@ -1,0 +1,9 @@
+component: project-management
+kind: patch
+body: >
+  Batch planning lets a record that serves one Task ride that Task (#2639).
+  A choice only one Task makes is no shared choice, so it calls for no
+  foundation: the Task drafts the record in its own change, with its edits to
+  the accepted records it changes, and the person's acceptance of them is one
+  of the Task's acceptance criteria. A foundation's records still come first,
+  in a Task of their own (DEC-060 point 2).
