@@ -23,6 +23,14 @@ architecture-docs:
 adr-records:
   - tech-docs/architecture/decisions/
 
+# The conventions corpus (per software-engineering DEC-001 point 2 and
+# ADR-013). The software-engineer writes code to it, and the code-review
+# panel's reviewers judge changes by its rules (software-engineering DEC-002
+# point 4), so it names one document of coding conventions and nothing else:
+# a process instruction here would become a rule a reviewer blocks on.
+project-conventions:
+  - tech-docs/coding-conventions.md
+
 # Process-authoring targets (per ADR-051) — the `process-author` agent's write
 # authority. Empty is the correct value *here*: project-kit ships the process
 # substrate and its definitions rather than authoring definitions as an adopter,

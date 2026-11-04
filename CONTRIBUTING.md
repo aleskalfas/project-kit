@@ -68,7 +68,18 @@ Each part names its own failures in its job's summary, and a slice names each fa
 
 The short check runs every line of the aggregator but the test suite, and of the suite only the tests marked `answers` ([`tests/README.md`](tests/README.md), "Running the suite"). The base's copy of the decider, `scripts/short_check.py`, decides, so a pull request that changes it is decided by the copy on `main`. Every other run is full, and so is every doubt, such as a re-run or a pull request whose base was changed. A merge-queue run and a push to `main` are always full. The deciding job's summary says which form ran and why. The pre-push hook always runs the whole aggregator. The same predicate decides whether `uv run pkit pm land-work` lands a later head, with only answers changed, under the person's earlier authorisation ([project-management:DEC-055](.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md) point 3). So such a head has usually passed only the short check, and the full run on `main` after the landing is the first to run the suite on it.
 
-**The full suite is the hook's and CI's, not a builder's.** The aggregator's test step runs the suite in parallel workers, then the tests marked `serial` on their own, and lets at most two full suites run on a machine at once — a third waits and says whose runs it waits for. While you build, run the test modules for the files you changed and the fast gates instead (`.pkit/rules/project.md`); [`tests/README.md`](tests/README.md) "Running the suite" has the details.
+**The full suite is the hook's and CI's, not a builder's.** The aggregator's test step runs the suite in parallel workers, then the tests marked `serial` on their own, and lets at most two full suites run on a machine at once — a third waits and says whose runs it waits for. While you build, run the test modules for the files you changed and the fast gates below instead (project rule 2, in `.pkit/rules/project.md`); [`tests/README.md`](tests/README.md) "Running the suite" has the details.
+
+**The fast gates.** CI runs each of them again: `pkit release check`, the changeset guard, in a step of its own, and every other one as a line of the aggregator.
+
+- `uv run pkit validate`
+- `uv run pkit friction check`
+- `uv run pkit migrations check-diff --include-working-tree`
+- `uv run pkit decisions check-diff`
+- `uv run pkit release check`
+- `uv run ruff check` and `uv run ruff format --check`, on the files you changed
+- `uv run python scripts/pyright_ratchet.py`
+- `uv run python scripts/prose_lint.py`
 
 **Writing tests.** Test-authoring guidance lives in [`tests/README.md`](tests/README.md) — in particular the shared adopter-repository fixture (`make_adopter_repo` / `adopter_repo`) to use instead of hand-rolling `git init` + `install_kit` in each test module. It hands each test a copy of a repository the session built once; a module whose tests start with the same slow setting-up hands that to it as `prepare`, and a test of the install itself asks for `fresh=True` ("Built once, copied for each test").
 
