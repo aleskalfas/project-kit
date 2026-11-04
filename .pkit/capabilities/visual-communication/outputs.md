@@ -24,6 +24,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/seam.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/svg.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/svg_declaration.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf_declaration.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/css.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/css_declaration.py
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
@@ -32,13 +34,15 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/produced-record.schema.json
         - .pkit/capabilities/visual-communication/schemas/code.schema.json
         - .pkit/capabilities/visual-communication/schemas/code-record.schema.json
-      record: ["visual-communication:DEC-002", "visual-communication:DEC-005", "visual-communication:DEC-006"]
+      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-011", "visual-communication:DEC-012"]
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
         - .pkit/capabilities/visual-communication/components.md#primitives
         - .pkit/capabilities/visual-communication/components.md#trace-ids
+        - .pkit/capabilities/visual-communication/components.md#what-a-scene-holds
         - .pkit/capabilities/visual-communication/files.md#keys-of-combinations
+        - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#shapes
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
 ---
@@ -52,6 +56,7 @@ Plugins make what the capability gives out. A renderer draws a piece's scenes as
 <!-- pkit:contents -->
 - [Plugins](#plugins)
 - [The SVG renderer](#the-svg-renderer)
+- [The PDF renderer](#the-pdf-renderer)
 - [Exports](#exports)
 - [Produced pictures](#produced-pictures)
 - [Written code](#written-code)
@@ -65,16 +70,17 @@ A *plugin* is code that meets the engine at one *seam*: what the engine hands it
 - A *producer* makes a picture while a piece is prepared. A person or an agent runs it with `pkit visual produce`. No render, check or export runs it.
 - A *code writer* writes a brand's resolved values as code in one language.
 
-Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships the `svg` renderer at version 1.0.1 and the `css` code writer at version 1.0.0. No producer ships yet.
+Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships the `svg` renderer at version 1.0.1, the `pdf` renderer at version 1.0.0 and the `css` code writer at version 1.0.0. No producer ships yet.
 
 Each plugin declares what it can take, so the capability knows it without running the plugin. A renderer declares each primitive it draws, and each property of it. A producer declares its inputs, each a role of one *value type* (a token's DTCG type, such as `color`), and the value types it uses. A code writer declares the value types its language has a form for, the forms of its spelling, and the kinds of axis it spells.
 
-Each plugin also declares what it needs beyond the project's files: the outside programs it calls (`programs`) and the services it reaches (`services`), each a list of names (DEC-005 point 9). The SVG renderer and the CSS code writer call no outside program and reach no service. A producer that names a service is refused before it runs, since a plugin that reaches a service runs only where the project's configuration turns it on, and format 1's configuration turns none on (DEC-002 point 8). So is a producer that names a program the machine lacks.
+Each plugin also declares what it needs beyond the project's files: the outside programs it calls (`programs`) and the services it reaches (`services`), each a list of names (DEC-005 point 9). The SVG and PDF renderers and the CSS code writer call no outside program and reach no service. A producer that names a service is refused before it runs, since a plugin that reaches a service runs only where the project's configuration turns it on, and format 1's configuration turns none on (DEC-002 point 8). So is a producer that names a program the machine lacks.
 
 ### Versions
 
 - **A plugin's own version,** `X.Y.Z`, is apart from the capability's. It rises when the same input could give another output. Reference outputs pinned to it in the capability's tests catch a change made without a new version (DEC-005 point 9).
-- **The seam's version** is 1. A plugin's declaration names the seam version it reads, and the capability refuses a plugin of another version.
+- **The seam's version** is 3. A plugin's declaration names the seam version it reads, and the capability refuses a plugin of another version. Version 2 hands a renderer a text's runs, each with its own paint and fonts ([What a scene holds](components.md#what-a-scene-holds)). Version 3 hands it a line's arrowheads, and a tie's connector with its points and the elements its ends meet (DEC-011). What a producer and a code writer are handed and return is as version 1 had it.
+- **What rose with ties.** The seam rose to 3, since a renderer must read a line's new properties. The SVG renderer stays at 1.0.1, and the CSS code writer at 1.0.0. A scene of seam 2 holds no arrowhead and no connector, and each draws it as before. The PDF renderer reads seam 3 from its first version, 1.0.0.
 - **The document of values** that producers and code writers read has its own version, 1 ([The hand-over](#the-hand-over)).
 - **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1.
 - **None of these versions** is the format number of the files a project keeps.
@@ -107,14 +113,14 @@ An entry matches a loss by its `plugin` and its `what` alone. The command that r
 
 ## The SVG renderer
 
-The `svg` renderer draws a scene as SVG files: one for each page, each language and each combination of modes the piece names. The previews and the exports are its files.
+The `svg` renderer draws a scene as SVG files: one for each page, each language and each combination of modes the piece names. The previews and the SVG exports are its files.
 
-- **Elements.** A group is drawn as `<g>`, a box as `<rect>`, an ellipse as `<ellipse>`, a line as `<line>`, a text as `<text>` and an image as `<image>`. Every element carries its trace id as `data-id`. A group a component drew names it as `data-component`, and its library's version, if any, as `data-version`, the page's own group included.
+- **Elements.** A group is drawn as `<g>`, a box as `<rect>`, an ellipse as `<ellipse>`, a line as `<line>`, a text as `<text>` and an image as `<image>`. A tie's connector whose route turns is drawn as `<polyline>`, through each of its points. Every element carries its trace id as `data-id`. A connector names the elements its ends meet, `data-start` and `data-end`. A group a component drew names it as `data-component`, and its library's version, if any, as `data-version`, the page's own group included.
 - **The file.** The `<svg>` element names the piece, the page's trace id, the language, the combination's key, and the renderer with its version: `data-piece`, `data-page`, `data-language`, `data-key`, `data-renderer`.
 - **Colours.** A colour stays a role in the scene. The renderer takes its value from the brand's resolved values in the combination it draws, as `#rrggbb`, with a `fill-opacity` or `stroke-opacity` where the colour is translucent.
-- **Shapes and text.** A box's stroke lies inside its frame. Each line of a text is drawn as the engine broke it, at its baseline, anchored at the start, the middle or the end of the text's width.
+- **Shapes and text.** A box's stroke lies inside its frame. An arrowhead is a `<marker>` that the page's `<defs>` holds once for each colour it is drawn in. It is a triangle five strokes long, its tip at the line's end, in the line's stroke. Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. The `<text>` takes the font and the paint of the text's first run. Each run that looks otherwise, in its family, size, weight or paint, is drawn in a `<tspan>` of its own that names all four. So a text of one run is drawn as it was before runs.
 - **Pictures.** A produced picture is embedded as PNG data: the variant that serves the combination drawn ([Variants](#variants)).
-- **Fonts.** Each font the page draws in is embedded as an `@font-face` rule, from the brand's committed font file, never from the machine's fonts, cut down to the characters drawn in it. The renderer draws in the brand's default font profile. A family's name is written as a CSS string in double quotes, in its `@font-face` rule and in each text's `font-family`. A `"` or a `\` takes a `\` before it. Each `<`, `>` and `&`, each control character and each character XML 1.0 does not allow is written as the escape of its code point: a `\`, the code point in hexadecimal, and a space. So no name a brand gives can end the drawing's `<style>` element, or leave the file malformed XML.
+- **Fonts.** Each font the page draws in, for each family and weight a run is drawn in, is embedded as an `@font-face` rule, from the brand's committed font file, never from the machine's fonts, cut down to the characters drawn in it. The renderer draws in the brand's default font profile. A family's name is written as a CSS string in double quotes, in its `@font-face` rule and in each text's `font-family`. A `"` or a `\` takes a `\` before it. Each `<`, `>` and `&`, each control character and each character XML 1.0 does not allow is written as the escape of its code point: a `\`, the code point in hexadecimal, and a space. So no name a brand gives can end the drawing's `<style>` element, or leave the file malformed XML.
 - **The same bytes.** Lengths are written to 1/100 px, and attributes in one order, so the same scene and values give the same file.
 
 ### Previews
@@ -123,19 +129,47 @@ A *preview* is a render for a person to look at, which `pkit visual render` draw
 
 ### What the SVG renderer loses
 
-Before it draws, the capability compares each scene with the renderer's declaration. An element of a type the declaration does not name is `refused`, and left out of the file. A property the declaration does not name for its type is `left-out`. The declaration names every primitive and property a scene of format 1 holds, so this finds no loss in format 1. While it draws, the renderer reports two losses of its own, both `left-out`:
+Before it draws, the capability compares each scene with the renderer's declaration. An element of a type the declaration does not name is `refused`, and left out of the file. A property the declaration does not name for its type is `left-out`. The declaration names every primitive and property a scene of format 1 holds, so this finds no loss in format 1. While it draws, the renderer reports three losses of its own. Two are `left-out`:
 
-- **a fill or a stroke** whose role the brand gives no colour in the combination drawn. A fill is then `none`.
+- **a fill or a stroke** whose role has no colour under the brand in the combination drawn, a run's fill included. A fill is then `none`. A library's role the brand gives no value is drawn at its default ([`roles.yaml`](files.md#rolesyaml)), so it is lost only where its chain of defaults reaches no colour.
 - **an image** whose produced picture has no variant for the combination drawn.
+
+The third is `refused`: a line that holds neither its ends nor its points, which is left out of the file. Every line of a scene the engine computes holds its ends ([What a scene holds](components.md#what-a-scene-holds)).
+
+## The PDF renderer
+
+The `pdf` renderer draws a scene as one PDF file for each language and each combination of modes the piece names. The file holds the scene's pages in order, one PDF page for each. It draws the exports a piece declares as `pdf` ([Exports](#exports)); previews stay SVG.
+
+- **Pages.** Each page is as large as its frame. Each px of the scene is 0.75 pt of the page, CSS's 96 px to the inch. Format 1's top components declare no physical size, so the renderer's declaration states this mapping as its `unit` (DEC-001 point 2).
+- **Shapes and lines.** A box's stroke lies inside its frame, as in the SVG renderer. Rounded corners and ellipses are cubic Bézier curves. A line, or a tie's connector through each of its points, is stroked with SVG's miter limit. An arrowhead is the SVG renderer's triangle: five strokes long, its tip at the line's end, in the line's stroke.
+- **Colours.** A colour stays a role in the scene. The renderer takes its value from the brand's resolved values in the combination it draws, as DeviceRGB. A translucent colour takes an opacity of its own.
+- **Text.** Each line of a text is drawn as the engine broke it, at its own baseline, anchored at the start, the middle or the end of the text's width. Each run is drawn in its own font, size and paint. The renderer shapes each span again with HarfBuzz from the committed font file, as the engine shaped it (DEC-005 point 4). It places each glyph at the advance shaped, so kerning is kept.
+- **Fonts.** Each family a run draws in is embedded once in the file, from the brand's committed font file, never from the machine's fonts. It is cut down to the glyphs the file draws in it. Each keeps a map from each glyph back to its characters, so the text can be searched and copied. A CFF font is embedded as CFF, and a TrueType font as TrueType. A font of other outlines is not embedded ([What the PDF renderer loses](#what-the-pdf-renderer-loses)).
+- **The file** names its language, `/Lang`, and the renderer with its version, `/Producer`.
+- **The same bytes.** The file holds no date, and its streams are not compressed. So the same scene and values give the same file on every machine.
+
+### What the PDF renderer does not carry yet
+
+The PDF is not tagged. It carries no alternative text, no reading order and no structure such as headings (DEC-005 point 5). Its declaration says so under `not-carried`, and a later version adds them ([project-kit#2570](https://github.com/aleskalfas/project-kit/issues/2570)).
+
+### What the PDF renderer loses
+
+Before it draws, the capability compares each scene with the renderer's declaration, as for the SVG renderer ([What the SVG renderer loses](#what-the-svg-renderer-loses)). The declaration names every primitive of format 1's scene but the image. So an image is `refused`, and left out of the file. No producer ships yet, so no piece can show a picture yet ([Produced pictures](#produced-pictures)); a later version draws it. The capability reports the loss before the renderer runs, unless the piece accepts it (DEC-005 point 9; *Losses* in *What the check reports*).
+
+While it draws, the renderer reports three losses of its own:
+
+- **a fill or a stroke** whose role has no colour under the brand in the combination drawn, `left-out`. It is not drawn, but a run's text is drawn unpainted, so it can still be searched.
+- **a font file** whose outlines are neither CFF nor TrueType, such as CFF2, `left-out`. Its family is not embedded, and the text drawn in it is left out, keeping its place in the line. The renderer never draws that text in another font (DEC-005 point 10).
+- **a line** that holds neither its ends nor its points, `refused`, and left out of the file.
 
 ## Exports
 
 An *export* is a set of files a piece is handed out as. Each export run is one *version*, numbered within its piece (DEC-006 point 7).
 
-- **Formats.** A piece names its formats under `exports` in its `piece.yaml`. Format 1 knows one, `svg`, which the SVG renderer draws.
-- **What a run makes:** one file for each format, each page, each language and each combination of modes the piece names, drawn from the scenes under the lock `piece.yaml` holds.
+- **Formats.** A piece names its formats under `exports` in its `piece.yaml`. Format 1 knows two: `svg`, which the SVG renderer draws, and `pdf`, which the PDF renderer draws.
+- **What a run makes:** for `svg`, one file for each page, each language and each combination of modes the piece names; for `pdf`, one file for each language and combination, which holds every page in order. Each is drawn from the scenes under the lock `piece.yaml` holds.
 - **The number.** A run takes the number one higher than the highest version the piece's `exports.yaml` records or any file of its exports folder carries, or 1 where there is none. Every file of the run carries it, so version 3 in English matches version 3 in Czech. A file the record does not name, such as one a failed run could not remove, is never overwritten, and refuses no later run.
-- **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. A piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.<format>`, such as `deck.v1.en.default.2.svg`.
+- **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. An SVG file of a piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.svg`, such as `deck.v1.en.default.2.svg`. A PDF holds every page, so its name carries none: `deck.v1.en.default.pdf`.
 - **Where:** `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the clone and never committed. No export overwrites another. What is committed is the record of exports, in the piece's folder.
 
 ### The record of exports
@@ -322,13 +356,13 @@ out: web/brand.css
 | `writer` | the code writer: `css`, the only one |
 | `form` | the form of the writer's spelling: `1` |
 | `brand` | the brand, by its library's name |
-| `lock` | a version of the brand and of every library it builds on, each one the project holds, whose majors fit what each builds on |
+| `lock` | a version of the brand and of every library it builds on, and of any other library whose roles the code holds, each one the project holds and the capability reads, whose majors fit what each builds on |
 | `out` | where the code goes: a file of the project's tree |
 | `prefix` | optional: a name that opens every name the code writes |
 | `accept-losses` | optional: the losses a person accepted ([Accepting a loss](#accepting-a-loss)) |
 
 - **The lock is the declaration's own.** A person moves it on purpose, and no command moves it, so the code changes only when the declaration changes (DEC-005 point 7).
-- **What the code holds:** every token the brand exports, in every combination of the brand's axes, at the versions the lock names. It follows no piece's modes.
+- **What the code holds:** the document of values under the lock: every token the brand exports, and every other role of each library of components the lock names, at the brand's value or at its default (DEC-008 point 5), in every combination of the brand's axes, at the versions the lock names. A library's role that has no value under the brand is left out. Code that reads a library's role names that library's major in its lock, since the library promises its names by major. A brand built on a base is read over the base the lock names. The code follows no piece's modes.
 - **Where `out` may not lie:** outside the repository, under `.pkit/`, under a hidden folder, or in the location's library folder, its `code/` folder or its `pieces/` folder. Nor may it be reached through a link, or be a folder.
 - **Committing the code** is the project's choice, as for any file its build writes. Its record goes with it (DEC-006 point 4).
 
@@ -340,7 +374,7 @@ out: web/brand.css
 
 The CSS writer writes one style sheet. Form 1 spells it as follows.
 
-- **Names.** Each token path gives one custom property: `--`, then the `prefix` and `--` where the declaration names one, then the path's segments joined by `--`. A segment keeps its own single hyphens, so no two paths give one name: `space.1` gives `--space--1`, `text-primary` gives `--text-primary`, and `space.1` with the prefix `brand` gives `--brand--space--1`.
+- **Names.** Each token path gives one custom property: `--`, then the `prefix` and `--` where the declaration names one, then the path's segments joined by `--`. A segment keeps its own single hyphens, so no two paths give one name: `space.1` gives `--space--1`, `text-primary` gives `--text-primary`, a library's role `test-parts.note` gives `--test-parts--note`, and `space.1` with the prefix `brand` gives `--brand--space--1`.
 - **Values.** A `color` is `#rrggbb`, each channel rounded to 8 bits, half up, or `#rrggbbaa` where its alpha is not 1. A `dimension` is its number and `px`. A `fontFamily` is its names, each in double quotes, joined by `, `. A `fontWeight` or a `number` is the number, in the capability's canonical text, such as `1.4` or `16`.
 - **Modes.** Each mode is switched by an attribute, `data-<axis>="<mode>"`, on one element: the page's root by default. An area that changes modes sets every axis's attribute on its own element; the root may leave out an axis at its default. Form 1 spells value axes alone, and refuses a brand with an axis of another kind.
 

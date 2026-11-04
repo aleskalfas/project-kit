@@ -21,7 +21,18 @@ in memory and read through an in-memory `Env` (`tests/visual_engine.py`):
 - what cannot be drawn: a top that names no component, which lies in the piece; a
   component whose file cannot be read, a finding in that file alone;
 - a list a `use` part passes on under another name, two levels deep: each item's
-  sources name the keys the content file writes.
+  sources name the keys the content file writes;
+- a top whose layouts are its pages' forms, as the foundations' deck: each page drawn by
+  its layout's own drawing, or by the component it names, as a page of its own; what
+  its shape may not be; format 1's tops read as before;
+- a list's component field and arrangement fields (DEC-010 points 1 to 4): what draws
+  each item, and the keys and sources an item takes from the field; a row shared by its
+  items' weights, and equal shares as equal sizes; a key both an item's component and
+  its list declare, read by neither; what a pattern may not declare for its lists;
+- fields of runs (DEC-012 points 1 to 3 and 8): a terminal's line in three styles, a
+  sentence with one phrase set apart, a run's concept under a state, a field whose only
+  run holds no text under a condition, a slot of a page's layout; each mark, switch and
+  reading of a field of runs the component may not hold.
 """
 
 from __future__ import annotations
@@ -29,6 +40,9 @@ from __future__ import annotations
 from typing import Any
 
 from tests.visual_engine import (
+    RUN_FONTS,
+    RUN_ROLES,
+    SEMIBOLD,
     VERSIONS,
     FakeEnv,
     block,
@@ -764,7 +778,7 @@ def test_a_component_whose_file_cannot_be_read_is_a_finding_in_that_file_alone()
     def drawn(use: str, **components: dict[str, Any]) -> Any:
         return scene.compute_scene(
             piece="test-piece", top=use, content={}, language="en", lock=dict(VERSIONS),
-            size_key="default", seam_version=1, env=_Unreadable(components=lab(**components)),
+            size_key="default", seam_version=3, env=_Unreadable(components=lab(**components)),
         )  # fmt: skip
 
     placed = drawn("lab/top", top=top({"p": {"use": "lab/broken"}}))
@@ -914,3 +928,809 @@ def test_an_item_of_a_list_passed_on_under_another_name_is_named_by_the_content_
         "rows[a]/p/items#2": ("accent", "content:steps[a].subs#2.state"),
         "rows#2/p/items#1": ("line", "content:steps#2.subs#1.override.b"),
     }
+
+
+# --- a top whose layouts are its pages' forms (#2558) ------------------------------------------
+
+#: A deck of the foundations: a cover, a slide with a picture, and a page the figure draws.
+DECK = {
+    "slides": [
+        {
+            "id": "cover",
+            "layout": "cover",
+            "title": "Building with AI",
+            "subtitle": "The way the project decided",
+            "author": "A. K.",
+            "link": "example.org",
+        },
+        {
+            "id": "rules",
+            "layout": "slide",
+            "title": "Where permissions come from",
+            "lead": "From the rules the project keeps.",
+            "visual": {"use": "tests/steps", "steps": [{"id": "a", "head": "Ask"}]},
+            "limit": "A deny stops only what it can tell.",
+            "footer": "In project-kit.",
+        },
+        {"layout": "slide", "title": "How it fits"},
+    ]
+}
+
+
+def test_each_page_is_drawn_by_its_layouts_own_drawing_as_a_page_of_its_own() -> None:
+    result = draw(DECK, use="foundations/deck")
+
+    assert result.findings == []
+    assert result.scene.pages == ["deck/slides[cover]", "deck/slides[rules]", "deck/slides#3"]
+    # Each page lies at the top's origin, as large as the top: a slide's width, 16 by 9.
+    for page in ("deck", *result.scene.pages):
+        assert frame(result, page) == (0.0, 0.0, 1280.0, 720.0), page
+    # Each part that places a slot is named after it, so a slot keeps its trace id.
+    for slot in ("title", "subtitle", "author", "link"):
+        assert result.scene.find(f"deck/slides[cover]/{slot}") is not None, slot
+    for slot in ("title", "lead", "visual", "limit", "footer"):
+        assert result.scene.find(f"deck/slides[rules]/{slot}") is not None, slot
+    assert result.scene.find("deck/slides[rules]/visual/steps[a]") is not None
+    # The slide leaves out what its page does not fill.
+    assert result.scene.find("deck/slides#3/lead") is None
+
+
+def test_a_pages_trace_id_and_its_contents_source_name_its_place_in_the_list() -> None:
+    result = draw(DECK, use="foundations/deck")
+
+    title = result.scene.find("deck/slides[rules]/title")
+    untitled = result.scene.find("deck/slides#3/title")
+    assert title is not None and untitled is not None
+    assert title.sources["text"] == "content:slides[rules].title"
+    assert untitled.sources["text"] == "content:slides#3.title"
+    assert title.sources["x"] == "default:foundations/deck"
+
+
+def test_a_page_that_names_its_component_is_drawn_by_it_as_a_page() -> None:
+    content = {
+        "slides": [
+            DECK["slides"][0],
+            {"id": "flow", "use": "foundations/figure", "body": {"use": "tests/steps"}},
+        ]
+    }
+
+    result = draw(content, use="foundations/deck")
+
+    assert result.findings == []
+    assert result.scene.pages == ["deck/slides[cover]", "deck/slides[flow]"]
+    flow = result.scene.find("deck/slides[flow]")
+    assert flow is not None and flow.properties["component"] == "foundations/figure"
+    assert frame(result, "deck/slides[flow]") == (0.0, 0.0, 1280.0, 720.0)
+
+
+def test_a_page_that_names_no_layout_of_its_top_is_left_out_for_the_content_check() -> None:
+    content = {"slides": [{"id": "a", "title": "A"}, {"id": "b", "layout": "cvoer"}]}
+
+    result = draw(content, use="foundations/deck")
+
+    assert result.scene.pages == []
+    assert result.findings == []
+
+
+def forms_top(**keys: Any) -> dict[str, Any]:
+    """A top whose layouts are its pages' forms: `pages` holds its pages, and its layout
+    `one` draws a page's `head` in the colour its option `tone` names. `keys` add to it
+    or replace its defaults."""
+    return {
+        "status": "experimental",
+        "about": "A top whose layouts are its pages' forms.",
+        "fields": {
+            "type": "object",
+            "properties": keys.pop(
+                "fields",
+                {"pages": {"type": "array", "items": {"type": "object"}, "x-pkit-pages": True}},
+            ),
+        },
+        "options": {"tone": ["plain", "loud"]},
+        "layouts": keys.pop(
+            "layouts",
+            {
+                "one": {
+                    "slots": {"head": {"type": "string"}},
+                    "required": ["head"],
+                    "parts": {
+                        "head": {
+                            "text": {
+                                "content": "head",
+                                "style": "type.body",
+                                "fill": {"by": "tone", "plain": "text-primary", "loud": "accent"},
+                            },
+                            "width": "=:width",
+                        }
+                    },
+                }
+            },
+        ),
+        "preferred": {"width": "=@size.figure", "height": "=@space.4"},
+        **keys,
+    }
+
+
+def test_a_pages_drawing_takes_the_tops_options_and_its_other_fields() -> None:
+    fields = {
+        "pages": {"type": "array", "items": {"type": "object"}, "x-pkit-pages": True},
+        "note": {"type": "string"},
+    }
+    layouts = forms_top()["layouts"]
+    layouts["one"]["parts"]["note"] = label("note", y="=head.bottom", width="=:width")
+    component = forms_top(fields=fields, layouts=layouts)
+    content = {
+        "tone": "loud",
+        "note": "Said once.",
+        "pages": [{"id": "a", "layout": "one", "head": "A"}],
+    }
+
+    result = draw(content, components=lab(top=component))
+
+    assert result.findings == []
+    head = result.scene.find("top/pages[a]/head")
+    note = result.scene.find("top/pages[a]/note")
+    assert head is not None and note is not None
+    run = head.properties["paragraphs"][0][0]
+    assert (run["fill"], run["sources"]["fill"]) == ("accent", "option:tone")
+    assert result.scene.find("top/pages[a]").sources["options.tone"] == "content:tone"
+    assert (note.properties["text"], note.sources["text"]) == ("Said once.", "content:note")
+
+
+def issues(data: dict[str, Any]) -> list[tuple[str, str]]:
+    """What the engine finds in a component's shape, by code and key path."""
+    component = layout.Component("lab/x", data, layout.Context(FakeEnv(), "en"))
+    return [(code, where) for code, where, _ in component.issues]
+
+
+SHAPE = "component-shape"
+PAGES_FIELD = {"type": "array", "items": {"type": "object"}, "x-pkit-pages": True}
+
+
+def test_a_top_whose_layouts_are_its_pages_forms_reads_with_no_issue() -> None:
+    assert issues(forms_top()) == []
+
+
+def with_layout(**changes: Any) -> dict[str, dict[str, Any]]:
+    """The layouts of `forms_top`, the layout `one` changed by `changes`, a key whose
+    value is `...` removed."""
+    one = {**forms_top()["layouts"]["one"], **changes}
+    return {"one": {key: value for key, value in one.items() if value is not ...}}
+
+
+def test_a_top_that_marks_no_field_as_holding_its_pages_or_two_is_refused() -> None:
+    none = forms_top(fields={"pages": {"type": "array", "items": {"type": "object"}}})
+    two = forms_top(fields={"pages": PAGES_FIELD, "more": PAGES_FIELD})
+    text = forms_top(fields={"pages": {"type": "string", "x-pkit-pages": True}})
+
+    assert issues(none) == [(SHAPE, "fields")]
+    assert issues(two) == [(SHAPE, "fields")]
+    assert issues(text) == [(SHAPE, "fields.properties.pages")]
+    assert (
+        "it marks none"
+        in layout.Component("lab/x", none, layout.Context(FakeEnv(), "en")).issues[0][2]
+    )
+
+
+def test_a_slot_named_layout_or_a_reserved_key_or_holding_pages_is_refused() -> None:
+    def slot(name: str, schema: dict[str, Any]) -> dict[str, Any]:
+        return forms_top(layouts=with_layout(slots={"head": {"type": "string"}, name: schema}))
+
+    assert issues(slot("layout", {"type": "string"})) == [(SHAPE, "layouts.one.slots.layout")]
+    assert issues(slot("state", {"type": "string"})) == [(SHAPE, "layouts.one.slots.state")]
+    assert issues(slot("inner", PAGES_FIELD)) == [(SHAPE, "layouts.one.slots.inner")]
+
+
+def test_each_layout_has_its_own_drawing_and_the_top_draws_nothing_around_its_pages() -> None:
+    layouts = {**forms_top()["layouts"], "two": {"slots": {"head": {"type": "string"}}}}
+
+    assert issues(forms_top(layouts=layouts)) == [(SHAPE, "layouts.two")]
+    assert issues(forms_top(parts={"b": box()})) == [(SHAPE, "parts")]
+    assert issues(forms_top(layouts=with_layout(required=["body"]))) == [
+        (SHAPE, "layouts.one.required")
+    ]
+
+
+def test_a_slot_that_is_also_a_field_of_the_top_is_refused() -> None:
+    fields = {"pages": PAGES_FIELD, "head": {"type": "string"}}
+
+    assert issues(forms_top(fields=fields)) == [(SHAPE, "layouts.one.slots.head")]
+
+
+def test_a_layouts_drawing_is_read_as_the_tops_and_its_issues_lie_under_the_layout() -> None:
+    layouts = with_layout(parts={"head": label("headline", width="=:width")})
+
+    assert issues(forms_top(layouts=layouts)) == [(SHAPE, "layouts.one.parts.head.text.content")]
+
+
+def test_a_component_that_marks_a_field_of_pages_and_declares_no_layouts_is_refused() -> None:
+    data = block({"b": box()}, fields={"pages": PAGES_FIELD})
+
+    assert issues(data) == [(SHAPE, "fields")]
+
+
+def test_format_1s_tops_read_as_before_and_one_may_declare_a_field_named_layout() -> None:
+    """A top with one layout has no layout a page names, so `layout` stays a field it may
+    declare."""
+    figure = top({"l": label("layout", width="=:width")}, fields={"layout": {"type": "string"}})
+
+    result = draw({"layout": "Wide"}, components=lab(top=figure))
+
+    assert result.findings == []
+    assert result.scene.pages == ["top"]
+    shown = result.scene.find("top/l")
+    assert shown is not None and shown.properties["text"] == "Wide"
+
+
+# --- a list's component field and arrangement fields (#2560) ---------------------------------
+
+#: A weight of three words, whose shares are one, two and four.
+SIZE = {"words": ["one", "two", "four"], "shares": {"one": 1, "two": 2, "four": 4}}
+
+
+def toned() -> dict[str, Any]:
+    """A block whose box paints in the colour its option `tone` names, as large as `chip`."""
+    fill = {"by": "tone", "plain": "surface", "loud": "accent"}
+    return block(
+        {"b": {"box": {"fill": fill}, "width": "=:width", "height": "=:height"}},
+        options={"tone": ["plain", "loud"]},
+        preferred={"width": "=@space.3 * :index", "height": "=@space.3"},
+    )
+
+
+def chosen(**lists: Any) -> dict[str, dict[str, Any]]:
+    """The top of `listed`, whose field `kind` is the component field of its list `items`
+    and whose `lists` adds `lists`; its items drawn by `lab/chip` by default."""
+    components = listed("row", {"gap": "=@space.2"})
+    parts, fields = components["lab/top"]["parts"], {"items": LISTED, "kind": {"type": "object"}}
+    declared = {"items": {"component": "kind"}, **lists}
+    components["lab/top"] = top(parts, fields=fields, lists=declared)
+    return {**components, **lab(toned=toned())}
+
+
+def test_a_lists_component_field_draws_each_item_that_names_none_of_its_own() -> None:
+    content = {
+        "kind": {"use": "lab/toned", "tone": "loud"},
+        "items": [{"id": "a"}, {"id": "b", "tone": "plain"}, {"id": "c", "use": "lab/chip"}],
+    }
+
+    result = draw(content, components=chosen())
+
+    assert result.findings == []
+    drawn = {key: result.scene.find(f"top/items[{key}]") for key in ("a", "b", "c")}
+    assert {key: e.properties["component"] for key, e in drawn.items() if e is not None} == {
+        "a": "lab/toned",
+        "b": "lab/toned",
+        "c": "lab/chip",
+    }
+    # The item's choice first: `b` gives its own `tone`, and `c` takes nothing from the field.
+    assert drawn["a"] is not None and drawn["b"] is not None and drawn["c"] is not None
+    assert drawn["a"].sources["options.tone"] == "content:kind.tone"
+    assert drawn["b"].sources["options.tone"] == "content:items[b].tone"
+    assert "options.tone" not in drawn["c"].sources
+    fills = [result.scene.find(f"top/items[{key}]/b") for key in ("a", "b")]
+    assert [e.properties["fill"] for e in fills if e is not None] == ["accent", "surface"]
+    # The field places nothing.
+    assert result.scene.find("top/kind") is None
+
+
+def test_a_list_whose_component_field_is_empty_draws_its_items_by_its_default() -> None:
+    result = draw(ITEMS, components=chosen())
+
+    assert result.findings == []
+    shown = result.scene.find("top/items[a]")
+    assert shown is not None and shown.properties["component"] == "lab/chip"
+
+
+def test_a_component_field_naming_no_component_draws_no_item_that_names_none() -> None:
+    content = {
+        "kind": {"use": "lab/nothing"},
+        "items": [{"id": "a"}, {"id": "b", "use": "lab/chip"}],
+    }
+
+    result = draw(content, components=chosen())
+
+    assert finding(result, "unknown-component").where == "top/items"
+    assert result.scene.find("top/items[a]") is None
+    assert result.scene.find("top/items[b]") is not None
+
+
+def weighted(sizes: Any = "shares", **geometry: Any) -> dict[str, dict[str, Any]]:
+    """`listed`'s row, its gap @space.2, which shares its length by `sizes`; its list's
+    weight `size` is `SIZE`."""
+    components = listed("row", {"sizes": sizes, "gap": "=@space.2"}, **geometry)
+    components["lab/top"]["lists"] = {"items": {"arrangement": {"size": SIZE}}}
+    return components
+
+
+def test_a_row_shares_its_width_by_its_items_weights_less_the_gaps() -> None:
+    content = {"items": [{"id": "a"}, {"id": "b", "size": "two"}, {"id": "c", "size": "four"}]}
+
+    result = draw(content, components=weighted(width="=@space.4 * 4"))
+
+    # 128 px less two gaps of 8 px, shared one to two to four.
+    assert result.findings == []
+    assert item_frames(result) == [
+        (0.0, 0.0, 16.0, 16.0),
+        (24.0, 0.0, 32.0, 16.0),
+        (64.0, 0.0, 64.0, 16.0),
+    ]
+
+
+def test_items_of_equal_shares_are_drawn_as_equal_sizes_draws_them() -> None:
+    content = {"items": [{"id": key, "size": "two"} for key in ("a", "b", "c")]}
+    width = "=@space.4 * 4"
+
+    shared = draw(content, components=weighted(width=width))
+    equal = draw(content, components=weighted("equal", width=width))
+    unsized = draw(content, components=weighted())
+
+    assert item_frames(shared) == item_frames(equal)
+    assert [f[0] for f in item_frames(shared)] == [0.0, 45.33, 90.67]
+    assert "shares its width by its items' weights" in finding(unsized, "no-size").message
+
+
+def test_a_key_both_an_item_s_component_and_its_list_declare_is_read_by_neither() -> None:
+    """`lab/sized` declares `size` as a field it shows: on its item, `size` fills no field,
+    and the weight takes its default share."""
+    sized = block(
+        {"l": label("size", width="=:width", when="size"), "b": box(width="=:width")},
+        fields={"size": {"type": "string"}},
+        preferred={"width": "=@space.3", "height": "=@space.3"},
+    )
+    components = {**weighted(width="=@space.4 * 4"), **lab(sized=sized)}
+    content = {
+        "items": [
+            {"id": "a", "use": "lab/sized", "size": "four"},
+            {"id": "b", "size": "two"},
+            {"id": "c", "size": "four"},
+        ]
+    }
+
+    result = draw(content, components=components)
+
+    # One, two and four shares: `a` takes the weight's default.
+    assert [f[2] for f in item_frames(result)] == [16.0, 32.0, 64.0]
+    assert result.scene.find("top/items[a]/l") is None
+    assert result.scene.find("top/items[a]/b") is not None
+
+
+def a_pattern(**lists: Any) -> dict[str, Any]:
+    """A pattern of a list `items`, drawn by `lab/chip` in a row, and a field `kind`; its
+    `lists` are `lists`."""
+    parts = {"items": {"repeat": "items", "draw": "lab/chip", "row": {}}}
+    fields = {"items": LISTED, "kind": {"type": "object"}, "title": {"type": "string"}}
+    return block(parts, fields=fields, lists=lists)
+
+
+def test_a_patterns_lists_read_with_no_issue() -> None:
+    declared = {
+        "items": {
+            "component": "kind",
+            "arrangement": {"size": SIZE, "side": {"words": ["left", "right"]}},
+        }
+    }
+
+    assert issues(a_pattern(**declared)) == []
+
+
+def test_what_a_pattern_declares_for_its_lists_is_refused_where_it_does_not_hold() -> None:
+    def refused(**lists: Any) -> list[tuple[str, str]]:
+        return issues(a_pattern(**lists))
+
+    # A list no part repeats over, and a key the entry does not take.
+    assert refused(other={"component": "kind"}) == [(SHAPE, "lists.other")]
+    assert refused(items={"draw": "lab/chip"}) == [(SHAPE, "lists.items.draw")]
+    # A component field that is no field, or a list field.
+    assert refused(items={"component": "kinds"}) == [(SHAPE, "lists.items.component")]
+    assert refused(items={"component": "items"}) == [(SHAPE, "lists.items.component")]
+    # An arrangement field with no word, a word twice, a word no name, or a reserved name.
+    at = "lists.items.arrangement"
+    assert refused(items={"arrangement": {"side": {"words": []}}}) == [(SHAPE, f"{at}.side.words")]
+    twice = {"words": ["left", "left"]}
+    assert refused(items={"arrangement": {"side": twice}}) == [(SHAPE, f"{at}.side.words")]
+    assert refused(items={"arrangement": {"side": {"words": ["by"]}}}) == [
+        (SHAPE, f"{at}.side.words")
+    ]
+    assert refused(items={"arrangement": {"state": {"words": ["on"]}}}) == [(SHAPE, f"{at}.state")]
+    # A weight's shares: one for each word, above zero; and one weight for a list.
+    lacking = {"words": ["one", "two"], "shares": {"one": 1}}
+    zero = {"words": ["one", "two"], "shares": {"one": 1, "two": 0}}
+    assert refused(items={"arrangement": {"size": lacking}}) == [(SHAPE, f"{at}.size.shares")]
+    assert refused(items={"arrangement": {"size": zero}}) == [(SHAPE, f"{at}.size.shares")]
+    assert refused(items={"arrangement": {"size": SIZE, "span": SIZE}}) == [(SHAPE, f"{at}.span")]
+
+
+def test_a_component_field_that_a_part_places_or_passes_on_is_refused() -> None:
+    slotted = a_pattern(items={"component": "kind"})
+    slotted["parts"]["k"] = {"slot": "kind"}
+    passed = a_pattern(items={"component": "kind"})
+    passed["parts"]["p"] = {"use": "lab/chip", "fields": {"kind": "kind"}}
+
+    assert issues(slotted) == [(SHAPE, "lists.items.component")]
+    assert issues(passed) == [(SHAPE, "lists.items.component")]
+
+
+def test_sharing_by_weights_needs_a_weight_of_the_list() -> None:
+    data = a_pattern()
+    data["parts"]["items"]["row"] = {"sizes": "shares"}
+
+    assert issues(data) == [(SHAPE, "parts.items.row.sizes")]
+
+
+def test_a_top_whose_layouts_are_its_pages_forms_declares_no_fields_for_its_pages() -> None:
+    data = forms_top(lists={"pages": {"arrangement": {"size": SIZE}}})
+
+    assert issues(data) == [(SHAPE, "lists.pages")]
+
+
+# --- fields of runs ---------------------------------------------------------------------------
+
+RUNS = "x-pkit-runs"
+
+#: A terminal's line: the prompt, the command and the comment, each in its own colour, the
+#: command in the heading's role.
+TERMINAL = top(
+    {
+        "line": {
+            "text": {
+                "content": "line",
+                "style": {
+                    "by": "line",
+                    "command": "type.heading",
+                    "prompt": "type.body",
+                    "comment": "type.body",
+                },
+                "fill": {
+                    "by": "line",
+                    "command": "text-primary",
+                    "prompt": "accent",
+                    "comment": "text-secondary",
+                },
+            },
+            "width": "=:width",
+        }
+    },
+    fields={"line": {"type": "string", RUNS: ["command", "prompt", "comment"]}},
+)
+
+
+def runs_drawn(content: dict[str, Any], trace: str = "top/line", **environment: Any) -> Any:
+    """The scene of `content`, its findings, and the runs of the text at `trace`."""
+    environment.setdefault("components", lab(top=TERMINAL))
+    result = draw(content, roles=RUN_ROLES, fonts=RUN_FONTS, **environment)
+    element = result.scene.find(trace)
+    held = [run for paragraph in element.properties["paragraphs"] for run in paragraph]
+    return result, element, held
+
+
+def test_a_terminals_line_shows_each_run_in_the_role_and_paint_its_style_chooses() -> None:
+    content = {
+        "line": [
+            {"text": "$ ", "style": "prompt"},
+            "pkit visual render deck",
+            {"text": "  # draws every page", "style": "comment"},
+        ]
+    }
+
+    result, line, held = runs_drawn(content)
+
+    assert result.findings == []
+    assert line.properties["text"] == "$ pkit visual render deck  # draws every page"
+    assert [(run["text"], run["style"], run["fill"]) for run in held] == [
+        ("$ ", "type.body", "accent"),
+        ("pkit visual render deck", "type.heading", "text-primary"),
+        ("  # draws every page", "type.body", "text-secondary"),
+    ]
+    assert [run["font-family"] for run in held] == [
+        ["Source Sans Pro"],
+        [SEMIBOLD],
+        ["Source Sans Pro"],
+    ]
+    assert [run["sources"]["text"] for run in held] == [f"content:line#{n}" for n in (1, 2, 3)]
+    assert [run["sources"]["style"] for run in held] == [
+        "content:line#1.style",
+        "default:lab/top",
+        "content:line#3.style",
+    ]
+    assert held[0]["sources"]["fill"] == "content:line#1.style"
+    # The command's heading is the tallest role the text's runs take.
+    assert line.properties["line-height"] == 28.8
+    assert line.sources["line-height"] == "role:type.heading"
+
+
+def test_a_field_of_runs_given_as_text_is_one_run_in_its_first_style() -> None:
+    result, _, held = runs_drawn({"line": "pkit visual check"})
+
+    assert result.findings == []
+    assert [(run["text"], run["style"], run["fill"]) for run in held] == [
+        ("pkit visual check", "type.heading", "text-primary")
+    ]
+    assert held[0]["sources"] == {
+        "fill": "default:lab/top",
+        "font-family": "role:type.heading",
+        "font-size": "role:type.heading",
+        "font-weight": "role:type.heading",
+        "style": "default:lab/top",
+        "text": "content:line",
+    }
+
+
+SENTENCE = top(
+    {
+        "say": {
+            "text": {
+                "content": "say",
+                "style": {"by": "say", "plain": "type.body", "strong": "type.heading"},
+                "fill": "text-primary",
+            },
+            "width": "=:width",
+        }
+    },
+    fields={"say": {"type": "string", RUNS: ["plain", "strong"]}},
+)
+
+
+def test_a_sentence_sets_one_phrase_apart_and_its_lines_break_across_its_runs() -> None:
+    content = {"say": ["Draw ", {"text": "every page of the deck", "style": "strong"}, " once."]}
+
+    result, say, held = runs_drawn(content, "top/say", components=lab(top=SENTENCE))
+
+    assert result.findings == []
+    assert [run["style"] for run in held] == ["type.body", "type.heading", "type.body"]
+    assert {run["fill"] for run in held} == {"text-primary"}
+    assert held[1]["fonts"][0]["file"] == "SourceSansPro-Semibold.otf"
+    assert " ".join(line["text"] for line in say.properties["lines"]) == say.properties["text"]
+    spans = [span["run"] for line in say.properties["lines"] for span in line["spans"]]
+    assert spans == sorted(spans) and set(spans) == {0, 1, 2}
+
+
+def test_a_field_whose_only_run_holds_no_text_is_not_filled_under_a_condition() -> None:
+    shown = top(
+        {"say": {**SENTENCE["parts"]["say"], "when": "say"}},
+        fields=SENTENCE["fields"]["properties"],
+    )
+
+    for empty in ([], [{"text": ""}], ["", {"text": "", "style": "strong"}]):
+        result = draw({"say": empty}, components=lab(top=shown), roles=RUN_ROLES, fonts=RUN_FONTS)
+        assert result.findings == [] and result.scene.find("top/say") is None, empty
+    filled = draw({"say": ["", "x"]}, components=lab(top=shown), roles=RUN_ROLES, fonts=RUN_FONTS)
+    assert filled.scene.find("top/say") is not None
+
+
+#: A said line placed in a slot: its runs paint the strong style from the colour family, the
+#: plain one with a role; a dropped one greys it.
+SAID = block(
+    {
+        "say": {
+            "text": {
+                "content": "say",
+                "style": "type.body",
+                "fill": {"by": "say", "plain": "text-primary", "strong": ":colour.text"},
+            },
+            "width": "=:width",
+        }
+    },
+    fields={"say": {"type": "string", RUNS: ["plain", "strong"]}},
+    colour="blue",
+    states={"dropped": {"colour": "grey"}},
+)
+TINTS = {"blue": {"text": "accent"}, "red": {"text": "text-secondary"}, "grey": {"text": "line"}}
+
+
+def said(body: dict[str, Any]) -> Any:
+    components = {
+        **lab(
+            top=top(
+                {"s": {"slot": "body", "width": "=:width"}}, fields={"body": {"type": "object"}}
+            )
+        ),
+        **lab(said=SAID),
+    }
+    return runs_drawn(
+        {"body": {"use": "lab/said", **body}},
+        "top/s/say",
+        components=components,
+        families=TINTS,
+        concepts={"flow/queue": "red"},
+    )
+
+
+def test_a_run_that_names_a_concept_takes_its_family_and_a_state_replaces_it() -> None:
+    runs = [
+        "Write to ",
+        {"text": "the queue", "style": "strong", "concept": "flow/queue"},
+        {"text": " now", "style": "strong"},
+    ]
+
+    result, _, held = said({"say": runs})
+    dropped, _, greyed = said({"say": runs, "state": "dropped"})
+
+    assert result.findings == [] and dropped.findings == []
+    assert [(run["fill"], run["sources"]["fill"]) for run in held] == [
+        ("text-primary", "default:lab/said"),
+        ("text-secondary", "content:body.say#2.concept"),
+        ("accent", "default:lab/said"),
+    ]
+    assert [(run["fill"], run["sources"]["fill"]) for run in greyed] == [
+        ("text-primary", "default:lab/said"),
+        ("line", "content:body.state"),
+        ("line", "content:body.state"),
+    ]
+
+
+def test_a_run_that_names_a_concept_no_notation_holds_is_a_finding_at_the_run() -> None:
+    result, _, _ = said(
+        {"say": ["A ", {"text": "b", "concept": "flow/nothing"}, {"text": "c", "concept": "plain"}]}
+    )
+
+    unknown = [(f.code, f.where) for f in result.findings if f.code == "unknown-concept"]
+    assert unknown == [("unknown-concept", "body.say#2"), ("unknown-concept", "body.say#3")]
+    assert "the notation `flow` holds no concept `nothing`" in result.findings[0].message
+
+
+def test_a_slot_of_a_pages_layout_may_be_a_field_of_runs_its_drawing_chooses_by() -> None:
+    layouts = with_layout(
+        slots={"head": {"type": "string", RUNS: ["plain", "strong"]}},
+        parts={
+            "head": {
+                "text": {
+                    "content": "head",
+                    "style": {"by": "head", "plain": "type.body", "strong": "type.heading"},
+                },
+                "width": "=:width",
+            }
+        },
+    )
+    component = forms_top(layouts=layouts)
+    content = {
+        "pages": [{"id": "a", "layout": "one", "head": ["A ", {"text": "b", "style": "strong"}]}]
+    }
+
+    assert issues(component) == []
+    result, _, held = runs_drawn(content, "top/pages[a]/head", components=lab(top=component))
+    assert result.findings == []
+    assert [(run["style"], run["sources"]["text"]) for run in held] == [
+        ("type.body", "content:pages[a].head#1"),
+        ("type.heading", "content:pages[a].head#2"),
+    ]
+
+
+def marked(schema: dict[str, Any], **keys: Any) -> list[tuple[str, str]]:
+    """What the engine finds in a component whose field `say` takes `schema`, shown by a
+    text part that chooses its role by the field's words where they are `plain` and
+    `strong`."""
+    style = {"by": "say", "plain": "type.body", "strong": "type.heading"}
+    choose = schema.get(RUNS) == ["plain", "strong"]
+    parts = keys.pop(
+        "parts", {"t": {"text": {"content": "say", "style": style if choose else "type.body"}}}
+    )
+    fields = {"say": schema, **keys.pop("fields", {})}
+    return issues(top(parts, fields=fields, **keys))
+
+
+def test_a_field_of_runs_reads_with_no_issue() -> None:
+    assert marked({"type": "string", RUNS: ["plain", "strong"]}) == []
+    assert marked({"type": ["string"], RUNS: ["one"]}) == []
+
+
+def test_a_mark_lies_on_a_field_of_text_alone_with_its_words_each_once() -> None:
+    at = f"fields.properties.say.{RUNS}"
+
+    for schema in (
+        {"type": ["string", "number"], RUNS: ["one", "two"]},
+        {"type": "array", RUNS: ["one", "two"]},
+        {RUNS: ["one", "two"]},
+        {"type": "string", "enum": ["a"], RUNS: ["one", "two"]},
+        {"type": "string", "const": "a", RUNS: ["one", "two"]},
+        {"type": "string", RUNS: []},
+        {"type": "string", RUNS: "one"},
+        {"type": "string", RUNS: ["one", "by"]},
+        {"type": "string", RUNS: ["one", "Two words"]},
+        {"type": "string", RUNS: ["one", "one"]},
+    ):
+        assert marked(schema) == [(SHAPE, at)], schema
+
+
+def test_a_mark_below_a_field_or_on_all_of_them_or_reached_by_a_ref_is_refused() -> None:
+    below = {
+        "type": "array",
+        "items": {"type": "object", "properties": {"say": {"type": "string", RUNS: ["a"]}}},
+    }
+    component = top({}, fields={"lines": below})
+    component["fields"][RUNS] = ["a"]
+    referred = {"type": "string", RUNS: ["plain", "strong"]}
+
+    assert issues(component) == [
+        (SHAPE, f"fields.{RUNS}"),
+        (SHAPE, f"fields.properties.lines.items.properties.say.{RUNS}"),
+    ]
+    assert marked(referred, fields={"other": {"$ref": "#/properties/say"}}) == [
+        (SHAPE, "fields.properties.other.$ref")
+    ]
+
+
+def test_a_field_of_several_words_needs_a_text_part_that_chooses_by_them() -> None:
+    plain = {"t": {"text": {"content": "say", "style": "type.body"}}}
+
+    assert marked({"type": "string", RUNS: ["plain", "strong"]}, parts=plain) == [
+        (SHAPE, f"fields.properties.say.{RUNS}")
+    ]
+    # A field of one word needs none; another text part may show the field in one look.
+    assert marked({"type": "string", RUNS: ["only"]}, parts=plain) == []
+
+
+def test_a_switch_on_a_fields_run_styles_names_each_of_its_words_and_no_other() -> None:
+    def switching(style: dict[str, Any]) -> list[tuple[str, str]]:
+        parts = {"t": {"text": {"content": "say", "style": style}}}
+        return marked({"type": "string", RUNS: ["plain", "strong"]}, parts=parts)
+
+    left_out = switching({"by": "say", "plain": "type.body"})
+    foreign = switching(
+        {"by": "say", "plain": "type.body", "strong": "type.body", "loud": "type.body"}
+    )
+
+    assert left_out == [(SHAPE, "parts.t.text.style")]
+    assert foreign == [(SHAPE, "parts.t.text.style")]
+
+
+def test_only_a_text_parts_role_and_paint_choose_by_the_run_styles_of_the_field_it_shows() -> None:
+    schema = {"type": "string", RUNS: ["plain", "strong"]}
+    words = {"by": "say", "plain": "start", "strong": "end"}
+    anchor = {
+        "content": "say",
+        "style": {"by": "say", "plain": "type.body", "strong": "type.body"},
+        "text-anchor": words,
+    }
+    boxed = {**box(), "box": {"fill": {"by": "say", "plain": "surface", "strong": "accent"}}}
+    other = {
+        "text": {
+            "content": "note",
+            "style": {"by": "say", "plain": "type.body", "strong": "type.body"},
+        }
+    }
+    shown = {
+        "text": {
+            "content": "say",
+            "style": {"by": "say", "plain": "type.body", "strong": "type.body"},
+        }
+    }
+
+    assert marked(schema, parts={"t": {"text": anchor}}) == [(SHAPE, "parts.t.text.text-anchor")]
+    assert marked(schema, parts={"t": shown, "b": boxed}) == [(SHAPE, "parts.b.box.fill")]
+    assert marked(schema, parts={"t": shown, "o": other}, fields={"note": {"type": "string"}}) == [
+        (SHAPE, "parts.o.text.style")
+    ]
+    assert marked(
+        schema,
+        parts={
+            "t": shown,
+            "w": {**box(), "width": {"by": "say", "plain": "=@space.1", "strong": "=@space.2"}},
+        },
+    ) == [(SHAPE, "parts.w.width")]
+
+
+def test_a_field_of_runs_is_neither_passed_on_nor_read_but_by_a_text_part_or_a_condition() -> None:
+    schema = {"type": "string", RUNS: ["one"]}
+    shown = {"t": {"text": {"content": "say", "style": "type.body"}}}
+
+    passed = marked(schema, parts={**shown, "p": {"use": "lab/inner", "fields": {"label": "say"}}})
+    slotted = marked(schema, parts={**shown, "s": {"slot": "say"}})
+    image = {"image": {"produced": "say"}, "width": "=@space.4", "height": "=@space.4"}
+    pictured = marked(schema, parts={**shown, "i": image})
+    conditioned = marked(schema, parts={**shown, "b": {**box(), "when": "say"}})
+
+    assert passed == [(SHAPE, "parts.p.fields.label")]
+    assert slotted == [(SHAPE, "parts.s.slot")]
+    assert pictured == [(SHAPE, "parts.i.image.produced")]
+    assert conditioned == []
+
+
+def test_a_format_1_layouts_slot_takes_no_mark_the_field_it_names_takes_it() -> None:
+    component = top(
+        {"t": {"text": {"content": "say", "style": "type.body"}}},
+        fields={"say": {"type": "string", RUNS: ["one"]}},
+        layouts={"frame": {"slots": {"say": {RUNS: ["one"]}}}},
+    )
+
+    assert issues(component) == [(SHAPE, f"layouts.frame.slots.say.{RUNS}")]

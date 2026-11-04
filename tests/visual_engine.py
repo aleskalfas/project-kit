@@ -31,6 +31,8 @@ TESTS_LIBRARY = FIXTURES / "tests" / "1.0.0"
 FOUNDATIONS = REPO / ".pkit" / "capabilities" / "visual-communication" / "libraries" / "foundations"
 FONT = FIXTURES / "test-brand" / "1.0.0" / "fonts" / "SourceSansPro-Regular.otf"
 FAMILY = "Source Sans Pro"
+SEMIBOLD_FONT = FIXTURES / "test-brand" / "1.0.0" / "fonts" / "SourceSansPro-Semibold.otf"
+SEMIBOLD = "Source Sans Pro Semibold"
 
 #: The library versions a fake lock names.
 VERSIONS = {"foundations": "1.0.0", "tests": "1.0.0", "lab": "1.0.0"}
@@ -48,6 +50,7 @@ ROLES: dict[str, Any] = {
     "space.4": _px(32),
     "stroke.thin": _px(1),
     "size.figure": _px(640),
+    "size.slide": _px(1280),
     "font.body": [FAMILY],
     "type.body": {
         "fontFamily": [FAMILY],
@@ -56,7 +59,26 @@ ROLES: dict[str, Any] = {
         "letterSpacing": _px(0),
         "lineHeight": 1.4,
     },
+    # Measured with the body's one file, which measures every weight of its family.
+    "type.heading": {
+        "fontFamily": [FAMILY],
+        "fontSize": _px(24),
+        "fontWeight": 600,
+        "letterSpacing": _px(0),
+        "lineHeight": 1.2,
+    },
 }
+
+
+#: The roles the tests of runs set runs in, and their fonts. Each weight is a family of its
+#: own, as the test brand's heading is, so each run is measured and drawn from its own
+#: weight's file (DEC-012, Implications, "A weight's own file"): the body, and the heading
+#: in the semibold family.
+RUN_ROLES: dict[str, Any] = {
+    "type.body": ROLES["type.body"],
+    "type.heading": {**ROLES["type.heading"], "fontFamily": [SEMIBOLD]},
+}
+RUN_FONTS = {FAMILY: FONT, SEMIBOLD: SEMIBOLD_FONT}
 
 
 def read_components() -> dict[str, dict[str, Any]]:
@@ -180,7 +202,7 @@ def draw(
         language=language,
         lock=dict(VERSIONS),
         size_key="default",
-        seam_version=1,
+        seam_version=3,
         env=FakeEnv(**environment),
     )
 

@@ -15,17 +15,37 @@ produced picture with a label at the point the picture exposes.
 - a missing font, or a character no family measures, refused before layout;
 - under a part that passes a list on under another name: each content source names the
   keys the content file writes, and a field no part passes on is the placing
-  component's.
+  component's;
+- a top whose layouts are its pages' forms: the scene's `pages` names each page in
+  order, each a group of the top at its origin, as large as the top;
+- a text's runs (DEC-012 points 3, 4 and 8, DEC-005 point 14): its paragraphs of runs,
+  each with its role, its paint, its fonts and its sources, and its lines of spans; a
+  run that names a concept and shows it in no colour; a text measured in part otherwise
+  than from a font file, which overflows asking for attention.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from typing import Any
 
 import pytest
 
-from tests.visual_engine import FAMILY, FONT, block, draw, env, frame, text, top
+from tests.visual_engine import (
+    FAMILY,
+    FONT,
+    RUN_FONTS,
+    RUN_ROLES,
+    SEMIBOLD,
+    SEMIBOLD_FONT,
+    block,
+    draw,
+    env,
+    frame,
+    text,
+    top,
+)
 
 CONTENT = {
     "body": {
@@ -130,7 +150,7 @@ def test_the_root_says_what_the_scene_is_and_to_dict_is_stable_and_ordered() -> 
         "test-piece",
         "en",
         "default",
-        1,
+        3,
     )
     assert list(first["lock"]) == sorted(first["lock"])
     group = first["children"][0]
@@ -167,8 +187,11 @@ def test_each_property_names_its_source() -> None:
     assert root.sources["width"] == "role:size.figure"
     assert root.sources["height"] == "default:foundations/figure"
     assert head.sources["text"] == "content:body.steps[plan].head"
-    assert head.sources["fill"] == "default:tests/card"
-    assert head.sources["font-size"] == "role:type.body"
+    run = head.properties["paragraphs"][0][0]
+    assert run["sources"]["text"] == "content:body.steps[plan].head"
+    assert run["sources"]["fill"] == "default:tests/card"
+    assert run["sources"]["style"] == "default:tests/card"
+    assert run["sources"]["font-size"] == "role:type.body"
     assert head.sources["x"] == "role:space.2"
     assert head.sources["height"] == "engine"
     assert label.sources["x"] == "default:tests/callout"
@@ -225,12 +248,18 @@ def test_a_text_records_its_lines_and_how_it_was_measured() -> None:
     assert " ".join(line["text"] for line in props["lines"]) == props["text"]
     assert all(line["width"] <= props["width"] for line in props["lines"])
     assert props["line-height"] == 22.4
+    assert head.sources["line-height"] == "role:type.body"
     assert props["measured-height"] == props["height"] == 44.8
-    assert props["font-family"] == [FAMILY]
-    assert props["measured"] == "file"
+    [[run]] = props["paragraphs"]
+    assert run["text"] == props["text"]
+    assert (run["style"], run["font-family"], run["font-size"]) == ("type.body", [FAMILY], 16.0)
+    assert run["measured"] == "file"
     sha256 = text.Face(FAMILY, FONT).sha256
-    assert props["fonts"] == [{"family": FAMILY, "file": FONT.name, "sha256": sha256}]
-    assert 0 < props["baseline"] < props["line-height"]
+    assert run["fonts"] == [{"family": FAMILY, "file": FONT.name, "sha256": sha256}]
+    for line in props["lines"]:
+        assert 0 < line["baseline"] < props["line-height"]
+        assert line["paragraph"] == 0
+        assert line["spans"] == [{"run": 0, "text": line["text"], "width": line["width"]}]
 
 
 def test_a_text_too_long_for_its_width_overflows_as_a_finding() -> None:
@@ -247,7 +276,7 @@ def test_a_text_too_long_for_its_width_overflows_as_a_finding() -> None:
     assert [f.where for f in overflow] == [f"figure/body/steps#{n}/head" for n in range(1, 5)]
     head = result.scene.find("figure/body/steps#1/head")
     assert head is not None and head.properties["overflow"] is True
-    assert head.properties["font-size"] == 16.0  # never shrunk to fit
+    assert head.properties["paragraphs"][0][0]["font-size"] == 16.0  # never shrunk to fit
 
 
 def test_a_missing_font_refuses_the_scene_before_layout() -> None:
@@ -350,3 +379,167 @@ def test_a_field_the_content_leaves_out_names_its_key_and_one_no_part_passes_on_
         element = figure(content, components=components).scene.find(label)
         assert element is not None
         assert (element.properties["text"], element.sources["text"]) == ("", source)
+
+
+# --- a top whose layouts are its pages' forms (#2558) ------------------------------------------
+
+DECK = {
+    "slides": [
+        {"id": "cover", "layout": "cover", "title": "Building with AI"},
+        {"id": "rules", "layout": "slide", "title": "Where permissions come from"},
+        {"layout": "slide", "title": "How it fits"},
+    ]
+}
+
+
+def test_a_decks_scene_names_each_page_in_order_each_a_group_of_the_top() -> None:
+    result = draw(DECK, use="foundations/deck")
+    tree = result.scene.to_dict()
+
+    assert result.findings == []
+    assert tree["pages"] == ["deck/slides[cover]", "deck/slides[rules]", "deck/slides#3"]
+    deck = tree["children"][0]
+    assert "page" not in deck
+    assert (deck["sources"]["width"], deck["sources"]["height"]) == (
+        "role:size.slide",
+        "default:foundations/deck",
+    )
+    pages = [child for child in deck["children"] if child.get("page")]
+    assert [page["id"] for page in pages] == tree["pages"]
+    for page in pages:
+        assert page["component"] == "foundations/deck"
+        assert (page["x"], page["y"], page["width"], page["height"]) == (0, 0, 1280, 720)
+        assert {page["sources"][key] for key in ("x", "y", "width", "height")} == {"engine"}
+
+
+# --- a text's runs ------------------------------------------------------------------------------
+
+#: A sentence whose strong runs are painted from the colour family, its plain ones with a
+#: role, in a width of 100 px.
+SAYING = top(
+    {
+        "say": {
+            "text": {
+                "content": "say",
+                "style": {"by": "say", "plain": "type.body", "strong": "type.heading"},
+                "fill": {"by": "say", "plain": "text-primary", "strong": ":colour.text"},
+            },
+            "width": "=@space.4 * 3",
+        }
+    },
+    fields={"say": {"type": "string", "x-pkit-runs": ["plain", "strong"]}},
+    colour="blue",
+)
+
+
+def saying(say: Any, **environment: Any) -> Any:
+    return draw(
+        {"say": say, **environment.pop("given", {})},
+        components={"lab/top": SAYING},
+        roles=RUN_ROLES,
+        fonts=RUN_FONTS,
+        families={"blue": {"text": "accent"}, "red": {"text": "text-secondary"}},
+        concepts={"flow/queue": "red"},
+        **environment,
+    )
+
+
+def test_a_text_holds_its_paragraphs_of_runs_and_its_lines_of_spans() -> None:
+    result = saying(["One ", {"text": "two", "style": "strong"}, "\nthree"])
+
+    element = result.scene.find("top/say")
+    assert element is not None
+    props = element.properties
+    assert result.findings == []
+    assert list(props) == [
+        "x",
+        "y",
+        "width",
+        "height",
+        "text-anchor",
+        "line-height",
+        "text",
+        "paragraphs",
+        "lines",
+        "measured-height",
+    ]
+    first, second = props["paragraphs"]
+    assert [run["text"] for run in first] == ["One ", "two"]
+    assert [run["text"] for run in second] == ["three"]
+    strong = first[1]
+    assert list(strong) == [
+        "text",
+        "fill",
+        "style",
+        "font-family",
+        "font-size",
+        "font-weight",
+        "fonts",
+        "measured",
+        "sources",
+    ]
+    sha256 = text.Face(SEMIBOLD, SEMIBOLD_FONT).sha256
+    assert strong["fonts"] == [{"family": SEMIBOLD, "file": SEMIBOLD_FONT.name, "sha256": sha256}]
+    assert (strong["fill"], strong["sources"]["fill"]) == ("accent", "default:lab/top")
+    # A run that goes on into the next paragraph is the same run of the field, by its place.
+    assert second[0]["sources"]["text"] == "content:say#3"
+    assert [line["paragraph"] for line in props["lines"]] == [0, 1]
+    assert props["lines"][0]["spans"] == [
+        {"run": 0, "text": "One ", "width": round(advance("type.body", "One "), 2)},
+        {"run": 1, "text": "two", "width": round(advance("type.heading", "two"), 2)},
+    ]
+    assert props["measured-height"] == round(2 * 28.8, 2)
+
+
+def advance(role: str, words: str) -> float:
+    """How far `words` move the pen in the run role `role`."""
+    faces = text.Faces(lambda family: RUN_FONTS[family])
+    return text.Style.of_role(role, RUN_ROLES[role], faces).advance(words)
+
+
+def test_a_run_that_names_a_concept_shown_in_no_colour_asks_for_attention() -> None:
+    coloured = saying([{"text": "the queue", "style": "strong", "concept": "flow/queue"}])
+    by_style = saying([{"text": "the queue", "concept": "flow/queue"}])
+    overridden = saying(
+        [{"text": "the queue", "style": "strong", "concept": "flow/queue"}],
+        given={"override": {"say": "accent"}},
+    )
+
+    assert coloured.findings == []
+    run = coloured.scene.find("top/say").properties["paragraphs"][0][0]
+    assert (run["fill"], run["sources"]["fill"]) == ("text-secondary", "content:say#1.concept")
+    for result, why in (
+        (by_style, "its style `plain`"),
+        (overridden, "the `override` of its part"),
+    ):
+        [found] = [f for f in result.findings if f.code == "concept-uncoloured"]
+        assert (found.level, found.where, found.who) == (
+            "attention",
+            "top/say",
+            "the piece's author",
+        )
+        assert "the run say#1 names the concept `flow/queue`" in found.message
+        assert why in found.message
+
+
+def test_an_overflowing_text_measured_in_part_otherwise_than_from_a_file_asks_for_attention(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    long = "Pneumonoultramicroscopicsilicovolcanoconiosis"
+    all_files = saying([long, {"text": " b", "style": "strong"}])
+    of_role = text.Style.of_role
+
+    def tabled(role: str, value: Any, faces: Any) -> Any:
+        found = of_role(role, value, faces)
+        return dataclasses.replace(found, measured="table") if role == "type.heading" else found
+
+    monkeypatch.setattr(text.Style, "of_role", staticmethod(tabled))
+    in_part = saying([long, {"text": " b", "style": "strong"}])
+
+    [fails] = [f for f in all_files.findings if f.code == "text-overflow"]
+    [asks] = [f for f in in_part.findings if f.code == "text-overflow"]
+    assert (fails.level, fails.who) == ("fails", "")
+    assert (asks.level, asks.who) == ("attention", "the piece's author")
+    assert asks.message == f"{fails.message}, measured in part table, not from a font file"
+    runs = in_part.scene.find("top/say").properties["paragraphs"][0]
+    assert [run["measured"] for run in runs] == ["file", "table"]

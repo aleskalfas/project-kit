@@ -85,6 +85,9 @@ NOT_PLACES: dict[str, str] = {
     ".pkit/rule-sets/README.md": (
         "the folder's signpost; the rules README is the page that describes the set"
     ),
+    ".pkit/capabilities/visual-communication/libraries/README.md": (
+        "maintainer-facing: the rule a change to a shipped library's version declares"
+    ),
 }
 
 # The trees of the code-to-doc mapping's retired rules (#1010), which the

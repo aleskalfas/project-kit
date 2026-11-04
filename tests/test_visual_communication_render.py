@@ -18,18 +18,24 @@ import pytest
 from tests import visual_communication_producer as producer
 from tests.in_process import load, run_main
 from tests.test_visual_communication_pipeline import (
+    BLOCKS,
     LONG,
+    NET,
+    PATTERNS,
     PIECE,
     PIECE_FOLDER,
+    ROW,
     TESTS,
     drawing_project,
+    lab_lock,
+    lab_project,
     write_content,
     write_picture,
 )
 from tests.visual_communication_project import CONFIG, importable, write_list
 from tests.visual_communication_writes import FULL, failing
 
-script, svg, seam, framing, files, reading, pl = load(
+script, svg, seam, framing, files, reading, pl, checks, libraries = load(
     "visual-communication",
     "render.py",
     "plugins.svg",
@@ -38,6 +44,8 @@ script, svg, seam, framing, files, reading, pl = load(
     "files",
     "reading",
     "pipeline",
+    "checks",
+    "libraries",
 )
 
 PREVIEWS = ".pkit/capabilities/visual-communication/project/local/previews/flow"
@@ -437,3 +445,179 @@ def test_an_old_preview_is_removed_only_once_the_new_ones_are_written(
     assert shown.returncode == 1
     assert sorted(previews(root)) == ["flow.en.colour-scheme.dark.svg", "flow.en.default.svg"]
     assert state(root) == before
+
+
+# --- a draft's lock held back from versions that do not fit (DEC-003 point 8, DEC-010 point 2,
+# --- DEC-011 point 4) ---------------------------------------------------------------------------
+
+#: Where the render states what it held back.
+AT_LOCK = f"fact: {PIECE_FOLDER}/piece.yaml#lock:"
+
+
+def locked(root: Path) -> dict[str, str]:
+    return pl.read_piece(root, "visual", PIECE).lock
+
+
+def kept_codes(root: Path) -> set[str]:
+    return {entry["code"] for entry in reading.read_yaml(root / FINDINGS)["findings"]}
+
+
+def test_a_draft_is_held_back_from_a_patterns_version_under_which_an_item_clashes(
+    tmp_path: Path,
+) -> None:
+    root = lab_project(
+        tmp_path,
+        ROW,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": False},
+        {"1.0.0": {}, "1.1.0": {"size": True}},
+    )
+
+    shown = run(root, PIECE)
+
+    assert shown.returncode == 0, shown.stderr
+    said = (
+        f"{AT_LOCK} the render held back {PATTERNS}@1.1.0: under it, the item "
+        f"`body.items[a]` carries `size`, which both its component `{BLOCKS}/sized` and its "
+        "list declare"
+    )
+    assert said in shown.stdout.splitlines()
+    assert locked(root) == lab_lock("1.0.0", "1.0.0")
+    assert "held-clash" not in kept_codes(root)
+
+
+@pytest.mark.parametrize(
+    "lock",
+    [
+        pytest.param(lab_lock("1.0.0", "1.1.0"), id="under-its-lock"),
+        pytest.param(None, id="under-a-first-lock"),
+    ],
+)
+def test_a_clash_the_lock_shows_holds_nothing_back_and_its_finding_names_both_mends(
+    tmp_path: Path, lock: dict[str, str] | None
+) -> None:
+    root = lab_project(
+        tmp_path,
+        ROW,
+        lock,
+        {"1.0.0": False},
+        {"1.1.0": {"size": True}, "1.2.0": {"size": True}},
+    )
+
+    shown = run(root, PIECE)
+
+    assert shown.returncode == 0, shown.stderr
+    assert "held back" not in shown.stdout
+    assert locked(root)[PATTERNS] == "1.2.0"
+    [clash] = [f for f, _ in checks.check(root, only=PIECE).judged if f.code == "item-clash"]
+    assert clash.fix == (
+        "take the key off the item, or move the lock to versions under which the item's "
+        "component and its list do not both declare it"
+    )
+
+
+def test_a_draft_is_held_back_from_a_blocks_version_that_draws_an_ends_list_twice(
+    tmp_path: Path,
+) -> None:
+    root = lab_project(
+        tmp_path,
+        NET,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": False, "1.1.0": True},
+        {"1.0.0": {"frame": True}},
+    )
+
+    shown = run(root, PIECE)
+
+    assert shown.returncode == 0, shown.stderr
+    said = (
+        f"{AT_LOCK} the render held back {BLOCKS}@1.1.0: under it, the end `from` of the "
+        "tie `body.links[ab]` would not be found; the end `to` of the tie `body.links[ab]` "
+        "would not be found"
+    )
+    assert said in shown.stdout.splitlines()
+    assert locked(root) == lab_lock("1.0.0", "1.0.0")
+    assert "drawn 2 times" not in shown.stdout
+    assert "held-end" not in kept_codes(root)
+
+
+def test_a_loss_only_both_newest_versions_show_holds_back_the_later_library_alone(
+    tmp_path: Path,
+) -> None:
+    """The content names the patterns, which build on the blocks: the search reaches the
+    blocks last, so it backs them off first."""
+    root = lab_project(
+        tmp_path,
+        NET,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": False, "1.1.0": True},
+        {"1.0.0": {}, "1.1.0": {"frame": True}},
+    )
+
+    shown = run(root, PIECE)
+
+    assert shown.returncode == 0, shown.stderr
+    lines = shown.stdout.splitlines()
+    assert lines[1:3] == [
+        f"lock: foundations 1.0.0, {BLOCKS} 1.0.0, {PATTERNS} 1.1.0, test-brand 1.0.0",
+        f"{AT_LOCK} the render held back {BLOCKS}@1.1.0: under it, the end `from` of the "
+        "tie `body.links[ab]` would not be found; the end `to` of the tie `body.links[ab]` "
+        "would not be found",
+    ]
+
+
+def test_past_its_bound_of_combinations_judged_the_render_keeps_the_lock_and_says_so(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = lab_project(
+        tmp_path,
+        NET,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": False, "1.1.0": True},
+        {"1.0.0": {"frame": True}},
+    )
+    monkeypatch.setattr(libraries, "SEARCH_JUDGED", 1)
+
+    shown = run(root, PIECE)
+
+    assert shown.returncode == 0, shown.stderr
+    said = (
+        f"{AT_LOCK} the search for versions that fit together stopped at its bound, 1 "
+        f"combinations judged, choosing among those of `foundations`, `{BLOCKS}`, `{PATTERNS}`, "
+        "`test-brand`: the lock is kept, with the newest version that fits of each library it "
+        "does not name yet; move the lock by hand, or take the versions no piece needs out of "
+        "the library folder"
+    )
+    assert said in shown.stdout.splitlines()
+    assert "held back" not in shown.stdout
+    assert locked(root) == lab_lock("1.0.0", "1.0.0")
+
+
+def test_a_pinned_lock_moved_by_hand_to_such_versions_shows_the_item_and_the_tie(
+    tmp_path: Path,
+) -> None:
+    clashing = lab_project(
+        tmp_path / "clash",
+        ROW,
+        lab_lock("1.0.0", "1.1.0"),
+        {"1.0.0": False},
+        {"1.0.0": {}, "1.1.0": {"size": True}},
+        pinned=True,
+    )
+    losing = lab_project(
+        tmp_path / "loss",
+        NET,
+        lab_lock("1.1.0", "1.0.0"),
+        {"1.0.0": False, "1.1.0": True},
+        {"1.0.0": {"frame": True}},
+        pinned=True,
+    )
+
+    shown = run(clashing, PIECE)
+    lost = run(losing, PIECE)
+
+    assert (shown.returncode, lost.returncode) == (0, 0), shown.stderr + lost.stderr
+    assert "held back" not in shown.stdout + lost.stdout
+    report = checks.check(clashing, only=PIECE)
+    assert [f.where for f, _ in report.judged if f.code == "item-clash"] == ["lock"]
+    assert "the end `cards[a]` is drawn 2 times below `figure/body`" in lost.stdout

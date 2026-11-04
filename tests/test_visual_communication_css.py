@@ -17,7 +17,7 @@ from typing import Any
 import pytest
 
 from tests.in_process import load
-from tests.visual_communication_project import CAPABILITY, FOUNDATIONS, TEST_BRAND
+from tests.visual_communication_project import CAPABILITY, FOUNDATIONS, TEST_BRAND, TEST_PARTS
 
 css, css_declaration, seam, values, tokens, keys = load(
     "visual-communication",
@@ -64,6 +64,7 @@ REFERENCE = {
   --font--heading: "Source Sans Pro Semibold";
   --line: #d0d7de;
   --size--figure: 960px;
+  --size--slide: 1280px;
   --space--1: 4px;
   --space--2: 8px;
   --space--3: 16px;
@@ -478,3 +479,23 @@ def test_its_declaration_is_plain_data_the_seam_ships_as_a_code_writer() -> None
     assert found["programs"] == [] and found["services"] == []
     assert "css" in seam.names(seam.CODE_WRITER)
     assert found["version"] == css.VERSION
+
+
+# --- a library's own roles (DEC-008 point 5) ---------------------------------------------------
+
+
+def test_the_roles_of_a_library_locked_with_the_brand_are_written_at_their_defaults() -> None:
+    scope = tokens.read_scope({"foundations": FOUNDATIONS, "test-parts": TEST_PARTS})
+    brand = tokens.read_brand(TEST_BRAND, scope)
+    doc = values.document(brand, brand.combinations(), {**LOCK, "test-parts": "1.0.0"})
+    assert doc["version"] == 1
+    doc["tokens"] = {p: t for p, t in doc["tokens"].items() if t["type"] in css.KINDS}
+    sheet = css.write(doc, axes_of(brand))
+    root = parsed(sheet)[0].declarations
+    assert root["--test-parts--note"] == root["--text-primary"]
+    assert root["--test-parts--gap"] == "8px"
+    assert "--test-parts--warning" not in sheet
+    assert_switches(sheet, doc, axes_of(brand))
+    plain = css.write(written_document(brand), axes_of(brand))
+    assert plain != sheet
+    assert css.VERSION == "1.0.0"

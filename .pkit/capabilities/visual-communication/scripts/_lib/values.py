@@ -4,8 +4,10 @@
      "lock": {<library>: <version>}, "keys": [<key>, ...],
      "tokens": {<token path>: {"type": <DTCG type>, "values": {<key>: <value>}}}}
 
-It holds each exported token of a brand, resolved over its chain, in each combination
-asked for, named by token path and key; keys in key order, tokens in path order. Each
+It holds each token of a brand with a value, resolved over its chain, in each combination
+asked for, named by token path and key; keys in key order, tokens in path order. Under a
+lock these are the roles the brand exports, and every other role of the libraries locked
+with it, at the brand's value or at its default (DEC-008 point 5). Each
 value is in its DTCG form, canonical: a colour without `hex` and with `alpha`, a font
 family a list. The engine computes it and never commits it; a producer and a code writer
 read it. Its version is apart from the format number of the files a project keeps: it
@@ -33,7 +35,7 @@ class BrandLike(Protocol):
     def axes(self) -> Mapping[str, keys.AxisLike]: ...
 
     @property
-    def roles(self) -> tuple[str, ...]: ...
+    def valued(self) -> tuple[str, ...]: ...
 
     def resolve(self, token_path: str, combination: Mapping[str, str]) -> Any: ...
 
@@ -47,12 +49,12 @@ def document(
     tokens: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """The values document of `brand` in each of `combinations`, under `lock`: every token
-    it exports, or those of `tokens` alone, such as the inputs a producer declares. Raises
-    tokens.UnknownRole for a token the brand does not export, and keys.BadKey for a
-    combination its axes do not hold."""
+    with a value under it (`valued`), or those of `tokens` alone, such as the inputs a
+    producer declares. Raises tokens.UnknownRole for a token that has no value under the
+    brand, and keys.BadKey for a combination its axes do not hold."""
     by_key = {keys.key_of(combination, brand.axes): combination for combination in combinations}
     ordered = sorted(by_key, key=keys.key_order)
-    paths = sorted(set(tokens)) if tokens is not None else sorted(brand.roles)
+    paths = sorted(set(tokens)) if tokens is not None else sorted(brand.valued)
     return {
         "document": DOCUMENT,
         "version": VERSION,

@@ -19,6 +19,7 @@ from tests.visual_communication_project import (
     FOUNDATIONS,
     TEST_BRAND,
     TEST_EDITION,
+    TEST_PARTS,
     bound,
     copy_library,
     project,
@@ -635,7 +636,7 @@ def test_a_piece_in_a_brand_built_on_another_reads_its_base_at_the_version_it_lo
     write(root / "visual/pieces/card/content.en.yaml", yaml_text(bound("content", caption="x")))
     held = libraries.Held(root, "visual", (0, 1, 0))
     piece = pl.read_piece(root, "visual", "card")
-    lock = libraries.move_lock(held, pl.needed(piece))
+    lock = libraries.move_lock(held, pl.needed(piece)).lock
     assert lock == {"foundations": "1.0.0", "test-brand": "1.0.0", "test-edition": "1.0.0"}
     document = pl.Project(piece, lock, held).values()
     assert document["tokens"]["accent"]["values"]["colour-scheme.dark"] == ORANGE
@@ -710,3 +711,505 @@ def test_a_familys_text_below_its_contrast_fails_in_the_combinations_it_lies_in(
     assert finding.where == "family.blue.text"
     assert "`family.blue.text` on `family.blue.fill`" in finding.message
     assert "the combination `colour-scheme.dark`" in finding.message
+
+
+# --- a library's own roles (DEC-008) -----------------------------------------------------------
+
+#: The libraries the test library's roles are read with: the foundations, and itself.
+PARTS = {"foundations": FOUNDATIONS, "test-parts": TEST_PARTS}
+
+BLACK = {"colorSpace": "srgb", "components": [0.0, 0.0, 0.0], "alpha": 1}
+WHITE = {"colorSpace": "srgb", "components": [1.0, 1.0, 1.0], "alpha": 1}
+
+
+@pytest.fixture(scope="module")
+def parts() -> Any:
+    return tokens.read_scope(PARTS)
+
+
+def own_roles(
+    tmp_path: Path,
+    roles: dict[str, Any],
+    pairs: list[dict[str, str]] | None = None,
+    builds_on: tuple[str, ...] = ("foundations",),
+    **more: Any,
+) -> Any:
+    """The own roles of a library `test-parts` written from `roles` and `pairs`, read in a
+    scope with the foundations."""
+    path = write(
+        tmp_path / "roles.yaml",
+        yaml_text(bound("roles", roles=roles, pairs=pairs or [], **more)),
+    )
+    declared = tokens.read_own_roles(
+        path, name="test-parts", library="test-parts@1.0.0", builds_on=builds_on
+    )
+    return tokens.Scope(tokens.read_declarations(ROLES), [declared])
+
+
+def naming_brand(tmp_path: Path, given: dict[str, Any] | None = None, file: str = BASE) -> Path:
+    """A copy of the test brand that names `test-parts` 1 among the libraries it builds on,
+    `given` added to its token file `file`; by default, the test library's role without a
+    default, its warning, takes the brand's ink."""
+    folder = brand_copy(tmp_path)
+    replace_in(
+        folder / "library.yaml",
+        "  - {name: foundations, major: 1}\n",
+        "  - {name: foundations, major: 1}\n  - {name: test-parts, major: 1}\n",
+    )
+    if given is None:
+        given = {"test-parts": {"$type": "color", "warning": {"$value": "{scheme.ink}"}}}
+    edit_json(folder / file, lambda data: data.update(given))
+    return folder
+
+
+def test_a_librarys_own_roles_lie_under_its_name_and_their_type_reads_with_no_brand(
+    parts: Any,
+) -> None:
+    assert parts.owner["test-parts.ink"] == "test-parts"
+    assert parts.owner["text-primary"] == ""
+    assert parts.type_of("test-parts.gap") == "dimension"
+    assert parts.type_of("background") == "color"
+    with pytest.raises(tokens.UnknownRole):
+        parts.type_of("test-parts.nothing")
+    assert parts.default_of("test-parts.note") == "test-parts.ink"
+    assert parts.default_of("test-parts.ink") == "text-primary"
+    assert parts.default_of("test-parts.warning") is None
+    (fact,) = parts.findings
+    assert (fact.code, fact.level, fact.where) == (
+        "role-brand-only",
+        findings.FACT,
+        "roles.test-parts.warning",
+    )
+    assert fact.library == "test-parts@1.0.0"
+    assert tokens.Pair("test-parts.ink", "test-parts.paper", "text") in parts.pairs
+
+
+def test_a_brand_that_does_not_name_the_library_draws_it_at_its_defaults(parts: Any) -> None:
+    brand = tokens.read_brand(TEST_BRAND, parts)
+    assert brand.named == frozenset()
+    assert brand.findings == ()
+    for combination in brand.combinations():
+        assert brand.resolve("test-parts.note", combination) == brand.resolve(
+            "text-primary", combination
+        )
+        assert brand.resolve("test-parts.paper", combination) == brand.resolve(
+            "background", combination
+        )
+        assert brand.resolve("test-parts.gap", combination) == brand.resolve("space.2", combination)
+    with pytest.raises(tokens.RoleWithoutValue):
+        brand.resolve("test-parts.warning", {})
+    assert not any(path.startswith("test-parts.") for path in brand.roles)
+    assert {"test-parts.ink", "test-parts.note", "test-parts.gap"} <= set(brand.valued)
+    assert "test-parts.warning" not in brand.valued
+    assert brand.type_of("test-parts.warning") == "color"
+
+
+def test_a_brand_that_names_the_library_gives_its_roles_values_and_its_defaults_follow(
+    tmp_path: Path, parts: Any
+) -> None:
+    given = {
+        "test-parts": {
+            "$type": "color",
+            "ink": {"$value": "{scheme.strong-ink}"},
+            "warning": {"$value": "{scheme.ink}"},
+        }
+    }
+    brand = tokens.read_brand(naming_brand(tmp_path, given), parts)
+    assert brand.named == {"test-parts"}
+    assert brand.findings == ()
+    assert brand.resolve("test-parts.ink", {}) == BLACK
+    assert brand.resolve("test-parts.note", {}) == BLACK
+    assert brand.resolve("test-parts.note", DARK_MODE) == WHITE
+    assert brand.resolve("test-parts.paper", {}) == brand.resolve("background", {})
+    assert {"test-parts.ink", "test-parts.warning"} <= set(brand.roles)
+    assert "test-parts.paper" not in brand.roles
+    assert "test-parts.paper" in brand.valued
+
+
+def test_a_brands_value_wins_where_its_sources_cover_and_the_default_holds_elsewhere(
+    tmp_path: Path, parts: Any
+) -> None:
+    folder = naming_brand(tmp_path)
+    given = {"test-parts": {"$type": "color", "ink": {"$value": "{palette.white}"}}}
+    edit_json(folder / DARK, lambda data: data.update(given))
+    brand = tokens.read_brand(folder, parts)
+    assert brand.findings == ()
+    assert brand.resolve("test-parts.ink", DARK_MODE) == WHITE
+    assert brand.resolve("test-parts.ink", {}) == brand.resolve("text-primary", {})
+    assert "test-parts.ink" in brand.roles
+
+
+def test_a_role_whose_chain_of_defaults_reaches_no_value_has_none(tmp_path: Path) -> None:
+    roles = {
+        "test-parts.warning": {"type": "color"},
+        "test-parts.alert": {"type": "color", "default": "{test-parts.warning}"},
+    }
+    scope = own_roles(tmp_path, roles)
+    brand = tokens.read_brand(TEST_BRAND, scope)
+    assert brand.findings == ()
+    with pytest.raises(tokens.RoleWithoutValue):
+        brand.resolve("test-parts.alert", {})
+    named = tokens.read_brand(naming_brand(tmp_path), scope)
+    assert named.findings == ()
+    assert named.resolve("test-parts.alert", {}) == named.resolve("text-primary", {})
+
+
+def test_a_brand_that_names_the_library_gives_each_role_without_a_default_a_value(
+    tmp_path: Path, parts: Any
+) -> None:
+    (finding,) = tokens.read_brand(naming_brand(tmp_path, {}), parts).findings
+    assert (finding.code, finding.level, finding.where) == (
+        "library-role-missing",
+        findings.FAILS,
+        "test-parts.warning",
+    )
+    assert finding.library == "test-brand@1.0.0"
+    assert "no value in any combination" in finding.message
+    folder = naming_brand(tmp_path / "dark", {})
+    given = {"test-parts": {"$type": "color", "warning": {"$value": "{scheme.ink}"}}}
+    edit_json(folder / DARK, lambda data: data.update(given))
+    (finding,) = tokens.read_brand(folder, parts).findings
+    assert "in the combinations `default`, `contrast.high`" in finding.message
+
+
+def test_a_token_under_a_named_librarys_name_that_fits_none_of_its_roles_is_a_finding(
+    tmp_path: Path, parts: Any
+) -> None:
+    given = {
+        "test-parts": {
+            "warning": {"$type": "color", "$value": "{scheme.ink}"},
+            "extra": {"$type": "color", "$value": "{scheme.ink}"},
+            "gap": {"$type": "color", "$value": "{scheme.ink}"},
+        }
+    }
+    brand = tokens.read_brand(naming_brand(tmp_path, given), parts)
+    found = {finding.where: finding for finding in brand.findings}
+    assert set(found) == {"test-parts.extra", "test-parts.gap"}
+    assert {finding.code for finding in found.values()} == {"library-token"}
+    assert "is none of its roles" in found["test-parts.extra"].message
+    assert "of type `color`, but the role" in found["test-parts.gap"].message
+    assert brand.resolve("test-parts.gap", {}) == brand.resolve("space.2", {})
+
+
+def test_a_token_under_a_library_the_brand_does_not_name_stays_private_and_asks_attention(
+    tmp_path: Path, parts: Any
+) -> None:
+    folder = brand_copy(tmp_path)
+    given = {"test-parts": {"$type": "color", "ink": {"$value": "{scheme.strong-ink}"}}}
+    edit_json(folder / BASE, lambda data: data.update(given))
+    brand = tokens.read_brand(folder, parts)
+    (finding,) = brand.findings
+    assert (finding.code, finding.level) == ("library-token-private", findings.ATTENTION)
+    assert finding.who == "the owner of the brand test-brand"
+    assert brand.resolve("test-parts.ink", {}) == brand.resolve("text-primary", {})
+    assert tokens.read_brand(folder, tokens.read_declarations(ROLES)).findings == ()
+
+
+def test_an_alias_to_a_role_of_a_library_the_brand_does_not_name_fails(
+    tmp_path: Path, parts: Any
+) -> None:
+    folder = brand_copy(tmp_path)
+    edit_json(folder / BASE, setting("accent|$value", "{test-parts.ink}"))
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, parts)
+    (finding,) = raised.value.findings
+    assert finding.code == "alias-dangling"
+    assert "which test-brand@1.0.0 does not name among the libraries" in finding.message
+
+
+def test_a_librarys_pair_is_judged_where_the_brands_values_reach_it(
+    tmp_path: Path, parts: Any
+) -> None:
+    given = {
+        "test-parts": {
+            "$type": "color",
+            "ink": {"$value": "{scheme.rule}"},
+            "warning": {"$value": "{scheme.ink}"},
+        }
+    }
+    found = tokens.read_brand(naming_brand(tmp_path, given), parts).findings
+    assert codes(found) == {"pair-contrast"}
+    assert {finding.where for finding in found} == {"test-parts.ink"}
+    assert all("`test-parts.ink` on `test-parts.paper`" in f.message for f in found)
+
+
+def test_a_pair_with_a_role_without_a_default_is_judged_only_where_it_has_a_value(
+    tmp_path: Path, parts: Any
+) -> None:
+    assert tokens.read_brand(TEST_BRAND, parts).findings == ()
+    given = {"test-parts": {"$type": "color", "warning": {"$value": "{scheme.paper}"}}}
+    found = tokens.read_brand(naming_brand(tmp_path, given), parts).findings
+    assert codes(found) == {"pair-contrast"}
+    assert {finding.where for finding in found} == {"test-parts.warning"}
+
+
+def library_chain(tmp_path: Path, *, base_names: bool, edition_names: bool) -> tuple[Path, Path]:
+    """The test brand as a base that opens the test library's ink, and the edition over it
+    that gives the ink a value; each names `test-parts` as asked."""
+    base, edition = chain_copy(tmp_path)
+    if base_names:
+        given = {
+            "test-parts": {
+                "$type": "color",
+                "ink": {"$value": "{scheme.strong-ink}"},
+                "warning": {"$value": "{scheme.ink}"},
+            }
+        }
+        naming = naming_brand(tmp_path / "named", given)
+        shutil.rmtree(base)
+        shutil.copytree(naming, base)
+    replace_in(
+        base / "library.yaml", "open: [accent, space]", "open: [accent, space, test-parts.ink]"
+    )
+    replace_in(edition / "library.yaml", "open: [accent]", "open: [accent, test-parts.ink]")
+    if edition_names:
+        replace_in(
+            edition / "library.yaml",
+            "  - {name: foundations, major: 1}\n",
+            "  - {name: foundations, major: 1}\n  - {name: test-parts, major: 1}\n",
+        )
+    given = {"test-parts": {"$type": "color", "ink": {"$value": "{text-secondary}"}}}
+    edit_json(edition / EDITION, lambda data: data.update(given))
+    return base, edition
+
+
+def test_a_brand_built_on_a_base_gives_a_library_role_a_value_where_both_name_it(
+    tmp_path: Path, parts: Any
+) -> None:
+    base, edition = library_chain(tmp_path, base_names=True, edition_names=True)
+    read = tokens.read_brand(edition, parts, locked={"test-brand": base})
+    assert read.findings == ()
+    assert read.base is not None
+    assert read.base.opened >= {"test-parts.ink"}
+    assert read.opened == {"accent", "test-parts.ink"}
+    secondary = read.resolve("text-secondary", {})
+    assert read.resolve("test-parts.ink", {}) == secondary
+    assert read.resolve("test-parts.note", {}) == secondary
+    assert read.base.resolve("test-parts.ink", {}) == BLACK
+    assert "test-parts.ink" in read.roles
+
+
+def test_a_brand_that_does_not_name_the_library_keeps_its_bases_values_for_it(
+    tmp_path: Path, parts: Any
+) -> None:
+    base, edition = library_chain(tmp_path, base_names=True, edition_names=False)
+    read = tokens.read_brand(edition, parts, locked={"test-brand": base})
+    assert read.resolve("test-parts.ink", {}) == BLACK
+    assert "test-parts.ink" in read.roles
+    found = {finding.code: finding for finding in read.findings}
+    assert set(found) == {"library-token-private", "open-unknown"}
+    assert "roles of `test-parts`, which the brand does not name" in found["open-unknown"].message
+
+
+def test_a_base_that_does_not_name_the_library_opens_none_of_its_roles(
+    tmp_path: Path, parts: Any
+) -> None:
+    base, edition = library_chain(tmp_path, base_names=False, edition_names=True)
+    read = tokens.read_brand(edition, parts, locked={"test-brand": base})
+    assert read.base is not None
+    assert "test-parts.ink" not in read.base.opened
+    found = {(finding.code, finding.library) for finding in read.findings}
+    assert ("open-unknown", "test-brand@1.0.0") in found
+    assert ("role-not-open", "test-edition@1.0.0") in found
+    assert ("library-role-missing", "test-edition@1.0.0") in found
+    (not_open,) = [f for f in read.findings if f.code == "role-not-open"]
+    assert "does not name `test-parts`, so it opens none of its roles" in not_open.message
+    assert read.resolve("test-parts.ink", {}) == read.resolve("text-primary", {})
+
+
+def without_value(brand: Any, path: str) -> Any:
+    """What resolving the role at `path` under `brand` raises, which has no value there."""
+    with pytest.raises(tokens.RoleWithoutValue) as raised:
+        brand.resolve(path, {})
+    return raised.value
+
+
+def test_a_role_without_a_value_names_its_library_and_whether_a_brand_of_the_chain_names_it(
+    tmp_path: Path, parts: Any
+) -> None:
+    alone = without_value(tokens.read_brand(TEST_BRAND, parts), "test-parts.warning")
+    assert isinstance(alone, env.UnvaluedRole)
+    assert (alone.role, alone.library, alone.named) == ("test-parts.warning", "test-parts", False)
+    named = tokens.read_brand(naming_brand(tmp_path / "named", {}), parts)
+    assert without_value(named, "test-parts.warning").named
+    base, edition = library_chain(tmp_path / "chain", base_names=True, edition_names=False)
+    edit_json(base / BASE, dropping("test-parts|warning"))
+    read = tokens.read_brand(edition, parts, locked={"test-brand": base})
+    assert ("library-role-missing", "test-brand@1.0.0") in {
+        (finding.code, finding.library) for finding in read.findings
+    }
+    assert without_value(read, "test-parts.warning").named
+
+
+@pytest.mark.parametrize(
+    ("roles", "builds_on", "code", "said"),
+    [
+        (
+            {"test-parts.a": {"type": "color", "default": "{component.card.fill}"}},
+            ("foundations",),
+            "role-default",
+            "a component token",
+        ),
+        (
+            {"test-parts.a": {"type": "dimension", "default": "{text-primary}"}},
+            ("foundations",),
+            "role-default",
+            "of type `color`, not `dimension`",
+        ),
+        (
+            {"test-parts.a": {"type": "color", "default": "{text-primary}"}},
+            (),
+            "role-default",
+            "which `test-parts` does not build on",
+        ),
+        (
+            {"test-parts.a": {"type": "color", "default": "text-primary"}},
+            ("foundations",),
+            "role-default",
+            "is not an alias",
+        ),
+        (
+            {"test-parts.a": {"type": "color", "default": "{test-parts.nothing}"}},
+            ("foundations",),
+            "default-dangling",
+            "neither `test-parts` nor a library it builds on declares",
+        ),
+        (
+            {
+                "test-parts.a": {"type": "color", "default": "{test-parts.b}"},
+                "test-parts.b": {"type": "color", "default": "{test-parts.a}"},
+            },
+            ("foundations",),
+            "default-loop",
+            "the defaults make a loop",
+        ),
+        (
+            {"other.a": {"type": "color", "default": "{text-primary}"}},
+            ("foundations",),
+            "role-name",
+            "lies outside `test-parts`",
+        ),
+        (
+            {"component.a": {"type": "color"}},
+            ("foundations",),
+            "role-name",
+            "the group of component tokens",
+        ),
+    ],
+)
+def test_a_default_that_does_not_hold_is_the_librarys_finding_and_gives_no_value(
+    tmp_path: Path, roles: dict[str, Any], builds_on: tuple[str, ...], code: str, said: str
+) -> None:
+    scope = own_roles(tmp_path, roles, builds_on=builds_on)
+    failing = [f for f in scope.findings_of("test-parts") if f.level == findings.FAILS]
+    assert {finding.code for finding in failing} == {code}
+    assert all(said in finding.message for finding in failing)
+    assert all(finding.library == "test-parts@1.0.0" for finding in failing)
+    for path in roles:
+        assert scope.default_of(path) is None
+    brand = tokens.read_brand(TEST_BRAND, scope)
+    assert brand.findings == ()
+    assert not any(path in brand.valued for path in roles)
+
+
+def test_a_loop_of_defaults_is_found_at_each_role_in_it(tmp_path: Path) -> None:
+    roles = {
+        "test-parts.a": {"type": "color", "default": "{test-parts.b}"},
+        "test-parts.b": {"type": "color", "default": "{test-parts.c}"},
+        "test-parts.c": {"type": "color", "default": "{test-parts.a}"},
+        "test-parts.d": {"type": "color", "default": "{test-parts.a}"},
+    }
+    found = own_roles(tmp_path, roles).findings_of("test-parts")
+    loops = [finding for finding in found if finding.code == "default-loop"]
+    assert {finding.where for finding in loops} == {
+        "roles.test-parts.a",
+        "roles.test-parts.b",
+        "roles.test-parts.c",
+    }
+    assert ("role-brand-only", "roles.test-parts.d") in {(f.code, f.where) for f in found}
+
+
+def test_a_librarys_roles_file_declares_no_axes_or_families_and_is_read_still(
+    tmp_path: Path,
+) -> None:
+    roles = {"test-parts.a": {"type": "color", "default": "{text-primary}"}}
+    axes = {"density": {"kind": "size", "modes": ["tight", "loose"], "default": "tight"}}
+    scope = own_roles(tmp_path, roles, axes=axes, families={"blue": {"fill": "test-parts.a"}})
+    found = scope.findings_of("test-parts")
+    assert {(f.code, f.where) for f in found} == {
+        ("roles-declaration", "axes"),
+        ("roles-declaration", "families"),
+    }
+    assert scope.default_of("test-parts.a") == "text-primary"
+    assert "density" not in scope.axes
+
+
+def test_a_librarys_roles_file_that_cannot_be_read_is_its_finding(tmp_path: Path) -> None:
+    declared = tokens.read_own_roles(
+        tmp_path / "roles.yaml", name="test-parts", library="test-parts@1.0.0"
+    )
+    assert [finding.code for finding in declared.findings] == ["roles-unreadable"]
+    assert declared.roles == {}
+
+
+@pytest.mark.parametrize(
+    ("pairs", "code", "said"),
+    [
+        (
+            [{"text": "text-primary", "under": "background", "level": "text"}],
+            "pair-shape",
+            "names none of the library's own roles",
+        ),
+        (
+            [{"text": "test-parts.a", "under": "test-parts.gap", "level": "text"}],
+            "pair-shape",
+            "does not name two colour roles",
+        ),
+        (
+            [{"text": "test-parts.a", "under": "other.paper", "level": "text"}],
+            "pair-shape",
+            "which is no colour role of `test-parts` or of a library it builds on",
+        ),
+        (
+            [{"text": "test-parts.a", "under": "test-parts.b", "level": "text"}],
+            "pair-defaults",
+            "falls at its defaults on `text-secondary` on `surface`",
+        ),
+        (
+            [{"text": "test-parts.c", "under": "test-parts.b", "level": "text"}],
+            "pair-defaults",
+            "falls at its defaults on `text-primary` on `surface`",
+        ),
+    ],
+)
+def test_a_librarys_pair_at_its_defaults_rests_on_a_declared_pair(
+    tmp_path: Path, pairs: list[dict[str, str]], code: str, said: str
+) -> None:
+    roles = {
+        "test-parts.a": {"type": "color", "default": "{text-secondary}"},
+        "test-parts.b": {"type": "color", "default": "{surface}"},
+        "test-parts.c": {"type": "color", "default": "{text-primary}"},
+        "test-parts.gap": {"type": "dimension", "default": "{space.2}"},
+    }
+    found = own_roles(tmp_path, roles, pairs).findings_of("test-parts")
+    (finding,) = [f for f in found if f.level == findings.FAILS]
+    assert (finding.code, finding.where) == (code, "pairs.0")
+    assert said in finding.message
+
+
+def test_a_pair_resting_on_a_pair_of_its_library_at_a_level_as_strict_holds(
+    tmp_path: Path,
+) -> None:
+    roles = {
+        "test-parts.ink": {"type": "color", "default": "{text-primary}"},
+        "test-parts.paper": {"type": "color", "default": "{background}"},
+        "test-parts.note": {"type": "color", "default": "{test-parts.ink}"},
+        "test-parts.card": {"type": "color", "default": "{test-parts.paper}"},
+    }
+    pairs = [
+        {"text": "test-parts.ink", "under": "test-parts.paper", "level": "large-text"},
+        {"text": "test-parts.note", "under": "test-parts.card", "level": "large-text"},
+        {"text": "test-parts.note", "under": "test-parts.card", "level": "text"},
+    ]
+    found = own_roles(tmp_path, roles, pairs).findings_of("test-parts")
+    assert [(f.code, f.where) for f in found] == [("pair-defaults", "pairs.2")]

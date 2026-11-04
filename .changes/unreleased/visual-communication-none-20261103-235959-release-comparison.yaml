@@ -1,0 +1,12 @@
+component: visual-communication
+kind: none
+body: >
+  The release's comparison of two versions of one library names each break
+  of what the earlier version promises, each addition, and the segment the
+  later number needs (#2609, DEC-003 points 6 and 7, DEC-004 point 5,
+  DEC-013 point 3). It reads each version through the one routine that reads
+  a version in full (DEC-014 point 1), now its own module. The capability's
+  own tests run it on each library it ships, against the newest released
+  version of the major its version being built carries, and fail each break.
+  `files.md` states what it compares, kind by kind. No command calls it yet
+  and no version is released, so nothing an adopter can observe moves.

@@ -33,6 +33,8 @@ TEST_BRAND = FIXTURES / "libraries" / "test-brand" / "1.0.0"
 TEST_EDITION = FIXTURES / "libraries" / "test-edition" / "1.0.0"
 #: A notation the tests name concepts from (DEC-004 point 10).
 TEST_NOTATION = FIXTURES / "libraries" / "test-notation" / "1.0.0"
+#: A component library with roles of its own, one without a default (DEC-008).
+TEST_PARTS = FIXTURES / "libraries" / "test-parts" / "1.0.0"
 
 #: The capability's project configuration, relative to the project root.
 CONFIG = ".pkit/capabilities/visual-communication/project/config.yaml"
