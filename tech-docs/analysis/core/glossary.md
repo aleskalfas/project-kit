@@ -6,10 +6,9 @@ TERM-acceptance-gate:
   pkit:
     friction:
       anchors:
-        path:
-          - .pkit/decisions/README.md
         record:
           - COR-051#4
+          - COR-066#1
 TERM-adapter:
   name: adapter
   noun-forms: [adapters]
@@ -32,7 +31,6 @@ TERM-agent-definition:
       anchors:
         path:
           - src/project_kit/agents.py
-          - .pkit/adapters/README.md
         record:
           - COR-006
           - COR-013#1
@@ -859,7 +857,6 @@ TERM-operational-rule:
         path:
           - .pkit/rules/core.md
           - .pkit/rule-sets/ops.md
-          - .pkit/adapters/README.md
           - src/project_kit/loaded_rules.py
         record:
           - COR-014
@@ -1426,7 +1423,6 @@ TERM-scratchpad-note:
       anchors:
         path:
           - src/project_kit/scratchpads.py
-          - .pkit/scratchpad/README.md
         record:
           - COR-012
           - COR-043
@@ -1491,9 +1487,6 @@ TERM-skill:
   pkit:
     friction:
       anchors:
-        path:
-          - .pkit/skills/README.md
-          - .pkit/adapters/README.md
         record:
           - COR-005
           - COR-006
