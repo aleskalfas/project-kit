@@ -100,7 +100,7 @@ def test_shipped_container_schema_is_draft_2020_12() -> None:
 
 
 def test_readme_example_validates_clean(schema: dict) -> None:
-    """The example in the schemas README's container section is a valid carrier."""
+    """The example in the backbone file schemas' container section is a valid carrier."""
     text = """
 pkit:
   friction:

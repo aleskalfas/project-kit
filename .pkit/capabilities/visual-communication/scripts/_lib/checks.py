@@ -75,7 +75,7 @@ from collections.abc import Collection, Iterator, Mapping, Sequence
 from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 
-from _lib import code, fingerprint, framing, layout, location, names, tokens
+from _lib import code, exports, fingerprint, framing, layout, location, names, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.files import FileError, binding_problem, nearest, read_bound, schema_of
@@ -117,8 +117,8 @@ from _lib.reading import ReadError, read_yaml
 from _lib.root import CONFIG
 from _lib.scene import SceneResult
 
-#: The renderers that draw every piece: its previews, and its SVG exports.
-RENDERERS = ("svg",)
+#: The renderer that draws every piece's previews.
+PREVIEWS = "svg"
 
 #: The environment variable that carries the validator's deadline, in seconds since the
 #: epoch.
@@ -1766,7 +1766,7 @@ def scene_findings(
         scene = result.scene.to_dict()
         found.extend(drawn_contrast(scene, colours, project.keys))
         found.extend(_unknown_colours(scene, colours))
-        for renderer in RENDERERS:
+        for renderer in renderers(piece):
             declared = seam.declaration(renderer, seam.RENDERER)
             for loss in losses(scene, declared):
                 if not accepted(loss, piece.accepted_losses):
@@ -2051,6 +2051,13 @@ def _statuses(scene: Mapping[str, Any], env: pl.ProjectEnv) -> list[Finding]:
 
 
 # --- losses -------------------------------------------------------------------------------------
+
+
+def renderers(piece: pl.Piece) -> list[str]:
+    """The renderers that draw a piece, each once, in name order: the one that draws its
+    previews, and the one that draws each format it exports in (`exports.RENDERERS`)."""
+    found = (exports.RENDERERS.get(form) for form in piece.exports)
+    return sorted({PREVIEWS, *(renderer for renderer in found if renderer is not None)})
 
 
 def losses(scene: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[seam.Loss]:

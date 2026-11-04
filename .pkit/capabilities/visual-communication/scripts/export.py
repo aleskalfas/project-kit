@@ -11,12 +11,13 @@
 """visual-communication capability — export: a numbered export of a piece, and its record
 (DEC-006 point 7).
 
-Makes each format the piece declares under `exports`, one file for each page, each of its
-languages and each combination of modes it names, from the scene, under the lock its
-`piece.yaml` holds. The run takes the piece's next number, past every version its
-`exports.yaml` records and every file of its exports folder, and every file it makes
-carries it: `<piece>.v<N>.<language>.<key>.svg`, and for a piece of more
-than one page `<piece>.v<N>.<language>.<key>.<n>.svg`, its page's number from 1, in
+Makes each format the piece declares under `exports`, in each of its languages and each
+combination of modes it names, from the scene, under the lock its `piece.yaml` holds:
+`svg`, one file for each page, and `pdf`, one file that holds every page in order. The run
+takes the piece's next number, past every version its `exports.yaml` records and every
+file of its exports folder, and every file it makes carries it:
+`<piece>.v<N>.<language>.<key>.<format>`, and for an SVG file of a piece of more than one
+page `<piece>.v<N>.<language>.<key>.<n>.svg`, its page's number from 1, in
 `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the
 clone and never committed. It then records the version in `exports.yaml`: the fingerprint
 of every file its scenes were computed from, each file's hash, and when, in which state,

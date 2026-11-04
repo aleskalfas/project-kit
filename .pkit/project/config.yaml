@@ -96,6 +96,9 @@ friction:
     - {path: .pkit/process/connections.md, type: living-docs:page}
     - {path: .pkit/rules/README.md, type: living-docs:page}
     - {path: .pkit/schemas/README.md, type: living-docs:page}
+    - {path: .pkit/schemas/backbone-files.md, type: living-docs:page}
+    - {path: .pkit/schemas/shape-patterns.md, type: living-docs:page}
+    - {path: .pkit/schemas/data-binding.md, type: living-docs:page}
     - {path: .pkit/scratchpad/README.md, type: living-docs:page}
     - {path: .pkit/skills/README.md, type: living-docs:page}
   # The declared surface (COR-050 point 8): the code project-kit says ought to
