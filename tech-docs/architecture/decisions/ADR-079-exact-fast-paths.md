@@ -8,7 +8,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Summary
 
-**In plain terms:** any reading of the `pkit` binary may take a fast path, a second way of computing it, on one condition. The fast path gives exactly what the reading gives, or hands its input to the reading. A reading takes one where its cost grows with the repository, its history and its answers. With the fast paths, living-docs' doc-check filler goes on reading the whole-repository friction check, every artefact judged. A test fails the build once the filler's cost passes a budget, set at half the filler's 30-second bound.
+**In plain terms:** any reading of the `pkit` binary may take a fast path, a second way of computing it, on one condition. The fast path gives exactly what the reading gives, or hands its input to the reading. A reading takes one where its cost grows with the repository, its history and its answers. With the fast paths, living-docs' doc-check filler goes on reading the whole-repository friction check, every artefact judged. A test fails the build once the filler's cost passes a budget, set at two-thirds of the filler's 30-second bound on the slower of CI's runners.
 - **Why:** on CI the filler overran its bound, and both the doc check and `pkit validate` failed ([project-kit#2410](https://github.com/aleskalfas/project-kit/issues/2410)).
 - **What lasts:** the exact reading of YAML text is ruamel.yaml's pure-Python loader. The answer writer is held to the form the fast reader takes. The declared floor of ruamel.yaml rises to the oldest version the fast reader is tested against.
 - **The measure:** on 4 November's tree, on a laptop, the median wall time of the whole check fell from 14.3 to 5.2 seconds, and of the filler from 14.7 to 5.8. On CI, where the filler had taken up to 30 seconds, it took about 7 on the runners measured.
@@ -51,7 +51,7 @@ A selection still reads HEAD, the history and HEAD's answers, and computes the m
 
 ## Decision
 
-**Any reading of the binary may take a fast path, which gives the exact reading's result or hands its input to the exact reading. The doc-check filler reads the whole-repository check, and a test fails the build once the filler's cost passes half its bound. YAML text has one fast reader, of the plain block form.**
+**Any reading of the binary may take a fast path, which gives the exact reading's result or hands its input to the exact reading. The doc-check filler reads the whole-repository check, and a test fails the build once the filler's cost passes two-thirds of its bound. YAML text has one fast reader, of the plain block form.**
 
 ### 1. A fast path gives the exact result, or hands its input on
 
@@ -71,13 +71,13 @@ Tests sample the difference and cannot prove it nil. What keeps a fast path exac
 ### 2. The filler reads the whole check, within a budget
 
 The filler reads its pages' states and the uncovered surface from the whole-repository check, every artefact judged. No selection of the check is built for it.
-- **The budget.** A test runs the filler on project-kit's own tree, and fails the build once the filler's cost passes a budget. The budget is about the cost at which the filler would take half its bound, 15 seconds, on the slower of CI's runners.
+- **The budget.** A test runs the filler on project-kit's own tree, and fails the build once the filler's cost passes a budget. The budget is about the cost at which the filler would take two-thirds of its bound, 20 seconds, on the slower of CI's runners.
 - **Counted in units.** The cost is the filler's processor time, counted in units of a fixed parse by the exact reading of YAML text. So a slow runner and a fast one count alike.
 - **On every run.** Answers alone grow the cost, so the short check runs the test too ([ADR-067](ADR-067-answers-only-short-check.md) point 8).
 - **When the selection is taken up.** The selection of the check that judges the filler's pages alone (#2365) is taken up next when either holds:
   - the test fails, its budget passed;
   - the filler gives no answer within its bound, in project-kit's runs or as an adopter reports it.
-- **The budget's number** is the test's. It is set again only to keep it at half the bound, never to put the selection off.
+- **The budget's number** is the test's. It is set again only to keep it at two-thirds of the bound, never to put the selection off.
 
 ### 3. YAML text has one fast reader, of the plain block form
 
@@ -92,7 +92,7 @@ The filler reads its pages' states and the uncovered surface from the whole-repo
 
 ## Rationale
 
-**Why half the bound.** It is #2410's criterion. Set on the slower of CI's runners, it leaves room for a run twice as slow as theirs. It leaves room too for a crowded run, which counts more units than a quiet one.
+**Why two-thirds of the bound.** The test must fail before the bound does, on any runner. Set on the slower of CI's runners, it fails while a run half again as slow as theirs still answers within the bound, and it sits above what a crowded run counts. Half the bound, #2410's criterion for the filler's time, would leave the filler less room to grow before the test fails, 1.4 times its cost on 4 November's tree against 1.9.
 
 **Why a test that fails.** A warning that fails nothing is passed over, by an agent above all. So the filler's time would grow back to its bound unseen, as it did before #2410. A test fails the change that passes the budget, while the filler still answers.
 

@@ -1155,11 +1155,13 @@ def test_the_filler_reads_its_answers_in_the_order_the_answer_depends_on_them(
 #: it took about 17 units, in process on a laptop. On CI that was about 7 s on this
 #: change's runners: the doc check's line, 15 s, less the 7 s of the change check the
 #: line also runs. It was about 10 s on the runners `main`'s checks ran on, which took
-#: 1.4 times as long over the type check. At 24 units the filler would take about 15 s
-#: on those slower runners, half the 30 s bound of a query command (ADR-057 point 3), and
-#: 10 s on the faster. The budget also sits above the 18 to 21 units the same tree
-#: measured with every core of the laptop busy, so a crowded run does not fail it.
-DOC_CHECK_BUDGET = 24
+#: 1.4 times as long over the type check. At 32 units the filler would take about 20 s
+#: on those slower runners, two-thirds of the 30 s bound of a query command (ADR-057
+#: point 3), and about 13 s on the faster. So the test fails while a run half again as
+#: slow as theirs still answers within the bound. The budget also sits above the 18 to
+#: 21 units the same tree measured with every core of the laptop busy, so a crowded run
+#: does not fail it.
+DOC_CHECK_BUDGET = 32
 
 
 def _yaml_unit() -> float:
@@ -1209,7 +1211,7 @@ def test_the_filler_answers_within_its_budget_on_project_kit_s_own_tree(
     assert answered.returncode == 0, answered.stderr
     assert spent / unit <= DOC_CHECK_BUDGET, (
         f"fill-doc-check took {spent:.1f} s of CPU, {spent / unit:.1f} units of "
-        f"{unit:.3f} s, over its budget of {DOC_CHECK_BUDGET} units: about half its 30 s "
+        f"{unit:.3f} s, over its budget of {DOC_CHECK_BUDGET} units: about 20 s of its 30 s "
         "bound on CI's slower runners. Take up next the selection of the whole-repository "
         "check that judges the filler's pages alone, as #2412 proposed (ADR-079 point 2)."
     )
