@@ -1,0 +1,14 @@
+component: backbone
+kind: patch
+body: >
+  A decision lands with what it decides (#2639). The decisions reference's
+  "The acceptance gate" and "Refining an accepted record" say that the change
+  proposing a record may carry its edits to the accepted records it refines,
+  overturns in part or replaces whole, and that a person accepts those edits
+  with the record, in the same change. The `decision-author` skill drafts
+  those edits in the proposing change, and has a person accept the record in
+  its change, so the record lands accepted, never proposed. The `architect`
+  agent's line on an ADR it authors says the same. `pkit decisions
+  check-diff` and `pkit refs rot` behave as before: neither fails such a
+  change, and the rot report lists the edited records only until the record
+  is accepted.

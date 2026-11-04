@@ -237,6 +237,7 @@ A person accepts a record in the change that proposes it, before any work in the
 
 - **Who accepts it:** a person, never an agent. Usually it is the person who authorises the change's merge. An agent writes `accepted` only once a person has accepted the record.
 - **What they read:** the record, and each record it cites. Check that each cited record is accepted, and accept one proposed in the same change first.
+- **The records it changes:** the same change may edit the accepted records the new record refines, overturns in part or replaces whole. The person accepts those edits with the record ([the reference, "The acceptance gate"](../../.pkit/decisions/README.md#the-acceptance-gate)).
 - **How it is written:** the record's `status` becomes `accepted` in a commit of its own, made by the person or by an agent on their word. Where the person accepts the record as first written, it may be added accepted. Either commit comes before the commits whose work rests on the record.
 - **With your agent:** tell it "the squash-merge record is accepted", once you have read the record. It sets the status and commits, and only then builds on the record.
 - **Work that rests on the record:** that work follows in the same change, or in a change built on this one that lands no earlier.
@@ -261,7 +262,7 @@ Install project-kit
 ```
 
 > [!WARNING]
-> Nothing enforces [COR-066](../../.pkit/decisions/core/COR-066-accepted-before-landing.md) yet ([the reference, "The acceptance gate"](../../.pkit/decisions/README.md#the-acceptance-gate)). No check refuses a merge that lands a record still `proposed`, and none lists the records a change makes accepted. The decision-author skill and the architect agent still have a record land `proposed`. So before the merge, accept each such record in the change, and look again at any work that rested on it.
+> Nothing enforces [COR-066](../../.pkit/decisions/core/COR-066-accepted-before-landing.md) yet ([the reference, "The acceptance gate"](../../.pkit/decisions/README.md#the-acceptance-gate)). No check refuses a merge that lands a record still `proposed`, and none lists the records a change makes accepted. So before the merge, accept each such record in the change, and look again at any work that rested on it.
 
 ## Refine a record, or supersede it
 
@@ -323,5 +324,6 @@ To supersede a record, and to leave the methodology's alone ([the reference, "Re
 
 - **A record replaced whole:** the new record's `supersedes:` names the old one. In the old record, set `status: superseded`, and put a *Superseded by …* line at the top of its body. Leave the rest as it stood, and in an ADR also set `superseded_by:`.
 - **A record overturned only in part** stays `accepted`, and its top line reads *Partially superseded by …*. The new record's `supersedes:` does not name it.
+- **In the new record's change:** you may make these edits there, and the person accepts them with the new record ("Have a person accept it" above).
 - **Within one namespace:** a record supersedes only a record of its own namespace, so an ADR never supersedes a `PRJ-` record.
 - **The methodology's records,** and an installed capability's: never edit one, since the next sync overwrites the edit ([COR-001](../../.pkit/decisions/core/COR-001-content-mechanisms.md)). Propose the change where the record is kept.

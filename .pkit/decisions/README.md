@@ -226,10 +226,11 @@ Work depends only on accepted records: code, content, tooling, and records that 
   pkit refs rot
   ```
 
+- **The records a proposal changes:** the change that proposes a record may also edit each accepted record the new record refines, overturns in part or replaces whole. Those edits are part of the proposal, and a person accepts them with the record, in the same change ("Refining an accepted record" below). So the decision lands with what it decides. Until the person accepts, the reference-rot report lists each accepted record the change edits to cite the proposal, and afterwards none.
 - **Documents** that describe what a record decides wait until it is accepted.
 - **Before the merge:** the person who authorises it sees each record the change makes accepted, added accepted or set to accepted. Where no component that carries out merges shows that list, the change's author shows it. An edit made to such a record after its acceptance in the change is accepted only through that list (COR-066 point 3).
-- **An edit to a record accepted where the branch left the default branch** that changes what it decides is a person's to accept. The numbering check lists it ("Refining an accepted record").
-- **Not enforced yet:** no check refuses a merge that lands a proposed record, and none lists the records a change makes accepted (COR-066 points 2 and 3). The `decision-author` skill and the `architect` agent still have a record land `proposed`, and COR-066 point 1 holds over both. So, before the change lands, have a person accept each record it adds.
+- **An edit to a record accepted where the branch left the default branch** that changes what it decides is a person's to accept. The numbering check lists it, the edits a proposing change makes among them ("Refining an accepted record").
+- **Not enforced yet:** no check refuses a merge that lands a proposed record, and none lists the records a change makes accepted (COR-066 points 2 and 3). So, before the change lands, have a person accept each record it adds, with its edits to accepted records.
 
 ## Adding a record
 
@@ -280,6 +281,8 @@ Two more disciplines bind a core record. Core records are written where the meth
 ## Refining an accepted record
 
 Edit an accepted record in place for a clarification, a scope tweak or a refinement where its decision stands, narrowed or completed. Git history is the change log, so the record does not repeat it. Where a change overturns the record, in whole or in part, so that another record decides otherwise, write a new superseding record instead.
+
+**A new record's edits may go in its change.** A new record may refine an accepted record, overturn it in part or replace it whole. The change that proposes the new record may carry the edits to the old one ("The acceptance gate" above). They rewrite the points the new record narrows or completes, and add a forward refinement pointer or the superseded-by line, whole or partial. The numbering check lists them, for the person who accepts them with the new record.
 
 **One test sorts the edits made in place: does the edit change what the record decides, in either direction?**
 
