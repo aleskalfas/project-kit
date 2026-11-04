@@ -309,7 +309,8 @@ _SKIPPED_TOP_LEVEL = frozenset({".git"})
 
 _GLOB_CHARS = frozenset("*?[")
 
-_yaml = YAML(typ="safe")
+# The exact reading behind `block_yaml`: ruamel's pure-Python safe loader, never libyaml.
+_yaml = YAML(typ="safe", pure=True)
 
 
 # --- repository trees ---------------------------------------------------

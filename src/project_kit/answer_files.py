@@ -160,7 +160,8 @@ DEFERRED_KEY = "deferred"
 BLOCK_HOME = "block"
 FILES_HOME = "files"
 
-_yaml: Any = YAML(typ="safe")
+# The exact reading behind `block_yaml`: ruamel's pure-Python safe loader, never libyaml.
+_yaml: Any = YAML(typ="safe", pure=True)
 
 
 # --- the folder ---------------------------------------------------------------------

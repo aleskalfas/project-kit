@@ -1,4 +1,9 @@
-"""YAML text as ruamel's safe loader reads it, the plain block form read without it.
+"""YAML text as ruamel's pure-Python safe loader reads it, the plain block form read
+without it.
+
+The loader, `YAML(typ="safe", pure=True)`, is the exact reading: each caller's
+fallback builds it so, never leaving `pure` unset, since an install that holds
+ruamel's compiled binding would then read the text by libyaml, as YAML 1.1.
 
 ruamel's loader is pure Python, about a megabyte a second, and the
 whole-repository friction check reads YAML on every run: every version of
@@ -27,6 +32,11 @@ whole: a text it refuses raises its own error, and one this reading is unsure
 of reads as the loader reads it. Tests hold both readings equal on texts made
 to sit at the edges of the form, and on the answer files of the project's own
 tree.
+
+This reading takes a few parts of the loader as it is imported: the reader's
+set of characters it refuses, the resolver and the constructor. Where the
+installed ruamel.yaml lacks one, or calls it another way, this reading is off,
+and `load` gives every text to the loader.
 """
 
 from __future__ import annotations
@@ -35,17 +45,9 @@ import functools
 import json
 import re
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 from ruamel.yaml import YAML
-from ruamel.yaml.nodes import ScalarNode
-from ruamel.yaml.reader import Reader
-
-# ruamel.yaml is untyped; its reader, resolver and constructor are read through `Any`.
-_reader: Any = Reader
-_loader: Any = YAML(typ="safe")
-_resolver: Any = _loader.resolver
-_constructor: Any = _loader.constructor
 
 _STR = "tag:yaml.org,2002:str"
 #: The implicit types a plain scalar may resolve to that this reading builds; any
@@ -60,11 +62,45 @@ _BUILT = frozenset(
     }
 )
 
+
+def _parts() -> tuple[Any, Any, Any, str] | None:
+    """The parts of the loader this reading takes: the class of a scalar's node, the
+    resolver, the constructor, and the pattern of the characters the reader refuses.
+    `None` where the installed ruamel.yaml lacks one, or calls it another way. Each call
+    this reading makes of them is made here once, so a part renamed or changed turns the
+    reading off, and no command fails for it."""
+    try:
+        from ruamel.yaml.nodes import ScalarNode
+        from ruamel.yaml.reader import Reader
+
+        # ruamel.yaml is untyped; its parts are read through `Any`.
+        loader: Any = YAML(typ="safe", pure=True)
+        resolver: Any = loader.resolver
+        constructor: Any = loader.constructor
+        refused = str(cast(Any, Reader).NON_PRINTABLE.pattern)
+        re.compile(refused)
+        if str(resolver.resolve(ScalarNode, "x", (True, False))) != _STR:
+            return None
+        twelve = ScalarNode(resolver.resolve(ScalarNode, "12", (True, False)), "12")
+        if constructor.construct_non_recursive_object(twelve) != 12:
+            return None
+    except Exception:  # any part missing or changed: the loader reads every text
+        return None
+    return ScalarNode, resolver, constructor, refused
+
+
+_PARTS = _parts()
+#: Whether this reading is on: the installed ruamel.yaml has every part it takes.
+ON = _PARTS is not None
+# ruamel.yaml is untyped; its parts are read through `Any`, and not at all while off.
+_scalar_node: Any
+_resolver: Any
+_constructor: Any
+_scalar_node, _resolver, _constructor, _refused = _PARTS or (None, None, None, r"(?!)")
+
 #: Characters the loader refuses, or reads as a line break or a byte-order mark,
 #: and tabs and carriage returns, which a line here never holds.
-_UNSURE_CHARACTERS = re.compile(
-    str(_reader.NON_PRINTABLE.pattern) + r"|[\t\r\x85\u2028\u2029\ufeff]"
-)
+_UNSURE_CHARACTERS = re.compile(_refused + r"|[\t\r\x85\u2028\u2029\ufeff]")
 
 #: A key this reading takes: plain, opening with a word character, with no space or
 #: hash in it, and a colon only before a character that continues the key.
@@ -105,7 +141,10 @@ def load(text: str, fallback: Callable[[], Any]) -> Any:
     """The YAML `text` as ruamel's safe loader reads it: read here when it is in the
     plain block form, else by `fallback`, the caller's own call of the loader on it,
     whose errors are the caller's to catch. A text this reading fails on in any way is
-    the loader's too, so every error raised is the loader's own."""
+    the loader's too, so every error raised is the loader's own. Every text is the
+    loader's while this reading is off (`ON`)."""
+    if not ON:
+        return fallback()
     try:
         return _read(text)
     except Exception:  # `_Unsure`, or a value the loader is to refuse
@@ -227,7 +266,7 @@ def _key(text: str) -> str:
     """A plain key, which this reading takes only where the loader reads it as text."""
     if len(text) >= _LONGEST_KEY:
         raise _Unsure
-    if str(_resolver.resolve(ScalarNode, text, (True, False))) != _STR:
+    if str(_resolver.resolve(_scalar_node, text, (True, False))) != _STR:
         raise _Unsure
     return text
 
@@ -329,13 +368,13 @@ def _plain(text: str) -> Any:
     collection, so one reading serves every text that writes it."""
     if not text or text[0] in _INDICATORS:
         raise _Unsure
-    tag = _resolver.resolve(ScalarNode, text, (True, False))
+    tag = _resolver.resolve(_scalar_node, text, (True, False))
     name = str(tag)
     if name == _STR:
         return text
     if name not in _BUILT:
         raise _Unsure
-    return _constructor.construct_non_recursive_object(ScalarNode(tag, text))
+    return _constructor.construct_non_recursive_object(_scalar_node(tag, text))
 
 
 def _double_quoted(text: str) -> str:

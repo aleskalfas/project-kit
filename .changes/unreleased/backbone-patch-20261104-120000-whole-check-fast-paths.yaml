@@ -13,4 +13,7 @@ body: >
   seeks a time in a version's front matter alone where it can cut one, and
   finds the files of a path anchor without glob characters through a sorted
   index of the listing. What every friction command and `pkit validate`
-  report is unchanged.
+  report is unchanged. A text that reader hands on is read by ruamel's
+  pure-Python loader, never by libyaml where ruamel's compiled binding is
+  installed. Should the installed ruamel.yaml lack a part of the loader the
+  reader takes, the reader turns itself off, and every text goes to the loader.

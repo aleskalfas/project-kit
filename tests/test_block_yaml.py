@@ -5,6 +5,7 @@ otherwise — the loader's own error included — and the answer files are in th
 from __future__ import annotations
 
 import random
+import sys
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -12,9 +13,13 @@ from typing import Any
 
 import pytest
 from ruamel.yaml import YAML
+from ruamel.yaml.constructor import BaseConstructor
+from ruamel.yaml.reader import Reader
+from ruamel.yaml.resolver import VersionedResolver
 
 from project_kit import answer_files as af
-from project_kit import block_yaml
+from project_kit import block_yaml, document_parts
+from project_kit import friction_discovery as fd
 from project_kit import friction_write as fw
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -42,7 +47,7 @@ def _outcome(read: Callable[[], Any]) -> tuple[str, Any]:
 def _loaded(text: str) -> Any:
     """The text as a loader of its own reads it: a loader that failed on a text keeps
     what it had built of it, and may fail on the next with an error of the last."""
-    return YAML(typ="safe").load(text)
+    return YAML(typ="safe", pure=True).load(text)
 
 
 def _both(text: str) -> tuple[tuple[str, Any], tuple[str, Any], bool]:
@@ -189,6 +194,53 @@ def test_a_text_the_loader_refuses_raises_its_error(text: str) -> None:
     it fails, with its own error."""
     expected, found, here = _both(text)
     assert expected[0] == "error"
+    assert found == expected and not here
+
+
+# --- the loader this reading takes its parts from -------------------------------------
+
+
+def test_every_fallback_reads_by_the_pure_python_loader() -> None:
+    """The exact reading is ruamel's pure-Python safe loader: a fallback left to pick
+    libyaml, where ruamel's compiled binding is installed, would read YAML 1.1."""
+    for module in (af, document_parts, fd):
+        assert module._yaml.pure is True, module.__name__
+
+
+def test_the_reading_is_on_with_the_installed_loader() -> None:
+    assert block_yaml.ON
+
+
+@pytest.mark.parametrize(
+    "removed",
+    [
+        "the reader's refused characters",
+        "the constructor's call",
+        "the resolver's call",
+        "the module of nodes",
+    ],
+)
+def test_a_loader_without_a_part_this_reading_takes_turns_it_off(
+    removed: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """On a ruamel.yaml without a part this reading takes, or that calls one another
+    way, the parts are not taken, so the reading is off rather than failing at import."""
+    if removed == "the reader's refused characters":
+        monkeypatch.delattr(Reader, "NON_PRINTABLE")
+    elif removed == "the constructor's call":
+        monkeypatch.delattr(BaseConstructor, "construct_non_recursive_object")
+    elif removed == "the resolver's call":
+        monkeypatch.setattr(VersionedResolver, "resolve", lambda self, value: None)
+    else:
+        monkeypatch.setitem(sys.modules, "ruamel.yaml.nodes", None)
+    assert block_yaml._parts() is None
+
+
+def test_a_reading_turned_off_gives_every_text_to_the_loader(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(block_yaml, "ON", False)
+    expected, found, here = _both("a: x\nb: [1, 2]\n")
     assert found == expected and not here
 
 

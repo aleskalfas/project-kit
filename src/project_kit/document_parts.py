@@ -86,8 +86,9 @@ _INLINE_LINK = re.compile(r"(?<!!)\[(?P<words>[^\[\]]+)\]\((?P<target>[^()\s]+)\
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
 _CODE_SPAN = re.compile(r"(?<!`)(`+)(?!`)(?:[^\n]|\n(?![ \t]*\n))+?(?<!`)\1(?!`)")
 
-# ruamel.yaml is untyped; the loaded value is judged where it is read.
-_yaml: Any = YAML(typ="safe")
+# ruamel.yaml is untyped; the loaded value is judged where it is read. The exact reading
+# behind `block_yaml`: ruamel's pure-Python safe loader, never libyaml.
+_yaml: Any = YAML(typ="safe", pure=True)
 
 
 def split_front_matter(text: str) -> tuple[str | None, str]:
