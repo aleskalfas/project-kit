@@ -1,0 +1,53 @@
+{
+  "total_count": 4,
+  "workflow_runs": [
+    {
+      "id": 41673959766,
+      "name": "checks",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "feat/2605-the-capability-keeps-each-released",
+      "head_sha": "d3433e1ea0b3f591b91dfe6a811bb439b90cce9e",
+      "run_attempt": 1,
+      "created_at": "2026-11-03T16:24:57Z",
+      "path": ".github/workflows/checks.yml"
+    },
+    {
+      "id": 41672114961,
+      "name": "checks",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "head_branch": "feat/2605-the-capability-keeps-each-released",
+      "head_sha": "79873aa0c15142770cbf1fa503f36394c4a4ccf5",
+      "run_attempt": 1,
+      "created_at": "2026-11-03T16:14:21Z",
+      "path": ".github/workflows/checks.yml"
+    },
+    {
+      "id": 41665141214,
+      "name": "checks",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "feat/2605-the-capability-keeps-each-released",
+      "head_sha": "dd742dfff25bca5baf063d9a9e1d5752e333956b",
+      "run_attempt": 2,
+      "created_at": "2026-11-03T15:33:37Z",
+      "path": ".github/workflows/checks.yml"
+    },
+    {
+      "id": 41653052221,
+      "name": "checks",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "head_branch": "feat/2605-the-capability-keeps-each-released",
+      "head_sha": "774012ad3c914287885e875d2331a97f98e16a74",
+      "run_attempt": 1,
+      "created_at": "2026-11-03T14:22:32Z",
+      "path": ".github/workflows/checks.yml"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+2026-11-03T15:51:46.5588520Z ##[endgroup]
+2026-11-03T15:51:47.2196314Z ### `checks`: the full run, did not pass
+2026-11-03T15:51:47.2196854Z 
+2026-11-03T15:51:47.2197115Z | Part | Its job ended | It took | It said |
+2026-11-03T15:51:47.2197632Z |---|---|---|---|
+2026-11-03T15:51:47.2198049Z | deciding the form | `success` |  | named `full` |
+2026-11-03T15:51:47.2198581Z | slice 1 of 2 | `success` | 13 min 08 s | ran 16,117 |
+2026-11-03T15:51:47.2199028Z | slice 2 of 2 | `success` | 7 min 31 s | ran 6,585 |
+2026-11-03T15:51:47.2199473Z | the remainder | `failure` | 17 min 08 s |  |
+2026-11-03T15:51:47.2199949Z | the changeset guard | `failure` |  | `changeset guard` |
+2026-11-03T15:51:47.2200168Z 
+2026-11-03T15:51:47.2200343Z It did not pass, because:
+2026-11-03T15:51:47.2200528Z 
+2026-11-03T15:51:47.2200701Z - the remainder ended in `failure`
+2026-11-03T15:51:47.2200950Z 
+2026-11-03T15:51:47.2201128Z Warnings:
+2026-11-03T15:51:47.2201349Z 
+2026-11-03T15:51:47.2201520Z - the table lacks 1,638 of the 22,702 tests collected
+2026-11-03T15:51:47.2201784Z 
+2026-11-03T15:51:47.2202055Z Each part names its own failures in its job's summary (ADR-078 point 8).
+2026-11-03T15:51:47.2287355Z ##[error]Process completed with exit code 1.
