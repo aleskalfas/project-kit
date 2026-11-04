@@ -1,0 +1,21 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A piece is exported as one PDF for each language and combination of modes,
+  its pages in order, under the export's number (#2564, DEC-006 point 7).
+  `piece.yaml`'s `exports` takes `pdf` beside `svg`, and `pkit visual export`
+  writes `<piece>.v<N>.<language>.<key>.pdf`, which `exports.yaml` records.
+  The new `pdf` renderer, version 1.0.0 at seam 3, draws boxes, ellipses,
+  lines with their arrowheads, ties' connectors and text, each run in its own
+  font and paint, from the scene. Each px of the scene is 0.75 pt of the
+  page. Each family is embedded from the brand's committed file, subset, as a
+  CID-keyed font with a map back to Unicode, its glyphs shaped with HarfBuzz
+  as the engine measured them. A family's name is written as a PDF name,
+  escaped. The renderer calls no outside program and adds no dependency. It
+  writes no date and no compressed stream, so the same scene gives the same
+  bytes. It refuses an image for now, and declares that it carries no
+  alternative text, reading order or structure (#2570). The check reports
+  what each renderer a piece exports in would lose, beside the SVG renderer
+  of its previews. Every file format 1 accepted still holds.

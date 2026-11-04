@@ -9,7 +9,8 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
   a producer made for it under `produced/<output>/`. `read_piece` reads it.
 - **Its lock** names the version of each library it uses. `needed` gives the libraries
   the piece names itself: its top's library, its brand, its notations and every library
-  its content uses; `libraries.move_lock` adds what they build on. `write_lock` writes a
+  its content uses; `libraries.move_lock` adds what they build on, judging each whole
+  combination it reaches with `Fit`. `write_lock` writes a
   lock into `piece.yaml` as text, every other byte kept.
 - **A project** (`Project`) is a piece under one lock: the scope of the locked versions,
   the foundations' declarations and the own roles of each component library the lock
@@ -21,6 +22,10 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
 - **A library version checked alone** is read through `LibraryEnv`, an `Env` that no
   piece or brand stands behind: components from a combination of library versions, and
   roles from their declarations alone (DEC-008 point 1, DEC-010 point 9).
+- **Whether versions fit the piece** as its lock does is `Fit`, the judgement a draft's
+  render gives the search for its lock: the piece placed under a combination, no scene
+  computed, against the piece placed under its lock (DEC-003 point 8, DEC-010 point 2,
+  DEC-011 point 4).
 - **A produced picture** is read from `produced/<output>/record.yaml`. A missing record,
   or a variant file it names that is missing, makes the picture missing for the engine,
   with the reason kept so the finding names `pkit visual produce <piece> <output>`; it
@@ -32,13 +37,14 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from _lib import keys, notations, records, tokens, values
+from _lib import keys, layout, notations, records, tokens, values
 from _lib.env import MissingFont, PictureInfo, UnknownConcept, UnreadableComponent
 from _lib.files import FileError, read_bound, refuse_links, without_binding, write_whole
-from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, Version
+from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, Misfit, Version
 from _lib.location import files as listed_files
 from _lib.names import PIECE, is_language, is_name, split_use
 from _lib.plugins import seam
@@ -496,45 +502,11 @@ class ProjectEnv:
             raise KeyError(output)
         if output not in self.records:
             try:
-                self.records[output] = self._read_record(output)
+                self.records[output] = _read_record(self._project.piece, output)
             except _Missing as exc:
                 self.missing[output] = str(exc)
                 raise KeyError(output) from exc
-        record = self.records[output]
-        return PictureInfo(
-            variants={
-                key: {"file": variant["file"], "pixels": dict(variant["pixels"])}
-                for key, variant in record["variants"].items()
-            },
-            points={point: dict(places) for point, places in record["points"].items()},
-        )
-
-    def _read_record(self, output: str) -> Mapping[str, Any]:
-        piece = self._project.piece
-        if not is_name(output):
-            raise _Missing(f"`{output}` is not the name of a produced output")
-        folder = piece.folder / PRODUCED / output
-        rel = piece.file(f"{PRODUCED}/{output}/{RECORD}")
-        if not (folder / RECORD).is_file():
-            raise _Missing(f"{rel} does not exist: the picture was never produced")
-        try:
-            record = read_bound(folder / RECORD, "produced-record")
-            variants, points = record["variants"], record["points"]
-            for key, variant in variants.items():
-                file, pixels = variant["file"], variant["pixels"]
-                if not isinstance(file, str) or "/" in file or not (folder / file).is_file():
-                    raise _Missing(
-                        f"{rel} names the variant `{key}` file `{file}`, which is missing"
-                    )
-                int(pixels["width"]), int(pixels["height"])
-            for places in points.values():
-                for place in places.values():
-                    float(place["x"]), float(place["y"])
-        except (ReadError, FileError) as exc:
-            raise _Missing(f"{rel} cannot be read: {exc}") from exc
-        except (KeyError, TypeError, ValueError, AttributeError) as exc:
-            raise _Missing(f"{rel} is not of the shape of a produced output's record") from exc
-        return record
+        return _picture_info(self.records[output])
 
     def pictures_at(self, key: str) -> dict[str, Path]:
         """The file of the variant that serves the combination `key`, of each produced output
@@ -660,6 +632,243 @@ class LibraryEnv:
 
 class _Missing(Exception):
     """Why a produced picture is missing."""
+
+
+def _read_record(piece: Piece, output: str) -> Mapping[str, Any]:
+    """The record of the piece's produced output `output`. Raises _Missing, saying why the
+    picture is missing."""
+    if not is_name(output):
+        raise _Missing(f"`{output}` is not the name of a produced output")
+    folder = piece.folder / PRODUCED / output
+    rel = piece.file(f"{PRODUCED}/{output}/{RECORD}")
+    if not (folder / RECORD).is_file():
+        raise _Missing(f"{rel} does not exist: the picture was never produced")
+    try:
+        record = read_bound(folder / RECORD, "produced-record")
+        variants, points = record["variants"], record["points"]
+        for key, variant in variants.items():
+            file, pixels = variant["file"], variant["pixels"]
+            if not isinstance(file, str) or "/" in file or not (folder / file).is_file():
+                raise _Missing(f"{rel} names the variant `{key}` file `{file}`, which is missing")
+            int(pixels["width"]), int(pixels["height"])
+        for places in points.values():
+            for place in places.values():
+                float(place["x"]), float(place["y"])
+    except (ReadError, FileError) as exc:
+        raise _Missing(f"{rel} cannot be read: {exc}") from exc
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
+        raise _Missing(f"{rel} is not of the shape of a produced output's record") from exc
+    return record
+
+
+def _picture_info(record: Mapping[str, Any]) -> PictureInfo:
+    """A produced output as the engine reads it, from its record."""
+    return PictureInfo(
+        variants={
+            key: {"file": variant["file"], "pixels": dict(variant["pixels"])}
+            for key, variant in record["variants"].items()
+        },
+        points={point: dict(places) for point, places in record["points"].items()},
+    )
+
+
+# --- whether versions fit the piece as its lock does --------------------------------------------
+
+
+def fit(piece: Piece, held: Held) -> Fit | None:
+    """The judgement of the versions a draft's lock may move to (`Fit`). None where the
+    piece has no lock yet: its first lock takes the newest versions, and nothing holds them
+    back (DEC-003 point 8, DEC-011 point 4)."""
+    return Fit(piece, held) if piece.lock else None
+
+
+class Fit:
+    """The judgement a draft's render gives the search for its lock (`libraries.Judge`):
+    whether a whole combination of versions fits the piece as its lock does (DEC-003 point
+    8). It places the piece under the combination, in every language, as the engine finds
+    a tie's ends (`layout.place_top`), and computes no scene. Versions do not fit where,
+    under them:
+
+    - an item the lock places carries a key that both its component and its list declare,
+      where it does not under the lock (DEC-010 point 2). The libraries of the item's
+      component, and of each component above it, are implicated.
+    - an end of a tie the lock draws is not found: its item is drawn other than once below
+      the tie's pattern or off the tie's page, or the tie is not drawn (DEC-011 point 4).
+      Every library whose component the placing read or looked for is implicated.
+
+    So what the lock already shows holds nothing back: a clash under the lock, an end it
+    does not find, and what a library it does not name yet brings. Each component file and
+    each produced picture's record is read once, across every combination judged. The
+    placing under the lock, which each combination is compared with, is made at the first
+    judgement."""
+
+    def __init__(self, piece: Piece, held: Held) -> None:
+        self.piece = piece
+        self.held = held
+        self.components: dict[Path | None, tuple[dict[str, Any] | None, str | None]] = {}
+        self.pictures: dict[str, PictureInfo | str] = {}
+        self._placed: dict[frozenset[str], _Placed] = {}
+        self._lock: _Placed | None = None
+
+    def __call__(self, versions: Mapping[str, Library]) -> list[Misfit]:
+        under_lock = self._under_lock()
+        if not under_lock.items and not under_lock.drawn:
+            return []
+        now = self._place(versions)
+        misfits: dict[str, Misfit] = {}
+        for at, (said, implicates) in now.clashes.items():
+            language, item, _ = at
+            if (language, item) in under_lock.items and at not in under_lock.clashes:
+                misfits.setdefault(said, Misfit("clash", said, implicates))
+        for _, tie, end in sorted(under_lock.drawn - now.found):
+            said = f"the end `{end}` of the tie `{tie}` would not be found"
+            misfits.setdefault(said, Misfit("end", said, now.asked))
+        return list(misfits.values())
+
+    def _under_lock(self) -> _Placed:
+        """The piece placed under the versions its lock names that the project holds and the
+        installed capability reads."""
+        if self._lock is None:
+            versions = {}
+            for name, text in self.piece.lock.items():
+                try:
+                    version = Version.parse(text)
+                except ValueError:
+                    continue
+                if self.held.unreadable(name, version) is None:
+                    versions[name] = self.held.library(name, version)
+            self._lock = self._place(versions)
+        return self._lock
+
+    def _place(self, versions: Mapping[str, Library]) -> _Placed:
+        key = frozenset(library.label for library in versions.values())
+        if key not in self._placed:
+            env = _FitEnv(self, versions)
+            placed = _Placed()
+            asked: set[str] = set()
+            for language in self.piece.languages:
+                ctx = layout.Context(env, language)
+                top = layout.place_top(ctx, self.piece.top, dict(self.piece.contents[language]))
+                asked |= ctx.asked()
+                if top is not None:
+                    placed.add(language, top)
+            placed.asked = frozenset(asked)
+            self._placed[key] = placed
+        return self._placed[key]
+
+
+@dataclass
+class _Placed:
+    """What placing the piece under one combination of versions shows, in every language:
+    each item placed, by its language and key path; each key an item carries that both its
+    component and its list declare, in words, with the libraries it implicates; the ends of
+    each tie drawn; every end found, a left-out tie's included where its item lies on the
+    tie's page; and the library of each component read or looked for."""
+
+    items: set[tuple[str, str]] = field(default_factory=set)
+    clashes: dict[tuple[str, str, str], tuple[str, frozenset[str]]] = field(default_factory=dict)
+    drawn: set[tuple[str, str, str]] = field(default_factory=set)
+    found: set[tuple[str, str, str]] = field(default_factory=set)
+    asked: frozenset[str] = frozenset()
+
+    def add(self, language: str, top: layout.Instance) -> None:
+        for each in [top, *top.below()]:
+            path = _path_of(each)
+            if each.is_item:
+                self.items.add((language, path))
+            if each.clashed:
+                above, at = set(), each
+                while at is not None:
+                    above.add(at.library.partition("@")[0])
+                    at = at.parent
+                above.discard("")
+                for key in each.clashed:
+                    said = (
+                        f"the item `{path}` carries `{key}`, which both its component "
+                        f"`{each.component.use}` and its list declare"
+                    )
+                    self.clashes.setdefault((language, path, key), (said, frozenset(above)))
+            if each.tie is not None and each.tie.ends is not None:
+                for name in each.tie.ends:
+                    self.drawn.add((language, path, name))
+                    self.found.add((language, path, name))
+            for tie in each.left_out:
+                page = tie.page()
+                for which, name in zip(layout.ENDS, tie.tie.ends if tie.tie else (), strict=False):
+                    end = tie.ends.get(which)
+                    if end is not None and page is not None and end.item.page() is page:
+                        self.found.add((language, _path_of(tie), name))
+
+
+def _path_of(instance: layout.Instance) -> str:
+    """An instance by the key path in the content file of what content gave it, else by
+    its trace id."""
+    return instance.content_path if instance.content_path is not None else instance.trace
+
+
+class _FitEnv:
+    """The `Env` a combination of versions is placed through, for its fit (`Fit`):
+    components from those versions and from the piece's own folder, and the piece's
+    produced pictures, each read once across the combinations. No brand stands behind it,
+    so a role has no value, and no concept a colour family: neither changes where an item
+    is placed, or how often."""
+
+    def __init__(self, fit: Fit, versions: Mapping[str, Library]) -> None:
+        self._fit = fit
+        self._versions = dict(versions)
+
+    def component(self, use: str) -> dict:
+        path = self.component_path(use)
+        read = self._fit.components
+        if path not in read:
+            read[path] = read_component(path)
+        data, why = read[path]
+        if why is not None:
+            raise UnreadableComponent(use, why)
+        if data is None:
+            raise KeyError(use)
+        return data
+
+    def component_path(self, use: str) -> Path | None:
+        """The file of a component, by its use; None where the combination holds no version
+        of its library."""
+        try:
+            library, name = split_use(use)
+        except ValueError:
+            return None
+        if library == PIECE:
+            return self._fit.piece.folder / COMPONENTS / f"{name}.yaml"
+        version = self._versions.get(library)
+        return None if version is None else version.folder / COMPONENTS / f"{name}.yaml"
+
+    def role(self, token_path: str) -> dict:
+        raise KeyError(token_path)
+
+    def font_file(self, family: str) -> Path:
+        raise MissingFont(
+            f"no brand stands behind the fit of versions, so no file measures {family!r}"
+        )
+
+    def picture(self, output: str) -> PictureInfo:
+        pictures = self._fit.pictures
+        if output not in pictures:
+            try:
+                pictures[output] = _picture_info(_read_record(self._fit.piece, output))
+            except _Missing as exc:
+                pictures[output] = str(exc)
+        found = pictures[output]
+        if isinstance(found, str):
+            raise KeyError(output)
+        return found
+
+    def family(self, name: str) -> dict[str, str]:
+        raise KeyError(name)
+
+    def concept(self, name: str) -> str | None:
+        raise UnknownConcept(name, "no notation stands behind the fit of versions")
+
+    def library_version(self, library: str) -> str:
+        return str(self._versions[library].version)
 
 
 # --- drawing ------------------------------------------------------------------------------------

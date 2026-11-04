@@ -1,7 +1,9 @@
 """`pkit visual export <piece>` (visual-communication DEC-006 point 7): numbered exports in
 the clone's local folder, never overwriting another; their record, `exports.yaml`; no stale
 or missing produced picture, unless the person names a stale one; a piece of several
-pages, one file for each page under one number; and what a write that fails leaves."""
+pages, one file for each page under one number; a piece exported as PDF, one file for each
+language and combination holding its pages in order; and what a write that fails
+leaves."""
 
 from __future__ import annotations
 
@@ -15,6 +17,7 @@ import pytest
 
 from tests import visual_communication_producer as producer
 from tests.in_process import load, run_main
+from tests.test_visual_communication_pdf import read as read_pdf
 from tests.test_visual_communication_pipeline import (
     LOCK,
     PIECE,
@@ -25,11 +28,12 @@ from tests.test_visual_communication_pipeline import (
 from tests.visual_communication_project import CONFIG, SCHEMAS, bound, importable, write, yaml_text
 from tests.visual_communication_writes import FULL, failing
 
-script, exports, svg, seam, framing, files, reading, fingerprint, pl = load(
+script, exports, svg, pdf, seam, framing, files, reading, fingerprint, pl = load(
     "visual-communication",
     "export.py",
     "exports",
     "plugins.svg",
+    "plugins.pdf",
     "plugins.seam",
     "framing",
     "files",
@@ -44,9 +48,9 @@ RECORD = f"{PIECE_FOLDER}/exports.yaml"
 
 @pytest.fixture(autouse=True)
 def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """The renderer stands in for the import a run makes when it draws, and the test
+    """The renderers stand in for the import a run makes when it draws, and the test
     producer is registered, for the length of the test."""
-    importable(monkeypatch, svg)
+    importable(monkeypatch, svg, pdf)
     producer.register(seam)
     yield
     seam.unregister(producer.NAME)
@@ -239,7 +243,7 @@ def test_a_missing_picture_stops_the_export_whatever_is_named(tmp_path: Path) ->
         pytest.param(
             {"exports": []},
             "error: visual/pieces/flow/piece.yaml declares no format under `exports`: name "
-            "`svg` there",
+            "`svg` or `pdf` there",
             id="no-format",
         ),
     ],
@@ -360,10 +364,13 @@ DECK_FILES = {
 }
 
 
-def deck(tmp_path: Path, slides: Mapping[str, Mapping[str, str]] = SLIDES) -> Path:
-    """The piece `flow` as a deck of two pages, ready to export: its top the local
-    component `piece/deck`, in English and Czech, in both colour schemes."""
-    root = drawing_project(tmp_path, picture=False, top="piece/deck", languages=list(slides))
+def deck(tmp_path: Path, slides: Mapping[str, Mapping[str, str]] = SLIDES, **fields: Any) -> Path:
+    """The piece `flow` as a deck of a page for each slide, two by default, ready to
+    export: its top the local component `piece/deck`, in English and Czech, in both colour
+    schemes; `fields` are the piece's own, such as its `exports`."""
+    root = drawing_project(
+        tmp_path, picture=False, top="piece/deck", languages=list(slides), **fields
+    )
     write(root / PIECE_FOLDER / "components" / "deck.yaml", yaml_text(DECK))
     for language, heads in slides.items():
         items = [{"id": slide, "head": head} for slide, head in heads.items()]
@@ -461,6 +468,111 @@ def test_every_name_format_1_accepted_still_holds_beside_names_with_a_page_numbe
     ["flow.v1.en.default.0.svg", "flow.v1.en.default.01.svg", "flow.v1.en.default.1.2.svg"],
 )
 def test_a_page_number_counts_from_1_and_comes_once(name: str) -> None:
+    assert files.shape_problems(record_naming([name]), "exports") != []
+
+
+# --- a piece exported as PDF --------------------------------------------------------------------
+
+#: The heads of a deck of three slides, in two languages.
+THREE = {
+    "en": {"one": "Plan the work.", "two": "Build it.", "three": "Ship it."},
+    "cs": {"one": "Naplánovat práci.", "two": "Postavit ji.", "three": "Vydat ji."},
+}
+
+#: The files a run of the deck of three slides makes as PDF, version 1: one for each
+#: language and combination, each holding every page.
+PDF_FILES = [
+    f"flow.v1.{language}.{key}.pdf"
+    for language in THREE
+    for key in ("default", "colour-scheme.dark")
+]
+
+
+def heads(path: Path) -> list[list[str]]:
+    """The text each page of an exported PDF shows, page by page."""
+    file = read_pdf(path.read_bytes())
+    return [file.lines(page) for page in file.pages()]
+
+
+def test_a_deck_exported_as_pdf_makes_one_file_for_each_language_its_pages_in_order(
+    tmp_path: Path,
+) -> None:
+    root = deck(tmp_path, THREE, exports=["pdf"])
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert [line for line in shown.stdout.splitlines() if line.startswith("export: ")] == [
+        *(f"export: {FOLDER}/{name}" for name in PDF_FILES),
+        f"export: version 1 recorded in {RECORD}",
+    ]
+    assert exported(root) == sorted(PDF_FILES)
+    for name in PDF_FILES:
+        language = name.split(".")[2]
+        assert heads(root / FOLDER / name) == [[head] for head in THREE[language].values()]
+    record = reading.read_yaml(root / RECORD)
+    assert files.shape_problems(record, "exports") == []
+    [version] = record["versions"]
+    assert version["files"] == {
+        name: reading.sha256((root / FOLDER / name).read_bytes()) for name in PDF_FILES
+    }
+    assert version["recorded"]["renderers"] == {"pdf": "1.0.0"}
+
+
+def test_a_pdf_draws_each_combination_in_its_own_colours(tmp_path: Path) -> None:
+    root = deck(tmp_path, THREE, exports=["pdf"])
+    assert run(root, PIECE).returncode == 0
+    light, dark = (
+        (root / FOLDER / f"flow.v1.en.{key}.pdf").read_bytes()
+        for key in ("default", "colour-scheme.dark")
+    )
+    assert light != dark
+    assert heads(root / FOLDER / "flow.v1.en.default.pdf") == heads(
+        root / FOLDER / "flow.v1.en.colour-scheme.dark.pdf"
+    )
+
+
+def test_svg_and_pdf_are_exported_under_one_number(tmp_path: Path) -> None:
+    root = deck(tmp_path, THREE, exports=["svg", "pdf"])
+    assert run(root, PIECE).returncode == 0
+    svgs = [
+        f"flow.v1.{language}.{key}.{page}.svg"
+        for language in THREE
+        for key in ("default", "colour-scheme.dark")
+        for page in (1, 2, 3)
+    ]
+    assert exported(root) == sorted([*svgs, *PDF_FILES])
+    [version] = reading.read_yaml(root / RECORD)["versions"]
+    assert version["recorded"]["renderers"] == {"pdf": "1.0.0", "svg": "1.0.1"}
+
+
+def test_the_same_scene_gives_the_same_pdf_under_each_number(tmp_path: Path) -> None:
+    root = deck(tmp_path, THREE, exports=["pdf"])
+    assert run(root, PIECE).returncode == 0
+    assert run(root, PIECE).returncode == 0
+    for name in PDF_FILES:
+        again = name.replace(".v1.", ".v2.")
+        assert (root / FOLDER / name).read_bytes() == (root / FOLDER / again).read_bytes()
+    first, second = reading.read_yaml(root / RECORD)["versions"]
+    assert list(first["files"].values()) == list(second["files"].values())
+
+
+def test_a_picture_the_pdf_renderer_refuses_leaves_the_rest_drawn(tmp_path: Path) -> None:
+    root = ready(tmp_path, exports=["pdf"])
+    assert run(root, PIECE).returncode == 0
+    lines = heads(root / FOLDER / "flow.v1.en.default.pdf")
+    assert lines and any("Plan the work." in text for text in lines[0])
+
+
+#: Names of exported PDF files: one for each language and combination, of no page.
+PDF_NAMES = ["flow.v1.en.default.pdf", "flow.v12.cs.colour-scheme.dark+contrast.high.pdf"]
+
+
+def test_the_record_takes_a_pdfs_name_beside_every_name_format_1_accepted() -> None:
+    names = FORMAT_1_NAMES + PAGED_NAMES + PDF_NAMES
+    assert files.shape_problems(record_naming(names), "exports") == []
+
+
+@pytest.mark.parametrize("name", ["flow.v1.en.default.1.pdf", "flow.v1.en.default.2.pdf"])
+def test_a_pdf_names_no_page(name: str) -> None:
     assert files.shape_problems(record_naming([name]), "exports") != []
 
 

@@ -636,7 +636,7 @@ def test_a_piece_in_a_brand_built_on_another_reads_its_base_at_the_version_it_lo
     write(root / "visual/pieces/card/content.en.yaml", yaml_text(bound("content", caption="x")))
     held = libraries.Held(root, "visual", (0, 1, 0))
     piece = pl.read_piece(root, "visual", "card")
-    lock = libraries.move_lock(held, pl.needed(piece))
+    lock = libraries.move_lock(held, pl.needed(piece)).lock
     assert lock == {"foundations": "1.0.0", "test-brand": "1.0.0", "test-edition": "1.0.0"}
     document = pl.Project(piece, lock, held).values()
     assert document["tokens"]["accent"]["values"]["colour-scheme.dark"] == ORANGE
