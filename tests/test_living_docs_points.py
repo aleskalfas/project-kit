@@ -19,8 +19,9 @@ Three layers:
   unresolved, which the validator reports once rather than per page;
 - the contribution through the real backbone: obligations in
   project-management's shape, read from the whole-repository friction check,
-  and inert when no work-tracking provider is installed; and project-management's
-  check over them, where an uncovered path is met only once a page anchors it;
+  and inert when no work-tracking provider is installed; project-management's
+  check over them, where an uncovered path is met only once a page anchors it; and
+  the filler's cost on project-kit's own tree, held within a budget;
 - the fixer through the real backbone: project-management's checks pass the
   declaration with the agent as deployed, and report it were the agent to do
   more than propose.
@@ -46,6 +47,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -1146,6 +1148,71 @@ def test_the_filler_reads_its_answers_in_the_order_the_answer_depends_on_them(
     assert (answered.returncode, answered.stdout) == (1, ""), answered.stderr
     assert answered.stderr.startswith(f"error: {named}"), answered.stderr
     assert answered.stderr.count("failed on purpose") <= 1
+
+
+#: The filler's CPU time on project-kit's own tree, in units of the work `_yaml_unit`
+#: does, may grow to this before the test fails (ADR-079 point 2). On 4 November 2026
+#: it took about 17 units, in process on a laptop. On CI that was about 7 s on this
+#: change's runners: the doc check's line, 15 s, less the 7 s of the change check the
+#: line also runs. It was about 10 s on the runners `main`'s checks ran on, which took
+#: 1.4 times as long over the type check. At 24 units the filler would take about 15 s
+#: on those slower runners, half the 30 s bound of a query command (ADR-057 point 3), and
+#: 10 s on the faster. The budget also sits above the 18 to 21 units the same tree
+#: measured with every core of the laptop busy, so a crowded run does not fail it.
+DOC_CHECK_BUDGET = 24
+
+
+def _yaml_unit() -> float:
+    """The CPU time of a fixed piece of the work the filler's time is made of: a run of
+    answer-file-shaped YAML parsed by ruamel.yaml's pure-Python safe loader itself, the
+    exact reading, so no fast path changes the unit. The budget is counted in it, so a
+    runner slower than another counts the same."""
+    entry = (
+        "  - artefact: tech-docs/analysis/core/glossary.md#TERM-{n}\n"
+        "    read:\n"
+        + "".join(f"      - 2026102{d}T00000{d}Z-0000000{d}.yaml\n" for d in range(8))
+        + "    revalidated:\n      at: 2026-10-30T04:15:20Z\n      outcome: unchanged\n"
+        '      unchanged-because: "The page still says what the code does."\n'
+    )
+    text = "answers:\n" + "".join(entry.format(n=n) for n in range(40))
+    loader = YAML(typ="safe", pure=True)
+    start = time.process_time()
+    for _ in range(20):
+        loader.load(text)
+    return time.process_time() - start
+
+
+@pytest.mark.answers
+def test_the_filler_answers_within_its_budget_on_project_kit_s_own_tree(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The documentation check's filler on this repository, history and answers included,
+    as `pkit validate` runs it, every `pkit` it reads through and every resolver answered
+    in this process: its CPU time holds within `DOC_CHECK_BUDGET`, counted in
+    `_yaml_unit`s so a slow runner and a fast one count alike. The filler reads the
+    whole-repository check, whose time grows with the history and the answers, so this
+    test fails while the filler still answers well within its bound (ADR-079 point 2)."""
+    shallow = subprocess.run(
+        ["git", "rev-parse", "--is-shallow-repository"],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if shallow.stdout.strip() != "false":
+        pytest.skip("the check reads every artefact's history, which this clone does not hold")
+    start_in_process(monkeypatch)
+    unit = min(_yaml_unit() for _ in range(3))
+    start = time.process_time()
+    answered = filled(REPO)
+    spent = time.process_time() - start
+    assert answered.returncode == 0, answered.stderr
+    assert spent / unit <= DOC_CHECK_BUDGET, (
+        f"fill-doc-check took {spent:.1f} s of CPU, {spent / unit:.1f} units of "
+        f"{unit:.3f} s, over its budget of {DOC_CHECK_BUDGET} units: about half its 30 s "
+        "bound on CI's slower runners. Take up next the selection of the whole-repository "
+        "check that judges the filler's pages alone, as #2412 proposed (ADR-079 point 2)."
+    )
 
 
 @pytest.mark.process(
