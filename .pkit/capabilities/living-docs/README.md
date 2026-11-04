@@ -14,7 +14,7 @@ pkit:
         - .pkit/capabilities/living-docs/schemas/config.schema.json
         - .pkit/capabilities/living-docs/schemas/reading-evidence.schema.json
         - .pkit/capabilities/living-docs/skills/**
-      record: ["living-docs:DEC-001", COR-005, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, "project-management:DEC-053", "project-management:DEC-056", "living-docs:DEC-002", "living-docs:DEC-003"]
+      record: ["living-docs:DEC-001", COR-005, COR-030, COR-049, COR-050, COR-051, "COR-052#4", "COR-052#6", COR-053, "project-management:DEC-053", "project-management:DEC-056", "living-docs:DEC-002", "living-docs:DEC-003"]
       artefact:
         - RS-LDOC-003
         - .pkit/capabilities/living-docs/pages.md#
@@ -39,6 +39,7 @@ pkit:
         - .pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare
         - .pkit/lifecycle/README.md#the-methodologys-literals
         - .pkit/lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping
+        - .pkit/lifecycle/README.md#how-a-data-point-resolves
         - .pkit/adapters/claude-code/README.md#deploy-skillssh
         - .pkit/cli/README.md#capabilities--two-ways-in
         - .pkit/cli/README.md#config-set-key-value---yes
@@ -207,6 +208,7 @@ value:
 - **A commit git cannot read.** The command asks git nothing itself: whether HEAD has a commit it reads from the core (`head` in `pkit repository base --json`). Where git cannot read a commit that is there, the command gives no answer. Such is a repository git refuses as unsafe, or a missing object.
 - **A shallow clone.** If a page's friction lies beyond a shallow clone's history, the check reports itself unresolved, rather than pass on fewer obligations. Fetch the full history.
 - **A page left unjudged:** one whose anchor's resolver gave no answer (`no-answer`, state `unresolved`). The same holds for a page in a state this capability does not know, which it never takes for current. `pkit friction explain <page>` says why.
+- **A run past its bound.** The command reads the whole check, so its time grows with the repository's history and with its answers. A run the backbone's bound ends gives no answer ([the lifecycle README, "How a data point resolves"](../../lifecycle/README.md#how-a-data-point-resolves)). project-management's inert policy for the point is `fail`, so the point is then unresolved ([project-management:DEC-053-doc-check-slot], COR-052 point 6).
 - **A friction document of another version.** The friction check's answer carries a `schema_version`. The command does not read one other than 1. One without the key, from a backbone before it, reads as 1 ([the CLI reference, "Friction checks"](../../cli/README.md#friction-checks)).
 
 **An anchor nothing resolves.** A page left unjudged only by an anchor of a kind nothing installed resolves (`unresolved-kind`) is different. That anchor is a declaration to mend, not an obligation of this change. It is mended in one of three ways:
