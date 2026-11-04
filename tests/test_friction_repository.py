@@ -966,13 +966,23 @@ def test_a_dead_anchor_leaves_the_artefact_judged_on_its_other_anchors(timeline:
     assert result.artefact_reports[0].state is fr.ArtefactState.CURRENT
 
 
-def test_an_over_broad_anchor_is_warned_about(timeline: Timeline) -> None:
+def test_an_over_broad_anchor_is_warned_about_and_leaves_the_artefact_current(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Reported, never failed, and no answer owed (COR-050 point 12): the window and the
+    bar are made small, so two changes cross it (`test_friction_over_broad` holds the
+    record's own numbers)."""
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 10)
+    monkeypatch.setattr(fr, "OVER_BROAD_FLAGS", 1)
     timeline.start({"docs/guide.md": guide(anchors={"path": [".", "src/cli/**"]})})
+    timeline.commit("unrelated", {"README.md": "Hello.\n"})
+    timeline.commit(
+        "revalidate the guide",
+        {"docs/guide.md": guide(anchors={"path": [".", "src/cli/**"]}, at=T2, because="holds")},
+    )
     result = _run(timeline)
     assert _summary(result) == [("over-broad", "docs/guide.md", "path:.", None)]
-    assert fr.OVER_BROAD_SHARE == 0.5
-    message = result.findings[0].message
-    assert "tracked files (100%)" in message and "most changes" in message
+    assert result.findings[0].message.startswith("flagged its artefact in 2 of the last 3 changes")
     assert result.artefact_reports[0].state is fr.ArtefactState.CURRENT
 
 
@@ -1016,15 +1026,18 @@ def test_an_index_of_paths_matches_what_the_pattern_reading_matches(pattern: str
 
 
 def test_an_over_broad_anchor_two_artefacts_share_is_warned_about_on_each(
-    timeline: Timeline,
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The share is counted once for a pattern, and every artefact anchored by it is told."""
+    """The count is taken once for a pattern, and every artefact anchored by it is told."""
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 10)
+    monkeypatch.setattr(fr, "OVER_BROAD_FLAGS", 1)
     timeline.start(
         {
             "docs/guide.md": guide(anchors={"path": [".", "src/cli/**"]}),
             "docs/notes.md": notes(anchors={"path": ["."]}),
         }
     )
+    timeline.commit("unrelated", {"README.md": "Hello.\n"})
     result = _run(timeline)
     broad = [f for f in result.findings if f.kind is fr.RepositoryFindingKind.OVER_BROAD]
     assert sorted(str(f.location) for f in broad) == ["docs/guide.md", "docs/notes.md"]

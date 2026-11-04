@@ -48,6 +48,7 @@ headings and every part's place in the body stay as they were.
 
 from __future__ import annotations
 
+import functools
 import html
 import io
 import re
@@ -252,6 +253,10 @@ def running_text(body: str) -> str:
     return _CODE_SPAN.sub(blank, _COMMENT.sub(blank, text))
 
 
+# Kept for the life of the process, keyed on the whole input, as ADR-079 point 1 lets a
+# cache: a friction walk cuts many parts from each version of one document, and each
+# cut reads the same body's headings and slugs again.
+@functools.lru_cache(maxsize=512)
 def body_headings(body: str) -> tuple[Heading, ...]:
     """The headings of a Markdown body, in order, fenced code skipped.
 
@@ -276,6 +281,7 @@ def heading_opens_with(title: str, part_id: str) -> bool:
     return title.startswith(part_id) and not _ID_CONTINUES.match(title, len(part_id))
 
 
+@functools.lru_cache(maxsize=8192)
 def heading_slug(title: str) -> str:
     """A heading's slug: its title in lower case, with every character but letters,
     digits, spaces and hyphens dropped, and each space made a hyphen.

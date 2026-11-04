@@ -355,11 +355,14 @@ def test_the_same_findings_render_the_same_body(timeline: Timeline) -> None:
     assert report.publication(later) == report.publication(earlier)
 
 
-def test_an_over_broad_anchor_keeps_the_body_while_the_tracked_files_change(
-    timeline: Timeline,
+def test_an_over_broad_anchor_keeps_the_body_while_its_count_moves(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The check's message counts the tracked files, which most pushes change; the
-    body tells the finding without the count."""
+    """The check's message counts the recent changes the anchor flagged its artefact in,
+    which most pushes move; the body tells the finding without the count. The window and
+    the bar are made small, so a few changes cross it."""
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 10)
+    monkeypatch.setattr(fr, "OVER_BROAD_FLAGS", 1)
     timeline.start({"docs/guide.md": guide(anchors={"path": ["**"]})})
     root = timeline.adopter.root
     timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
@@ -374,7 +377,10 @@ def test_an_over_broad_anchor_keeps_the_body_while_the_tracked_files_change(
     assert over_broad(earlier) != over_broad(later)  # the count moved
     body = report.publication(later)["body"]
     assert body == report.publication(earlier)["body"]
-    assert "- `docs/guide.md` · `over-broad` · `path:**`\n  matches most of the tracked" in body
+    assert (
+        "- `docs/guide.md` · `over-broad` · `path:**`\n  flagged its artefact in many of the "
+        "recent changes"
+    ) in body
 
 
 def test_since_when_is_the_utc_day_the_checks_message_names() -> None:

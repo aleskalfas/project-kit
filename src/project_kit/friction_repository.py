@@ -84,7 +84,9 @@ after the point with no revalidation — with its origin (author, date,
 change); *deferred* — every deferral, with its point's origin and, in the
 human view, its age; *left-out* — a widening of `friction.exclude` since the
 point that asks nothing; dead anchors, unresolved kinds and resolvers that
-gave no answer, all of them, not only a change's; *over-broad* anchors;
+gave no answer, all of them, not only a change's; *over-broad* anchors —
+each that flagged its artefact in more than `OVER_BROAD_FLAGS` of the newest
+`OVER_BROAD_WINDOW` changes on the first-parent line (`_Flags`, ADR-080);
 *shared-id* — an artefact anchor on an id two artefacts share, read as naming
 the first in walk order and judged so, warned of and never failed. An
 artefact with an anchor that cannot be resolved — its kind has no resolver
@@ -101,7 +103,8 @@ in either mode. Dormant while no place is declared.
 — the unanchored listing and its count — and so of the debt: it is never
 judged stale or deferred and has no state. What it declares is still
 checked, since a dead anchor is an error and never silence: its dead
-anchors, unresolved kinds and over-broad anchors are reported. Whether it is
+anchors and unresolved kinds are reported. Its anchors are never over-broad,
+since no change asks it for an answer (ADR-080 point 1). Whether it is
 excluded is read from the artefact, as discovery decided it
 (`Artefact.excluded_by`), never by matching its path again.
 
@@ -143,7 +146,7 @@ from __future__ import annotations
 
 import difflib
 import json
-from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from enum import Enum
@@ -193,6 +196,7 @@ from project_kit.friction_git import (
     SHORT,
     BlobReader,
     CommitTree,
+    DiffEntry,
     FrictionCheckError,
     TreeEntry,
     TreeReader,
@@ -201,6 +205,7 @@ from project_kit.friction_git import (
 from project_kit.friction_history import (
     Commit,
     History,
+    LineChange,
     MergeEntry,
     Points,
     Version,
@@ -210,6 +215,7 @@ from project_kit.friction_history import (
     differs,
     file_entry,
     files_line_changes,
+    first_parent_changes,
     line_changes,
     origin,
     read_history,
@@ -222,13 +228,14 @@ from project_kit.record_points import RecordPoints, Standing, read_points_bytes,
 #: a record is read from.
 _FILE_MODE = "100"
 
-#: The share of the tracked files (excluded paths left out) above which a
-#: path anchor is over-broad (COR-050 point 7: "broad enough to match most
-#: changes"). *Most* is more than half. The share of files stands in for the
-#: share of changes: changes are not spread evenly over files, but the file
-#: share is what HEAD alone can answer, deterministically, without guessing
-#: at what will change next.
-OVER_BROAD_SHARE = 0.5
+#: How many changes the warning on an over-broad anchor reads (COR-050 point 7; ADR-080
+#: point 2): the newest on the first-parent line to HEAD, each against its first parent.
+OVER_BROAD_WINDOW = 100
+
+#: An anchor that flagged its artefact in more of the window's changes than this is
+#: over-broad (ADR-080 point 3): a tenth of a full window. A history with fewer changes
+#: is held to the same count, so a young project's few changes warn of nothing by chance.
+OVER_BROAD_FLAGS = 10
 
 # The file a state's `friction.exclude` is written in: a commit that changes the
 # exclusions touches it (COR-050 point 14).
@@ -564,11 +571,6 @@ class _Judge:
         self.unreadable: dict[str, str] = {}
         """The revalidation points whose `friction.exclude` does not read, and why:
         each read under HEAD's instead, and reported (`unreadable_findings`)."""
-        self._tracked = frozenset(
-            rel
-            for rel in head.files
-            if not head.excluded(rel) and not answer_files.is_answer_file(rel)
-        )
         self._head_sha = history.commits[0].sha if history.commits else ""
         self._head_config = blobs.read(self._head_sha, _CONFIG) if self._head_sha else None
         self._by_config: dict[bytes | None, FrictionSettings] = {}
@@ -576,7 +578,6 @@ class _Judge:
         self._as_head: dict[int, bool] = {}
         self._trees: dict[str, CommitTree] = {}
         self._matched: dict[str, tuple[frozenset[str], frozenset[str]]] = {}
-        self._stands_on_count: dict[str, int] = {}  # by path pattern: HEAD's files it stands on
         self._history_paths: PathIndex | None = None  # every path the history touched, indexed
         self._matching: dict[tuple[str, tuple[str, ...] | None], frozenset[str]] = {}
         self._after: dict[int, frozenset[str]] = {}
@@ -592,6 +593,7 @@ class _Judge:
         """By merge and answering state, the files a merge took whole from one side that
         `line` read as changes measured from that state: git's combined diff lists none of
         them, and `explain` names them behind the merge (`_touched_by`)."""
+        self._flags: _Flags | None = None  # read when an anchor's breadth is first asked
 
     # --- an artefact's answers --------------------------------------------------------
 
@@ -941,32 +943,30 @@ class _Judge:
             return None
         return RepositoryFinding(RepositoryFindingKind.SHARED_ID, warning, anchor=anchor)
 
-    def over_broad(self, anchor: Anchor) -> RepositoryFinding | None:
-        """An anchor standing on more than `OVER_BROAD_SHARE` of the tracked files (point 7):
-        a path anchor by the files it matches, an anchor of a registered kind by the
-        files its resolver names — the rule is not a kind's. Both are counted among the
-        tracked files `friction.exclude` leaves in, the share's whole, so it never passes
-        100%. A record or an artefact anchor names one file."""
-        if not self._tracked:
+    def over_broad(self, artefact: Artefact, anchor: Anchor) -> RepositoryFinding | None:
+        """An anchor that flagged its artefact in more than `OVER_BROAD_FLAGS` of the newest
+        `OVER_BROAD_WINDOW` changes on the first-parent line (point 7; ADR-080): of every
+        kind, the rule being no kind's, counted by `_Flags`. An artefact that owes no
+        answer is never flagged, so none of its anchors is over-broad."""
+        if artefact.owes_no_answer:
+            return None
+        if self._flags is None:
+            changes = first_parent_changes(self.head.root, self.history, OVER_BROAD_WINDOW)
+            self._flags = _Flags(self, changes)
+        flags = self._flags
+        count = flags.count(anchor, flags.own(artefact.path))
+        if count <= OVER_BROAD_FLAGS:
             return None
         if anchor.kind == "path":
-            matched = self._stands_on_count.get(anchor.value)
-            if matched is None:
-                matched = len(self.head.matching(anchor.value))
-                self._stands_on_count[anchor.value] = matched
-            verb, fix = "matches", "narrow it"
-        elif anchor.kind not in CORE_ANCHOR_KINDS:
-            matched = len(self._tracked.intersection(self.kinds.files(anchor)))
-            verb, fix = "stands on", "have its resolver name less, or anchor to a narrower value"
+            fix = "narrow it"
+        elif anchor.kind in CORE_ANCHOR_KINDS:
+            fix = "anchor only the points or sections the artefact rests on"
         else:
-            return None
-        total = len(self._tracked)
-        if matched <= total * OVER_BROAD_SHARE:
-            return None
-        share = round(100 * matched / total)
+            fix = "have its resolver name less, or anchor to a narrower value"
         message = (
-            f"{verb} {matched} of {total} tracked files ({share}%): most changes would make it "
-            f"a revalidation, which teaches people to bump the marker blindly — {fix}"
+            f"flagged its artefact in {count} of the last {flags.size} changes, more than "
+            f"{OVER_BROAD_FLAGS}: so many revalidations teach people to bump the marker "
+            f"blindly — {fix}"
         )
         return RepositoryFinding(RepositoryFindingKind.OVER_BROAD, message, anchor=anchor)
 
@@ -1156,7 +1156,7 @@ class _Judge:
             value = self.part_in(target, part)
         elif target is not None:
             key = ("artefact", state, start, rel, renames, target.id)
-            value = self._content_in(target)
+            value = self.content_in(target)
         elif record is not None:
             key = ("record", state, start, rel, renames, record.value)
             value = self.standing_in(record)
@@ -1230,7 +1230,7 @@ class _Judge:
         by its mode and content (`placed_in`), or as stored, its entry."""
         return self.placed_in if content else file_entry
 
-    def _content_in(self, target: Artefact) -> Callable[[str, TreeEntry | None], Any]:
+    def content_in(self, target: Artefact) -> Callable[[str, TreeEntry | None], Any]:
         """The content of `target` as the file at a path, with an entry, holds it."""
         walker = self.walker
 
@@ -1581,6 +1581,154 @@ class _Judge:
         return self._contents[key]
 
 
+class _Flags:
+    """How many of the window's changes each anchor flagged its artefact in (COR-050 point
+    7; ADR-080 point 1): the changes on the first-parent line (`first_parent_changes`), each
+    read against its first parent alone, in which what the anchor stands on differs.
+
+    The anchor is HEAD's, read as the whole check reads a part at HEAD — under
+    HEAD's exclusions, places and derived links — so the count is the anchor's as
+    it stands, whatever the artefact declared when each change was made, or
+    whether it was there. Each part is read by the judge's own readings: a path
+    anchor's files by mode and object, a Markdown file HEAD's places hold by its
+    content (`placed_in`), so a change that wrote only its containers flags
+    nothing; a registered kind's files the same way, each followed across the
+    window's renames; a record anchor by what it stands on (`standing_in`); an
+    artefact anchor by its target's content, or by what its section or lead stands
+    on (`part_in`). So an artefact or record anchor flags where what it leads to
+    changed — a flag reached through another artefact, revalidated as updated in
+    the same change, counts, and one an `unchanged` revalidation stopped does not,
+    as the change check's cascade reads it. Each anchor value is counted once for
+    the run, whichever artefacts declare it.
+    """
+
+    def __init__(self, judge: _Judge, changes: Sequence[LineChange]) -> None:
+        self.judge = judge
+        self.size = len(changes)
+        """How many changes the window holds: `OVER_BROAD_WINDOW`, or fewer where the
+        first-parent line holds fewer."""
+        self._by_path: list[dict[str, DiffEntry]] = [
+            {entry.path: entry for entry in change.entries} for change in changes
+        ]
+        self._touching: dict[str, list[tuple[int, DiffEntry]]] = {}
+        for position, change in enumerate(changes):
+            for entry in change.entries:
+                for path in dict.fromkeys((entry.path, entry.old_path)):
+                    if path is not None:
+                        self._touching.setdefault(path, []).append((position, entry))
+        self._index = PathIndex(self._touching)
+        self._matched: dict[str, tuple[str, ...]] = {}
+        self._by_file: dict[str, frozenset[int]] = {}
+        self._versions: dict[str, tuple[tuple[int, DiffEntry], ...]] = {}
+        self._by_value: dict[tuple[str, str], frozenset[int]] = {}
+
+    def own(self, rel: str) -> frozenset[str]:
+        """The names the artefact's file at `rel` had over the window: a change under one
+        is never an anchor's (`Points.own_paths`)."""
+        names = {rel}
+        for _position, entry in self.versions(rel):
+            if entry.old_path is not None:
+                names.add(entry.old_path)
+        return frozenset(names)
+
+    def count(self, anchor: Anchor, own: frozenset[str]) -> int:
+        """How many of the window's changes `anchor` flagged its artefact in, the
+        artefact's own names (`own`) left out of what a path or registered anchor
+        stands on."""
+        judge = self.judge
+        if anchor.kind == "path":
+            flagged = [self._file(rel) for rel in self._matching(anchor.value) if rel not in own]
+        elif anchor.kind not in CORE_ANCHOR_KINDS:
+            flagged = [self._by(("file", rel)) for rel in judge.files_of(anchor, own)]
+        else:
+            flagged = [self._by((anchor.kind, anchor.value))]
+        return len(frozenset[int]().union(*flagged))
+
+    def versions(self, rel: str) -> tuple[tuple[int, DiffEntry], ...]:
+        """The window's changes to the file now at `rel`, newest first, each with its entry:
+        down the line, renames followed to the file's earlier name, back to where it was
+        last added."""
+        found = self._versions.get(rel)
+        if found is None:
+            listed: list[tuple[int, DiffEntry]] = []
+            name = rel
+            for position, by_path in enumerate(self._by_path):
+                entry = by_path.get(name)
+                if entry is None:
+                    continue
+                listed.append((position, entry))
+                if entry.status == "A":
+                    break
+                if entry.status == "R" and entry.old_path is not None:
+                    name = entry.old_path
+            found = self._versions[rel] = tuple(listed)
+        return found
+
+    def _matching(self, pattern: str) -> tuple[str, ...]:
+        """The paths the window's changes touched that a path anchor's `pattern` stands on
+        under HEAD's exclusions (`Side.stands_on`), matched once per pattern."""
+        found = self._matched.get(pattern)
+        if found is None:
+            stands_on = self.judge.head.stands_on(pattern)
+            found = tuple(filter(stands_on, self._index.matching(pattern)))
+            self._matched[pattern] = found
+        return found
+
+    def _file(self, rel: str) -> frozenset[int]:
+        """The changes that changed what a path anchor stands on at the path `rel`: each
+        that touched it, but one that changed a file HEAD's places hold in place, leaving
+        its content as it was (`placed_in`)."""
+        found = self._by_file.get(rel)
+        if found is None:
+            placed = rel in self.judge.head.placed
+            found = self._by_file[rel] = frozenset(
+                position
+                for position, entry in self._touching.get(rel, ())
+                if not (placed and entry.status == "M" and entry.path == rel)
+                or self._differs(entry, self.judge.placed_as(rel))
+            )
+        return found
+
+    def _by(self, key: tuple[str, str]) -> frozenset[int]:
+        """The changes in which what a part stands on differs from its first parent: a
+        registered kind's file (`("file", rel)`), a record anchor's or an artefact
+        anchor's value — counted once per part for the run."""
+        found = self._by_value.get(key)
+        if found is None:
+            found = self._by_value[key] = frozenset(self._changed(*key))
+        return found
+
+    def _changed(self, kind: str, value: str) -> Iterator[int]:
+        judge = self.judge
+        if kind == "file":
+            rel = value
+            reading = judge.placed_as(rel) if rel in judge.head.placed else file_entry
+        elif kind == "record":
+            found = judge.head.record_path(value)
+            if found is None:
+                return
+            rel, reading = found, judge.standing_in(Anchor(kind, value))
+        else:
+            part = judge.head.part_of(value)
+            if part.target is None:
+                return
+            rel = part.target.path
+            if part.names_part and part.part is not None:
+                reading = judge.part_in(part.target, part.part)
+            else:
+                reading = judge.content_in(part.target)
+        for position, entry in self.versions(rel):
+            if self._differs(entry, reading):
+                yield position
+
+    @staticmethod
+    def _differs(entry: DiffEntry, reading: Callable[[str, TreeEntry | None], Any]) -> bool:
+        """Whether what `reading` reads of a file differs across a change's `entry`: at the
+        first parent, under the file's name there, and after the change."""
+        before = entry.before[0] if entry.before else None
+        return reading(entry.old_path or entry.path, before) != reading(entry.path, entry.after)
+
+
 # --- the check ---------------------------------------------------------------------
 
 
@@ -1757,8 +1905,9 @@ def _check_artefact(
 
     An artefact under an excluded path has no report and no stale or deferred
     finding — it is left out of the debt as of the measures (point 7) — and
-    only what it declares is checked: dead anchors, unresolved kinds, missing
-    answers and over-broad anchors. So it is with an artefact the project
+    only what it declares is checked: dead anchors, unresolved kinds and missing
+    answers — never an over-broad anchor, since no change asks it for an answer.
+    So it is with an artefact the project
     receives by sync, which owes it no answer (COR-062 point 9). An artefact
     with an anchor that cannot be resolved is not judged
     (`ArtefactState.UNRESOLVED`): what its other anchors owe is still found and
@@ -1788,7 +1937,7 @@ def _check_artefact(
             live.append(anchor)
         else:
             problems.append(finding(problem.kind, problem.message, anchor))
-        over = judge.over_broad(anchor)
+        over = judge.over_broad(artefact, anchor)
         if over is not None:
             broad.append(finding(over.kind, over.message, anchor))
         shared = judge.shared_id(anchor)
@@ -2557,7 +2706,8 @@ _LEGEND: dict[RepositoryFindingKind, str] = {
         "a resolver gave no answer for an anchor: its artefact is not judged — run again"
     ),
     RepositoryFindingKind.OVER_BROAD: (
-        f"an anchor standing on more than {round(100 * OVER_BROAD_SHARE)}% of the tracked files"
+        f"an anchor that flagged its artefact in more than {OVER_BROAD_FLAGS} of the last "
+        f"{OVER_BROAD_WINDOW} changes"
     ),
     RepositoryFindingKind.SHARED_ID: (
         "an anchor on an id two artefacts share, read as naming the first: reported only"
@@ -2755,7 +2905,8 @@ def _result_line(result: RepositoryCheck) -> str:
 
 __all__ = [
     "LET_BACK_IN",
-    "OVER_BROAD_SHARE",
+    "OVER_BROAD_FLAGS",
+    "OVER_BROAD_WINDOW",
     "REPOSITORY_SCHEMA_VERSION",
     "UNRESOLVED_KINDS",
     "AcceptedUnanchored",

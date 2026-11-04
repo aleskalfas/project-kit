@@ -1,0 +1,13 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  The whole-repository check's `over-broad` warning counts what an anchor did
+  (#2636; ADR-080). Over the last 100 changes on the first-parent line to
+  HEAD, it counts the changes in which the anchor flagged its artefact, and
+  warns of one that did so in more than 10. Path, record, artefact and
+  registered anchors are all counted, and an anchor on another artefact flags
+  where that artefact changed. The share of tracked files a path anchor
+  matches is no longer read. The finding's message names the count and the
+  window, and the machine-readable document keeps its shape.

@@ -1,0 +1,9 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Changed
+body: >
+  The `analysis-author` skill states the backbone's new measure of an
+  over-broad anchor (#2636): one that flagged its artefact in more than 10 of
+  the last 100 changes, in place of one matching more than half the tracked
+  files.

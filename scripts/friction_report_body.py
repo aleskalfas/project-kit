@@ -23,7 +23,7 @@ point 5).
   bodies changes nothing when nothing changed. A finding says since when by the
   UTC day of its origin, the day the check's own message names. An over-broad
   anchor is told in this module's words, not the check's, whose message counts
-  the tracked files and so moves with most pushes.
+  the recent changes it flagged its artefact in and so moves with most pushes.
 - **Inert text.** What the document carries — paths, anchors, messages, deferral
   reasons, commit subjects, dates — is set in code spans, so a reason naming
   `@someone` or `#123` notifies and links nobody, and none of it can break the
@@ -125,8 +125,8 @@ APART = (
 )
 #: What the body says of an over-broad anchor, in place of the check's message.
 OVER_BROAD_SAID = (
-    "matches most of the tracked files, so most changes would make it a revalidation: "
-    "narrow it (`pkit friction check --all` gives the count)"
+    "flagged its artefact in many of the recent changes, so its revalidations are answered "
+    "blindly: narrow it (`pkit friction check --all` gives the count)"
 )
 WHOLE = "`pkit friction check --all` lists them all"
 

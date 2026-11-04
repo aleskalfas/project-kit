@@ -45,7 +45,6 @@ whose point is what only a process meets, a bound or a value the system cannot p
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import sys
 import textwrap
@@ -1097,34 +1096,47 @@ def test_a_repointed_mapping_asks_the_artefact_when_the_answer_names_the_mapping
     assert stale.origin is not None and stale.origin.sha == repointed
 
 
-def test_an_anchor_whose_resolver_names_most_of_the_tracked_files_is_over_broad(
-    repo: AdopterRepo,
+def test_an_anchor_whose_resolver_names_a_file_most_changes_edit_is_over_broad(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The over-broad rule is not a kind's (COR-050 point 7)."""
-    _sources(repo, EVERYTHING)
-    _start(repo, {"docs/guide.md": guide(anchors=SOURCE_ANCHORS)})
+    """The over-broad rule is not a kind's (COR-050 point 7; ADR-080 point 1): the file the
+    resolver names flagged the guide in the base and in each of two edits, three changes,
+    over a bar made small."""
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 10)
+    monkeypatch.setattr(fr, "OVER_BROAD_FLAGS", 2)
+    _sources(repo)
+    _start(repo, {"docs/guide.md": guide(anchors=SOURCE_ANCHORS), **CAPTURED})
+    for edit in (1, 2):
+        repo.commit(f"recapture {edit}", {"sources/iso-8601.md": f"ISO 8601, edit {edit}.\n"})
     result = fr.run_repository_check(repo.root)
     [broad] = [f for f in result.findings if f.kind is fr.RepositoryFindingKind.OVER_BROAD]
     assert broad.anchor == SOURCE_ANCHOR
-    assert broad.message.startswith("stands on ") and "tracked files (100%)" in broad.message
+    assert broad.message.startswith("flagged its artefact in 3 of the last 3 changes")
     assert broad.message.endswith("have its resolver name less, or anchor to a narrower value")
 
 
-def test_the_over_broad_share_counts_the_named_files_exclusions_leave_in(
-    repo: AdopterRepo,
+def test_the_count_leaves_out_the_artefact_s_own_file_among_those_the_resolver_names(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The share's whole is the tracked files `friction.exclude` leaves in, and the files a
-    resolver names are counted among them: one naming every file stands on all of them,
-    100%, never more."""
+    """A resolver naming every tracked file names the guide's own: its edits flag nothing,
+    as a change under an artefact's own names is never an anchor's."""
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 10)
+    monkeypatch.setattr(fr, "OVER_BROAD_FLAGS", 0)
     _sources(repo, EVERYTHING)
-    vendored = {f"vendor/lib{n}.py": f"N = {n}\n" for n in range(3)}
-    files = {"docs/guide.md": guide(anchors=SOURCE_ANCHORS), **vendored}
-    _start(repo, files, friction_config(exclude=["vendor"]))
+    _start(repo, {"docs/guide.md": guide(anchors=SOURCE_ANCHORS)})
+    for edit in (1, 2):
+        repo.commit(
+            f"edit the guide {edit}",
+            {"docs/guide.md": guide(anchors=SOURCE_ANCHORS, body=f"Edit {edit}.")},
+        )
+    repo.commit("change the CLI", {"src/cli/main.py": "print('cli v2')\n"})
     result = fr.run_repository_check(repo.root)
-    [broad] = [f for f in result.findings if f.kind is fr.RepositoryFindingKind.OVER_BROAD]
-    counted = re.match(r"stands on (\d+) of (\d+) tracked files \(100%\)", broad.message)
-    assert counted is not None, broad.message
-    assert counted[1] == counted[2]
+    [broad] = [
+        f
+        for f in result.findings
+        if f.kind is fr.RepositoryFindingKind.OVER_BROAD and f.anchor == SOURCE_ANCHOR
+    ]
+    assert broad.message.startswith("flagged its artefact in 2 of the last 4 changes")
 
 
 # --- validation and the writers admit an anchor of any kind a word names ---------------------

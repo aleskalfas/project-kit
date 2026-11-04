@@ -426,10 +426,17 @@ def test_the_commands_named_clear_the_finding(timeline: Timeline, answer: str) -
     )
 
 
-def test_explain_findings_are_the_whole_repository_checks(timeline: Timeline) -> None:
+def test_explain_findings_are_the_whole_repository_checks(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A bar made small, so `.` — flagged in the base, the CLI change and the unrelated
+    # one — is over-broad, and the CLI's anchor, in two, is not.
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 10)
+    monkeypatch.setattr(fr, "OVER_BROAD_FLAGS", 2)
     anchors = {"path": ["src/cli/**", "src/core/**", "src/gone/**", "."], "use-case": ["UC-1"]}
     timeline.start({"docs/guide.md": guide(anchors=anchors), "docs/other.md": _notes()})
     timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
+    timeline.commit("unrelated", {"README.md": "Hello.\n"})
     timeline.commit(
         "defer the engine",
         {"docs/guide.md": guide(anchors=anchors, deferred=[("path", "src/core/**", "later")])},
