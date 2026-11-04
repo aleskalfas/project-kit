@@ -254,7 +254,7 @@ A connection is a tie that a [component](../glossary.md#term-component--componen
 
 **Relations:**
 
-- A component declares it. The component's `depends-on` connections are copied from the process definitions by a command, and never written by hand ([COR-053 point 4](../../../../.pkit/decisions/core/COR-053-connection-points.md#4-depends-on-is-generated-never-hand-written)).
+- A component declares it. The component's `depends-on` connections are copied from each process's definition by a command, and never written by hand ([COR-053 point 4](../../../../.pkit/decisions/core/COR-053-connection-points.md#4-depends-on-is-generated-never-hand-written)).
 - The [backbone](../glossary.md#term-backbone--backbone) resolves each one against the connection points of each [role](../glossary.md#term-role--role)'s active provider, and checks it ([COR-053 point 7](../../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)).
 - An [install plan](../glossary.md#term-install-plan--install-plan) lists the connections an [install](../glossary.md#term-install--install) would make, and the conflicts to resolve ([COR-053 point 8](../../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
 

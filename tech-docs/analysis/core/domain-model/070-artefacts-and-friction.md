@@ -1012,7 +1012,7 @@ Package metadata is the file a component ships that declares its [version](../gl
 **Relations:**
 
 - A component ships it (COR-017).
-- Its `depends-on` connections are copied into it from the [process](../glossary.md#term-process--process) definitions by a command ([COR-053 point 4](../../../../.pkit/decisions/core/COR-053-connection-points.md#4-depends-on-is-generated-never-hand-written)).
+- Its `depends-on` connections are copied into it from each [process](../glossary.md#term-process--process)'s definition by a command ([COR-053 point 4](../../../../.pkit/decisions/core/COR-053-connection-points.md#4-depends-on-is-generated-never-hand-written)).
 - It is no [manifest](../glossary.md#term-manifest--manifest): a manifest is what the [project](../glossary.md#term-project--project) recorded when it installed the component.
 
 **States:** None.
