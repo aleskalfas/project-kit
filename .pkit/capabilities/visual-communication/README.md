@@ -15,6 +15,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/export.py
         - .pkit/capabilities/visual-communication/scripts/write-code.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
@@ -99,7 +100,7 @@ Every piece uses the foundations, so bring them into the location first:
 pkit visual add foundations
 ```
 
-A library the capability ships reaches the location only through [`pkit visual add`](#pkit-visual-add-library). No install, sync or upgrade of the capability writes there, so an upgrade changes no piece's look ([What the location holds](files.md#what-the-location-holds)).
+A library the capability ships reaches the location only through [`pkit visual add`](#pkit-visual-add-library). No install, sync or upgrade of the capability writes there, so an upgrade alone changes no piece's look ([What the location holds](files.md#what-the-location-holds)). Run the command again after an upgrade to take the newest released version, and to bring each copy of the library up to date.
 
 ## Drawing a piece
 
@@ -114,7 +115,7 @@ A brand's values reach code the same way: a declaration under the location's `co
 
 ## Commands
 
-Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names. `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, and takes back the location it recorded. It names each file it could not put back. `produce` alone writes before it can refuse: it hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)).
+Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names. `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, puts back each folder it replaced, and takes back the location it recorded. It names each file it could not put back. `produce` alone writes before it can refuse: it hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)).
 
 ### `pkit visual status`
 
@@ -126,14 +127,22 @@ Shows where the visual work lies, and each piece with its state and its lock.
 
 ### `pkit visual add <library>`
 
-Copies a library the capability ships into the location's library folder, and lists it.
+Copies a library the capability ships into the location's library folder, lists it, and brings every copy of it up to date.
 
-- **Copies** the version the capability ships, whole, to `libraries/<library>/<version>/`, and never over a version the library folder holds ([What the location holds](files.md#what-the-location-holds)). `pkit visual add foundations` makes `libraries/foundations/1.0.0/`.
-- **Lists it** in `libraries/libraries.yaml` with the source `shipped`, `released: false`, since no shipped library is released yet. Every other byte of the list stays ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)).
-- **Refuses** a library the capability does not ship, naming the ones it ships; a version whose files of the capability's format lack their binding ([The binding](files.md#the-binding)); a version the list names already; and a library the list names from another source, since one name ties one library to its source.
-- **Exits** 0 when it copied and listed the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
+- **Takes** the newest released version the capability ships ([The libraries the capability ships](files.md#the-libraries-the-capability-ships)). `pkit visual add <library>@<version>` names another released version, and `--being-built` asks for the version being built. Where the library has no released version, it takes the version being built. Asked for the version being built while it carries a released number, it takes that released version.
+- **Copies** the version whole to `libraries/<library>/<version>/`, beside the versions the location holds. `pkit visual add foundations` makes `libraries/foundations/1.0.0/`.
+- **Lists it** in `libraries/libraries.yaml` with the source `shipped`. A released version is listed `released: true`, with the hash the library's record keeps, as it is. The version being built is listed `released: false`, with no hash. Every other byte of the list stays ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)).
+- **Brings every copy of the library up to date** in the same run ([What the location holds](files.md#what-the-location-holds)):
+  - A copy the list marks not released, of a number the capability ships, is replaced whole by what the capability ships under that number. Where that number is released, the list then marks the copy released, with its hash.
+  - Such a copy is replaced only where every lock that names it is the lock of a draft that is not pinned, which moves at each render. Under a pinned draft's lock, or written code's, the copy stays as it is. The command names each such piece or declaration, and goes on with the rest of the run. A lock it cannot read counts as one that moves only on purpose, and the command names its file. It reads only a piece's `lock`, `pinned` and `state`, so a fault in the piece's content stops nothing.
+  - A released copy whose files no longer match its hash is restored as released. One that matches is not written.
+  - A copy of a number the installed capability does not ship stays as it is, and so does a version folder the list does not name.
+  - A version the list names whose folder is missing is brought in as a copy of its kind is: a released one restored, one not released replaced, under the same locks.
+- **Prints** each copy it writes, as copied, replaced or restored, with each piece and declaration whose lock names it. Then each copy it leaves, with why, and each version it lists.
+- **Refuses** a library the capability does not ship, naming the ones it ships, and a released version it does not ship. It refuses files the capability ships that no longer match the hash the library's record keeps, or whose files of the capability's format lack their binding ([The binding](files.md#the-binding)). It refuses a hash the list keeps for a released version that differs from the one the capability records, naming both. It refuses a version folder the list does not name, where the version is to be copied, and a library the list names from another source, since one name ties one library to its source.
+- **Exits** 0 when it wrote each copy, or left it with why; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
-Running it is the consent for the copy.
+Running it is the consent for each copy it writes. A change the project made in a copy it replaces or restores is lost, as the project's diff shows: a shipped library changes where it is authored, never in a copy.
 
 ### `pkit visual release <library>`
 

@@ -133,3 +133,60 @@ def test_a_key_on_the_way_written_in_quotes_is_refused_naming_it(
     for key in path:
         mapping = mapping[key]
     assert mapping["b"] == 2
+
+
+# --- one entry's value replaced -----------------------------------------------------------------
+
+RELEASED = {"released": True, "hash": {"form": 1, "inputs": [{"path": "a.yaml", "sha256": "ab"}]}}
+
+
+def test_an_entry_written_in_block_is_written_again_at_its_indent() -> None:
+    original = (
+        records.BOM
+        + "# Kept.\r\nv:\r\n    1.0.0:  # ours\r\n        released: false\r\n"
+        + "    2.0.0:\r\n        released: false\r\n# The end.\r\n"
+    )
+    assert records.with_value(original, ["v"], "1.0.0", RELEASED, each="version") == (
+        records.BOM
+        + "# Kept.\r\nv:\r\n    1.0.0:  # ours\r\n      released: true\r\n      hash:\r\n"
+        + "        form: 1\r\n        inputs:\r\n          - path: a.yaml\r\n"
+        + "            sha256: ab\r\n"
+        + "    2.0.0:\r\n        released: false\r\n# The end.\r\n"
+    )
+
+
+def test_an_entry_written_in_flow_on_its_line_is_written_again_there() -> None:
+    original = "a:\n  v:\n    1.0.0: {released: false}  # ours\n    2.0.0: {released: false}"
+    assert records.with_value(original, ["a", "v"], "2.0.0", RELEASED, each="version") == (
+        "a:\n  v:\n    1.0.0: {released: false}  # ours\n"
+        "    2.0.0: {released: true, hash: {form: 1, inputs: [{path: a.yaml, sha256: ab}]}}"
+    )
+
+
+def test_an_entry_of_a_mapping_written_in_flow_is_written_again_in_its_place() -> None:
+    original = (
+        "libraries: {a: {v: {1.0.0: {released: false}}}, "
+        "b: {v: {2.0.0: {released: false}, 1.0.0: {released: false}}}}  # all\n"
+    )
+    assert records.with_value(original, ["libraries", "b", "v"], "1.0.0", RELEASED, each="v") == (
+        "libraries: {a: {v: {1.0.0: {released: false}}}, "
+        "b: {v: {2.0.0: {released: false}, 1.0.0: {released: true, hash: {form: 1, inputs: "
+        "[{path: a.yaml, sha256: ab}]}}}}}  # all\n"
+    )
+    flow = "a:\n  v: {1.0.0: {released: false}}\n"
+    assert reading.load_yaml(records.with_value(flow, ["a", "v"], "1.0.0", RELEASED, each="v")) == {
+        "a": {"v": {"1.0.0": RELEASED}}
+    }
+
+
+def test_an_entry_the_mapping_does_not_hold_or_the_text_does_not_show_is_refused() -> None:
+    with pytest.raises(records.RecordError, match=r"^`v` holds no `1\.0\.0`$"):
+        records.with_value("v: {}\n", ["v"], "1.0.0", RELEASED, each="version")
+    with pytest.raises(records.RecordError, match=r"^write `v` as a block mapping, one version"):
+        records.with_value(
+            "v: {\n  1.0.0: {released: false}}\n", ["v"], "1.0.0", RELEASED, each="version"
+        )
+    with pytest.raises(records.RecordError, match=r"^write the key `1\.0\.0` without quotes$"):
+        records.with_value(
+            "v:\n  '1.0.0': {released: false}\n", ["v"], "1.0.0", RELEASED, each="version"
+        )

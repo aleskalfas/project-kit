@@ -22,6 +22,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/records.py
         - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
         - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
         - .pkit/capabilities/visual-communication/scripts/_lib/full_read.py
         - .pkit/capabilities/visual-communication/scripts/_lib/comparison.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
@@ -111,15 +112,15 @@ The commands list the location's files as git sees them: tracked files, and untr
 
 ## What the location holds
 
-The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration. Nor does any command change a library version: `pkit visual add` copies a version the capability ships, whole, into a folder of its own, and never over a version the library folder holds. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through that command (DEC-003 point 5). The table names the schema each file binds to (see [The binding](#the-binding)).
+The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration. Nor does any command change a library version, except `pkit visual add` on the copies of a library the capability ships (DEC-013 point 5). It copies a version the capability ships, whole, into a folder of its own. It writes over a version the library folder holds only to bring a copy not yet released up to what the capability ships under its number, or to restore a released copy to its hash. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through that command (DEC-003 point 5). The table names the schema each file binds to (see [The binding](#the-binding)).
 
 | File, in the location | Schema | Written by |
 |---|---|---|
-| `libraries/libraries.yaml` | `libraries` | a person; `pkit visual add` lists each version it copies |
-| `libraries/<library>/<version>/library.yaml` | `library` | the library's owner |
-| `libraries/<library>/<version>/roles.yaml` | `roles` | the library's owner |
-| `libraries/<library>/<version>/notation.yaml` | `notation` | the library's owner |
-| `libraries/<library>/<version>/components/<component>.yaml` | `component` | the library's owner |
+| `libraries/libraries.yaml` | `libraries` | a person; `pkit visual add` lists each version it copies, and lists as released each copy it replaces with a released version |
+| `libraries/<library>/<version>/library.yaml` | `library` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
+| `libraries/<library>/<version>/roles.yaml` | `roles` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
+| `libraries/<library>/<version>/notation.yaml` | `notation` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
+| `libraries/<library>/<version>/components/<component>.yaml` | `component` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | a brand's token files, Resolver document and fonts | none: DTCG, or a font's own format | the brand's owner |
 | `pieces/<piece>/piece.yaml` | `piece` | a person; `pkit visual render` rewrites its `lock` alone |
 | `pieces/<piece>/content.<language>.yaml` | `content` | a person |
@@ -308,7 +309,7 @@ libraries:
 - **`versions`** maps each version to `released: true` or `false`. A released version carries `hash`, its fingerprint over every file of its folder (*The fingerprint* in *What the check reports*). A version not released carries none.
 - **One library to a name:** a second library of one name is refused (DEC-003 point 4).
 
-`pkit visual add` lists each shipped version it copies, `released: false`. Where the location holds no list, it writes one whole, under a comment that says what the file is. Otherwise it adds the version as text: a library the list does not name yet goes last under `libraries`, and a new version of a shipped library last under its `versions`. Where that mapping's entries lie on the lines below its key, the command writes the new entry as block lines at their indent. Where the mapping is written in flow on its key's line, such as `versions: {}`, it writes the entry in flow before the closing brace. Every other byte of the file stays: comments, order, line endings and a byte-order mark. Where the result would not read back as the list with that version added, the command refuses: write `libraries`, and the library's `versions`, as block mappings. Where a key on the way, `libraries`, the library's name or `versions`, is written in quotes, the refusal names it instead, to be written without them.
+`pkit visual add` lists each shipped version it copies. A released version takes `released: true` and the hash the library's record keeps, copied as it is. The version being built takes `released: false`, with no hash. A copy not yet released that the command replaces with a released version is listed released, with its hash, in its entry's place. Where the location holds no list, it writes one whole, under a comment that says what the file is. Otherwise it adds the version as text: a library the list does not name yet goes last under `libraries`, and a new version of a shipped library last under its `versions`. Where that mapping's entries lie on the lines below its key, the command writes the new entry as block lines at their indent. Where the mapping is written in flow on its key's line, such as `versions: {}`, it writes the entry in flow before the closing brace. An entry it lists released is written again in the style it had: on its own lines, or in flow where the list writes it so. Every other byte of the file stays: comments, order, line endings and a byte-order mark. Where the result would not read back as the list with that version added, or listed released, the command refuses: write `libraries`, and the library's `versions`, as block mappings. Where a key on the way, `libraries`, the library's name, `versions` or the version, is written in quotes, the refusal names it instead, to be written without them.
 
 `pkit visual release` marks a version of the project's own library released. It replaces the version's entry, `released: false`, with `released: true` and the version's `hash`, as text. Where the entry lies on the lines below its key, it writes the new one as block lines at their indent, and a comment on the key's line stays. Where the entry is written in flow, as `{1.0.0: {released: false}}`, it writes the new one in flow. Every other byte of the file stays, as above. Where the result would not read back as the list with that entry, the command refuses: write the library's `versions` as a block mapping.
 
@@ -378,7 +379,7 @@ Every change to a version the capability ships reaches a project that brings it 
 
 ### The foundations
 
-The capability ships the foundations' version being built at `.pkit/capabilities/visual-communication/libraries/foundations/` ([The libraries the capability ships](#the-libraries-the-capability-ships)): version 1.0.0, of kind `components`, needing release 0.1.0, building on nothing, and not yet released. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the folder whole to `libraries/foundations/1.0.0/` and lists it with `source: {kind: shipped}` ([What the location holds](#what-the-location-holds)). The foundations hold:
+The capability ships the foundations' version being built at `.pkit/capabilities/visual-communication/libraries/foundations/` ([The libraries the capability ships](#the-libraries-the-capability-ships)): version 1.0.0, of kind `components`, needing release 0.1.0, building on nothing, and not yet released. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the folder whole to `libraries/foundations/1.0.0/`. No version of the foundations is released yet, so the command takes the version being built, and lists it with `source: {kind: shipped}`, `released: false` ([What the location holds](#what-the-location-holds)). The foundations hold:
 
 - `library.yaml`;
 - `roles.yaml`, the shared roles, axes, colour families and contrast pairs that every library shares (DEC-004 points 2, 7 and 8);

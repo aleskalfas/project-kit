@@ -362,7 +362,7 @@ def needs_written(path: Path, needs: str) -> bytes:
     file cannot take it as text."""
     try:
         text = path.read_bytes().decode("utf-8")
-        return records.with_value(text, ["needs-release"], needs, each="key").encode("utf-8")
+        return records.with_value(text, [], "needs-release", needs, each="key").encode("utf-8")
     except (OSError, UnicodeDecodeError, records.RecordError) as exc:
         raise ShippedError(f"{path} cannot take the release it needs as text: {exc}") from exc
 
