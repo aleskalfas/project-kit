@@ -269,6 +269,7 @@ from project_kit.friction_discovery import (
     ArtefactKind,
     Discovery,
     FrictionSettings,
+    PathIndex,
     RecordContent,
     RepositoryTree,
     ResolverCommand,
@@ -862,6 +863,14 @@ class Listing:
     def __init__(self, files: Iterable[str], settings: FrictionSettings) -> None:
         self.files = frozenset(files)
         self.settings = settings
+        self._index: PathIndex | None = None
+
+    def matched(self, pattern: str) -> tuple[str, ...]:
+        """This state's files a path `pattern` matches, whatever leaves them out, sorted:
+        read through one index of the files (`PathIndex`)."""
+        if self._index is None:
+            self._index = PathIndex(self.files)
+        return self._index.matching(pattern)
 
     def excluded(self, path: str) -> bool:
         """Whether `friction.exclude` leaves `path` out: discovery's one decision of it."""
@@ -894,8 +903,9 @@ class Listing:
         commit's, or every path a history touched — read under this state's
         exclusions.
         """
-        listing = self.files if files is None else files
-        return tuple(sorted(filter(self.stands_on(pattern), listing)))
+        if files is None:
+            return tuple(filter(self.stands_on(pattern), self.matched(pattern)))
+        return tuple(sorted(filter(self.stands_on(pattern), files)))
 
     def left_out(self, pattern: str) -> tuple[str, ...]:
         """The files here a path anchor's `pattern` matches but does not stand on,
@@ -936,7 +946,7 @@ class Side(Listing):
         anchor is.
         """
         if anchor.kind == "path":
-            return any(map(self.stands_on(anchor.value), self.files))
+            return any(map(self.stands_on(anchor.value), self.matched(anchor.value)))
         if anchor.kind == "record":
             rel = self.record_path(anchor.value)
             if rel is None:

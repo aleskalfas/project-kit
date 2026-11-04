@@ -1,0 +1,16 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The whole-repository friction check, `pkit friction check --all`, takes
+  about a third of the time it took on project-kit's own tree (#2410).
+  living-docs' `fill-doc-check` reads it inside its own thirty-second run, and
+  on a slow CI runner it overran, so validation and project-management's doc
+  check failed. The backbone now reads plain block YAML, the form answer files
+  and front matter are written in, through a reader of its own that hands
+  every other text to the YAML loader. It parses a settings text once a run,
+  seeks a time in a version's front matter alone where it can cut one, and
+  finds the files of a path anchor without glob characters through a sorted
+  index of the listing. What every friction command and `pkit validate`
+  report is unchanged.

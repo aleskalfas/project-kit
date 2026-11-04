@@ -976,6 +976,45 @@ def test_an_over_broad_anchor_is_warned_about(timeline: Timeline) -> None:
     assert result.artefact_reports[0].state is fr.ArtefactState.CURRENT
 
 
+#: Paths whose names sort next to one another: `-`, `.` and `0` fall either side of `/`.
+_NEIGHBOURS = (
+    "a",
+    "a-b",
+    "a.md",
+    "a/b",
+    "a/b-c",
+    "a/b.md",
+    "a/b/c.md",
+    "a/b/d/e.md",
+    "a/b0",
+    "a/bc",
+    "a0",
+    "b/a/b",
+    ".hidden/a",
+    "docs/guide.md",
+)
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        "a", "a/", "./a", "a//b", "a/b", "a/b/", "a/b/c.md", "a/b/c", "a/b0", "b", "b/a",
+        "docs/guide.md", "docs", "c", "", ".", "..", "../a", ".hidden", "*", "a/*", "a/**",
+        "**/b", "a/b/**/*.md", "a?", "[ab]/b", "z",
+    ],
+)  # fmt: skip
+def test_an_index_of_paths_matches_what_the_pattern_reading_matches(pattern: str) -> None:
+    """The index finds a literal path's files by bisection, the same paths, in the same
+    order, as reading every path with the one pattern reading does."""
+    from project_kit.friction_discovery import PathIndex, pattern_matcher
+
+    index = PathIndex(reversed(_NEIGHBOURS))
+    expected = tuple(sorted(filter(pattern_matcher(pattern), _NEIGHBOURS)))
+    assert index.matching(pattern) == expected
+    assert PathIndex(()).matching(pattern) == ()
+    assert index.paths == tuple(sorted(_NEIGHBOURS))
+
+
 def test_an_over_broad_anchor_two_artefacts_share_is_warned_about_on_each(
     timeline: Timeline,
 ) -> None:

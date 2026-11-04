@@ -155,6 +155,7 @@ git plumbing behind a commit in `friction_git`.
 
 from __future__ import annotations
 
+import bisect
 import copy
 import functools
 import json
@@ -1842,11 +1843,42 @@ def pattern_matcher(pattern: str) -> Callable[[str], bool]:
     normalised = os.path.normpath(pattern).replace(os.sep, "/")
     if normalised == ".":
         return lambda _path: True
-    if any(ch in _GLOB_CHARS for ch in normalised):
+    literal = _literal_path(pattern)
+    if literal is None:
         regex = compile_glob(normalised)
         return lambda path: regex.fullmatch(path) is not None
-    prefix = normalised + "/"
-    return lambda path: path == normalised or path.startswith(prefix)
+    prefix = literal + "/"
+    return lambda path: path == literal or path.startswith(prefix)
+
+
+def _literal_path(pattern: str) -> str | None:
+    """The path a `pattern` without glob characters names, normalised: the file it is,
+    or the folder every file beneath it lies in. `None` for a glob and for `.`."""
+    normalised = os.path.normpath(pattern).replace(os.sep, "/")
+    if normalised == "." or any(ch in _GLOB_CHARS for ch in normalised):
+        return None
+    return normalised
+
+
+class PathIndex:
+    """Repository-relative paths, sorted once, so a pattern without glob characters
+    finds the paths it matches by bisection rather than by reading every path: the
+    paths `pattern_matcher` matches, in sorted order. A glob, and `.`, read every path."""
+
+    def __init__(self, paths: Iterable[str]) -> None:
+        self.paths = tuple(sorted(set(paths)))
+
+    def matching(self, pattern: str) -> tuple[str, ...]:
+        """The paths `pattern` matches (`pattern_matcher`), sorted."""
+        literal = _literal_path(pattern)
+        if literal is None:
+            return tuple(filter(pattern_matcher(pattern), self.paths))
+        at = bisect.bisect_left(self.paths, literal)
+        named = self.paths[at : at + 1] if self.paths[at : at + 1] == (literal,) else ()
+        # The paths beneath it sort from `<literal>/` up to `<literal>0`, `0` following `/`.
+        start = bisect.bisect_left(self.paths, literal + "/", at)
+        end = bisect.bisect_left(self.paths, literal + "0", start)
+        return named + self.paths[start:end]
 
 
 @functools.lru_cache(maxsize=1024)
