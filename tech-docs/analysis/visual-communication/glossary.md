@@ -338,10 +338,12 @@ TERM-stable:
 TERM-starter-library:
   name: starter library
   status: active
-  definition: "set of shared parts that arrange and draw content, which visual-communication gives every project for jobs most pieces have, such as showing layers or steps"
+  definition: "set of shared parts that arrange and draw content, which visual-communication gives every project for common jobs, such as showing layers or a list"
   pkit:
     friction:
       anchors:
+        path:
+          - .pkit/capabilities/visual-communication/libraries/starter/library.yaml
         record:
           - visual-communication:DEC-007#1
 ---
@@ -595,7 +597,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-stable — stable
 
-**Example:** The starter library's card is stable. A library version that removes one of its options, and keeps its major number, is refused.
+**Example:** Suppose the starter library's card were stable. A library version that removes one of its options, and keeps its major number, would then be refused.
 
 **Distinctions:**
 
