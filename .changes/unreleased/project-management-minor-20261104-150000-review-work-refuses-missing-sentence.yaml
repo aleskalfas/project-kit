@@ -11,7 +11,9 @@ body: >
   names each such document, the one-line form a sentence takes,
   ``- `path`: sentence``, and each item under the sentences heading that is not
   read as one, ends with `edit-pr <PR> --body-file <file>` as the next step,
-  and `--force` overrides it, as it overrides validate-at-ready. A description
+  and `--force` overrides it, as it overrides validate-at-ready. Where a later
+  fix round left a document the list marks `updated` unchanged, the refusal
+  says to write no sentence for it and to pass `--force`. A description
   `review-work` cannot read stops it (exit 3) instead of passing. With every
   sentence given it proceeds as before. `open-pr` and `edit-pr` warn of such a
   document and refuse nothing; `edit-pr` gains that warning, a finding of its

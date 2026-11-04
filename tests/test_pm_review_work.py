@@ -673,16 +673,24 @@ def _described(rw, said: str = "", *updated: str) -> str:
     return f"{FILLED}\n{said}\n{section}\n"
 
 
+#: The step for a list a later fix round left out of date, after the refusal's next step.
+UNDONE = (
+    "  → where a later fix round left a document the list marks updated unchanged, write no "
+    "sentence for it: once nothing else is refused, run review-work again with --force, and "
+    "land-work writes the list again for the head it merges."
+)
+
+
 def _refusals(err: str) -> list[str]:
     return [ln for ln in err.splitlines() if ln.startswith("  - [hard-reject] body.sentences: ")]
 
 
 def _refusal(location: str) -> str:
     return (
-        f"  - [hard-reject] body.sentences: {location} is updated in this change, and the "
-        f"description gives no sentence on what changed in it — under `{SENTENCES}`, write one "
-        'on a line of its own as "- `path`: sentence", starting in the line\'s first column, '
-        "the document in a code span as the list names it"
+        f"  - [hard-reject] body.sentences: {location} is marked updated in the description's "
+        f"list, and the description gives no sentence on what changed in it — under "
+        f'`{SENTENCES}`, write one on a line of its own as "- `path`: sentence", starting in '
+        "the line's first column, the document in a code span as the list names it"
     )
 
 
@@ -703,10 +711,12 @@ def test_an_updated_document_with_no_sentence_is_refused_before_any_write(
     out, err = capsys.readouterr()
     assert "[refused] PR body is not ready for review:" in err.splitlines()
     assert _refusals(err) == [_refusal("docs/cli.md"), _refusal("docs/notes.md")]
-    assert (
+    lines = err.splitlines()
+    step = (
         f"  → write the description with `edit-pr {PR_NUMBER} --body-file <file>`, then run "
         "`review-work 42` again; --force overrides."
-    ) in err.splitlines()
+    )
+    assert lines[lines.index(step) + 1] == UNDONE
     assert "[ok]" not in out
 
 
@@ -783,6 +793,7 @@ def test_force_takes_the_pr_to_review_past_the_refusal(run_main, rw, capsys) -> 
     err = capsys.readouterr().err
     assert _refusals(err) == [_refusal("docs/guide.md")]
     assert "→ proceeding under --force." in err
+    assert UNDONE not in err.splitlines()
 
 
 def test_the_refusal_joins_the_body_validator_s_findings(rw, monkeypatch, capsys) -> None:
@@ -800,3 +811,19 @@ def test_the_refusal_joins_the_body_validator_s_findings(rw, monkeypatch, capsys
     err = capsys.readouterr().err
     assert "  - [hard-reject] body.doc-impact: no Doc impact" in err.splitlines()
     assert _refusals(err) == [_refusal("docs/guide.md")]
+    assert UNDONE in err.splitlines()
+
+
+def test_a_refusal_with_no_sentence_finding_names_no_out_of_date_list(
+    rw, monkeypatch, capsys
+) -> None:
+    """The step for a list a later fix round left out of date follows a refused
+    sentence only: a body the validator alone refuses is not told of it."""
+    no_doc_impact = rw.pr_validation.Finding(
+        rw.pr_validation.SEVERITY_HARD_REJECT, "body.doc-impact", "no Doc impact"
+    )
+    monkeypatch.setattr(rw.pr_validation, "validate_pr", lambda **k: [no_doc_impact])
+    assert rw._ready_body_ok(FILLED, {}, CAP_ROOT, False, next_step=rw.FILL_FIRST) is False
+    err = capsys.readouterr().err
+    assert UNDONE not in err.splitlines()
+    assert f"  → {rw.FILL_FIRST}; --force overrides." in err.splitlines()

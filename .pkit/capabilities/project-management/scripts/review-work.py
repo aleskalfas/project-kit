@@ -33,7 +33,8 @@ Gates per DEC-026:
     the PR found, a draft or one already ready, before it is made ready,
     reviewers are requested or the issue moves; refused at validate-at-ready's
     severity, hard-reject, naming each such document, the form a sentence
-    takes and each item there that is not read as one (`--force` overrides).
+    takes and each item there that is not read as one (`--force` overrides,
+    and is the remedy where a later fix round left such a document unchanged).
     A description that cannot be read stops the run (exit 3), never read as
     one with no list. The list is read as the description carries it,
     nothing derived, so a document updated after it was written is the
@@ -126,6 +127,15 @@ FILL_FIRST = (
 )
 #: The label of a finding on the author's sentences, as edit-pr's validation names it.
 SENTENCES_LABEL = "body.sentences"
+#: What to do about a refused sentence where the description's list is out of date:
+#: a later fix round left the document unchanged, and the refusal is wrong. --force
+#: is its remedy, never a sentence on a change the document no longer has (DEC-055
+#: point 3; the capability README, "Where the sentences live").
+UNDONE_STEP = (
+    "where a later fix round left a document the list marks updated unchanged, write no "
+    "sentence for it: once nothing else is refused, run review-work again with --force, and "
+    "land-work writes the list again for the head it merges"
+)
 
 
 def main() -> int:
@@ -675,7 +685,9 @@ def _edit_step(issue_number: int, pr_number: int | None) -> str:
 def _body_ok(findings: list[pr_validation.Finding], force: bool, *, next_step: str) -> bool:
     """True iff no finding of `findings` blocks; otherwise print them all, with
     `next_step`, and return False, or True under ``force``. The findings are
-    validate-at-ready's (#569) and the author's sentences' (DEC-055 point 3)."""
+    validate-at-ready's (#569) and the author's sentences' (DEC-055 point 3); a
+    refused sentence also gets `UNDONE_STEP`, for a list a later fix round left
+    out of date."""
     if not pr_validation.has_blocking(findings):
         return True
     print("[refused] PR body is not ready for review:", file=sys.stderr)
@@ -685,6 +697,11 @@ def _body_ok(findings: list[pr_validation.Finding], force: bool, *, next_step: s
         print("  → proceeding under --force.", file=sys.stderr)
         return True
     print(f"  → {next_step}; --force overrides.", file=sys.stderr)
+    if any(
+        f.label == SENTENCES_LABEL and f.severity == pr_validation.SEVERITY_HARD_REJECT
+        for f in findings
+    ):
+        print(f"  → {UNDONE_STEP}.", file=sys.stderr)
     return False
 
 

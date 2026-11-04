@@ -301,10 +301,10 @@ def test_an_updated_document_given_no_sentence_is_a_warning_and_the_edit_is_writ
     out = capsys.readouterr().out
     assert "[hard-reject]" not in out and "[refused]" not in out
     assert (
-        "  [warning] body.sentences: docs/guide.md is updated in this change, and the "
-        f"description gives no sentence on what changed in it — under `{SENTENCES}`, write "
-        'one on a line of its own as "- `path`: sentence", starting in the line\'s first '
-        "column, the document in a code span as the list names it"
+        "  [warning] body.sentences: docs/guide.md is marked updated in the description's "
+        f"list, and the description gives no sentence on what changed in it — under "
+        f'`{SENTENCES}`, write one on a line of its own as "- `path`: sentence", starting in '
+        "the line's first column, the document in a code span as the list names it"
     ) in out.splitlines()
 
 

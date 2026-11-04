@@ -1544,11 +1544,13 @@ def unsaid_in(body: str) -> list[str]:
 
 def unsaid_message(location: str) -> str:
     """What a command that refuses or warns says of `location`, a document the list
-    marks `updated` with no sentence: the document, and the form a sentence takes."""
+    marks `updated` with no sentence: the document, and the form a sentence takes.
+    It says what the list marks, not that the change updates the document: the
+    list is the description's, and a later fix round may have left it unchanged."""
     return (
-        f"{location} is updated in this change, and the description gives no sentence on what "
-        f"changed in it — under `{SENTENCES_HEADING}`, write one on a line of its own as "
-        f"{_FORM_SAID}"
+        f"{location} is marked updated in the description's list, and the description gives "
+        f"no sentence on what changed in it — under `{SENTENCES_HEADING}`, write one on a "
+        f"line of its own as {_FORM_SAID}"
     )
 
 
