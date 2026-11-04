@@ -2,13 +2,16 @@ component: backbone
 kind: patch
 body: >
   A decision lands with what it decides (#2639). The decisions reference's
-  "The acceptance gate" and "Refining an accepted record" say that the change
-  proposing a record may carry its edits to the accepted records it refines,
-  overturns in part or replaces whole, and that a person accepts those edits
-  with the record, in the same change. The `decision-author` skill drafts
-  those edits in the proposing change, and has a person accept the record in
-  its change, so the record lands accepted, never proposed. The `architect`
-  agent's line on an ADR it authors says the same. `pkit decisions
-  check-diff` and `pkit refs rot` behave as before: neither fails such a
-  change, and the rot report lists the edited records only until the record
-  is accepted.
+  "The acceptance gate" says that a new record's Implications name each edit
+  it makes to an accepted record, that a person accepts the new record in its
+  change, and that the edits then follow in that change. The superseded-by
+  line of a project's own record it replaces, and each point it narrows, go
+  there, and a refinement pointer may. The person who authorises the merge sees
+  those edits in the numbering check's list. "Refining an accepted record"
+  says how each edit is made. The `decision-author` skill names the edits in
+  the Implications, has a person accept the record in its change, and only
+  then makes them, so the record lands accepted, never proposed. The
+  `architect` agent's line on an ADR it authors says the same, for the
+  records it owns. `pkit decisions check-diff` and `pkit refs rot` behave as
+  before: neither fails such a change, and the numbering check lists the
+  edits.
