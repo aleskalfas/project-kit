@@ -58,7 +58,47 @@ pkit:
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/notation.yaml
         - tests/fixtures/visual-communication/libraries/test-parts/1.0.0/roles.yaml
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-009", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012", "visual-communication:DEC-013", "visual-communication:DEC-014"]
+      record:
+        - visual-communication:DEC-001#3
+        - visual-communication:DEC-001#5
+        - visual-communication:DEC-001#7
+        - visual-communication:DEC-001#8
+        - visual-communication:DEC-002#1
+        - visual-communication:DEC-002#2
+        - visual-communication:DEC-002#3
+        - visual-communication:DEC-002#4
+        - visual-communication:DEC-002#5
+        - visual-communication:DEC-003#1
+        - visual-communication:DEC-003#4
+        - visual-communication:DEC-003#5
+        - visual-communication:DEC-003#6
+        - visual-communication:DEC-003#7
+        - visual-communication:DEC-003#8
+        - visual-communication:DEC-004
+        - visual-communication:DEC-007#1
+        - visual-communication:DEC-008#1
+        - visual-communication:DEC-008#3
+        - visual-communication:DEC-008#4
+        - visual-communication:DEC-008#5
+        - visual-communication:DEC-008#6
+        - visual-communication:DEC-008#7
+        - visual-communication:DEC-009#7
+        - visual-communication:DEC-010#1
+        - visual-communication:DEC-010#2
+        - visual-communication:DEC-010#3
+        - visual-communication:DEC-010#5
+        - visual-communication:DEC-010#7
+        - visual-communication:DEC-011#1
+        - visual-communication:DEC-011#2
+        - visual-communication:DEC-011#3
+        - visual-communication:DEC-011#4
+        - visual-communication:DEC-011#6
+        - visual-communication:DEC-012#1
+        - visual-communication:DEC-012#6
+        - visual-communication:DEC-013
+        - visual-communication:DEC-014#1
+        - visual-communication:DEC-014#2
+        - visual-communication:DEC-014#5
 ---
 
 # The files of the visual work
@@ -112,12 +152,12 @@ The commands list the location's files as git sees them: tracked files, and untr
 
 ## What the location holds
 
-The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration. Nor does any command change a library version, except `pkit visual add` on the copies of a library the capability ships (DEC-013 point 5). It copies a version the capability ships, whole, into a folder of its own. It writes over a version the library folder holds only to bring a copy not yet released up to what the capability ships under its number, or to restore a released copy to its hash. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through that command (DEC-003 point 5). The table names the schema each file binds to (see [The binding](#the-binding)).
+The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration. Nor does any command change a library version, but two. `pkit visual release` writes into a version of the project's own library the release it needs ([`library.yaml`](#libraryyaml)). `pkit visual add` changes the copies of a library the capability ships (DEC-013 point 5). It copies a version the capability ships, whole, into a folder of its own. It writes over a version the library folder holds only to bring a copy not yet released up to what the capability ships under its number, or to restore a released copy to its hash. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through that command (DEC-003 point 5). The table names the schema each file binds to (see [The binding](#the-binding)).
 
 | File, in the location | Schema | Written by |
 |---|---|---|
-| `libraries/libraries.yaml` | `libraries` | a person; `pkit visual add` lists each version it copies, and lists as released each copy it replaces with a released version |
-| `libraries/<library>/<version>/library.yaml` | `library` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
+| `libraries/libraries.yaml` | `libraries` | a person; `pkit visual add` lists each version it copies, and lists as released each copy it replaces with a released version; `pkit visual release` lists as released each version it releases |
+| `libraries/<library>/<version>/library.yaml` | `library` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships; `pkit visual release` writes the release a version needs |
 | `libraries/<library>/<version>/roles.yaml` | `roles` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | `libraries/<library>/<version>/notation.yaml` | `notation` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | `libraries/<library>/<version>/components/<component>.yaml` | `component` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
@@ -309,9 +349,18 @@ libraries:
 - **`versions`** maps each version to `released: true` or `false`. A released version carries `hash`, its fingerprint over every file of its folder (*The fingerprint* in *What the check reports*). A version not released carries none.
 - **One library to a name:** a second library of one name is refused (DEC-003 point 4).
 
-`pkit visual add` lists each shipped version it copies. A released version takes `released: true` and the hash the library's record keeps, copied as it is. The version being built takes `released: false`, with no hash. A copy not yet released that the command replaces with a released version is listed released, with its hash, in its entry's place. Where the location holds no list, it writes one whole, under a comment that says what the file is. Otherwise it adds the version as text: a library the list does not name yet goes last under `libraries`, and a new version of a shipped library last under its `versions`. Where that mapping's entries lie on the lines below its key, the command writes the new entry as block lines at their indent. Where the mapping is written in flow on its key's line, such as `versions: {}`, it writes the entry in flow before the closing brace. An entry it lists released is written again in the style it had: on its own lines, or in flow where the list writes it so. Every other byte of the file stays: comments, order, line endings and a byte-order mark. Where the result would not read back as the list with that version added, or listed released, the command refuses: write `libraries`, and the library's `versions`, as block mappings. Where a key on the way, `libraries`, the library's name, `versions` or the version, is written in quotes, the refusal names it instead, to be written without them.
+Two commands write the list:
 
-`pkit visual release` marks a version of the project's own library released. It replaces the version's entry, `released: false`, with `released: true` and the version's `hash`, as text. Where the entry lies on the lines below its key, it writes the new one as block lines at their indent, and a comment on the key's line stays. Where the entry is written in flow, as `{1.0.0: {released: false}}`, it writes the new one in flow. Every other byte of the file stays, as above. Where the result would not read back as the list with that entry, the command refuses: write the library's `versions` as a block mapping.
+- **`pkit visual add`** lists each shipped version it copies. A released version takes `released: true` and the hash the library's record keeps, copied as it is. The version being built takes `released: false`, with no hash. A copy not yet released that the command replaces with a released version is listed released, with its hash. Where the location holds no list, the command writes one whole, under a comment that says what the file is.
+- **`pkit visual release`** lists a version of the project's own library released: `released: true`, with the version's `hash`.
+
+Where the list is there already, each command writes it as text:
+
+- **A new entry goes last:** a library the list does not name yet under `libraries`, a new version under its library's `versions`. Where that mapping's entries lie on the lines below its key, the entry is written as block lines at their indent. Where the mapping is written in flow on its key's line, such as `versions: {}`, the entry is written in flow before the closing brace.
+- **An entry listed released is written again in its place,** in the style it had. It stays on its own lines, or in flow where the list writes it so, as in `{1.0.0: {released: false}}`. A comment on its key's line stays.
+- **Every other byte of the file stays:** comments, order, line endings and a byte-order mark.
+- **Where the result would not read back as the list with that entry,** the command refuses: write `libraries`, and the library's `versions`, as block mappings.
+- **Where a key on the way is written in quotes,** such as `'1.0.0':`, the refusal names that key instead, to be written without them. The keys on the way are `libraries`, the library's name, `versions`, and the version of an entry listed released.
 
 ### `library.yaml`
 
@@ -450,7 +499,7 @@ The *comparison* reads two versions of one library, each in full with the versio
 
 `pkit visual release` runs it on the version it releases and the library's previous release, and prints what the number needs before it writes. It refuses a break in a version that keeps the previous release's major (DEC-003 point 7). A library's first release is compared with none.
 
-The capability's own checks run it on each library the capability ships ([The libraries the capability ships](#the-libraries-the-capability-ships)). They compare the version being built with the newest released version of its major, where that major has one. The version being built keeps that major, so each break fails (DEC-013 point 6). Each addition is reported and fails nothing, so an addition in a patch passes.
+A library the capability ships breaks nothing within a major ([The libraries the capability ships](#the-libraries-the-capability-ships)). Each of its versions keeps what the release before it in that major promises (DEC-013 point 6).
 
 A change of how something looks breaks nothing (DEC-003 point 6). So it passes over a brand's values, a component's colour, the look of its states and parts, and each drawing. What it compares, kind by kind:
 
@@ -470,7 +519,7 @@ A change of how something looks breaks nothing (DEC-003 point 6). So it passes o
 - **The foundations' axes and colour families,** whatever reads them. An axis or a mode removed breaks, and so does a new axis, or an axis of another kind or default (DEC-004 point 5). A colour family or a member removed breaks (DEC-003 point 6). A new mode, colour family or member is an addition.
 - **A brand's exported names** (DEC-004 point 5): its token paths, its axes and modes ([Axes and modes](#axes-and-modes)), and its open roles ([Open roles](#open-roles)). A token removed or of another type breaks, as do an axis or a mode removed and an axis of another kind or default. So does a role taken off its open roles. A new token, axis, mode or open role is an addition.
 
-Where either version cannot be read with its bases, or the later one cannot read a component the earlier one promises, no comparison is made. The checks fail it. A brand's component tokens are not compared yet.
+Where either version cannot be read with its bases, or the later one cannot read a component the earlier one promises, no comparison is made, and the release refuses. A brand's component tokens are not compared yet.
 
 ## Brands
 
