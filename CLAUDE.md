@@ -49,7 +49,7 @@ The default is to call them. Skipping is a deliberate choice (trivia exemption, 
 
 ## Builders
 
-Until the build command of project-management DEC-063 is built, the coordinator, the session that takes a batch of Tasks, dispatches each Task's builder itself. Both follow that record's division of the work ahead of its command.
+project-kit runs no topology of seats, and a project with none builds as before, the build command optional to it (project-management DEC-063 point 1). So the coordinator, the session that takes a batch of Tasks, dispatches each Task's builder itself.
 
 - **As `software-engineer`,** without a `name`, for the reason above, in a worktree of its own on the Task's branch. The prompt names only the worktree, the Task and the branch, and in a fix round the findings to fix. Everything else a builder follows is committed: this file and the rules it includes, the agent's own definition, the conventions corpus and what they point to. The core rules say which records to read first (core rule 22), which answers a change owes (core rule 20) and when to stop after a failed step (core rule 21), so no prompt restates them.
 - **From its worktree's own instructions.** A harness may load the coordinator's checkout's `CLAUDE.md` and rules into a builder, rather than its worktree's. So a builder reads its worktree's `CLAUDE.md`, and the rules it includes, before it changes anything.
