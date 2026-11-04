@@ -52,13 +52,13 @@ Judge each choice:
 - **In hand:** an open foundation's Feature lists it under its `## Shared choices`. Plan no foundation of your own for it, and plan the slices once that Feature closes.
 - **Open:** nothing settles it, so the work needs a foundation. Say whether the foundation settles it by a record or by its walking skeleton.
 
-**A record that serves one Task rides that Task.** A choice only one Task makes is no shared choice, so it calls for no foundation (DEC-060 point 1). Where such a choice needs a record, and no other open Task rests on an accepted record it changes:
+**A record that serves one Task rides that Task.** A choice only one Task makes is no shared choice, so it calls for no foundation (DEC-060 point 1). Where such a choice needs a record:
 
 - **The Task drafts it** in its own change. A person accepts it there, before its edits to accepted records and the Task's work follow ([COR-066](../../../../decisions/core/COR-066-accepted-before-landing.md) point 1). That acceptance is one of the Task's acceptance criteria, so the Task cannot close on a draft.
 - **No Task of its own** is planned for the record.
 - **Refused:** the change closes, as COR-066 point 1 says, and the Task goes back to be planned again.
 
-A record that changes an accepted record another open Task rests on takes a Task of its own. So does a change to a foundation's record (DEC-060 point 5), and a foundation's records come first in a Task of their own (DEC-060 point 2). The other Tasks start from the default branch, so a record reaches them only once its own change has landed.
+A record that changes a foundation's record does not ride a Task: the change goes through a Task of its own (DEC-060 point 5).
 
 Where every choice is settled, slice the work at once, as the rest of this step says. Otherwise this plan is the first of two, and files an EPIC even for a single deliverable (DEC-060 points 2 to 4):
 
