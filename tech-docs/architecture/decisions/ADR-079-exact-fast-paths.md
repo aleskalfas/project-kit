@@ -1,7 +1,7 @@
 ---
 id: ADR-079
 title: A fast path gives exactly its reading's result or hands its input on, and the doc-check filler reads the whole check until its cost passes a budget
-status: proposed
+status: accepted
 date: 2026-11-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
