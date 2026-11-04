@@ -8,6 +8,7 @@ pkit:
         - .pkit/capabilities/visual-communication/package.yaml
         - .pkit/capabilities/visual-communication/scripts/status.py
         - .pkit/capabilities/visual-communication/scripts/add.py
+        - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/produce.py
         - .pkit/capabilities/visual-communication/scripts/export.py
@@ -310,6 +311,8 @@ libraries:
 
 `pkit visual add` lists each shipped version it copies. A released version takes `released: true` and the hash the library's record keeps, copied as it is. The version being built takes `released: false`, with no hash. A copy not yet released that the command replaces with a released version is listed released, with its hash, in its entry's place. Where the location holds no list, it writes one whole, under a comment that says what the file is. Otherwise it adds the version as text: a library the list does not name yet goes last under `libraries`, and a new version of a shipped library last under its `versions`. Where that mapping's entries lie on the lines below its key, the command writes the new entry as block lines at their indent. Where the mapping is written in flow on its key's line, such as `versions: {}`, it writes the entry in flow before the closing brace. An entry it lists released is written again in the style it had: on its own lines, or in flow where the list writes it so. Every other byte of the file stays: comments, order, line endings and a byte-order mark. Where the result would not read back as the list with that version added, or listed released, the command refuses: write `libraries`, and the library's `versions`, as block mappings. Where a key on the way, `libraries`, the library's name, `versions` or the version, is written in quotes, the refusal names it instead, to be written without them.
 
+`pkit visual release` marks a version of the project's own library released. It replaces the version's entry, `released: false`, with `released: true` and the version's `hash`, as text. Where the entry lies on the lines below its key, it writes the new one as block lines at their indent, and a comment on the key's line stays. Where the entry is written in flow, as `{1.0.0: {released: false}}`, it writes the new one in flow. Every other byte of the file stays, as above. Where the result would not read back as the list with that entry, the command refuses: write the library's `versions` as a block mapping.
+
 ### `library.yaml`
 
 The test brand's file:
@@ -333,7 +336,7 @@ open: [accent, space]
 | `name` | The library's name. It matches the folder's. |
 | `version` | Its version, `X.Y.Z` with X at least 1. It matches the folder's. A major release carries a breaking change, a minor one an addition or a change of look, a patch a fix (DEC-003 point 1). |
 | `kind` | `components`, a component library; `brand`; or `notation` ([Notations](#notations)). |
-| `needs-release` | The release of the capability the version needs. A released version names the capability's version current at its release, and a version being built names any release the installed capability reads. A version that names a newer release than the installed one, the `version` of the capability's `package.yaml`, cannot be read. |
+| `needs-release` | The release of the capability the version needs. A released version names the capability's version installed in the project when it was released. Its release writes it into this file before it works out the version's hash, and no person does (DEC-014 point 1). Where that copy of the capability is what a release carried, the number never understates what the version uses (DEC-014 point 2). A version being built names any release the installed capability reads. A version that names a newer release than the installed one, the `version` of the capability's `package.yaml`, cannot be read. |
 | `builds-on` | Each library it builds on, as `{name, major}`, the major an integer from 1. |
 | `dtcg` | A brand's DTCG version, `"2025.10"`, quoted, since YAML reads `2025.10` as a number. |
 | `resolver` | A brand's Resolver document, a path within its version folder. |
@@ -362,6 +365,15 @@ libraries:
 ```
 
 The released versions and the record lie outside the version being built, and each library's apart from every other's. So a release changes no file of the version being built. Only whoever maintains the capability releases a version, by a release of its own. A release of the capability releases none (DEC-013 point 1).
+
+**How a version is released.** `pkit visual release <library> --shipped` releases the version being built as the last commit holds it, where the capability is authored. A change to it that is not committed refuses the release. It releases the version only:
+
+- **Untouched since the capability's current version was released.** No change has touched the version being built since the release step's change that wrote the version the capability's `package.yaml` carries (DEC-013 point 1). That change is the one that added the changelog's entry for that version. A change since waits for the next release that moves the capability's version. So no library is released while the capability carries a version no release wrote, as 0.1.0 is.
+- **Under a number of its own.** The number is not released already. It is below neither the newest released one nor one the version being built carried at an earlier release (DEC-013 point 3). A library's first release takes the number the version being built carries.
+- **On released bases.** It is checked on the newest released version of each major of each library it builds on, a base released earlier in the same change included. A base with no released version of a major the library names is released first.
+- **Read in full and compared** with its previous release ([What a release compares](#what-a-release-compares)). A finding that fails refuses it (*What each run judges* in *What the check reports*).
+
+The release adds the released place, whole, its `library.yaml` naming the capability's current version as the release it needs. It adds the version's entry to the record, and changes no other file of the capability's folder (DEC-013 point 2). It writes the change's patch changeset for the capability, naming the library and the version.
 
 Every change to a version the capability ships reaches a project that brings it in. So it comes with a new version of the capability, at least a patch (DEC-013 point 4).
 
@@ -435,6 +447,8 @@ pairs:
 ### What a release compares
 
 The *comparison* reads two versions of one library, each in full with the versions it is checked with (DEC-014 point 1). It names each *break*, a change that breaks what the earlier version promises, and each *addition*. The later number needs a major for a break, at least a minor for an addition, and otherwise at least a patch (DEC-013 point 3). Whether a change of look makes a patch a minor is the owner's judgement.
+
+`pkit visual release` runs it on the version it releases and the library's previous release, and prints what the number needs before it writes. It refuses a break in a version that keeps the previous release's major (DEC-003 point 7). A library's first release is compared with none.
 
 The capability's own checks run it on each library the capability ships ([The libraries the capability ships](#the-libraries-the-capability-ships)). They compare the version being built with the newest released version of its major, where that major has one. The version being built keeps that major, so each break fails (DEC-013 point 6). Each addition is reported and fails nothing, so an addition in a patch passes.
 

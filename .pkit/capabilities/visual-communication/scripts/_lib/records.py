@@ -18,8 +18,8 @@ written code, a piece's lock and the list of libraries (DEC-002 points 3 and 5).
   it was with that entry, or it is refused.
 - **One entry's value replaced** (`with_value`): the file's text with the value of an
   entry that a path of keys leads to written again in its place, such as a version of the
-  list, in the style it was written in, every other byte kept. The text must read back as
-  it was with that value, or it is refused.
+  list or the release a library's file names, in the style it was written in, every other
+  byte kept. The text must read back as it was with that value, or it is refused.
 """
 
 from __future__ import annotations
@@ -164,11 +164,10 @@ def with_entry(original: str, path: Sequence[str], name: str, value: Any, *, eac
     return written
 
 
-def with_value(
-    original: str, path: Sequence[str], name: str, value: Mapping[str, Any], *, each: str
-) -> str:
+def with_value(original: str, path: Sequence[str], name: str, value: Any, *, each: str) -> str:
     """`original`, the text of a YAML file, with the value of the entry `name` of the
-    mapping the keys of `path` lead to replaced by `value`, in its place. Where the entry
+    mapping the keys of `path` lead to replaced by `value`, in its place; an empty `path`
+    names the file's top, as for the release a library's file names. Where the entry
     opens a line of its own, it is written again there, at its indent: in flow on that line
     where its value was written on it, else as block YAML on the lines below. Where the
     mapping is written in flow on one line, such as `versions: {1.0.0: {released: false}}`,
@@ -182,7 +181,7 @@ def with_value(
     dotted = ".".join(path)
     held = _at(before, path)
     if not isinstance(held, Mapping) or name not in held:
-        raise RecordError(f"`{dotted}` holds no `{name}`")
+        raise RecordError(f"{f'`{dotted}`' if path else 'the file'} holds no `{name}`")
     wanted = _with_value(before, [*path, name], value)
     for candidate in _replacements(lines, path, name, value, newline):
         written = bom + "".join(candidate)
@@ -196,6 +195,8 @@ def with_value(
     if quoted:
         keys = ", ".join(f"`{key}`" for key in quoted)
         raise RecordError(f"write the key{'s' if len(quoted) > 1 else ''} {keys} without quotes")
+    if not path:
+        raise RecordError(f"write `{name}:` at the top of the file, on a line of its own")
     raise RecordError(f"write `{dotted}` as a block mapping, one {each} an entry")
 
 
@@ -206,7 +207,7 @@ def _with_value(data: Mapping[str, Any], keys: Sequence[str], value: Any) -> dic
 
 
 def _replacements(
-    lines: list[str], path: Sequence[str], name: str, value: Mapping[str, Any], newline: str
+    lines: list[str], path: Sequence[str], name: str, value: Any, newline: str
 ) -> Iterator[list[str]]:
     """Each way of writing `lines` with the value of the entry `name` of the mapping the
     keys of `path` lead to replaced by `value`: where the entry opens a line of its own,
@@ -240,7 +241,8 @@ def _replacements(
         return
     index = shown[-1]
     line = lines[index]
-    text = _dumped(value, flow=True).strip()
+    # Dumped as an entry's value, so a plain value is written as one line of flow too.
+    text = _dumped({"value": value}, flow=True).strip()[len("{value: ") : -1]
     for match in re.finditer(rf"(?<=[{{,\s]){re.escape(name)}\s*:", line):
         span = _flow_span(line, match.end())
         if span is not None:

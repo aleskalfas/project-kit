@@ -248,9 +248,9 @@ class Change:
         """Write `data` to the file `target`, whole, making its folders."""
         self._steps.append(_Write(target, data))
 
-    def add_folder(self, target: Path, sources: Mapping[str, Path]) -> None:
-        """Add the folder `target`, which does not exist, holding a copy of each file of
-        `sources` at its path within the folder."""
+    def add_folder(self, target: Path, sources: Mapping[str, Path | bytes]) -> None:
+        """Add the folder `target`, which does not exist, holding each file of `sources` at
+        its path within the folder: a copy of the file a path names, or the bytes given."""
         self._steps.append(_Folder(target, sources))
 
     def replace_folder(self, target: Path, sources: Mapping[str, Path]) -> None:
@@ -369,7 +369,7 @@ class _Write(_Step):
 
 
 class _Folder(_Step):
-    def __init__(self, target: Path, sources: Mapping[str, Path]) -> None:
+    def __init__(self, target: Path, sources: Mapping[str, Path | bytes]) -> None:
         super().__init__(target)
         self.sources = sources
 
@@ -378,7 +378,10 @@ class _Folder(_Step):
         for rel, source in self.sources.items():
             copied = self.staged / rel
             copied.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source, copied)
+            if isinstance(source, bytes):
+                copied.write_bytes(source)
+            else:
+                shutil.copyfile(source, copied)
 
     def take(self) -> None:
         assert self.staged is not None

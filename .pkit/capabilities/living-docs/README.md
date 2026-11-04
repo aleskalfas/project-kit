@@ -251,7 +251,7 @@ Each part the capability ships is described here, or on one of the pages beside 
 
 - [`pages.md`](pages.md) — a page's fields and anchors, a kind's format, the types of documents, captured sources and visual elements.
 - [`spaces.md`](spaces.md) — declaring the spaces, each definition's scope, the definitions location, the space-definition template and the shared method, `LDOC`.
-- [`validation.md`](validation.md) — what validation reads, fails on and reports, and what a page mentions and does not anchor.
+- [`validation.md`](validation.md) — what validation reads, fails on, reports and warns of, and what a page mentions and does not anchor.
 - [`agent.md`](agent.md) — the `living-docs` agent, its fixer runs and onboarding, and the review contribution.
 
 **Where each section that left this page went:**
