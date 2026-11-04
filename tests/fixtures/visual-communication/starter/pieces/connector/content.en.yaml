@@ -1,0 +1,74 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: straight
+    layout: slide
+    title: A straight connector, its arrowhead at its end or at its start
+    visual:
+      use: piece/rows
+      upper:
+        - id: ideas
+          head: Where ideas start
+          text: In a conversation, or a note.
+        - id: decisions
+          head: Decisions
+          text: Choices you accepted.
+        - id: review
+          head: Review
+          text: Each change is read again.
+      lower:
+        - id: checks
+          head: Checks
+          text: Run on every change.
+        - id: rules
+          head: Working rules
+          text: Exactly what to do.
+        - id: work
+          head: Your code
+          text: The work itself.
+      ties:
+        - id: ideas-decisions
+          from: {item: "upper[ideas]"}
+          to: {item: "upper[decisions]"}
+        - id: work-decisions
+          from: {item: "lower[work]"}
+          to: {item: "upper[decisions]"}
+          arrow: start
+
+  - id: corners
+    layout: slide
+    title: A connector with corners, its arrowheads at both ends or at neither
+    visual:
+      use: piece/rows
+      tie: {use: starter/connector, route: corners}
+      upper:
+        - id: ideas
+          head: Where ideas start
+          text: In a conversation, or a note.
+        - id: decisions
+          head: Decisions
+          text: Choices you accepted.
+        - id: review
+          head: Review
+          text: Each change is read again.
+      lower:
+        - id: checks
+          head: Checks
+          text: Run on every change.
+        - id: rules
+          head: Working rules
+          text: Exactly what to do.
+        - id: work
+          head: Your code
+          text: The work itself.
+      ties:
+        - id: ideas-rules
+          from: {item: "upper[ideas]"}
+          to: {item: "lower[rules]"}
+          arrow: both
+          concept: test-notation/service
+        - id: review-rules
+          from: {item: "upper[review]"}
+          to: {item: "lower[rules]"}
+          arrow: none
