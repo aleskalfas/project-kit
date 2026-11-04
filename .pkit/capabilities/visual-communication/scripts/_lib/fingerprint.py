@@ -163,11 +163,18 @@ def part_input(rel: str, keys: Sequence[str], value: Any) -> Input:
 
 
 def library_file_input(
-    library: str, version: str, rel: str, path: Path, format: int = FORMAT
+    library: str,
+    version: str,
+    rel: str,
+    path: Path,
+    format: int = FORMAT,
+    data: bytes | None = None,
 ) -> Input:
-    """A file of a library version, by its path within the version folder."""
+    """A file of a library version, by its path within the version folder; `data`, where
+    given, read in place of the file (`reading`)."""
     return Input(
-        {"library": library, "version": version, "path": rel}, sha256(reading(path, format))
+        {"library": library, "version": version, "path": rel},
+        sha256(reading(path, format, data)),
     )
 
 
@@ -279,13 +286,23 @@ def _identity(entry: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def library_version_inputs(
-    *, library: str, version: str, folder: Path, files: Iterable[Path], format: int = FORMAT
+    *,
+    library: str,
+    version: str,
+    folder: Path,
+    files: Iterable[Path],
+    format: int = FORMAT,
+    data: Mapping[str, bytes] | None = None,
 ) -> list[Input]:
-    """Every file of a library version's folder."""
-    return [
-        library_file_input(library, version, path.relative_to(folder).as_posix(), path, format)
-        for path in files
-    ]
+    """Every file of a library version's folder. `data` gives, by its path within the
+    folder, what a file holds once a command writes it, read in place of the file: so a
+    release works out the hash of a version before it writes the release it needs."""
+    written = data or {}
+    inputs = []
+    for path in files:
+        rel = path.relative_to(folder).as_posix()
+        inputs.append(library_file_input(library, version, rel, path, format, written.get(rel)))
+    return inputs
 
 
 def piece_files(piece: Path, files: Iterable[Path]) -> list[Path]:

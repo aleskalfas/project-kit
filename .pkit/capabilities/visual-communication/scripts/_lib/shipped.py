@@ -28,6 +28,14 @@ being built, each released version with its place and its hash (`Released`), and
 newest released version of each major. It reads the record as it finds it, and names
 what does not match it (`Shipped.problems`, `strays`).
 
+**The writer**, `plan_release` then `write_release`, releases a library's version being
+built as it stands (DEC-013 points 2 and 3): its files copied to its released place, the
+release it needs written in its `library.yaml` there, and its entry added to the record,
+with its hash over every file of the place, the release it needs included. It writes no
+other file of the capability's folder. The release of a version is the one command that
+writes the folder, and only where the capability is authored (`synced_copy`, DEC-002
+point 9).
+
 **The history** of the repository the capability is authored in, read with git:
 
 - `release_change`: the release step's change that wrote a version of the capability,
@@ -40,6 +48,10 @@ what does not match it (`Shipped.problems`, `strays`).
 - `brought_in`: the change that brings a released version in, the last change on HEAD's
   first-parent line that added its place. A place taken back and released again is read
   from its last release.
+- `numbers_carried`: the number the version being built carried at each release, each
+  change on HEAD's first-parent line that wrote the changelog.
+- `held_at`, whether the tree at a change holds a file; `uncommitted`, what the working
+  tree changes in a place since HEAD.
 
 Each raises HistoryMissing where the history is not at hand: git cannot be run, the
 folder holds no repository, or the clone is shallow, so a change it needs may lie beyond
@@ -49,14 +61,26 @@ is a kind of, says the history at hand cannot answer otherwise.
 
 from __future__ import annotations
 
+import importlib.util
 import subprocess
+import sys
 from collections.abc import Mapping
+from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from typing import Any
 
 from _lib import fingerprint, location, records
-from _lib.libraries import SHIPPED_LIBRARIES, Library, Version, read_library, shipped_names
+from _lib.files import FORMAT, Change, schema_of
+from _lib.libraries import (
+    SHIPPED_LIBRARIES,
+    Library,
+    Version,
+    read_library,
+    release_of,
+    shipped_names,
+)
+from _lib.reading import ReadError, load_yaml, read_yaml
 from _lib.root import CAPABILITY, SHIPPED
 
 #: The folder of the capability that holds the version being built of each library.
@@ -70,6 +94,22 @@ RECORD = "releases.yaml"
 
 #: The changelog the release step writes, relative to the repository's top.
 CHANGELOG = "CHANGELOG.md"
+
+#: The capability's own checks of the versions it ships, relative to the repository's top
+#: (DEC-013 point 6). A version is released only where the tree at the release step's
+#: change holds them, so they read the version as that release carried it (point 1).
+CHECKS = "tests/test_visual_communication_shipped_libraries.py"
+
+#: The methodology's answer to whether a path arrives in a repository as a synced copy,
+#: in the tree, relative to its top: the module the backbone loads by path.
+OWNERSHIP = ".pkit/lifecycle/ownership.py"
+
+#: The comment that opens a library's record, written whole at its first release.
+RECORD_HEADER = (
+    "The released versions of a library the capability ships (visual-communication",
+    "DEC-013 point 2), each with its hash. `pkit visual release <library> --shipped` adds",
+    "each one; nothing changes an entry once it is added.",
+)
 
 
 class ShippedError(Exception):
@@ -268,8 +308,7 @@ def place_of(folder: Path, name: str, version: Version) -> Path:
 def files_of(folder: Path, name: str, version: Version) -> list[Path]:
     """Every file of a released version's place, listed as a location's version is: as git
     sees them, tracked and untracked but not ignored; walked outside a repository."""
-    rel = place_of(folder, name, version).relative_to(folder).as_posix()
-    return [folder / each for each in location.files(folder, rel)]
+    return files_in(folder, place_of(folder, name, version))
 
 
 def entry_of(folder: Path, name: str, version: Version) -> dict[str, Any]:
@@ -281,6 +320,127 @@ def entry_of(folder: Path, name: str, version: Version) -> dict[str, Any]:
         library=name, version=str(version), folder=place, files=files_of(folder, name, version)
     )
     return {"released": True, "hash": fingerprint.fingerprint(inputs)}
+
+
+# --- a release ----------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Release:
+    """A release of the version being built of a library the capability ships, worked out
+    and not yet written: the library, its version, each file of its released place by its
+    path within it, as a file to copy or the bytes to write, its entry in the record, and
+    the record's text once it lists the version."""
+
+    library: Shipped
+    version: Version
+    files: Mapping[str, Path | bytes]
+    entry: Mapping[str, Any]
+    record_text: str
+
+    @property
+    def place(self) -> Path:
+        return place_of(self.library.folder, self.library.name, self.version)
+
+
+def current_version(folder: Path = SHIPPED) -> str:
+    """The capability's current version: the version its `package.yaml`, in the
+    capability's folder `folder`, carries (DEC-013 point 1). Raises ShippedError where it
+    cannot be read."""
+    path = folder / "package.yaml"
+    try:
+        version = read_yaml(path)["component"]["version"]
+        release_of(version)
+    except (ReadError, KeyError, TypeError, ValueError) as exc:
+        raise ShippedError(f"{path} gives no version of the capability: {exc}") from exc
+    return str(version)
+
+
+def needs_written(path: Path, needs: str) -> bytes:
+    """The `library.yaml` at `path` with the release it needs, `needs-release`, set to
+    `needs`, every other byte kept (`records.with_value`). Raises ShippedError where the
+    file cannot take it as text."""
+    try:
+        text = path.read_bytes().decode("utf-8")
+        return records.with_value(text, ["needs-release"], needs, each="key").encode("utf-8")
+    except (OSError, UnicodeDecodeError, records.RecordError) as exc:
+        raise ShippedError(f"{path} cannot take the release it needs as text: {exc}") from exc
+
+
+def plan_release(library: Shipped, built: Library, needs: str) -> Release:
+    """The release of `built`, the version being built of `library`, as it stands, naming
+    `needs`, the capability's current version, as the release it needs (DEC-013 point 3):
+    every file of the version being built for its place, its `library.yaml` with that
+    release written; the entry's hash over them; and the record's text with the entry
+    added, or written whole where the library has no record yet. Writes nothing. Raises
+    ShippedError where a file cannot take what the release writes."""
+    name, version = library.name, built.version
+    found = files_in(library.folder, library.built)
+    written = {"library.yaml": needs_written(library.built / "library.yaml", needs)}
+    sources: dict[str, Path | bytes] = {
+        path.relative_to(library.built).as_posix(): path for path in found
+    }
+    sources.update(written)
+    inputs = fingerprint.library_version_inputs(
+        library=name, version=str(version), folder=library.built, files=found, data=written
+    )
+    entry = {"released": True, "hash": fingerprint.fingerprint(inputs)}
+    if library.record.is_file():
+        try:
+            text = records.with_entry(
+                library.record.read_bytes().decode("utf-8"),
+                ["libraries", name, "versions"],
+                str(version),
+                entry,
+                each="version",
+            )
+        except (OSError, UnicodeDecodeError, records.RecordError) as exc:
+            shown = library.record.relative_to(library.folder).as_posix()
+            raise ShippedError(f"{shown} cannot take {name}@{version} as text: {exc}") from exc
+    else:
+        whole = {
+            "pkit_schema": schema_of("libraries"),
+            "schema_version": FORMAT,
+            "libraries": {name: {"source": {"kind": "shipped"}, "versions": {str(version): entry}}},
+        }
+        text = records.text(whole, RECORD_HEADER)
+    return Release(library, version, sources, entry, text)
+
+
+def write_release(planned: Release, change: Change) -> None:
+    """Add a planned release to `change`, as its next steps: the released place, whole,
+    then the record. Nothing else of the capability's folder is written."""
+    change.add_folder(planned.place, planned.files)
+    change.write(planned.library.record, planned.record_text.encode("utf-8"))
+
+
+def files_in(folder: Path, place: Path) -> list[Path]:
+    """Every file of `place`, within the capability's folder `folder`, as a location's
+    version is listed: as git sees them, tracked and untracked but not ignored."""
+    rel = place.relative_to(folder).as_posix()
+    return [folder / each for each in location.files(folder, rel)]
+
+
+def synced_copy(root: Path, path: str) -> bool:
+    """Whether `path`, relative to `root`, arrives in the repository at `root` as a synced
+    copy, by the methodology's own answer: `is_synced_copy` of the tree's ownership module,
+    loaded by path as the backbone loads it, writing no bytecode beside it. Raises
+    ShippedError where the tree holds no such module, so the question has no answer."""
+    module = root / OWNERSHIP
+    spec = importlib.util.spec_from_file_location("pkit_lifecycle_ownership", module)
+    if not module.is_file() or spec is None or spec.loader is None:
+        raise ShippedError(
+            f"the tree holds no {OWNERSHIP}, so whether {path} is a synced copy has no "
+            f"answer: sync the methodology first"
+        )
+    loaded = importlib.util.module_from_spec(spec)
+    before = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(loaded)
+    finally:
+        sys.dont_write_bytecode = before
+    return bool(loaded.is_synced_copy(root, path))
 
 
 # --- the history --------------------------------------------------------------------------------
@@ -357,6 +517,62 @@ def brought_in(root: Path, place: str, head: str = "HEAD") -> str | None:
         f"{place}/library.yaml",
     )
     return added[0] if added else None
+
+
+def numbers_carried(
+    root: Path, place: str, *, changelog: str = CHANGELOG, head: str = "HEAD"
+) -> list[tuple[str, Version]]:
+    """The number the version being built at `place`, a path relative to `root`, carried at
+    each release: each change on `head`'s first-parent line that wrote the changelog, a
+    merge read against its first parent, newest first, with the version its `library.yaml`
+    gives there. A change whose tree holds no such version is left out. Raises
+    HistoryMissing where the history is not at hand."""
+    _whole(root)
+    changes = _lines(
+        root,
+        "log",
+        "--first-parent",
+        "--diff-merges=first-parent",
+        "--no-patch",
+        "--format=%H",
+        head,
+        "--",
+        changelog,
+    )
+    found = []
+    for change in changes:
+        try:
+            data = load_yaml(_show(root, change, f"{place}/library.yaml"))
+            version = Version.parse(data.get("version") if isinstance(data, Mapping) else None)
+        except (ReadError, ValueError):
+            continue
+        found.append((change, version))
+    return found
+
+
+def held_at(root: Path, change: str, path: str) -> bool:
+    """Whether the tree at the change `change` holds the file `path`, relative to `root`."""
+    return _git(root, "cat-file", "-e", f"{change}:{path}").returncode == 0
+
+
+def uncommitted(root: Path, place: str) -> list[str]:
+    """Each path under `place`, relative to `root`, that the working tree or the index
+    changes since HEAD, an untracked file included, as git's short status shows it. Raises
+    HistoryMissing where git cannot read the repository."""
+    proc = _git(root, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--", place)
+    if proc.returncode:
+        detail = [line for line in proc.stderr.splitlines() if line]
+        said = detail[-1] if detail else f"git exited {proc.returncode}"
+        raise HistoryMissing(f"git status could not read the repository: {said}")
+    entries = proc.stdout.split("\0")
+    found, skip = [], False
+    for entry in entries:
+        if skip or not entry:
+            skip = False
+            continue
+        found.append(entry[3:])
+        skip = entry[0] in "RC"
+    return found
 
 
 def _whole(root: Path) -> None:
