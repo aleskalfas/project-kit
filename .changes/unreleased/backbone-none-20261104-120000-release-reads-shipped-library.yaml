@@ -1,0 +1,9 @@
+component: backbone
+kind: none
+body: >
+  The release mechanics, `.pkit/release/README.md`, name the release of a
+  library the visual-communication capability ships among what reads the
+  release step's work: the capability's changelog entry, the change that wrote
+  it, and the version in its `package.yaml` (#2610). The page gains one line
+  and two anchors; no command, path or format of the backbone changes, so no
+  surface moves.

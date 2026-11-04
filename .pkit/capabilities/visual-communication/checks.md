@@ -10,7 +10,9 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/produce.py
         - .pkit/capabilities/visual-communication/scripts/write-code.py
+        - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/_lib/checks.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/full_read.py
         - .pkit/capabilities/visual-communication/scripts/_lib/findings.py
         - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
         - .pkit/capabilities/visual-communication/scripts/_lib/reading.py
@@ -122,6 +124,8 @@ Without a piece named, each run judges, in order: the configuration, the locatio
 
 **A version checked alone.** The newest version the project holds of each major of each library is checked alone, once (DEC-005 point 7, DEC-008 point 1). It is resolved with the newest version the project holds of each major it names, and of each major those name. A brand is read over its base, and the foundations' declarations are read. A component library's own roles are judged against the libraries it builds on. So is each of its patterns against the default component of each list it declares fields for, a drawing of a top's layout included. Its findings are `arrangement-clash`, `end-clash` and `tie-default` (DEC-010 point 9, DEC-011 point 8). Its components are read as a piece's are, from the versions it is resolved with, with no piece and no brand behind them, so each role stands for the type it declares. What a version shows alone lies in that version. A version that names majors no versions fit, or one of which the project holds no version, cannot be checked alone: that is its finding (`alone-majors`, `alone-missing`). An older version of a major is checked only under the locks that name it.
 
+**A version a release reads.** `pkit visual release` reads the version it releases in full on the installed capability, beside what the check of it alone judges (DEC-014 point 1). It reads each file of the capability's format in the version against its schema, and every component, a component no piece places included. It reads a brand's tokens over its base, and opens each font the version holds. It computes no scene. Each finding takes the label it takes in the check, and the level it takes in a version not yet released. It points at the version's file. A finding that fails refuses the release (DEC-003 point 6).
+
 **Under a lock.** A piece's lock combines versions, so each version it names is judged at that lock too (DEC-008 point 9). A fault the version shows alone as well lies in the version, and is reported once. A fault only the lock's combination of versions shows lies at the lock, `<piece>/piece.yaml#lock`. It names no version, so its level stands, and its message names the version and the place it was seen in. A fault of the lock itself, such as a base the lock names at another major, names no version either.
 
 `pkit visual check <piece>` judges that piece alone: the binding of its own files, and all of the above for it. It judges neither the library folder, nor its list, nor written code. It runs no pass of versions checked alone: it checks alone only the versions its lock names, to tell where each finding under the lock lies, and reports only what the lock shows.
@@ -142,6 +146,7 @@ In the tables, `<piece>/` is the piece's folder, `<location>/pieces/<piece>/`, a
 | `files-unlisted` | git cannot list the location's files. | fails | `.` | The message gives git's error. |
 | `file-unreadable` | The configuration, or a file of the capability's format, cannot be read ([how files are read](files.md#how-the-files-are-read)). | fails | the file | Mend the file. |
 | `binding` | The file names no schema, or another schema than its name and place call for. A file at another format number is the core's data validation's to report. | fails | the file | Write the binding the message names ([the binding](files.md#the-binding)). |
+| `schema-refused` | A file of a library version breaks its schema at the key path the message names. Only a release, which reads the version in full, reports it ([What each run judges](#what-each-run-judges)). In the location, `pkit validate`'s data validation reports the same fault. | fails | the file | Mend the file. |
 | `piece-missing` | `pkit visual check <piece>` names a piece the location does not hold. | fails | `<location>/pieces` | Name a piece of the location. |
 | `piece-unreadable` | `piece.yaml` or a content file cannot be read as a piece: a field of the wrong shape, a language with no content file, or a mode the brand lacks. Not reported where a `binding` finding names one of the piece's files. | fails | `<piece>/piece.yaml` | The message names the file and the field. |
 | `unexpected-error` | The check of a piece stopped on an error it does not expect, such as one the engine raises on data it does not guard against. The message names the error. | fails | `<piece>/piece.yaml` | Mend what the error names in the piece's files or the components they use. Where none is at fault, report the error as a fault of the capability. |

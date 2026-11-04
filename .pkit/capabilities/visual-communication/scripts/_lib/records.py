@@ -16,6 +16,10 @@ written code, a piece's lock and the list of libraries (DEC-002 points 3 and 5).
   entry last in the mapping that a path of keys leads to, such as a library in the list,
   written in the style of that mapping, every other byte kept. The text must read back as
   it was with that entry, or it is refused.
+- **One entry's value replaced** (`with_value`): the file's text with the value of the
+  entry a path of keys leads to written anew, in the style of its mapping, such as a
+  version the list marks released or the release a library's file names. Every other byte
+  is kept, and the text must read back as it was with that value, or it is refused.
 """
 
 from __future__ import annotations
@@ -153,6 +157,186 @@ def with_entry(original: str, path: Sequence[str], name: str, value: Any, *, eac
     if after != _added(before, path, name, value):
         raise RecordError(refusal)
     return written
+
+
+def with_value(original: str, path: Sequence[str], value: Any, *, each: str) -> str:
+    """`original`, the text of a YAML file, with the value of the entry the keys of `path`
+    lead to from its top replaced by `value`. Where the entry lies on lines of its own, it
+    is written there anew as block YAML, at its indent, a comment on its key's line kept;
+    where its mapping is written in flow on its key's line, such as `{1.0.0: {...}}`, the
+    value is written in flow in its place. Every other byte is kept: its comments, its
+    order, its line endings and a byte-order mark. Raises RecordError where `original`
+    cannot be read, holds no such entry, or the text would not read back as it was with
+    that value; `each` names what one entry of the mapping holds, in the refusal. A key on
+    the way that the text writes in quotes is found by no line, and the refusal names it,
+    to be written without them."""
+    bom, lines, newline = _lines(original)
+    before = _loaded(original[len(bom) :])
+    *parent, name = path
+    dotted = ".".join(path)
+    held = _at(before, parent)
+    if not isinstance(held, Mapping) or name not in held:
+        raise RecordError(f"the file holds no `{dotted}`")
+    if parent:
+        refusal = f"write `{'.'.join(parent)}` as a block mapping, one {each} an entry"
+    else:
+        refusal = f"write `{name}:` at the top of the file, on a line of its own"
+    valued = _valued(lines, parent, name, value, newline)
+    if valued is None:
+        quoted = _quoted(lines, parent) if parent else []
+        if quoted:
+            keys = ", ".join(f"`{key}`" for key in quoted)
+            raise RecordError(
+                f"write the key{'s' if len(quoted) > 1 else ''} {keys} without quotes"
+            )
+        raise RecordError(refusal)
+    written = bom + "".join(valued)
+    try:
+        after = load_yaml(written[len(bom) :])
+    except ReadError:
+        after = None
+    if after != _replaced(before, path, value):
+        raise RecordError(refusal)
+    return written
+
+
+def _replaced(data: Any, path: Sequence[str], value: Any) -> Any:
+    """`data` with the value the keys of `path` lead to replaced by `value`."""
+    if not path:
+        return value
+    head, *rest = path
+    return {**data, head: _replaced(data[head], rest, value)}
+
+
+def _valued(
+    lines: list[str], parent: Sequence[str], name: str, value: Any, newline: str
+) -> list[str] | None:
+    """`lines` with the value of `name`, in the mapping the keys of `parent` lead to,
+    replaced by `value`; None where the lines do not show where it lies."""
+    low, high, inner = 0, len(lines), 0
+    if parent:
+        found = _key_lines(lines, parent)
+        if found is None:
+            return None
+        start = found[-1]
+        indent = _indent(lines[start])
+        line = lines[start]
+        head = line.split("#", 1)[0].rstrip()
+        if head[indent + len(parent[-1]) + 1 :].strip():
+            opens = head.find("{", indent + len(parent[-1]) + 1)
+            return None if opens < 0 else _flow_valued(lines, start, opens, name, value)
+        end = _block_end(lines, start, indent)
+        entries = _entries_indent(lines, start, end)
+        if entries is None:
+            return None
+        low, high, inner = start + 1, end + 1, entries
+    entry = next(
+        (
+            index
+            for index in range(low, high)
+            if _indent(lines[index]) == inner and _opens(lines[index][inner:], name, quoted=True)
+        ),
+        None,
+    )
+    if entry is None:
+        return None
+    last = _block_end(lines, entry, inner)
+    line = lines[entry].rstrip("\r\n")
+    comment = line[len(line.split("#", 1)[0].rstrip()) :] if "#" in line else ""
+    block = [" " * inner + text for text in _dumped({name: value}).splitlines()]
+    block[0] += comment
+    ends = lines[last].endswith(("\n", "\r"))
+    written = [text + newline for text in block]
+    if not ends:
+        written[-1] = block[-1]
+    return [*lines[:entry], *written, *lines[last + 1 :]]
+
+
+def _flow_valued(
+    lines: list[str], start: int, opens: int, name: str, value: Any
+) -> list[str] | None:
+    """`lines` with the value of `name` in the flow mapping that opens at `opens` on line
+    `start`, all of it on that line, replaced by `value` written in flow; None where the
+    line does not hold it."""
+    line = lines[start]
+    span = _flow_entry(line, opens, name)
+    if span is None:
+        return None
+    low, high = span
+    was = line[low:high]
+    lead = was[: len(was) - len(was.lstrip())] or " "
+    trail = was[len(was.rstrip()) :]
+    flow = _dumped({name: value}, flow=True).strip()[1:-1]
+    text = flow[flow.index(":") + 1 :].strip()
+    return [*lines[:start], line[:low] + lead + text + trail + line[high:], *lines[start + 1 :]]
+
+
+def _flow_entry(text: str, opens: int, name: str) -> tuple[int, int] | None:
+    """Where the value of the key `name` lies in the flow mapping that opens with the `{`
+    at `opens` in `text`: from just after its `:` up to the `,` or `}` that ends it; None
+    where the mapping does not close on the line, or holds no such key at its top."""
+    depth, index, key = 0, opens, None
+    while index < len(text):
+        char = text[index]
+        if char in "'\"":
+            index = _quote_end(text, index)
+            continue
+        if char in "{[":
+            depth += 1
+            key = index + 1 if depth == 1 else key
+        elif char in "}]":
+            depth -= 1
+            if depth == 0:
+                return None
+        elif depth == 1 and char == ",":
+            key = index + 1
+        elif (
+            depth == 1 and char == ":" and key is not None and text[index + 1 : index + 2] in " \t"
+        ):
+            if text[key:index].strip() in (name, f"'{name}'", f'"{name}"'):
+                return index + 1, _flow_value_end(text, index + 1)
+            key = None
+        index += 1
+    return None
+
+
+def _flow_value_end(text: str, index: int) -> int:
+    """Where a value in flow that starts at `index` ends: at the `,` or `}` of its mapping."""
+    depth = 0
+    while index < len(text):
+        char = text[index]
+        if char in "'\"":
+            index = _quote_end(text, index)
+            continue
+        if char in "{[":
+            depth += 1
+        elif char in "}]":
+            if depth == 0:
+                return index
+            depth -= 1
+        elif char == "," and depth == 0:
+            return index
+        index += 1
+    return index
+
+
+def _quote_end(text: str, index: int) -> int:
+    """Where the quoted scalar that opens at `index` in `text` ends, just past its closing
+    quote: a single quote doubled within it, or a character a backslash escapes in double
+    quotes, does not close it."""
+    quote, index = text[index], index + 1
+    while index < len(text):
+        char = text[index]
+        if quote == '"' and char == "\\":
+            index += 2
+            continue
+        if char == quote:
+            if quote == "'" and text[index + 1 : index + 2] == "'":
+                index += 2
+                continue
+            return index + 1
+        index += 1
+    return index
 
 
 def _lines(original: str) -> tuple[str, list[str], str]:

@@ -9,6 +9,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/status.py
         - .pkit/capabilities/visual-communication/scripts/check.py
         - .pkit/capabilities/visual-communication/scripts/add.py
+        - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/produce.py
         - .pkit/capabilities/visual-communication/scripts/export.py
@@ -18,7 +19,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/__init__.py
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-007", COR-017, COR-023, COR-031, COR-055]
+      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-007", "visual-communication:DEC-013", "visual-communication:DEC-014", COR-017, COR-023, COR-031, COR-055, ADR-059]
       artefact:
         - .pkit/capabilities/visual-communication/checks.md
         - .pkit/capabilities/visual-communication/checks.md#content-against-components
@@ -33,10 +34,13 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-binding
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-foundations
+        - .pkit/capabilities/visual-communication/files.md#the-libraries-the-capability-ships
         - .pkit/capabilities/visual-communication/files.md#the-library-folder
+        - .pkit/capabilities/visual-communication/files.md#libraryyaml
         - .pkit/capabilities/visual-communication/files.md#the-list-librariesyaml
         - .pkit/capabilities/visual-communication/files.md#the-location
         - .pkit/capabilities/visual-communication/files.md#the-lock
+        - .pkit/capabilities/visual-communication/files.md#what-a-release-compares
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/outputs.md
         - .pkit/capabilities/visual-communication/outputs.md#exports
@@ -105,7 +109,7 @@ A brand's values reach code the same way: a declaration under the location's `co
 
 ## Commands
 
-Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, and takes back the location it recorded. It names each file it could not put back. `produce` alone writes before it can refuse: it hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)).
+Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names. `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, and takes back the location it recorded. It names each file it could not put back. `produce` alone writes before it can refuse: it hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)).
 
 ### `pkit visual status`
 
@@ -125,6 +129,21 @@ Copies a library the capability ships into the location's library folder, and li
 - **Exits** 0 when it copied and listed the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
 Running it is the consent for the copy.
+
+### `pkit visual release <library>`
+
+Releases a version of a project's own library, after it reads the version in full and compares it with the library's previous release.
+
+- **Takes** the newest version the library folder holds of a library the list names from the source `project`, listed `released: false`.
+- **Reads it in full** on the installed capability: every file against its schema, and every component, a component no piece places included ([What each run judges](checks.md#what-each-run-judges)). A finding that fails refuses the release, and the command names each one.
+- **Compares it** with the library's previous release, and prints what the number needs. A break in a version that keeps that release's major refuses it. A first release is compared with none, and says so ([What a release compares](files.md#what-a-release-compares)).
+- **Writes** the installed capability's version as the release the version needs, in its `library.yaml` ([`library.yaml`](files.md#libraryyaml)). Then it lists the version `released: true` with its hash, every other byte of the list kept ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)). It writes nothing else.
+- **Refuses** a version the list does not name, one released already, and a library the project does not own: one the capability ships, or one another repository shares.
+- **Exits** 0 when it released the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
+
+Before you release a library for other projects, sync from a tagged install of the methodology. The release a version needs is the installed capability's version. That number covers what the version uses only where the capability's copy is what a release carried, as a tagged install writes it ([`library.yaml`](files.md#libraryyaml)). The advice does not apply where the capability is authored, since no sync copies into that tree.
+
+`pkit visual release <library> --shipped` releases the version being built of a library the capability ships, where the capability is authored. It reads and compares the version the same way, and writes the released place, the library's record and a patch changeset for the capability. Raise the changeset's kind where the release needs more. Each condition it holds the version to is under [The libraries the capability ships](files.md#the-libraries-the-capability-ships).
 
 ### `pkit visual render <piece>`
 
