@@ -126,12 +126,13 @@ esac
 fail=0
 run() {
   local label="$1"; shift
+  local started=$SECONDS
   echo
   echo "== ${label} =="
   if "$@"; then
-    echo "-- ${label}: ok"
+    echo "-- ${label}: ok ($((SECONDS - started)) s)"
   else
-    echo "-- ${label}: FAILED"
+    echo "-- ${label}: FAILED ($((SECONDS - started)) s)"
     fail=1
   fi
 }
