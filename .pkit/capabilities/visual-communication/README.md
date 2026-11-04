@@ -31,6 +31,8 @@ pkit:
         - visual-communication:DEC-013#5
         - visual-communication:DEC-014#3
         - COR-017
+        - COR-031
+        - COR-055#3
         - ADR-059#1
       artefact:
         - .pkit/capabilities/visual-communication/files.md#contents
