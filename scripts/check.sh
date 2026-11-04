@@ -124,16 +124,38 @@ esac
 # --base: every line exercises the rule a contributor's own run does.
 
 fail=0
+took=0  # the seconds the last line took
 run() {
   local label="$1"; shift
-  local started=$SECONDS
+  local started=$SECONDS status=0
   echo
   echo "== ${label} =="
-  if "$@"; then
-    echo "-- ${label}: ok ($((SECONDS - started)) s)"
+  "$@" || status=$?
+  took=$((SECONDS - started))
+  if [ "${status}" -eq 0 ]; then
+    echo "-- ${label}: ok (${took} s)"
   else
-    echo "-- ${label}: FAILED ($((SECONDS - started)) s)"
+    echo "-- ${label}: FAILED (${took} s)"
     fail=1
+  fi
+}
+
+# The doc check's line warns when it takes more than 15 seconds, half the 30-second
+# bound its filler runs under (ADR-057 point 3; #2410). The filler reads the
+# whole-repository friction check, whose time grows with the repository's history
+# and answers. A run killed at the bound fails the doc check and `pkit validate`,
+# so the warning comes first. It fails nothing. On GitHub Actions it is an
+# annotation too, shown on the run's summary. $PKIT_DOC_CHECK_WARN_SECONDS sets
+# another threshold, as the aggregator's tests do.
+doc_check_warn_seconds="${PKIT_DOC_CHECK_WARN_SECONDS:-15}"
+
+warn_if_slow() {
+  local label="$1" threshold="$2"
+  [ "${took}" -gt "${threshold}" ] || return 0
+  local message="the ${label} took ${took} s, more than ${threshold} s; its filler's bound is 30 s, so weigh a faster doc check (#2410)"
+  echo "warning: ${message}"
+  if [ "${GITHUB_ACTIONS:-}" = true ]; then
+    echo "::warning title=${label} near its bound::${message}"
   fi
 }
 
@@ -286,6 +308,7 @@ else
   run "analysis numbers"   uv run pkit analysis check-numbers
   run "analysis pointers"  uv run pkit analysis check-pointers
   run "doc check"          uv run pkit pm check-doc-mapping
+  warn_if_slow "doc check" "${doc_check_warn_seconds}"
   run "changelog lint"     uv run pkit release lint
 fi
 

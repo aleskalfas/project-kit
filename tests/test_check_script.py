@@ -83,7 +83,8 @@ RUN_EXAMPLES = ".pkit/capabilities/doc-examples/scripts/run-examples.py"
 # deployed agents' check, which exits with $STUB_AGENTS_STATUS, the console
 # fences, which exit with $STUB_CONSOLE_STATUS, and the contents lists, which exit
 # with $STUB_CONTENTS_STATUS;
-# `pkit decisions check-diff` exits with $STUB_NUMBERING_STATUS; `pytest` logs its
+# `pkit decisions check-diff` exits with $STUB_NUMBERING_STATUS; `pkit pm
+# check-doc-mapping` sleeps $STUB_DOC_CHECK_SECONDS, then passes; `pytest` logs its
 # arguments and, on the parallel pass, holds until the release file exists and
 # then exits with $STUB_PARALLEL_STATUS; anything else passes.
 STUB_UV = """#!/bin/sh
@@ -104,6 +105,7 @@ case "$1" in
   pkit)
     case "$2 $3" in
       "decisions check-diff") exit "${{STUB_NUMBERING_STATUS:-0}}" ;;
+      "pm check-doc-mapping") sleep "${{STUB_DOC_CHECK_SECONDS:-0}}"; exit 0 ;;
     esac
     exit 0 ;;
   pytest)
@@ -129,7 +131,7 @@ PARALLEL_PASS = "pytest -q -n auto --durations=30 -m not serial"
 #: the suite these tests are part of may carry either: a contributor's count of
 #: workers, or the folder a slice in CI reports into (`scripts/ci_parts.py`). So the
 #: `check.sh` under test sees one only where a test sets it.
-CALLERS_TEST_SETTINGS = ("PKIT_TEST_WORKERS", "PKIT_TEST_REPORTS")
+CALLERS_TEST_SETTINGS = ("PKIT_TEST_WORKERS", "PKIT_TEST_REPORTS", "PKIT_DOC_CHECK_WARN_SECONDS")
 
 
 class Checkout:
@@ -249,6 +251,26 @@ def test_each_check_s_result_line_says_how_long_it_took(checkout: Checkout) -> N
 
     assert re.search(r"^-- types: FAILED \(\d+ s\)$", done.stdout, re.MULTILINE)
     assert re.search(r"^-- doc check: ok \(\d+ s\)$", done.stdout, re.MULTILINE)
+    assert "warning:" not in done.stdout
+
+
+@pytest.mark.parametrize("actions", ["true", ""])
+def test_a_doc_check_slower_than_its_threshold_warns_and_fails_nothing(
+    checkout: Checkout, actions: str
+) -> None:
+    """Past half its filler's bound, the doc check's line is followed by a warning, an
+    annotation too on GitHub Actions; the run still passes. The threshold is lowered here,
+    so the stub's doc check passes it in a second rather than in fifteen."""
+    done = checkout.check(
+        PKIT_DOC_CHECK_WARN_SECONDS="0", STUB_DOC_CHECK_SECONDS="1.2", GITHUB_ACTIONS=actions
+    )
+
+    assert done.returncode == 0, done.stdout + done.stderr
+    lines = done.stdout.splitlines()
+    result = next(i for i, line in enumerate(lines) if line.startswith("-- doc check: ok"))
+    assert re.fullmatch(r"warning: the doc check took \d+ s, more than 0 s; .*", lines[result + 1])
+    annotations = [line for line in lines if line.startswith("::warning ")]
+    assert len(annotations) == (1 if actions else 0)
 
 
 def test_the_numbering_check_runs_after_the_migration_check_and_a_failure_fails_the_run(
