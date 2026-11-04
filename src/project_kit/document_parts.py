@@ -59,6 +59,7 @@ from typing import Any, cast
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from project_kit import block_yaml
 from project_kit.backbone_schemas import as_written
 from project_kit.line_breaks import universal_newlines
 
@@ -85,8 +86,9 @@ _INLINE_LINK = re.compile(r"(?<!!)\[(?P<words>[^\[\]]+)\]\((?P<target>[^()\s]+)\
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
 _CODE_SPAN = re.compile(r"(?<!`)(`+)(?!`)(?:[^\n]|\n(?![ \t]*\n))+?(?<!`)\1(?!`)")
 
-# ruamel.yaml is untyped; the loaded value is judged where it is read.
-_yaml: Any = YAML(typ="safe")
+# ruamel.yaml is untyped; the loaded value is judged where it is read. The exact reading
+# behind `block_yaml`: ruamel's pure-Python safe loader, never libyaml.
+_yaml: Any = YAML(typ="safe", pure=True)
 
 
 def split_front_matter(text: str) -> tuple[str | None, str]:
@@ -125,7 +127,7 @@ def parse_front_matter(text: str) -> tuple[Mapping[str, Any] | None, str, str | 
     if front_matter is None:
         return None, body, None
     try:
-        data = _yaml.load(io.StringIO(front_matter))
+        data = block_yaml.load(front_matter, lambda: _yaml.load(io.StringIO(front_matter)))
     except YAMLError as exc:
         return None, body, yaml_reason(exc)
     except (TypeError, ValueError, KeyError) as exc:
