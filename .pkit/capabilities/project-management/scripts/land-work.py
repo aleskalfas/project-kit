@@ -165,7 +165,10 @@ there instead, and changes nothing else.
           accepted records the change alters, other than the one at the head
           authorised; one that merges says which head and why it was covered. Its gates,
           refusals and queue handling are done-work's own; land-work decides
-          on how its run ended (`done_work.run`), never on its exit code.
+          on how its run ended (`done_work.run`), never on its exit code. A
+          merge the host refused, on a PR it reads as behind a base it merges
+          only a branch up to date with, stops the run with the merge of the
+          base to make.
 
 There is no flag that skips the checks or the review: the bypasses are
 `done-work`'s, with their audit. Run again, land-work resumes: green checks on
@@ -367,12 +370,19 @@ class _Checks:
     gate: CiGateResult | None = None
     #: GitHub's `mergeable`: MERGEABLE, CONFLICTING or UNKNOWN.
     mergeable: str = ""
+    #: GitHub's `mergeStateStatus`: BEHIND where the head is out of date with a
+    #: base the host merges only a branch up to date with.
+    merge_state: str = ""
     #: Why the PR could not be read; empty when it was.
     problem: str = ""
 
     @property
     def conflicting(self) -> bool:
         return self.mergeable == "CONFLICTING"
+
+    @property
+    def behind(self) -> bool:
+        return self.merge_state == "BEHIND"
 
 
 @dataclass(frozen=True)
@@ -967,7 +977,7 @@ def _read_pr(pr_number: int, config: dict[str, Any]) -> _Checks:
                 "view",
                 str(pr_number),
                 "--json",
-                "headRefOid,state,mergeable,statusCheckRollup",
+                "headRefOid,state,mergeable,mergeStateStatus,statusCheckRollup",
             ],
             config,
             check=False,
@@ -990,6 +1000,7 @@ def _read_pr(pr_number: int, config: dict[str, Any]) -> _Checks:
         rollup=rollup,
         gate=evaluate_ci_gate(rollup),
         mergeable=str(data.get("mergeable") or "").upper(),
+        merge_state=str(data.get("mergeStateStatus") or "").upper(),
     )
 
 
@@ -999,6 +1010,17 @@ def _conflict_line(step: str, head: _Head) -> str:
         "no pull_request workflow on a PR that conflicts with its base. Merge "
         f"{head.base} into {head.branch} (`git merge {head.remote}/{head.base}`), resolve "
         f"the conflicts, push, and run `land-work {head.issue}` again"
+    )
+
+
+def _behind_line(step: str, head: _Head) -> str:
+    """The stop where the host refused the merge of a head behind its base: the
+    merge of the base to make, which the landing names (DEC-055 point 6)."""
+    return (
+        f"{step}: stopped — the host merges only a branch up to date with {head.base}, and "
+        f"reads PR #{head.pr_number} as behind it. Merge {head.base} into {head.branch} "
+        f"(`git merge {head.remote}/{head.base}`), push, and run `land-work {head.issue}` "
+        "again"
     )
 
 
@@ -2141,7 +2163,8 @@ def _judged(
 
 def _request_failed(head: _Head, reason: str, config: dict[str, Any]) -> tuple[int, str]:
     """done-work merged nothing, and a re-run may help: what GitHub reports of
-    the PR now says which — a head that moved, a conflict, a merge meanwhile."""
+    the PR now says which — a head that moved, a conflict, a head behind a base
+    the host merges only a branch up to date with, a merge meanwhile."""
     issue, number = head.issue, head.pr_number
     again = f"run `land-work {issue}` again"
     now = _read_pr(number, config)
@@ -2160,6 +2183,8 @@ def _request_failed(head: _Head, reason: str, config: dict[str, Any]) -> tuple[i
         )
     if now.conflicting:
         return EXIT_NEEDS_CHANGE, _conflict_line("merge", head)
+    if now.behind:
+        return EXIT_NEEDS_CHANGE, _behind_line("merge", head)
     return EXIT_RETRY, f"merge: not merged — {reason}; {again}"
 
 

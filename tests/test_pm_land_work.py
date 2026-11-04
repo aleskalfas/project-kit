@@ -111,6 +111,9 @@ class _FakeGitHub:
     draft: bool = False
     state: str = "OPEN"
     mergeable: str = "MERGEABLE"
+    #: GitHub's `mergeStateStatus`; BEHIND refuses a merge, as a host that merges
+    #: only a branch up to date with its base does.
+    merge_state: str = "CLEAN"
     merge_commit: str = ""
     #: The base branch merges through a queue.
     queue: bool = False
@@ -220,6 +223,7 @@ class _FakeGitHub:
             "baseRefOid": self.base,
             "state": self.state,
             "mergeable": self.mergeable,
+            "mergeStateStatus": self.merge_state,
             "isCrossRepository": False,
             "mergedAt": "2026-10-01T12:00:00Z" if merged else None,
             "author": self.author,
@@ -259,6 +263,8 @@ class _FakeGitHub:
             self.merges.append(argv)
             if _option(argv, "--match-head-commit") != self.head:
                 return _done(argv, returncode=1, stderr="Head branch was modified")
+            if self.merge_state == "BEHIND":
+                return _done(argv, returncode=1, stderr="Head branch is out of date")
             if "--auto" in argv:
                 self.queued = True
             elif not self.unreadable_after_merge:
@@ -1527,6 +1533,23 @@ def test_a_head_that_moves_between_the_gate_and_the_merge_request_merges_nothing
         f"merge: stopped — PR #{PR}'s head moved from {_short(pinned)} to "
         f"{_short(run.github.head)} before the merge. Nothing was merged; "
         f"`land-work {ISSUE}` checks and reviews the new head"
+    )
+
+
+def test_a_merge_the_host_refuses_on_a_head_behind_its_base_names_the_merge(world, capsys) -> None:
+    """A host that merges only a branch up to date with its base refuses the merge,
+    and a run again would fail the same way: the run stops at exit 1 with the merge
+    of the base to make (DEC-055 point 6), not exit 7."""
+    run = world()
+    run.github.merge_state = "BEHIND"
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert run.github.state == "OPEN"
+    assert len(run.github.merges) == 1
+    assert out.splitlines()[-1] == (
+        f"merge: stopped — the host merges only a branch up to date with main, and reads "
+        f"PR #{PR} as behind it. Merge main into {BRANCH} (`git merge origin/main`), push, "
+        f"and run `land-work {ISSUE}` again"
     )
 
 

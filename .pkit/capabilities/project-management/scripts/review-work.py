@@ -32,11 +32,12 @@ Gates per DEC-026:
     `## What changed in each updated document`. Read from the description of
     the PR found, a draft or one already ready, before it is made ready,
     reviewers are requested or the issue moves; refused at validate-at-ready's
-    severity, naming each such document, the form a sentence takes and each
-    item there that is not read as one (`--force` overrides). The list is read
-    as the description carries it, nothing derived, so a document updated
-    after it was written is the reviewer's to catch. open-pr and edit-pr only
-    warn of it.
+    severity, hard-reject, naming each such document, the form a sentence
+    takes and each item there that is not read as one (`--force` overrides).
+    A description that cannot be read stops the run (exit 3), never read as
+    one with no list. The list is read as the description carries it,
+    nothing derived, so a document updated after it was written is the
+    reviewer's to catch. open-pr and edit-pr only warn of it.
   - The clash guard (DEC-035 point 6), with an instance id set or a seat of
     a topology held: an issue another instance owns is refused before any PR
     is opened or made ready and before reviewers are requested, at
@@ -72,9 +73,9 @@ Exit codes:
   2  usage error / gate failure / illegal transition / issue not found /
      where the board carries the state, a card whose Status does not place
      the issue
-  3  gh failure: `gh pr create` could not open the PR, or `gh pr ready`
-     could not make it ready, or the board carrying the state could not be
-     read
+  3  gh failure: `gh pr create` could not open the PR, the PR's description
+     could not be read, or `gh pr ready` could not make it ready, or the board
+     carrying the state could not be read
   *  a failed composed move-issue passes its exit code through
 """
 
@@ -119,6 +120,10 @@ from _lib.review_mode import (
 )
 
 TARGET_STATE = "review"
+#: What to do about a refused body when no PR is open yet.
+FILL_FIRST = (
+    "fill the body first (create-draft → edit-pr → review-work), or use open-pr --body-file"
+)
 #: The label of a finding on the author's sentences, as edit-pr's validation names it.
 SENTENCES_LABEL = "body.sentences"
 
@@ -356,7 +361,9 @@ def main() -> int:
         # Open a ready PR (non-draft) — validate the composed body first.
         title = _derive_pr_title(issue, branch)
         body = f"Closes #{args.issue_number}"
-        if not _ready_body_ok(body, classification, capability_root, args.force):
+        if not _ready_body_ok(
+            body, classification, capability_root, args.force, next_step=FILL_FIRST
+        ):
             return 1
         url = _gh_pr_create_ready(branch, base, title, body, config)
         if url is None:
@@ -368,8 +375,15 @@ def main() -> int:
     elif existing_pr.get("isDraft"):
         # Flip draft → ready — validate the draft's current body first.
         pr_number = existing_pr.get("number")
+        body = _gh_pr_body(pr_number, config)
+        if body is None:
+            return 3
         if not _ready_body_ok(
-            _gh_pr_body(pr_number, config), classification, capability_root, args.force
+            body,
+            classification,
+            capability_root,
+            args.force,
+            next_step=_edit_step(args.issue_number, pr_number),
         ):
             return 1
         if not _gh_pr_ready(pr_number, config):
@@ -378,7 +392,14 @@ def main() -> int:
         print(f"  flipped PR #{pr_number} draft → ready")
     else:
         pr_number = existing_pr.get("number")
-        if not _body_ok(_sentence_findings(_gh_pr_body(pr_number, config)), args.force):
+        body = _gh_pr_body(pr_number, config)
+        if body is None:
+            return 3
+        if not _body_ok(
+            _sentence_findings(body),
+            args.force,
+            next_step=_edit_step(args.issue_number, pr_number),
+        ):
             return 1
         print(f"  PR #{pr_number} already ready; idempotent skip")
 
@@ -587,15 +608,17 @@ def _gh_pr_create_ready(branch: str, base: str, title: str, body: str, config: d
     return proc.stdout.strip()
 
 
-def _ready_body_ok(body: str, classification: dict, capability_root: Path, force: bool) -> bool:
+def _ready_body_ok(
+    body: str, classification: dict, capability_root: Path, force: bool, *, next_step: str
+) -> bool:
     """Validate-at-ready (#569): True iff `body` may go ready-for-review.
 
     Runs the shared PR-body validator at the merge-gate phase (empty checkbox →
     hard-reject). Title/closing-label checks are skipped (review-work composes the
     title). The author's sentences are checked beside it (`_sentence_findings`),
     so one refusal names every blocking finding. On a blocking finding: print it
-    and return False, or True under ``force``. Merge remains the backstop; drafts
-    never reach here.
+    with `next_step`, and return False, or True under ``force``. Merge remains the
+    backstop; drafts never reach here.
     """
     findings = pr_validation.validate_pr(
         pr_title="",
@@ -608,7 +631,7 @@ def _ready_body_ok(body: str, classification: dict, capability_root: Path, force
         phase=PHASE_TRANSITION,
     )
     blocking = [f for f in findings if f.severity in pr_validation.BLOCKING_SEVERITIES]
-    return _body_ok(blocking + _sentence_findings(body), force)
+    return _body_ok(blocking + _sentence_findings(body), force, next_step=next_step)
 
 
 def _sentence_findings(body: str) -> list[pr_validation.Finding]:
@@ -625,7 +648,7 @@ def _sentence_findings(body: str) -> list[pr_validation.Finding]:
         pr_validation.Finding(
             pr_validation.SEVERITY_HARD_REJECT,
             SENTENCES_LABEL,
-            friction_answers.unsaid_refusal(location),
+            friction_answers.unsaid_message(location),
         )
         for location in unsaid
     ]
@@ -640,44 +663,64 @@ def _sentence_findings(body: str) -> list[pr_validation.Finding]:
     return refused + unread
 
 
-def _body_ok(findings: list[pr_validation.Finding], force: bool) -> bool:
-    """True iff no finding of `findings` blocks; otherwise print them all and
-    return False, or True under ``force``."""
+def _edit_step(issue_number: int, pr_number: int | None) -> str:
+    """What to do about a refused description of PR `pr_number`: write it with
+    edit-pr, then run review-work again."""
+    return (
+        f"write the description with `edit-pr {pr_number} --body-file <file>`, then run "
+        f"`review-work {issue_number}` again"
+    )
+
+
+def _body_ok(findings: list[pr_validation.Finding], force: bool, *, next_step: str) -> bool:
+    """True iff no finding of `findings` blocks; otherwise print them all, with
+    `next_step`, and return False, or True under ``force``. The findings are
+    validate-at-ready's (#569) and the author's sentences' (DEC-055 point 3)."""
     if not pr_validation.has_blocking(findings):
         return True
-    print(
-        "[refused] PR body is not ready for review (validate-at-ready, #569):",
-        file=sys.stderr,
-    )
+    print("[refused] PR body is not ready for review:", file=sys.stderr)
     for f in findings:
         print(f"  - [{f.severity}] {f.label}: {f.detail}", file=sys.stderr)
     if force:
         print("  → proceeding under --force.", file=sys.stderr)
         return True
-    print(
-        "  → fill the body first (create-draft → edit-pr → review-work), or use "
-        "open-pr --body-file; --force overrides.",
-        file=sys.stderr,
-    )
+    print(f"  → {next_step}; --force overrides.", file=sys.stderr)
     return False
 
 
-def _gh_pr_body(pr_number: int | None, config: dict) -> str:
+def _gh_pr_body(pr_number: int | None, config: dict) -> str | None:
     """The current body of a PR: a draft's, validated before the flip → ready, or
-    a ready one's, whose sentences are checked before the move (or "" when it
-    cannot be read)."""
+    a ready one's, whose sentences are checked before the move. None, with what
+    failed printed, when it cannot be read: a description unread is never read
+    as one with no list."""
     if pr_number is None:
-        return ""
+        print("error: cannot read the PR's description — no PR number resolved.", file=sys.stderr)
+        return None
     try:
         proc = gh_run(["gh", "pr", "view", str(pr_number), "--json", "body"], config, check=False)
-    except FileNotFoundError:
-        return ""
+    except FileNotFoundError as exc:
+        return _unread_body(pr_number, f"`gh` could not be run ({exc})")
     if proc.returncode != 0:
-        return ""
+        return _unread_body(
+            pr_number, (proc.stderr or "").strip() or f"gh exited {proc.returncode}"
+        )
     try:
-        return str((json.loads(proc.stdout) or {}).get("body") or "")
+        data = json.loads(proc.stdout)
     except json.JSONDecodeError:
-        return ""
+        return _unread_body(pr_number, "gh's answer is not JSON")
+    if not isinstance(data, dict):
+        return _unread_body(pr_number, "gh's answer names no pull request")
+    return str(data.get("body") or "")
+
+
+def _unread_body(pr_number: int, why: str) -> None:
+    """Say that PR `pr_number`'s description could not be read, and why."""
+    print(
+        f"error: PR #{pr_number}'s description could not be read ({why}); nothing was made "
+        "ready, no reviewer requested and the issue not moved. Run review-work again once it "
+        "can be read.",
+        file=sys.stderr,
+    )
 
 
 def _gh_pr_ready(pr_number: int | None, config: dict) -> bool:

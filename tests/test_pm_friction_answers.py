@@ -1751,7 +1751,7 @@ def test_the_description_names_each_updated_document_it_gives_no_sentence(
         "docs/a.md",
         "tech-docs/actors.md#ACT-one",
     ]
-    assert fa.unsaid_refusal("docs/c.md") == (
+    assert fa.unsaid_message("docs/c.md") == (
         "docs/c.md is updated in this change, and the description gives no sentence on what "
         "changed in it — under `## What changed in each updated document`, write one on a line "
         f'of its own as "{FORM}", starting in the line\'s first column, the document in a code '

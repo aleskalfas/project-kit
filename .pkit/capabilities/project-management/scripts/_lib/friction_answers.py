@@ -41,11 +41,12 @@ updated document's sentence from the change's author:
   a sentence takes (`SENTENCE_FORM`). `given` is the ones the list shows, and
   `with_sentences` puts them into a list already written, for an edit that
   derives nothing. `unsaid_in` names each document the list a description
-  carries marks `updated` with no sentence, and `unsaid_refusal` is what the
-  move to review says of it when it refuses (DEC-055 point 3). `told` is what
-  the person who authorises the merge is told, as information: those
-  sentences, the documents and the targets of a link left out of date, and
-  the friction settings changed; `counted_told` counts them.
+  carries marks `updated` with no sentence, and `unsaid_message` is what a
+  command says of it: the move to review when it refuses, an edit when it
+  warns (DEC-055 point 3). `told` is what the person who authorises the
+  merge is told, as information: those sentences, the documents and the
+  targets of a link left out of date, and the friction settings changed;
+  `counted_told` counts them.
 - `closing_reference` and `comment_delimiter` name a word of the list that
   must not be written: one that reads as a closing reference — the host's own
   parser would close an issue with it at merge, and nothing here can make that
@@ -1541,9 +1542,9 @@ def unsaid_in(body: str) -> list[str]:
     return [location for location in dict.fromkeys(_region_updated(block)) if location not in said]
 
 
-def unsaid_refusal(location: str) -> str:
-    """What a command that refuses says of `location`, a document the list marks
-    `updated` with no sentence: the document, and the form a sentence takes."""
+def unsaid_message(location: str) -> str:
+    """What a command that refuses or warns says of `location`, a document the list
+    marks `updated` with no sentence: the document, and the form a sentence takes."""
     return (
         f"{location} is updated in this change, and the description gives no sentence on what "
         f"changed in it — under `{SENTENCES_HEADING}`, write one on a line of its own as "

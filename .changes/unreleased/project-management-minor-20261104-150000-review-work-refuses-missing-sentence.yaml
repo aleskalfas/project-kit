@@ -7,11 +7,17 @@ body: >
   the change wrote marks a document `updated` with no sentence on what changed
   in it (#2637, DEC-055 point 3). It reads the list the description carries, a
   draft's or a ready pull request's, before it makes the pull request ready,
-  requests reviewers or moves the issue. The refusal names each such document,
-  the one-line form a sentence takes, ``- `path`: sentence``, and each item
-  under the sentences heading that is not read as one; `--force` overrides it,
-  as it overrides validate-at-ready. With every sentence given it proceeds as
-  before, and `open-pr` and `edit-pr` still only warn. The pm skill's landing
-  step and the capability README say when a branch takes in its base: only
-  where the pull request conflicts with it, or where `land-work` stops and
-  names the merge to make, a host that requires up-to-date branches excepted.
+  requests reviewers or moves the issue. The refusal is a `hard-reject`: it
+  names each such document, the one-line form a sentence takes,
+  ``- `path`: sentence``, and each item under the sentences heading that is not
+  read as one, ends with `edit-pr <PR> --body-file <file>` as the next step,
+  and `--force` overrides it, as it overrides validate-at-ready. A description
+  `review-work` cannot read stops it (exit 3) instead of passing. With every
+  sentence given it proceeds as before. `open-pr` and `edit-pr` warn of such a
+  document and refuse nothing; `edit-pr` gains that warning, a finding of its
+  validation. `land-work` stops at exit 1, naming the merge of the base to
+  make, where the host refused the merge of a pull request it reads as behind
+  its base, instead of exit 7. The pm skill's landing step and the capability
+  README say when a branch takes in its base, as DEC-055 point 6 decides: only
+  where the pull request conflicts with it, or where a command names that
+  merge.

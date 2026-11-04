@@ -262,6 +262,7 @@ def test_pr_ready_returns_true_on_success(rw, monkeypatch) -> None:
 CAP_ROOT = SCRIPT.parent.parent
 BRANCH = "fix/42-do-the-thing"
 PR_URL = "https://github.com/o/r/pull/77"
+PR_NUMBER = 77
 PR_READS = {"list", "view"}
 # The variable an earlier revision of #1242 handed the engine's answer down in.
 HAND_DOWN_ENV = "PKIT_PM_ISSUE_STATUS"
@@ -279,7 +280,7 @@ def _task(labels: list[str]) -> dict:
 
 
 def _open_pr(*, draft: bool) -> dict:
-    return {"number": 77, "state": "OPEN", "isDraft": draft, "headRefName": BRANCH}
+    return {"number": PR_NUMBER, "state": "OPEN", "isDraft": draft, "headRefName": BRANCH}
 
 
 def _pr_writes(gh_calls: list[list[str]]) -> list[list[str]]:
@@ -296,10 +297,11 @@ def run_main(rw, monkeypatch):
     """Returns `run(issue, *, pr=None, body="filled", move_rc=0, reviewer=None,
     engine=None, config=None, move=None, dry_run=False, instance=None,
     github=None, extra=())` → `(rc, gh_calls, moves)`. `pr` is the open PR on
-    the branch (None: none yet), and `body` its description; the body
-    validator finds nothing in it, and the author's sentences are read from it
-    as they stand. `engine` is the process engine, a `FakeEngine` (by default
-    one that gives no answer); `config` the adopter config. `move` runs the
+    the branch (None: none yet), and `body` its description, None for one gh
+    cannot read; the body validator finds nothing in it, and the author's
+    sentences are read from it as they stand. `engine` is the process engine,
+    a `FakeEngine` (by default one that gives no answer); `config` the adopter
+    config. `move` runs the
     composed move-issue in process; without it the move is recorded and answers
     `move_rc`. `instance` is this clone's instance id (none by default), and
     `github` the in-memory GitHub its ownership calls reach; each ownership
@@ -310,7 +312,7 @@ def run_main(rw, monkeypatch):
         issue: dict,
         *,
         pr: dict | None = None,
-        body: str = "filled",
+        body: str | None = "filled",
         move_rc: int = 0,
         reviewer: str | None = None,
         engine: FakeEngine | None = None,
@@ -339,6 +341,10 @@ def run_main(rw, monkeypatch):
             if args[:3] == ["gh", "pr", "list"]:
                 stdout = json.dumps([pr] if pr else [])
             elif args[:3] == ["gh", "pr", "view"]:
+                if body is None:
+                    return subprocess.CompletedProcess(
+                        args=args, returncode=1, stdout="", stderr="HTTP 502: Bad Gateway"
+                    )
                 stdout = json.dumps({"body": body})
             elif args[:3] == ["gh", "pr", "create"]:
                 stdout = PR_URL
@@ -695,10 +701,31 @@ def test_an_updated_document_with_no_sentence_is_refused_before_any_write(
     assert _pr_writes(gh_calls) == []
     assert moves == []
     out, err = capsys.readouterr()
-    assert "[refused] PR body is not ready for review" in err
+    assert "[refused] PR body is not ready for review:" in err.splitlines()
     assert _refusals(err) == [_refusal("docs/cli.md"), _refusal("docs/notes.md")]
-    assert "--force overrides" in err
+    assert (
+        f"  → write the description with `edit-pr {PR_NUMBER} --body-file <file>`, then run "
+        "`review-work 42` again; --force overrides."
+    ) in err.splitlines()
     assert "[ok]" not in out
+
+
+@pytest.mark.parametrize("draft", [True, False], ids=["draft-pr", "ready-pr"])
+def test_a_description_that_cannot_be_read_stops_before_any_write(run_main, capsys, draft) -> None:
+    """A failed read is never read as a description with no list, which would pass
+    a ready PR and move the issue: the run stops at exit 3, saying what failed."""
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]), pr=_open_pr(draft=draft), body=None, reviewer="@alice"
+    )
+    assert rc == 3
+    assert _pr_writes(gh_calls) == []
+    assert moves == []
+    err = capsys.readouterr().err
+    assert (
+        f"error: PR #{PR_NUMBER}'s description could not be read (HTTP 502: Bad Gateway); "
+        "nothing was made ready, no reviewer requested and the issue not moved. Run "
+        "review-work again once it can be read."
+    ) in err.splitlines()
 
 
 def test_with_every_sentence_given_it_proceeds_as_before(run_main, rw, capsys) -> None:
@@ -764,7 +791,12 @@ def test_the_refusal_joins_the_body_validator_s_findings(rw, monkeypatch, capsys
         rw.pr_validation.SEVERITY_HARD_REJECT, "body.doc-impact", "no Doc impact"
     )
     monkeypatch.setattr(rw.pr_validation, "validate_pr", lambda **k: [no_doc_impact])
-    assert rw._ready_body_ok(_described(rw, "", "docs/guide.md"), {}, CAP_ROOT, False) is False
+    assert (
+        rw._ready_body_ok(
+            _described(rw, "", "docs/guide.md"), {}, CAP_ROOT, False, next_step=rw.FILL_FIRST
+        )
+        is False
+    )
     err = capsys.readouterr().err
     assert "  - [hard-reject] body.doc-impact: no Doc impact" in err.splitlines()
     assert _refusals(err) == [_refusal("docs/guide.md")]
