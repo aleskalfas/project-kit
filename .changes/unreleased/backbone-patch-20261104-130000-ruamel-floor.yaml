@@ -1,0 +1,10 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+body: >
+  `pkit` needs ruamel.yaml 0.19.1 or later, where it needed 0.18 (#2410). Its
+  reader of plain block YAML copies how ruamel's pure-Python loader reads that
+  form, and is tested against 0.19.1, the version an install resolves today.
+  Under a later version that reader is off, and the loader reads every text,
+  as exactly and as slowly as before the reader, until a release tests it.
