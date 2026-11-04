@@ -113,7 +113,7 @@ If any check fails, revise.
 
 ### 8. Name its edits to the records it changes
 
-In the new record's `## Implications`, name each edit it makes to an accepted record: one it refines, overturns in part or replaces whole. `.pkit/decisions/README.md`, "The acceptance gate", says which of them go in this change. Make none yet: they rest on the new record, so they follow its acceptance (step 11). A record it replaces whole is also named in its `supersedes:`. A record the project receives by sync, such as a COR in a project that adopts the methodology, is changed where it is kept, never here (step 1).
+In the new record's `## Implications`, name each edit this change makes to an accepted record: one it refines, overturns in part or replaces whole. `.pkit/decisions/README.md`, "The acceptance gate", says which edits those are, and how its Implications name an edit to a record the project receives by sync. Make none yet: they rest on the new record, so they follow its acceptance (step 11). For a record it replaces whole, see also "Superseding an existing record" under Variations.
 
 ### 9. Show the draft for review
 
@@ -133,15 +133,15 @@ Status: proposed.
 Co-Authored-By: <as appropriate>
 ```
 
-The record reaches the default branch only accepted ([COR-066](../../decisions/core/COR-066-accepted-before-landing.md) point 1), so the next step follows in this same change.
+The record reaches the default branch only accepted ([COR-066](../../decisions/core/COR-066-accepted-before-landing.md) point 1), so a person accepts it in this same change (next step).
 
 ### 11. Have it accepted, then make its edits
 
-In this order, in the same change (`.pkit/decisions/README.md`, "The acceptance gate"):
+In this order (`.pkit/decisions/README.md`, "The acceptance gate"):
 
-1. **Ask a person to accept the record.** Write `accepted` only on their word, in a commit of its own, `decision(<scope>): accept <ID> <short title>`. Where the user explicitly approves the record's addition and its acceptance together, step 10's commit may add it `accepted` instead.
-2. **Make the edits its Implications name,** each as `.pkit/decisions/README.md`, "Refining an accepted record", says, in commits after the acceptance.
-3. **Then the work** that rests on the record.
+1. **Ask a person to accept the record** in this change. Write `accepted` only on their word, in a commit of its own, `decision(<scope>): accept <ID> <short title>`. Where the user explicitly approves the record's addition and its acceptance together, step 10's commit may add it `accepted` instead.
+2. **Make the edits its Implications name** in this change, each as `.pkit/decisions/README.md`, "Refining an accepted record", says, in commits after the acceptance.
+3. **Then the work** that rests on the record, in this change or in a change built on it that lands no earlier.
 
 Where the person refuses the record, close the change as COR-066 point 1 says. Where nobody can accept it yet, leave it `proposed`, make no edit and build nothing on it, and say that the change cannot land.
 
