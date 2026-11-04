@@ -1821,3 +1821,15 @@ def test_a_malformed_point_in_a_record_anchor_fails_the_container_schema(
     result = _pointed(adopter, "PRJ-900#second")
     malformed = [f for f in result.errors if f.kind is fv.FrictionFindingKind.MALFORMED_BLOCK]
     assert len(malformed) == 1
+
+
+def test_a_settings_text_read_again_gives_each_reader_its_own_mapping() -> None:
+    """The settings of many commits share their package metadata's text, read once: a
+    reader that changes the mapping it was given changes no other reader's."""
+    text = "friction:\n  places: [docs]\n  exclude: [docs/old]\n"
+    first, _reason = fd._parse_mapping(text)
+    first["friction"]["places"].append("elsewhere")
+    first["added"] = True
+    again, reason = fd._parse_mapping(text)
+    assert again == {"friction": {"places": ["docs"], "exclude": ["docs/old"]}}
+    assert reason is None

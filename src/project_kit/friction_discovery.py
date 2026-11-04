@@ -155,6 +155,8 @@ git plumbing behind a commit in `friction_git`.
 
 from __future__ import annotations
 
+import bisect
+import copy
 import functools
 import json
 import os
@@ -169,7 +171,7 @@ from typing import Any, Protocol, cast
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from project_kit import command_runner, docs_roots, lifecycle_ownership, validators
+from project_kit import block_yaml, command_runner, docs_roots, lifecycle_ownership, validators
 from project_kit.backbone_schemas import CONTAINER_KEY
 from project_kit.document_parts import (
     Body,
@@ -307,7 +309,8 @@ _SKIPPED_TOP_LEVEL = frozenset({".git"})
 
 _GLOB_CHARS = frozenset("*?[")
 
-_yaml = YAML(typ="safe")
+# The exact reading behind `block_yaml`: ruamel's pure-Python safe loader, never libyaml.
+_yaml = YAML(typ="safe", pure=True)
 
 
 # --- repository trees ---------------------------------------------------
@@ -1274,9 +1277,20 @@ def _load_mapping(path: Path) -> tuple[dict[str, Any], str | None]:
 
 def _parse_mapping(text: str) -> tuple[dict[str, Any], str | None]:
     """YAML text as a mapping with text keys, and why it is none: it does not parse,
-    or it is no mapping. Empty text is an empty mapping."""
+    or it is no mapping. Empty text is an empty mapping.
+
+    A text's parse is kept for the life of the process, keyed on its content (the 256
+    texts read last), and each caller is given a copy of its own: the checks read the
+    settings of many commits, and a capability's package metadata is the same text at
+    most of them."""
+    found, reason = _parsed_mapping(text)
+    return copy.deepcopy(found), reason
+
+
+@functools.lru_cache(maxsize=256)
+def _parsed_mapping(text: str) -> tuple[dict[str, Any], str | None]:
     try:
-        data = _yaml.load(text)
+        data = block_yaml.load(text, lambda: _yaml.load(text))
     except YAMLError:
         return {}, "does not parse as YAML"
     if data is None:
@@ -1831,11 +1845,42 @@ def pattern_matcher(pattern: str) -> Callable[[str], bool]:
     normalised = os.path.normpath(pattern).replace(os.sep, "/")
     if normalised == ".":
         return lambda _path: True
-    if any(ch in _GLOB_CHARS for ch in normalised):
+    literal = _literal_path(pattern)
+    if literal is None:
         regex = compile_glob(normalised)
         return lambda path: regex.fullmatch(path) is not None
-    prefix = normalised + "/"
-    return lambda path: path == normalised or path.startswith(prefix)
+    prefix = literal + "/"
+    return lambda path: path == literal or path.startswith(prefix)
+
+
+def _literal_path(pattern: str) -> str | None:
+    """The path a `pattern` without glob characters names, normalised: the file it is,
+    or the folder every file beneath it lies in. `None` for a glob and for `.`."""
+    normalised = os.path.normpath(pattern).replace(os.sep, "/")
+    if normalised == "." or any(ch in _GLOB_CHARS for ch in normalised):
+        return None
+    return normalised
+
+
+class PathIndex:
+    """Repository-relative paths, sorted once, so a pattern without glob characters
+    finds the paths it matches by bisection rather than by reading every path: the
+    paths `pattern_matcher` matches, in sorted order. A glob, and `.`, read every path."""
+
+    def __init__(self, paths: Iterable[str]) -> None:
+        self.paths = tuple(sorted(set(paths)))
+
+    def matching(self, pattern: str) -> tuple[str, ...]:
+        """The paths `pattern` matches (`pattern_matcher`), sorted."""
+        literal = _literal_path(pattern)
+        if literal is None:
+            return tuple(filter(pattern_matcher(pattern), self.paths))
+        at = bisect.bisect_left(self.paths, literal)
+        named = self.paths[at : at + 1] if self.paths[at : at + 1] == (literal,) else ()
+        # The paths beneath it sort from `<literal>/` up to `<literal>0`, `0` following `/`.
+        start = bisect.bisect_left(self.paths, literal + "/", at)
+        end = bisect.bisect_left(self.paths, literal + "0", start)
+        return named + self.paths[start:end]
 
 
 @functools.lru_cache(maxsize=1024)
