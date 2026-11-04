@@ -2,8 +2,9 @@
 points 8, 9 and 11, DEC-005 points 9 and 14): the lock, the ids and fields of the content,
 an item of a list a part passes on under another name read against the component that
 draws it, a page read against the layout or the component it names (DEC-010 point 5),
-contrast as drawn, the losses a renderer's declaration predicts, the document the
-validator reads, a component it cannot read, a top that names no component, the notations
+contrast as drawn, the losses the declaration of each renderer that draws the piece
+predicts, the document the validator reads, a component it cannot read, a top that names
+no component, the notations
 a piece names and the concepts its content names (DEC-004 point 10), a list's component
 field and arrangement fields, a key both an item's component and its list declare at the
 lock, a pattern's clash with its default component checked alone (DEC-010 points 1 to 4
@@ -496,6 +497,36 @@ def test_the_svg_renderer_loses_nothing_of_the_skeleton_piece(tmp_path: Path) ->
     write_picture(root, framing)
     [(_, result)] = project_of(root).scenes()
     assert checks.losses(result.scene.to_dict(), svg_declaration.DECLARATION) == []
+
+
+@pytest.mark.parametrize(
+    ("exports", "renderers"),
+    [
+        ([], ["svg"]),
+        (["svg"], ["svg"]),
+        (["pdf"], ["pdf", "svg"]),
+        (["svg", "pdf"], ["pdf", "svg"]),
+    ],
+)
+def test_a_piece_is_checked_against_its_previews_renderer_and_each_it_exports_in(
+    tmp_path: Path, exports: list[str], renderers: list[str]
+) -> None:
+    root = drawing_project(tmp_path, exports=exports)
+    assert checks.renderers(piece_of(root)) == renderers
+
+
+def test_a_piece_exported_as_pdf_is_told_what_the_pdf_renderer_loses(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, exports=["svg", "pdf"])
+    write_picture(root, framing)
+    report = checks.check(root)
+    assert not report.failed()
+    [(lost, level)] = [(f, level) for f, level in report.judged if f.code == "loss"]
+    assert level == "attention"
+    assert (lost.file, lost.where) == (PIECE_FILE, "figure/body/steps[note]/pictures[square]/image")
+    assert lost.message == (
+        "the pdf renderer refuses `figure/body/steps[note]/pictures[square]/image`: the pdf "
+        "renderer draws no `image`"
+    )
 
 
 def test_a_loss_the_piece_accepts_is_no_finding_and_one_it_does_not_asks_its_author() -> None:

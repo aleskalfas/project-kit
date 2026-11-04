@@ -45,6 +45,7 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#produced-pictures
         - .pkit/capabilities/visual-communication/outputs.md#the-declaration
         - .pkit/capabilities/visual-communication/outputs.md#the-svg-renderer
+        - .pkit/capabilities/visual-communication/outputs.md#the-pdf-renderer
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-an-export
         - .pkit/capabilities/visual-communication/outputs.md#written-code
         - .pkit/cli/README.md#sync
@@ -60,7 +61,7 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 - **The commands** `pkit visual …`, also reachable as `pkit visual-communication …`. Each is described under [Commands](#commands).
 - **The file formats,** format 1: a schema for each kind of file a piece, a library or a command writes, under `schemas/`. Each file names its schema in its first lines ([The binding](files.md#the-binding)), so `pkit validate` checks its shape.
 - **The foundations library,** under `libraries/foundations/`: a few shared roles, two axes, six colour families, and two top components: `figure`, for a figure, and `deck`, for a presentation ([The foundations](files.md#the-foundations)). Its version is not released yet, so it may change in any release of the capability.
-- **Two plugins:** the SVG renderer, which draws the previews and the exports, and the CSS code writer, which writes a brand out as CSS variables ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [Written code](outputs.md#written-code)).
+- **Three plugins:** the SVG renderer, which draws the previews and the SVG exports; the PDF renderer, which draws a piece as one PDF for each language and combination of modes; and the CSS code writer, which writes a brand out as CSS variables ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [The PDF renderer](outputs.md#the-pdf-renderer), [Written code](outputs.md#written-code)).
 - **The check,** the `visual-communication:check` member of `pkit validate`.
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
 
@@ -161,7 +162,7 @@ Runs the producer a piece declares for one of its produced outputs, and keeps it
 
 Makes a numbered export of a piece in each format it declares.
 
-- **Numbers the run:** every file it makes carries the piece's next version number, as `<piece>.v<N>.<language>.<key>.svg`, in `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`. A piece of more than one page makes one file for each page, which adds the page's number, from 1: `<piece>.v<N>.<language>.<key>.<n>.svg`. No file overwrites another ([Exports](outputs.md#exports)).
+- **Numbers the run:** every file it makes carries the piece's next version number, as `<piece>.v<N>.<language>.<key>.<format>`, in `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`. As `svg`, a piece of more than one page makes one file for each page, which adds the page's number, from 1: `<piece>.v<N>.<language>.<key>.<n>.svg`. As `pdf`, it makes one file for each language and combination, which holds every page in order. No file overwrites another ([Exports](outputs.md#exports)).
 - **Records the version** in `exports.yaml`.
 - **Uses the lock** `piece.yaml` holds, and never moves it.
 - **Refuses** a piece with no lock yet, a lock that does not hold, and a produced picture that is missing or stale, unless `--use-stale <output>` names it. `--use-stale` may repeat. Every reason it refuses is under [What refuses an export](outputs.md#what-refuses-an-export).
