@@ -52,7 +52,8 @@ TERM-axis:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
+          - .pkit/capabilities/visual-communication/schemas/roles.schema.json
         record:
           - visual-communication:DEC-004#2
 TERM-brand:
@@ -63,7 +64,8 @@ TERM-brand:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
+          - .pkit/capabilities/visual-communication/schemas/library.schema.json
         record:
           - visual-communication:DEC-001#5
           - visual-communication:DEC-004#1
@@ -75,7 +77,7 @@ TERM-content:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/schemas/content.schema.json
         record:
           - visual-communication:DEC-001#3
 TERM-content-slot:
@@ -86,7 +88,8 @@ TERM-content-slot:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
+          - .pkit/capabilities/visual-communication/schemas/component.schema.json
         record:
           - visual-communication:DEC-001#4
 TERM-draft:
@@ -97,7 +100,8 @@ TERM-draft:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/schemas/piece.schema.json
+          - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
         record:
           - visual-communication:DEC-003#8
 TERM-experimental:
@@ -108,7 +112,8 @@ TERM-experimental:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/schemas/component.schema.json
+          - .pkit/capabilities/visual-communication/scripts/_lib/comparison.py
         record:
           - visual-communication:DEC-003#7
 TERM-export:
@@ -119,7 +124,8 @@ TERM-export:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
+          - .pkit/capabilities/visual-communication/schemas/exports.schema.json
         record:
           - visual-communication:DEC-006#7
 TERM-final:
@@ -129,8 +135,6 @@ TERM-final:
   pkit:
     friction:
       anchors:
-        path:
-          - .pkit/capabilities/visual-communication/README.md
         record:
           - visual-communication:DEC-003#8
 TERM-helper-script:
@@ -140,8 +144,6 @@ TERM-helper-script:
   pkit:
     friction:
       anchors:
-        path:
-          - .pkit/capabilities/visual-communication/README.md
         record:
           - visual-communication:DEC-001#8
           - visual-communication:DEC-006#1
@@ -153,9 +155,11 @@ TERM-layout:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
+          - .pkit/capabilities/visual-communication/schemas/component.schema.json
         record:
           - visual-communication:DEC-001#4
+          - visual-communication:DEC-001#5
 TERM-library:
   name: library
   status: active
@@ -164,7 +168,8 @@ TERM-library:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
+          - .pkit/capabilities/visual-communication/schemas/library.schema.json
         record:
           - visual-communication:DEC-001#5
 TERM-library-component:
@@ -175,7 +180,8 @@ TERM-library-component:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
+          - .pkit/capabilities/visual-communication/schemas/component.schema.json
         record:
           - visual-communication:DEC-001#4
 TERM-library-owner:
@@ -185,8 +191,6 @@ TERM-library-owner:
   pkit:
     friction:
       anchors:
-        path:
-          - .pkit/capabilities/visual-communication/README.md
         record:
           - visual-communication:DEC-001#5
           - visual-communication:DEC-003#7
@@ -198,9 +202,11 @@ TERM-library-version:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
+          - .pkit/capabilities/visual-communication/schemas/libraries.schema.json
         record:
           - visual-communication:DEC-003#1
+          - visual-communication:DEC-003#4
           - visual-communication:DEC-003#6
 TERM-local-component:
   name: local component
@@ -210,7 +216,8 @@ TERM-local-component:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
+          - .pkit/capabilities/visual-communication/schemas/component.schema.json
         record:
           - visual-communication:DEC-001#4
 TERM-lock:
@@ -221,7 +228,8 @@ TERM-lock:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/schemas/piece.schema.json
+          - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
         record:
           - visual-communication:DEC-001#7
 TERM-mode:
@@ -232,7 +240,8 @@ TERM-mode:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
+          - .pkit/capabilities/visual-communication/schemas/roles.schema.json
         record:
           - visual-communication:DEC-004#2
 TERM-model:
@@ -242,8 +251,6 @@ TERM-model:
   pkit:
     friction:
       anchors:
-        path:
-          - .pkit/capabilities/visual-communication/README.md
         record:
           - visual-communication:DEC-001#3
           - visual-communication:DEC-006#1
@@ -255,7 +262,8 @@ TERM-notation:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/scripts/_lib/notations.py
+          - .pkit/capabilities/visual-communication/schemas/notation.schema.json
         record:
           - visual-communication:DEC-001#5
           - visual-communication:DEC-004#10
@@ -267,7 +275,8 @@ TERM-option:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
+          - .pkit/capabilities/visual-communication/schemas/component.schema.json
         record:
           - visual-communication:DEC-001#6
 TERM-piece:
@@ -278,7 +287,8 @@ TERM-piece:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/schemas/piece.schema.json
+          - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         record:
           - visual-communication:DEC-001#3
 TERM-pinned:
@@ -289,7 +299,8 @@ TERM-pinned:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/schemas/piece.schema.json
+          - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
         record:
           - visual-communication:DEC-003#8
 TERM-published:
@@ -299,8 +310,6 @@ TERM-published:
   pkit:
     friction:
       anchors:
-        path:
-          - .pkit/capabilities/visual-communication/README.md
         record:
           - visual-communication:DEC-003#8
 TERM-renderer:
@@ -311,7 +320,7 @@ TERM-renderer:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/scripts/_lib/plugins/seam.py
         record:
           - visual-communication:DEC-001#2
 TERM-stable:
@@ -322,7 +331,8 @@ TERM-stable:
     friction:
       anchors:
         path:
-          - .pkit/capabilities/visual-communication/README.md
+          - .pkit/capabilities/visual-communication/schemas/component.schema.json
+          - .pkit/capabilities/visual-communication/scripts/_lib/comparison.py
         record:
           - visual-communication:DEC-003#7
 TERM-starter-library:
@@ -332,8 +342,6 @@ TERM-starter-library:
   pkit:
     friction:
       anchors:
-        path:
-          - .pkit/capabilities/visual-communication/README.md
         record:
           - visual-communication:DEC-007#1
 ---
