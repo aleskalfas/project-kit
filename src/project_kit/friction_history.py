@@ -652,17 +652,17 @@ class _Bytes:
 
 
 def _data_of(raw: bytes) -> bytes:
-    """The part of a version's bytes its artefacts' data is read from: its front matter,
-    as `parse_artefacts` cuts it, since a body holds no artefact's data — so a long
-    document's body is never scanned for times. Empty where there is no front matter,
-    which holds no artefact; the whole where the bytes are not UTF-8 text, which no
-    parse reads."""
+    """The part of a version's bytes a time is sought in: its front matter, as
+    `parse_artefacts` cuts it, since a body holds no artefact's data — so a long
+    document's body is never scanned for times. The whole where no front matter is
+    cut, or the bytes are not UTF-8 text, so a file whose data is held some other
+    way is never passed over unread."""
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError:
         return raw
     front_matter, _body = split_front_matter(text)
-    return b"" if front_matter is None else front_matter.encode("utf-8")
+    return raw if front_matter is None else front_matter.encode("utf-8")
 
 
 def stamp(value: datetime) -> str:

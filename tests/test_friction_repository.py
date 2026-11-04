@@ -2529,14 +2529,16 @@ def test_every_spelling_of_a_time_reads_as_the_instant_it_denotes(written: str) 
 
 def test_the_walk_seeks_a_time_in_a_version_s_front_matter_alone() -> None:
     """A time a body writes is no artefact's value, so the prefilter reads only the front
-    matter, cut as a parse cuts it: a long document's body is never scanned for times."""
+    matter, cut as a parse cuts it: a long document's body is never scanned for times. A
+    version with no front matter cut, or not UTF-8, is scanned whole, so data held some
+    other way is never passed over."""
     front = "---\nid: guide\nat: 2026-01-01T09:00:00Z\n---\n"
     body = "Changed on 2026-02-02T10:00:00Z.\n" * 3
     assert fh.stamps_in(fh._data_of((front + body).encode())) == {"2026-01-01T09:00:00": 1}
     assert fh._data_of(front.replace("\n", "\r\n").encode() + b"Body.") == (
         b"id: guide\nat: 2026-01-01T09:00:00Z\n"
     )
-    assert fh._data_of(body.encode()) == b""
+    assert fh._data_of(body.encode()) == body.encode()
     assert fh._data_of(b"---\nat: 2026-01-01T09:00:00Z\n\xff---\n") == (
         b"---\nat: 2026-01-01T09:00:00Z\n\xff---\n"
     )
