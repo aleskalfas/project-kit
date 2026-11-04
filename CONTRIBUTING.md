@@ -22,6 +22,7 @@ pkit:
         - mise.toml
         - tests/README.md
         - src/project_kit/router.py
+        - .pkit/rules/project.md
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, "COR-062#1", "COR-062#4", "COR-062#7", "COR-062#10", "COR-066#1", PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, ADR-068, ADR-078, "project-management:DEC-053", "living-docs:DEC-002", "doc-examples:DEC-001"]
       artefact:
         - .pkit/capabilities/doc-examples/README.md
@@ -70,7 +71,7 @@ The short check runs every line of the aggregator but the test suite, and of the
 
 **The full suite is the hook's and CI's, not a builder's.** The aggregator's test step runs the suite in parallel workers, then the tests marked `serial` on their own, and lets at most two full suites run on a machine at once — a third waits and says whose runs it waits for. While you build, run the test modules for the files you changed and the fast gates below instead (project rule 2, in `.pkit/rules/project.md`); [`tests/README.md`](tests/README.md) "Running the suite" has the details.
 
-**The fast gates.** CI runs each of them again: `pkit release check`, the changeset guard, in a step of its own, and every other one as a line of the aggregator.
+**The fast gates.** CI runs them again, `pkit release check` in a step of its own.
 
 - `uv run pkit validate`
 - `uv run pkit friction check`

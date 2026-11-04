@@ -6,17 +6,20 @@ pkit:
     anchors:
       path:
         - .pkit/agents/project/overlay.yaml
+        - tests/README.md
       record:
         - software-engineering:DEC-001#2
         - software-engineering:DEC-001#3
         - software-engineering:DEC-002#3
         - software-engineering:DEC-002#4
         - PRJ-010
+      artefact:
+        - CONTRIBUTING.md#running-checks
 ---
 
 # Coding conventions
 
-The conventions that project-kit's code, its tests and its scripts are written to. The agents' overlay, `.pkit/agents/project/overlay.yaml`, names this page as the project's conventions corpus. So the `software-engineer` agent writes code to it, and the code-review panel's reviewers judge a change by its rules (software-engineering DEC-001 point 2, DEC-002 point 4). It therefore holds coding conventions only. How to run the checks, and how a change lands, is in [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+The conventions that project-kit's code, its tests and its scripts are written to. The agents' overlay, `.pkit/agents/project/overlay.yaml`, names this page as the project's conventions corpus. So the `software-engineer` agent writes code to it, and the code-review panel's reviewers judge a change by its rules (software-engineering DEC-001 point 2, DEC-002 point 4). It therefore holds coding conventions only. How to run the checks is in [`CONTRIBUTING.md`, "Running checks"](../CONTRIBUTING.md#running-checks).
 
 ## Names, docstrings and comments
 
