@@ -9,10 +9,10 @@ body: >
   on a slow CI runner it overran, so validation and project-management's doc
   check failed. The backbone now reads plain block YAML, the form answer files
   and front matter are written in, through a reader of its own that hands
-  every other text to the YAML loader. It parses a settings text once a run,
-  seeks a time in a version's front matter alone where it can cut one, and
-  finds the files of a path anchor without glob characters through a sorted
-  index of the listing. What every friction command and `pkit validate`
+  every other text to the YAML loader. It keeps a settings text's parse for
+  the life of the process, keyed on its content, seeks a time in a version's
+  front matter alone where it can cut one, and finds the files of a path
+  anchor without glob characters through a sorted index of the listing. What every friction command and `pkit validate`
   report is unchanged. A text that reader hands on is read by ruamel's
   pure-Python loader, never by libyaml where ruamel's compiled binding is
   installed. Should the installed ruamel.yaml lack a part of the loader the

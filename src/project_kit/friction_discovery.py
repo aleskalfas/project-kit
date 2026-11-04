@@ -1279,9 +1279,10 @@ def _parse_mapping(text: str) -> tuple[dict[str, Any], str | None]:
     """YAML text as a mapping with text keys, and why it is none: it does not parse,
     or it is no mapping. Empty text is an empty mapping.
 
-    A text is parsed once a run, and each caller is given a copy of its own: the
-    checks read the settings of many commits, and a capability's package metadata is
-    the same text at most of them."""
+    A text's parse is kept for the life of the process, keyed on its content (the 256
+    texts read last), and each caller is given a copy of its own: the checks read the
+    settings of many commits, and a capability's package metadata is the same text at
+    most of them."""
     found, reason = _parsed_mapping(text)
     return copy.deepcopy(found), reason
 
