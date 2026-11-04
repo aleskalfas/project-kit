@@ -1,7 +1,7 @@
 ---
 id: PRJ-013
 title: project-kit writes names, docstrings and comments plainly in each module's manner, and its conventions corpus holds coding conventions only
-status: proposed
+status: accepted
 date: 2026-11-04
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
