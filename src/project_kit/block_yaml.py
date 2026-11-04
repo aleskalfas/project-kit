@@ -33,10 +33,12 @@ of reads as the loader reads it. Tests hold both readings equal on texts made
 to sit at the edges of the form, and on the answer files of the project's own
 tree.
 
-This reading takes a few parts of the loader as it is imported: the reader's
-set of characters it refuses, the resolver and the constructor. Where the
-installed ruamel.yaml lacks one, or calls it another way, this reading is off,
-and `load` gives every text to the loader.
+This reading copies how the loader reads the block form, so it is on only under
+a version of ruamel.yaml the tests held it to (`TESTED_VERSIONS`). It takes a
+few parts of the loader as it is imported: the reader's set of characters it
+refuses, the resolver and the constructor. Under another version, or where the
+installed ruamel.yaml lacks one of those parts or calls it another way, this
+reading is off, and `load` gives every text to the loader.
 """
 
 from __future__ import annotations
@@ -48,6 +50,13 @@ from collections.abc import Callable
 from typing import Any, cast
 
 from ruamel.yaml import YAML
+
+#: The versions of ruamel.yaml this reading is held to: under each, the tests compared
+#: the two readings, and every YAML text in the repository's history read the same
+#: through both (#2410). Under any other version this reading is off. A lock moved to
+#: another version fails the test that it is on, until the comparison is made again
+#: under that version and the version is added here.
+TESTED_VERSIONS = frozenset({"0.19.1"})
 
 _STR = "tag:yaml.org,2002:str"
 #: The implicit types a plain scalar may resolve to that this reading builds; any
@@ -66,10 +75,15 @@ _BUILT = frozenset(
 def _parts() -> tuple[Any, Any, Any, str] | None:
     """The parts of the loader this reading takes: the class of a scalar's node, the
     resolver, the constructor, and the pattern of the characters the reader refuses.
-    `None` where the installed ruamel.yaml lacks one, or calls it another way. Each call
-    this reading makes of them is made here once, so a part renamed or changed turns the
-    reading off, and no command fails for it."""
+    `None` under a version of ruamel.yaml not in `TESTED_VERSIONS`, and where the
+    installed one lacks a part, or calls it another way. Each call this reading makes of
+    them is made here once, so a part renamed or changed turns the reading off, and no
+    command fails for it."""
     try:
+        from ruamel.yaml import __version__
+
+        if str(__version__) not in TESTED_VERSIONS:
+            return None
         from ruamel.yaml.nodes import ScalarNode
         from ruamel.yaml.reader import Reader
 
@@ -90,7 +104,8 @@ def _parts() -> tuple[Any, Any, Any, str] | None:
 
 
 _PARTS = _parts()
-#: Whether this reading is on: the installed ruamel.yaml has every part it takes.
+#: Whether this reading is on: the installed ruamel.yaml is a tested version, with every
+#: part this reading takes.
 ON = _PARTS is not None
 # ruamel.yaml is untyped; its parts are read through `Any`, and not at all while off.
 _scalar_node: Any

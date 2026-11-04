@@ -20,9 +20,10 @@ license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
     "click>=8.1",
-    # The version the reader of plain block YAML, `block_yaml`, is tested against: it
-    # copies the pure-Python loader's reading of that form, and takes parts of the
-    # loader at import, turning itself off where one is missing (#2410).
+    # The oldest version the reader of plain block YAML, `block_yaml`, is tested
+    # against: it copies the pure-Python loader's reading of that form, so it is off
+    # under a version it was not tested against, or where a part of the loader it takes
+    # is missing (`block_yaml.TESTED_VERSIONS`, #2410).
     "ruamel.yaml>=0.19.1",
     "packaging>=24.0",
     "jsonschema>=4.20",

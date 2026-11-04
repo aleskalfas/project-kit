@@ -6,12 +6,15 @@ from __future__ import annotations
 
 import random
 import sys
+import tomllib
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
+import ruamel.yaml
+from packaging.version import Version
 from ruamel.yaml import YAML
 from ruamel.yaml.constructor import BaseConstructor
 from ruamel.yaml.reader import Reader
@@ -202,18 +205,40 @@ def test_a_text_the_loader_refuses_raises_its_error(text: str) -> None:
 
 def test_every_fallback_reads_by_the_pure_python_loader() -> None:
     """The exact reading is ruamel's pure-Python safe loader: a fallback left to pick
-    libyaml, where ruamel's compiled binding is installed, would read YAML 1.1."""
+    libyaml, where ruamel's compiled binding is installed, would read YAML 1.1. Each
+    module that calls this reading hands it a fallback through its own `_yaml`."""
+    callers = sorted(
+        path.stem
+        for path in (REPO_ROOT / "src" / "project_kit").glob("*.py")
+        if "block_yaml.load(" in path.read_text(encoding="utf-8")
+    )
+    assert callers == ["answer_files", "document_parts", "friction_discovery"]
     for module in (af, document_parts, fd):
         assert module._yaml.pure is True, module.__name__
 
 
+def test_the_declared_floor_of_the_loader_is_its_oldest_tested_version() -> None:
+    """An install resolves no ruamel.yaml older than the versions this reading is held to."""
+    dependencies = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    (floor,) = [
+        requirement.removeprefix("ruamel.yaml>=")
+        for requirement in dependencies["project"]["dependencies"]
+        if requirement.startswith("ruamel.yaml")
+    ]
+    assert floor == min(block_yaml.TESTED_VERSIONS, key=Version)
+
+
 def test_the_reading_is_on_with_the_installed_loader() -> None:
+    """The locked ruamel.yaml is a version this reading is held to: a lock moved to another
+    fails here, until the two readings are compared under it."""
+    assert ruamel.yaml.__version__ in block_yaml.TESTED_VERSIONS
     assert block_yaml.ON
 
 
 @pytest.mark.parametrize(
     "removed",
     [
+        "a version not tested",
         "the reader's refused characters",
         "the constructor's call",
         "the resolver's call",
@@ -223,9 +248,12 @@ def test_the_reading_is_on_with_the_installed_loader() -> None:
 def test_a_loader_without_a_part_this_reading_takes_turns_it_off(
     removed: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """On a ruamel.yaml without a part this reading takes, or that calls one another
-    way, the parts are not taken, so the reading is off rather than failing at import."""
-    if removed == "the reader's refused characters":
+    """Under a ruamel.yaml version it was not held to, or one without a part this reading
+    takes, or that calls one another way, the parts are not taken, so the reading is off
+    rather than misreading or failing at import."""
+    if removed == "a version not tested":
+        monkeypatch.setattr(ruamel.yaml, "__version__", "0.20.0")
+    elif removed == "the reader's refused characters":
         monkeypatch.delattr(Reader, "NON_PRINTABLE")
     elif removed == "the constructor's call":
         monkeypatch.delattr(BaseConstructor, "construct_non_recursive_object")
