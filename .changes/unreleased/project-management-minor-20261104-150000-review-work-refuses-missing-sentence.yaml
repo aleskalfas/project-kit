@@ -1,0 +1,17 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  `review-work` refuses a pull request's description whose list of the answers
+  the change wrote marks a document `updated` with no sentence on what changed
+  in it (#2637, DEC-055 point 3). It reads the list the description carries, a
+  draft's or a ready pull request's, before it makes the pull request ready,
+  requests reviewers or moves the issue. The refusal names each such document,
+  the one-line form a sentence takes, ``- `path`: sentence``, and each item
+  under the sentences heading that is not read as one; `--force` overrides it,
+  as it overrides validate-at-ready. With every sentence given it proceeds as
+  before, and `open-pr` and `edit-pr` still only warn. The pm skill's landing
+  step and the capability README say when a branch takes in its base: only
+  where the pull request conflicts with it, or where `land-work` stops and
+  names the merge to make, a host that requires up-to-date branches excepted.

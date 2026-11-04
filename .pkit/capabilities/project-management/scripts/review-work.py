@@ -26,6 +26,17 @@ Gates per DEC-026:
     (`_lib/issue_position`, shared with start-work, #1242); move-issue reads
     it itself when it moves.
   - PR title is Conventional Commits.
+  - The author's sentences (DEC-055 point 3): where the PR's description
+    carries the list of the answers its change wrote, each document the list
+    marks `updated` needs a sentence on what changed in it, under
+    `## What changed in each updated document`. Read from the description of
+    the PR found, a draft or one already ready, before it is made ready,
+    reviewers are requested or the issue moves; refused at validate-at-ready's
+    severity, naming each such document, the form a sentence takes and each
+    item there that is not read as one (`--force` overrides). The list is read
+    as the description carries it, nothing derived, so a document updated
+    after it was written is the reviewer's to catch. open-pr and edit-pr only
+    warn of it.
   - The clash guard (DEC-035 point 6), with an instance id set or a seat of
     a topology held: an issue another instance owns is refused before any PR
     is opened or made ready and before reviewers are requested, at
@@ -55,8 +66,9 @@ Side-effects:
 Exit codes:
   0  PR ready + issue in Review (moved there, or already there)
   1  membership or foreign-repo refusal / PR body not ready for review
-     (validate-at-ready; --force overrides) / the clash guard refused an
-     issue another instance owns / this clone's seat could not be confirmed
+     (validate-at-ready, or an updated document with no sentence; --force
+     overrides) / the clash guard refused an issue another instance owns /
+     this clone's seat could not be confirmed
   2  usage error / gate failure / illegal transition / issue not found /
      where the board carries the state, a card whose Status does not place
      the issue
@@ -84,6 +96,7 @@ from _lib import (
     classification_rules,
     composed_move,
     default_branch,
+    friction_answers,
     instance_claims,
     issue_branch,
     issue_position,
@@ -106,6 +119,8 @@ from _lib.review_mode import (
 )
 
 TARGET_STATE = "review"
+#: The label of a finding on the author's sentences, as edit-pr's validation names it.
+SENTENCES_LABEL = "body.sentences"
 
 
 def main() -> int:
@@ -154,7 +169,8 @@ def main() -> int:
         action="store_true",
         help=(
             "Take a PR to ready-for-review despite hard-reject body-validation "
-            "findings (empty required section / checkbox / missing Doc impact). "
+            "findings (empty required section / checkbox / missing Doc impact / an "
+            "updated document with no sentence on what changed in it). "
             "Drafts stay exempt; you normally fill a draft first (create-draft → "
             "edit-pr → review-work) or use open-pr --body-file."
         ),
@@ -328,6 +344,9 @@ def main() -> int:
     # (DEC-031 empty checkbox → hard-reject; DEC-015 Doc impact). Drafts are
     # exempt; --force overrides. An empty body cannot go ready — fill a draft
     # first (create-draft → edit-pr → review-work), or use open-pr --body-file.
+    # A description whose list marks a document updated with no sentence on
+    # what changed in it is refused too, a PR already ready included, before
+    # reviewers are requested or the issue moves (DEC-055 point 3).
     existing_pr = _find_pr_for_branch(branch, config)
     pr_number: int | None = None
     # What this run changed on the PR, named if the composed move then fails.
@@ -359,6 +378,8 @@ def main() -> int:
         print(f"  flipped PR #{pr_number} draft → ready")
     else:
         pr_number = existing_pr.get("number")
+        if not _body_ok(_sentence_findings(_gh_pr_body(pr_number, config)), args.force):
+            return 1
         print(f"  PR #{pr_number} already ready; idempotent skip")
 
     # Reviewer assignment per DEC-027 mode resolution.
@@ -571,8 +592,10 @@ def _ready_body_ok(body: str, classification: dict, capability_root: Path, force
 
     Runs the shared PR-body validator at the merge-gate phase (empty checkbox →
     hard-reject). Title/closing-label checks are skipped (review-work composes the
-    title). On a blocking finding: print it and return False, or True under
-    ``force``. Merge remains the backstop; drafts never reach here.
+    title). The author's sentences are checked beside it (`_sentence_findings`),
+    so one refusal names every blocking finding. On a blocking finding: print it
+    and return False, or True under ``force``. Merge remains the backstop; drafts
+    never reach here.
     """
     findings = pr_validation.validate_pr(
         pr_title="",
@@ -585,13 +608,48 @@ def _ready_body_ok(body: str, classification: dict, capability_root: Path, force
         phase=PHASE_TRANSITION,
     )
     blocking = [f for f in findings if f.severity in pr_validation.BLOCKING_SEVERITIES]
-    if not blocking:
+    return _body_ok(blocking + _sentence_findings(body), force)
+
+
+def _sentence_findings(body: str) -> list[pr_validation.Finding]:
+    """A hard-reject finding for each document the list in the description `body`
+    marks `updated` that its author gives no sentence on what changed in it
+    (DEC-055 point 3), named with the form a sentence takes. Each item under the
+    sentences heading that is not read as one follows, as a warning: it is
+    likely the sentence, in another form. Nothing where every such document has
+    a sentence, or the description carries no list."""
+    unsaid = friction_answers.unsaid_in(body)
+    if not unsaid:
+        return []
+    refused = [
+        pr_validation.Finding(
+            pr_validation.SEVERITY_HARD_REJECT,
+            SENTENCES_LABEL,
+            friction_answers.unsaid_refusal(location),
+        )
+        for location in unsaid
+    ]
+    unread = [
+        pr_validation.Finding(
+            pr_validation.SEVERITY_WARNING,
+            SENTENCES_LABEL,
+            friction_answers.unread_warning(item),
+        )
+        for item in friction_answers.unread(body)
+    ]
+    return refused + unread
+
+
+def _body_ok(findings: list[pr_validation.Finding], force: bool) -> bool:
+    """True iff no finding of `findings` blocks; otherwise print them all and
+    return False, or True under ``force``."""
+    if not pr_validation.has_blocking(findings):
         return True
     print(
         "[refused] PR body is not ready for review (validate-at-ready, #569):",
         file=sys.stderr,
     )
-    for f in blocking:
+    for f in findings:
         print(f"  - [{f.severity}] {f.label}: {f.detail}", file=sys.stderr)
     if force:
         print("  → proceeding under --force.", file=sys.stderr)
@@ -605,7 +663,9 @@ def _ready_body_ok(body: str, classification: dict, capability_root: Path, force
 
 
 def _gh_pr_body(pr_number: int | None, config: dict) -> str:
-    """The current body of a PR (for validating a draft before flip → ready)."""
+    """The current body of a PR: a draft's, validated before the flip → ready, or
+    a ready one's, whose sentences are checked before the move (or "" when it
+    cannot be read)."""
     if pr_number is None:
         return ""
     try:

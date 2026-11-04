@@ -287,6 +287,18 @@ def test_an_edit_gives_each_updated_document_its_sentence_as_it_now_stands(ep, m
     assert "has not said" not in written and _sections(written) == 1
 
 
+def test_an_updated_document_given_no_sentence_refuses_no_edit(ep, monkeypatch, capsys) -> None:
+    """edit-pr only warns, of an item it cannot read: an edit that leaves an updated
+    document with no sentence is written, and its list says so. The move to review
+    refuses it (DEC-055 point 3, `test_pm_review_work`)."""
+    body = f"{PR_BODY}\n{_updated_section(ep)}\n\n{FOOTER}"
+    rec = _run(ep, monkeypatch, ["7", "--append", "A note.", "--yes"], body=body)
+    assert rec.rc == 0
+    assert "(what changed: the pull request's author has not said)" in rec.edits[0]["body"]
+    out = capsys.readouterr().out
+    assert "[hard-reject]" not in out and "[refused]" not in out
+
+
 def test_a_sentence_the_list_must_not_hold_leaves_its_sentences_as_they_were(
     ep, monkeypatch, capsys
 ) -> None:

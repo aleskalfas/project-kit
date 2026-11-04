@@ -40,10 +40,12 @@ updated document's sentence from the change's author:
   its line, and `unread_warning` is what a command says of it, with the form
   a sentence takes (`SENTENCE_FORM`). `given` is the ones the list shows, and
   `with_sentences` puts them into a list already written, for an edit that
-  derives nothing. `told` is what the person who authorises the merge is
-  told, as information: those sentences, the documents and the targets of a
-  link left out of date, and the friction settings changed; `counted_told`
-  counts them.
+  derives nothing. `unsaid_in` names each document the list a description
+  carries marks `updated` with no sentence, and `unsaid_refusal` is what the
+  move to review says of it when it refuses (DEC-055 point 3). `told` is what
+  the person who authorises the merge is told, as information: those
+  sentences, the documents and the targets of a link left out of date, and
+  the friction settings changed; `counted_told` counts them.
 - `closing_reference` and `comment_delimiter` name a word of the list that
   must not be written: one that reads as a closing reference — the host's own
   parser would close an issue with it at merge, and nothing here can make that
@@ -1368,6 +1370,11 @@ _SENTENCE_ITEM = re.compile(
 )
 #: The form a sentence takes, as a warning names it.
 SENTENCE_FORM = "- `path`: sentence"
+#: The form, as a command's warning or refusal tells the author to write it.
+_FORM_SAID = (
+    f'"{SENTENCE_FORM}", starting in the line\'s first column, the document in a code span '
+    "as the list names it"
+)
 #: A thematic break: three or more of one of `-`, `*`, `_`, spaces between.
 _BREAK = r" {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$"
 #: A line that ends the item above it: a list item of its own, at any depth, a
@@ -1517,8 +1524,30 @@ def unread_warning(item: Unread) -> str:
     takes."""
     return (
         f"line {item.line} of the description, under `{SENTENCES_HEADING}`, is not read as "
-        f'a sentence: "{item.text}" — write it as "{SENTENCE_FORM}", starting in the '
-        "line's first column, the document in a code span as the list names it"
+        f'a sentence: "{item.text}" — write it as {_FORM_SAID}'
+    )
+
+
+def unsaid_in(body: str) -> list[str]:
+    """Each document the list `body` carries marks `updated` that `sentences` reads
+    no sentence for in `body`, as the list names it and in its order; none where
+    `body` carries no list a command wrote. Read from the description alone, for a
+    command that derives nothing: a document updated since the list was written is
+    not among them."""
+    block = find(body)
+    if block is None:
+        return []
+    said = sentences(body)
+    return [location for location in dict.fromkeys(_region_updated(block)) if location not in said]
+
+
+def unsaid_refusal(location: str) -> str:
+    """What a command that refuses says of `location`, a document the list marks
+    `updated` with no sentence: the document, and the form a sentence takes."""
+    return (
+        f"{location} is updated in this change, and the description gives no sentence on what "
+        f"changed in it — under `{SENTENCES_HEADING}`, write one on a line of its own as "
+        f"{_FORM_SAID}"
     )
 
 

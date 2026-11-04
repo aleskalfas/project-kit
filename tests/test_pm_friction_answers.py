@@ -1729,6 +1729,36 @@ def test_the_warning_names_the_line_and_the_form(fa: ModuleType) -> None:
     )
 
 
+def test_the_description_names_each_updated_document_it_gives_no_sentence(
+    fa: ModuleType,
+) -> None:
+    """For the move to review, which derives nothing (DEC-055 point 3): each document
+    the list the description carries marks updated, in the list's order, that the
+    author's section gives no sentence for. A target revisited by its own change
+    asks for none, and a description with no list names nothing."""
+    document = _document(
+        _entry("docs/c.md", "updated"),
+        _entry("docs/a.md", "updated"),
+        _entry("tech-docs/actors.md#ACT-one", "updated"),
+        _entry("docs/b.md", "unchanged", "Holds."),
+        _revisit(SOURCE_REQ, "updated"),
+    )
+    body = fa.stamp(SAID_BODY, fa.render(document, HEAD))
+    assert fa.unsaid_in(body) == ["docs/c.md"]
+    assert fa.unsaid_in(SAID_BODY) == []
+    assert fa.unsaid_in(fa.stamp(BODY, fa.render(document, HEAD))) == [
+        "docs/c.md",
+        "docs/a.md",
+        "tech-docs/actors.md#ACT-one",
+    ]
+    assert fa.unsaid_refusal("docs/c.md") == (
+        "docs/c.md is updated in this change, and the description gives no sentence on what "
+        "changed in it — under `## What changed in each updated document`, write one on a line "
+        f'of its own as "{FORM}", starting in the line\'s first column, the document in a code '
+        "span as the list names it"
+    )
+
+
 def test_a_line_keeps_its_number_past_the_list_and_is_shown_escaped(fa: ModuleType) -> None:
     """The list a command wrote is never read, yet its lines are counted, so the
     number is the line's in the description; a terminal is shown no control

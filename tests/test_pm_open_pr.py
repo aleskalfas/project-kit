@@ -580,6 +580,25 @@ def test_the_list_gives_each_updated_document_its_author_s_sentence(
     ) in err
 
 
+def test_a_ready_pr_opens_with_an_updated_document_given_no_sentence(
+    op, monkeypatch, tmp_path, capsys
+) -> None:
+    """open-pr only warns of a missing sentence, a PR opened ready too: its
+    validate-at-ready refuses nothing over it. The move to review refuses it
+    (DEC-055 point 3, `test_pm_review_work`)."""
+    body_file = tmp_path / "body.md"
+    body_file.write_text(SAID, encoding="utf-8")
+    argv = ["open-pr", "42", "--summary", "s", "--yes", "--body-file", str(body_file)]
+    captured = _stub_main(
+        op, monkeypatch, argv, {42: _open_issue()}, derived=_derived(op, *UPDATED)
+    )
+    assert op.main() == 3  # opened: the faked create was asked, and returns no URL
+    assert "   - (what changed: the pull request's author has not said)" in captured["body"]
+    err = capsys.readouterr().err
+    assert "[refused]" not in err
+    assert "warn: 1 updated document(s) with no sentence on what changed" in err
+
+
 @pytest.mark.parametrize(
     ("item", "unread"),
     [

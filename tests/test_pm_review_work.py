@@ -293,10 +293,12 @@ def _last_failure(err: str) -> str:
 
 @pytest.fixture
 def run_main(rw, monkeypatch):
-    """Returns `run(issue, *, pr=None, move_rc=0, reviewer=None, engine=None,
-    config=None, move=None, dry_run=False, instance=None, github=None,
-    extra=())` → `(rc, gh_calls, moves)`. `pr` is the open PR on the branch
-    (None: none yet); `engine` the process engine, a `FakeEngine` (by default
+    """Returns `run(issue, *, pr=None, body="filled", move_rc=0, reviewer=None,
+    engine=None, config=None, move=None, dry_run=False, instance=None,
+    github=None, extra=())` → `(rc, gh_calls, moves)`. `pr` is the open PR on
+    the branch (None: none yet), and `body` its description; the body
+    validator finds nothing in it, and the author's sentences are read from it
+    as they stand. `engine` is the process engine, a `FakeEngine` (by default
     one that gives no answer); `config` the adopter config. `move` runs the
     composed move-issue in process; without it the move is recorded and answers
     `move_rc`. `instance` is this clone's instance id (none by default), and
@@ -308,6 +310,7 @@ def run_main(rw, monkeypatch):
         issue: dict,
         *,
         pr: dict | None = None,
+        body: str = "filled",
         move_rc: int = 0,
         reviewer: str | None = None,
         engine: FakeEngine | None = None,
@@ -336,7 +339,7 @@ def run_main(rw, monkeypatch):
             if args[:3] == ["gh", "pr", "list"]:
                 stdout = json.dumps([pr] if pr else [])
             elif args[:3] == ["gh", "pr", "view"]:
-                stdout = json.dumps({"body": "filled"})
+                stdout = json.dumps({"body": body})
             elif args[:3] == ["gh", "pr", "create"]:
                 stdout = PR_URL
             return subprocess.CompletedProcess(args=args, returncode=0, stdout=stdout, stderr="")
@@ -365,7 +368,7 @@ def run_main(rw, monkeypatch):
         monkeypatch.setattr(rw.axis_labels, "load_substrate_map", lambda _r: None)
         monkeypatch.setattr(rw, "_gh_get_issue", lambda _n, _c: issue)
         monkeypatch.setattr(rw.issue_branch, "_local_branches", lambda: (BRANCH,))
-        monkeypatch.setattr(rw, "_ready_body_ok", lambda *a: True)
+        monkeypatch.setattr(rw.pr_validation, "validate_pr", lambda **k: [])
         monkeypatch.setattr(rw, "gh_run", fake_gh_run)
         if move is None:
             monkeypatch.setattr(rw.composed_move, "invoke_move_issue", move_issue)
@@ -640,3 +643,128 @@ def test_bypass_owner_posts_its_reason_first_and_once(run_main, rw, monkeypatch,
     assert "--bypass-owner let this clone, instance 2, act on it" in captured.err
     assert "audit comment already present; idempotent skip" in captured.out
     assert captured.out.rstrip().endswith("[ok] PR ready; #42 in Review")
+
+
+# ---- the author's sentences (DEC-055 point 3) -------------------------------------
+#
+# Where the description carries the list of the answers the change wrote, each
+# document it marks `updated` needs a sentence on what changed in it. review-work
+# refuses before it makes the PR ready, requests reviewers or moves the issue;
+# open-pr and edit-pr only warn (their own tests).
+
+SENTENCES = "## What changed in each updated document"
+FILLED = "Closes #42\n\n## Summary\nwork\n\n## Doc impact\n- [x] the guide\n"
+
+
+def _described(rw, said: str = "", *updated: str) -> str:
+    """A description whose list marks each of `updated` as updated in the change
+    and holds `docs/api.md`, with `said` — the author's sentences — above it."""
+    entries = [{"location": location, "answer": "updated", "changed": []} for location in updated]
+    entries.append({"location": "docs/api.md", "answer": "unchanged", "reason": "Holds."})
+    document = {"base": {"commit": "b" * 40}, "answers": entries, "unreadable": []}
+    section = rw.friction_answers.render(document, "a" * 40)
+    assert section is not None
+    return f"{FILLED}\n{said}\n{section}\n"
+
+
+def _refusals(err: str) -> list[str]:
+    return [ln for ln in err.splitlines() if ln.startswith("  - [hard-reject] body.sentences: ")]
+
+
+def _refusal(location: str) -> str:
+    return (
+        f"  - [hard-reject] body.sentences: {location} is updated in this change, and the "
+        f"description gives no sentence on what changed in it — under `{SENTENCES}`, write one "
+        'on a line of its own as "- `path`: sentence", starting in the line\'s first column, '
+        "the document in a code span as the list names it"
+    )
+
+
+@pytest.mark.parametrize("draft", [True, False], ids=["draft-pr", "ready-pr"])
+def test_an_updated_document_with_no_sentence_is_refused_before_any_write(
+    run_main, rw, capsys, draft
+) -> None:
+    """Each document the list marks updated with no sentence is named, with the
+    one-line form; nothing is made ready, no reviewer requested, nothing moved."""
+    said = f"{SENTENCES}\n\n- `docs/guide.md`: The guide names the new flag.\n"
+    body = _described(rw, said, "docs/guide.md", "docs/cli.md", "docs/notes.md")
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]), pr=_open_pr(draft=draft), body=body, reviewer="@alice"
+    )
+    assert rc == 1
+    assert _pr_writes(gh_calls) == []
+    assert moves == []
+    out, err = capsys.readouterr()
+    assert "[refused] PR body is not ready for review" in err
+    assert _refusals(err) == [_refusal("docs/cli.md"), _refusal("docs/notes.md")]
+    assert "--force overrides" in err
+    assert "[ok]" not in out
+
+
+def test_with_every_sentence_given_it_proceeds_as_before(run_main, rw, capsys) -> None:
+    said = (
+        f"{SENTENCES}\n\n- `docs/guide.md`: The guide names the new flag.\n"
+        "- `docs/cli.md`: The page lists the new command.\n"
+    )
+    body = _described(rw, said, "docs/guide.md", "docs/cli.md")
+    rc, gh_calls, moves = run_main(_task(["state:in-progress"]), pr=_open_pr(draft=True), body=body)
+    assert rc == 0
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["ready"]
+    assert moves == ["review"]
+    out, err = capsys.readouterr()
+    assert "body.sentences" not in err
+    assert out.rstrip().endswith("[ok] PR ready; #42 in Review")
+
+
+def test_a_description_with_no_list_is_not_refused(run_main) -> None:
+    """No list, nothing marked updated: a change that wrote no answers, or a list
+    open-pr left out, which land-work writes or refuses."""
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]), pr=_open_pr(draft=True), body=FILLED
+    )
+    assert rc == 0
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["ready"]
+    assert moves == ["review"]
+
+
+def test_an_item_not_read_as_a_sentence_is_named_beside_the_refusal(run_main, rw, capsys) -> None:
+    """A sentence written in another form, the document in bold, gives none: the
+    refusal names the document, and the item by its line, with the form."""
+    item = "- **docs/guide.md:** The guide names the new flag."
+    body = _described(rw, f"{SENTENCES}\n\n{item}\n", "docs/guide.md")
+    rc, gh_calls, moves = run_main(_task(["state:in-progress"]), pr=_open_pr(draft=True), body=body)
+    assert rc == 1
+    assert _pr_writes(gh_calls) == [] and moves == []
+    err = capsys.readouterr().err
+    assert _refusals(err) == [_refusal("docs/guide.md")]
+    line = body.split("\n").index(item) + 1
+    assert (
+        f"  - [warning] body.sentences: line {line} of the description, under `{SENTENCES}`, "
+        f'is not read as a sentence: "{item}" — write it as "- `path`: sentence", starting in '
+        "the line's first column, the document in a code span as the list names it"
+    ) in err.splitlines()
+
+
+def test_force_takes_the_pr_to_review_past_the_refusal(run_main, rw, capsys) -> None:
+    body = _described(rw, "", "docs/guide.md")
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]), pr=_open_pr(draft=True), body=body, extra=("--force",)
+    )
+    assert rc == 0
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["ready"]
+    assert moves == ["review"]
+    err = capsys.readouterr().err
+    assert _refusals(err) == [_refusal("docs/guide.md")]
+    assert "→ proceeding under --force." in err
+
+
+def test_the_refusal_joins_the_body_validator_s_findings(rw, monkeypatch, capsys) -> None:
+    """One refusal names every blocking finding, the validator's and the sentences'."""
+    no_doc_impact = rw.pr_validation.Finding(
+        rw.pr_validation.SEVERITY_HARD_REJECT, "body.doc-impact", "no Doc impact"
+    )
+    monkeypatch.setattr(rw.pr_validation, "validate_pr", lambda **k: [no_doc_impact])
+    assert rw._ready_body_ok(_described(rw, "", "docs/guide.md"), {}, CAP_ROOT, False) is False
+    err = capsys.readouterr().err
+    assert "  - [hard-reject] body.doc-impact: no Doc impact" in err.splitlines()
+    assert _refusals(err) == [_refusal("docs/guide.md")]
