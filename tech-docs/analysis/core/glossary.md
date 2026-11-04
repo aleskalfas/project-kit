@@ -1628,7 +1628,7 @@ TERM-trigger-field:
 TERM-validation:
   name: validation
   status: active
-  definition: "check of a project's own files against the invariants its records own, which installed components join through validators, failing on one severity alone"
+  definition: "check of a project's state against the invariants its records own, which installed components join through validators, failing on one severity alone"
   pkit:
     friction:
       anchors:

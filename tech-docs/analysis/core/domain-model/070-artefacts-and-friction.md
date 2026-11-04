@@ -48,6 +48,7 @@ pkit:
         - COR-053#4
         - COR-053#8
         - COR-054#3
+        - COR-055#3
         - COR-056
         - COR-062
         - COR-068
@@ -1000,14 +1001,14 @@ Defined in [TERM-package-metadata](../glossary.md#term-package-metadata--package
 
 **Why:** What a [component](../glossary.md#term-component--component) adds to the [backbone](../glossary.md#term-backbone--backbone) must be declared on purpose, not found by scanning its files ([COR-021](../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)). A scan would let a renamed file reshape the commands others rely on, without a word (COR-021).
 
-Package metadata is the file a component ships that declares its [version](../glossary.md#term-version--version), its ranges and what it adds to the backbone. It may add places, types, [roles](../glossary.md#term-role--role), commands and [validators](../glossary.md#term-validator--validator). The `package.yaml` of `software-analysis` declares the glossary as a [place](../glossary.md#term-place--place).
+Package metadata is the file a component ships that declares its [version](../glossary.md#term-version--version), its ranges and what it adds to the backbone. It may add places, [artefact types](../glossary.md#term-artefact-type--artefact-type), [roles](../glossary.md#term-role--role), commands and [validators](../glossary.md#term-validator--validator) ([COR-055 point 3](../../../../.pkit/decisions/core/COR-055-validation.md#3-a-component-joins-by-naming-a-command)). The `package.yaml` of `software-analysis` declares the glossary as a [place](../glossary.md#term-place--place).
 
 **Attributes:**
 
 - the component's name, kind and version, and its ranges: on the backbone, and on other [capabilities](../glossary.md#term-capability--capability) ([COR-017](../../../../.pkit/decisions/core/COR-017-capability-pattern.md), [COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md))
 - its commands (COR-021)
 - the [connection points](../glossary.md#term-connection-point--connection-point) it defines, and its [connections](../glossary.md#term-connection--connection) to those it plugs into ([COR-053 point 3](../../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality))
-- its places, and its [artefact types](../glossary.md#term-artefact-type--artefact-type) ([COR-050 point 1](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts), [COR-056 point 2](../../../../.pkit/decisions/core/COR-056-artefact-types.md#2-who-declares-it))
+- its places, and its artefact types ([COR-050 point 1](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts), [COR-056 point 2](../../../../.pkit/decisions/core/COR-056-artefact-types.md#2-who-declares-it))
 
 **Relations:**
 
