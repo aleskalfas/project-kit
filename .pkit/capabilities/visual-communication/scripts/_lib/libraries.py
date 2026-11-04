@@ -32,10 +32,14 @@ DEC-005 point 7, DEC-008 point 1, DEC-013 points 2 and 5, DEC-014 point 5).
   installed capability reads that fit together, within the lines the lock names. It tries
   the newest of each library first, and where two libraries build on two majors of one
   library, it backs off library by library; it refuses, naming the conflict, when none
-  fits. The search stops after `SEARCH_STEPS` steps, each a version tried for one
-  library, and refuses as when none fits, naming the libraries it was choosing. A library
-  the lock does not name yet takes its newest version of any major. A pinned draft's lock
-  never moves: it is checked, never changed.
+  fits. A judgement the caller gives (`Judge`) judges each whole combination it reaches,
+  and the search backs off first a library the judgement implicates (DEC-003 point 8,
+  DEC-010 point 2, DEC-011 point 4). A library the lock names stays at or above the
+  version it names, unless no combination fits so (`_Search`). The search stops after
+  `SEARCH_STEPS` steps, each a version tried for one library, and refuses as when none
+  fits, naming the libraries it was choosing. After `SEARCH_JUDGED` combinations judged,
+  it stops and keeps the lock. A library the lock does not name yet takes its newest
+  version of any major. A pinned draft's lock never moves: it is checked, never changed.
 - **A version checked alone** is resolved with the newest version the project holds of
   each major it builds on, and of each major those build on (`newest_of_majors`). The
   search and that choice take a library's versions through one filter (`readable`): the
@@ -47,7 +51,7 @@ DEC-005 point 7, DEC-008 point 1, DEC-013 points 2 and 5, DEC-014 point 5).
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
@@ -89,6 +93,12 @@ KINDS = ("components", "brand", "notation")
 #: before it stops and refuses: far more than a project of a few versions of each library
 #: takes, and few enough that a render never waits on it.
 SEARCH_STEPS = 10_000
+
+#: The most whole combinations a search for a draft's lock judges, each by placing the
+#: piece under it, before it stops and keeps the lock: far more than a draft whose
+#: libraries each bring a few new versions takes, and few enough that a render never
+#: waits on them.
+SEARCH_JUDGED = 50
 
 _SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 
@@ -579,27 +589,87 @@ def newest_of_majors(held: Held, library: Library) -> dict[str, Library]:
     return {name: chosen[name] for name in sorted(chosen)}
 
 
+@dataclass(frozen=True)
+class Misfit:
+    """One reason a whole combination of versions does not fit a piece as its lock does
+    (DEC-003 point 8). `rule` is `clash`: an item carries a key that both its component and
+    its list declare, where it does not under the lock (DEC-010 point 2). Or it is `end`:
+    an end of a tie that the lock finds would not be found (DEC-011 point 4). `said` names
+    the item and the key, or the tie and the end. `implicates` names the libraries whose
+    versions decide it."""
+
+    rule: str
+    said: str
+    implicates: frozenset[str]
+
+
+#: The judgement of a whole combination of versions, by library: what makes it not fit the
+#: piece, nothing where it fits. The pipeline builds it (`pipeline.Fit`), so this module
+#: reads no piece and no component.
+Judge = Callable[[Mapping[str, Library]], Sequence[Misfit]]
+
+
+@dataclass(frozen=True)
+class HeldBack:
+    """A version the search held back, newer than the one it chose of its library, with
+    what made the first combination judged with it, that implicated it, not fit."""
+
+    library: Library
+    misfits: tuple[Misfit, ...]
+
+
+@dataclass(frozen=True)
+class Moved:
+    """The lock a render writes, and what the search states of it: each version it held
+    back; each library it moved below the version the lock named, in words; and, where it
+    stopped at its bound of combinations judged and kept the lock, that, in words."""
+
+    lock: dict[str, str]
+    held_back: tuple[HeldBack, ...] = ()
+    below: tuple[str, ...] = ()
+    kept: str = ""
+
+
 def move_lock(
     held: Held,
     roots: Iterable[str],
     lock: Mapping[str, str] | None = None,
     *,
     pinned: bool = False,
-) -> dict[str, str]:
+    judge: Judge | None = None,
+) -> Moved:
     """The lock a render writes for a piece that names the libraries `roots` (its top's
     library, its brand, every library its content uses), with what they build on.
 
     A draft's lock moves to the newest combination that fits within the lines `lock`
     names; a first lock, or a library the lock does not name yet, takes the newest version
-    of any major. A pinned draft's lock is returned as it is once it is checked. Raises
-    LockRefused, naming the conflict or what the project lacks, or the libraries the
-    search was choosing where it stops at its bound (`SEARCH_STEPS`)."""
+    of any major. `judge`, where given, judges each whole combination the search reaches,
+    and the search holds back one that does not fit (`_Search`). A pinned draft's lock is
+    returned as it is once it is checked, and never judged.
+
+    Raises LockRefused, naming the conflict or what the project lacks, or the libraries the
+    search was choosing where it stops at its bound of versions tried (`SEARCH_STEPS`).
+    Past its bound of combinations judged (`SEARCH_JUDGED`), it keeps the lock, with the
+    newest version that fits of each library the lock does not name yet, and says so."""
     roots = sorted(set(roots))
     if pinned:
-        return _checked_pinned(held, roots, lock)
-    search = _Search(held, lock or {})
+        return Moved(_checked_pinned(held, roots, lock))
+    search = _Search(held, lock or {}, judge)
+    kept = ""
     try:
-        found = search.run(roots)
+        try:
+            found = search.run(roots)
+        except _Bounded as bounded:
+            named = ", ".join(f"`{name}`" for name in bounded.choosing)
+            kept = (
+                f"the search for versions that fit together stopped at its bound, "
+                f"{SEARCH_JUDGED} combinations judged, choosing among those of {named}: the "
+                f"lock is kept, with the newest version that fits of each library it does not "
+                f"name yet; move the lock by hand, or take the versions no piece needs out of "
+                f"the library folder"
+            )
+            search = _Search(held, lock or {})
+            found = search.run(roots, fixed=True)
     except _Stopped as stopped:
         named = ", ".join(f"`{name}`" for name in stopped.choosing)
         raise LockRefused(
@@ -610,32 +680,78 @@ def move_lock(
         ) from None
     if found is None:
         raise LockRefused(search.conflict or "no versions the project holds fit together")
-    return {name: str(found[name].version) for name in sorted(found)}
+    return Moved(
+        {name: str(found[name].version) for name in sorted(found)},
+        search.held_back(found),
+        search.below(found),
+        kept,
+    )
 
 
 class _Stopped(Exception):
-    """A search for a lock that reached its bound; `choosing` names the libraries it had
-    reached, in name order."""
+    """A search for a lock that reached its bound of versions tried; `choosing` names the
+    libraries it had reached, in name order."""
 
     def __init__(self, choosing: Sequence[str]) -> None:
         super().__init__(", ".join(choosing))
         self.choosing = tuple(choosing)
 
 
-class _Search:
-    """The newest combination that fits, backing off library by library, within
-    `SEARCH_STEPS` versions tried."""
+class _Bounded(_Stopped):
+    """A search for a lock that reached its bound of combinations judged."""
 
-    def __init__(self, held: Held, lock: Mapping[str, str]) -> None:
+
+class _Search:
+    """The newest combination that fits, within `SEARCH_STEPS` versions tried and
+    `SEARCH_JUDGED` combinations judged.
+
+    - **One order.** It chooses the libraries in one order: the piece's own in name order,
+      then each library one of them builds on, as it reaches them. It tries each library's
+      versions newest first.
+    - **What fits.** A combination fits where no two of its versions build on two majors of
+      one library, and the judgement, where one is given, finds nothing in it (`Judge`).
+    - **Backing off.** Where a choice fails, the search backs off the library it chose
+      last. Where a whole combination does not fit the judgement, it backs off first the
+      library it chose last among those the judgement implicates, and chooses each library
+      after that one again, from its newest. A judgement that implicates no library of the
+      combination is backed off as any other failure is.
+    - **Never below the lock first.** A library the lock names first takes only the
+      version the lock names, or a newer one, where the project holds that version and the
+      installed capability reads it. Only where no combination fits so does the search
+      take any version of its line. `below` names each library it then moved below the
+      version the lock named. Past the bound of combinations judged, a library the lock
+      names takes only that version (`fixed`).
+
+    `_step` returns the combination found, or the libraries whose choice another try may
+    mend: those the judgement implicated, every library chosen where a choice failed, and
+    each library that builds on one whose versions all failed."""
+
+    def __init__(self, held: Held, lock: Mapping[str, str], judge: Judge | None = None) -> None:
         self.held = held
         self.lock = lock
+        self.judge = judge
         self.conflict: str | None = None
         self.steps = 0
+        self.judged = 0
         self.reached: set[str] = set()
+        self.floors = False
+        self.fixed = False
+        self._misfits: dict[tuple[str, Version], tuple[Library, tuple[Misfit, ...]]] = {}
 
     def _note(self, conflict: str) -> None:
         if self.conflict is None:
             self.conflict = conflict
+
+    def floor(self, name: str) -> Version | None:
+        """The version the lock names of `name`, where the project holds it and the
+        installed capability reads it; else None."""
+        try:
+            version = Version.parse(self.lock.get(name))
+        except ValueError:
+            return None
+        if version not in self.held.folders.get(name, {}):
+            return None
+        return version if self.held.unreadable(name, version) is None else None
 
     def candidates(self, name: str) -> list[Library]:
         held = self.held
@@ -650,6 +766,13 @@ class _Search:
                 self._note(f"the lock names `{name}: {self.lock[name]}`, which is no version")
                 return []
         found, unread = readable(held, name, line)
+        floor = self.floor(name) if self.floors or self.fixed else None
+        if floor is not None:
+            found = [
+                library
+                for library in found
+                if library.version == floor or (library.version > floor and not self.fixed)
+            ]
         if not found:
             within = f" of major {line}, the line the lock names" if line is not None else ""
             reasons = f" ({'; '.join(unread)})" if unread else ""
@@ -659,15 +782,32 @@ class _Search:
             )
         return found
 
-    def run(self, roots: list[str]) -> dict[str, Library] | None:
-        """The combination found, or None where none fits. Raises _Stopped at the bound."""
-        return self._step({}, list(roots))
+    def run(self, roots: list[str], *, fixed: bool = False) -> dict[str, Library] | None:
+        """The combination found, or None where none fits: first with each library the lock
+        names at or above that version, then, where none fits so, with any version of its
+        line. With `fixed`, each takes that version alone. Raises _Stopped at the bound of
+        versions tried, and _Bounded at the bound of combinations judged."""
+        if fixed:
+            self.fixed = True
+        elif any(self.floor(name) is not None for name in self.lock):
+            self.floors = True
+            found = self._step({}, list(roots))
+            self.floors = False
+            if isinstance(found, dict):
+                return found
+            self.conflict = None
+        found = self._step({}, list(roots))
+        return found if isinstance(found, dict) else None
 
-    def _step(self, chosen: dict[str, Library], pending: list[str]) -> dict[str, Library] | None:
+    def _step(
+        self, chosen: dict[str, Library], pending: list[str]
+    ) -> dict[str, Library] | frozenset[str]:
         if not pending:
-            return chosen
+            return self._judged(chosen)
         self.reached.update(pending)
         name, rest = pending[0], pending[1:]
+        # A failure at this library that a choice of any library before it may mend.
+        before = frozenset(chosen)
         wanted = {
             (library.label, need.major)
             for library in chosen.values()
@@ -680,7 +820,7 @@ class _Search:
                 f"{label} builds on `{name}` {major}" for label, major in sorted(wanted)
             )
             self._note(f"no lock fits: {listed}, and a piece locks one version of each library")
-            return None
+            return before
         candidates = self.candidates(name)
         fitting = [
             library for library in candidates if not majors or library.version.major in majors
@@ -691,6 +831,9 @@ class _Search:
                 f"{label} builds on `{name}` {major}, of which the project holds no version "
                 f"that fits"
             )
+        if not fitting:
+            return before
+        mend: set[str] = set()
         for library in fitting:
             self.steps += 1
             if self.steps > SEARCH_STEPS:
@@ -708,6 +851,7 @@ class _Search:
                     f"no lock fits: {library.label} builds on `{clash.name}` {clash.major}, but "
                     f"{chosen[clash.name].label} is in the lock"
                 )
+                mend |= before
                 continue
             added = sorted(
                 {
@@ -717,9 +861,74 @@ class _Search:
                 }
             )
             found = self._step({**chosen, name: library}, rest + added)
-            if found is not None:
+            if isinstance(found, dict):
                 return found
-        return None
+            if name not in found:
+                return found  # no other version of this library mends what failed
+            mend |= found - {name}
+        # Every version failed: a library that builds on this one decides which fit.
+        mend |= {
+            other
+            for other, library in chosen.items()
+            if any(need.name == name for need in library.builds_on)
+        }
+        return frozenset(mend)
+
+    def _judged(self, chosen: dict[str, Library]) -> dict[str, Library] | frozenset[str]:
+        """A whole combination, judged where a judgement is given: itself where it fits,
+        else the libraries the judgement implicates, each of whose versions keeps the
+        misfits that implicate it, the first time a combination with it does not fit."""
+        if self.judge is None:
+            return chosen
+        self.judged += 1
+        if self.judged > SEARCH_JUDGED:
+            raise _Bounded(sorted(self.reached))
+        misfits = list(self.judge(chosen))
+        if not misfits:
+            return chosen
+        labels = ", ".join(chosen[name].label for name in sorted(chosen))
+        self._note(f"no versions fit together under which {misfits[0].said}: {labels}")
+        implicated: set[str] = set()
+        for name in sorted(chosen):
+            mine = tuple(misfit for misfit in misfits if name in misfit.implicates)
+            if mine:
+                implicated.add(name)
+                key = (name, chosen[name].version)
+                self._misfits.setdefault(key, (chosen[name], mine))
+        return frozenset(implicated or chosen)
+
+    def held_back(self, found: Mapping[str, Library]) -> tuple[HeldBack, ...]:
+        """Each version a misfit implicated that is newer than the one chosen of its
+        library, by library and the newest first."""
+        held = [
+            (library, misfits)
+            for (name, version), (library, misfits) in self._misfits.items()
+            if name in found and version > found[name].version
+        ]
+        held.sort(key=lambda entry: entry[0].version, reverse=True)
+        held.sort(key=lambda entry: entry[0].name)
+        return tuple(HeldBack(library, misfits) for library, misfits in held)
+
+    def below(self, found: Mapping[str, Library]) -> tuple[str, ...]:
+        """Each library chosen below the version the lock names, in words, with why."""
+        said = []
+        for name in sorted(found):
+            try:
+                named = Version.parse(self.lock.get(name))
+            except ValueError:
+                continue
+            version = found[name].version
+            if version >= named:
+                continue
+            why = (
+                "no versions at or above those the lock names fit together"
+                if self.floor(name) is not None
+                else f"the project holds no version {named} that the installed capability reads"
+            )
+            said.append(
+                f"`{name}` moves below {named}, the version the lock named, to {version}: {why}"
+            )
+        return tuple(said)
 
 
 def _checked_pinned(held: Held, roots: list[str], lock: Mapping[str, str] | None) -> dict[str, str]:

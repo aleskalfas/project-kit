@@ -1,0 +1,412 @@
+answers:
+  - artefact: .pkit/schemas/backbone-files.md
+    revalidated:
+      at: 2026-11-04T12:15:52Z
+      outcome: unchanged
+      unchanged-because: Judged against friction_discovery.py, friction_check.py, answer_files.py and ADR-057 as this change leaves them. They read YAML text through a fast reader that gives the loader's exact result or hands the text on, and ADR-057 point 2 gains that reader as a home. One module still reads answer files for both checks and every writer, an answer file written by hand still reads, and validation finds the same faults in a file, so the page holds.
+  - artefact: .pkit/schemas/data-binding.md
+    revalidated:
+      at: 2026-11-04T12:15:54Z
+      outcome: unchanged
+      unchanged-because: answer_files.py reads an answer file through a fast reader for the block form its writer writes, or else the loader, into the same mapping. The file is still judged against the answer files' schema its folder binds it to, and reaches no binding, as the page says.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-revisit
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T191319Z-d75fc556.yaml
+    revalidated:
+      at: 2026-11-04T12:15:55Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch friction_write.py changes only its refusal's pointer for an artefact with no friction block, which now names the page on backbone files. Here the change check finds a path anchor's files through an index of the same files. What a revisit is, and when a link asks for one, are untouched, so the term holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T000914Z-bb10d180.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T120714Z-e6d6c881.yaml
+    revalidated:
+      at: 2026-11-04T12:15:57Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch the schemas README is split, a rule-set file's front matter, body and ids moving to the page on backbone files, which the use case anchors too, and UC-038 comes to anchor status.py and link the glossary's terms. Here ADR-057 point 2 gains one home, the fast reader of YAML text. The reach walk, the rule-set reader and every other home the use case rests on stand as they were, so each step holds.
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T030614Z-db9a0a3b.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T134448Z-e94c9244.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261103T003147Z-452efc9b.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T005444Z-7994390f.yaml
+      - 20261103T014109Z-bd846f15.yaml
+      - 20261103T020421Z-0bcddb3a.yaml
+      - 20261103T023611Z-a9448c1a.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+    revalidated:
+      at: 2026-11-04T12:15:59Z
+      outcome: unchanged
+      unchanged-because: "Judged on the changes together. On the default branch the reference's configuration file, validate and friction sections rename their pointers into the schemas reference, which now name its pages. Here the commands print the same documents: the walk still parses each version once, and seeks a time only in front matter, where an artefact's block is read. Neither change makes a statement of the reference untrue."
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T013912Z-adb73078.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113029Z-9dec9cb8.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T145906Z-a3781d7a.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T152404Z-888b608a.yaml
+      - 20261029T155317Z-2d90650e.yaml
+      - 20261029T155559Z-74f6b0d1.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T160608Z-f0e5731a.yaml
+      - 20261029T190551Z-85ee9700.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T204639Z-57b1f9b1.yaml
+      - 20261029T204651Z-6eb49a72.yaml
+      - 20261029T212322Z-bf411b6a.yaml
+      - 20261029T213250Z-52102acd.yaml
+      - 20261029T213830Z-1305dbb8.yaml
+      - 20261029T230516Z-0e59ab68.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261031T010906Z-47833d43.yaml
+      - 20261031T013603Z-dccf51ad.yaml
+      - 20261031T014558Z-c26fa007.yaml
+      - 20261031T021353Z-44474827.yaml
+      - 20261031T185157Z-7a2bd436.yaml
+      - 20261101T232054Z-d8df47fb.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T114153Z-1c96ae08.yaml
+    revalidated:
+      at: 2026-11-04T12:16:00Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch the decisions README sends the reader to the page on backbone files for a rule-set file's front matter, which CONTRIBUTING does not summarise. Here the aggregator runs the same checks in the same order with the same verdicts, each result line adds its time, and the doc check's line a warning past 15 s that fails nothing, neither of which the guide describes or contradicts.
+  - artefact: .pkit/schemas/README.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T152454Z-63ed08af.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261031T033803Z-982f5fe6.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T000914Z-bb10d180.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+    revalidated:
+      at: 2026-11-04T12:16:03Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch the README is split, a file's front matter, the friction block and data binding moving to pages of their own. Here the schemas and the YAML they validate read into the same values, plain block YAML faster, and ADR-057 point 2 gains the fast reader as a home. No schema changed, and what the README keeps states nothing of how YAML text is read, so it holds.
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T214030Z-7cd17739.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T120747Z-7de02ad2.yaml
+    revalidated:
+      at: 2026-11-04T12:16:04Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T130909Z-658c2c39.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+    revalidated:
+      at: 2026-11-04T12:16:06Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch UC-002 comes to anchor the migration that moves answers to their files, cites RS-OPS-020, and links the glossary's terms, and friction_write.py's refusal names the page on backbone files. Here the change check finds the same friction, its path matching through an index of the same files. Answering a stale artefact works as each step says.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+    revalidated:
+      at: 2026-11-04T12:16:07Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch the use case comes to anchor friction_write.py, cites RS-OPS-020 and links the glossary's terms, changing only words in its steps and variants. Here the whole check CI runs reports the same debt from the same history, faster. The steps of resolving debt hold as written.
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023128Z-752860d8.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T155551Z-be632892.yaml
+      - 20261030T161257Z-5352f58f.yaml
+      - 20261030T164324Z-d7667894.yaml
+      - 20261030T231942Z-8fe86054.yaml
+      - 20261030T235059Z-0bb410f6.yaml
+      - 20261031T003126Z-7b1634e4.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261101T154833Z-45114068.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261101T232054Z-d8df47fb.yaml
+      - 20261102T121046Z-6806ad50.yaml
+      - 20261102T123725Z-50894971.yaml
+      - 20261102T130909Z-658c2c39.yaml
+      - 20261102T133609Z-a3edfa39.yaml
+      - 20261102T135947Z-57ea5a73.yaml
+      - 20261102T140536Z-ff2d2c9f.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261102T214446Z-127dec5e.yaml
+      - 20261102T214752Z-f7faed46.yaml
+      - 20261102T215329Z-f5d52865.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T000914Z-bb10d180.yaml
+      - 20261103T001352Z-256282c0.yaml
+      - 20261103T003147Z-452efc9b.yaml
+      - 20261103T014145Z-5f96d643.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T113759Z-36cfe195.yaml
+    revalidated:
+      at: 2026-11-04T12:16:09Z
+      outcome: unchanged
+      unchanged-because: Judged on the changes together. On the default branch the README gains an anchor on, and an entry for, the guide that explains schemas. Here pyproject.toml raises the ruamel.yaml floor to 0.19.1. The README asks only uv and jq to install pkit and names no version of ruamel.yaml, so every statement holds.

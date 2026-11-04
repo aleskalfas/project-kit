@@ -27,6 +27,7 @@ from tests.visual_communication_project import (
     TEST_BRAND,
     TEST_NOTATION,
     TEST_PARTS,
+    add_library,
     bound,
     copy_library,
     project,
@@ -649,3 +650,287 @@ def test_a_role_with_no_value_under_the_brand_is_none_to_the_engine_or_the_docum
     [[run]] = label.properties["paragraphs"]
     assert run["fill"] == "test-parts.warning"
     assert "test-parts.warning" not in project.values()["tokens"]
+
+
+# --- whether versions fit the piece as its lock does (DEC-003 point 8, DEC-010 point 2, DEC-011
+# --- point 4) -----------------------------------------------------------------------------------
+
+#: The two libraries the fit of a draft's versions is judged with: blocks, and the patterns
+#: that draw them, each built on the foundations.
+BLOCKS, PATTERNS = "lab-blocks", "lab-patterns"
+LISTED = {"type": "array", "items": {"type": "object"}}
+V = pl.Version.parse
+
+
+def component_text(**fields: Any) -> str:
+    return yaml_text(bound("component", status="experimental", **fields))
+
+
+def block(**more: Any) -> str:
+    """A block that shows its `head`, with what `more` declares beside."""
+    head = {"text": {"content": "head", "style": "type.body", "fill": "text-primary"}}
+    return component_text(
+        about="A head.",
+        fields={"type": "object", "required": ["head"], "properties": {"head": {"type": "string"}}},
+        parts={"head": {**head, "width": "=:width"}},
+        preferred={"height": "=head.bottom"},
+        **more,
+    )
+
+
+def write_blocks(root: Path, version: str, *, twice: bool = False) -> None:
+    """A version of the blocks: a card; a card that declares the option `size`; an arrow,
+    which takes ends; and a frame, which draws its `cards` where `twice`, so that a list a
+    pattern draws and passes on to it is drawn twice."""
+    components = add_library(root, BLOCKS, version, builds_on={"foundations": 1}) / "components"
+    write(components / "card.yaml", block())
+    write(components / "sized.yaml", block(options={"size": ["small", "large"]}))
+    arrow = {"l": {"line": {"stroke": "line"}, "connect": "straight"}}
+    write(components / "arrow.yaml", component_text(about="An arrow.", ends=True, parts=arrow))
+    cards = {"repeat": "cards", "draw": f"{BLOCKS}/card", "width": "=:width", "column": {}}
+    box = {"box": {"fill": "surface"}, "width": "=:width", "height": "=:height"}
+    frame = component_text(
+        about="A frame of cards.",
+        fields={"type": "object", "properties": {"cards": LISTED}},
+        parts={"cards": cards} if twice else {"box": box},
+        preferred={"height": "=@space.4"},
+    )
+    write(components / "frame.yaml", frame)
+
+
+def write_patterns(root: Path, version: str, *, size: bool = False, frame: bool = False) -> None:
+    """A version of the patterns: a row of items, which declares the arrangement field
+    `size` for them where `size`; and cards tied to each other, which also pass their cards
+    on to the blocks' frame where `frame`."""
+    builds_on = {"foundations": 1, BLOCKS: 1}
+    components = add_library(root, PATTERNS, version, builds_on=builds_on) / "components"
+    items = {"repeat": "items", "draw": f"{BLOCKS}/card", "width": "=:width", "row": {}}
+    arranged = {"items": {"arrangement": {"size": {"words": ["one", "two"]}}}}
+    write(
+        components / "row.yaml",
+        component_text(
+            about="A row of items.",
+            fields={"type": "object", "properties": {"items": LISTED}},
+            parts={"items": items},
+            preferred={"height": "=items.height"},
+            **({"lists": arranged} if size else {}),
+        ),
+    )
+    cards = {"repeat": "cards", "draw": f"{BLOCKS}/card", "width": "=@space.4 * 4", "column": {}}
+    parts: dict[str, Any] = {
+        "cards": cards,
+        "links": {"repeat": "links", "draw": f"{BLOCKS}/arrow"},
+    }
+    if frame:
+        parts["frame"] = {
+            "use": f"{BLOCKS}/frame",
+            "fields": {"cards": "cards"},
+            "x": "=@space.4 * 5",
+            "width": "=@space.4 * 4",
+        }
+    write(
+        components / "net.yaml",
+        component_text(
+            about="Cards tied to each other.",
+            fields={"type": "object", "properties": {"cards": LISTED, "links": LISTED}},
+            lists={"links": {"ends": ["from", "to"]}},
+            parts=parts,
+            preferred={"height": "=@space.4 * 6"},
+        ),
+    )
+
+
+#: A row whose first item names the sized card and gives `size`.
+ROW = {
+    "use": f"{PATTERNS}/row",
+    "items": [
+        {"id": "a", "use": f"{BLOCKS}/sized", "head": "A", "size": "large"},
+        {"id": "b", "head": "B"},
+    ],
+}
+
+#: Two cards and a tie between them.
+NET = {
+    "use": f"{PATTERNS}/net",
+    "cards": [{"id": "a", "head": "A"}, {"id": "b", "head": "B"}],
+    "links": [{"id": "ab", "from": {"item": "cards[a]"}, "to": {"item": "cards[b]"}}],
+}
+
+
+def lab_project(
+    tmp_path: Path,
+    body: Mapping[str, Any],
+    lock: Mapping[str, str] | None,
+    blocks: Mapping[str, bool],
+    patterns: Mapping[str, Mapping[str, bool]],
+    **fields: Any,
+) -> Path:
+    """The draft `flow` of `body` under `lock`, in a project that holds the foundations, the
+    test brand, and each version of the blocks (`write_blocks`, whether its frame draws its
+    cards) and of the patterns (`write_patterns`, with its options) given, all listed."""
+    root = drawing_project(tmp_path, lock=lock, picture=False, **fields)
+    for version, twice in blocks.items():
+        write_blocks(root, version, twice=twice)
+    for version, given in patterns.items():
+        write_patterns(root, version, **given)
+    unreleased = {"released": False}
+    listed = {
+        name: {"source": {"kind": "project"}, "versions": {v: unreleased for v in versions}}
+        for name, versions in ((BLOCKS, blocks), (PATTERNS, patterns))
+    }
+    write_list(
+        root,
+        {
+            "foundations": {"source": {"kind": "shipped"}, "versions": {"1.0.0": unreleased}},
+            "test-brand": {"source": {"kind": "project"}, "versions": {"1.0.0": unreleased}},
+            "tests": {"source": {"kind": "project"}, "versions": {"1.0.0": unreleased}},
+            **listed,
+        },
+    )
+    write_content(root, body=dict(body))
+    return root
+
+
+def lab_lock(blocks: str | None, patterns: str) -> dict[str, str]:
+    """The lock of the lab piece: the foundations, the test brand, and the versions given."""
+    lock = {"foundations": "1.0.0", "test-brand": "1.0.0", PATTERNS: patterns}
+    return lock if blocks is None else {**lock, BLOCKS: blocks}
+
+
+def judged(root: Path, blocks: str, patterns: str, fit: Any = None) -> list[Any]:
+    """What the fit of the piece finds in the combination of its lock's foundations and
+    brand with the versions given."""
+    held = pl.Held(root, "visual")
+    fit = fit or pl.fit(piece_of(root), held)
+    versions = lab_lock(blocks, patterns)
+    return fit({name: held.library(name, V(text)) for name, text in versions.items()})
+
+
+def test_versions_under_which_an_item_carries_a_key_both_declare_do_not_fit(
+    tmp_path: Path,
+) -> None:
+    root = lab_project(
+        tmp_path,
+        ROW,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": False},
+        {"1.0.0": {}, "1.1.0": {"size": True}},
+    )
+
+    [misfit] = judged(root, "1.0.0", "1.1.0")
+
+    assert misfit.rule == "clash"
+    assert misfit.said == (
+        f"the item `body.items[a]` carries `size`, which both its component `{BLOCKS}/sized` "
+        f"and its list declare"
+    )
+    assert misfit.implicates == {"foundations", BLOCKS, PATTERNS}
+    assert judged(root, "1.0.0", "1.0.0") == []
+
+
+@pytest.mark.parametrize(
+    "lock",
+    [
+        pytest.param(lab_lock("1.0.0", "1.1.0"), id="the-lock-shows-it"),
+        pytest.param(lab_lock(None, "1.1.0"), id="a-library-named-for-the-first-time"),
+    ],
+)
+def test_a_clash_the_lock_shows_or_cannot_show_holds_nothing_back(
+    tmp_path: Path, lock: dict[str, str]
+) -> None:
+    root = lab_project(
+        tmp_path,
+        ROW,
+        lock,
+        {"1.0.0": False},
+        {"1.1.0": {"size": True}, "1.2.0": {"size": True}},
+    )
+    assert judged(root, "1.0.0", "1.2.0") == []
+
+
+def test_versions_under_which_a_component_draws_an_ends_list_twice_do_not_fit(
+    tmp_path: Path,
+) -> None:
+    root = lab_project(
+        tmp_path,
+        NET,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": False, "1.1.0": True},
+        {"1.0.0": {"frame": True}},
+    )
+
+    found = judged(root, "1.1.0", "1.0.0")
+
+    assert [(misfit.rule, misfit.said) for misfit in found] == [
+        ("end", "the end `from` of the tie `body.links[ab]` would not be found"),
+        ("end", "the end `to` of the tie `body.links[ab]` would not be found"),
+    ]
+    assert found[0].implicates == {"foundations", BLOCKS, PATTERNS}
+    assert judged(root, "1.0.0", "1.0.0") == []
+
+
+def test_an_end_the_lock_does_not_find_holds_nothing_back(tmp_path: Path) -> None:
+    root = lab_project(
+        tmp_path,
+        NET,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": True, "1.1.0": True},
+        {"1.0.0": {"frame": True}},
+    )
+    assert judged(root, "1.1.0", "1.0.0") == []
+
+
+def test_a_loss_only_both_newest_versions_show_is_found_in_that_combination_alone(
+    tmp_path: Path,
+) -> None:
+    root = lab_project(
+        tmp_path,
+        NET,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": False, "1.1.0": True},
+        {"1.0.0": {}, "1.1.0": {"frame": True}},
+    )
+    fit = pl.fit(piece_of(root), pl.Held(root, "visual"))
+    lost = {
+        (blocks, patterns): [misfit.rule for misfit in judged(root, blocks, patterns, fit)]
+        for blocks in ("1.0.0", "1.1.0")
+        for patterns in ("1.0.0", "1.1.0")
+    }
+    assert lost == {
+        ("1.0.0", "1.0.0"): [],
+        ("1.0.0", "1.1.0"): [],
+        ("1.1.0", "1.0.0"): [],
+        ("1.1.0", "1.1.0"): ["end", "end"],
+    }
+
+
+def test_each_file_a_version_holds_is_read_once_across_the_combinations_judged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = lab_project(
+        tmp_path,
+        NET,
+        lab_lock("1.0.0", "1.0.0"),
+        {"1.0.0": False, "1.1.0": True},
+        {"1.0.0": {}, "1.1.0": {"frame": True}},
+    )
+    read: list[Path | None] = []
+    reader = pl.read_component
+
+    def counted(path: Path | None) -> Any:
+        read.append(path)
+        return reader(path)
+
+    monkeypatch.setattr(pl, "read_component", counted)
+    fit = pl.fit(piece_of(root), pl.Held(root, "visual"))
+    for blocks in ("1.0.0", "1.1.0"):
+        for patterns in ("1.0.0", "1.1.0"):
+            judged(root, blocks, patterns, fit)
+
+    assert len(read) == len(set(read)) > 0
+    assert root / f"visual/libraries/{BLOCKS}/1.1.0/components/frame.yaml" in read
+
+
+def test_a_piece_with_no_lock_yet_has_no_fit_to_judge(tmp_path: Path) -> None:
+    root = lab_project(tmp_path, ROW, None, {"1.0.0": False}, {"1.0.0": {}})
+    assert pl.fit(piece_of(root), pl.Held(root, "visual")) is None

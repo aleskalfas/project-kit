@@ -61,6 +61,7 @@ sets the second on the very run these tests are part of.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -240,6 +241,14 @@ def test_a_failing_type_check_fails_the_run_and_the_checks_after_it_still_run(
     assert "-- types: FAILED" in done.stdout
     assert "-- tests: ok" in done.stdout
     assert "-- changelog lint: ok" in done.stdout
+
+
+def test_each_check_s_result_line_says_how_long_it_took(checkout: Checkout) -> None:
+    """A check's time is one line of the log: how near the doc check runs to its bound, say."""
+    done = checkout.check(STUB_TYPES_STATUS="1")
+
+    assert re.search(r"^-- types: FAILED \(\d+ s\)$", done.stdout, re.MULTILINE)
+    assert re.search(r"^-- doc check: ok \(\d+ s\)$", done.stdout, re.MULTILINE)
 
 
 def test_the_numbering_check_runs_after_the_migration_check_and_a_failure_fails_the_run(

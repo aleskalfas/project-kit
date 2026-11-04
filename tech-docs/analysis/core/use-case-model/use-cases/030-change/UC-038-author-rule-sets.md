@@ -23,6 +23,7 @@ pkit:
         - src/project_kit/cli.py
         - src/project_kit/status.py
         - .pkit/schemas/README.md
+        - .pkit/schemas/backbone-files.md
       record:
         - COR-051#2
         - COR-051#3

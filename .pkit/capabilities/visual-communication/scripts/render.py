@@ -13,7 +13,14 @@ and draw its previews (DEC-003 point 8, DEC-005 points 5, 9, 13 and 14).
 
 - **Moves a draft's lock** to the newest versions the project holds that the installed
   capability reads and that fit together, within the lines the lock names, and writes it
-  into `piece.yaml`, every other byte kept. A pinned draft's lock is checked, never moved.
+  into `piece.yaml`, every other byte kept. Versions under which an item clashes, or a tie
+  loses an end, where neither happens under the lock, do not fit: it judges each whole
+  combination it reaches by placing the piece under it (`pipeline.Fit`). A pinned draft's
+  lock is checked, never moved.
+- **States** each version it held back, with the item and the key or the tie and the
+  end, each library it moved below the version the lock named, and a search that stopped
+  at its bound and kept the lock, each a fact at the lock (DEC-010 point 9, DEC-011 point
+  8). The findings record keeps none: its key covers only the versions the lock names.
 - **Computes every scene:** one for each language the piece lists. A font with no file,
   or a character no family measures, refuses the render before anything is laid out.
 - **Writes the piece's findings record,** `findings.yaml`, keyed by a fingerprint of every
@@ -57,7 +64,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import checks, files, fingerprint, libraries, location, records, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
-from _lib.findings import Finding
+from _lib.findings import FACT, Finding
 from _lib.plugins import seam
 from _lib.root import LOCAL, project_root
 from _lib.scene import SceneResult
@@ -102,9 +109,12 @@ def _render(root: Path, name: str, given: str | None) -> int:
     piece = pl.read_piece(root, where.path, name)
     held = libraries.Held(root, where.path)
     try:
-        lock = libraries.move_lock(held, pl.needed(piece), piece.lock, pinned=piece.pinned)
+        moved = libraries.move_lock(
+            held, pl.needed(piece), piece.lock, pinned=piece.pinned, judge=pl.fit(piece, held)
+        )
     except libraries.LockRefused as exc:
         raise pl.Refused(f"{piece.file(pl.PIECE_FILE)}: {exc}") from exc
+    lock = moved.lock
     try:
         project = pl.Project(piece, lock, held)
     except tokens.TokenError as exc:
@@ -150,6 +160,7 @@ def _render(root: Path, name: str, given: str | None) -> int:
         print(said)
     if locked is not None:
         print(f"lock: {', '.join(f'{lib} {lock[lib]}' for lib in sorted(lock))}")
+    _print(_stated(piece, moved))
     print(f"previews: {len(previews)} file(s) in {PREVIEWS}/{name}/")
     for loss in lost:
         if not checks.accepted(loss, piece.accepted_losses):
@@ -158,6 +169,31 @@ def _render(root: Path, name: str, given: str | None) -> int:
     _print(checks.rooted(finding, piece) for finding in found if finding.code != "loss")
     print(f"findings: {len(found)} kept in {piece.file(pl.FINDINGS_FILE)}")
     return 0
+
+
+#: The fact the render states of a version it held back, by the rule it would break.
+HELD = {"clash": "held-clash", "end": "held-end"}
+
+
+def _stated(piece: pl.Piece, moved: libraries.Moved) -> list[Finding]:
+    """What the search for the lock states, each a fact at the piece's lock (DEC-010 point
+    9, DEC-011 point 8): each version it held back, for each rule, with the item and the
+    key, or the tie and the end; each library it moved below the version the lock named;
+    and a search that stopped at its bound of combinations judged and kept the lock.
+    Each is computed from a version the lock it writes does not name, which the findings
+    record's key does not cover, so the record keeps none of them."""
+    file = piece.file(pl.PIECE_FILE)
+    found = []
+    for held in moved.held_back:
+        for rule, code in HELD.items():
+            said = [misfit.said for misfit in held.misfits if misfit.rule == rule]
+            if said:
+                message = f"the render held back {held.library.label}: under it, {'; '.join(said)}"
+                found.append(Finding(code, FACT, message, file=file, where="lock"))
+    found.extend(Finding("lock-below", FACT, said, file=file, where="lock") for said in moved.below)
+    if moved.kept:
+        found.append(Finding("lock-kept", FACT, moved.kept, file=file, where="lock"))
+    return found
 
 
 def _key(sources: Mapping[str, Any]) -> dict[str, Any]:

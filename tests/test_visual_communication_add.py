@@ -274,10 +274,10 @@ def test_a_library_the_capability_does_not_ship_is_refused_naming_the_ones_it_sh
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = project(tmp_path)
-    added = run(root, "starter")
+    added = run(root, "charts")
     assert added.returncode == 1
     assert added.stderr == (
-        "error: the capability ships no library `starter`; it ships `foundations`\n"
+        "error: the capability ships no library `charts`; it ships `foundations`, `starter`\n"
     )
     folder = capability(tmp_path, monkeypatch)
     shutil.copytree(FOUNDATIONS, folder / "libraries" / "neutral")

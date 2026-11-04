@@ -1,0 +1,57 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+    revalidated:
+      at: 2026-11-04T12:07:14Z
+      outcome: unchanged
+      unchanged-because: ADR-057 point 2 gains one home, the fast reader of YAML text; the reach walk, the rule-set reader and every other home this use case rests on stand as they were, so each step holds.
+  - artefact: tech-docs/analysis/core/domain-model/070-artefacts-and-friction.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044308Z-41eae20f.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T132647Z-b5b3a09e.yaml
+      - 20261102T133129Z-a00dd54f.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+    revalidated:
+      at: 2026-11-04T12:07:16Z
+      outcome: unchanged
+      unchanged-because: ADR-057 adds to point 2 the home of the fast reader of YAML text and leaves the query contract, its bound and its failure reading as they were; no concept or relation of this view names that reader.
