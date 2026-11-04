@@ -43,7 +43,7 @@ code, css, seam, files, fingerprint, reading, findings_ = load(
 NAME = "brand-css"
 LOCK = {"foundations": "1.0.0", "test-brand": "1.0.0"}
 NOW = datetime(2026, 11, 2, 10, 30, tzinfo=UTC)
-TYPOGRAPHY = ("type.body", "type.heading")
+TYPOGRAPHY = ("type.body", "type.heading", "type.strong")
 
 
 @pytest.fixture(autouse=True)
@@ -117,7 +117,7 @@ def test_a_run_writes_the_code_and_its_record_beside_it(root: Path) -> None:
 
 #: The tokens the CSS writer writes of the test brand: the shared roles but the typographies,
 #: the colours of the foundations' six colour families among them.
-WRITTEN = 33
+WRITTEN = 34
 
 
 def test_the_record_fingerprints_the_declaration_each_value_written_and_the_writer(
@@ -180,11 +180,12 @@ def test_a_run_reports_the_losses_its_declaration_does_not_accept(root: Path) ->
     assert [(loss.plugin, loss.what, loss.did) for loss in written.losses] == [
         ("css", "type.body", "left-out"),
         ("css", "type.heading", "left-out"),
+        ("css", "type.strong", "left-out"),
     ]
     assert "typography" in written.losses[0].why
     accepted = [{"plugin": "css", "what": "type.body", "reason": "Pages set their own type."}]
     declare(root, NAME, **{"accept-losses": accepted})
-    assert [loss.what for loss in run(root).losses] == ["type.heading"]
+    assert [loss.what for loss in run(root).losses] == ["type.heading", "type.strong"]
 
 
 def test_the_lock_is_never_moved(root: Path) -> None:
@@ -291,6 +292,7 @@ def test_code_written_and_fresh_has_no_finding_but_its_losses(root: Path) -> Non
     assert [(f.code, f.level, f.where) for f in every] == [
         ("code-loss", "attention", "type.body"),
         ("code-loss", "attention", "type.heading"),
+        ("code-loss", "attention", "type.strong"),
     ]
     assert every[0].file == "visual/code/brand-css.yaml"
     assert every[0].who
