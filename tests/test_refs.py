@@ -1317,29 +1317,55 @@ def test_rot_reads_only_accepted_records_and_proposed_grounds(kit_target: Path) 
     assert _resting(kit_target) == []
 
 
-def test_rot_lists_an_edit_citing_a_proposal_until_both_are_accepted_together(
-    kit_target: Path,
+_SCOPE = "### 1. Scope\n\nAll of it.\n"
+
+#: Each way a new record, PRJ-002, changes the accepted PRJ-001: PRJ-001's status and body
+#: once the edit is made, citing PRJ-002.
+_EDITS_TO_THE_OLD_RECORD = {
+    "refines": ("accepted", "### 1. Scope\n\nAll of it (refinement per PRJ-002).\n"),
+    "overturns in part": ("accepted", f"*Partially superseded by PRJ-002.*\n\n{_SCOPE}"),
+    "replaces whole": ("superseded", f"*Superseded by PRJ-002.*\n\n{_SCOPE}"),
+}
+
+
+@pytest.mark.parametrize("how", list(_EDITS_TO_THE_OLD_RECORD))
+def test_rot_finds_nothing_where_a_new_record_is_accepted_before_its_edits(
+    kit_target: Path, how: str
 ) -> None:
-    """A change that proposes a record may edit the accepted record it refines to cite it,
-    and the edit is accepted with the record, in the same change (the decisions README,
-    "The acceptance gate"). The report lists the edited record while the proposal is
-    discussed, and nothing once the record is accepted there."""
+    """A new record is accepted in its change, and its edits to the accepted record it
+    refines, overturns in part or replaces whole follow there, citing it (the decisions
+    README, "The acceptance gate"). The report finds nothing at any of those steps."""
     project = kit_target / ".pkit" / "decisions" / "project"
-    _record(project / "PRJ-001-base.md", "PRJ-001", "accepted", "### 1. Scope\n\nAll of it.\n")
+    old, new = project / "PRJ-001-base.md", project / "PRJ-002-new.md"
+    _record(old, "PRJ-001", "accepted", _SCOPE)
+    _record(new, "PRJ-002", "proposed", "### 1. Narrower\n\nChanges PRJ-001.\n")
     assert _resting(kit_target) == []
 
-    _record(project / "PRJ-002-narrow.md", "PRJ-002", "proposed", "### 1. Narrower\n\nPart.\n")
-    refined = "### 1. Scope\n\nAll of it (refinement per PRJ-002).\n"
-    _record(project / "PRJ-001-base.md", "PRJ-001", "accepted", refined)
-    issues = _resting(kit_target)
-    assert [i.location for i in issues] == [".pkit/decisions/project/PRJ-001-base.md"]
-    assert "'PRJ-002'" in issues[0].diagnosis
+    _record(new, "PRJ-002", "accepted", "### 1. Narrower\n\nChanges PRJ-001.\n")
+    assert _resting(kit_target) == []
 
-    _record(project / "PRJ-002-narrow.md", "PRJ-002", "accepted", "### 1. Narrower\n\nPart.\n")
+    status, edited = _EDITS_TO_THE_OLD_RECORD[how]
+    _record(old, "PRJ-001", status, edited)
     assert _resting(kit_target) == []
     result = CliRunner().invoke(main, ["refs", "rot"])
     assert result.exit_code == 0, result.output
     assert "no rotten references found." in result.output
+
+
+@pytest.mark.parametrize("how", ["refines", "overturns in part"])
+def test_rot_lists_an_edit_made_before_its_new_record_is_accepted(
+    kit_target: Path, how: str
+) -> None:
+    """An edit that cites a new record still proposed rests on a proposal, against the
+    acceptance gate: the report lists the edited record, which stays accepted."""
+    project = kit_target / ".pkit" / "decisions" / "project"
+    _record(project / "PRJ-002-new.md", "PRJ-002", "proposed", "### 1. Narrower\n\nPart.\n")
+    status, edited = _EDITS_TO_THE_OLD_RECORD[how]
+    _record(project / "PRJ-001-base.md", "PRJ-001", status, edited)
+
+    issues = _resting(kit_target)
+    assert [i.location for i in issues] == [".pkit/decisions/project/PRJ-001-base.md"]
+    assert "'PRJ-002'" in issues[0].diagnosis
 
 
 def test_rot_attributes_a_citation_to_the_capability_it_names(kit_target: Path) -> None:

@@ -606,32 +606,65 @@ def test_a_record_not_accepted_at_the_branch_point_is_not_listed(repo: GitRepo) 
     assert "accepted record(s) the change alters" not in _run().output
 
 
-def test_a_record_proposed_with_its_edits_to_an_accepted_record_passes_and_once_accepted(
-    repo: GitRepo,
+def _top_line(record: str, line: str) -> str:
+    """`record` with `line` at the top of its body."""
+    return record.replace("---\n\n## Context", f"---\n\n{line}\n\n## Context")
+
+
+#: Each way a new record changes the accepted PRJ-001: its front matter's extra lines, the
+#: edit to PRJ-001 once it is accepted, and what the check lists for that edit.
+_NEW_RECORD_EDITS = {
+    "refines": (
+        "",
+        _record(_point("1") + _point("2", text="Narrowed (refinement per PRJ-002), text of")),
+        _Change(RECORD, "PRJ-001", (_Point("2", "altered", "Point 2"),)),
+    ),
+    "overturns in part": (
+        "",
+        _top_line(_record(_points("1", "2")), "*Partially superseded by PRJ-002.*"),
+        _Change(RECORD, "PRJ-001", shared=True),
+    ),
+    "replaces whole": (
+        "supersedes: PRJ-001\n",
+        _top_line(
+            _record(_points("1", "2")).replace("status: accepted", "status: superseded"),
+            "*Superseded by PRJ-002.*",
+        ),
+        _Change(RECORD, "PRJ-001", fields=("status",), shared=True),
+    ),
+}
+
+
+@pytest.mark.parametrize("how", list(_NEW_RECORD_EDITS))
+def test_a_new_record_accepted_in_its_change_then_its_edits_pass_and_are_listed(
+    repo: GitRepo, how: str
 ) -> None:
-    """A change that proposes a record may edit the accepted record it refines, and the
-    edits are accepted with it, in the same change (the decisions README, "The acceptance
-    gate"). The check fails the change neither while the record is proposed nor once it
-    is accepted there, and lists the edits for whoever accepts them both times."""
+    """A new record is accepted in its change, and its edits to the accepted record it
+    refines, overturns in part or replaces whole follow there (the decisions README,
+    "The acceptance gate"). The check fails none of the change's commits, and lists the
+    edits to the accepted record for whoever authorises the merge, once they are made."""
+    extra, edited, listed = _NEW_RECORD_EDITS[how]
     _branch(repo, {RECORD: _record(_points("1", "2"))})
     added = f"{PROJECT}/PRJ-002-b.md"
-    refined = _point("1") + _point("2", text="Narrowed by PRJ-002, text of") + _point("3")
-    proposed = _record(_points("1"), record_id="PRJ-002").replace(
-        "status: accepted", "status: proposed"
-    )
-    edits = (_Point("2", "altered", "Point 2"), _Point("3", "added", "Point 3"))
+    accepted = _record(_points("1"), record_id="PRJ-002", extra=extra)
 
-    def passes_listing_the_edits() -> None:
+    def passes(compared: int, changed: list[decisions_check_diff.ChangedRecord]) -> Result:
         result = _run()
         assert result.exit_code == 0, result.output
-        assert "Compared 2 decision record(s)" in result.output
+        assert f"Compared {compared} decision record(s)" in result.output
         assert "0 error(s) and 0 warning(s)" in result.output
-        assert _changed(repo) == [_Change(RECORD, "PRJ-001", edits)]
+        assert _changed(repo) == changed
+        return result
 
-    repo.commit("propose PRJ-002", {added: proposed, RECORD: _record(refined)})
-    passes_listing_the_edits()
-    repo.commit("accept PRJ-002", {added: _record(_points("1"), record_id="PRJ-002")})
-    passes_listing_the_edits()
+    proposed = accepted.replace("status: accepted", "status: proposed")
+    repo.commit("propose PRJ-002", {added: proposed})
+    passes(1, [])
+    repo.commit("accept PRJ-002", {added: accepted})
+    passes(1, [])
+    repo.commit("edit PRJ-001", {RECORD: edited})
+    result = passes(2, [listed])
+    assert "1 accepted record(s) the change alters or removes" in result.output
+    assert f"PRJ-001 (`{RECORD}`): {listed.said()}" in result.output
 
 
 def test_a_record_in_list_form_is_listed_whole(repo: GitRepo) -> None:
