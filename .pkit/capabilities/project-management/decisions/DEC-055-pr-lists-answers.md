@@ -6,6 +6,8 @@ date: 2026-10-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [DEC-065](DEC-065-answers-read-from-check.md).** A pull request's description carries no list of the answers its change wrote, and each reader derives the answers from the change check at the pull request's head. Overturned: points 1, 2 and 4 of this record, and each other passage of it that writes, carries, reads, prints or compares that list. Every other choice stands.
+
 ## Context
 
 An agent building a change may give the answers its own change owes — the revalidations, deferrals and revisit entries the change check asks of it — without asking anyone first. A reviewer other than that agent checks them, and the pull request says what changed in each `updated` document. The person who authorises the merge is told what changed and what is left out of date, as information, not a gate: a change with answers merges under the same authorisation as any other (COR-050 point 3). The change check gives the list of answers in its machine-readable output (COR-050 point 12).

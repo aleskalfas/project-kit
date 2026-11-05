@@ -138,7 +138,8 @@ def _changed_files(fork: str) -> list[str] | None:
 
 def _doc_impact_section(body: str) -> str:
     """Return the text of the PR body's `## Doc impact` section (lowercased), read
-    without the friction answers' section, which overrides no mapping (DEC-055)."""
+    without a list of the answers an earlier run left, which overrides no mapping
+    (DEC-065 point 1)."""
     if not body:
         return ""
     lines = friction_answers.strip(body).splitlines()

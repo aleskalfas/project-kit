@@ -1,14 +1,16 @@
 """The section of the answers a change wrote is never input (project-management
-DEC-055 point 4).
+DEC-055 point 4, DEC-065 point 1).
 
-A pull request's `## Documentation this change affects` section carries the
-artefacts' words, as the change check lists them. No reader of the description
-treats it as input: a reason saying "fixes #77" closes nothing and meets no
-closing requirement, a `## Doc impact` in a reason is no Doc impact section, and a
-path in it overrides no mapping (`test_pm_check_doc_mapping`). Each reader here is
-the capability's own: `pr_validation` (behind done-work, merge-pr, validate-pr,
-open-pr and edit-pr), show-pr, show-tree and `lifecycle_inference`. done-work's
-close of the issues a PR closes is tested through land-work (`test_pm_land_work`).
+No command writes a `## Documentation this change affects` section into a pull
+request's description any longer, but one an earlier run wrote stays there until
+the landing command removes it, and it carries the artefacts' words as the change
+check listed them. No reader of the description treats it as input: a reason
+saying "fixes #77" closes nothing and meets no closing requirement, a `## Doc
+impact` in a reason is no Doc impact section, and a path in it overrides no
+mapping (`test_pm_check_doc_mapping`). Each reader here is the capability's own:
+`pr_validation` (behind done-work, merge-pr, validate-pr, open-pr and edit-pr),
+show-pr, show-tree and `lifecycle_inference`. done-work's close of the issues a PR
+closes is tested through land-work (`test_pm_land_work`).
 """
 
 from __future__ import annotations
@@ -43,23 +45,20 @@ def _script(name: str) -> ModuleType:
 
 
 def _body(scripts: None) -> str:
-    """A PR body closing #42, with a Doc impact section and a list whose reason
-    reads as a closing reference and names a Doc impact heading."""
+    """A PR body closing #42, with a Doc impact section and a list an earlier run
+    wrote, whose reason reads as a closing reference and names a Doc impact heading."""
     from _lib import friction_answers
 
-    entry = {
-        "artefact": "guide",
-        "location": "docs/guide.md",
-        "answer": "unchanged",
-        "anchor": None,
-        "reason": "fixes #77 — the ## Doc impact of the guide holds",
-        "kept": [],
-        "asked": True,
-        "status": "stands",
-        "new": False,
-    }
-    section = friction_answers.render({"base": {"commit": "b" * 40}, "answers": [entry]}, "a" * 40)
-    assert section is not None
+    section = "\n".join(
+        [
+            friction_answers.HEADING,
+            "",
+            f"{friction_answers.MARKER_START} head={'a' * 40} base={'b' * 40} -->",
+            '1. `docs/guide.md` — **still accurate**: "``fixes #77 — the ## Doc impact of '
+            'the guide holds``"',
+            friction_answers.MARKER_END,
+        ]
+    )
     return f"Closes #42\n\n## Summary\n\nWork.\n\n## Doc impact\n\nThe README.\n\n{section}\n"
 
 

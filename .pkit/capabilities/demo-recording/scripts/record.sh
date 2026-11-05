@@ -93,8 +93,12 @@ esac
 # --- YAML parsing helpers ----------------------------------------------------
 
 yaml_get_scalar() {
+    # Print a top-level key's value, or nothing when the key is absent.
+    # Succeed either way, so a caller can assign the result under
+    # ``set -euo pipefail``: grep exits 1 on no match, which pipefail
+    # would pass on as the pipeline's status.
     local key="$1"
-    grep -E "^${key}:[[:space:]]+" "$CONFIG" 2>/dev/null | head -1 | sed -E "s/^${key}:[[:space:]]+//; s/[[:space:]]*\$//"
+    { grep -E "^${key}:[[:space:]]+" "$CONFIG" 2>/dev/null || true; } | head -1 | sed -E "s/^${key}:[[:space:]]+//; s/[[:space:]]*\$//"
 }
 
 yaml_get_window_bounds() {
@@ -442,12 +446,9 @@ do_start() {
     fi
 
     # Open the two windows.  Forward optional font knobs from record.yaml.
-    # ``|| true`` so a missing key (commented out / absent in the yaml)
-    # doesn't trip ``set -euo pipefail``: yaml_get_scalar's underlying
-    # grep returns 1 on no-match, which would otherwise kill the script.
     local font_size font_name
-    font_size=$(yaml_get_scalar font_size) || font_size=""
-    font_name=$(yaml_get_scalar font_name) || font_name=""
+    font_size=$(yaml_get_scalar font_size)
+    font_name=$(yaml_get_scalar font_name)
     DCR_CWD="$cwd" \
     DCR_FONT_SIZE="${font_size:-18}" \
     DCR_FONT_NAME="${font_name:-Menlo-Regular}" \

@@ -270,7 +270,7 @@ PUSHED = "abcdef0123456789abcdef0123456789abcdef01"
 
 
 def _derived(op: Any, *answers: dict[str, Any], **document: Any) -> Any:
-    """The derivation `friction_answers.derive` returns for a change that wrote `answers`."""
+    """The derivation `friction_answers.checked` returns for a change that wrote `answers`."""
     found = {
         "schema_version": 1,
         "base": {"commit": "0" * 40, "outdated": False},
@@ -286,16 +286,16 @@ def _stub_main(
     op, monkeypatch, argv: list[str], issues: dict[int, dict], *, derived: Any = None
 ) -> dict:
     """Pass every gate, serve `issues` by number, capture the create call. The
-    change check's list is `derived` (none written, by default), at `PUSHED`;
-    `captured["derive"]` holds each (head, base) it was derived for."""
+    change check's answers are `derived` (none written, by default), at `PUSHED`;
+    `captured["checked"]` holds each (head, base) they were derived for."""
     calls: list[tuple[str, str | None]] = []
 
-    def derive(head: str, base: str | None) -> Any:
+    def checked(head: str, base: str | None) -> Any:
         calls.append((head, base))
         return derived if derived is not None else _derived(op)
 
     monkeypatch.setattr(op, "_pushed_head", lambda _branch: (PUSHED, ""))
-    monkeypatch.setattr(op.friction_answers, "derive", derive)
+    monkeypatch.setattr(op.friction_answers, "checked", checked)
     monkeypatch.setattr(sys, "argv", argv)
     monkeypatch.setattr(op, "resolve_capability_root", lambda _explicit: CAP_ROOT)
     monkeypatch.setattr(op.bootstrap_gate, "enforce", lambda *a, **k: True)
@@ -309,7 +309,7 @@ def _stub_main(
     monkeypatch.setattr(op, "check_membership", lambda *a: SimpleNamespace(allowed=True))
     monkeypatch.setattr(op, "_gh_get_issue", lambda n, _config: issues.get(n))
     monkeypatch.setattr(op, "_current_branch", lambda: "feat/42-thing")
-    captured: dict = {"derive": calls}
+    captured: dict = {"checked": calls}
 
     def fake_pr_create(*, title, body, base, draft, config):
         captured.update(title=title, body=body, base=base)
@@ -397,10 +397,10 @@ def test_main_refuses_an_unknown_second_closing_issue(op, monkeypatch) -> None:
         {42: _open_issue()},
     )
     assert op.main() == 2
-    assert "title" not in captured and captured["derive"] == []
+    assert "title" not in captured and captured["checked"] == []
 
 
-# --- main(): the friction answers' section (DEC-055) ------------------------------
+# --- main(): no list of the answers (DEC-065 points 1 and 3) ----------------------
 
 
 def _answer(location: str, reason: str | None, **fields: Any) -> dict[str, Any]:
@@ -421,10 +421,10 @@ def _answer(location: str, reason: str | None, **fields: Any) -> dict[str, Any]:
 
 TWO = (_answer("docs/guide.md", "The flags did not move."), _answer("docs/api.md", "Holds."))
 FOOTER_START = "<!-- pkit-provenance:start -->"
-#: The description's section of the answers, and the heading an earlier run wrote it under.
+#: The heading a list of the answers was written under, and the one before it.
 HEADING = "## Documentation this change affects"
 FORMER_HEADING = "## Friction answers"
-#: How the plan's line for that section begins.
+#: How the plan's line for the answers begins.
 PLAN = "  documents this change affects:"
 
 
@@ -435,17 +435,16 @@ def _open(op, monkeypatch, *extra: str, derived: Any = None, body_file: Path | N
     return _stub_main(op, monkeypatch, argv, {42: _open_issue()}, derived=derived)
 
 
-def test_the_list_is_written_last_before_the_footer(op, monkeypatch, capsys) -> None:
+def test_no_list_is_written_and_the_plan_counts_the_documents(op, monkeypatch, capsys) -> None:
+    """The answers are derived at the pushed head against the PR's base, named even
+    for the default branch, and the plan counts the documents they are on; the
+    description gains no list of them."""
     captured = _open(op, monkeypatch, derived=_derived(op, *TWO))
     assert op.main() == 3  # the faked create returns no URL
     body = captured["body"]
-    section = op.friction_answers.render(_derived(op, *TWO).document, PUSHED)
-    assert f"\n\n{section}\n\n{FOOTER_START}" in body
-    assert body.count(HEADING) == 1
-    # The PR's base, named even for the default branch; the pushed head.
-    assert captured["derive"] == [(PUSHED, "main")]
-    out = capsys.readouterr().out
-    assert f"{PLAN} 2, listed under `{HEADING}` (at abcdef0)" in (out)
+    assert HEADING not in body and "The flags did not move." not in body
+    assert captured["checked"] == [(PUSHED, "main")]
+    assert f"{PLAN} 2 (at abcdef0)" in capsys.readouterr().out.splitlines()
 
 
 def test_a_pr_against_another_base_is_derived_against_that_base(op, monkeypatch) -> None:
@@ -453,33 +452,37 @@ def test_a_pr_against_another_base_is_derived_against_that_base(op, monkeypatch)
     branch named as a base (COR-054 point 2), as the default branch is."""
     captured = _open(op, monkeypatch, "--base", "integration/7-x")
     assert op.main() == 3
-    assert captured["derive"] == [(PUSHED, "integration/7-x")]
+    assert captured["checked"] == [(PUSHED, "integration/7-x")]
 
 
-def test_no_answers_no_section(op, monkeypatch, capsys) -> None:
+def test_no_answers_the_plan_says_none(op, monkeypatch, capsys) -> None:
     captured = _open(op, monkeypatch)
     assert op.main() == 3
     assert HEADING not in captured["body"]
-    assert f"{PLAN} none" in capsys.readouterr().out.splitlines()
+    assert f"{PLAN} none (at abcdef0)" in capsys.readouterr().out.splitlines()
+
+
+def _listed(heading: str) -> str:
+    """A list as an earlier run of these commands wrote it, under `heading`."""
+    return "\n".join(
+        [
+            heading,
+            "",
+            f"<!-- pkit-friction-answers:start head={'f' * 40} base={'0' * 40} -->",
+            '1. `docs/x.md` — **still accurate**: "``An agent\'s own list.``"',
+            "<!-- pkit-friction-answers:end -->",
+        ]
+    )
 
 
 @pytest.mark.parametrize(
-    ("marked", "heading"),
-    [(True, HEADING), (True, FORMER_HEADING), (False, HEADING), (False, FORMER_HEADING)],
-    ids=["a command's", "an earlier run's", "typed by hand", "typed by hand, former heading"],
+    "heading", [HEADING, FORMER_HEADING], ids=["a command's", "an earlier run's"]
 )
-def test_a_section_in_a_supplied_body_is_dropped(
-    op, monkeypatch, tmp_path, capsys, marked, heading
-) -> None:
-    supplied = (
-        op.friction_answers.render(
-            _derived(op, _answer("docs/x.md", "An agent's own list.")).document, "f" * 40
-        ).replace(HEADING, heading, 1)
-        if marked
-        else f"{heading}\n\n```\n1. docs/x.md — unchanged: An agent's own list.\n```"
-    )
+def test_a_region_in_a_supplied_body_is_dropped(op, monkeypatch, tmp_path, capsys, heading) -> None:
     body_file = tmp_path / "body.md"
-    body_file.write_text(f"Closes #42\n\n## Summary\nx\n\n{supplied}\n\n## Doc impact\n- none\n")
+    body_file.write_text(
+        f"Closes #42\n\n## Summary\nx\n\n{_listed(heading)}\n\n## Doc impact\n- none\n"
+    )
     captured = _open(op, monkeypatch, body_file=body_file)
     assert op.main() == 3
     assert "An agent's own list." not in captured["body"]
@@ -488,61 +491,59 @@ def test_a_section_in_a_supplied_body_is_dropped(
     assert f"warn: the body's `{HEADING}` section is dropped" in capsys.readouterr().err
 
 
-def test_the_friction_settings_a_change_alters_are_listed(op, monkeypatch, capsys) -> None:
-    derived = _derived(op)
-    derived = op.friction_answers.Derivation(
-        PUSHED,
-        document=derived.document,
-        settings=(op.friction_answers.Setting(op.friction_answers.PLACES, ("docs",), ()),),
-    )
-    captured = _open(op, monkeypatch, derived=derived)
+@pytest.mark.parametrize("heading", [HEADING, FORMER_HEADING], ids=["heading", "former heading"])
+def test_a_section_typed_under_the_heading_stays(
+    op, monkeypatch, tmp_path, capsys, heading
+) -> None:
+    """Only a region a command wrote is dropped (DEC-065 point 1)."""
+    body_file = tmp_path / "body.md"
+    body_file.write_text(f"Closes #42\n\n{heading}\n\nIn my words.\n\n## Doc impact\n- none\n")
+    captured = _open(op, monkeypatch, body_file=body_file)
     assert op.main() == 3
-    assert "- Checked locations: `docs` → none" in captured["body"]
-    assert (
-        f"{PLAN} none, but a change to which documents are checked, listed under `{HEADING}` "
-        "(at abcdef0)"
-    ) in capsys.readouterr().out
+    assert "In my words." in captured["body"]
+    assert "is dropped" not in capsys.readouterr().err
+
+
+def test_a_start_marker_with_no_end_warns_and_stays(op, monkeypatch, tmp_path, capsys) -> None:
+    marker = op.friction_answers.MARKER_START
+    body_file = tmp_path / "body.md"
+    body_file.write_text(f"Closes #42\n\n{marker} head=x base=y -->\n\n## Doc impact\n- none\n")
+    captured = _open(op, monkeypatch, body_file=body_file)
+    assert op.main() == 3
+    assert marker in captured["body"] and "## Doc impact\n- none" in captured["body"]
+    assert f"warn: {op.friction_answers.ORPHAN_WARNING}" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize(
-    ("how", "warning"),
+    ("how", "why"),
     [
-        ("unreadable", "the base origin/main could not be fetched"),
+        ("unreadable", "the base origin/main could not be fetched: no route"),
         ("not pushed", "origin/feat/42-thing names no commit — push the branch first"),
-        ("closing reference", "the words on docs/api.md read as a closing reference (fixes #7)"),
-        ("comment delimiter", "the words on docs/api.md hold an HTML comment's delimiter (-->)"),
-        ("too long", "past the host's 65536 — split the change or narrow the anchor"),
     ],
 )
-def test_open_pr_never_refuses_over_the_list(op, monkeypatch, capsys, how, warning) -> None:
-    """The section is left out with one warning line; the pull request opens, and
-    land-work writes the list or says why it cannot."""
+def test_open_pr_never_refuses_over_the_answers(op, monkeypatch, capsys, how, why) -> None:
+    """Answers that cannot be read draw one warning line; the pull request opens, and
+    review-work reads them at its head (DEC-065 point 3)."""
     derived = {
-        "unreadable": op.friction_answers.Derivation(
-            PUSHED, problem="the base origin/main could not be fetched: no route"
-        ),
+        "unreadable": op.friction_answers.Derivation(PUSHED, problem=why),
         "not pushed": _derived(op, *TWO),
-        "closing reference": _derived(op, TWO[0], _answer("docs/api.md", "This fixes #7.")),
-        "comment delimiter": _derived(op, TWO[0], _answer("docs/api.md", "ends -->")),
-        "too long": _derived(op, _answer("docs/guide.md", "x" * 70000)),
     }[how]
     captured = _open(op, monkeypatch, derived=derived)
     if how == "not pushed":
-        monkeypatch.setattr(op, "_pushed_head", lambda _branch: (None, warning))
+        monkeypatch.setattr(op, "_pushed_head", lambda _branch: (None, why))
     assert op.main() == 3  # opened: the faked create was asked, and returns no URL
     assert HEADING not in captured["body"]
     out = capsys.readouterr()
-    (line,) = [
-        ln
-        for ln in out.err.splitlines()
-        if ln.startswith("warn: documents this change affects not listed — ")
-    ]
-    assert warning in line and "`land-work` writes the list or says why it cannot" in line
-    assert f"{PLAN} not listed (the warning above says why)" in out.out
+    (line,) = [ln for ln in out.err.splitlines() if ln.startswith("warn: the answers the change")]
+    assert line == (
+        f"warn: the answers the change wrote were not read — {why}; review-work reads them at "
+        "the pull request's head"
+    )
+    assert f"{PLAN} not read (the warning above says why)" in out.out
 
 
 #: The supplied body's own section where the author says what changed in each
-#: document the change revalidated as `updated` (DEC-055 point 1).
+#: document the change revalidated as `updated` (DEC-065 point 1).
 SAID = (
     "Closes #42\n\n## Summary\nx\n\n## What changed in each updated document\n\n"
     "- `docs/guide.md`: The guide now names the renamed flag.\n\n## Doc impact\n- none\n"
@@ -552,42 +553,41 @@ UPDATED = (
     _answer("docs/api.md", None, answer="updated"),
     _answer("docs/cli.md", "Holds."),
 )
+#: How open-pr's warning of updated documents with no sentence begins.
+UNSAID = (
+    "warn: {n} updated document(s) with no sentence on what changed under `## What changed "
+    "in each updated document`: "
+)
 
 
-def test_the_list_gives_each_updated_document_its_author_s_sentence(
+def test_an_updated_document_given_no_sentence_is_warned_of(
     op, monkeypatch, tmp_path, capsys
 ) -> None:
-    """The sentences are read from the body's own section and given beside each
-    updated document; one with none is listed as having none, with a warning."""
+    """The sentences are read from the body's own section, which stays as the author
+    wrote it; each updated document with none is named in a warning that says
+    review-work refuses it."""
     body_file = tmp_path / "body.md"
     body_file.write_text(SAID, encoding="utf-8")
     captured = _open(op, monkeypatch, derived=_derived(op, *UPDATED), body_file=body_file)
     assert op.main() == 3
     body = captured["body"]
-    sentences = {"docs/guide.md": "The guide now names the renamed flag."}
-    section = op.friction_answers.render(_derived(op, *UPDATED).document, PUSHED, (), sentences)
-    assert section is not None and f"\n\n{section}\n\n{FOOTER_START}" in body
     assert body.startswith(SAID.rstrip("\n"))  # the author's section stays where it was
-    assert (
-        "   - (what changed, in the words of the pull request's author: \"``The guide now names "
-        'the renamed flag.``")'
-    ) in body
-    assert "   - (what changed: the pull request's author has not said)" in body
+    assert HEADING not in body
     err = capsys.readouterr().err
     assert (
-        "warn: 1 updated document(s) with no sentence on what changed under `## What changed in "
-        "each updated document`: docs/api.md — the list says so"
-    ) in err
+        f"{UNSAID.format(n=1)}docs/api.md — review-work refuses them; add a list item there for "
+        "each, naming the document in a code span, then the sentence"
+    ) in err.splitlines()
 
 
-@pytest.mark.parametrize("answers", [UPDATED, ()], ids=["a list", "no answers"])
-def test_a_sentence_on_a_document_the_list_does_not_mark_updated_is_warned_of(
+@pytest.mark.parametrize("answers", [UPDATED, ()], ids=["answers", "no answers"])
+def test_a_sentence_on_a_document_the_check_does_not_mark_updated_is_warned_of(
     op, monkeypatch, tmp_path, capsys, answers
 ) -> None:
-    """The list never shows a sentence on a document it does not mark updated,
-    one left unchanged here, or any where the change wrote no answers: a warning
-    names each, and the edit that removes it. The PR opens all the same
-    (DEC-055 point 3)."""
+    """No reviewer checks a sentence on a document the change check does not mark
+    updated, one left unchanged here, or any where the change wrote no answers: a
+    warning names each, and the edit that removes it. The PR opens all the same
+    (DEC-065 point 3)."""
     body_file = tmp_path / "body.md"
     body_file.write_text(
         SAID.replace(
@@ -600,9 +600,9 @@ def test_a_sentence_on_a_document_the_list_does_not_mark_updated_is_warned_of(
     assert captured["body"]
     err = capsys.readouterr().err
     unlisted = ["docs/cli.md"] if answers else ["docs/guide.md", "docs/cli.md"]
-    assert [line for line in err.splitlines() if "does not show the sentence" in line] == [
+    assert [line for line in err.splitlines() if "no reviewer checks the sentence" in line] == [
         f"warn: {location} has a sentence under `## What changed in each updated document`, "
-        "and the list at abcdef0 does not mark it updated, so the list does not show the "
+        "and the change check at abcdef0 does not mark it updated, so no reviewer checks the "
         "sentence — remove it from the description with `edit-pr`"
         for location in unlisted
     ]
@@ -613,18 +613,15 @@ def test_a_ready_pr_opens_with_an_updated_document_given_no_sentence(
 ) -> None:
     """open-pr only warns of a missing sentence, a PR opened ready too: its
     validate-at-ready refuses nothing over it. The move to review refuses it
-    (DEC-055 point 3, `test_pm_review_work`)."""
+    (DEC-065 point 3, `test_pm_review_work`)."""
     body_file = tmp_path / "body.md"
     body_file.write_text(SAID, encoding="utf-8")
     argv = ["open-pr", "42", "--summary", "s", "--yes", "--body-file", str(body_file)]
-    captured = _stub_main(
-        op, monkeypatch, argv, {42: _open_issue()}, derived=_derived(op, *UPDATED)
-    )
+    _stub_main(op, monkeypatch, argv, {42: _open_issue()}, derived=_derived(op, *UPDATED))
     assert op.main() == 3  # opened: the faked create was asked, and returns no URL
-    assert "   - (what changed: the pull request's author has not said)" in captured["body"]
     err = capsys.readouterr().err
     assert "[refused]" not in err
-    assert "warn: 1 updated document(s) with no sentence on what changed" in err
+    assert UNSAID.format(n=1) in err
 
 
 @pytest.mark.parametrize(
@@ -640,7 +637,7 @@ def test_an_item_it_cannot_read_draws_a_warning_naming_its_line_and_the_form(
     op, monkeypatch, tmp_path, capsys, item, unread
 ) -> None:
     """An item the reading leaves out is named by its line in the description, with
-    the form it needs; the list says its document has no sentence. The read form
+    the form it needs, and its document counts as having no sentence. The read form
     draws no such warning."""
     body_file = tmp_path / "body.md"
     body_file.write_text(
@@ -649,7 +646,8 @@ def test_an_item_it_cannot_read_draws_a_warning_naming_its_line_and_the_form(
     captured = _open(op, monkeypatch, derived=_derived(op, *UPDATED), body_file=body_file)
     assert op.main() == 3
     body = captured["body"]
-    err = [ln for ln in capsys.readouterr().err.splitlines() if "is not read as a sentence" in ln]
+    lines = capsys.readouterr().err.splitlines()
+    err = [ln for ln in lines if "is not read as a sentence" in ln]
     if not unread:
         assert err == []
         return
@@ -657,9 +655,9 @@ def test_an_item_it_cannot_read_draws_a_warning_naming_its_line_and_the_form(
     assert err == [
         "warn: line 8 of the description, under `## What changed in each updated document`, is "
         f'not read as a sentence: "{item}" — write it as "- `path`: sentence", starting in the '
-        "line's first column, the document in a code span as the list names it"
+        "line's first column, the document in a code span as the change check names it"
     ]
-    assert body.count("   - (what changed: the pull request's author has not said)") == 2
+    assert any(ln.startswith(f"{UNSAID.format(n=2)}docs/guide.md, docs/api.md") for ln in lines)
 
 
 def test_the_line_named_is_the_line_in_the_description_opened(
@@ -689,29 +687,6 @@ def test_the_line_named_is_the_line_in_the_description_opened(
     assert warning.startswith(f"warn: line {opened.index(item) + 1} of the description, ")
 
 
-@pytest.mark.parametrize(
-    ("sentence", "warning"),
-    [
-        ("This fixes #7.", "reads as a closing reference (fixes #7)"),
-        ("Ends -->", "holds an HTML comment's delimiter (-->)"),
-    ],
-)
-def test_a_sentence_the_list_must_not_hold_leaves_the_list_out(
-    op, monkeypatch, tmp_path, capsys, sentence, warning
-) -> None:
-    body_file = tmp_path / "body.md"
-    body_file.write_text(SAID.replace("The guide now names the renamed flag.", sentence))
-    captured = _open(op, monkeypatch, derived=_derived(op, *UPDATED), body_file=body_file)
-    assert op.main() == 3  # opened all the same
-    assert HEADING not in captured["body"]
-    (line,) = [
-        ln
-        for ln in capsys.readouterr().err.splitlines()
-        if ln.startswith("warn: documents this change affects not listed — ")
-    ]
-    assert f"the sentence on what changed in docs/guide.md {warning}" in line
-
-
 def test_the_pushed_head_is_the_remote_tracking_reference_not_local_head(
     op, monkeypatch, tmp_path
 ) -> None:
@@ -739,7 +714,7 @@ def test_the_pushed_head_is_the_remote_tracking_reference_not_local_head(
     )
 
 
-# --- main(): `--doc-impact-from-friction` (DEC-053, DEC-055) ---------------------
+# --- main(): `--doc-impact-from-friction` (DEC-053, DEC-065) ---------------------
 
 
 def _doc_impact(body: str) -> list[str]:
@@ -749,10 +724,14 @@ def _doc_impact(body: str) -> list[str]:
     return [ln for ln in section.splitlines() if ln.strip()]
 
 
-def test_doc_impact_gets_one_line_pointing_at_the_list(op, monkeypatch, capsys) -> None:
+#: The line the opt-in writes, for `n` documents: it points at the change check.
+LINE = "{n} this change affects — their answers are the change check's (`pkit friction check`)."
+
+
+def test_doc_impact_gets_one_line_pointing_at_the_change_check(op, monkeypatch, capsys) -> None:
     captured = _open(op, monkeypatch, "--doc-impact-from-friction", derived=_derived(op, *TWO))
     assert op.main() == 3
-    line = f"2 documents this change affects — listed under `{HEADING}`."
+    line = LINE.format(n="2 documents")
     assert _doc_impact(captured["body"]) == [line]
     assert f"doc impact: pre-filled: {line}" in capsys.readouterr().out
 
@@ -762,9 +741,7 @@ def test_doc_impact_names_the_pages_still_carrying_friction(op, monkeypatch, cap
     derived = _derived(op, TWO[0], findings=[unanswered])
     captured = _open(op, monkeypatch, "--doc-impact-from-friction", derived=derived)
     assert op.main() == 3
-    assert _doc_impact(captured["body"]) == [
-        f"1 document this change affects — listed under `{HEADING}`."
-    ]
+    assert _doc_impact(captured["body"]) == [LINE.format(n="1 document")]
     err = capsys.readouterr().err
     assert "1 artefact(s) still carry friction with no answer on the page: docs/cli.md" in err
 
@@ -783,16 +760,14 @@ def test_an_authored_doc_impact_section_is_left_as_written(op, monkeypatch, tmp_
     ("derived", "note"),
     [
         (None, "not pre-filled — the change check reports no answers"),
-        ("unlisted", "not pre-filled — the answers are not listed"),
         ("unreadable", "not pre-filled — `pkit friction check --json` gave no document"),
     ],
 )
-def test_doc_impact_is_left_unwritten_without_a_list(
+def test_doc_impact_is_left_unwritten_without_answers(
     op, monkeypatch, capsys, derived, note
 ) -> None:
     found = {
         None: None,
-        "unlisted": _derived(op, _answer("docs/api.md", "This fixes #7.")),
         "unreadable": op.friction_answers.Derivation(PUSHED, problem="no document"),
     }[derived]
     captured = _open(op, monkeypatch, "--doc-impact-from-friction", derived=found)

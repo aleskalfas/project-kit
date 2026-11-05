@@ -60,7 +60,7 @@ project-kit is both the backbone's source and an adopter of it. The backbone's l
 project-management's landing command reads the answer files through the backbone (DEC-055 point 3).
 - **The cover of a later head.** `pkit friction since` keeps its name and its flags. It answers whether every change since the authorised head lies in answer files the change adds: files that the base, where the head left it, does not hold.
 - **The firm stop** intersects the base's changes since the head left it with the answer files at the head that carry a listed answer. A change answers only by adding, so it fires mostly on a stacked pull request.
-- **Answered apart.** Before it stops ready, asks or merges, the landing command runs the change check against the base's tip, fetched for the run. It prints the revalidations that the check's machine-readable output reports as answered apart on the change's documents, beside the list. It stops on none of them.
+- **Answered apart.** Before it stops ready, asks or merges, the landing command runs the change check against the base's tip, fetched for the run. It prints the revalidations that the check's machine-readable output reports as answered apart on the change's documents, beside what it tells the person. It stops on none of them.
 - **`pkit friction resolve`** has no conflict left to resolve in the answers, since none is written in a block. The build retires it as a surface change, with what that needs (PRJ-002, COR-010).
 
 ### 6. Continuous integration

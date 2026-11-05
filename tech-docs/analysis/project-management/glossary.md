@@ -1048,7 +1048,7 @@ Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge
 
 - **Branch protection:** GitHub's own protection of a branch, which the hosting service holds. The merge gate is project-management's, and it runs before the merge is asked for ([DEC-003](../../../.pkit/capabilities/project-management/decisions/DEC-003-github-bound-substrate.md) and [DEC-028](../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 - **Authorisation to merge:** the person's go-ahead for the pull request at its head. A gate that passes gives no [authorisation](#term-authorisation--authorisation), and an authorisation passes no gate ([DEC-055 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
-- **Change check:** the core's comparison of a head with its [base](../core/glossary.md#term-base--base). The landing command runs it to list the answers a [change](../core/glossary.md#term-change--change) wrote, and the merge gate judges none of them (DEC-055 point 3).
+- **Change check:** the core's comparison of a head with its [base](../core/glossary.md#term-base--base). The landing command runs it to derive a [change](../core/glossary.md#term-change--change)'s answers ([DEC-065 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-065-answers-read-from-check.md#2-the-answers-are-derived-from-the-change-check)), and the merge gate judges none of them (DEC-055 point 3).
 
 ## TERM-milestone — Milestone
 

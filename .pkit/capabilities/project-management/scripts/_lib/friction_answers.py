@@ -1,12 +1,14 @@
-"""The answers a change wrote, listed in its pull request's description (DEC-055).
+"""The answers a change wrote, read from the change check (DEC-055, DEC-065).
 
 An agent building a change may give the answers its own change owes — the
 revalidations and deferrals the change check asks of it — without asking
 first. A reviewer other than that agent checks them, from the change check's
 own list, and the person who authorises the merge is told what changed in
 each updated document and which are left out of date, as information
-(COR-050 point 3). This module puts that list in the description, with each
-updated document's sentence from the change's author:
+(COR-050 point 3). No command writes the list into the pull request's
+description: each reader derives the answers from the change check at the
+pull request's head (DEC-065 points 1 and 2). This module derives them and
+says what a reader takes from them:
 
 - `derive(head, base)` runs the change check at the pull request's head
   (`pkit friction check --json --base <base> --head <oid>`) against the pull
@@ -20,61 +22,47 @@ updated document's sentence from the change's author:
   needs only the answers. Given the pull request's `Source`, either first
   fetches a head this clone lacks (`fetch_head`), from its branch, or for a
   pull request from a fork from the ref its base repository keeps for it, on
-  the base's remote (`base_remote`).
+  the base's remote (`base_remote`). With `from_checkout=False`, either keeps the
+  backbone's refusal to run an anchor's resolver away from the head, and starts
+  no program the head holds (`Derivation.needs_checkout`).
 - `written(base)` runs the same check as the project's gate runs it, from the
   working directory with no `--head` and nothing fetched: the answers the
   documentation check reads, where a page's answer meets its obligation
   (DEC-053 point 2).
-- `render(document, head, settings)` is the `## Documentation this change
-  affects` section, between its markers; `lines(document, settings)` the same
-  list for a terminal. Both speak to a reader who does not know the
-  methodology, in the words of the change check's own list: the question once
-  (`QUESTION`), then each document, the anchors the change modified that it
-  relies on, and whether it is still true, each answer and flag in plain words
-  (`LABELS`, `FLAGS`). A revisit entry (COR-050 point 16) names its source,
-  the target, the links that list it and the trigger fields the change
-  modified, then the outcome and its reason. The change check's own terms stay
-  in its machine-readable list (`--json`), which this module reads. Each
-  `updated` document also gives its sentence on what changed, or says its
-  author gave none.
-- `sentences(body)` reads those sentences where the change's author keeps
-  them: the description's own `## What changed in each updated document`
+- `told(document, settings, sentences, also)` is what the person who authorises
+  the merge is told, as information, as a terminal shows it (DEC-065 point 4):
+  what changed in each `updated` document, in its author's sentence; what is
+  left out of date (`left_out`); each answer the change check did not ask for,
+  with its words; the friction settings changed; how many files the check could
+  not read; each revalidation the merge would leave answered apart (`apart`);
+  and what the caller adds. The landing command and `show-pr --field answers`
+  both print it from `_lib.answers_told.at_head`, the one place that feeds it, so
+  the two cannot differ. `counted_told` counts it. Each answer reads in the words
+  of the change check's own list (`LABELS`).
+- `sentences(body)` reads the author's sentences where the change's author
+  keeps them: the description's own `## What changed in each updated document`
   section (`SENTENCES_HEADING`), one list item per document, the document in
-  a code span as the list names it. `unread` names each list item there that
-  gives no sentence — one in another form, such as the document in bold — by
-  its line, and `unread_warning` is what a command says of it, with the form
-  a sentence takes (`SENTENCE_FORM`). `given` is the ones the list shows, and
-  `with_sentences` puts them into a list already written, for an edit that
-  derives nothing. `listed_updated` names each document the list a
-  description carries marks `updated`, `unsaid_in` each of those with no
-  sentence, and `unsaid_message` is what a command says of one: the move to
-  review when it refuses, an edit when it warns (DEC-055 point 3).
-  `listed_head` is the head that list was derived at, which the move to review
-  compares with the pull request's head, and trusts alone to decide whether to
-  derive the list again. `updated_in` is the documents a list derived again
-  marks `updated`, so the move to review refuses exactly what the pull
-  request's head marks.
-  `unlisted` names each sentence on a document a derived list does not mark
-  `updated`, which the list never shows, and `unlisted_warning` is what the
-  commands that derive the list say of it. `told` is what the person who
-  authorises the merge is told, as information: those sentences, the
-  documents and the targets of a link left out of date, and the friction
-  settings changed; `counted_told` counts them.
-- `closing_reference` and `comment_delimiter` name a word of the list that
-  must not be written: one that reads as a closing reference — the host's own
-  parser would close an issue with it at merge, and nothing here can make that
-  parser skip a section — and one holding an HTML comment's delimiter, which
-  could open or close a comment around the section's markers.
-  `sentence_closing_reference` and `sentence_comment_delimiter` name the same
-  in an author's sentence.
-- `listed_paths(document)` names the files the list's words are on, from the
+  a code span as the change check names it. `unread` names each list item
+  there that gives no sentence — one in another form, such as the document in
+  bold — by its line, and `unread_warning` is what a command says of it, with
+  the form a sentence takes (`SENTENCE_FORM`). `updated_in` is the documents
+  the change check marks `updated`, `unsaid` each of those with no sentence,
+  and `unsaid_message` is what a command says of one: the move to review when
+  it refuses, the opening of the pull request when it warns (DEC-065 point 3).
+  `unlisted` names each sentence on a document the change check does not mark
+  `updated`, which no reviewer checks, and `unlisted_warning` is what a
+  command says of it. `closing_references` names each sentence that reads as a
+  closing reference, which the host's own parser would close an issue with at
+  merge, and `closing_message` is what a command says of one when it refuses
+  (DEC-065 point 5).
+- `listed_paths(document)` names the files the answers' words are on, from the
   file the change check gives each answer, an answer file or the artefact's own
   (COR-062 point 1): the landing stops, and nothing overrides it, on a base
-  that changed one (DEC-055 point 3), and names the merge of the base
+  that changed one (DEC-065 point 5), and names the merge of the base
   ([project-management:DEC-064-base-merge-named] point 1).
   `apart(document)` is each revalidation on the base's tip that a merge would
   leave answered apart from the change's own (`answered_apart_at_tip`, COR-062
-  point 7), a line each, printed beside the list and never in it.
+  point 7), a line each, told after the rest.
 - `answers_folder(root)` is where the backbone keeps the friction answers, as
   its whole-repository check gives it, read once for a run: no path in it
   counts as code for a floor (DEC-032 D1).
@@ -93,27 +81,27 @@ updated document's sentence from the change's author:
   is not run at the merge: what a change leaves unanswered is what that check
   reports once the change merges, save the cases COR-050 names where the two
   checks part, and a page the base had already left stale is not the change's.
-- `stamp`, `strip`, `find` and `current` place, remove, find and compare the
-  section — strip-then-place-exactly-one, as `provenance.stamp` keeps the
-  footer. The section sits last, before the provenance footer. A section
-  under its heading no command wrote — a list typed by hand, with no markers —
-  is stripped with everything under it (`hand_written`). `FORMER_HEADING`, the
-  heading an earlier run of these commands wrote the section under, is read as
-  the section's heading too, so a list it left is replaced whole.
+- `strip` and `has_list` find and remove the region an earlier run of these
+  commands wrote into a description: both its markers, what lies between them,
+  and the heading directly above it (`HEADING`, or `FORMER_HEADING`, a still
+  earlier run's). No command writes one (DEC-065 point 1): the landing command
+  removes one an earlier run left, the commands that open and edit the pull
+  request drop one from the body they write, and every other reader strips it
+  before it reads. Nothing else is removed. `orphaned` says a start marker has
+  no end marker after it, and `ORPHAN_WARNING` is what a command says of it,
+  leaving the text as it is.
 
-Which backbone derives the list: each run of the change check — from the
-working directory, or from a temporary checkout of the head when the first
-meets the backbone's refusal to run an anchor's resolver away from the head —
-runs the `pkit` first on PATH with routing off (`PKIT_NO_ROUTE=1`). That is the
-backbone serving the command that runs this module: a source checkout's own
-environment (`uv run` puts its `pkit` first), a project's pinned version (the
-pin's run puts its `pkit` first), else the installed tool. Never routed again
-from the directory a run starts in, a temporary checkout's own source or pin
-cannot give the same head another list.
+Which backbone derives the answers: each run of the change check — from the
+working directory, or, unless the caller gave it up (`from_checkout`), from a
+temporary checkout of the head when the first meets the backbone's refusal to
+run an anchor's resolver away from the head — runs the `pkit` first on PATH with
+routing off (`PKIT_NO_ROUTE=1`). That is the backbone serving the command that
+runs this module: a source checkout's own environment (`uv run` puts its `pkit`
+first), a project's pinned version (the pin's run puts its `pkit` first), else
+the installed tool. Never routed again from the directory a run starts in, a
+temporary checkout's own source or pin cannot give the same head other answers.
 
-Every reader of a description strips the section before it reads (DEC-055
-point 4): the list is the artefacts' words, never input. The markers are
-locked to `body-format.yaml`'s `friction_answers_marker` by
+The markers are locked to `body-format.yaml`'s `friction_answers_marker` by
 `tests/test_pm_friction_answers.py`.
 """
 
@@ -147,17 +135,17 @@ try:
 except ImportError:  # pragma: no cover
     import backbone  # type: ignore[no-redef]
 
+#: The heading directly above the region an earlier run of these commands wrote into
+#: a description: no command writes it (DEC-065 point 1), and each finds and strips it.
 HEADING = "## Documentation this change affects"
-#: The heading an earlier run of these commands wrote the section under: read as
-#: the section's heading, so a section it left is found, stripped and replaced.
+#: The heading a still earlier run wrote above the region, stripped with it as well.
 FORMER_HEADING = "## Friction answers"
 #: Sentinels — MUST match body-format.yaml `friction_answers_marker`. The start
-#: marker carries the head the list is for and the merge-base it was taken against.
+#: marker an earlier run wrote carries the head the list was for and the merge-base
+#: it was taken against.
 MARKER_START = "<!-- pkit-friction-answers:start"
 MARKER_END = "<!-- pkit-friction-answers:end -->"
 _START_LINE = re.compile(r"^<!-- pkit-friction-answers:start(?:\s[^\n]*)?-->$")
-#: The head a start marker names, `head=<oid>`.
-_LISTED_HEAD = re.compile(r"\shead=([0-9a-f]+)(?=\s|-->)")
 
 
 def _heading_line(*headings: str) -> re.Pattern[str]:
@@ -169,7 +157,7 @@ def _heading_line(*headings: str) -> re.Pattern[str]:
     return re.compile(rf"^ {{0,3}}##[ \t]+(?:{words})[ \t]*#*[ \t]*$", re.IGNORECASE)
 
 
-#: The section's heading as a line — its own, or the one an earlier run wrote.
+#: The region's heading as a line — its own, or the one a still earlier run wrote.
 _HEADING_LINE = _heading_line(HEADING, FORMER_HEADING)
 #: A heading that ends a section: an ATX heading of level one or two.
 _SECTION_END = re.compile(r"^ {0,3}#{1,2}(?:[ \t]|$)")
@@ -179,9 +167,6 @@ _FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 #: The version of `pkit friction check --json` this module reads; a document of
 #: another is unreadable here, never misread.
 SCHEMA_VERSION = 1
-#: The longest description the host keeps, in characters (GitHub's limit on a
-#: pull request's body).
-BODY_LIMIT = 65536
 #: How long the change check may run before its answer is given up on.
 TIMEOUT = 600
 #: The backbone's command, as a capability's script runs it, and the
@@ -213,18 +198,6 @@ SINCE_SCHEMA_VERSION = 2
 #: Where a friction setting's change is said to be, in a refusal.
 SETTINGS_WHERE = "the friction settings"
 
-#: A closing reference in the host's grammar: one of its nine keywords, an
-#: optional colon, then `#N`, `owner/repo#N` or an issue's URL, in any case.
-#: Over-matching only refuses a list; under-matching closes an issue at merge.
-CLOSING_REFERENCE = re.compile(
-    r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*"
-    r"(?:#\d+|[\w.-]+/[\w.-]+#\d+|https?://\S+?/issues/\d+)",
-    re.IGNORECASE,
-)
-#: An HTML comment's delimiters: a word holding one could open or close a
-#: comment around the section's markers, or hide the list from the page.
-COMMENT_DELIMITER = re.compile(r"<!--|-->")
-
 
 # --- the friction settings ----------------------------------------------------
 
@@ -235,16 +208,16 @@ class Setting:
     value where the head left its base and at the head, each a list of texts.
     The friction settings decide what the check asks — a change that empties the
     places leaves it dormant, one that excludes an artefact's file leaves the
-    artefact out — so a change to them is shown with the answers (DEC-055
-    point 1)."""
+    artefact out — so a change to them is told with the answers (DEC-065
+    point 4)."""
 
     key: str
     before: tuple[str, ...]
     after: tuple[str, ...]
 
 
-#: The two settings a list can show, as it names them: the places the change
-#: check reads, and — of the files whose standing changed — those
+#: The two settings a change can alter, as the person is told them: the places the
+#: change check reads, and — of the files whose standing changed — those
 #: `friction.exclude` leaves out.
 PLACES = "Checked locations"
 EXCLUDED = "Documents excluded from checking"
@@ -346,18 +319,21 @@ def _standing(document: Mapping[str, Any]) -> dict[str, bool]:
 @dataclass(frozen=True)
 class Derivation:
     """The change check's document at one head and the friction settings the
-    change alters, or why they could not be read."""
+    change alters, or why they could not be read. `needs_checkout` says `problem`
+    is the backbone's refusal to run an anchor's resolver away from the head, kept
+    because the caller asked for no temporary checkout (`from_checkout=False`)."""
 
     head: str
     document: Mapping[str, Any] | None = None
     problem: str | None = None
     answers: tuple[Mapping[str, Any], ...] = field(default=())
     settings: tuple[Setting, ...] = field(default=())
+    needs_checkout: bool = False
 
     @property
     def listed(self) -> bool:
-        """Whether there is a list to show: answers the change wrote, or friction
-        settings it alters."""
+        """Whether the change check lists anything for the change: answers it
+        wrote, or friction settings it alters."""
         return bool(self.answers or self.settings)
 
     @property
@@ -458,14 +434,16 @@ def fetch_head(head: str, source: Source) -> str | None:
     )
 
 
-def derive(head: str, base: str, *, source: Source | None = None) -> Derivation:
+def derive(
+    head: str, base: str, *, source: Source | None = None, from_checkout: bool = True
+) -> Derivation:
     """The change check's document for commit `head` against the branch `base` —
     the pull request's, named always — as `checked` gives it, and the friction
     settings the change alters.
 
     Never a pass on a guess: what makes `checked` unreadable, and settings that
     cannot be read, make the derivation unreadable, with why."""
-    found = checked(head, base, source=source)
+    found = checked(head, base, source=source, from_checkout=from_checkout)
     if found.document is None:
         return found
     settings = settings_change(found.merge_base, head)
@@ -474,7 +452,9 @@ def derive(head: str, base: str, *, source: Source | None = None) -> Derivation:
     return replace(found, settings=settings)
 
 
-def checked(head: str, base: str, *, source: Source | None = None) -> Derivation:
+def checked(
+    head: str, base: str, *, source: Source | None = None, from_checkout: bool = True
+) -> Derivation:
     """The change check's document for commit `head` against the branch `base`, the
     base fetched first where it is a remote's, and `head` from `source` where this
     clone lacks it. It reads no friction settings, for a reader that needs only the
@@ -486,7 +466,12 @@ def checked(head: str, base: str, *, source: Source | None = None) -> Derivation
     check runs again from a temporary checkout of `head`, removed afterwards; any
     other failure is kept as it is. Never a pass on a guess: a base or a head that
     could not be fetched, no document, and a document of another version or
-    without `answers` all make the derivation unreadable, with why."""
+    without `answers` all make the derivation unreadable, with why.
+
+    That second run starts the resolvers `head` holds, under this account, so it is
+    code from the pull request's head. A reader anyone may run on a head they have
+    not read passes `from_checkout=False`: the refusal is then kept, and the
+    derivation says so (`needs_checkout`)."""
     problem = _refresh_base(base)
     if problem is None and source is not None:
         problem = fetch_head(head, source)
@@ -494,6 +479,8 @@ def checked(head: str, base: str, *, source: Source | None = None) -> Derivation
         return Derivation(head, problem=problem)
     found = _run_check(head, base, cwd=None)
     if isinstance(found, _NoDocument) and found.elsewhere:
+        if not from_checkout:
+            return Derivation(head, problem=found.why, needs_checkout=True)
         with _checkout(head) as (path, why_not):
             if path is None:
                 found = _NoDocument(
@@ -929,7 +916,7 @@ def _entries(document: Mapping[str, Any]) -> list[Mapping[str, Any]]:
 
 
 def listed_paths(document: Mapping[str, Any]) -> set[str]:
-    """The files the list's words are on: the file the change check names for each
+    """The files the answers' words are on: the file the change check names for each
     answer (`file`), which holds the deferrals a revalidation kept too. That is an
     answer file the change adds, or the artefact's own file for an answer in its
     block (COR-062 point 1). An answer it names no file for, such as a target
@@ -999,7 +986,7 @@ def documents(answers: Iterable[Mapping[str, Any]]) -> int:
     return len({str(answer.get("location") or answer.get("artefact") or "?") for answer in answers})
 
 
-#: How a command's output names the list, in the section's plain words.
+#: How a command's output names the answers: the documents they are on.
 NAME = "documents this change affects"
 #: What that output calls a change to the friction settings.
 CHECKED = "a change to which documents are checked"
@@ -1014,7 +1001,7 @@ def affected(count: int, *, settings: bool) -> str:
     return f"{count}, plus {CHECKED}" if settings else str(count)
 
 
-# --- rendering ---------------------------------------------------------------
+# --- what the person is told --------------------------------------------------
 
 
 def shown(text: str) -> str:
@@ -1026,50 +1013,36 @@ def shown(text: str) -> str:
     return "".join(ch if ch.isprintable() else ascii(ch)[1:-1] for ch in text)
 
 
-def _code(text: str, *, least: int = 1) -> str:
-    """`text` as a Markdown code span: its delimiter is longer than any run of
-    backticks inside, and a space pads a text that starts or ends with one."""
-    runs = [len(run) for run in re.findall(r"`+", text)]
-    fence = "`" * max(least, max(runs, default=0) + 1)
-    pad = " " if text.startswith("`") or text.endswith("`") else ""
-    return f"{fence}{pad}{text}{pad}{fence}"
-
-
-#: Each answer of the change check (`--json`'s `answer`) as the list says it:
-#: whether the document is still true. An answer it does not name here is shown
-#: as the check gives it. The change check's own list says the same words.
+#: Each answer of the change check (`--json`'s `answer`) in plain words: whether
+#: the document is still true. An answer it does not name here is shown as the
+#: check gives it. The change check's own list says the same words.
 LABELS = {
     "updated": "updated in this change",
     "unchanged": "still accurate",
     "deferred": "out of date, fixed later",
     "unanchored": "not tied to anything",
 }
-#: The answers whose words the list tells the person who authorises the merge
-#: (DEC-055 point 3): an update's sentence, and a deferral's reason.
+#: The answers whose words the person who authorises the merge is told (DEC-065
+#: point 4): an update's sentence, and a deferral's reason.
 UPDATED, DEFERRED = "updated", "deferred"
+#: A reason for having no anchors (`unanchored-because`): a person's to decide,
+#: since no change owes it (COR-050 point 3).
+UNANCHORED = "unanchored"
 #: The `answer` of a revisit entry (COR-050 point 16): a source's answer for one
 #: target of its links. Its `outcome` — `updated` where the target changed in the
 #: change, else `unchanged` or `deferred` — reads as `LABELS` says it, and a
 #: `deferred` one leaves the target out of date until the follow-up its reason
 #: names.
 REVISITED = "revisited"
-#: How the list gives an `updated` document's sentence: the author's words.
-SAID = "what changed, in the words of the pull request's author"
-#: What it says where the author wrote no sentence for that document.
-UNSAID = "what changed: the pull request's author has not said"
 #: A revalidation whose outcome is neither `updated` nor `unchanged` (`answer` null).
 NO_OUTCOME = "no decision recorded"
-#: Each flag the change check puts on an answer, as the list names it.
-FLAGS = {
-    "new": "new document",
-    "not asked": "not asked for by this change",
-    "bump": "re-check date changed with nothing behind it",
-    "edited": "edited without a new re-check",
-    "revisit edited": "outcome changed without a new reason, which answers nothing",
-    "written back": "re-check date set back to one it had before, which answers nothing",
-    "entry written back": "an entry it had before, which covers only what that one did",
-    "put back": "an entry it had before, covering the anchor as it stood then",
-}
+#: How a line names an answer the change check did not ask for, which a person or
+#: the delegate they named decided before it was written (COR-064).
+NOT_ASKED = "Not asked for by this change"
+#: How a line names a document or a target left out of date (COR-050 point 3).
+LEFT = "Left out of date"
+#: How a line counts the files the change check could not read for answers.
+UNREAD = "Files the change check could not read"
 #: What an anchor of a core kind is named; an anchor of another kind is named as
 #: the check names it, `kind:value`.
 _ANCHOR_NOUNS = {"path": "", "record": "decision record ", "artefact": "document "}
@@ -1077,7 +1050,7 @@ _ANCHOR_NOUNS = {"path": "", "record": "decision record ", "artefact": "document
 
 @dataclass(frozen=True)
 class _Anchor:
-    """An anchor, its kind and value each shown as the list shows it."""
+    """An anchor, its kind and value each shown escaped."""
 
     kind: str
     value: str
@@ -1087,12 +1060,10 @@ class _Anchor:
         """The anchor as the change check names it."""
         return f"{self.kind}:{self.value}"
 
-    def said(self, *, markdown: bool) -> str:
-        """The anchor in plain words: "`src/cli/**`", "decision record `COR-050`". The
-        anchor's own text is set in a code span in Markdown."""
+    def said(self) -> str:
+        """The anchor in plain words: "src/cli/**", "decision record COR-050"."""
         noun = _ANCHOR_NOUNS.get(self.kind)
-        text = self.value if noun is not None else self.named
-        return f"{noun or ''}{_code(text) if markdown else text}"
+        return f"{noun}{self.value}" if noun is not None else self.named
 
 
 def _read_anchor(value: Any) -> _Anchor | None:
@@ -1104,52 +1075,28 @@ def _read_anchor(value: Any) -> _Anchor | None:
 
 @dataclass(frozen=True)
 class _Entry:
-    """One answer, every text in it shown as the list shows it. `changed`: the
-    anchors the change modified that the answer is about (the check's `changed`;
-    none from a backbone that predates it). `updated`: the answer is `updated`,
-    so the list gives the author's `sentence` on what changed, or says there is
-    none.
+    """One answer, every text in it shown escaped. `updated`: the answer is
+    `updated`, so the person is told the author's `sentence` on what changed, or
+    that there is none. `asked`: the change check asked for it.
 
     A revisit entry (`revisit`, COR-050 point 16) is the source's answer for one
     target: `location` is the source, `label` its outcome, `target` the anchor it
-    names, `links` the fields that list the target, `fields` the trigger fields the
-    change modified, and `deferred` whether it leaves the target out of date. It is
-    never `updated`: a target revisited by changing it carries no author's
-    sentence, since it is no revalidation."""
+    names, `links` the fields that list the target, and `deferred` whether it
+    leaves the target out of date. It is never `updated`: a target revisited by
+    changing it carries no author's sentence, since it is no revalidation."""
 
     location: str
     label: str
     anchor: _Anchor | None
-    flags: tuple[str, ...]
     reason: str | None
     kept: tuple[tuple[_Anchor, str | None], ...]
-    changed: tuple[_Anchor, ...] = ()
     updated: bool = False
     sentence: str | None = None
+    asked: bool = True
     revisit: bool = False
     target: _Anchor | None = None
     links: tuple[str, ...] = ()
-    fields: tuple[str, ...] = ()
     deferred: bool = False
-
-
-def _flags(entry: Mapping[str, Any]) -> list[str]:
-    """Every flag the change check puts on an answer, in the list's words."""
-    status = entry.get("status")
-    flags: list[str] = []
-    if entry.get("new"):
-        flags.append(FLAGS["new"])
-    if not entry.get("asked"):
-        flags.append(FLAGS["not asked"])
-    if status == "bump":
-        flags.append(FLAGS["bump"])
-    if status == "edited":
-        flags.append(FLAGS["revisit edited" if entry.get("answer") == REVISITED else "edited"])
-    if status == "written-back":
-        flags.append(FLAGS["written back" if entry.get("anchor") is None else "entry written back"])
-    elif entry.get("put_back"):
-        flags.append(FLAGS["put back"])
-    return flags
 
 
 def _read_entry(entry: Mapping[str, Any], sentences: Mapping[str, str] | None = None) -> _Entry:
@@ -1159,64 +1106,36 @@ def _read_entry(entry: Mapping[str, Any], sentences: Mapping[str, str] | None = 
         words = _mapping(item).get("reason")
         held = _read_anchor(_mapping(item).get("anchor")) or _Anchor("None", "None")
         kept.append((held, shown(str(words)) if words is not None else None))
-    changed = entry.get("changed")
-    relied = [_read_anchor(item) for item in changed] if isinstance(changed, list) else []
     location = shown(str(entry.get("location") or entry.get("artefact") or "?"))
     updated = answer == UPDATED
     sentence = (sentences or {}).get(location) if updated else None
     revisit = answer == REVISITED
-    # A revisit's outcome is what the list says of it, as an answer's is.
+    # A revisit's outcome is what the person is told of it, as an answer's is.
     said = entry.get("outcome") if revisit else answer
     return _Entry(
         location=location,
         label=LABELS.get(str(said), shown(str(said))) if said else NO_OUTCOME,
         anchor=_read_anchor(entry.get("anchor")),
-        flags=tuple(_flags(entry)),
         reason=shown(str(reason)) if reason is not None else None,
         kept=tuple(kept),
-        changed=tuple(anchor for anchor in relied if anchor is not None),
         updated=updated,
         sentence=shown(sentence) if sentence is not None else None,
+        asked=entry.get("asked") is True and answer != UNANCHORED,
         revisit=revisit,
         target=_read_anchor(entry.get("target")) if revisit else None,
         links=_texts_of(entry.get("links")) if revisit else (),
-        fields=_texts_of(entry.get("fields")) if revisit else (),
         deferred=revisit and said == DEFERRED,
     )
 
 
 def _texts_of(value: Any) -> tuple[str, ...]:
-    """Each text of a list of the check's, shown as the list shows it; none where it
-    is no list."""
+    """Each text of a list of the check's, shown escaped; none where it is no list."""
     return tuple(shown(str(item)) for item in value) if isinstance(value, list) else ()
 
 
-def _side(values: Sequence[str], *, code: bool) -> str:
+def _side(values: Sequence[str]) -> str:
     """One side of a setting's change: each text, or "none"."""
-    if not values:
-        return "none"
-    return ", ".join(_code(shown(v)) if code else shown(v) for v in values)
-
-
-def _counted(count: int, one: str, many: str) -> str:
-    return f"{count} {one if count == 1 else many}"
-
-
-#: The question the list answers, stated once above it, as the change check's
-#: own list states it.
-QUESTION = (
-    "These documents rely on something this change modifies, and each answer says whether "
-    "the document is still true."
-)
-#: What the section says first, to a reader who does not know the methodology.
-OPENING = QUESTION
-#: What it says first where the change decided nothing about any document but
-#: changes which documents are checked.
-SETTINGS_OPENING = (
-    "This change decided nothing about any document, but it changes which documents are checked."
-)
-#: What the list says above those changes, after the documents.
-SETTINGS_LEAD = "It also changes which documents are checked:"
+    return ", ".join(shown(v) for v in values) if values else "none"
 
 
 def _and(items: Sequence[str]) -> str:
@@ -1224,141 +1143,22 @@ def _and(items: Sequence[str]) -> str:
     return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} and {items[-1]}"
 
 
-def _described(entry: _Entry, number: int, *, markdown: bool) -> list[str]:
-    """One answer as the list shows it — the document, the anchors the change
-    modified that it relies on, whether it is still true, its flags and its words —
-    then, for an `updated` document, the author's sentence on what changed (`SAID`)
-    or that there is none (`UNSAID`), then each deferral it kept, as the change
-    check's own list says them. A revisit entry names its source, the target, the
-    links that list it and the trigger fields the change modified, then the
-    outcome, its flags and its words (`_revisit`). In Markdown the outcome is bold
-    and every text of the artefact's, and the author's sentence, is set in a code
-    span."""
-
-    def text(words: str, least: int = 1) -> str:
-        return _code(words, least=least) if markdown else words
-
-    def bold(words: str) -> str:
-        return f"**{words}**" if markdown else words
-
-    sentence = bold(entry.label[:1].upper() + entry.label[1:])
-    where = text(entry.location)
-    if entry.revisit:
-        line = f"{number}. {_revisit(entry, markdown=markdown)}. {sentence}"
-    elif entry.changed:
-        relied = _and([anchor.said(markdown=markdown) for anchor in entry.changed])
-        line = f"{number}. {where} relies on {relied}, which this change modifies. {sentence}"
-    elif entry.anchor is not None:
-        line = f"{number}. {where} relies on {entry.anchor.said(markdown=markdown)}. {sentence}"
-    else:
-        line = f"{number}. {where} — {bold(entry.label)}"
-    line += "".join(f" ({flag})" for flag in entry.flags)
-    if entry.reason is not None:
-        line += f': "{text(entry.reason, least=2)}"'
-    out = [line]
-    if entry.updated:
-        said = UNSAID if entry.sentence is None else f'{SAID}: "{text(entry.sentence, least=2)}"'
-        out.append(f"   - ({said})" if markdown else f"   ({said})")
-    for anchor, words in entry.kept:
-        kept = f"still out of date for changes to {anchor.said(markdown=markdown)}, fixed later"
-        kept += f': "{text(words, least=2)}"' if words is not None else ""
-        out.append(f"   - ({kept})" if markdown else f"   ({kept})")
-    return out
-
-
-#: What a revisit entry says where the check names no target.
-A_TARGET = "a target"
-#: What follows the source on a revisit entry's line (`_revisit`), as the change
-#: check's own list says it.
-_NAMES = " names "
-
-
-def _revisit(entry: _Entry, *, markdown: bool) -> str:
-    """A revisit entry's source and target as the change check's own list says them
-    (COR-050 point 16): `<source> names <target> through <links>, and this change
-    modifies its <fields>`. Without links, or where the change triggered none, that
-    part is left out. In Markdown each text is set in a code span."""
-
-    def text(words: str) -> str:
-        return _code(words) if markdown else words
-
-    target = entry.target.said(markdown=markdown) if entry.target is not None else A_TARGET
-    line = f"{text(entry.location)}{_NAMES}{target}"
-    if entry.links:
-        line += f" through {_and([text(link) for link in entry.links])}"
-    if entry.fields:
-        line += f", and this change modifies its {_and([text(name) for name in entry.fields])}"
-    return line
-
-
-def render(
-    document: Mapping[str, Any],
-    head: str,
-    settings: Sequence[Setting] = (),
-    sentences: Mapping[str, str] | None = None,
-) -> str | None:
-    """The `## Documentation this change affects` section for `document`, derived
-    at commit `head`, with the friction `settings` the change alters and, beside
-    each `updated` document, its author's sentence from `sentences` (`sentences`
-    reads them); None when the change wrote no answers and alters no setting. It
-    opens in plain words for a reader who does not know the methodology
-    (`OPENING`); every text of the check's or the backbone discovery's, and every
-    sentence, is shown with any non-printable character escaped and set in a code
-    span, so no word of an artefact is read as Markdown."""
-    entries = [_read_entry(entry, sentences) for entry in _entries(document)]
-    if not entries and not settings:
-        return None
-    merge_base = str(_mapping(document.get("base")).get("commit") or "")
-    dormant = not entries and bool(document.get("dormant"))
-    as_of = f"As of commit `{head[:SHORT]}`" + (", no document is checked." if dormant else ".")
-    unreadable = document.get("unreadable")
-    if isinstance(unreadable, list) and unreadable:
-        as_of += f" {_counted(len(unreadable), 'document', 'documents')} could not be read."
-    out = [HEADING, "", f"{MARKER_START} head={head} base={merge_base} -->"]
-    out += [OPENING if entries else SETTINGS_OPENING, "", as_of, ""]
-    for number, entry in enumerate(entries, start=1):
-        out += _described(entry, number, markdown=True)
-    if settings:
-        out += ["", SETTINGS_LEAD, ""] if entries else []
-        for setting in settings:
-            before, after = _side(setting.before, code=True), _side(setting.after, code=True)
-            out.append(f"- {setting.key}: {before} → {after}")
-    out.append(MARKER_END)
-    return "\n".join(out)
-
-
-def lines(
-    document: Mapping[str, Any],
-    settings: Sequence[Setting] = (),
-    sentences: Mapping[str, str] | None = None,
-) -> list[str]:
-    """The list as a terminal shows it, in the section's words: the question once
-    (`QUESTION`), one line per answer, its words in full, with each `updated`
-    document's sentence on a line of its own, then one per friction setting the
-    change alters."""
-    entries = [_read_entry(e, sentences) for e in _entries(document)]
-    out: list[str] = [QUESTION] if entries else []
-    for number, entry in enumerate(entries, start=1):
-        out += _described(entry, number, markdown=False)
-    for setting in settings:
-        before, after = _side(setting.before, code=False), _side(setting.after, code=False)
-        out.append(f"{setting.key}: {before} → {after}")
-    return out
-
-
 def told(
     document: Mapping[str, Any],
     settings: Sequence[Setting] = (),
     sentences: Mapping[str, str] | None = None,
+    also: Sequence[str] = (),
 ) -> list[str]:
     """What the person who authorises the merge is told, as information, not a
-    gate (DEC-055 point 3), as a terminal shows it: what changed in each `updated`
-    document, in its author's sentence or that there is none; each document left
-    out of date, with the anchor and the words of each deferral the change wrote
-    or a revalidation kept, which name its follow-up, and each target of a link a
-    `deferred` revisit entry leaves out of date, with the source that names it and
-    the entry's words, which name its follow-up (COR-050 points 3 and 16); then
-    each friction setting the change alters."""
+    gate (DEC-065 point 4), as a terminal shows it: what changed in each `updated`
+    document, in its author's sentence or that there is none; what is left out of
+    date (`left_out`); each answer the change check did not ask for, and each
+    reason for having no anchors, with its outcome and words, which a person or
+    their delegate decided (COR-064); each friction setting the change alters; how
+    many files the check could not read; each revalidation the merge would leave
+    answered apart (`apart`); then `also`, what the caller adds, such as a change
+    to the fixers' grant list. No other answer is told, such as a document still
+    accurate."""
     out: list[str] = []
     entries = [_read_entry(e, sentences) for e in _entries(document)]
     for entry in entries:
@@ -1367,19 +1167,40 @@ def told(
             if entry.sentence is not None:
                 said = f'"{entry.sentence}"'
             out.append(f"What changed in {entry.location}: {said}")
+    out += left_out(document)
     for entry in entries:
+        if not entry.asked:
+            where = _late_target(entry) if entry.revisit else entry.location + _for(entry.anchor)
+            out.append(f"{NOT_ASKED}: {where}, {entry.label}{_quoted(entry.reason)}")
+    for setting in settings:
+        out.append(f"{setting.key}: {_side(setting.before)} → {_side(setting.after)}")
+    unread_files = _texts_of(document.get("unreadable"))
+    if unread_files:
+        out.append(f"{UNREAD}: {len(unread_files)}")
+    return [*out, *apart(document), *also]
+
+
+def left_out(document: Mapping[str, Any]) -> list[str]:
+    """What the change leaves out of date, a line each, as `told` gives it: each
+    document, with the anchor and the words of each deferral the change wrote or a
+    revalidation kept, and each target of a link a `deferred` revisit entry leaves
+    out of date, with the source that names it and the entry's words. The words
+    name its follow-up (COR-050 points 3 and 16)."""
+    out: list[str] = []
+    for entry in (_read_entry(e) for e in _entries(document)):
         if entry.revisit:
             if entry.deferred:
-                out.append(f"Left out of date: {_late_target(entry)}{_quoted(entry.reason)}")
+                out.append(f"{LEFT}: {_late_target(entry)}{_quoted(entry.reason)}")
             continue
         late = [(entry.anchor, entry.reason)] if entry.label == LABELS[DEFERRED] else []
         for anchor, words in [*late, *entry.kept]:
-            where = f", for changes to {anchor.said(markdown=False)}" if anchor else ""
-            out.append(f"Left out of date: {entry.location}{where}{_quoted(words)}")
-    for setting in settings:
-        before, after = _side(setting.before, code=False), _side(setting.after, code=False)
-        out.append(f"{setting.key}: {before} → {after}")
+            out.append(f"{LEFT}: {entry.location}{_for(anchor)}{_quoted(words)}")
     return out
+
+
+def _for(anchor: _Anchor | None) -> str:
+    """`, for changes to <anchor>`, or nothing where there is no anchor."""
+    return f", for changes to {anchor.said()}" if anchor is not None else ""
 
 
 def _quoted(words: str | None) -> str:
@@ -1387,10 +1208,14 @@ def _quoted(words: str | None) -> str:
     return f': "{words}"' if words is not None else ""
 
 
+#: What a revisit entry says where the check names no target.
+A_TARGET = "a target"
+
+
 def _late_target(entry: _Entry) -> str:
-    """A target a `deferred` revisit entry leaves out of date, as `told` names it:
-    `<target>, which <source> names through <links>`."""
-    target = entry.target.said(markdown=False) if entry.target is not None else A_TARGET
+    """The target a revisit entry answers for, as `told` names it: `<target>, which
+    <source> names through <links>`."""
+    target = entry.target.said() if entry.target is not None else A_TARGET
     through = f" through {_and(list(entry.links))}" if entry.links else ""
     return f"{target}, which {entry.location} names{through}"
 
@@ -1405,8 +1230,8 @@ def apart(document: Mapping[str, Any]) -> list[str]:
     document did not read, a line each, as the change check reports it
     (`answered_apart_at_tip`). Merged, the two are answered apart, which the
     whole-repository check reports as debt until a revalidation reads both (COR-062
-    point 7). Printed beside the list, never in it, as information that stops
-    nothing (DEC-055 point 3). Every text is shown escaped."""
+    point 7). Told after the rest (`told`), as information that stops nothing
+    (DEC-055 point 3). Every text is shown escaped."""
     out: list[str] = []
     found = document.get("answered_apart_at_tip")
     for item in found if isinstance(found, list) else []:
@@ -1432,18 +1257,20 @@ class Counted(NamedTuple):
     """What `told` tells, counted: the documents the change updated, the documents
     it leaves out of date — a deferral it wrote or a revalidation kept — and the
     targets of a link it leaves out of date — a `deferred` revisit entry — each
-    counted once."""
+    counted once, and the answers the change check did not ask for."""
 
     updated: int
     left: int
     targets: int
+    unasked: int = 0
 
 
 def counted_told(document: Mapping[str, Any]) -> Counted:
-    """How many documents the change updated, how many it leaves out of date, and
-    how many targets of a link it leaves out of date (`Counted`): a document by
-    its location, a target by its anchor, whatever sources name it. An entry the
-    check names no target for counts as one of its own, as `told` gives it a line."""
+    """How many documents the change updated, how many it leaves out of date, how
+    many targets of a link it leaves out of date, and how many answers the change
+    check did not ask for (`Counted`): a document by its location, a target by its
+    anchor, whatever sources name it. An entry the check names no target for
+    counts as one of its own, as `told` gives it a line."""
     entries = _entries(document)
     updated = {str(e.get("location") or "") for e in entries if e.get("answer") == UPDATED}
     late = {
@@ -1458,22 +1285,22 @@ def counted_told(document: Mapping[str, Any]) -> Counted:
         target = _mapping(e.get("target"))
         named = (str(target.get("kind")), str(target.get("value")))
         targets.add(named if target else ("", str(index)))
-    return Counted(len(updated), len(late), len(targets))
+    unasked = sum(1 for e in entries if not _read_entry(e).asked)
+    return Counted(len(updated), len(late), len(targets), unasked)
 
 
 # --- the author's sentences ---------------------------------------------------
 
 #: The heading of the description's section where the change's author says what
 #: changed in each document the change revalidated as `updated`, one sentence
-#: each (DEC-055 point 1). It is the author's own text, kept in the description
-#: between writes; the commands read it and give each sentence beside its
-#: document in the list. MUST match body-format.yaml `friction_answers_marker`'s
-#: `sentences_heading`.
+#: each (COR-050 point 3, DEC-065 point 1). It is the author's own text, kept in
+#: the description; the commands read each sentence from it. MUST match
+#: body-format.yaml `friction_answers_marker`'s `sentences_heading`.
 SENTENCES_HEADING = "## What changed in each updated document"
 _SENTENCES_LINE = _heading_line(SENTENCES_HEADING)
 #: A sentence: a top-level list item, bulleted or numbered and starting in the
-#: line's first column, that names the document in a code span, as the list names
-#: it, then a colon or a dash, then the sentence.
+#: line's first column, that names the document in a code span, as the change check
+#: names it, then a colon or a dash, then the sentence.
 _SENTENCE_ITEM = re.compile(
     r"^(?:[-*+]|\d{1,9}[.)])[ \t]+(`+)(.+?)\1(?!`)[ \t]*(?:[:—–-][ \t]*)?(.*)$"
 )
@@ -1482,7 +1309,17 @@ SENTENCE_FORM = "- `path`: sentence"
 #: The form, as a command's warning or refusal tells the author to write it.
 _FORM_SAID = (
     f'"{SENTENCE_FORM}", starting in the line\'s first column, the document in a code span '
-    "as the list names it"
+    "as the change check names it"
+)
+#: A closing reference in the host's grammar: one of its nine keywords, an optional
+#: colon, then `#N`, `owner/repo#N` or an issue's URL, in any case. It reads wider
+#: than the closing references this capability reads, since the host closes what it
+#: reads: over-matching only refuses a sentence, and under-matching closes an issue
+#: at merge past the checkbox gate and the cascade (DEC-065 point 5).
+CLOSING_REFERENCE = re.compile(
+    r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*"
+    r"(?:#\d+|[\w.-]+/[\w.-]+#\d+|https?://\S+?/issues/\d+)",
+    re.IGNORECASE,
 )
 #: A thematic break: three or more of one of `-`, `*`, `_`, spaces between.
 _BREAK = r" {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$"
@@ -1521,17 +1358,24 @@ def _nest(opening: re.Match[str]) -> int:
     return len(indent) + len(marker) + (min(len(space), 4) if space else 1)
 
 
+def _closes(line: str, fence: str) -> bool:
+    """Whether `line` closes a fenced block opened with `fence`: that character, at
+    least as many times, and nothing else."""
+    text = line.strip()
+    return text.startswith(fence) and not text.strip(fence[0])
+
+
 def _read_sentences(body: str) -> tuple[dict[str, str], list[Unread]]:
     """The sentences the author wrote under `SENTENCES_HEADING`, and each list item
     there that gives none (`sentences`, `unread`). One reading for both, so a
-    warning names exactly the items the reading leaves out. The list a command
+    warning names exactly the items the reading leaves out. A list an earlier run
     wrote reads as a blank line, so its lines keep their numbers. An item is at
     the list's top level unless it is indented as far as the content of the
     top-level item above it, in the same list. A heading, an HTML comment, a
     thematic break, a fence, or a paragraph after a blank line, indented less
     than that content, ends the list."""
     lines_ = _split(provenance.strip_footer(body))
-    listed = {index for span in _spans(lines_) for index in range(span.first, span.last + 1)}
+    listed = _covered(_spans(lines_))
     found: dict[str, str] = {}
     unread_: list[Unread] = []
     inside = comment = blank = False
@@ -1610,11 +1454,11 @@ def _read_sentences(body: str) -> tuple[dict[str, str], list[Unread]]:
 
 def sentences(body: str) -> dict[str, str]:
     """The sentences the change's author wrote under `SENTENCES_HEADING`, by the
-    document each names — its location, as the list names it. Read from `body`
-    without the list, its provenance footer, fenced code blocks and HTML comments.
-    An item runs on over the lines under it up to a blank line, another list item,
-    a heading, an HTML comment, a thematic break or a fence, its whitespace
-    folded. Of two items for one document, the first."""
+    document each names — its location, as the change check names it. Read from
+    `body` without a list an earlier run wrote, its provenance footer, fenced code
+    blocks and HTML comments. An item runs on over the lines under it up to a blank
+    line, another list item, a heading, an HTML comment, a thematic break or a
+    fence, its whitespace folded. Of two items for one document, the first."""
     return _read_sentences(body)[0]
 
 
@@ -1637,220 +1481,80 @@ def unread_warning(item: Unread) -> str:
     )
 
 
-def listed_updated(body: str) -> list[str]:
-    """Each document the list `body` carries marks `updated`, as the list names it
-    and in its order; none where `body` carries no list a command wrote."""
-    block = find(body)
-    return [] if block is None else list(dict.fromkeys(_region_updated(block)))
-
-
-def unsaid_in(body: str) -> list[str]:
-    """Each document the list `body` carries marks `updated` that `sentences` reads
-    no sentence for in `body`, as the list names it and in its order; none where
-    `body` carries no list a command wrote. Read from the description alone: the
-    list is for the head its start marker names (`listed_head`), so a document
-    updated since is not among them, and one among them may be updated no more."""
-    said = sentences(body)
-    return [location for location in listed_updated(body) if location not in said]
-
-
 def unsaid_message(location: str) -> str:
-    """What a command that refuses or warns says of `location`, a document the list
-    marks `updated` with no sentence: the document, and the form a sentence takes.
-    It says what the list marks, not that the change updates the document: the
-    list is the description's, and a later fix round may have answered the
-    document otherwise or dropped its revalidation."""
+    """What a command that refuses or warns says of `location`, a document the change
+    check marks `updated` at the pull request's head with no sentence in the
+    description: the document, and the form a sentence takes."""
     return (
-        f"{location} is marked updated in the description's list, and the description gives "
-        f"no sentence on what changed in it — under `{SENTENCES_HEADING}`, write one on a "
-        f"line of its own as {_FORM_SAID}"
+        f"{location} is updated in this change, and the description gives no sentence on "
+        f"what changed in it — under `{SENTENCES_HEADING}`, write one on a line of its own "
+        f"as {_FORM_SAID}"
     )
 
 
 def updated_in(document: Mapping[str, Any]) -> list[str]:
-    """Each document the change check's `document` marks `updated`, as the list
+    """Each document the change check's `document` marks `updated`, as the check
     names it and in its order. A target revisited by changing it is none: no
     revalidation carries a sentence there."""
     entries = (e for e in _entries(document) if e.get("answer") == UPDATED)
     return list(dict.fromkeys(_read_entry(e).location for e in entries))
 
 
-def given(document: Mapping[str, Any], sentences_: Mapping[str, str]) -> dict[str, str]:
-    """The sentences the list gives: each `updated` document's, by its location."""
-    updated = set(updated_in(document))
-    return {key: words for key, words in sentences_.items() if key in updated}
-
-
 def unlisted(document: Mapping[str, Any], sentences_: Mapping[str, str]) -> list[str]:
     """Each document `sentences_` gives a sentence for that `document` does not mark
-    `updated`, in the sentences' order: the list never shows such a sentence, so
-    the author removes it (DEC-055 point 3)."""
+    `updated`, in the sentences' order: no reviewer checks such a sentence, so the
+    author removes it (DEC-055 point 3, DEC-065 point 3)."""
     updated = set(updated_in(document))
     return [key for key in sentences_ if key not in updated]
 
 
 def unlisted_warning(location: str, head: str, pr_number: int | None = None) -> str:
-    """What a command that derives the list at `head` says of `location`, a document
-    the author gives a sentence for that the list does not mark `updated`: the list
-    does not show it, and the edit that removes it."""
+    """What a command that derives the answers at `head` says of `location`, a document
+    the author gives a sentence for that the change check does not mark `updated`:
+    no reviewer checks the sentence, and the edit that removes it."""
     edit = "`edit-pr`" if pr_number is None else f"`edit-pr {pr_number} --body-file <file>`"
     return (
-        f"{location} has a sentence under `{SENTENCES_HEADING}`, and the list at "
-        f"{head[:SHORT]} does not mark it updated, so the list does not show the sentence — "
+        f"{location} has a sentence under `{SENTENCES_HEADING}`, and the change check at "
+        f"{head[:SHORT]} does not mark it updated, so no reviewer checks the sentence — "
         f"remove it from the description with {edit}"
     )
 
 
-def listed_head(body: str) -> str | None:
-    """The head the list `body` carries was derived at, as its start marker names
-    it; None where `body` carries no list a command wrote, or its marker names no
-    head."""
-    block = find(body)
-    if block is None:
-        return None
-    found = _LISTED_HEAD.search(_split(block)[0])
-    return found.group(1) if found is not None else None
-
-
 def unsaid(document: Mapping[str, Any], sentences_: Mapping[str, str]) -> list[str]:
-    """Each `updated` document the author wrote no sentence for, in the list's order."""
+    """Each `updated` document the author wrote no sentence for, in the change check's
+    order."""
     entries = [_read_entry(e, sentences_) for e in _entries(document)]
     return list(dict.fromkeys(e.location for e in entries if e.updated and e.sentence is None))
 
 
-def sentence_closing_reference(sentences_: Mapping[str, str]) -> tuple[str, str] | None:
-    """The first of `sentences_` that reads as a closing reference, as (the
-    document it is for, the words that read so); None when none does."""
-    return _first(CLOSING_REFERENCE, ((key, shown(words)) for key, words in sentences_.items()))
+def closing_references(sentences_: Mapping[str, str]) -> list[tuple[str, str]]:
+    """Each of `sentences_` that reads as a closing reference, in order, as (the
+    document it is for, the words that read so). A sentence stays in the description
+    and the squash commit, where the host's parser reads it, and nothing here can
+    make that parser skip a section (DEC-065 point 5)."""
+    found = ((key, CLOSING_REFERENCE.search(shown(words))) for key, words in sentences_.items())
+    return [(key, match.group(0)) for key, match in found if match is not None]
 
 
-def sentence_comment_delimiter(sentences_: Mapping[str, str]) -> tuple[str, str] | None:
-    """The first of `sentences_` holding an HTML comment's delimiter, as (the
-    document it is for, the delimiter); None when none does."""
-    return _first(COMMENT_DELIMITER, ((key, shown(words)) for key, words in sentences_.items()))
+def closing_message(location: str, words: str) -> str:
+    """What a command that refuses says of the sentence on `location`, whose `words`
+    read as a closing reference."""
+    return (
+        f"the sentence on what changed in {location}, under `{SENTENCES_HEADING}`, reads as "
+        f"a closing reference ({words}): the host would close an issue with it at merge — "
+        "reword it"
+    )
 
 
-#: An entry's line in a list a command wrote: its number, then the document in a
-#: code span.
-_ENTRY_LINE = re.compile(r"^\d+\. (`+)(.+?)\1(?!`)")
-#: How an `updated` entry's outcome reads in the Markdown list, in either case.
-_UPDATED_MARK = f"**{LABELS[UPDATED]}**".lower()
-#: A code span, as `_code` writes every text of an artefact's.
-_CODE_SPAN = re.compile(r"(`+).+?\1(?!`)")
+# --- the region in a description --------------------------------------------
 
-
-def _is_revisit_line(line: str) -> bool:
-    """Whether an entry's line is a revisit entry's: its source's code span, then
-    `_NAMES`. Its outcome may read `updated` — a target the change revisited by
-    changing it — yet it marks no document updated, since no revalidation carries
-    a sentence there."""
-    entry = _ENTRY_LINE.match(line)
-    return entry is not None and line[entry.end() :].startswith(_NAMES)
-
-
-def _marked_updated(line: str) -> bool:
-    """Whether an entry's line gives the outcome `updated` of a revalidation: the
-    bold label outside every code span, so an artefact's words that quote it mark
-    nothing, on a line that is no revisit entry's (`_is_revisit_line`)."""
-    if _is_revisit_line(line):
-        return False
-    return _UPDATED_MARK in _CODE_SPAN.sub("", line).lower()
-
-
-#: How a line giving an author's sentence, or saying there is none, begins.
-_SAID_LINE = re.compile(rf"^   - \((?:{re.escape(SAID)}|{re.escape(UNSAID)})")
-
-
-def _region_updated(block: str) -> list[str]:
-    """The documents a list a command wrote marks `updated`, as it names them."""
-    out: list[str] = []
-    for line in _split(block):
-        entry = _ENTRY_LINE.match(line)
-        if entry is not None and _marked_updated(line):
-            out.append(_unpadded(entry.group(2)))
-    return out
-
-
-def given_in(block: str, sentences_: Mapping[str, str]) -> dict[str, str]:
-    """The sentences a list a command wrote gives: each `updated` document's."""
-    updated = set(_region_updated(block))
-    return {key: words for key, words in sentences_.items() if key in updated}
-
-
-def _unpadded(text: str) -> str:
-    """A code span's text as `_code` wrote it: one space each side dropped when
-    both are there."""
-    return text[1:-1] if len(text) > 1 and text.startswith(" ") and text.endswith(" ") else text
-
-
-def with_sentences(block: str, sentences_: Mapping[str, str]) -> str:
-    """A list a command wrote — a region `find` gave — with each `updated`
-    document's sentence from `sentences_`, or the line saying there is none, in
-    place of the one it had; every other line as it was, the check's words and
-    the markers included. For an edit that derives nothing: the list stays the
-    check's for the head it names, and gives the author's sentences as they now
-    stand."""
-    out: list[str] = []
-    for line in _split(block):
-        if _SAID_LINE.match(line):
-            continue
-        out.append(line)
-        entry = _ENTRY_LINE.match(line)
-        if entry is None or not _marked_updated(line):
-            continue
-        sentence = sentences_.get(_unpadded(entry.group(2)))
-        said = UNSAID if sentence is None else f'{SAID}: "{_code(shown(sentence), least=2)}"'
-        out.append(f"   - ({said})")
-    return "\n".join(out)
-
-
-def _texts(document: Mapping[str, Any], settings: Sequence[Setting]) -> Iterator[tuple[str, str]]:
-    """Every text the section would show, as it would show it, with where it is:
-    (an answer's location, or `SETTINGS_WHERE`) and the text. An anchor is read as
-    the change check names it, `kind:value`; a revisit entry's target, links and
-    trigger fields are read too."""
-    for entry in (_read_entry(e) for e in _entries(document)):
-        named = entry.anchor.named if entry.anchor is not None else None
-        texts: list[str | None] = [entry.location, entry.label, named, entry.reason]
-        texts += [anchor.named for anchor in entry.changed]
-        texts += [entry.target.named if entry.target is not None else None]
-        texts += [*entry.links, *entry.fields]
-        for anchor, words in entry.kept:
-            texts += [anchor.named, words]
-        for text in texts:
-            if text:
-                yield entry.location, text
-    for setting in settings:
-        for value in (setting.key, *setting.before, *setting.after):
-            yield SETTINGS_WHERE, shown(value)
-
-
-def _first(pattern: re.Pattern[str], found: Iterable[tuple[str, str]]) -> tuple[str, str] | None:
-    for where, text in found:
-        match = pattern.search(text)
-        if match is not None:
-            return where, match.group(0)
-    return None
-
-
-def closing_reference(
-    document: Mapping[str, Any], settings: Sequence[Setting] = ()
-) -> tuple[str, str] | None:
-    """The first text of the list that reads as a closing reference, as
-    (location, the words that read so); None when none does. Every text the
-    section would show is read, as it would show it."""
-    return _first(CLOSING_REFERENCE, _texts(document, settings))
-
-
-def comment_delimiter(
-    document: Mapping[str, Any], settings: Sequence[Setting] = ()
-) -> tuple[str, str] | None:
-    """The first text of the list holding an HTML comment's delimiter (`<!--` or
-    `-->`), as (location, the delimiter); None when none does."""
-    return _first(COMMENT_DELIMITER, _texts(document, settings))
-
-
-# --- the section in a description ------------------------------------------
+#: What a command says of a start marker with no end marker after it: what follows
+#: may be the author's, so nothing is removed (DEC-065 point 1).
+ORPHAN_WARNING = (
+    f"the description holds a line `{MARKER_START} …` with no end marker after it, so it "
+    "is left as it is: if it is what remains of a list an earlier run wrote, remove it "
+    "with `edit-pr`"
+)
 
 
 def _is_start(line: str) -> bool:
@@ -1861,141 +1565,68 @@ def _is_end(line: str) -> bool:
     return line.strip() == MARKER_END
 
 
-def _is_marker(line: str) -> bool:
-    return _is_start(line) or _is_end(line)
-
-
 @dataclass(frozen=True)
 class _Span:
-    """Lines of a body that are the section, or a piece of one: `first` through
-    `last`. `kind` is `region` (a start marker's line through its end marker's,
-    `start` and `end`), `marker` (a marker with no partner, and for a start
-    marker everything after it up to the provenance footer), or `hand` (the
-    section's heading — or `FORMER_HEADING` — with no marker following, and
-    everything under it)."""
+    """The lines of a body a command wrote: `first`, the heading directly above the
+    start marker or the marker itself, through `last`, the end marker."""
 
     first: int
     last: int
-    kind: str
-    start: int = -1
-    end: int = -1
 
 
 def _spans(lines_: Sequence[str]) -> list[_Span]:
-    """Every piece of the section `lines_` carries, in order. The heading directly
-    above a region or a marker — blank lines between — goes with it. Markers are
-    whole lines wherever they stand, a fenced code block included, so a region is
-    never hidden by a fence left open above it; a heading is read only outside a
-    fenced code block."""
-    footer = _footer_start(lines_)
+    """Every region a command wrote that `lines_` carries, in order: a start marker
+    through the first end marker after it with no start marker between, and the
+    heading directly above it, blank lines between. Markers are whole lines wherever
+    they stand, a fenced code block included, so a region is never hidden by a fence
+    left open above it. A marker with no partner makes no region."""
     spans: list[_Span] = []
-    fence: str | None = None
-    index = 0
-    while index < len(lines_):
-        line = lines_[index]
-        if _is_marker(line):
-            spans.append(_marked(lines_, index, footer, heading=None))
-            index = spans[-1].last + 1
-            continue
-        if fence is not None:
-            fence = None if _closes(line, fence) else fence
-            index += 1
-            continue
-        opened = _FENCE.match(line)
-        if opened is not None:
-            fence = opened.group(1)
-            index += 1
-            continue
-        if _HEADING_LINE.match(line):
-            below = index + 1
-            while below < len(lines_) and not lines_[below].strip():
-                below += 1
-            if below < len(lines_) and _is_marker(lines_[below]):
-                spans.append(_marked(lines_, below, footer, heading=index))
-            else:
-                spans.append(_hand(lines_, index, footer))
-            index = spans[-1].last + 1
-            continue
-        index += 1
+    start: int | None = None
+    for index, line in enumerate(lines_):
+        if _is_start(line):
+            start = index
+        elif _is_end(line) and start is not None:
+            spans.append(_Span(_opening(lines_, start), index))
+            start = None
     return spans
 
 
-def _closes(line: str, fence: str) -> bool:
-    """Whether `line` closes a fenced block opened with `fence`: that character, at
-    least as many times, and nothing else."""
-    text = line.strip()
-    return text.startswith(fence) and not text.strip(fence[0])
+def _opening(lines_: Sequence[str], start: int) -> int:
+    """The line a region whose start marker is at `start` opens on: the heading
+    directly above it, blank lines between, or the marker."""
+    above = start - 1
+    while above >= 0 and not lines_[above].strip():
+        above -= 1
+    return above if above >= 0 and _HEADING_LINE.match(lines_[above]) else start
 
 
-def _marked(lines_: Sequence[str], at: int, footer: int | None, *, heading: int | None) -> _Span:
-    """The span of the marker line at `at`: its region, when a start marker's end
-    follows; else the marker alone — or, for a start marker, everything from it to
-    the provenance footer or the end of the body, where its list would be."""
-    first = at if heading is None else heading
-    if _is_start(lines_[at]):
-        for end in range(at + 1, len(lines_)):
-            if _is_end(lines_[end]):
-                return _Span(first, end, "region", start=at, end=end)
-            if _is_start(lines_[end]):
-                break
-        stop = footer if footer is not None and footer > at else len(lines_)
-        return _Span(first, stop - 1, "marker")
-    return _Span(first, at, "marker")
-
-
-def _hand(lines_: Sequence[str], heading: int, footer: int | None) -> _Span:
-    """The span of a section under the section's heading that no command wrote: its
-    heading through the line before the provenance footer, a marker, the next heading of
-    level one or two outside a fenced block, or the end of the body."""
-    fence: str | None = None
-    for index in range(heading + 1, len(lines_)):
-        line = lines_[index]
-        if index == footer or _is_marker(line):
-            return _Span(heading, index - 1, "hand")
-        if fence is not None:
-            fence = None if _closes(line, fence) else fence
-            continue
-        opened = _FENCE.match(line)
-        if opened is not None:
-            fence = opened.group(1)
-            continue
-        if _SECTION_END.match(line):
-            return _Span(heading, index - 1, "hand")
-    return _Span(heading, len(lines_) - 1, "hand")
+def _covered(spans: Iterable[_Span]) -> set[int]:
+    """The numbers of the lines `spans` cover."""
+    return {index for span in spans for index in range(span.first, span.last + 1)}
 
 
 def _split(body: str) -> list[str]:
     return body.replace("\r\n", "\n").split("\n")
 
 
-def find(body: str) -> str | None:
-    """The region `body` carries — its start marker's line through its end
-    marker's — or None when it carries no complete one. Of several, the last:
-    every write places its region last, so that is the latest."""
-    lines_ = _split(body)
-    regions = [span for span in _spans(lines_) if span.kind == "region"]
-    if not regions:
-        return None
-    return "\n".join(lines_[regions[-1].start : regions[-1].end + 1])
-
-
-def hand_written(body: str) -> bool:
-    """Whether `body` carries a section no command wrote: the section's heading —
-    or `FORMER_HEADING` — with no marker under it."""
-    return any(span.kind == "hand" for span in _spans(_split(body)))
-
-
 def has_list(body: str) -> bool:
-    """Whether `body` carries the section a command wrote, or a marker of one."""
-    return any(span.kind != "hand" for span in _spans(_split(body)))
+    """Whether `body` carries a region a command wrote."""
+    return bool(_spans(_split(body)))
+
+
+def orphaned(body: str) -> bool:
+    """Whether `body` holds a start marker that makes no region: its end marker was
+    lost, or it is quoted. What follows it may be the author's, so nothing removes
+    it (DEC-065 point 1)."""
+    lines_ = _split(body)
+    covered = _covered(_spans(lines_))
+    return any(_is_start(line) for at, line in enumerate(lines_) if at not in covered)
 
 
 def strip(body: str) -> str:
-    """`body` without the section: every region and the heading directly above it,
-    every marker with no partner — a start marker with everything after it up to
-    the provenance footer — and every section under the section's heading, or
-    `FORMER_HEADING`, that no command wrote, with everything under it. Text
-    outside them is left as it is."""
+    """`body` without each region a command wrote and the heading directly above it.
+    Text outside them is left as it is, a marker with no partner and a section under
+    either heading with no markers included (DEC-065 point 1)."""
     lines_ = _split(body)
     spans = _spans(lines_)
     if not spans:
@@ -2021,56 +1652,3 @@ def strip(body: str) -> str:
         cut = False
         out.append(line)
     return "\n".join(out)
-
-
-def _footer_start(lines_: Sequence[str]) -> int | None:
-    """Where the provenance footer starts, as `provenance.strip_footer` finds it:
-    the first line that is one of its markers, whole."""
-    markers = (provenance.MARKER_START, provenance.MARKER_END)
-    for index, line in enumerate(lines_):
-        if line.strip() in markers:
-            return index
-    return None
-
-
-def stamp(body: str, block: str | None) -> str:
-    """`body` with exactly one section, `block` — the section `render` gives, or a
-    region `find` gave — placed last before the provenance footer; with `block`
-    None, `body` without one."""
-    rest = strip(body).split("\n")
-    if block is None:
-        return "\n".join(rest)
-    section = block if block.lstrip().startswith(HEADING) else f"{HEADING}\n\n{block.strip()}"
-    footer_at = _footer_start(rest)
-    before = "\n".join(rest if footer_at is None else rest[:footer_at]).rstrip()
-    footer = "" if footer_at is None else "\n".join(rest[footer_at:]).strip()
-    out = f"{before}\n\n{section.strip()}" if before else section.strip()
-    return f"{out}\n\n{footer}\n" if footer else f"{out}\n"
-
-
-def _normal(text: str | None) -> str:
-    """Line endings as `\\n`, trailing whitespace dropped, outer blank lines trimmed."""
-    if text is None:
-        return ""
-    lines_ = [line.rstrip() for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n")]
-    return "\n".join(lines_).strip("\n")
-
-
-def current(body: str, block: str | None) -> bool:
-    """Whether `body` carries `block`'s region and nothing else of the section,
-    read as a host may have changed its whitespace; with `block` None, whether it
-    carries nothing of the section — no region, no marker line, no section a
-    hand wrote under its heading. Markers count only as whole lines."""
-    lines_ = _split(body)
-    spans = _spans(lines_)
-    if block is None:
-        return not spans
-    if len(spans) != 1 or spans[0].kind != "region":
-        return False
-    region = "\n".join(lines_[spans[0].start : spans[0].end + 1])
-    return _normal(region) == _normal(find(block))
-
-
-def fits(body: str) -> bool:
-    """Whether the host keeps `body` whole."""
-    return len(body) <= BODY_LIMIT
