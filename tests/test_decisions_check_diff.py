@@ -606,6 +606,67 @@ def test_a_record_not_accepted_at_the_branch_point_is_not_listed(repo: GitRepo) 
     assert "accepted record(s) the change alters" not in _run().output
 
 
+def _top_line(record: str, line: str) -> str:
+    """`record` with `line` at the top of its body."""
+    return record.replace("---\n\n## Context", f"---\n\n{line}\n\n## Context")
+
+
+#: Each way a new record changes the accepted PRJ-001: its front matter's extra lines, the
+#: edit to PRJ-001 once it is accepted, and what the check lists for that edit.
+_NEW_RECORD_EDITS = {
+    "refines": (
+        "",
+        _record(_point("1") + _point("2", text="Narrowed (refinement per PRJ-002), text of")),
+        _Change(RECORD, "PRJ-001", (_Point("2", "altered", "Point 2"),)),
+    ),
+    "overturns in part": (
+        "",
+        _top_line(_record(_points("1", "2")), "*Partially superseded by PRJ-002.*"),
+        _Change(RECORD, "PRJ-001", shared=True),
+    ),
+    "replaces whole": (
+        "supersedes: PRJ-001\n",
+        _top_line(
+            _record(_points("1", "2")).replace("status: accepted", "status: superseded"),
+            "*Superseded by PRJ-002.*",
+        ),
+        _Change(RECORD, "PRJ-001", fields=("status",), shared=True),
+    ),
+}
+
+
+@pytest.mark.parametrize("how", list(_NEW_RECORD_EDITS))
+def test_a_new_record_accepted_in_its_change_then_its_edits_pass_and_are_listed(
+    repo: GitRepo, how: str
+) -> None:
+    """A new record is accepted in its change, and its edits to the accepted record it
+    refines, overturns in part or replaces whole follow there (the decisions README,
+    "The acceptance gate"). The check fails none of the change's commits, and lists the
+    edits to the accepted record for whoever authorises the merge, once they are made."""
+    extra, edited, listed = _NEW_RECORD_EDITS[how]
+    _branch(repo, {RECORD: _record(_points("1", "2"))})
+    added = f"{PROJECT}/PRJ-002-b.md"
+    accepted = _record(_points("1"), record_id="PRJ-002", extra=extra)
+
+    def passes(compared: int, changed: list[decisions_check_diff.ChangedRecord]) -> Result:
+        result = _run()
+        assert result.exit_code == 0, result.output
+        assert f"Compared {compared} decision record(s)" in result.output
+        assert "0 error(s) and 0 warning(s)" in result.output
+        assert _changed(repo) == changed
+        return result
+
+    proposed = accepted.replace("status: accepted", "status: proposed")
+    repo.commit("propose PRJ-002", {added: proposed})
+    passes(1, [])
+    repo.commit("accept PRJ-002", {added: accepted})
+    passes(1, [])
+    repo.commit("edit PRJ-001", {RECORD: edited})
+    result = passes(2, [listed])
+    assert "1 accepted record(s) the change alters or removes" in result.output
+    assert f"PRJ-001 (`{RECORD}`): {listed.said()}" in result.output
+
+
 def test_a_record_in_list_form_is_listed_whole(repo: GitRepo) -> None:
     _branch(repo, {RECORD: _record(_LIST)})
     repo.write({RECORD: _record(_LIST.replace("Two.", "Two, widened."))})

@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+body: >
+  The whole-repository friction check, `pkit friction check --all`, reads each
+  version of a collection file from git once in the walk that finds where each
+  of the file's entries was last added (#2650). It read the file's versions
+  again for every entry. The walker keeps one file's versions while it walks
+  them, and lets them go when it walks another. What every friction command
+  reports is unchanged.

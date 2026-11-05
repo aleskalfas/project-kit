@@ -331,7 +331,8 @@ def _release_own(root: Path, name: str) -> int:
     try:
         text = records.with_value(
             list_file.read_bytes().decode("utf-8"),
-            ["libraries", name, "versions", str(version)],
+            ["libraries", name, "versions"],
+            str(version),
             released,
             each="version",
         )

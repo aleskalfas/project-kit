@@ -1,0 +1,10 @@
+component: visual-communication
+kind: none
+body: >
+  The capability's pages anchor the sections they summarise, and no page
+  anchors another page whole (#2635). A page that rests on a few points of
+  a record anchors those points, one anchor a line. The README's command
+  bullets link the section that holds each detail, and restate none.
+  `files.md` states the list's rewriting once for both commands, with the
+  refusal of a key written in quotes. No command, file format or shipped
+  library changes, so no surface moves.

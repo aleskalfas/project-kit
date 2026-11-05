@@ -81,7 +81,7 @@ These come up often enough to name. Work each one against the proposal:
 You have write authority over `<adr-records>` (overlay-resolved per COR-025; conventional default `docs/architecture/decisions/`). When you author an ADR:
 
 - Stamp via `pkit new decision adr <slug>` once that command lands; until then, hand-stamp following the kit's uniform four-section schema (Context / Decision / Rationale / Implications) per `.pkit/decisions/README.md`.
-- The new ADR lands as `status: proposed`. Acceptance is a separate gesture per the acceptance gate.
+- The new ADR is `status: proposed` on its change's branch, and its Implications name each edit it makes to an accepted record. A person accepts it in that change, and it lands accepted (per the acceptance gate). Once it is accepted, you make in that change the edits to records you own. Any other edit its Implications name is for whoever makes the change.
 - Cite the proposal or session that produced the decision in `## Context`; cite the alternatives considered in `## Rationale`.
 - **Follow the disciplines an ADR follows**: `.pkit/decisions/README.md` → "Writing a record", its "Every record" and "An architecture record". Every record leads with meaning: give the ADR a short declarative title and open with a plain-language summary a reader grasps in under a minute, *before* the detailed decision; let each sentence cite what it needs (roughly one reference per point) rather than stacking five. Keep the rigor — put a readable on-ramp in front of it. Your audience is future maintainers and on-call engineers reading under pressure; a correct-but-cryptic ADR has failed them.
 

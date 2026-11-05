@@ -6,21 +6,33 @@ date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** a decision record or a rule is a proposal only inside the change that proposes it. A person accepts it there, before work rests on it, and it reaches the default branch accepted. A check of its own refuses a merge, or a direct commit, that would land a proposal, and the person who authorises a change to land sees first every record and rule it makes accepted. A project turns the refusal on when it chooses.
+**In plain terms:** a decision record or a rule is a proposal only inside the change that proposes it. A person accepts it there, before work rests on it, and it reaches the default branch accepted. A new decision record lands with its edits to the records it changes, made after its acceptance and read before the change lands. A check of its own refuses a merge, or a direct commit, that would land a proposal, and the person who authorises a change to land sees first every record and rule it makes accepted. A project turns the refusal on when it chooses.
 
 ## Context
 
-The decision-record specification and [COR-025](COR-025-adr-decision-space.md) let a record land on the default branch as `proposed`, and be accepted later in a separate step. [COR-051](COR-051-rule-sets.md) point 4 gives rules the same statuses. A proposed record or rule binds nothing, and accepting one stays a person's ([COR-064](COR-064-answer-delegate.md) point 6), so no agent decides alone. A proposal that lands, though, stays on the default branch with nothing to end it: it reads like a decision beside the accepted ones, and later work may build on it or decide its question without citing it.
+The decision-record specification and [COR-025](COR-025-adr-decision-space.md) let a record land on the default branch as `proposed`, and be accepted later in a separate step. [COR-051](COR-051-rule-sets.md) point 4 gives rules the same statuses. A proposed record or rule binds nothing, and accepting one stays a person's ([COR-064](COR-064-answer-delegate.md) point 6), so no agent decides alone. A proposal that lands, though, stays on the default branch with nothing to end it: it reads like a decision beside the accepted ones, and later work may build on it or decide its question without citing it. Nor does anything say when a new record's edits to the records it changes are made. Left to a later change, they leave those records saying otherwise until it lands.
 
 ## Decision
 
-**A decision record or a rule reaches the default branch only accepted, by a person, within the change that proposes it. A check of its own refuses to land a proposal, and what a change makes accepted is shown to the person before they authorise it.**
+**A decision record or a rule reaches the default branch only accepted, by a person, within the change that proposes it, and a new decision record lands with its edits to the records it changes. A check of its own refuses to land a proposal, and what a change makes accepted is shown to the person before they authorise it.**
 
 ### 1. A proposal lives only in its change
 
 A decision record or a rule is proposed only within the change that proposes it. A person accepts it in that change, before work in the change rests on it, and an agent writes `accepted` only once a person has; until then it reads `proposed` on its branch. Work in a change built on that one may rest on it once it is accepted, and reaches the default branch no earlier than that change does. A proposal that is refused is the change closed, so it never lands. A refused proposal whose reasoning is worth keeping becomes a scratchpad note, abandoned with the reason it was refused ([COR-012](COR-012-scratchpad-notes.md)).
 
 This overturns COR-025's "ADRs land as `proposed`", and the specification's practice of landing records proposed. A person's acceptance stays a separate act, made within the change. The statuses stand: a proposed record or rule binds nothing, and it exists only on the branch of the change that proposes it.
+
+### 5. A new record lands with its edits
+
+A new decision record's Implications name each edit its change makes to an accepted record, one the new record refines, overturns in part or replaces whole. Each name states what the edit makes that record say, not only where the edit goes. The decision-record specification says which edits those are, and how each is made.
+
+These edits rest on the new record, so they follow its acceptance, in its change. They do not go in a change built on that one, which may land later and leave the records disagreeing until it does. Accepting the new record accepts the edits its Implications name. An edit beyond them that changes what a record decides is a decision of its own, which stays a person's ([COR-064](COR-064-answer-delegate.md) point 6).
+
+The person who authorises the change to land is shown these edits beside point 3's list, in the same way: by the component that carries out merges or, without one, by the change's author. They are the edits the numbering check lists, and those point 3's list shows for a record accepted in a change this one is built on. That person reads each edit before the change lands.
+
+An edit the new record forces on a rule of the project's own rule sets, such as to an origin that cites a record it supersedes, is named in its Implications and made in its change after the acceptance ([COR-051](COR-051-rule-sets.md)). An edit to a rule set the project receives is proposed where that set is kept.
+
+A new record decides nothing against a record the project receives from elsewhere. A change it needs there is proposed where that record is kept ([COR-065](COR-065-records-and-projection.md) point 3), and nothing rests on that change until the project receives it accepted.
 
 ### 2. A check of its own refuses to land a proposal
 
@@ -38,7 +50,7 @@ The same check lists each record and rule the change makes accepted, added accep
 
 ### 4. A project turns the refusal on
 
-Point 1 binds every project. A project turns on point 2's refusal with a key in its backbone configuration that this record owns ([COR-048](COR-048-backbone-configuration.md) point 2). With the key absent, the refusal is off. Point 3's list is shown either way. The key counts as the default branch holds it when the check runs, so a change that turns it on or off counts only once it has landed, and the person who authorises that change sees it. Its writers are an install and a change a person authorises, each with consent as COR-048 point 5 asks. An upgrade does not write it.
+Points 1 and 5 bind every project. A project turns on point 2's refusal with a key in its backbone configuration that this record owns ([COR-048](COR-048-backbone-configuration.md) point 2). With the key absent, the refusal is off. Point 3's list is shown either way. The key counts as the default branch holds it when the check runs, so a change that turns it on or off counts only once it has landed, and the person who authorises that change sees it. Its writers are an install and a change a person authorises, each with consent as COR-048 point 5 asks. An upgrade does not write it.
 
 When a project turns the refusal on, the check lists each proposed record or rule on its own default branch, and a person settles each: a record is accepted or deleted, since a record has no state for a refused proposal, and a rule is accepted or withdrawn, which keeps it in place binding nothing (COR-051 point 4).
 
@@ -47,6 +59,8 @@ When a project turns the refusal on, the check lists each proposed record or rul
 **Why nothing proposed lands.** Accepting a decision stays a person's so that no agent decides alone. A proposal that lands keeps that promise, since it binds nothing, but it stays: it sits beside accepted records, where readers and agents meet it, and work builds on it or around it. Kept inside its change, a proposal is either accepted or closed, and the default branch holds only what a person decided. The change is the place to discuss and refine a proposal, so nothing is lost.
 
 **Why acceptance comes first, and is shown again at landing.** A person accepts a record before work rests on it, as the specification's acceptance gate asks. The check sees only a change's commits, not who wrote them, so refusing only the word `proposed` would push an agent to write `accepted` itself. The list at landing shows the person who authorises the merge each acceptance, the commit that made it, the work that came before it and every edit since. An acceptance no person gave, or text changed after it, is then seen before it lands. Without a component that shows it, this rests on the author's word, as an answer's evidence does ([COR-050](COR-050-anchors-and-friction.md) point 3).
+
+**Why a new record lands with its edits.** A decision lands stating what it decides, and each record it changes lands saying so. Left to a later change, the edits would leave a window in which the records disagree, and a reader of the old record would act on a choice the new one overturns. The person reads the edits' names, each saying what the edit makes the old record say, before accepting the record, so accepting it accepts them. They read the edits' words before the change lands, beside what it makes accepted, so an edit that strays from its name is seen. Made after the acceptance, the edits rest on an accepted record, as the rest of the change's work does. Committed before it, an edit would be a proposal that no status shows, which point 2's check cannot see. A line naming the new record at the top of an old one would then have an accepted record cite a proposed one, which the specification's reference-rot report lists. A project cannot fix a copy it receives, because sync overwrites it, so the change a new record needs there is proposed where that record is kept.
 
 **Why the refusal is a check of its own.** A proposal is pushed, reviewed and revised in its change before a person accepts it. A failure among the change's other checks would block the push where a hook runs them, stop the reviewers where the merge waits for every check to pass, and hide the other failures. A check of its own, run where the merge is decided, refuses only the merge.
 
@@ -57,6 +71,8 @@ When a project turns the refusal on, the check lists each proposed record or rul
 ### Alternatives considered
 
 - **Keep landing records proposed.** Rejected: a landed proposal reads like a decision, and nothing ends its life.
+- **A new record's edits follow in a change of their own.** Rejected: the records they change disagree with the decision until that change lands.
+- **Commit the edits before the acceptance, so the person reads their words with the record.** Rejected: an accepted record would then cite a proposal, and point 3's list would show the edits as work done on a draft. Their words may be shown uncommitted before the acceptance, and are read as committed before the change lands.
 - **The refusal fails among a change's other checks.** Rejected: it would block a proposal's push where a hook runs those checks, stop the reviewers where the merge waits for every check to pass, and hide other failures.
 - **The refusal fails only in the run that lands the change.** Rejected: where no component carries out merges, that run cannot be told apart from the others.
 
@@ -66,5 +82,6 @@ When a project turns the refusal on, the check lists each proposed record or rul
 - **The decision-record specification** says a record reaches the default branch accepted, after a person accepts it in its change. Its acceptance gate counts a record a person accepted in the change, or in a change it is built on. Its check of a change on records gains point 3's list, and point 2's refusal stands beside it as a check of its own; both read rules where their rule sets keep them.
 - **A component that carries out merges on a person's authority** runs the reviewers on a change that holds a proposal, shows the person one list of what the change decides (the records and rules it makes accepted, beside the edits to accepted records it already lists), and runs point 2's check before it merges. A status set to accepted after the reviewers judged a change is a new head they judge again, unless that component's own rules say otherwise.
 - **A project's checks run before a push**, and its decisions check on each change, leave point 2's check out; where no component carries out merges, the host requires it for a merge on a line of its own.
-- **The core operational rules, the authoring skill for records and the agent that authors architecture records** have a person accept a record in its change before work rests on it, and no longer land a record proposed.
+- **The core operational rules, the authoring skill for records and the agent that authors architecture records** have a person accept a record in its change before work rests on it, and never land a record proposed.
+- **Point 5 is carried out** by the decision-record specification, which says which edits a new record makes and how each is made. The authoring skill for records and the agent that authors architecture records name the edits, and make them after the acceptance. A component that plans work places a new record's edits in the change that lands the record. No command changes: the numbering check already lists such edits, and no check fails a change that makes them after the acceptance.
 - **An architecture record realizes this record**: point 2's check and how it reads rules, point 3's list, and the key.
