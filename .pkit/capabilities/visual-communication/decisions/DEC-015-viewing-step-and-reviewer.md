@@ -1,7 +1,7 @@
 ---
 id: DEC-015
 title: A piece's drawn pages are seen as images nothing else reads, and a reviewer reports what no check measures
-status: proposed
+status: accepted
 date: 2026-11-05
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
