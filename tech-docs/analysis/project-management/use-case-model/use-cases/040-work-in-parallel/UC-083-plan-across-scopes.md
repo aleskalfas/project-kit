@@ -15,16 +15,14 @@ requirements:
 after:
   - [UC-082]
   - [UC-064]
-shortfalls:
-  - at: 10
-    issue: "#2136"
-    record: project-management:DEC-059#7
 pkit:
   friction:
     anchors:
       path:
         - .pkit/capabilities/project-management/skills/pm/batch-plan.md
         - .pkit/capabilities/project-management/scripts/create-issue.py
+        - .pkit/capabilities/project-management/scripts/edit-issue.py
+        - .pkit/capabilities/project-management/scripts/promote-issue.py
         - .pkit/capabilities/project-management/scripts/seats.py
       record:
         - project-management:DEC-029
@@ -34,7 +32,6 @@ pkit:
         - project-management:DEC-018
         - project-management:DEC-025
         - project-management:DEC-035#3
-        - project-management:DEC-045#4
         - project-management:DEC-059#1
         - project-management:DEC-059#2
         - project-management:DEC-059#6
@@ -73,7 +70,7 @@ pkit:
 
 **Other actors:**
 
-- **Planning agent** (`ACT-planning-agent`): plans the intent on the planner's direction, and files nothing before the planner approves the whole plan ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
+- **Planning agent** (`ACT-planning-agent`): plans the intent on the planner's direction, and files nothing before the planner approves the whole batch plan ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 - **Worker agent** (`ACT-worker-agent`) and **Lead agent** (`ACT-lead-agent`): take the Tasks from the [ready Tasks](../../../glossary.md#term-ready-task--ready-task) that every [seat](../../../glossary.md#term-seat--seat) shares, or from their seats' [pools](../../../glossary.md#term-pool--pool). Each [Task](../../../glossary.md#term-task--task) names the Tasks that the Task waits on, so these agents never start a Task too early (`batch-plan.md`).
 - **AI agent** (`core:ACT-ai-agent`): the critic and the architect, each of which reviews the plan where `UC-063` step 5 asks for it ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 - **Operator** (`core:ACT-operator`): is asked before a filing changes a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
@@ -95,13 +92,10 @@ pkit:
 2. The planning agent reads the intent, the intent's references and the [project](../../../../core/glossary.md#term-project--project)'s use cases, as `UC-063` steps 2 and 3 describe ([DEC-054 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#5-the-planning-step)). The agent reads too the [topology](../../../glossary.md#term-topology--topology) from the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), with each [seat](../../../glossary.md#term-seat--seat) and the seat's [scope](../../../glossary.md#term-scope--scope), through `pkit pm seats` ([DEC-059 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch) and `batch-plan.md`). Where the topology declares [pools](../../../glossary.md#term-pool--pool), the listing shows each pool's open [Milestones](../../../glossary.md#term-milestone--milestone) too ([DEC-061 point 10](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#10-the-check-refuses-an-undeclared-pool-and-the-listings-warn-of-stranded-work)).
 3. The agent slices the intent into an [EPIC](../../../glossary.md#term-epic--epic), Features and Tasks. The agent slices vertically, so that one agent can finish a [Task](../../../glossary.md#term-task--task) or a [Feature](../../../glossary.md#term-feature--feature) across the software's layers ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and `batch-plan.md`). The agent gives each Task its [workstream](../../../glossary.md#term-workstream--workstream) and its [kind of work](../../../glossary.md#term-kind-of-work--kind-of-work) ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)). A Task falls in each scope whose parts the Task matches.
 
-10. The [system](../../../../core/glossary.md#term-system--system) warns of each Task of the plan that no seat may take, and refuses nothing (DEC-059 point 7 and [DEC-045 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#4-the-partition-is-soft--full-coverage-is-the-default-sharing-and-gaps-are-allowed-but-discouraged)).
-
-> [!WARNING]
-> **Not built yet:** nothing warns of a Task that no seat may take. DEC-059 point 7 decides the warning, and #2136 tracks it.
+10. The agent names each Task of the batch plan that no seat may take, for the planner to see with the batch plan (`batch-plan.md`).
 
 4. Where Tasks of one parent, Milestone and priority share a file, the agent plans the Tasks as one Task ([DEC-066 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-066-fold-tasks-that-share-a-file.md#2-tasks-of-one-parent-milestone-and-priority-that-share-a-file-are-planned-as-one-task) and `batch-plan.md`). That Task stays within what one review can read and one build can finish ([DEC-066 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-066-fold-tasks-that-share-a-file.md#3-the-one-task-stays-within-what-one-review-can-read-and-one-build-can-finish)). Where Tasks share a file and stay apart, the `## Dependencies` section of the Task planned or widened later names the earlier Task. The later Task is built once the earlier Task has merged ([DEC-066 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-066-fold-tasks-that-share-a-file.md#1-tasks-that-share-a-file-are-built-one-at-a-time) and [DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
-5. Where a Task needs what a Task of another scope builds, the first Task's `## Dependencies` section names that other Task too (DEC-005 and `batch-plan.md`).
+5. Where a Task needs the work of a Task of another scope, the first Task's `## Dependencies` section names that other Task too (DEC-005 and `batch-plan.md`).
 6. The agent has the plan reviewed, and shows the plan to the planner, as `UC-063` steps 5 and 6 describe ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 7. The planner approves the plan (DEC-029). Where the topology declares pools, the plan names each Task's Milestone and that Milestone's pool. The approval then puts each Task into its pool ([DEC-061 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)).
 8. The agent files the issues, as `UC-063` steps 8 and 9 describe. The agent files the issues with no [owner](../../../glossary.md#term-owner--owner), so the issues join the [ready Tasks](../../../glossary.md#term-ready-task--ready-task) that every seat shares (DEC-059 point 7). Where the topology declares pools, each Task joins the pool of the Milestone the planner gave it instead ([DEC-061 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)). The agent of each seat takes the seat's Tasks from there, as `UC-084` describes.
@@ -110,23 +104,23 @@ pkit:
 **Variants:**
 
 - **1a.** A lead agent plans the work of the lead agent's own [scope](../../../glossary.md#term-scope--scope), in place of a planning agent. The lead agent's [instance](../../../glossary.md#term-instance--instance) owns each [issue](../../../glossary.md#term-issue--issue) the lead agent files, the parents and the Tasks alike. The lead agent builds that work itself ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree) and [DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
-- **3a.** The intent's Tasks would share a choice that nothing settles yet, such as a library or the layout of the code. The first plan files only the [EPIC](../../../glossary.md#term-epic--epic), with an outline of the slices, and the [Feature](../../../glossary.md#term-feature--feature) of the work's foundation. The foundation's Tasks follow one another: first the records of the shared choices, then a walking skeleton built on the records the planner accepted. Once the planner closes the foundation's Feature, the agent's second plan slices the work against the records and the skeleton's code ([DEC-060](../../../../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md) and `batch-plan.md`).
+- **3a.** The intent's Tasks would share a choice that nothing settles yet, such as a library or the layout of the code. The first batch plan files only the [EPIC](../../../glossary.md#term-epic--epic), with an outline of the slices, and the [Feature](../../../glossary.md#term-feature--feature) of the work's foundation. The foundation's Tasks follow one another: first the records of the shared choices, then a walking skeleton built on the records the planner accepted. Once the planner closes the foundation's Feature, the agent's second plan slices the work against the records and the skeleton's code ([DEC-060](../../../../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md) and `batch-plan.md`).
 - **4a.** A planned [Task](../../../glossary.md#term-task--task) shares a file with an open Task of the same parent, [Milestone](../../../glossary.md#term-milestone--milestone) and priority, which has not started. In the plan, the open Task takes the planned work and the work's dependencies into its body, replacing the planned Task ([DEC-066 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-066-fold-tasks-that-share-a-file.md#4-a-task-already-filed-takes-in-work-only-before-it-starts-with-the-persons-approval)). The plan shows the planner each such open Task, and where its classification, Milestone or state differs from what the plan would give the work. An open Task that has started keeps its body, and the planned Task's `## Dependencies` section names the open Task.
-- **7a.** The planner asks for changes, or cancels the plan, as `UC-063` variants 7a and 7c describe.
+- **7a.** The planner asks for edits to the plan, or cancels the plan, as `UC-063` variants 7a and 7c describe.
 - **8a.** The planning agent's [clone](../../../glossary.md#term-clone--clone) holds no [seat](../../../glossary.md#term-seat--seat). The clone marks no issue, and the agent files as step 8 does, with no [owner](../../../glossary.md#term-owner--owner) ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 - **8b.** The approved plan named no [pool](../../../glossary.md#term-pool--pool) for a Task's Milestone, which is in a pool. The command that files or schedules the Task asks the planner for [consent](../../../../core/glossary.md#term-consent--consent) to the pool, and off a terminal it refuses ([DEC-061 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). The agent never gives that consent for the planner.
 - **8c.** Several planning agents each plan separate work at once, each in a seat of its own. Each files into the Milestones the planner gives it, and only those Milestones keep their work apart ([DEC-061 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)).
 
-**Postconditions:** Each [Task](../../../glossary.md#term-task--task) of the approved plan is filed with no [owner](../../../glossary.md#term-owner--owner), with its [workstream](../../../glossary.md#term-workstream--workstream) and its [kind of work](../../../glossary.md#term-kind-of-work--kind-of-work). The `## Dependencies` section of each Task names each Task that the Task waits on. Where the [topology](../../../glossary.md#term-topology--topology) declares [pools](../../../glossary.md#term-pool--pool), each Task is in the pool of its [Milestone](../../../glossary.md#term-milestone--milestone).
+**Postconditions:** Each [Task](../../../glossary.md#term-task--task) of the approved batch plan is filed with no [owner](../../../glossary.md#term-owner--owner), with its [workstream](../../../glossary.md#term-workstream--workstream) and its [kind of work](../../../glossary.md#term-kind-of-work--kind-of-work). The `## Dependencies` section of each Task names each Task that the Task waits on. Where the [topology](../../../glossary.md#term-topology--topology) declares [pools](../../../glossary.md#term-pool--pool), each Task is in the pool of its [Milestone](../../../glossary.md#term-milestone--milestone).
 
 **Minimal guarantees:**
 
-- No [issue](../../../glossary.md#term-issue--issue) is filed before the planner approves the whole plan ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
+- No [issue](../../../glossary.md#term-issue--issue) is filed before the planner approves the whole batch plan ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 - The `## Dependencies` section of a [Task](../../../glossary.md#term-task--task) that shares a file with an earlier Task names the earlier Task (`batch-plan.md`).
 
 ## Open for the design
 
 What the planner needs here that no accepted record decides yet:
 
-- **How one scope gives another scope what the other scope needs,** such as an interface two scopes share. A contract between scopes is proposed only, in an unmerged note (draft PR #566). Typed `Blocked by:` lines, and the Tasks ready to start that those lines give, are [project-management DEC-025](../../../../../../.pkit/capabilities/project-management/decisions/DEC-025-parallelization-primitive.md)'s. That record names them, to be built once lived evidence answers its open questions.
+- **How the agent of one scope gives the agent of another scope what that agent needs,** such as an interface two scopes share. A contract between scopes is proposed only, in an unmerged scratchpad note (draft pull request #566). Typed `Blocked by:` lines, and the Tasks ready to start that those lines give, are [project-management DEC-025](../../../../../../.pkit/capabilities/project-management/decisions/DEC-025-parallelization-primitive.md)'s. That record names them, to be built once lived evidence answers its open questions.
 - **Work that passes through stages,** such as design, development and testing, where each stage needs the work of the stage before. No record decides how such work is planned.

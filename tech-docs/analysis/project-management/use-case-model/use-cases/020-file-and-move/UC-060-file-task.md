@@ -54,6 +54,7 @@ pkit:
         - project-management:DEC-012
         - project-management:DEC-014
         - project-management:DEC-018
+        - project-management:DEC-019
         - project-management:DEC-031
         - project-management:DEC-039
         - project-management:DEC-041
@@ -66,6 +67,7 @@ pkit:
         - COR-031
         - COR-039
         - ADR-034#1
+        - ADR-035#3
         - COR-009
         - ADR-061#3
         - PRJ-002#D1
@@ -106,7 +108,7 @@ pkit:
 
 - The [project](../../../../core/glossary.md#term-project--project) has project-management installed, or registered in place where project-management is developed ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-031](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md)). The CLI registers `pkit pm` and its commands from the [capability](../../../../core/glossary.md#term-capability--capability)'s [package metadata](../../../../core/glossary.md#term-package-metadata--package-metadata) ([COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)). The [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys the `pm` [skill](../../../../core/glossary.md#term-skill--skill) ([COR-005](../../../../../../.pkit/decisions/core/COR-005-bundle-pattern.md) and [COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
 - Where the body cites [use-case entries](../../../glossary.md#term-use-case-entry--use-case-entry), the [backbone](../../../../core/glossary.md#term-backbone--backbone) resolves the [data point](../../../../core/glossary.md#term-data-point--data-point) that holds them ([DEC-054 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#4-the-rule)).
-- Where the body cites a decision id, the backbone looks up the [decision record](../../../../core/glossary.md#term-decision-record--decision-record) that holds it ([DEC-010](../../../../../../.pkit/capabilities/project-management/decisions/DEC-010-issue-body-minimum-structure.md)).
+- Where the body cites a decision id, the backbone looks up the [decision record](../../../../core/glossary.md#term-decision-record--decision-record) that holds it (COR-013 point 3).
 
 **Trigger:** The developer has a unit of work to track, such as a bug found while working on a [Feature](../../../glossary.md#term-feature--feature).
 
@@ -132,7 +134,7 @@ pkit:
 
 10. The system lists each placeholder of the template left in the body, and each [use-case entry](../../../glossary.md#term-use-case-entry--use-case-entry) the body cites that the [data point](../../../../core/glossary.md#term-data-point--data-point) lacks. It lists too each decision id the body cites that no [decision record](../../../../core/glossary.md#term-decision-record--decision-record) holds (DEC-010). None of these stops the filing ([DEC-031](../../../../../../.pkit/capabilities/project-management/decisions/DEC-031-reject-unauthored-placeholder-bodies.md) and [DEC-054 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#4-the-rule)).
 11. The system prints the Task it is about to file, with its title, type, kind of work, priority, workstream, parent and labels. At a terminal, without `--yes`, it asks before it writes.
-12. The system files the Task, with its labels and its assignee, and prints `[ok] created: <url>`. It posts a comment that records the [versions](../../../../core/glossary.md#term-version--version) it was filed under ([DEC-041](../../../../../../.pkit/capabilities/project-management/decisions/DEC-041-version-provenance-stamp.md)).
+12. The system files the Task, with its labels and its assignee (DEC-019), and prints `[ok] created: <url>`. It posts a comment that records the [versions](../../../../core/glossary.md#term-version--version) it was filed under ([DEC-041](../../../../../../.pkit/capabilities/project-management/decisions/DEC-041-version-provenance-stamp.md)).
 13. The system links the Task to its parent as a GitHub sub-issue, and prints `[ok] linked #<n> as a native sub-issue of #<N>` (DEC-005 and [DEC-039](../../../../../../.pkit/capabilities/project-management/decisions/DEC-039-containment-substrate-selection.md)).
 
 **Variants:**
@@ -162,7 +164,7 @@ pkit:
 
 - **10a.** The body still holds a placeholder of the template. The system warns, and files the Task. Its first move of the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) is then refused until the body is written ([DEC-031](../../../../../../.pkit/capabilities/project-management/decisions/DEC-031-reject-unauthored-placeholder-bodies.md)).
 - **11a.** The developer says no at the terminal. The system writes nothing, and the use case ends.
-- **11b.** The Milestone of `--milestone` is in a [pool](../../../glossary.md#term-pool--pool) of workers, so the Task would enter that pool. The system asks the developer at the terminal, or takes `--yes` as [consent](../../../../core/glossary.md#term-consent--consent), and with neither refuses and writes nothing ([DEC-061 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). Once the Task is filed, an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) on the Task records the consent.
+- **11b.** The Milestone of `--milestone` is in a [pool](../../../glossary.md#term-pool--pool), so the Task would enter that pool. The system asks the developer at the terminal, or takes `--yes` as [consent](../../../../core/glossary.md#term-consent--consent), and with neither refuses and writes nothing ([DEC-061 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). Once the Task is filed, an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) on the Task records the consent.
 - **12a.** GitHub refuses the filing. The system says so and exits `3`, and nothing is filed. The use case ends.
 - **13a.** The link to the parent fails. The system warns that the Task is filed under its parent by its body alone, and names `pkit pm link-parent <n>`, which makes the link ([DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)). The use case ends with the Task filed.
 - **13b.** The project keeps containment as text, where its GitHub has no sub-issues. The system makes no link, and rewrites the comment on the parent that lists its children ([DEC-039](../../../../../../.pkit/capabilities/project-management/decisions/DEC-039-containment-substrate-selection.md)).

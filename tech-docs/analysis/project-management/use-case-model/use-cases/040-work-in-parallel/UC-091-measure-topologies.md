@@ -62,7 +62,7 @@ What the adopter needs here that no accepted record decides yet:
   - one backlog split between the topologies
 - **What else to record:**
   - the topology and the [seat](../../../glossary.md#term-seat--seat) behind each event. An [ownership](../../../glossary.md#term-ownership--ownership) names its seat ([project-management DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)), and no other event names a seat
-  - the time from a plan's approval to its last merge
+  - the time from a batch plan's approval to its last merge
   - the person's own time
   - the tokens each agent spends
   - the work dropped or done twice

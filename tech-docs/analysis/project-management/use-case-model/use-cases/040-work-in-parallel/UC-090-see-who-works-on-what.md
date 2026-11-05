@@ -12,6 +12,9 @@ shortfalls:
   - at: 1
     issue: "#521"
     record: project-management:DEC-035#7
+  - at: "1a"
+    issue: "#521"
+    record: project-management:DEC-035#7
 pkit:
   friction:
     anchors:
@@ -37,6 +40,8 @@ pkit:
         - COR-021
         - ADR-071
         - ADR-072
+        - ADR-041#1
+        - ADR-074#5
       artefact:
         - ACT-planner
         - REQ-062
@@ -69,8 +74,12 @@ pkit:
 **Variants:**
 
 - **1a.** The planner lists from a [clone](../../../glossary.md#term-clone--clone) that holds no [seat](../../../glossary.md#term-seat--seat). The listing signs nothing, since only an [instance](../../../glossary.md#term-instance--instance) signs its listings ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) and [DEC-035 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)). The planner lists from an instance instead.
+
+> [!WARNING]
+> **Not built yet:** no command signs a listing, from a clone with a seat or without one. DEC-035 point 7 decides the signed listing, and #521 tracks it.
+
 - **3a.** A [change](../../../../core/glossary.md#term-change--change) that added seats was closed unmerged. The listing of the seats names each [state issue](../../../glossary.md#term-state-issue--state-issue) that no seat names, for a person to close ([DEC-059 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)).
-- **3b.** The [topology](../../../glossary.md#term-topology--topology) declares [pools](../../../glossary.md#term-pool--pool) of workers. The listing shows the pools each seat serves, and each pool's open [Milestones](../../../glossary.md#term-milestone--milestone) by number and title. It warns of the work left stranded ([DEC-061 point 10](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#10-the-check-refuses-an-undeclared-pool-and-the-listings-warn-of-stranded-work)):
+- **3b.** The [topology](../../../glossary.md#term-topology--topology) declares [pools](../../../glossary.md#term-pool--pool). The listing shows the pools each seat serves, and each pool's open [Milestones](../../../glossary.md#term-milestone--milestone) by number and title. It warns of the work left stranded ([DEC-061 point 10](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#10-the-check-refuses-an-undeclared-pool-and-the-listings-warn-of-stranded-work)):
    - a pool that no seat serves, or a pool with no open Milestone
    - a seat that builds and names no pool
    - a Milestone that names a pool the topology does not declare
