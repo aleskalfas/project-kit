@@ -6,7 +6,7 @@ date: 2026-11-05
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** a pull request's description no longer carries a list of the answers its change wrote. Whoever needs the answers derives them from the change check at the pull request's head. The reviewer of the answers, the move to review and the landing command each do so, and one read-only command prints them for anyone else. The author still writes one sentence on what changed in each updated document. The other merge commands and the host's button print nothing, so a person who merges there runs that command.
+**In plain terms:** a pull request's description no longer carries a list of the answers its change wrote. Whoever needs the answers derives them from the change check at the pull request's head. The reviewer of the answers, the move to review and the landing command each do so, and one read-only command prints them for anyone else. The author still writes one sentence on what changed in each updated document. The other merge commands and the host's button print no answer, so a person who merges there runs that command.
 
 ## Context
 
@@ -14,34 +14,26 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 The list repeats every answer. #2664 measured it on [#2653](https://github.com/aleskalfas/project-kit/pull/2653) at 71,400 characters, past the 65,536 the host keeps, and most of its entries said only "still accurate". It also brought a stop on a description too long to hold it, a refusal of words that would close an issue or hide its markers, and markers naming its head.
 
-The list has these readers, and this is what stands in for each once it goes:
-
-- **The reviewer of the answers** works from the change check's own list, never from an account the change's author composed ([COR-050](../../../decisions/core/COR-050-anchors-and-friction.md) point 3). So the copy was never what it checked.
-- **The commands that make the pull request ready and land it** derive the answers themselves.
-- **The person at the landing command** needs what changed in each updated document and what is left out of date until which follow-up (COR-050 point 3). The command's printout gives both.
-- **A person who directs an agent** reads that printout as the agent relays it, or runs the read-only command of point 2.
-- **A person who approves in `human` review mode, or merges through the other merge commands or the host's button,** has no printout, and runs that command.
+The reviewer of the answers works from the change check's own list, never from an account the change's author composed ([COR-050](../../../decisions/core/COR-050-anchors-and-friction.md) point 3). So the copy was never what it checked.
 
 ## Decision
 
-**No command of this capability writes the list of the answers a change wrote into its pull request's description, or carries one there. The landing command removes one an earlier run left. Each reader that needs the answers derives them from the change check at the pull request's head, and a read-only command prints them for anyone not at the landing command. The author's sentences stay in the description, in the sentences' section (point 1). This overturns DEC-055 where it puts the list in the description: its points 1, 2 and 4. It also overturns each passage of its Decision and of its points 3, 5 and 6 that writes, carries, reads, prints or compares that list. Every other choice of DEC-055 stands.**
+**No command of this capability writes the list of the answers a change wrote into its pull request's description, or carries one there. The landing command removes one an earlier run left. Each reader that needs the answers derives them from the change check at the pull request's head, and a read-only command prints them for anyone not at the landing command. The author's sentences stay in the description, in the sentences' section (point 1). This overturns DEC-055 where it puts the list in the description: its points 1, 2 and 4, and each other passage of it that writes, carries, reads, prints or compares that list. Every other choice of DEC-055 stands.**
 
 ### 1. The description carries no list
-
-No command of this capability writes the change check's list of the answers into a pull request's description. None carries one across an edit.
 
 - **A list an earlier run left** is its region: both its markers, what lies between them, and the heading directly above. That heading is `## Documentation this change affects`, or the earlier `## Friction answers`.
 - **Removing it.** The commands that open the pull request and edit its description drop a region from the body they write, with a warning. The landing command removes one before it stops ready, asks or merges.
 - **Nothing else is removed.** A section under either heading with no markers is the author's. A start marker with no end marker draws a warning, and the description stays as it is.
 - **Until it is removed,** no reader of this capability treats a region as input: none that reads closing references or the `## Doc impact` section (DEC-013, DEC-015), or checks the template was filled (DEC-031). The host still reads it, and the squash commit of a merge through the other merge commands carries it.
 - **The sentences' section stays.** `## What changed in each updated document` holds the sentences, as the author wrote them.
+- **An unwritten `## Doc impact`.** The opt-in that fills it from the answers writes one line, counting the documents and pointing at the change check.
 
 ### 2. The answers are derived from the change check
 
 Each reader that needs a change's answers derives them from the change check, at the pull request's head against its base (COR-050 points 6 and 12). None reads them from the description. The reviewer of the answers, the command that makes the pull request ready and the landing command each do so.
 
-- **Anyone else** runs `pkit pm show-pr <N> --field answers`. It is read-only. It derives the answers as the landing command does, and prints what that command prints (point 4). What it cannot derive it says, and it prints nothing else.
-- **The sentences** are read from the sentences' section.
+- **Anyone else** runs `pkit pm show-pr <N> --field answers`. It is read-only. It derives the answers as the landing command does, and prints what that command prints (point 4). Where it cannot derive them, it says why and prints nothing more.
 - **"The list" in a record that stands.** Where a passage of DEC-055, or of [project-management:DEC-064-base-merge-named], speaks of the list of answers, it is the change check's list the landing command derives.
 
 ### 3. The move to review derives the answers at the head
@@ -61,10 +53,10 @@ The landing command derives the answers at the head it merges. Before it stops r
 - **What changed** in each updated document, in the author's sentence, or that the author gave none.
 - **What is left out of date:** each document and each target of a link, with the words that name its follow-up.
 - **The answers a person or their delegate decided:** each answer the change check did not ask for, and each reason for having no anchors, with its words ([COR-064](../../../decisions/core/COR-064-answer-delegate.md)).
-- **Each friction setting** the change alters, as it was and as it is. The friction settings decide what the check asks: the places it reads and the files it leaves out (COR-050 points 1, 7 and 14). They are no part of the change check's list, and the command reads them beside it.
+- **Each friction setting** the change alters, as it was and as it is. The friction settings decide what the check asks: the places it reads and the files it leaves out (COR-050 points 1, 7 and 14). They are no part of the change check's list, and the command reads them beside it. A change to the delegate's name is not shown at the merge, which #2122 tracks.
 - **How many files** the change check could not read.
 
-It prints no line for any other answer, such as a document still accurate. Beside these lines it prints each revalidation the merge would leave answered apart, as DEC-055 point 3 has it. This is information, not a gate: a change with answers merges under the same authorisation as any other.
+It prints no line for any other answer, such as a document still accurate. Beside these lines it prints each revalidation the merge would leave answered apart, as DEC-055 point 3 has it, and each change to the fixers' grant list (DEC-056 point 2). This is information, not a gate: a change with answers merges under the same authorisation as any other.
 
 A run authorised up front prints these lines after the authorisation, so two of them hold it at the ready stop:
 
@@ -73,65 +65,51 @@ A run authorised up front prints these lines after the authorisation, so two of 
 
 ### 5. What goes with the list, and what stays
 
-What went only with the list's place in the description goes with it:
-
-- the stop on a description too long to hold the list
-- the refusal of a word of the list that reads as a closing reference
-- the refusal of a word or a sentence that holds an HTML comment's delimiter
-- the markers that name the head the list was derived for
-- the showing of the change check's flags on an answer, other than "not asked for": they stay in its own list, for the reviewer
+The refusal of a word or a sentence that holds an HTML comment's delimiter goes with the list. So does the showing of the change check's flags on an answer, other than "not asked for": they stay in its own list, for the reviewer.
 
 **A sentence that reads as a closing reference stays refused.** A sentence stays in the description and the squash commit, and the host reads both, with a parser this capability cannot make skip a section. So the move to review refuses such a sentence, and the landing command refuses it with nothing to override that. The refusal reads as widely as the host does: `fixed #12` is refused, which the host would close past the checkbox gate (DEC-007) and the cascade.
 
-What guards the answers themselves stays, as DEC-055 point 3 has it. The landing command merges nothing where the answers cannot be derived, or where a file the change touches cannot be read for answers. Nor does it where the base's commits since the head left it changed a file the answers' words are on, or those friction settings the change alters.
+What guards the answers themselves stays, as DEC-055 point 3 has it, since it guards what merges. The landing command merges nothing where the answers cannot be derived, or where a file the change touches cannot be read for answers. Nor does it where the base's commits since the head left it changed a file the answers' words are on, or those friction settings the change alters.
 
 ### 6. What this gives up
 
-- **The other merge commands and the host's button print nothing.** DEC-055 point 5 accepted that a merge through them "may carry the list of an earlier head, or none". This widens that limit: such a merge shows the person no answer, and nothing holds it. The person there runs the read-only command, or the agent they direct does, and COR-064's telling of what a delegate decided rests on that.
+- **The other merge commands and the host's button print no answer.** DEC-055 point 5 accepted that a merge through them "may carry the list of an earlier head, or none". This widens that limit: such a merge shows the person no answer, and nothing holds it. A project that runs no checks on its pull requests lands only this way, since the landing command waits for checks (DEC-055 point 5). The person there runs the read-only command, or the agent they direct does, and COR-064's telling of what a delegate decided rests on that.
 - **An agent's relay.** A person who directs an agent is told what the agent passes on, the case DEC-055's Context feared. The printout's words are the command's, and the read-only command gives them first-hand.
 - **No record of what was told.** The printout goes where the run's output goes, and nothing keeps it. The answer files that land hold what was answered, not what was shown.
 - **A reader with no clone** reads the sentences alone, since the read-only command runs the change check.
 
 ## Rationale
 
-**Why no list.** The list was a second copy of what the change check derives. Most of a long one is answers that leave a document as it is, so it grew past what the host keeps while telling no one anything. DEC-055 also wanted the answers kept in the default branch's history, and the answer files that land with the change keep them there.
+**Why no list.** DEC-055 wanted the answers kept in the default branch's history, and the answer files that land with the change keep them there.
 
-**Why the printout answers DEC-055's rejection of spilling the list.** DEC-055 rejected "Spilling an over-long list elsewhere", since the person "would authorise the merge from a description that does not hold what they are told". That held while the description was where they read the answers. The landing command already printed more than the description held, each finding among it. So the printout becomes the one place the person is told, for the head that merges, at any length.
+**Why the printout answers DEC-055's rejection of spilling the list.** DEC-055 rejected "Spilling an over-long list elsewhere", since the person "would authorise the merge from a description that does not hold what they are told". That held while the description was where they read the answers. The landing command already printed more than the description held, each finding among it. So the printout becomes the place the person is told, for the head that merges, at any length.
 
 **Why the move to review derives on every run, and what that costs.** A list in the description went out of date on the next fix round, so the move to review compared its marker with the head. With no list, the head is all it can read. DEC-055 ran the check only where the list was for another head, and never on a description with no list. Now a failed fetch or a run past its timeout stops every move, and `--force`, the only way past, passes the move's other findings too. That run is still cheaper than the review round a missing sentence would spend.
 
 **Why `--force` then refuses nothing.** Under DEC-055 the description's list stood in for a check that could not run. With no list, nothing stands in, and `--force` is the operator's choice to pass the refusal whole (DEC-046 point 2). A reviewer of the answers then blocks a missing sentence. A project that chose no reviewer, or reviews in `human` mode, has no one to block it, and only point 4's line and hold remain.
 
-**Why the command that edits the description warns of no missing sentence.** It derives nothing, since a run of the change check on every edit was rejected (DEC-055, Alternatives considered). Its warning read the list the description carried. Before review, the move to review refuses what it would have warned of. After review no move runs and an edit stales no verdict, so point 4's hold takes its place.
+**Why the command that edits the description warns of no missing sentence.** Before review, the move to review refuses what it would have warned of. After review no move runs and an edit stales no verdict, so point 4's hold takes its place.
 
 **Why the holds of point 4.** A line printed just before a merge tells a person who authorised up front nothing in time. A missing sentence after the review has no other stop. A deferral first written at a later head is what COR-050 point 3 says the person is told, so the run compares with the head authorised, as it does for a change to the grant list (DEC-056 point 2).
-
-**Why the printout names the answers a person or their delegate decided.** Each needed that decision before it was written (COR-064), and a run at a later head stops on one (DEC-055 point 3). The list showed which answers those were.
-
-**Why the author's sentences stay in the description.** The change check cannot supply a sentence: it knows that a document changed, not what the change means. So the author writes it where the reviewer reads it, and the squash commit carries it. The landing command prints it, so the person need not read the description for it.
 
 **Why the landing command removes a list an earlier run left.** Pull requests opened before this record carry one. Left there, it would land in the squash commit as the list of an earlier head. A merge through the other merge commands still lands it so, until no such pull request is open.
 
 **Why only a region is removed.** DEC-055 removed a section no command wrote so that it was not shown beside the list. No list remains, so such a section is the author's, and its plain heading invites one. A start marker with no end may be quoted, and removing what follows it could take the author's text and a closing reference.
 
-**Why the stop on a base that moved on stays.** It guards what merges, not the description. A base that changed a file the answers' words are on merges words the reviewer did not check. One that changed the friction settings the change alters changes what the merged check asks.
-
 ### Alternatives considered
 
 - **A shorter list, of the answers that matter.** Rejected. It would still be a second copy of what the check derives, and it would keep the size stop and the markers.
-- **The list in a pull-request comment.** Rejected. It keeps the second copy, and a later comment does not replace an earlier one.
-- **A comment holding only what the person is told, written by the landing command.** Not taken. It would keep a record of what was told, at the cost of a write on every run. Point 6 states the gap.
+- **A pull-request comment.** Rejected for the list: it keeps the second copy, and a later comment does not replace an earlier one. Not taken for what the person is told alone: it would keep a record of that, at the cost of a write on every run. Point 6 states the gap.
 - **The other merge commands printing what the person is told.** Not taken. It would reach the person on every path of this capability, at the cost of a run of the change check on each merge. The read-only command gives the same lines to whoever asks.
-- **The description's list kept to save a run of the change check.** Rejected. The move to review trusted the list only where its marker named the head, and a fix round moves the head. So most moves ran the check anyway.
 - **Superseding DEC-055 whole.** Rejected. Its authorisation, its findings' hold, its rule on a later head and its check of the merge stand. Restating them would add words and decide nothing.
 
 ## Implications
 
-- **DEC-055** gains a first line saying it is partially superseded by this record, for the list in the description. The line says the description carries no list and every reader derives the answers at the head. It names what is overturned: points 1, 2 and 4, and each passage of the Decision and of points 3, 5 and 6 that writes, carries, reads, prints or compares that list. Every other choice stands.
+- **DEC-055** gains a first line saying it is partially superseded by this record, for the list in the description. The line names what the Decision overturns: points 1, 2 and 4, and each other passage of it that writes, carries, reads, prints or compares that list.
 - **[project-management:DEC-053-doc-check-slot] point 2** says that the answers are read from the change check, and that no section of the description carries them (refinement per this record). It says so in place of its sentence that this capability lists them in the description.
 - **[project-management:DEC-056-drift-fixers]** cites this record's point 4 for the landing command's printout of a change to the friction settings, in point 2. Its Rationale's "as no word of the list of answers is an agent's" becomes that the reviewer works from the change check's own list, never an account an agent composed, citing COR-050 point 3. Neither edit changes what DEC-056 decides.
-- **[project-management:DEC-064-base-merge-named] point 1** says, in its case "What the list shows", that the list is the change check's list of the answers (refinement per this record). It says the friction settings are no part of that list, and that the landing command reads them beside it. The case still names the same merge.
-- **The commands.** The commands that open the pull request, edit its description and land it write no list. The landing command removes a region an earlier run left, and holds a run as point 4 says. The move to review derives the answers at the head every time, and `show-pr` gains the field `answers`. The opt-in that fills an unwritten `## Doc impact` from the answers writes one line, counting the documents and pointing at the change check.
-- **The documentation.** The capability README documents each command's part. The reviewer of the answers reads the sentences from the sentences' section alone. Where a person checks the answers by reading them, the software-engineering README points at the read-only command. The pm skill's direct merge uses it, and the analysis names no list in the description.
+- **[project-management:DEC-064-base-merge-named]** keeps a base that changed the friction settings among the merges it names, with those settings no part of the list. Its Decision's third case becomes "a base that changed what the list of answers shows or the friction settings the change alters". Point 1, in its case "What the list shows", says the list is the change check's list of the answers (refinement per this record), and the landing command reads the settings beside it. Its Rationale, under "Why these merges are named", says such a base would change what the merged check asks. Each case still names the same merge.
+- **ADR-068 point 5** says the landing command prints the revalidations answered apart "beside what it tells the person", in place of "beside the list". The edit changes nothing the record decides.
+- **The documentation.** The capability README, the software-engineering README, the pm skill and the analysis say what each command does, and name no list in the description.
 - **No migration.** No file of an adopter's moves. A description an earlier run wrote is mended by the landing command, at no adopter's step.
 - **A surface change** for the capability: what the commands write, what the move to review runs, and the new field. Its changeset declares it.
