@@ -334,7 +334,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 
 ## A capability's commands
 
-A capability describes its own commands. [The visual-communication README](../capabilities/visual-communication/README.md) describes `pkit visual look`, for one.
+For `pkit visual look`, read [the visual-communication README](../capabilities/visual-communication/README.md).
 
 ## Lifecycle commands
 

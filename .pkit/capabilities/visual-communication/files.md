@@ -101,6 +101,8 @@ pkit:
         - visual-communication:DEC-014#1
         - visual-communication:DEC-014#2
         - visual-communication:DEC-014#5
+        - visual-communication:DEC-015#2
+        - visual-communication:DEC-015#4
 ---
 
 # The files of the visual work
