@@ -24,6 +24,7 @@ import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -860,6 +861,8 @@ CHANGED_GAP = "{space.3}"
 
 #: Where a piece's before-and-after lies, for the draft of `lay_out_drawing`.
 FLOW = f"{before_after.FOLDER}/flow"
+#: The font the draft's brand measures with, in the project's copy of that brand.
+FLOW_FONT = "visual/libraries/test-brand/1.0.0/fonts/SourceSansPro-Regular.otf"
 FLOW_LOCK = {"foundations": "1.0.0", "test-brand": "1.0.0", "tests": "1.0.0"}
 PIECE_FILE = "visual/pieces/flow/piece.yaml"
 
@@ -1185,6 +1188,31 @@ def test_a_fault_in_the_piece_is_said_once_and_stops_nothing(pinned: Path) -> No
     assert added.returncode == 0, added.stderr
     assert added.stdout.count("no before-and-after") == 1
     assert "with the copy as it is" not in added.stdout
+
+
+@pytest.mark.parametrize(
+    "broken",
+    [
+        lambda _font: b"not a font",
+        lambda _font: b"version https://git-lfs.github.com/spec/v1\noid sha256:0\nsize 1\n",
+        lambda font: font[:2000],
+        lambda font: font[: len(font) * 3 // 4],
+    ],
+    ids=["no font", "a git-lfs pointer", "cut before what is measured", "cut after it"],
+)
+def test_a_font_that_cannot_be_read_is_said_once_and_stops_nothing(
+    pinned: Path, broken: Callable[[bytes], bytes]
+) -> None:
+    font = pinned / FLOW_FONT
+    font.write_bytes(broken(font.read_bytes()))
+    added = run(pinned, "foundations")
+    assert added.returncode == 0, added.stderr
+    [said] = [line for line in added.stdout.splitlines() if "no before-and-after" in line]
+    assert said.startswith(f"    no before-and-after: the font file {FLOW_FONT} cannot be read: ")
+    assert added.stdout.splitlines()[-1] == (
+        "  to replace it, run `pkit visual add foundations --piece flow`"
+    )
+    assert not (pinned / FLOW).exists()
 
 
 def test_a_before_and_after_that_cannot_be_written_stops_the_run_as_any_write_does(
