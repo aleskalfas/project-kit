@@ -10,6 +10,10 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/export.py
         - .pkit/capabilities/visual-communication/scripts/produce.py
         - .pkit/capabilities/visual-communication/scripts/write-code.py
+        - .pkit/capabilities/visual-communication/scripts/look.py
+        - .pkit/capabilities/visual-communication/scripts/pages.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/viewing.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/viewing_tool.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
@@ -54,6 +58,12 @@ pkit:
         - visual-communication:DEC-008#5
         - visual-communication:DEC-011
         - visual-communication:DEC-012
+        - visual-communication:DEC-015#1
+        - visual-communication:DEC-015#2
+        - visual-communication:DEC-015#3
+        - visual-communication:DEC-015#4
+        - visual-communication:DEC-015#5
+        - visual-communication:DEC-015#6
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -79,6 +89,7 @@ Plugins make what the capability gives out. A renderer draws a piece's scenes as
 - [Exports](#exports)
 - [Produced pictures](#produced-pictures)
 - [Written code](#written-code)
+- [The viewing step](#the-viewing-step)
 <!-- /pkit:contents -->
 
 ## Plugins
@@ -416,3 +427,45 @@ A rule with no token is not written. A rule holds each token once, in the order 
 It holds no `[data-contrast="standard"]` rule: every token the contrast axis changes, the colour scheme changes too, and its name comes first. The writer writes each declaration on a line of its own.
 
 **Losses.** A token of a value type the writer has no form for is left out, as a loss known before the writer runs. In form 1 that type is `typography`, such as the test brand's `type.body`.
+
+## The viewing step
+
+The *viewing step* draws a piece's pages as images, for a person or an agent to read (DEC-015 point 1). `pkit visual look <piece>` runs it, and `pkit visual pages <piece>` lists what it can draw. It draws what the SVG renderer draws, and needs no network.
+
+- **No render, and no export.** It moves no lock and keeps no findings. It takes no number, writes no `exports.yaml` and records no location.
+- **Under the lock.** It reads the lock `piece.yaml` holds, and computes the piece's scenes under it (DEC-015 point 4).
+- **It runs no program.** No helper or producer runs. A produced picture is drawn as it stands, stale or not. One with no variant for the key is left out, as a loss.
+- **What it draws.** By default, every page in the piece's source language, in the first key in [key order](files.md#keys-of-combinations). That is the combination of defaults wherever the piece names it. `--page`, `--language` and `--key` pick others. `--every-language` and `--every-key` take them all.
+- **The size.** An image takes 1568 pixels on its long edge, or more where the page's smallest text would land under 10 pixels.
+- **The ground.** Where a page draws no ground of its own, its image lies on white, which the piece never set. Judge a text over nothing knowing this.
+- **The fonts.** It draws from the fonts the page embeds, never one on the machine.
+- **No promise about pixels.** An image may change with the tool, its version or the machine. It shows this tool's drawing, not a browser's (DEC-015 point 6).
+
+### What a run writes
+
+A run writes in `.pkit/capabilities/visual-communication/project/local/look/<piece>/`, local to the clone ([The clone's local folder](files.md#the-clones-local-folder)). It replaces what an earlier run left there, so the folder never mixes two runs.
+
+| File | What it holds |
+|---|---|
+| `<piece>.<language>.<key>.png` | one page drawn. A piece of more than one page adds the page's number, from 1, to this name and the next: `<piece>.<language>.<key>.<n>.png` |
+| `<piece>.<language>.<key>.frames.json` | beside each image, its language, key, page and pixels, and the lock it was drawn under. Then each element's frame in the image's pixels, with its [trace id](components.md#trace-ids) |
+| `report.json` | [What the report says](#what-the-report-says) |
+
+### What the report says
+
+`report.json` says what the images cannot show as the renderer set it, and the command prints the same (DEC-015 point 3). It holds the piece, the lock, the tool and its version, and four lists. Each entry but an image's names the language, key and page it lies on.
+
+- **`images`:** each image, with its frames' file and its pixels. `on-white` is true where the page draws no ground of its own.
+- **`dropped`:** each text or run the tool drew nothing of, whatever the cause, with its element and its characters. `whole` is true for a whole text, and false for a run lost from a line. A text in the colour of what lies beneath it, or under a later element, was drawn, so it is not here.
+- **`losses`:** each [loss](#the-loss-report) the renderer reports. `accepted` is true for one the piece [accepts](#accepting-a-loss), which the report names all the same.
+- **`drawn-otherwise`:** each run measured in more than one family, with its element, its characters and the families. The tool may set its whole line in one of them, where a browser sets only the characters the first family lacks.
+
+### What refuses a run
+
+A refused run writes nothing. Each of these refuses it:
+
+- a piece with no lock, naming the render that writes one;
+- a lock that does not hold, naming why;
+- a page, a language or a key the piece does not have, naming those it has;
+- a font with no file;
+- a page with no size, or one past 134217728 pixels at [its size](#the-viewing-step). `pkit visual check <piece>` names what such a piece still owes, such as a picture never produced.

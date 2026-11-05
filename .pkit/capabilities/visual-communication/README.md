@@ -14,6 +14,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/produce.py
         - .pkit/capabilities/visual-communication/scripts/export.py
         - .pkit/capabilities/visual-communication/scripts/write-code.py
+        - .pkit/capabilities/visual-communication/scripts/look.py
+        - .pkit/capabilities/visual-communication/scripts/pages.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
         - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
@@ -30,6 +32,7 @@ pkit:
         - visual-communication:DEC-013#1
         - visual-communication:DEC-013#5
         - visual-communication:DEC-014#3
+        - visual-communication:DEC-015#2
         - COR-017
         - COR-031
         - COR-055#3
@@ -71,6 +74,10 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-an-export
         - .pkit/capabilities/visual-communication/outputs.md#written-code
         - .pkit/capabilities/visual-communication/outputs.md#the-record-beside-the-code
+        - .pkit/capabilities/visual-communication/outputs.md#the-viewing-step
+        - .pkit/capabilities/visual-communication/outputs.md#what-a-run-writes
+        - .pkit/capabilities/visual-communication/outputs.md#what-the-report-says
+        - .pkit/capabilities/visual-communication/outputs.md#what-refuses-a-run
         - .pkit/capabilities/visual-communication/checks.md#
         - .pkit/capabilities/visual-communication/checks.md#contents
         - .pkit/capabilities/visual-communication/checks.md#what-a-finding-says
@@ -130,15 +137,16 @@ A library the capability ships reaches the location only through [`pkit visual a
 1. **Bring the libraries.** [`pkit visual add <library>`](#pkit-visual-add-library) copies a library the capability ships, such as the foundations, into the location's library folder, and lists it in `libraries/libraries.yaml`. Put each other library version a piece uses there yourself, and list it ([The library folder](files.md#the-library-folder)). A piece needs a brand, and none ships, so the project writes its own ([Brands](files.md#brands)).
 2. **Write the piece.** A piece is a folder under `pieces/`: its `piece.yaml` names its libraries, languages, modes and exports, and its content names the components that draw it ([A piece](files.md#a-piece)).
 3. **Draw it.** `pkit visual render <piece>` writes the piece's lock, computes its scenes, keeps their findings in `findings.yaml`, and draws an SVG preview of each scene. Open the previews under `.pkit/capabilities/visual-communication/project/local/previews/<piece>/` ([The clone's local folder](files.md#the-clones-local-folder)).
-4. **Check it.** `pkit visual check <piece>`, or `pkit validate`, reports what the piece breaks ([What the check reports](checks.md)).
-5. **Commit the piece's folder:** `piece.yaml`, the content and `findings.yaml` ([The findings record](checks.md#the-findings-record)). The previews stay local to the clone ([The clone's local folder](files.md#the-clones-local-folder)).
-6. **Hand it out.** `pkit visual export <piece>` makes a numbered export in each format the piece declares, and records the version in the piece's `exports.yaml`. Commit `exports.yaml`; the exported files stay local until they are handed out ([Exports](outputs.md#exports)).
+4. **See it.** [`pkit visual look <piece>`](#pkit-visual-look-piece) draws each page as an image, with a report of what the images cannot show ([The viewing step](outputs.md#the-viewing-step)).
+5. **Check it.** `pkit visual check <piece>`, or `pkit validate`, reports what the piece breaks ([What the check reports](checks.md)).
+6. **Commit the piece's folder:** `piece.yaml`, the content and `findings.yaml` ([The findings record](checks.md#the-findings-record)). The previews stay local to the clone ([The clone's local folder](files.md#the-clones-local-folder)).
+7. **Hand it out.** `pkit visual export <piece>` makes a numbered export in each format the piece declares, and records the version in the piece's `exports.yaml`. Commit `exports.yaml`; the exported files stay local until they are handed out ([Exports](outputs.md#exports)).
 
 A brand's values reach code the same way: a declaration under the location's `code/` folder names the brand and where the code goes, and `pkit visual write-code <name>` writes it ([Written code](outputs.md#written-code)).
 
 ## Commands
 
-Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names ([How a command finds it](files.md#how-a-command-finds-it)). `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, puts back each folder it replaced, and takes back the location it recorded. It names each file it could not put back. `produce` alone writes before it can refuse: it hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)).
+Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names ([How a command finds it](files.md#how-a-command-finds-it)). `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. `look` writes only in the clone's local folder, and records no location. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, puts back each folder it replaced, and takes back the location it recorded. It names each file it could not put back. `produce` alone writes before it can refuse: it hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)).
 
 ### `pkit visual status`
 
@@ -223,6 +231,25 @@ Makes a numbered export of a piece in each format it declares.
 - **Refuses** for each reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, and may repeat.
 - **Exits** 0 when it exported and recorded the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
+### `pkit visual look <piece>`
+
+Draws a piece's pages as images, for a person or an agent to read ([The viewing step](outputs.md#the-viewing-step)).
+
+- **Draws** every page in the source language, in the first key, unless told otherwise. `--page <page>` names a page by its number from 1 or its trace id, `--language <language>` a language and `--key <key>` a key. Each may repeat. `--every-language` and `--every-key` take them all.
+- **Writes** each image and its frames, and one report, in the clone's local folder, replacing what an earlier run left there ([What a run writes](outputs.md#what-a-run-writes)).
+- **Prints** the lock and what the report says ([What the report says](outputs.md#what-the-report-says)).
+- **Uses the lock** `piece.yaml` holds, and never moves it.
+- **Refuses** for each reason under [What refuses a run](outputs.md#what-refuses-a-run).
+- **Exits** 0 when it drew, whatever the report says; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
+
+### `pkit visual pages <piece>`
+
+Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
+
+- **Prints** the piece's languages and keys, what it draws by default, each page by its number and trace id, and the tool. `--json` prints it as one document.
+- **Writes** nothing.
+- **Exits** 0 when it listed; 1 when the piece has no lock yet, or a lock that does not hold.
+
 ### `pkit visual write-code <name>`
 
 Writes a brand out as code, as the declaration `code/<name>.yaml` in the location asks.
@@ -240,4 +267,4 @@ use the same form.
 
 ## Dependencies
 
-No other capability. The commands run their scripts through `uv`, with the Python packages each script pins; `pkit sync` installs those of the check, so `pkit validate` runs it offline.
+No other capability. The commands run their scripts through `uv`, with the Python packages each script pins; `pkit sync` installs those of the check, so `pkit validate` runs it offline. It installs those of `pkit visual pages` too, which pins every package `pkit visual look` does, so that command draws with no network.

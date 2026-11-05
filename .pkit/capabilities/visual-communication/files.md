@@ -179,9 +179,10 @@ The code that `pkit visual write-code` writes lies where its declaration names, 
 
 - `previews/<piece>/`: the SVG previews `pkit visual render` draws;
 - `exports/<piece>/`: the files `pkit visual export` makes;
-- `handover/<piece>/`: what `pkit visual produce` hands a producer, and what the producer writes, until the command keeps it in the piece's folder.
+- `handover/<piece>/`: what `pkit visual produce` hands a producer, and what the producer writes, until the command keeps it in the piece's folder;
+- `look/<piece>/`: the images, the frames and the report `pkit visual look` writes.
 
-*What is made from a piece* names the files in each.
+*What is made from a piece* names the files in each. While `pkit visual look` runs, the folder also holds a temporary folder of the fonts it hands its tool, which the run removes.
 
 ## Names, ids and the binding
 

@@ -1,0 +1,7 @@
+component: backbone
+kind: none
+body: >
+  The CLI reference gains a section, "A capability's commands", which says a
+  capability describes its own commands and names `pkit visual look`, linking
+  the capability's README (#2674). No command, path or format of the backbone
+  changes, so no surface moves.
