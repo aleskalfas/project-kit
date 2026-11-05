@@ -1,7 +1,7 @@
 ---
 id: DEC-065
 title: A change's answers are derived from the change check, not read from its pull request's description
-status: proposed
+status: accepted
 date: 2026-11-05
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
