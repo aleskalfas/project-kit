@@ -19,6 +19,7 @@ pkit:
         - tests/test_software_analysis_numbers.py
       record:
         - software-analysis:DEC-001#3
+        - software-analysis:DEC-002#2
         - COR-009
         - ADR-061#3
         - PRJ-002#D1
@@ -35,4 +36,4 @@ pkit:
 
 **Verified by:** Tests find that a number the [default branch](../../../core/glossary.md#term-default-branch--default-branch) took since the branch left it fails the number check, a number removed since included. Tests find that only the ids a named commit removed are freed, and that an entry the tools cannot honour fails both. A number written by hand that the default branch gave before the branch left it is caught by neither.
 
-**Rationale:** Journeys, evidence, records and work items cite an [artefact](../../../core/glossary.md#term-artefact--artefact) by its id. An id given again would point each of them at another artefact ([DEC-001 point 3](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers)). Where two lines of work give one number, the first to reach the [default branch](../../../core/glossary.md#term-default-branch--default-branch) keeps it (DEC-001 point 3). Ids that nothing cites carry no such promise, so the [project](../../../core/glossary.md#term-project--project) may free them, and only the project.
+**Rationale:** Journeys, evidence, revalidation records, decision records and work items cite an [artefact](../../../core/glossary.md#term-artefact--artefact) by its id. An id given again would point each of them at another artefact ([DEC-001 point 3](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers)). Where two lines of work give one number, the first to reach the [default branch](../../../core/glossary.md#term-default-branch--default-branch) keeps it (DEC-001 point 3). Ids that nothing cites carry no such promise, so the [project](../../../core/glossary.md#term-project--project) may free them, and only the project.

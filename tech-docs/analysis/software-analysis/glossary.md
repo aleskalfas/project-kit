@@ -49,7 +49,7 @@ builds-on:
       - id: ACT-adopter
         name: Adopter
         needs:
-          - Choose the parts of each kind of analysis artefact as I adopt software analysis, keeping, relabelling or adding to the shipped ones.
+          - Choose the parts of each kind of analysis artefact as I adopt software-analysis, keeping, relabelling or adding to the shipped ones.
       - id: ACT-ai-agent
         name: AI agent
       - id: ACT-operator
@@ -67,7 +67,13 @@ TERM-analysis:
         record:
           - software-analysis:DEC-001#2
           - COR-049#1
+          - COR-049#3
+          - COR-049#5
           - COR-050#1
+          - COR-050#2
+          - COR-050#7
+          - COR-001
+          - COR-010
 TERM-artefact-kind:
   name: artefact kind
   noun-forms: [artefact kinds]
@@ -80,8 +86,25 @@ TERM-artefact-kind:
           - .pkit/capabilities/software-analysis/schemas/artefact-kinds.yaml
         record:
           - software-analysis:DEC-001#1
+          - COR-050#1
           - COR-050#2
+          - COR-050#7
           - COR-050#14
+TERM-box:
+  name: box
+  noun-forms: [boxes]
+  status: active
+  definition: "callout below a use case's step or variant that says what the system lacks there, and names the decision record and the work item"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/software-analysis/scripts/_lib/shortfalls.py
+        record:
+          - software-analysis:DEC-001#1
+          - COR-006
+          - COR-025
+          - COR-058#1
 TERM-candidate:
   name: candidate
   noun-forms: [candidates]
@@ -97,6 +120,19 @@ TERM-candidate:
           - software-analysis:DEC-001#1
           - software-analysis:DEC-001#9
           - COR-050#1
+TERM-checked-form:
+  name: checked form
+  noun-forms: [checked forms]
+  status: active
+  definition: "named shape from a schema's closed list that a declared structure sets on a part or a front-matter field, for a script to test"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/software-analysis/schemas/artefact-kinds.schema.json
+          - .pkit/capabilities/software-analysis/scripts/_lib/forms.py
+        record:
+          - software-analysis:DEC-001#1
 TERM-declared-structure:
   name: declared structure
   noun-forms: [declared structures]
@@ -125,6 +161,9 @@ TERM-design-source:
         record:
           - software-analysis:DEC-001#6
           - COR-009#1
+          - COR-009#5
+          - COR-050#3
+          - COR-050#6
 TERM-freed-id:
   name: freed id
   noun-forms: [freed ids]
@@ -137,7 +176,10 @@ TERM-freed-id:
           - .pkit/capabilities/software-analysis/scripts/_lib/numbering.py
         record:
           - software-analysis:DEC-001#3
+          - software-analysis:DEC-002#2
           - COR-005
+          - COR-001
+          - COR-010
 TERM-hint:
   name: hint
   status: active
@@ -216,6 +258,9 @@ TERM-shortfall:
           - .pkit/capabilities/software-analysis/schemas/use-case.schema.json
         record:
           - software-analysis:DEC-001#1
+          - COR-006
+          - COR-025
+          - COR-058#1
 TERM-tightening:
   name: tightening
   noun-forms: [tightenings]
@@ -230,6 +275,12 @@ TERM-tightening:
         record:
           - software-analysis:DEC-001#1
           - COR-051#1
+          - COR-051#3
+          - COR-051#4
+          - COR-051#5
+          - COR-068#1
+          - COR-001
+          - COR-010
 TERM-use-case:
   name: use case
   noun-forms: [use cases]
@@ -249,7 +300,7 @@ TERM-use-case:
 
 The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
 
-- **From core at 2.0.0:** the areas up to `030-change`. No release holds the core's analysis yet, so the links name the next release, 2.0.0, rather than software-analysis's floor, 1.149.0.
+- **From core at 2.0.0:** the areas up to `030-change`, and `060-report`. The links name software-analysis's floor, 2.0.0.
   - **Term:** [adapter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-adapter--adapter)
   - **Term:** [agent definition](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-agent-definition--agent-definition)
   - **Term:** [agent workspace](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-agent-workspace--agent-workspace)
@@ -291,7 +342,7 @@ The words of the domain and what each means. A term's id is stable, and its name
     - Describe my existing project from its code, documents and decisions, with an agent deriving candidates that I confirm.
     - Free the ids of artefacts nothing cites, such as an abandoned pilot, so new artefacts may take those ids again.
   - **Actor:** [Adopter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-adopter.md)
-    - Choose the parts of each kind of analysis artefact as I adopt software analysis, keeping, relabelling or adding to the shipped ones.
+    - Choose the parts of each kind of analysis artefact as I adopt software-analysis, keeping, relabelling or adding to the shipped ones.
   - **Actor:** [AI agent](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md)
   - **Actor:** [Operator](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-operator.md)
 
@@ -318,6 +369,16 @@ Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.m
 - **Artefact type:** the name a place gives each [artefact](../core/glossary.md#term-artefact--artefact) in it, such as `software-analysis:use-case`, for a [rule set](../core/glossary.md#term-rule-set--rule-set)'s scope to select. Each artefact kind lies in a place of its own, which gives one type ([DEC-001 point 2](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them)).
 - **The revalidation record's kind:** declared beside the artefact kinds, though a [revalidation record](#term-revalidation-record--revalidation-record) is no artefact. It has a [declared structure](#term-declared-structure--declared-structure), but no place, no type and no [tightening](#term-tightening--tightening), and the [capability](../core/glossary.md#term-capability--capability) checks its structure always ([DEC-001 point 1](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)).
 
+## TERM-box — box
+
+**Example:** the box below step 5 of UC-070 says that `pkit analysis new` runs no such check yet. It names the decision record that decides the check, and the work item that tracks building it.
+
+**Distinctions:**
+
+- **Shortfall:** the step or the variant the system does not carry out yet. The box stands below it, and says what the system lacks (DEC-001 point 1).
+- **Its entry in `shortfalls`:** the data a tool reads, in the use case's front matter. Validation holds each box to an entry, and each entry to a box (DEC-001 point 1).
+- **Any other callout:** one whose text opens with other words. It is no box, and no check reads it.
+
 ## TERM-candidate — candidate
 
 Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.md#candidate).
@@ -328,6 +389,16 @@ Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.m
 
 - **An artefact in force:** one committed to the [analysis](#term-analysis--analysis), whose id is taken for good. A candidate takes no id until it is committed ([DEC-001 point 3](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers)).
 - **A proposed decision record:** a record whose status is `proposed`, which binds nothing yet. A candidate is an [artefact](../core/glossary.md#term-artefact--artefact) or a [revalidation record](#term-revalidation-record--revalidation-record) of the analysis, never a [decision record](../core/glossary.md#term-decision-record--decision-record).
+
+## TERM-checked-form — checked form
+
+**Example:** `sentence` is a checked form. The declared structure of `use-case` sets it on *Goal*, so a goal of two sentences fails validation where the format rule binds.
+
+**Distinctions:**
+
+- **A form in the plain sense:** the shape of anything else, such as a design source's pointer. The schema's closed list does not hold it.
+- **Schema:** what checks a member's front-matter fields, whatever any rule's status. A checked form reads the text of a part or a field (DEC-001 point 1).
+- **Declared structure:** the whole list of a kind's parts. A checked form is one test that list sets on one of them (DEC-001 point 1).
 
 ## TERM-declared-structure — declared structure
 
@@ -381,7 +452,7 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 **Distinctions:**
 
-- **The core's answer:** the statement on one [artefact](../core/glossary.md#term-artefact--artefact), `updated` or `unchanged`, that records a revalidation's result there and clears its [friction](../core/glossary.md#term-friction--friction) ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
+- **The backbone's answer:** the statement on one [artefact](../core/glossary.md#term-artefact--artefact), `updated` or `unchanged`, that records a revalidation's result there and clears its [friction](../core/glossary.md#term-friction--friction) ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - **Testing:** running the software to see whether it still does what a description says. A revalidation reads, and usually mends the description ([DEC-001 point 7](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#7-revalidation-is-not-testing)).
 - **A deferral:** friction put off with a reason, which is no result of a revalidation ([DEC-001 point 5](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)).
 
@@ -393,7 +464,7 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 **Distinctions:**
 
-- **The core's two answers:** `unchanged` and `updated`, which record a revalidation outcome on its [artefact](../core/glossary.md#term-artefact--artefact). `holds` and a regression map to `unchanged`, and a stale [analysis](#term-analysis--analysis) maps to `updated` ([DEC-001 point 5](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)).
+- **The backbone's two answers:** `unchanged` and `updated`, which record a revalidation outcome on its [artefact](../core/glossary.md#term-artefact--artefact). `holds` and a regression map to `unchanged`, and a stale [analysis](#term-analysis--analysis) maps to `updated` ([DEC-001 point 5](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)).
 - **A regression whose step an accepted record decides:** the step takes a box, which changes the use case, so it maps to `updated` (DEC-001 point 5).
 - **Ambiguous:** no revalidation outcome yet. Only a person knows whether the [change](../core/glossary.md#term-change--change) was meant, so nothing is recorded until they say (DEC-001 point 5).
 

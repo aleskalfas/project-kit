@@ -11,6 +11,7 @@ requirements:
   - REQ-053
 after:
   - [UC-070]
+  - [UC-070, UC-071]
 shortfalls:
   - at: 7
     issue: "#1765"
@@ -25,6 +26,10 @@ pkit:
         - .pkit/capabilities/software-analysis/scripts/check-numbers.py
         - .pkit/capabilities/software-analysis/scripts/_lib/shortfalls.py
         - .pkit/capabilities/software-analysis/scripts/_lib/stamp.py
+        - .pkit/capabilities/software-analysis/scripts/_lib/append_only.py
+        - .pkit/capabilities/software-analysis/scripts/_lib/check.py
+        - .pkit/capabilities/software-analysis/scripts/new.py
+        - .pkit/capabilities/software-analysis/scripts/validate.py
         - .pkit/capabilities/software-analysis/schemas/revalidation-record.schema.json
         - .pkit/capabilities/software-analysis/skills/analysis-author/revalidation-record.md
         - .pkit/capabilities/software-analysis/skills/analysis-author/use-case.md
@@ -73,13 +78,16 @@ pkit:
 - **AI agent** (`core:ACT-ai-agent`): may revise the [artefacts](../../../../core/glossary.md#term-artefact--artefact) and draft the [revalidation record](../../../glossary.md#term-revalidation-record--revalidation-record) for the developer, through the `analysis-author` [skill](../../../../core/glossary.md#term-skill--skill). The [revalidation outcomes](../../../glossary.md#term-revalidation-outcome--revalidation-outcome) stay the developer's (variant 6b).
 - **Operator** (`core:ACT-operator`): is asked before `pkit analysis new` or `pkit analysis link` writes in a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From [UC-070](../010-describe/UC-070-choose-parts.md):** The [revalidation record](../../../glossary.md#term-revalidation-record--revalidation-record)'s kind has its parts chosen.
+**Preconditions:**
+
+- **From [UC-070](../010-describe/UC-070-choose-parts.md):** The [revalidation record](../../../glossary.md#term-revalidation-record--revalidation-record)'s kind has its parts chosen.
+- **From UC-070 or UC-071:** The analysis holds artefacts in force.
 
 **Assumptions:**
 
 - The [project](../../../../core/glossary.md#term-project--project) has software-analysis installed, or registered in place where software-analysis is developed ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-031](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md)). The [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys the `analysis-author` [skill](../../../../core/glossary.md#term-skill--skill) ([COR-005](../../../../../../.pkit/decisions/core/COR-005-bundle-pattern.md) and [COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
 - The [change](../../../../core/glossary.md#term-change--change)'s design lies in [decision records](../../../../core/glossary.md#term-decision-record--decision-record) and notes in this repository, or in a work item in a tracker ([DEC-001 point 6](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
-- The [answer](../../../../core/glossary.md#term-answer--answer) each revised [artefact](../../../../core/glossary.md#term-artefact--artefact) carries is recorded with the core's writers, as `core:UC-002` describes ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
+- The backbone's commands record the [answer](../../../../core/glossary.md#term-answer--answer) each revised [artefact](../../../../core/glossary.md#term-artefact--artefact) carries, as `core:UC-002` describes ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - The [backbone](../../../../core/glossary.md#term-backbone--backbone) resolves the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), on which the [stamp](../../../../core/glossary.md#term-stamp--stamp) and `pkit analysis check-pointers` locate each commit ([COR-054 point 5](../../../../../../.pkit/decisions/core/COR-054-default-branch.md#5-one-computation-exposed)).
 
 **Trigger:** A [change](../../../../core/glossary.md#term-change--change) is proposed and its design written before its code, and the change touches what the [analysis](../../../glossary.md#term-analysis--analysis) describes.
