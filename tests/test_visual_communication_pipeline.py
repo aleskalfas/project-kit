@@ -1064,6 +1064,49 @@ def test_a_side_that_cannot_be_drawn_says_why_and_names_the_projects_file(
     assert list((root / before_after.FOLDER).iterdir()) == []
 
 
+def test_a_side_whose_scenes_hold_no_page_says_why_once_for_every_language(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importable(monkeypatch, svg)
+    root = drawing_project(
+        tmp_path, top="foundations/nothing", picture=False, languages=["en", "cs"]
+    )
+    write_content(root, "cs")
+    side = before_after.drawing(root, "visual", PIECE, LOCK)
+    assert side.files == {}
+    assert side.why == (
+        "the piece draws no page in `en`, `cs`: the piece's top names no component "
+        "`foundations/nothing`"
+    )
+    assert list((root / before_after.FOLDER).iterdir()) == []
+
+
+def test_a_top_that_cannot_be_read_names_the_component_and_no_path_of_the_side(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importable(monkeypatch, svg)
+    root = drawing_project(tmp_path, picture=False)
+    write(root / "visual/libraries/foundations/1.0.0/components/figure.yaml", "not: [yaml\n")
+    side = before_after.drawing(root, "visual", PIECE, LOCK)
+    assert side.files == {}
+    assert side.why.startswith(
+        "the piece draws no page in `en`: the component `foundations/figure` cannot be read: "
+    )
+    assert ".location." not in side.why
+
+
+def test_a_language_with_no_page_and_nothing_found_is_a_side_that_cannot_be_drawn(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importable(monkeypatch, svg)
+    root = drawing_project(tmp_path, top="foundations/deck", picture=False, languages=["en", "cs"])
+    write_content(root, slides=[{"id": "first", "layout": "slide", "title": "The flow"}])
+    write_content(root, "cs", slides=[])
+    side = before_after.drawing(root, "visual", PIECE, LOCK)
+    assert side.files == {}
+    assert side.why == "the piece draws no page in `cs`"
+
+
 @pytest.mark.parametrize(
     ("library", "version"), [("../../..", "1.0.0"), ("tests", "../../../.."), ("tests", "2.0")]
 )

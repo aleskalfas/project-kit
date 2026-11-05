@@ -1151,6 +1151,34 @@ def test_a_side_that_cannot_be_drawn_is_said_and_the_run_goes_on(
     )
 
 
+def test_a_top_the_shipped_copy_no_longer_holds_is_said_and_the_run_goes_on(
+    pinned: Path, tmp_path: Path
+) -> None:
+    (tmp_path / "capability/libraries/foundations/components/figure.yaml").unlink()
+    added = run(pinned, "foundations")
+    assert added.returncode == 0, added.stderr
+    assert added.stdout.splitlines()[1:] == [
+        "left foundations@1.0.0 as it is: a lock that moves only on purpose names it",
+        "  the pinned draft `flow`",
+        "    no before-and-after: with what the capability ships, the piece draws no page in "
+        "`en`: the piece's top names no component `foundations/figure`",
+        "  to replace it, run `pkit visual add foundations --piece flow`",
+    ]
+    assert not (pinned / FLOW).exists()
+
+
+def test_a_top_that_names_no_component_on_either_side_is_said_once(pinned: Path) -> None:
+    changed(pinned / PIECE_FILE, "top: foundations/figure", "top: foundations/nothing")
+    added = run(pinned, "foundations")
+    assert added.returncode == 0, added.stderr
+    assert (
+        "    no before-and-after: the piece draws no page in `en`: the piece's top names no "
+        "component `foundations/nothing`"
+    ) in added.stdout.splitlines()
+    assert "files differ" not in added.stdout
+    assert not (pinned / FLOW).exists()
+
+
 def test_a_fault_in_the_piece_is_said_once_and_stops_nothing(pinned: Path) -> None:
     write(pinned / "visual/pieces/flow/content.en.yaml", "not: [content\n")
     added = run(pinned, "foundations")

@@ -32,11 +32,13 @@ from _lib import code, copies, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.files import Change, FileError, refuse_links
+from _lib.findings import FAILS
 from _lib.libraries import FOLDER as LIBRARY_FOLDER
 from _lib.libraries import Held, Version
 from _lib.location import walked
 from _lib.names import is_name
 from _lib.root import LOCAL
+from _lib.scene import SceneResult
 
 #: Where each piece's before-and-after lies, relative to the project root, in a folder of
 #: its own.
@@ -67,14 +69,17 @@ def drawing(
     sources: Sequence[copies.Source] = (),
 ) -> Side:
     """The previews of the piece `name` under `lock`, each of `sources` in place of the
-    project's copy of its version."""
+    project's copy of its version. A scene that holds no page is a side that cannot be drawn
+    (`_refuse_no_page`)."""
     own = _files(root, f"{location}/{pl.PIECES}/{name}", f"{location}/{pl.FONTS}")
 
     def previews(built: Path) -> dict[str, str]:
         piece = pl.read_piece(built, location, name)
         project = pl.Project(piece, lock, Held(built, location, walked=True))
+        results = project.scenes()
+        _refuse_no_page(results)
         found: dict[str, str] = {}
-        for language, key, drawn in pl.drawn(project, project.scenes(), "svg"):
+        for language, key, drawn in pl.drawn(project, results, "svg"):
             found.update(pl.preview_files(name, language, key, drawn.pages))
         return found
 
@@ -199,6 +204,24 @@ def _why(before: Side, after: Side) -> str:
         if side.why
     ]
     return "; ".join(said)
+
+
+def _refuse_no_page(results: Sequence[tuple[str, SceneResult]]) -> None:
+    """Raises Refused where a scene holds no page, which the engine reports as findings and
+    the renderer draws as no file: naming each such language, and what failed in it, each
+    reason once."""
+    blank = [(language, result) for language, result in results if not result.scene.pages]
+    if not blank:
+        return
+    languages = ", ".join(f"`{language}`" for language, _ in blank)
+    failed = [
+        finding.message
+        for _, result in blank
+        for finding in result.findings
+        if finding.level == FAILS
+    ]
+    why = "; ".join(dict.fromkeys(failed))
+    raise pl.Refused(f"the piece draws no page in {languages}{f': {why}' if why else ''}")
 
 
 def _files(root: Path, *folders: str) -> dict[str, Path]:
