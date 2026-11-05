@@ -299,6 +299,8 @@ class _Made:
 def long_edge(page: Mapping[str, Any]) -> int:
     """How many pixels the long edge of `page`'s image takes (DEC-015 point 5)."""
     edge = max(float(page["width"]), float(page["height"]))
+    if edge <= 0:
+        return LONG_EDGE  # the tool refuses a page with no size, naming its measure
     sizes = [
         float(run["font-size"])
         for element in _elements(page)
@@ -306,7 +308,9 @@ def long_edge(page: Mapping[str, Any]) -> int:
         for run in paragraph
         if run.get("font-size")
     ]
-    scale = max(LONG_EDGE / edge, SMALLEST_TEXT / min(sizes, default=SMALLEST_TEXT))
+    scale = LONG_EDGE / edge
+    if sizes:
+        scale = max(scale, SMALLEST_TEXT / min(sizes))
     return math.ceil(edge * scale)
 
 

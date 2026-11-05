@@ -471,6 +471,10 @@ def test_the_long_edge_rises_where_a_page_s_smallest_text_would_land_under_what_
     assert viewing.long_edge(page(5000, 16)) == 3125
 
 
+def test_a_large_page_with_no_text_takes_the_long_edge_of_every_page() -> None:
+    assert viewing.long_edge({"width": 1920, "height": 1080}) == 1568
+
+
 # --- what lies beside the images ----------------------------------------------------------------
 
 
@@ -672,6 +676,22 @@ def test_a_page_with_no_size_refuses_naming_the_check_with_nothing_written(tmp_p
         "`pkit visual check flow` names what the piece still owes\n"
     )
     assert written(root) == before
+
+
+def test_a_page_of_no_width_and_no_height_refuses_naming_the_check(tmp_path: Path) -> None:
+    """A page 0 by 0 reaches the same refusal, not a division by its long edge."""
+    root = drawing_project(tmp_path)
+    tokens = root / BRAND_TOKENS
+    data = json.loads(tokens.read_text(encoding="utf-8"))
+    data["size"]["figure"]["$value"]["value"] = 0
+    tokens.write_text(json.dumps(data), encoding="utf-8")
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 1
+    assert "Traceback" not in shown.stderr
+    assert shown.stderr == (
+        "error: the tool cannot draw page figure of `flow`: the page measures 0 by 0 px. "
+        "`pkit visual check flow` names what the piece still owes\n"
+    )
 
 
 def test_a_stale_picture_is_drawn_as_it_stands(flow: Path) -> None:
