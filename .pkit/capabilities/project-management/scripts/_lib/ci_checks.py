@@ -19,6 +19,10 @@ shared seam to import across that boundary):
     yet, still running, failed, passed — for a reader that waits for them
     (`land-work`, #1203): the merge gate passes a head with no check reported, and
     a reader that waits must not take that for green.
+  * `named_checks_passed(rollup, names)` and `unreported_checks(rollup, names)` —
+    whether the checks a project names have passed, and which of them no run has
+    reported, for a reader that goes on before every check has (`land-work`,
+    #2638). No merge gate reads them.
 
 The gh round-trip (`gh pr view --json statusCheckRollup`) stays at the call
 site so each script threads its own adopter config through the pm `gh` helper.
@@ -26,6 +30,7 @@ site so each script threads its own adopter config through the pm `gh` helper.
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from dataclasses import dataclass, field
 
 # CheckRun conclusions / StatusContext states that count as "not blocking a
@@ -205,3 +210,25 @@ def evaluate_ci_gate(rollup: list[dict] | None) -> CiGateResult:
         failed=tuple(failed),
         running=tuple(running),
     )
+
+
+def named_checks_passed(rollup: list[dict] | None, names: Collection[str]) -> bool:
+    """Whether each check `names` holds has passed: its latest run ended in SUCCESS.
+
+    Narrower than the merge gate's reading, for a reader that goes on before every
+    check has passed. A check that was skipped did not pass, and neither did a name
+    no check bears, so the reader then waits for every check. No names at all is
+    False for the same reason. Which other checks failed is `evaluate_ci_gate`'s.
+    """
+    latest = {
+        _check_identity(check): _check_outcome(check)
+        for check in dedupe_to_latest_run(rollup or [])
+    }
+    return bool(names) and all(latest.get(name) == "SUCCESS" for name in names)
+
+
+def unreported_checks(rollup: list[dict] | None, names: Collection[str]) -> tuple[str, ...]:
+    """The names no check in the rollup bears, in the order `names` gives them. Every
+    check a rollup reports can pass while a check that has not started is missing."""
+    reported = {_check_identity(check) for check in rollup or []}
+    return tuple(name for name in names if name not in reported)

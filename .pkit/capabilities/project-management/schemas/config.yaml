@@ -99,6 +99,8 @@ has_projects_v2_board: false
 #   mode: agent
 #   agents:
 #     effort: medium                  # one uniform reviewer effort; absent = harness default (#1046)
+#     start_after_checks:             # the checks that start the review, such as all but the test suite (#2638)
+#       - lint                        #   absent = they start once every check has passed
 #     local_registered:
 #       - name: pm-reviewer
 #     contributed_opt_out:            # per DEC-032 — withdraw one contributed reviewer (#148)

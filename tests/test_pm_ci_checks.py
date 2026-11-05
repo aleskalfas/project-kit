@@ -299,6 +299,59 @@ def test_an_unknown_outcome_waits_rather_than_fails(ci) -> None:
     assert result.running == ("new (SOMETHING_NEW)",)
 
 
+def test_the_checks_named_passed_on_success_alone(ci) -> None:
+    rollup = [
+        {"name": "lint", "status": "COMPLETED", "conclusion": "SUCCESS"},
+        {"context": "docs", "state": "SUCCESS"},
+        {"name": "suite", "status": "IN_PROGRESS"},
+    ]
+    assert ci.named_checks_passed(rollup, ("lint", "docs"))
+    assert not ci.named_checks_passed(rollup, ("lint", "suite"))
+
+
+@pytest.mark.parametrize("conclusion", ["SKIPPED", "NEUTRAL", "FAILURE"])
+def test_a_check_named_passed_only_by_succeeding(ci, conclusion: str) -> None:
+    rollup = [{"name": "lint", "status": "COMPLETED", "conclusion": conclusion}]
+    assert not ci.named_checks_passed(rollup, ("lint",))
+
+
+@pytest.mark.parametrize(
+    ("rollup", "names"),
+    [
+        pytest.param([{"name": "lint", "state": "SUCCESS"}], (), id="no names"),
+        pytest.param([], ("lint",), id="no checks"),
+        pytest.param(None, ("lint",), id="no reading"),
+        pytest.param([{"name": "lint", "state": "SUCCESS"}], ("docs",), id="no such check"),
+    ],
+)
+def test_nothing_named_or_nothing_reported_has_not_passed(ci, rollup, names) -> None:
+    assert not ci.named_checks_passed(rollup, names)
+
+
+def test_the_checks_named_are_read_at_their_latest_run(ci) -> None:
+    failed = {
+        "name": "lint",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "completedAt": "2026-10-01T10:00:00Z",
+    }
+    passed = {**failed, "conclusion": "SUCCESS", "completedAt": "2026-10-01T11:00:00Z"}
+    again = {"name": "lint", "status": "IN_PROGRESS", "startedAt": "2026-10-01T12:00:00Z"}
+    assert ci.named_checks_passed([failed, passed], ("lint",))
+    assert not ci.named_checks_passed([passed, failed, again], ("lint",))
+
+
+def test_a_name_no_check_bears_is_unreported(ci) -> None:
+    rollup = [
+        {"name": "decide", "status": "COMPLETED", "conclusion": "SUCCESS"},
+        {"context": "docs", "state": "PENDING"},
+        {"name": "skipped", "status": "COMPLETED", "conclusion": "SKIPPED"},
+    ]
+    assert ci.unreported_checks(rollup, ("lint", "docs", "skipped", "suite")) == ("lint", "suite")
+    assert ci.unreported_checks(rollup, ()) == ()
+    assert ci.unreported_checks(None, ("lint",)) == ("lint",)
+
+
 def test_the_states_read_the_latest_run_per_check(ci) -> None:
     """A check that failed and was re-run is judged on its re-run."""
     rollup = [

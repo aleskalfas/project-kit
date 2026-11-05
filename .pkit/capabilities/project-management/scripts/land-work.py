@@ -12,7 +12,9 @@ Lands an issue's pull request in one command: waits for the checks on the PR's
 head, has the reviewers whose verdicts are not fresh review that head, shows
 the findings they left for a person to judge, reads the answers the change
 wrote from the change check, runs the change check on the merge with the base
-as it stands, and merges it through `done-work`. It composes
+as it stands, and merges it through `done-work`. A project can name the checks
+that start the review: the reviewers then run beside the rest, and the merge
+still waits for every check. It composes
 the verbs' own functions — the CI gate's reading (`_lib.ci_checks`),
 `review-pr`'s review, `done-work`'s merge — and adds no review loop or merge
 mechanic of its own. The rules it adds are on the answers the change wrote
@@ -69,12 +71,25 @@ there instead, and changes nothing else.
           it merges only up to date, with the merge of the base to make,
           unless the base merges through a queue, read once a run; where
           whether it does cannot be read, a line says so and the run goes on
-          ([project-management:DEC-064-base-merge-named] point 2).
+          ([project-management:DEC-064-base-merge-named] point 2). Where the
+          project names the checks that start the review
+          (`review.agents.start_after_checks`), this step ends once each has
+          passed and none has failed, and its line says the review starts
+          beside the rest. A name no check bears is read once more, then
+          warned of. The step then runs again once the review has ended,
+          waiting up to as long for the rest, and every stop above stops the
+          run before the merge ([project-management:DEC-063-task-builder]
+          point 8). A `--yes` run names none, so it runs no reviewer until
+          every check has passed: no stop can fall between a verdict it posts
+          and the findings' hold on it (DEC-055 point 3). A `--no-wait` run
+          names none either, since it only reads.
   review  In agent review mode, `review-pr`'s review on the pinned head: a
           verdict judged fresh for that head is kept, a stale or missing one
           re-run. A CHANGES_REQUESTED, kept or new, stops the run before the
           merge with the first line of each `[block]` finding; a reviewer
-          that could not be run stops it too. The advisories of the approvals
+          that could not be run stops it too. Where the review started beside
+          checks still running, that last line also names each that has failed
+          by then, so one fix round carries both. The advisories of the approvals
           are printed (DEC-028's finding tags, read by
           `_lib.agent_verdicts.findings`). `review-pr` works out the required
           set, so a reviewer a capability contributes runs though the project
@@ -251,7 +266,16 @@ from _lib.agent_verdicts import (
     tagged,
 )
 from _lib.audit import short_sha
-from _lib.ci_checks import FAILED, NO_RUN, PASSED, CiGateResult, evaluate_ci_gate
+from _lib.ci_checks import (
+    FAILED,
+    NO_RUN,
+    PASSED,
+    RUNNING,
+    CiGateResult,
+    evaluate_ci_gate,
+    named_checks_passed,
+    unreported_checks,
+)
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -552,6 +576,7 @@ class _FindingsEnd:
 
 # How the ci step ended, when it did not stop the run.
 _CI_PASSED = "passed"
+_CI_FIRST_PASSED = "first-passed"
 _CI_WOULD_WAIT = "would-wait"
 _CI_PR_MERGED = "merged"
 
@@ -618,8 +643,9 @@ def _parser() -> argparse.ArgumentParser:
         metavar="MINUTES",
         help=(
             f"How long to wait for the checks on the PR's head (default "
-            f"{DEFAULT_WAIT_MINUTES:g}), and, where the base merges through a queue, "
-            "for the queue to merge it (passed to done-work)."
+            f"{DEFAULT_WAIT_MINUTES:g}), as long again for those still running once a "
+            "review started beside them has ended, and, where the base merges through a "
+            "queue, for the queue to merge it (passed to done-work)."
         ),
     )
     wait.add_argument(
@@ -689,12 +715,25 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
     # What a run authorised up front found when it started: the hold on the
     # `[person]` findings is what it found then (DEC-055 point 3).
     found = _found_at_start(head, config) if args.yes and not args.dry_run else None
-    ci = _wait_for_checks(
-        head, wait_seconds=_wait_seconds(args), dry_run=args.dry_run, config=config
+    wait_for_checks = functools.partial(
+        _wait_for_checks,
+        head,
+        wait_seconds=_wait_seconds(args),
+        dry_run=args.dry_run,
+        config=config,
+        # Whether a PR read as behind stops here, read once a run: the queue is the base's.
+        behind_stops=functools.cache(lambda: _behind_stops(head, config)),
     )
+    ci = wait_for_checks(first=_checks_that_start_review(args, config))
     if ci == _CI_PR_MERGED:
         return _merge(args, None, config, reading)
-    review = _review(args, head, config, reading)
+    beside_checks = ci == _CI_FIRST_PASSED
+    review = _review(args, head, config, reading, beside_checks=beside_checks)
+    if beside_checks:
+        # The rest of the checks, which ran beside the review (DEC-063 point 8).
+        ci = wait_for_checks(reviewed=True)
+        if ci == _CI_PR_MERGED:
+            return _merge(args, None, config, reading)
     # Before the answers: this step stops on what it cannot read, and a stop
     # here has written nothing.
     to_judge = _findings(args, head, config, capability_root, found)
@@ -980,21 +1019,51 @@ def _wait_seconds(args: argparse.Namespace) -> float:
     return minutes * 60
 
 
+def _checks_that_start_review(args: argparse.Namespace, config: dict[str, Any]) -> tuple[str, ...]:
+    """The checks whose pass starts the review, which the project names
+    (`review.agents.start_after_checks`); none where it names none, or where the
+    value is not a list of names, so the review waits for every check. `pkit data
+    validate` refuses such a value.
+
+    None for a run authorised up front: a stop between a verdict it posted and the
+    findings' step would leave the verdict found at the next run's start, unshown
+    (DEC-055 point 3). None for `--no-wait`, which only reads."""
+    if args.yes or args.no_wait:
+        return ()
+    review = config.get("review") if isinstance(config, dict) else None
+    agents = review.get("agents") if isinstance(review, dict) else None
+    named = agents.get("start_after_checks") if isinstance(agents, dict) else None
+    if not isinstance(named, list) or not all(isinstance(name, str) for name in named):
+        return ()
+    return tuple(named)
+
+
 def _wait_for_checks(
-    head: _Head, *, wait_seconds: float, dry_run: bool, config: dict[str, Any]
+    head: _Head,
+    *,
+    wait_seconds: float,
+    dry_run: bool,
+    config: dict[str, Any],
+    behind_stops: Callable[[], bool],
+    first: tuple[str, ...] = (),
+    reviewed: bool = False,
 ) -> str:
     """Wait for the checks on the pinned head, as long as `wait_seconds`.
 
-    Returns how it ended when the run goes on — the checks passed, a dry run
-    would wait for them, or the PR merged meanwhile — and stops the run
-    otherwise. The checks are read with the head they belong to, so a run on
-    another head never counts: a head that moved stops the run.
+    Returns how it ended when the run goes on — the checks passed, each of `first`
+    passed and none failed, a dry run would wait for them, or the PR merged
+    meanwhile — and stops the run otherwise. The checks are read with the head they
+    belong to, so a run on another head never counts: a head that moved stops the
+    run. `reviewed` says the review has ended, as a stop then says.
+
+    Every check reported can pass before one of `first` has started, so that reading
+    is read once more. A name still unreported then is warned of, and the run reads
+    the checks again once the review has ended.
     """
     issue, number = head.issue, head.pr_number
     started = _monotonic()
     said = ""
-    # Whether a PR read as behind stops here, read once a run: the queue is the base's.
-    behind_stops = functools.cache(lambda: _behind_stops(head, config))
+    read_again = False
     while True:
         checks = _read_pr(number, config)
         if checks.problem:
@@ -1018,7 +1087,8 @@ def _wait_for_checks(
                 EXIT_HEAD_MOVED,
                 f"ci: stopped — PR #{number}'s head moved from {short_sha(head.oid)} to "
                 f"{short_sha(checks.head)} while its checks were awaited. Nothing was "
-                f"reviewed or merged; `land-work {issue}` checks and reviews the new head",
+                f"{'merged' if reviewed else 'reviewed or merged'}; `land-work {issue}` "
+                "checks and reviews the new head",
             )
         elif checks.conflicting:
             raise _Stop(EXIT_NEEDS_CHANGE, _conflict_line("ci", head))
@@ -1027,33 +1097,82 @@ def _wait_for_checks(
         else:
             gate = checks.gate
             assert gate is not None
+            missing = unreported_checks(checks.rollup, first)
+            if gate.state == PASSED and (not missing or read_again or dry_run):
+                return _all_passed(head, checks.rollup, missing)
             if gate.state == PASSED:
-                _say(f"ci: passed on {short_sha(head.oid)}{_passed_detail(checks.rollup)}")
-                return _CI_PASSED
-            if gate.state == FAILED:
-                failed = "; ".join(
-                    f"{check.name} ({check.outcome})" + (f" {check.url}" if check.url else "")
-                    for check in gate.failed
-                )
+                read_again = True
+                progress = f"{', '.join(missing)} not reported for {short_sha(head.oid)} yet"
+            elif gate.state == FAILED:
                 raise _Stop(
                     EXIT_NEEDS_CHANGE,
-                    f"ci: failed on {short_sha(head.oid)} — {failed}. Review and merge not started",
+                    f"ci: failed on {short_sha(head.oid)} — {_failed_checks(gate)}. "
+                    f"{'Merge' if reviewed else 'Review and merge'} not started",
                 )
-            progress = (
-                f"no check has been reported for {short_sha(head.oid)} yet"
-                if gate.state == NO_RUN
-                else f"running on {short_sha(head.oid)}: {', '.join(gate.running)}"
-            )
-            if dry_run:
-                _say(f"ci: (dry-run) {progress} — would wait up to {_duration(wait_seconds)}")
-                return _CI_WOULD_WAIT
-            waited = _monotonic() - started
-            if waited >= wait_seconds:
-                raise _Stop(EXIT_CI_PENDING, _ran_out(head, gate, waited, wait_seconds))
+            elif gate.state == RUNNING and named_checks_passed(checks.rollup, first):
+                return _first_passed(head, first, gate, wait_seconds, dry_run=dry_run)
+            else:
+                progress = (
+                    f"no check has been reported for {short_sha(head.oid)} yet"
+                    if gate.state == NO_RUN
+                    else f"running on {short_sha(head.oid)}: {', '.join(gate.running)}"
+                )
+                if dry_run:
+                    _say(f"ci: (dry-run) {progress} — would wait up to {_duration(wait_seconds)}")
+                    return _CI_WOULD_WAIT
+                waited = _monotonic() - started
+                if waited >= wait_seconds:
+                    raise _Stop(EXIT_CI_PENDING, _ran_out(head, gate, waited, wait_seconds))
         if progress != said:
             print(f"  ci: {progress}", flush=True)
             said = progress
         _sleep(max(0.0, min(POLL_SECONDS, wait_seconds - (_monotonic() - started))))
+
+
+def _all_passed(head: _Head, rollup: list[dict[str, Any]], missing: tuple[str, ...]) -> str:
+    """Say that every check reported passed on the pinned head, and how the step ends.
+    Where `missing` holds a name no check bears, the configuration may be wrong or the
+    check may start late, so a warning says so and the checks are read again after the
+    review."""
+    if missing:
+        print(
+            f"  warn: no check on {short_sha(head.oid)} is named {', '.join(missing)}, which "
+            "review.agents.start_after_checks names, so the review waited for every check "
+            "reported",
+            flush=True,
+        )
+    _say(f"ci: passed on {short_sha(head.oid)}{_passed_detail(rollup)}")
+    return _CI_FIRST_PASSED if missing else _CI_PASSED
+
+
+def _first_passed(
+    head: _Head,
+    first: tuple[str, ...],
+    gate: CiGateResult,
+    wait_seconds: float,
+    *,
+    dry_run: bool,
+) -> str:
+    """Say that the checks that start the review passed on the pinned head and the
+    rest still run, and how the step ends: the review starts beside them, or a dry
+    run would start it (DEC-063 point 8)."""
+    passed, rest = f"{', '.join(first)} passed on {short_sha(head.oid)}", ", ".join(gate.running)
+    if dry_run:
+        _say(
+            f"ci: (dry-run) {passed} — would start the review, then wait up to "
+            f"{_duration(wait_seconds)} for the rest: {rest}"
+        )
+        return _CI_WOULD_WAIT
+    _say(f"ci: {passed} — the review starts beside the rest: {rest}")
+    return _CI_FIRST_PASSED
+
+
+def _failed_checks(gate: CiGateResult) -> str:
+    """Each check that failed and where to read it, as a line says it."""
+    return "; ".join(
+        f"{check.name} ({check.outcome})" + (f" {check.url}" if check.url else "")
+        for check in gate.failed
+    )
 
 
 def _read_pr(pr_number: int, config: dict[str, Any]) -> _Checks:
@@ -1211,6 +1330,8 @@ def _review(
     head: _Head,
     config: dict[str, Any],
     reading: issue_branch.Reading,
+    *,
+    beside_checks: bool,
 ) -> _ReviewEnd:
     """Have the reviewers whose verdicts are not fresh review the pinned head.
 
@@ -1218,7 +1339,9 @@ def _review(
     The stop is chosen in this order: the head moved; a CHANGES_REQUESTED;
     something could not be read; a reviewer could not be run — so one
     reviewer's block is reported even when another timed out. `review-pr` is
-    handed the issue's branch as this run read it (`reading`).
+    handed the issue's branch as this run read it (`reading`). `beside_checks`
+    says checks still ran as the review started, so a CHANGES_REQUESTED's stop
+    names each that has failed by then.
     """
     issue = head.issue
     labels = done_work._label_names(gh_get_issue(issue, config, fields="labels"))
@@ -1257,14 +1380,15 @@ def _review(
         raise _Stop(
             EXIT_HEAD_MOVED,
             f"review: stopped — PR #{head.pr_number}'s head is {short_sha(run.moved_to)}, "
-            f"not {short_sha(head.oid)}, the head whose checks passed. Nothing was merged; "
+            f"not {short_sha(head.oid)}, the head this run pinned. Nothing was merged; "
             f"`land-work {issue}` checks and reviews the new head",
         )
     if requested:
         raise _Stop(
             EXIT_NEEDS_CHANGE,
             f"review: changes requested by {', '.join(requested)} — the blocking findings "
-            "are above; merge not started",
+            f"are above{_failed_meanwhile(head, config) if beside_checks else ''}; merge not "
+            "started",
         )
     if run.reason:
         raise _Stop(EXIT_UNREADABLE, f"review: stopped — {run.reason}")
@@ -1296,6 +1420,16 @@ def _review(
     )
     _say(f"review: {kept} kept fresh, {ran} re-run — all approved{noted}")
     return agents
+
+
+def _failed_meanwhile(head: _Head, config: dict[str, Any]) -> str:
+    """What the stop on a CHANGES_REQUESTED adds where the review ran beside checks:
+    each that has failed by then, so one fix round carries both; "" where none has,
+    or the checks cannot be read, since the stop stands without them."""
+    checks = _read_pr(head.pr_number, config)
+    if checks.head != head.oid or checks.gate is None or not checks.gate.failed:
+        return ""
+    return f", and a check failed on {short_sha(head.oid)}: {_failed_checks(checks.gate)}"
 
 
 def _blocking_lines(body: str, pr_number: int) -> list[str]:
@@ -1909,7 +2043,7 @@ def _person_verdicts(
         raise _Stop(
             EXIT_HEAD_MOVED,
             f"{FINDINGS}: stopped — PR #{number}'s head is {short_sha(now) or 'unknown'}, "
-            f"not {short_sha(head.oid)}, the head whose checks passed. Nothing was merged; "
+            f"not {short_sha(head.oid)}, the head this run pinned. Nothing was merged; "
             f"`land-work {issue}` checks and reviews the new head",
         )
     comments = data.get("comments") or []
