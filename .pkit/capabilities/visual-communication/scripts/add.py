@@ -63,7 +63,8 @@ run.
 
 It prints each copy it writes, as copied, replaced or restored, with each piece and
 declaration whose lock names it; each copy it leaves, with why, each lock left with its
-before-and-after, and the command that names them; and each version it lists.
+before-and-after, and, where it can read each, the command that names them; and each
+version it lists.
 
 Usage:
   pkit visual add <library>[@<version>] [--being-built] [--location <path>]

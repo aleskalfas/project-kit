@@ -12,7 +12,8 @@ body: >
   goes on. A run that leaves such a copy shows what replacing it would change.
   It draws a pinned draft's scenes both ways, under `before-after/<piece>/` in
   the clone's local folder, and prints the difference in the code a
-  declaration's writer writes. It prints the line that names them all. A piece
-  or a declaration named that locks no copy the run would replace is refused,
+  declaration's writer writes. It prints the line that names them all, unless
+  a lock on the copy cannot be read, which the person mends first. A piece or
+  a declaration named that locks no copy the run would replace is refused,
   naming what it locks. The command now takes the dependencies of drawing and
   of reading a declaration.
