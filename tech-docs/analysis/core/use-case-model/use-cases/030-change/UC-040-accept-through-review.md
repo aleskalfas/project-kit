@@ -30,6 +30,7 @@ pkit:
         - COR-066#1
         - COR-066#3
         - COR-066#5
+        - ADR-081#7
       artefact:
         - ACT-merge-authoriser
         - ACT-developer
@@ -75,7 +76,8 @@ pkit:
 - **3c.** The merge authoriser approved the record's addition and its acceptance together, as [UC-037](UC-037-record-decision.md) variant 9a says. The record lands `accepted` in the commit that adds it.
 - **5a.** The rule's origin cites a decision record that is still proposed. Validation fails, naming the rule. The cited record is accepted first, through this same use case, and the path rejoins at step 5.
 - **6a.** The accepted record's Implications name edits to accepted records. The change makes those to the project's own records in commits after the acceptance. The merge authoriser is shown each, as `pkit decisions check-diff` lists it, and reads it before the change lands ([COR-066 point 5](../../../../../../.pkit/decisions/core/COR-066-accepted-before-landing.md#5-a-new-record-lands-with-its-edits)). The path rejoins at step 7.
-- **7a.** The merge authoriser works alone, and commits the acceptance straight to the [default branch](../../../glossary.md#term-default-branch--default-branch), as [UC-034](UC-034-land-change.md) variant 1a says. No [pull request](../../../glossary.md#term-pull-request--pull-request) carries it.
+- **7a.** The merge authoriser works alone, and commits the acceptance straight to the [default branch](../../../glossary.md#term-default-branch--default-branch), as [UC-034](UC-034-land-change.md) variant 1a says. No [pull request](../../../glossary.md#term-pull-request--pull-request) carries it. Before the push, the merge authoriser runs `pkit decisions check-landing`, and pushes only on a pass ([ADR-081 point 7](../../../../../architecture/decisions/ADR-081-landing-check.md#7-where-it-runs)).
+- **7b.** The merge authoriser asks what the change makes accepted. `pkit decisions check-landing` lists each record and rule, with the commits that accepted it, the work before them and the edits since ([COR-066 point 3](../../../../../../.pkit/decisions/core/COR-066-accepted-before-landing.md#3-the-person-sees-what-the-change-makes-accepted)). The path rejoins at step 7.
 
 **Postconditions:** The record or the [rule](../../../glossary.md#term-rule--rule) is accepted, through the merge authoriser's review. An accepted rule carries a complete origin, and binds where a set of the [project](../../../glossary.md#term-project--project)'s own reaches it.
 

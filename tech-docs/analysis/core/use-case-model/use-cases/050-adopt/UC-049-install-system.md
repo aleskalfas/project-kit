@@ -46,8 +46,10 @@ pkit:
         - ADR-065#4
         - ADR-065#11
         - ADR-034#1
+        - COR-066#4
         - COR-070#2
         - ADR-076#2
+        - ADR-081#5
       artefact:
         - ACT-adopter
         - ACT-operator
@@ -101,10 +103,11 @@ pkit:
 - **1d.** The adopter passes `--root <path>`, as in a pipeline. The system installs at that path without asking, after the checks of step 4.
 - **1e.** Git refuses to verify the repository, or cannot open its `.git`. The system refuses, naming the fix, or `pkit init --root <target>` to install there anyway.
 - **1f.** An install lies between the working directory and the target. The system refuses to create a second one, and names `pkit init --root <target>`.
+- **1g.** The adopter passes `--refuse-proposals`. The system writes `decisions.refuse-proposals: true` into the [project](../../../glossary.md#term-project--project)'s configuration, which turns the landing check's refusal on ([COR-066 point 4](../../../../../../.pkit/decisions/core/COR-066-accepted-before-landing.md#4-a-project-turns-the-refusal-on)). Without the flag it writes no key, and makes no offer ([ADR-081 point 5](../../../../../architecture/decisions/ADR-081-landing-check.md#5-the-key-read-where-the-default-branch-holds-it)).
 - **4a.** The target holds a `.pkit/` that an earlier install wrote. The system refuses with `<target> is already a project-kit project.`, and names `pkit sync`, since first install runs once ([COR-004](../../../../../../.pkit/decisions/core/COR-004-cli-surface.md)). The use case ends.
 - **4b.** The target holds a `.pkit/` that no install wrote. The system refuses, and names moving it aside. The use case ends.
 - **4c.** The target is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the CLI ships an [adapter](../../../glossary.md#term-adapter--adapter) and a [capability](../../../glossary.md#term-capability--capability) of one name. The system refuses and writes nothing. The use case ends.
-- **8a.** The [project](../../../glossary.md#term-project--project) already holds `.claude/settings.json`. Before [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery), the system backs it up to `.claude/settings.json.pre-pkit` ([ADR-065 point 11](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#11-each-writer-of-a-project-owned-path-is-named-and-each-owner-of-derivable-state)).
+- **8a.** The project already holds `.claude/settings.json`. Before [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery), the system backs it up to `.claude/settings.json.pre-pkit` ([ADR-065 point 11](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#11-each-writer-of-a-project-owned-path-is-named-and-each-owner-of-derivable-state)).
 - **10a.** The install stops before step 10, such as on a failing script. The [manifest](../../../glossary.md#term-manifest--manifest) records the target and no [completion](../../../glossary.md#term-completion--completion), so the project reads as incomplete, and `pkit upgrade` finishes the install ([UC-051](UC-051-upgrade-system.md) and [REQ-026](../../../requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md)).
 - **12a.** The team has not adopted the system. The adopter runs `pkit visibility private`, and the system writes the footprint the installed [components](../../../glossary.md#term-component--component) declare into `.git/info/exclude` ([ADR-009 point 3](../../../../../architecture/decisions/ADR-009-git-footprint-visibility.md#3-private--make-the-whole-footprint-git-invisible-via-gitinfoexclude)).
 - **12b.** On the path of 12a, files of the footprint are tracked already. The system lists them and asks `Proceed?`. On a yes, it removes them from git's index with `git rm --cached`, and keeps each working copy ([ADR-009 point 4](../../../../../architecture/decisions/ADR-009-git-footprint-visibility.md#4-going-private-always-runs-a-confirm-gated-untrack)).

@@ -21,6 +21,9 @@ shortfalls:
   - at: 9
     issue: "#2122"
     record: COR-064#2
+  - at: 13
+    issue: "#2666"
+    record: COR-066#2
 pkit:
   friction:
     anchors:
@@ -138,6 +141,10 @@ pkit:
 11. The merge authoriser reads the findings and the list, and authorises the merge of the pull request at that head (DEC-055 point 3).
 12. The developer runs `pkit pm land-work <N> --yes --expect-head <sha>`, and the system runs steps 2 to 9 again at that head.
 13. The system holds the pull request to the [merge gate](../../../glossary.md#term-merge-gate--merge-gate). Each required reviewer's latest verdict must be a standing approval, and each [checkbox](../../../glossary.md#term-checkbox--checkbox) of each [issue](../../../glossary.md#term-issue--issue) the pull request closes must be ticked. The pull request's checks must have passed ([DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md), DEC-028 and `done-work.py`).
+
+> [!WARNING]
+> **Not built yet:** `land-work` does not run the landing check. So a proposed record or [rule](../../../../core/glossary.md#term-rule--rule) meets no refusal here, and the merge authoriser sees no list of what the change makes accepted. [COR-066 point 2](../../../../../../.pkit/decisions/core/COR-066-accepted-before-landing.md#2-a-check-of-its-own-refuses-to-land-a-proposal) decides that a [component](../../../../core/glossary.md#term-component--component) that merges runs it, and #2666 tracks it.
+
 14. The system has the [backbone](../../../../core/glossary.md#term-backbone--backbone) merge the pull request, pinned to the head the gate judged. The system then moves to Done, and closes, each issue the pull request closes, and has the branch deleted. It prints `[ok] merged + closed #<N>` ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md) and DEC-028).
 
 **Variants:**
