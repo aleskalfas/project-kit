@@ -13,7 +13,7 @@ requirements:
   - REQ-041
   - REQ-042
 after:
-  - [UC-084]
+  - [UC-084, UC-088]
 shortfalls:
   - at: "4a"
     issue: "#2287"
@@ -63,6 +63,7 @@ pkit:
         - PRJ-004
         - ADR-063
         - ADR-034#1
+        - ADR-066#1
       artefact:
         - ACT-worker-agent
         - REQ-040
@@ -81,7 +82,7 @@ pkit:
 - **AI agent** (`core:ACT-ai-agent`): each [required reviewer](../../../glossary.md#term-required-reviewer--required-reviewer) whose verdict does not stand for the new head, such as after a conflict the worker resolved. Each such [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) reviews the new head again. A merge of the [base](../../../../core/glossary.md#term-base--base) without a conflict keeps every verdict ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). It is also each agent the [project](../../../../core/glossary.md#term-project--project) granted, which `fix-drift` starts to propose answers after the merge ([DEC-056 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)).
 - **Operator** (`core:ACT-operator`): is asked before a command changes a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From [UC-084](UC-084-take-next-task.md):** The worker's [Task](../../../glossary.md#term-task--task) is in Review, and the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
+**Preconditions:** **From [UC-084](UC-084-take-next-task.md) or [UC-088](UC-088-delegate-to-agent.md):** The [Task](../../../glossary.md#term-task--task) is in Review, and the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 
 **Assumptions:**
 
@@ -121,7 +122,7 @@ pkit:
 
 - **7a.** Another run of `fix-drift` in the same [clone](../../../glossary.md#term-clone--clone) holds the clone's lock. The command refuses, and the worker runs `fix-drift` again later ([DEC-056 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#4-the-run-is-bounded)).
 
-**Postconditions:** The worker's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) merged at the [head](../../../../core/glossary.md#term-head--head) the gate judged, after the other agents' changes, and the pull request's [Task](../../../glossary.md#term-task--task) is in Done.
+**Postconditions:** The worker's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) merged at the [head](../../../../core/glossary.md#term-head--head) the merge gate judged, after the other agents' changes, and the pull request's [Task](../../../glossary.md#term-task--task) is in Done.
 
 **Minimal guarantees:**
 

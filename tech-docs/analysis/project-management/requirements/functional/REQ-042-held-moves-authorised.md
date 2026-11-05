@@ -15,6 +15,9 @@ pkit:
     anchors:
       path:
         - .pkit/capabilities/project-management/schemas/workflow.yaml
+        - .pkit/capabilities/project-management/scripts/move-issue.py
+        - .pkit/capabilities/project-management/scripts/close-issue.py
+        - .pkit/capabilities/project-management/scripts/done-work.py
         - tests/test_pm_move_issue.py
         - tests/test_pm_done_work.py
         - tests/test_pm_close_issue.py

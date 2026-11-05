@@ -23,6 +23,10 @@ pkit:
         - project-management:DEC-055#6
         - project-management:DEC-064
         - project-management:DEC-059#7
+        - COR-050#3
+        - COR-051#4
+        - COR-066#1
+        - COR-066#3
       artefact:
         - ACT-worker-agent
         - UC-084

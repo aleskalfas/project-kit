@@ -4,8 +4,8 @@ title: An instance's work in flight is found again from GitHub and the instance'
 status: active
 statement: "The issues an instance owns, and each issue's branch, are found from GitHub and the instance's number, with nothing an ended session kept."
 measure: "After every earlier session died, a new session in the instance lists the issues the instance owns, and finds each one's branch."
-applies-to: "Every instance that has set a number, whichever way the project writes the owner of an issue."
-obligation: v1:sha256:65fb724b26812b20d77086c98eff744389a283c1de11fbcae6071ded0e2656a9
+applies-to: "Every instance, whichever way the project writes the owner of an issue."
+obligation: v1:sha256:69312e666d936061f26554d41e41650cafea177134f5359866676e6d181d0462
 actors:
   - ACT-worker-agent
   - ACT-lead-agent
@@ -14,6 +14,8 @@ refines: []
 pkit:
   friction:
     anchors:
+      path:
+        - .pkit/capabilities/project-management/scripts/_lib/instance_ownership.py
       record:
         - project-management:DEC-035
         - project-management:DEC-035#1
@@ -30,7 +32,7 @@ pkit:
 
 **Verified by:** None.
 
-**Rationale:** [Clones](../../../glossary.md#term-clone--clone) coordinate through GitHub, so the only state the clones keep is each clone's number and the marks on the issues ([DEC-035](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md)). [EPIC](../../../glossary.md#term-epic--epic) #943 sets the outcome this requirement serves: with every session killed, each clone finds where the clone was from GitHub and the clone's number. The [owner](../../../glossary.md#term-owner--owner) is written on the [issue](../../../glossary.md#term-issue--issue) itself, so the owner survives a session that died ([DEC-043 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#4-the-current-owner-is-mirrored-into-the-issue-description-as-a-derived-regenerable-view)). Each [Task](../../../glossary.md#term-task--task)'s branch is named after the Task, so the branch is found from the issue ([DEC-013](../../../../../../.pkit/capabilities/project-management/decisions/DEC-013-branch-and-pr-conventions.md)).
+**Rationale:** [Clones](../../../glossary.md#term-clone--clone) coordinate through GitHub, so the only state the clones keep is each clone's number and the ownerships on the issues ([DEC-035](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md)). [EPIC](../../../glossary.md#term-epic--epic) #943 sets the outcome this requirement serves: with every session killed, each clone finds where the clone was from GitHub and the clone's number. The [owner](../../../glossary.md#term-owner--owner) is written on the [issue](../../../glossary.md#term-issue--issue) itself, so the owner survives a session that died ([DEC-043 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#4-the-current-owner-is-mirrored-into-the-issue-description-as-a-derived-regenerable-view)). Each [Task](../../../glossary.md#term-task--task)'s branch is named after the Task, so the branch is found from the issue ([DEC-013](../../../../../../.pkit/capabilities/project-management/decisions/DEC-013-branch-and-pr-conventions.md)).
 
 ## Open for the design
 
