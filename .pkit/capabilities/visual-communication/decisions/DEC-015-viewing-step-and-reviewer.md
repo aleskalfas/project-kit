@@ -6,7 +6,7 @@ date: 2026-11-05
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** whoever builds a piece can see its pages as images while it is built. The *viewing step* draws what a renderer drew, and writes only images and the frames beside them, in the clone's local folder. It is no plugin and no render, and no check, export or producer reads what it writes. Text its tool drew to nothing never passes in silence. That tool today is resvg, through the pinned `resvg-py` wheel, which reads the SVG renderer's pages and calls no outside program. The images promise nothing about their pixels. `graphic-design-reviewer` reads them on demand, reports what no check measures, and only advises.
+**In plain terms:** whoever builds a piece can see its pages as images while it is built. The *viewing step* draws what a renderer drew, and writes images, with the frames and a report beside them, in the clone's local folder. It is no plugin and no render, and no check, export or producer reads what it writes. Text its tool drew to nothing never passes in silence. That tool today is resvg, through the pinned `resvg-py` wheel, which reads the SVG renderer's pages and calls no outside program. The images promise nothing about their pixels. `graphic-design-reviewer` reads them on demand, reports what no check measures, and in this first form only advises.
 
 ## Context
 
@@ -20,57 +20,60 @@ Three tools were tried on real pages, on one Mac: the starter's reference pieces
 What was not measured, where any failure reopens the tool (Implications):
 - **Where it runs:** Linux, the real sandbox profile and the `uv run --script` path. The sandboxes tried were written by hand, and the wheel ran from a virtual environment. That the step needs no sandbox change is expected, not settled.
 - **What it draws:** a detailed picture, a role with two families and TrueType outlines. The one picture drawn was a solid square, every role held one family, and every font was CFF. Read from resvg's code and not run, its fallback sets a line of two families otherwise than a browser.
-- **The licence of the resvg the wheel bundles.** The wheel's own licence reads as MIT.
+- **Whether the step can learn what the tool dropped, down to a run.** The tool returns only the image, and logs a family it could not match to the process's output.
+- **The licence of the resvg the wheel bundles.** The wheel's own licence reads as MIT, and its package data gives resvg's as Apache-2.0 or MIT. Neither text has been read.
 
 ## Decision
 
-**A person or an agent sees a piece's drawn pages through a viewing step that is no plugin and no render, and takes no part in the seam. It draws a renderer's output as images, by page, language and key, into the clone's local folder. Text its tool drew to nothing never passes in silence. Its tool today is resvg, through the pinned `resvg-py` wheel behind one module of the capability. Its images promise nothing about their pixels. `graphic-design-reviewer`, read-only and advisory, reads them on demand and reports what no check measures.**
+**A person or an agent sees a piece's drawn pages through a viewing step that is no plugin and no render, and adds nothing to the seam. It draws a renderer's output as images, by page, language and key, into the clone's local folder. Text its tool drew to nothing never passes in silence. Its tool today is resvg, through the pinned `resvg-py` wheel behind one module of the capability. Its images promise nothing about their pixels. `graphic-design-reviewer`, read-only and in this first form advisory, reads them on demand and reports what no check measures.**
 
-### 1. The viewing step draws a renderer's output, outside the seam
+### 1. The viewing step draws a renderer's output, and adds nothing to the seam
 
-- **What it is.** The *viewing step* draws, as an image, what a renderer drew for one page, in one language, under one key ([visual-communication:DEC-004-brands-and-notations] point 3). It is defined over that drawn output, never over one format, so a later renderer fits it. A command of the capability runs it. Only a person or an agent reads what it writes, never a check, an export or a producer.
-- **No plugin.** It is none of the three kinds, and takes no part in the seam ([visual-communication:DEC-005-engine-and-plugins] points 8 and 9). So it has no declaration and no version of its own.
+- **What it is.** The *viewing step* draws, as an image, what a renderer drew for one page, in one language, under one key ([visual-communication:DEC-004-brands-and-notations] point 3). It is defined over that drawn output, never over one format, so a later renderer that writes its pages to files fits it. A command of the capability runs it. Only a person or an agent reads what it writes, never a check, an export or a producer.
+- **No plugin.** It is none of the three kinds, and adds nothing to the seam: it uses the seam from the engine's side, as render and export do ([visual-communication:DEC-005-engine-and-plugins] points 8 and 9). So it has no declaration and no version of its own.
 - **No render, and no export.** It moves no lock and keeps no record of findings, as a render does ([visual-communication:DEC-003-change-over-time] point 8, DEC-005 point 13). It takes no number and rewrites no record of exports, as an export does ([visual-communication:DEC-006-work-outside-the-engine-and-outputs] point 7).
 - **It runs no program.** No helper or producer runs (DEC-006 point 1). A produced picture is drawn as it stands, stale or not.
 
 ### 2. Its tool today is resvg, through the `resvg-py` wheel, behind one module
 
-- **Over the SVG, behind one module.** One module of the capability holds the tool. It takes a renderer's drawn page and gives an image, and nothing else calls the wheel. Reading the SVG renderer's pages is how the step works today, not what the step is. A browser comes only in the HTML renderer's own record, and behind the same module.
+- **Over the SVG, behind one module.** One module of the capability holds the tool. It takes a renderer's drawn page, and gives an image and what the tool dropped. Nothing else of the step calls the wheel. Reading the SVG renderer's pages is how the step works today, not what the step is.
 - **Pinned, and in the command's own process.** The wheel is pinned exactly, as the capability's scripts pin their packages, and runs as a library. So drawing needs no other runtime and no network ([visual-communication:DEC-002-files-and-validation] point 8). The step calls no outside program to draw, and what the permission model adds for such programs stays open (DEC-006, Implications).
 - **The page's faces.** The tool ignores `@font-face`. So the step takes each face from the page's `@font-face` rules, and hands it over under the family and the weight its rule names. It reads no font of the machine (DEC-004 point 9). The faces are transient files, in a temporary folder inside the clone's local folder, which the run removes.
+- **What it draws otherwise.** resvg's fallback may draw a run measured in more than one family otherwise than a browser does (Context). A face a browser could not read may still draw here.
 
 ### 3. Text drawn to nothing never passes in silence
 
-The step says what it cannot show as the renderer set it:
-- **Each loss the renderer declares** (DEC-005 point 9), since a colour left out can draw a text to nothing.
-- **Each text the tool dropped,** naming the page and the element, whatever the cause. How the step learns of one is left to the command ([project-kit#2674](https://github.com/aleskalfas/project-kit/issues/2674)).
-- **Each line set in more than one family,** naming the page and the element, since the tool may draw it otherwise (point 6).
+The step reports what it cannot show as the renderer set it, in a report beside the images, so a later reader has it too:
+- **Each loss the renderer reports** (DEC-005 point 9), since a colour left out can draw a text to nothing.
+- **Each text, or run of a text, the tool dropped,** naming the page and the element, whatever the cause. How the step learns of one is left to the command ([project-kit#2674](https://github.com/aleskalfas/project-kit/issues/2674)).
+- **Each run the tool is known to draw otherwise** (point 2), naming the page and the element.
 
 ### 4. It reads under the lock, and writes nothing committed
 
 - **Under the lock.** It reads the piece's own file with its lock, computes the scenes under that lock, and never moves it. It refuses a piece with no lock, naming the render that writes one.
-- **What it writes, and where.** Only the images, the frames beside them (point 5) and point 2's transient files, in the clone's local folder alone (DEC-002 point 1). So nothing it writes reaches a commit. This record names its command their writer (DEC-002 point 9).
-- **A run replaces what an earlier run left** for the piece, so a stale page never reads as current.
+- **What it writes, and where.** Only the images, the frames and the report beside them (points 3 and 5) and point 2's transient files, in the clone's local folder alone (DEC-002 point 1). So nothing it writes reaches a commit. This record names its command their writer (DEC-002 point 9).
+- **A run replaces what an earlier run left** for the piece, so its folder never mixes two runs. The frames name the lock the images were drawn under.
 
 ### 5. What it draws
 
 - **The caller picks** pages, languages and modes. By default it draws the source language, in one combination of the modes the piece names. That is the first key in the order a picture's variant uses (DEC-004 point 3), so the combination of defaults wherever the piece names it.
 - **The size.** Each image is large enough that a page's smallest text reads. The number is left to the command (#2674).
 - **Frames.** Beside each image lies each element's frame, in the image's pixels, with its trace id (DEC-005 point 5). So a finding names the element, and through it the field.
+- **The ground.** Where a page draws no ground of its own, its image lies on white, which the piece never set. A text over nothing is judged knowing this.
 
 ### 6. It promises nothing about pixels
 
 - **No contract.** The images may change with the tool, its version or the machine. No test and no check compares them as a contract, and no reference image is kept.
-- **It shows this tool's drawing, not a browser's.** resvg's fallback may draw a line set in more than one family otherwise than a browser does (Context). A face a browser could not read may still draw here.
+- **It shows this tool's drawing, not a browser's.** Point 2 says where the two are known to differ.
 
 ### 7. The reviewer's first form
 
 - **Whose.** `graphic-design-reviewer` is the capability's agent, since its work implies the capability's discipline (COR-026). It is read-only and advisory, and a session dispatches it on demand.
-- **It reads, and does not draw.** The session runs the step. The reviewer reads the images, with the piece, the brand and the frames beside them.
-- **Its remit** is what no check measures on the drawn result. Contrast of a text over a picture or over nothing is in it (DEC-004 point 8). The agent's body holds the list of faults.
+- **It reads, and does not draw.** The session runs the step. The reviewer reads the images, with the piece and the brand, and the frames and the report beside them.
+- **Its remit** is what no check measures on the drawn result, such as the contrast of a text over a picture (DEC-004 point 8). The agent's body holds the list of faults.
 - **Its findings** are of two kinds: a *fault*, which that list names, or a *note*, anything else worth a look. Each names the page, and the element's trace id where the element was drawn.
 - **Nothing unseen reads as clean.** Its report says which pages, languages and modes it looked at. It needs a harness that reads images, and where the harness reads none, it stops and says so.
-- **Advice only.** Its findings join no validation and hold no merge. The starter's owner judges a component's entry, and the findings only inform that review ([visual-communication:DEC-007-starter-library], Implications).
+- **Advice, for now.** Its findings join no validation, and hold no merge until a record gives them a place there ([project-kit#2676](https://github.com/aleskalfas/project-kit/issues/2676)). The starter's owner judges a component's entry, and the findings only inform that review ([visual-communication:DEC-007-starter-library], Implications).
 - **Left to others.** Who judges a piece against the rules of visual communication is [project-kit#2583](https://github.com/aleskalfas/project-kit/issues/2583)'s question. The boundaries among the capability's three agents are [project-kit#2584](https://github.com/aleskalfas/project-kit/issues/2584)'s record.
 
 ## Rationale
@@ -88,19 +91,18 @@ The step says what it cannot show as the renderer set it:
 ### Alternatives considered
 
 - **Headless Chrome now, or pdfium over the PDF.** Rejected, for the reasons above. Chrome also stops inside a sandbox.
-- **A step defined over the SVG previews.** Rejected. A renderer of another medium would not fit it.
+- **A step defined over the SVG previews.** Rejected. A renderer that writes another format would not fit it.
 - **Faces from the committed font files, or from the machine.** Rejected. The first drops text in silence, and the second draws in a font the brand never named.
 - **Refusing a page whose text has no face.** Rejected. It could never fire, and text could still vanish.
-- **A before-and-after from a base commit.** Left out. The word is the record of change over time's, for what a lock's move changes (DEC-003 point 8). It would read as nothing changed in ordinary cases, such as a change to a translation alone. The caller already bounds the cost by picking pages. A lock's move is seen by moving it in the working tree and looking.
+- **A before-and-after from a base commit.** Left out. The word is the record of change over time's, for what a lock's move changes (DEC-003 point 8). It would read as nothing changed in ordinary cases, such as a change to a translation alone. A person may try a move in the working tree, which stands in for no before-and-after.
 - **A folder the caller names.** Left out. No caller needs one, and a path into another worktree or behind a link could still reach a commit.
 
 ## Implications
 
 - **One edit to an accepted record,** refined in place once this record is accepted, and citing it. Accepting this record accepts the edit (COR-066 point 5).
   - **The record of files and validation's point 1.** Its last bullet reads: "What a render, an export or the viewing step makes that is not committed, such as a preview, an export nobody has handed out or a page's image, lies in the methodology's own folder". The rest of the bullet stands.
-  - **No other edit.** That record's point 9 needs none, since the step writes only in that folder.
-- **The change that builds the command** (#2674) settles how the step learns what the tool dropped (point 3), and an image's size (point 5). It sees to it that the wheel reaches a machine before an offline run, and measures what Context lists as not measured. [project-kit#2675](https://github.com/aleskalfas/project-kit/issues/2675) builds the reviewer.
+- **The change that builds the command** (#2674) settles how the step learns what the tool dropped (point 3), and an image's size (point 5). It sees to it that the wheel reaches a machine before an offline run, and measures what Context lists as not measured. A route for the wheel that needs a change to the backbone is a decision of its own. [project-kit#2675](https://github.com/aleskalfas/project-kit/issues/2675) builds the reviewer.
 - **Revisit this record:**
-  - if anything Context lists as not measured fails, which reopens the tool: the wheel does not run there, or what it draws is too poor to judge;
+  - if anything Context lists as not measured fails, which reopens the tool: the wheel does not run there, what it draws is too poor to judge, or the step cannot learn what the tool dropped;
   - if the licence of the resvg the wheel bundles does not let the capability use it;
-  - if the HTML renderer's own record brings a browser.
+  - if the HTML renderer's own record brings a browser, which refines point 2 alone.
