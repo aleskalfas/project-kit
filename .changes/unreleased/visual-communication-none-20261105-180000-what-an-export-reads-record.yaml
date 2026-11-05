@@ -1,0 +1,7 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-016 decides what a piece's export reads, what a piece's own files leave
+  out, when form 1 of the fingerprint may change, and how an export's facts are
+  measured (#2698). The record designs ahead: the reading, the folders and the
+  facts land in later pull requests, so no surface moves yet.
