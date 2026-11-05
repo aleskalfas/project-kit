@@ -5,6 +5,7 @@ status: active
 explains:
   - TERM-use-case-entry
   - TERM-batch-plan
+  - TERM-foundation
 pkit:
   friction:
     anchors:
@@ -15,20 +16,21 @@ pkit:
       artefact:
         - TERM-use-case-entry
         - TERM-batch-plan
+        - TERM-foundation
 ---
 
 # VIEW-batch-planning — Batch planning
 
-An intent becomes many issues, and slicing it well needs the [project](../../core/glossary.md#term-project--project)'s own account of what its software must do. That account is another [component](../../core/glossary.md#term-component--component)'s, so it comes through a [data point](../../core/glossary.md#term-data-point--data-point). Slicing is a judgement, so a person approves the whole outline before anything is filed ([DEC-029](../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md) and [DEC-054](../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md)).
+An intent becomes many issues, and slicing it well needs the [project](../../core/glossary.md#term-project--project)'s own account of what its software must do. That account is another [component](../../core/glossary.md#term-component--component)'s, so it comes through a [data point](../../core/glossary.md#term-data-point--data-point). Slicing is a judgement, so a person approves the whole batch plan before anything is filed ([DEC-029](../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md) and [DEC-054](../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md)).
 
-A [use-case entry](../glossary.md#term-use-case-entry--use-case-entry) names one goal of that account. A [batch plan](../glossary.md#term-batch-plan--batch-plan) is the outline the agent drafts against the entries. The person approves the outline, revises it or cancels it.
+A [use-case entry](../glossary.md#term-use-case-entry--use-case-entry) names one goal of that account. A [batch plan](../glossary.md#term-batch-plan--batch-plan) is the outline the agent drafts against the entries. The person approves it, revises it or cancels it.
 
 Where the slices would share a choice that nothing settles yet, a first plan files only the work's foundation. A second plan files the slices once the foundation is done ([DEC-060](../../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md)).
 
 ```mermaid
 classDiagram
   accTitle: Batch planning
-  accDescr: A batch plan outlines the issues to file for one intent, each with its parent. It judges each choice the slices would share. It maps the intent onto use-case entries. A use-case entry names one goal by its id, title and status.
+  accDescr: A batch plan outlines the issues to file for one intent, each with its parent. It judges each choice the slices would share. It maps the intent onto use-case entries. A use-case entry names one goal by its id, title and status. A first batch plan files a foundation, which settles the choices the slices would share.
   class BatchPlan["Batch plan"] {
     intent
     rows
@@ -41,9 +43,13 @@ classDiagram
     status
     path
   }
+  class Foundation {
+    choices it settles
+  }
   class Issue
   BatchPlan "1" --> "1..*" Issue : outlines
   BatchPlan "*" --> "*" UseCaseEntry : maps the intent onto
+  BatchPlan "1" --> "0..1" Foundation : a first plan files
 ```
 
 ```mermaid
@@ -88,9 +94,9 @@ A use-case entry is one item of that data point. It names one goal the project's
 
 Defined in [TERM-batch-plan](../glossary.md#term-batch-plan--batch-plan).
 
-**Why:** An intent becomes many issues, and slicing it is a judgement a person must check. One approval of the whole outline keeps the agent's speed without filing work nobody agreed to. Adversarial review before that approval catches bad slicing where it costs least ([DEC-029](../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
+**Why:** An intent becomes many issues, and slicing it is a judgement a person must check. One approval of the whole batch plan keeps the agent's speed without filing work nobody agreed to. Adversarial review before that approval catches bad slicing where it costs least ([DEC-029](../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 
-A batch plan is the outline the project-manager agent drafts for an intent. It holds an [EPIC](../glossary.md#term-epic--epic) and its work, each [issue](../glossary.md#term-issue--issue) with its parent, classification and [use-case entries](../glossary.md#term-use-case-entry--use-case-entry). The person approves it, revises it or cancels it, and nothing is filed before they approve it.
+A batch plan is the outline the project-manager agent drafts for an intent. It holds the issues for that intent, each with its parent, classification and [use-case entries](../glossary.md#term-use-case-entry--use-case-entry). The person approves it, revises it or cancels it, and nothing is filed before they approve it.
 
 **Attributes:**
 
@@ -112,6 +118,35 @@ A batch plan is the outline the project-manager agent drafts for an intent. It h
 - None of its issues is filed before the person approves the whole plan (DEC-029).
 - It cites only ids the [data point](../../core/glossary.md#term-data-point--data-point) holds, and never suggests one (DEC-054 point 5).
 - A first plan files no slice (DEC-060 point 3).
+
+## Foundation
+
+Defined in [TERM-foundation](../glossary.md#term-foundation--foundation).
+
+**Why:** A choice that each Task makes alone is made again for each Task, and the results do not fit together. Merging them costs more than deciding once. So the choices the slices would share are settled first, and each slice rests on records and code that exist (DEC-060).
+
+A foundation is the first part of new work whose slices would share a choice that nothing settles yet. It is filed as one Feature, whose body lists the choices it settles.
+
+Its Tasks are built one at a time. The first holds a record of each architectural choice, which a person accepts. One thin slice, built end to end on those records, then settles the choices of convention.
+
+**Attributes:**
+
+- the choices it settles, which its Feature's body lists (DEC-060 point 2)
+- its Tasks, each naming the one before among its dependencies (DEC-060 point 2)
+
+**Relations:**
+
+- A first batch plan files its Feature under the work's EPIC, and no slice (DEC-060 point 3).
+- A second batch plan slices the work, once its Feature has closed (DEC-060 point 3).
+- A Task not yet started that would make one of its choices waits, naming its Feature among that Task's dependencies (DEC-060 point 4).
+
+**States:** A foundation is open until its Feature closes, which a person authorises. It is then done (DEC-060 point 3).
+
+**Always true:**
+
+- A choice that an open foundation settles is in hand, so new work plans no foundation of its own for that choice (DEC-060 point 1).
+- A foundation that proves wrong is changed through a Task of its own, and never worked around (DEC-060 point 5).
+- Where one agent builds all the work in order, a person may fold its thin slice into the work's first slice (DEC-060 point 2).
 
 ## What is built on these concepts
 

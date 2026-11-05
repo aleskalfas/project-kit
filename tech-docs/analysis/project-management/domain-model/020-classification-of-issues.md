@@ -103,7 +103,7 @@ Defined in [TERM-kind-of-work](../glossary.md#term-kind-of-work--kind-of-work).
 
 **Why:** A reader should see from a [Task](../glossary.md#term-task--task)'s title, and from the [pull request](../../core/glossary.md#term-pull-request--pull-request) that closes the Task, which kind of work the Task holds. One fixed set of values keeps each title prefix and each commit type in step with the work ([DEC-011](../../../../.pkit/capabilities/project-management/decisions/DEC-011-title-formats.md) and [DEC-012](../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
-A kind of work is the value an [issue](../glossary.md#term-issue--issue) takes on the `type` axis, such as `bug`, `docs` or `test`. A Task's kind of work sets the prefix its title opens with, such as `[Docs]`. The kind of work also sets the commit type of the pull request that closes the Task.
+A kind of work is the value an [issue](../glossary.md#term-issue--issue) takes on the `type` classification axis, such as `bug`, `docs` or `test`. A Task's kind of work sets the prefix its title opens with, such as `[Docs]`. The kind of work also sets the commit type of the pull request that closes the Task.
 
 **Attributes:**
 
@@ -127,7 +127,7 @@ Defined in [TERM-workstream](../glossary.md#term-workstream--workstream).
 
 **Why:** A team invests in long-lived areas over many outcomes. Where each [project](../../core/glossary.md#term-project--project) improvises their names and their lifecycle, the names drift. One definition, kept in one file with fixed forms for the names, keeps every project's workstreams in one shape ([DEC-018](../../../../.pkit/capabilities/project-management/decisions/DEC-018-workstream-taxonomy-and-lifecycle.md)).
 
-A workstream is a long-lived area of a project's work, such as `docs` or `cli`. It outlasts the [EPICs](../glossary.md#term-epic--epic) whose outcomes lie within it. The project declares its workstreams in a file of its own, and each one is a value of the `workstream` axis.
+A workstream is a long-lived area of a project's work, such as `docs` or `cli`. It outlasts the [EPICs](../glossary.md#term-epic--epic) whose outcomes lie within it. The project declares its workstreams in a file of its own, and each one is a value of the `workstream` classification axis.
 
 **Attributes:**
 
@@ -152,7 +152,7 @@ A workstream is a long-lived area of a project's work, such as `docs` or `cli`. 
 
 Defined in [TERM-substrate-map](../glossary.md#term-substrate-map--substrate-map).
 
-**Why:** Some projects cannot create the labels project-management writes, since their tracker already has conventions of its own. Such a [project](../../core/glossary.md#term-project--project) says where each axis already lives. Each check that needs an axis the project cannot carry then warns, rather than refusing ([DEC-036](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md)).
+**Why:** Some projects cannot create the labels project-management writes, since their tracker already has conventions of its own. Such a [project](../../core/glossary.md#term-project--project) says where each classification axis already lives. Each check that needs an axis the project cannot carry then warns, rather than refusing ([DEC-036](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md)).
 
 A substrate map is a file of the project's own. It binds each [classification axis](../glossary.md#term-classification-axis--classification-axis) it names, and the [issue](../glossary.md#term-issue--issue) state where it names that state, to one carrier on GitHub, or marks either unsupported. The carrier may be project-management's own labels, or labels the project already has ([DEC-062 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#3-the-map-can-name-the-kits-own-labels)). It may also be one of these ([DEC-036 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#1-a-dedicated-substrate-mapyaml-schema)):
 
@@ -162,7 +162,7 @@ A substrate map is a file of the project's own. It binds each [classification ax
 
 **Attributes:**
 
-- for each axis it binds, the carrier and how the axis's values map onto it (DEC-036 point 1)
+- for each classification axis it binds, the carrier and how the axis's values map onto it (DEC-036 point 1)
 - for an issue's state, its carrier, which may be the board ([DEC-062 point 5](../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#5-where-the-map-puts-state-on-the-board-the-boards-status-is-the-source-of-an-open-issues-position))
 
 **Relations:**
@@ -174,7 +174,7 @@ A substrate map is a file of the project's own. It binds each [classification ax
 
 **Always true:**
 
-- With no substrate map, every axis reads project-management's own labels ([DEC-036 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#2-activation-is-emergent-not-a-global-mode-flag)).
+- With no substrate map, every classification axis reads project-management's own labels ([DEC-036 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#2-activation-is-emergent-not-a-global-mode-flag)).
 - An axis that a present map leaves out, or marks unsupported, has no carrier. The checks that need it warn instead of refusing (DEC-036 point 2 and [DEC-062 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#2-where-the-map-is-silent-an-axis-reads-as-it-does-with-no-board)).
 - A map carries nothing beyond its bindings, and puts the project in no mode ([DEC-062 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#4-a-map-carries-nothing-beyond-its-bindings)).
 - project-management never creates, renames or deletes a label or a field the project owns ([DEC-036 point 5](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#5-never-write-an-unmanaged-label)).

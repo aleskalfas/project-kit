@@ -80,8 +80,8 @@ flowchart LR
   inprogress -->|a Task| review[Review]
   review -->|authorisation| done[Done]
   inprogress -->|authorisation, a parent issue or a completed close| done
-  todo -->|authorisation, won't do or a completed close| done
-  backlog -->|authorisation, won't do or a completed close| done
+  todo -->|authorisation, a won't-do close or a completed close| done
+  backlog -->|authorisation, a won't-do close or a completed close| done
   inprogress -.-> forward([Issues above brought forward])
   done -.->|a completed close| forward
   done -.-> eligible([A parent with no open child eligible to close])
@@ -108,7 +108,7 @@ The issue lifecycle is the [process](../../core/glossary.md#term-process--proces
 **Relations:**
 
 - Each issue moves through it, and only a [Task](../glossary.md#term-task--task) enters Review (DEC-006).
-- The core's engine checks each move against its definition ([DEC-033](../../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
+- The backbone's engine checks each move against its definition ([DEC-033](../../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
 
 **States:** An issue is in Todo when it is filed, and in Backlog once a person schedules it. It is in In Progress once its work starts, and a Task is in Review while its [pull request](../../core/glossary.md#term-pull-request--pull-request) is open. A person moves an issue whose work stopped back from In Progress, to Backlog or to Todo. An issue is in Done once it closes (DEC-006).
 
@@ -140,7 +140,7 @@ Defined in [TERM-authorisation](../glossary.md#term-authorisation--authorisation
 
 **Why:** Scheduling and ending the work are commitments an agent must not make on its own. A move back from In Progress settles what becomes of the scheduling, so a person holds that move too. Held as refusals the agent cannot pass, the gates turn the [methodology](../../core/glossary.md#term-methodology--methodology)'s authority into something enforced rather than trusted ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
-An authorisation is a person's decision on one move they hold. Scheduling an [issue](../glossary.md#term-issue--issue) needs one, and so does ending a [Task](../glossary.md#term-task--task)'s work, by a merge of the Task's [pull request](../../core/glossary.md#term-pull-request--pull-request) or by a completed close. A completed close closes a Task whose work was not a pull request, as completed. Closing an issue as won't do, or a finished parent issue, needs one too, and so does moving back an issue whose work stopped.
+An authorisation is a person's decision on one move they hold. Scheduling an [issue](../glossary.md#term-issue--issue) needs one, and so does ending a [Task](../glossary.md#term-task--task)'s work, by a merge of the Task's [pull request](../../core/glossary.md#term-pull-request--pull-request) or by a completed close. A completed close closes a Task whose work was not a pull request, as completed. A won't-do close needs one too, and so do closing a finished parent issue and moving back an issue whose work stopped.
 
 The person gives an authorisation in the session, for the issue at hand, and it never stands for a later move.
 
@@ -160,7 +160,7 @@ The person gives an authorisation in the session, for the issue at hand, and it 
 
 **Always true:**
 
-- A move a person holds is never made without its authorisation (DEC-006).
+- A move a person holds, asked for directly, is never made without its authorisation (DEC-006).
 - A [bypass](../glossary.md#term-bypass--bypass)'s reason goes into an [audit comment](../glossary.md#term-audit-comment--audit-comment) before the move, where the [project](../../core/glossary.md#term-project--project)'s settings keep such comments (DEC-014 and [DEC-049](../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
 - An authorisation to merge is the person's, and no [reviewer](../../core/glossary.md#term-reviewer--reviewer)'s approval gives it (DEC-055 point 3).
 
@@ -264,7 +264,6 @@ A journal is the record the [backbone](../../core/glossary.md#term-backbone--bac
 **Always true:**
 
 - A move that fails to go into the journal is surfaced, and never dropped silently (DEC-049 point 1).
-- Where the backbone's engine cannot run, a command reads where the issue stands itself, and warns that the move went into no journal ([DEC-033](../../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
 
 ## What is built on these concepts
 

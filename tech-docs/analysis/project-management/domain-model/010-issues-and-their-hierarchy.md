@@ -23,6 +23,7 @@ pkit:
         - project-management:DEC-006
         - project-management:DEC-007
         - project-management:DEC-010
+        - project-management:DEC-011
         - project-management:DEC-016
       artefact:
         - TERM-issue
@@ -110,21 +111,22 @@ An issue is one item of work a [project](../../core/glossary.md#term-project--pr
 
 **Attributes:**
 
-- its title, which opens with its type's prefix, such as `[Task]` ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md))
-- its body, whose first line is its [parent reference](../glossary.md#term-parent-reference--parent-reference) ([DEC-005](../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md) and [DEC-010](../../../../.pkit/capabilities/project-management/decisions/DEC-010-issue-body-minimum-structure.md))
+- its title, which opens with a prefix, such as `[EPIC]` ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and DEC-011)
+- its body, whose first line is its [parent reference](../glossary.md#term-parent-reference--parent-reference) where it has a parent ([DEC-005](../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md) and [DEC-010](../../../../.pkit/capabilities/project-management/decisions/DEC-010-issue-body-minimum-structure.md))
 - its labels, such as `type:docs` (DEC-003)
 
 **Relations:**
 
 - It is an [EPIC](../glossary.md#term-epic--epic), a [Feature](../glossary.md#term-feature--feature), an [Umbrella](../glossary.md#term-umbrella--umbrella) or a [Task](../glossary.md#term-task--task) (DEC-004).
 - It sits in at most one Milestone at a time ([DEC-016](../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
-- Its parent is another issue or a Milestone. GitHub's sub-issue link holds the parent, and the parent reference names it (DEC-005).
+- Its parent, where it has one, is another issue or a Milestone, and the parent reference names it. Where the parent is an issue and the tracker supports sub-issues, GitHub's sub-issue link holds it (DEC-005).
 
 **States:** An issue is open until it closes. It closes only once each of its [checkboxes](../glossary.md#term-checkbox--checkbox) is ticked ([DEC-007](../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)).
 
 **Always true:**
 
-- Its type fixes its title's prefix, the sections its body needs and the parents it may have (DEC-004 and DEC-010).
+- Its type fixes the sections its body needs and the parents it may have (DEC-004 and DEC-010).
+- The type of an EPIC, a Feature or an Umbrella fixes its title's prefix too (DEC-011).
 
 ## Milestone
 
@@ -132,7 +134,7 @@ Defined in [TERM-milestone](../glossary.md#term-milestone--milestone).
 
 **Why:** Teams plan in different cadences, such as a sprint, a release wave or a quarter. So each [project](../../core/glossary.md#term-project--project) declares what its Milestones mean, rather than one meaning for every project. A date-based Milestone models a sprint: it ends on its date, and its unfinished work goes on in the next ([DEC-016](../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 
-A Milestone is GitHub's own container, kept apart from issues. It holds the issues of one delivery window, or of one bundle of outcomes that close together. Its description opens with the line that says when it closes.
+A Milestone is GitHub's own container, kept apart from issues. It holds the issues of one delivery window, or of one bundle of outcomes that close together. Its description opens with its close trigger, which says when it closes.
 
 **Attributes:**
 
@@ -157,7 +159,7 @@ A Milestone is GitHub's own container, kept apart from issues. It holds the issu
 
 Defined in [TERM-close-trigger](../glossary.md#term-close-trigger--close-trigger).
 
-**Why:** When a [Milestone](../glossary.md#term-milestone--milestone) closes must be declared and readable by a machine, so nothing is inferred while the line is there. The line mirrors the [parent reference](../glossary.md#term-parent-reference--parent-reference) on an [issue](../glossary.md#term-issue--issue)'s first line, and people see it where they read the Milestone ([DEC-016](../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
+**Why:** When a [Milestone](../glossary.md#term-milestone--milestone) closes must be declared and readable by a machine, so nothing is inferred while the close trigger is there. The close trigger mirrors the [parent reference](../glossary.md#term-parent-reference--parent-reference) on an [issue](../glossary.md#term-issue--issue)'s first line, and people see it where they read the Milestone ([DEC-016](../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 
 A close trigger is the first line of a Milestone's description, such as `Close trigger: date-based`. A `date-based` Milestone closes at its due date, and its open issues roll forward. A `content-based` one closes once its issues have closed, and one marked `either` closes at whichever comes first.
 
@@ -294,13 +296,13 @@ A Task is an [issue](../glossary.md#term-issue--issue) for one unit of work. One
 **Relations:**
 
 - It sits under a [Feature](../glossary.md#term-feature--feature), an [Umbrella](../glossary.md#term-umbrella--umbrella) or an [EPIC](../glossary.md#term-epic--epic), or straight under a [Milestone](../glossary.md#term-milestone--milestone) where the [project](../../core/glossary.md#term-project--project) skips the EPIC (DEC-004).
-- It holds no issue. Its sub-tasks are checkboxes in its body ([DEC-005](../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
+- It holds no issue. A checkbox in its body may name a smaller piece of its work ([DEC-005](../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 
 **States:** None.
 
 **Always true:**
 
-- A sub-task that needs its own pull request becomes a Task, under the parent of the Task that held it (DEC-005 and DEC-010).
+- A checkbox whose work needs its own pull request becomes a Task, under the parent of the Task that held it (DEC-005 and DEC-010).
 
 ## Parent reference
 
@@ -308,7 +310,7 @@ Defined in [TERM-parent-reference](../glossary.md#term-parent-reference--parent-
 
 **Why:** A child must name its parent where GitHub's interface does not show the link, such as in a diff or an exported [issue](../glossary.md#term-issue--issue). The parent reference names it there, and survives wherever the body is copied ([DEC-005](../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 
-A parent reference is the first line of an issue's body, such as `EPIC: #1643`. Its form depends on the issue's type, and GitHub's sub-issue link holds the same parent.
+A parent reference is the first line of an issue's body, such as `EPIC: #1643`. Its form depends on the issue's type. Where the parent is an issue and the tracker supports sub-issues, GitHub's sub-issue link holds the same parent.
 
 **Attributes:**
 
@@ -322,7 +324,7 @@ A parent reference is the first line of an issue's body, such as `EPIC: #1643`. 
 
 **Always true:**
 
-- Where it and GitHub's sub-issue link disagree, the link wins, and the line is rewritten to match (DEC-005).
+- Where it and GitHub's sub-issue link disagree, the link wins, and the parent reference is rewritten to match (DEC-005).
 
 ## Checkbox
 
@@ -330,7 +332,7 @@ Defined in [TERM-checkbox](../glossary.md#term-checkbox--checkbox).
 
 **Why:** Checkboxes in a body are either decoration or gates. Soft warnings drifted into decoration in practice, so a checkbox is a gate: it makes a claim carry weight ([DEC-007](../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)).
 
-A checkbox is a box in an [issue](../glossary.md#term-issue--issue)'s body beside one claim, such as an acceptance criterion. Whoever ticks it has checked the claim at that moment, and nothing checks the claim again at the close.
+A checkbox is a box in an [issue](../glossary.md#term-issue--issue)'s body beside one claim, such as an acceptance criterion. Whoever checked the claim of a checkbox that names no issue ticks it at that moment. GitHub ticks a checkbox that names an issue, once that issue closes. Nothing checks a claim again at the close.
 
 **Attributes:**
 
@@ -342,7 +344,7 @@ A checkbox is a box in an [issue](../glossary.md#term-issue--issue)'s body besid
 - It belongs to one issue's body (DEC-007).
 - A checkbox that names another issue, such as `- [ ] #99`, is ticked when that issue closes (DEC-007).
 
-**States:** A checkbox is unticked until whoever checked its claim ticks it. Once ticked, it is unticked only with a comment that says what regressed and why (DEC-007).
+**States:** A checkbox is unticked until whoever checked its claim ticks it, or, where it names an issue, until GitHub ticks it. Once ticked, it is unticked only with a comment that says what regressed and why (DEC-007).
 
 **Always true:**
 
