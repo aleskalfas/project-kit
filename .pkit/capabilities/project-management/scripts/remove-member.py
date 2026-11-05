@@ -11,14 +11,17 @@ Removes an entry from `members.yaml`. Like add-member, the script
 writes to the file on the working branch — the actual landing is via
 PR. Per DEC-021, removal PRs cannot be approved solely by the author
 when removing another member; self-removal is reviewable by any
-other member.
+other member. The removal is asked at a terminal, `--yes` authorises it, and
+off a terminal without `--yes` it is refused before the file is written
+(#2015).
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/remove-member.py
 
 Exit codes:
   0  entry removed (or abort acknowledged)
-  1  membership refusal (closed mode, invoker not a member)
+  1  membership refusal (closed mode, invoker not a member) / off a terminal
+     without --yes
   2  usage error
   3  not found (no entry matches the given github_login)
 """
@@ -34,7 +37,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, session_guard
+from _lib import bootstrap_gate, consent, session_guard
 from _lib.gh import load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -137,11 +140,14 @@ def main() -> int:
     print(f"about to remove from {file_path}:")
     for k, v in entry.items():
         print(f"  {k}: {v}")
-    if not args.yes and sys.stdin.isatty():
-        reply = input("Proceed? [y/N] ").strip().lower()
-        if reply not in ("y", "yes"):
-            print("aborted.", file=sys.stderr)
-            return 0
+    stop = consent.authorise(
+        "Proceed? [y/N] ",
+        yes=args.yes,
+        step=f"Removing {target!r} from the members",
+        verb="remove-member",
+    )
+    if stop is not None:
+        return stop
 
     new_members = [m for i, m in enumerate(members) if i != matching_index]
     _write_members(file_path, new_members, yaml_loader)

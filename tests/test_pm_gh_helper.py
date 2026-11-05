@@ -245,6 +245,49 @@ def test_gh_project_run_non_ghes_path_unchanged(gh, monkeypatch) -> None:
     assert captured["args"][captured["args"].index("--owner") + 1] == "a-user"
 
 
+# --- gh_get_issue refuses a state issue (DEC-058 point 3, ADR-071 point 6) --
+
+STATE_BODY = "<!-- pkit:state-issue v=1 kind=seat key=planner -->\n\nheld\n"
+
+
+def _issue_view(monkeypatch, record: dict, captured: dict) -> None:
+    import json as _json
+
+    def fake_run(args, **kwargs):
+        captured["args"] = args
+        fields = args[args.index("--json") + 1].split(",")
+        payload = {f: record[f] for f in fields if f in record}
+        return subprocess.CompletedProcess(args, 0, stdout=_json.dumps(payload), stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    scripts = str(GH_PY.parent.parent)
+    if scripts not in sys.path:
+        monkeypatch.syspath_prepend(scripts)
+
+
+def test_gh_get_issue_returns_only_the_fields_asked_for(gh, monkeypatch) -> None:
+    captured: dict = {}
+    _issue_view(monkeypatch, {"labels": [], "body": "## What\n\nwork\n"}, captured)
+    issue = gh.gh_get_issue(7, {}, fields="labels")
+    assert issue == {"labels": []}
+    assert captured["args"] == ["gh", "issue", "view", "7", "--json", "labels,body"]
+
+
+def test_gh_get_issue_refuses_a_state_issue(gh, monkeypatch, capsys) -> None:
+    captured: dict = {}
+    _issue_view(monkeypatch, {"labels": [], "body": STATE_BODY}, captured)
+    assert gh.gh_get_issue(7, {}, fields="labels") is None
+    assert "#7 is a state issue" in capsys.readouterr().err
+
+
+def test_gh_get_issue_keeps_a_body_it_was_asked_for(gh, monkeypatch) -> None:
+    captured: dict = {}
+    body = "## What\n\nquotes `pkit:state-issue`\n"
+    _issue_view(monkeypatch, {"title": "t", "body": body}, captured)
+    assert gh.gh_get_issue(7, {}, fields="title,body") == {"title": "t", "body": body}
+    assert captured["args"][-1] == "title,body"
+
+
 # --- gh_get_pr (gh_get_issue's twin, #1049) ------------------------------
 
 

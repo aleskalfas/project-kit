@@ -1,0 +1,48 @@
+answers:
+  - artefact: docs/capabilities/living-docs/030-write-a-page.md
+    read:
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+    revalidated:
+      at: 2026-11-02T15:33:30Z
+      outcome: unchanged
+      unchanged-because: "Judged with main's change to the living-docs use cases: ACT-developer, the page's reader, now writes its need for a skill or agent definition in full and anchors the acceptance gate's records, and UC-044, UC-045 and UC-046 changed only in naming their terms in full, in anchors and in saying edit for change, so the reader and the steps this page teaches are the same."
+  - artefact: docs/capabilities/living-docs/040-have-a-page-read-as-its-reader.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+    revalidated:
+      at: 2026-11-02T15:33:34Z
+      outcome: unchanged
+      unchanged-because: "Judged with main's change to the living-docs and software-engineering use cases: ACT-developer, the page's reader, now writes its need for a skill or agent definition in full and anchors the acceptance gate's records, and UC-045, UC-046, UC-001 and UC-080 changed only in naming their terms in full, in anchors and in wording, so the reader-review this page teaches still matches them."
+  - artefact: docs/capabilities/living-docs/050-fix-a-stale-page.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+    revalidated:
+      at: 2026-11-02T15:33:38Z
+      outcome: unchanged
+      unchanged-because: "Judged with main's change to the living-docs and software-engineering use cases: ACT-developer, the page's reader, now writes its need for a skill or agent definition in full and anchors the acceptance gate's records, and UC-045, UC-001 and UC-080 changed only in naming their terms in full, in anchors and in wording, so the proposed fix this page teaches still matches them."
+  - artefact: docs/capabilities/living-docs/README.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+    revalidated:
+      at: 2026-11-02T15:33:42Z
+      outcome: unchanged
+      unchanged-because: "Judged with main's change to the living-docs use cases: ACT-developer, the page's reader, now writes its need for a skill or agent definition in full and anchors the acceptance gate's records, and UC-043 to UC-047 and REQ-022 changed only in naming their terms in full, in anchors and in wording, so what this page tells the developer of the capability still holds."
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+    revalidated:
+      at: 2026-11-02T15:33:46Z
+      outcome: unchanged
+      unchanged-because: "Judged with main's change to the software-engineering use cases: ACT-developer, the page's reader, now writes its need for a skill or agent definition in full and anchors the acceptance gate's records, and UC-001 and UC-080 changed only in naming the conventions corpus and the code-review panel in full and in citing DEC-032's point, so what this page tells the developer still holds."

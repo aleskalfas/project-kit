@@ -6,6 +6,8 @@ date: 2026-10-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [software-analysis:DEC-006-text-in-body].** A requirement's statement, measure and scope live in its body, and its revisits fire on `obligation`, a fingerprint of the three. Overturned: point 4's front-matter fields for the three, as fields and as the link's trigger, with the reasons and the alternative behind them. Among what stands: what each says, that a change to any of them changes the obligation, `actors`, `refines` and the link's targets. DEC-006's "What this overturns, and what stands" lists each passage.
+
 ## Context
 
 A use case holds one actor's goal and how the system fulfils it. Some of what a system must do binds many use cases at once, and no single use case is its home:
@@ -48,7 +50,7 @@ Each kind has a folder of its own, and the three sit in one folder of the analys
 - **A place for each kind.** Each kind's folder is a place, which gives its artefacts the kind's type: `quality-requirement`, `functional-requirement` or `constraint`. A scope names them in full, as `software-analysis:constraint`.
 - **As for DEC-001's kinds,** no type names a kind field, and no place admits a project place (DEC-001 point 2).
 - **The folder that holds the three is no place.** A requirement lies in the folder of its kind.
-- **Areas.** A kind's folder may group its requirements in folders by functional area, as the use cases may be. Moving a requirement between areas never changes its id.
+- **Areas.** A kind's folder may group its requirements in folders by the use cases' functional areas, which hold every use case (refinement per [software-analysis:DEC-005-finding-functionality] point 1). Moving a requirement between areas never changes its id.
   - **One name.** A requirement's area folder takes the name of the use cases' area it belongs to. The overview shows the requirement under that area (refinement per [software-analysis:DEC-003-analysis-diagrams] point 8).
 
 ### 4. Their parts: the fields a tool reads, and the parts a reader reads

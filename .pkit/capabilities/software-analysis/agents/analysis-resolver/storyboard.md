@@ -13,7 +13,7 @@ This storyboard scripts how the `analysis-resolver` agent resolves the friction 
 
 - a drift on a pull request, with one artefact that holds and one the change made stale (the happy path)
 - the stop, where the agent cannot tell a stale analysis from regressed code and asks
-- the person's answer to that stop, a regression recorded with its gap
+- the person's answer to that stop, a regression recorded with its gap, its step boxed where an accepted record decides it
 - a run a command started, where nobody can answer and each artefact ends in a result line
 
 What the agent concludes about an artefact is judgment — it performs the judgment of the revalidation ([software-analysis:DEC-001-software-analysis-discipline] point 5). How it shows it, when it asks, and what it hands over are fixed here. It is not a reviewer.
@@ -138,22 +138,38 @@ Booted as the session's own agent, it writes the proposal, shows its commands an
 
 > **User:** Not meant — that's a bug.
 >
-> **analysis-resolver:** *Running pkit analysis propose on UC-007 and JRN-003 with --unintended "Not meant — that's a bug." --unintended-from Sam…* Both regressed with 4c1d2e9: they stay as they are, and nothing in them is rewritten. Report the defect first; its reference goes where the commands say `<the defect reference>`, and your name where they say `<your name>` — the writers refuse them until you do.
+> **analysis-resolver:** *Running pkit analysis propose on UC-007 and JRN-003 with --unintended "Not meant — that's a bug." --unintended-from Sam…* Both regressed with 4c1d2e9, and nothing in them is rewritten. UC-007 anchors an accepted record, the one that decides how the report is exported, so its regression waits for my reading of whether that record decides the step that broke. *Reading the record and UC-007's steps…* Its point 2 decides UC-007's step 2, "The system writes the report to a file", so that step takes its box.
+>
+> **analysis-resolver:** *Running pkit analysis propose on UC-007 again, naming step 2 and the record…* Report the defect first, and write its reference where the diff and the commands say `<the defect reference>`, and your name where they say `<your name>`. Then apply .agent-workspace/analysis-resolver/nightly-2026-10-02/UC-007.diff, which adds step 2's box and its entry, and run these:
 >
 > ```sh
 > # Commands for the person
-> pkit friction revalidate tech-docs/analysis/use-case-model/use-cases/UC-007-export-report.md --outcome unchanged --because "The description stands: exporting the report as a file is still wanted; 4c1d2e9 broke it — defect <the defect reference> reported."
+> pkit friction revalidate tech-docs/analysis/use-case-model/use-cases/UC-007-export-report.md --outcome updated
 > pkit friction revalidate tech-docs/analysis/use-case-model/journeys/JRN-003-share-a-run.md --outcome unchanged --because "The description stands: sharing a run ends with the exported file; 4c1d2e9 broke it — defect <the defect reference> reported."
-> pkit analysis new revalidation export-dropped --change 4c1d2e9 --trigger scheduled --outcome UC-007=code-regressed --outcome JRN-003=code-regressed --outcome UC-002=holds --because "UC-007=Exporting the report is still wanted; 4c1d2e9 dropped it." --because "JRN-003=Sharing a run still ends with the exported file." --because "UC-002=Reading the report is untouched by 4c1d2e9." --gap "UC-007, JRN-003: Exporting the report has no behaviour since 4c1d2e9 => defect <the defect reference> reported" --by-agent analysis-resolver --confirmed-by "<your name>"
+> pkit analysis new revalidation export-dropped --change 4c1d2e9 --trigger scheduled --outcome UC-007=code-regressed --outcome JRN-003=code-regressed --outcome UC-002=holds --because "UC-007=Exporting the report is still wanted, as its record decides; 4c1d2e9 dropped it." --because "JRN-003=Sharing a run still ends with the exported file." --because "UC-002=Reading the report is untouched by 4c1d2e9." --gap "UC-007, JRN-003: Exporting the report has no behaviour since 4c1d2e9 => defect <the defect reference> reported" --by-agent analysis-resolver --confirmed-by "<your name>"
 > ```
 >
-> **User:** Filed #231, and they all ran.
+> **User:** Filed #231, applied the diff, and they all ran.
 >
-> **analysis-resolver:** *Running pkit friction check --all and pkit analysis validate…* UC-007 and JRN-003 are answered, and the record is in. `pkit analysis validate` reports both regressions as open until they are revalidated against the fix for #231.
+> **analysis-resolver:** *Running pkit friction check --all and pkit analysis validate…* UC-007 and JRN-003 are answered, and the record is in. `pkit analysis validate` reports both regressions as open until they are revalidated against the fix for #231. The change that fixes it removes step 2's box and its entry.
 
 ### Behind the scenes
 
-- `pkit analysis propose <artefact> --unintended "<the person's words>" --unintended-from <the person> --json` answers `code-regressed` under `ground-gone`, and its `answer` gives the command with two placeholders: the agent drafts `<why it is still wanted>`; `<the defect reference>` stays for the person, who reports the defect and names it. The artefact is never edited.
+- `pkit analysis propose <artefact> --unintended "<the person's words>" --unintended-from <the person> --json` answers `code-regressed` under `ground-gone`. For JRN-003 its `answer` gives the command with two placeholders: the agent drafts `<why it is still wanted>`; `<the defect reference>` stays for the person, who reports the defect and names it. A journey takes no box, so JRN-003 is never edited.
+- **Which regression it is** (DEC-001 points 1 and 5) — UC-007 anchors an accepted record, so its `answer` gives no command, and its `which` names the record and asks whether it decides the regressed step. The agent reads the record and UC-007's steps, then asks again with the step, `--box`, and the record as UC-007's anchor writes it, `--decided-by`, as the block below shows. The `answer` is then `updated`. What the person does first is to report the defect, then to add step 2's box and its entry, naming the record and the defect.
+
+```sh
+pkit analysis propose UC-007 --unintended "Not meant — that's a bug." --unintended-from Sam --box 2 --decided-by ADR-006#2 --json
+```
+
+- **The boxed step's edit** — the agent drafts the box and the entry as `UC-007.diff`, with `<the defect reference>` where the issue goes, and checks it with `git apply --check`. Step 2 keeps its words, since the box only says what the system no longer does: nothing is rewritten to match the code. The proposal drafts the one sentence on what changed in UC-007: step 2 takes its box, naming the record and the defect.
+- **Where no record decides the step** — had the record decided another step, the agent would ask again with `--no-box`. Had UC-007 anchored no accepted record, `propose` would give the command at once. Either way UC-007 would stay as it is, its answer `unchanged` as JRN-003's is:
+
+  ```sh
+  # Commands for the person
+  pkit friction revalidate tech-docs/analysis/use-case-model/use-cases/UC-007-export-report.md --outcome unchanged --because "The description stands: exporting the report as a file is still wanted; 4c1d2e9 broke it — defect <the defect reference> reported."
+  ```
+
 - JRN-003 was held only because it depended on UC-007: the person's answer is about 4c1d2e9's removal of `export_report`, which JRN-003's seam rests on too, so it goes to `pkit analysis propose` for JRN-003 as the same quote.
 - **The record** — a regression is something to say (the README's "Revalidation records"): it names every artefact the revalidation covered with its outcome and why, each gap labelled with the artefacts it affects and paired with what resolved it, the agent with `--by-agent`, and the person with `--confirmed-by "<your name>"`, which they fill. It comes last, once nothing in it is held.
 - **An anchored file that is gone** is a dead anchor too, which a revalidation does not answer: `pkit analysis propose` names the edit it needs among what the person does first. Propose it as a diff like any edit; the person applies it.

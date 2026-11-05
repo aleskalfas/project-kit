@@ -155,6 +155,8 @@ git plumbing behind a commit in `friction_git`.
 
 from __future__ import annotations
 
+import bisect
+import copy
 import functools
 import json
 import os
@@ -169,7 +171,7 @@ from typing import Any, Protocol, cast
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from project_kit import command_runner, docs_roots, lifecycle_ownership, validators
+from project_kit import block_yaml, command_runner, docs_roots, lifecycle_ownership, validators
 from project_kit.backbone_schemas import CONTAINER_KEY
 from project_kit.document_parts import (
     Body,
@@ -307,7 +309,8 @@ _SKIPPED_TOP_LEVEL = frozenset({".git"})
 
 _GLOB_CHARS = frozenset("*?[")
 
-_yaml = YAML(typ="safe")
+# The exact reading behind `block_yaml`: ruamel's pure-Python safe loader, never libyaml.
+_yaml = YAML(typ="safe", pure=True)
 
 
 # --- repository trees ---------------------------------------------------
@@ -407,8 +410,9 @@ class DerivedLink:
 @dataclass(frozen=True)
 class SetAside:
     """The derived links read as their words alone in a body (COR-050 point 5): the
-    targets of every form the places matching a file declare, sorted, each once. Empty,
-    it sets nothing aside, and a body reads as written."""
+    targets of every form the places matching a file declare, sorted, each once. A link
+    is set aside where its target matches any one form whole, each form matched on its
+    own. Empty, it sets nothing aside, and a body reads as written."""
 
     targets: tuple[str, ...] = ()
 
@@ -433,13 +437,18 @@ NOTHING_SET_ASIDE = SetAside()
 def _set_aside(targets: tuple[str, ...], text: str) -> str:
     """`SetAside.body`, read once per targets and text for the run: the checks read one
     body at many comparisons."""
-    pattern = _targets_pattern(targets)
-    return links_set_aside(text, lambda target: pattern.fullmatch(target) is not None)
+    patterns = _targets_patterns(targets)
+    return links_set_aside(
+        text, lambda target: any(pattern.fullmatch(target) for pattern in patterns)
+    )
 
 
 @functools.lru_cache(maxsize=64)
-def _targets_pattern(targets: tuple[str, ...]) -> re.Pattern[str]:
-    return re.compile("|".join(f"(?:{target})" for target in targets))
+def _targets_patterns(targets: tuple[str, ...]) -> tuple[re.Pattern[str], ...]:
+    """Each form's pattern compiled on its own, never joined into one: forms that each
+    compile may clash when joined, by a group's name, a numbered back-reference or a flag
+    set for the whole pattern, so each means what it means alone."""
+    return tuple(re.compile(target) for target in targets)
 
 
 def compiles(target: str) -> str | None:
@@ -1268,9 +1277,20 @@ def _load_mapping(path: Path) -> tuple[dict[str, Any], str | None]:
 
 def _parse_mapping(text: str) -> tuple[dict[str, Any], str | None]:
     """YAML text as a mapping with text keys, and why it is none: it does not parse,
-    or it is no mapping. Empty text is an empty mapping."""
+    or it is no mapping. Empty text is an empty mapping.
+
+    A text's parse is kept for the life of the process, keyed on its content (the 256
+    texts read last), and each caller is given a copy of its own: the checks read the
+    settings of many commits, and a capability's package metadata is the same text at
+    most of them."""
+    found, reason = _parsed_mapping(text)
+    return copy.deepcopy(found), reason
+
+
+@functools.lru_cache(maxsize=256)
+def _parsed_mapping(text: str) -> tuple[dict[str, Any], str | None]:
     try:
-        data = _yaml.load(text)
+        data = block_yaml.load(text, lambda: _yaml.load(text))
     except YAMLError:
         return {}, "does not parse as YAML"
     if data is None:
@@ -1825,11 +1845,42 @@ def pattern_matcher(pattern: str) -> Callable[[str], bool]:
     normalised = os.path.normpath(pattern).replace(os.sep, "/")
     if normalised == ".":
         return lambda _path: True
-    if any(ch in _GLOB_CHARS for ch in normalised):
+    literal = _literal_path(pattern)
+    if literal is None:
         regex = compile_glob(normalised)
         return lambda path: regex.fullmatch(path) is not None
-    prefix = normalised + "/"
-    return lambda path: path == normalised or path.startswith(prefix)
+    prefix = literal + "/"
+    return lambda path: path == literal or path.startswith(prefix)
+
+
+def _literal_path(pattern: str) -> str | None:
+    """The path a `pattern` without glob characters names, normalised: the file it is,
+    or the folder every file beneath it lies in. `None` for a glob and for `.`."""
+    normalised = os.path.normpath(pattern).replace(os.sep, "/")
+    if normalised == "." or any(ch in _GLOB_CHARS for ch in normalised):
+        return None
+    return normalised
+
+
+class PathIndex:
+    """Repository-relative paths, sorted once, so a pattern without glob characters
+    finds the paths it matches by bisection rather than by reading every path: the
+    paths `pattern_matcher` matches, in sorted order. A glob, and `.`, read every path."""
+
+    def __init__(self, paths: Iterable[str]) -> None:
+        self.paths = tuple(sorted(set(paths)))
+
+    def matching(self, pattern: str) -> tuple[str, ...]:
+        """The paths `pattern` matches (`pattern_matcher`), sorted."""
+        literal = _literal_path(pattern)
+        if literal is None:
+            return tuple(filter(pattern_matcher(pattern), self.paths))
+        at = bisect.bisect_left(self.paths, literal)
+        named = self.paths[at : at + 1] if self.paths[at : at + 1] == (literal,) else ()
+        # The paths beneath it sort from `<literal>/` up to `<literal>0`, `0` following `/`.
+        start = bisect.bisect_left(self.paths, literal + "/", at)
+        end = bisect.bisect_left(self.paths, literal + "0", start)
+        return named + self.paths[start:end]
 
 
 @functools.lru_cache(maxsize=1024)
@@ -2418,6 +2469,19 @@ class AnchorKinds:
             self._resolved[key] = resolution
         return self._resolved[key]
 
+    def resolve_each(self, anchors: Iterable[Anchor]) -> None:
+        """Run, in their order, the resolver of each of `anchors` whose kind can be resolved,
+        each value once (`resolve`), and keep the answers for the run.
+
+        A check that will ask every one of them calls this before anything else
+        it reads. A resolver run inside another run has only the time that run has
+        left (ADR-057 point 3), so asked first, a resolver has the most of it, and
+        however long the rest of the check takes, it takes none of a resolver's
+        time."""
+        for anchor in anchors:
+            if anchor.kind not in CORE_ANCHOR_KINDS and self.unresolved(anchor.kind) is None:
+                self.resolve(anchor)
+
     def files(self, anchor: Anchor) -> tuple[str, ...]:
         """The files an anchor of a registered kind stands on — its resolver's answer —
         or none: for a core kind, a kind nothing resolves, or a resolver that gave no
@@ -2511,6 +2575,11 @@ class Artefact:
       every capability place matching its file declares at the state walked
       (`Discovery.aside_of`). An artefact read from history carries the aside of
       the artefact it stands for (`friction_history.Walker.artefact_in`).
+    - `received`: its file arrives in the project by sync, as a rule of a method
+      rule set does where the methodology is not authored (`synced_copy_test`).
+      It owes the project no answer, and neither check reports it stale, as for
+      an excluded path (COR-062 point 9). An artefact read from history carries
+      `False`.
     """
 
     id: str
@@ -2528,11 +2597,18 @@ class Artefact:
     span: SectionSpan | None = None
     body_line: int = 1
     aside: SetAside = NOTHING_SET_ASIDE
+    received: bool = False
 
     @property
     def excluded(self) -> bool:
         """Whether `friction.exclude` leaves it out (`excluded_by`)."""
         return self.excluded_by is not None
+
+    @property
+    def owes_no_answer(self) -> bool:
+        """Whether no check asks it for an answer or reports it stale: it lies under an
+        excluded path (COR-050 point 7), or arrives by sync (COR-062 point 9)."""
+        return self.excluded or self.received
 
     @property
     def location(self) -> str:
@@ -3058,6 +3134,10 @@ def discover_artefacts(
     unreadable: list[UnreadableFile] = []
     read: list[DiscoveredFile] = []
     texts = document_texts(listing, [rel for _place, rel in matched] + sorted(holder))
+    # A rule-set file is walked where a declared place would leave a synced copy out
+    # (COR-051 point 2); a rule in one arrives by sync, and owes no answer (COR-062
+    # point 9). Read on the working tree's install state, as the walk reads it.
+    is_synced_copy = synced_copy_test(target_root) if claimed else None
     for place, rel in matched:
         rule_set = claimed.get(rel)
         text = texts[rel]
@@ -3072,7 +3152,10 @@ def discover_artefacts(
             mixed = line_break(text) is None
             front_matter, found, reason = _read_artefacts(rel, place, text, rule_set=rule_set)
             aside = aside_of_places(matching[rel])
-            artefacts.extend(replace(a, excluded_by=excluded_by, aside=aside) for a in found)
+            received = rule_set is not None and is_synced_copy is not None and is_synced_copy(rel)
+            artefacts.extend(
+                replace(a, excluded_by=excluded_by, aside=aside, received=received) for a in found
+            )
         if reason is not None:
             unreadable.append(
                 UnreadableFile(path=rel, place=place, reason=reason, rule_set=rule_set)
@@ -4301,6 +4384,15 @@ def unreadable_configuration(target_root: Path, tree: RepositoryTree | None = No
     return None
 
 
+def configuration_at(target_root: Path, tree: RepositoryTree | None = None) -> dict[str, Any]:
+    """The backbone configuration's mapping at one state, read as the settings are:
+    forgivingly, `{}` for a file that is absent or does not read as a mapping (COR-048
+    point 4). With a `tree`, the file that state holds."""
+    rel = project_config_path(target_root).relative_to(target_root).as_posix()
+    config, _unparsed = _yaml_reader(target_root, tree)(rel)
+    return config
+
+
 def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) -> dict[str, Any]:
     """The declared places, the files they hold and the artefacts in them, as one
     stable document — what `pkit friction artefacts --json` prints.
@@ -4355,7 +4447,10 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
       resolves to (`_part_anchors`): an entry's section, a document's section
       or its lead, read through the one reading of an artefact anchor's part
       (`artefact_parts`), or a record's point, read through the one reading of
-      a record's points (`record_points`).
+      a record's points (`record_points`). And its `path_anchors`, added within
+      version 1 as well: each path anchor with the files it stands on at the
+      state, by the one rule both friction checks match a path pattern by
+      (`_path_anchors`).
     - `types`: every declared type by its full name — the backbone's own and
       each installed component's type registry — with its `component`,
       `name`, `description`, `kind_field` and `project_places`. Added within
@@ -4427,6 +4522,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
     anchored_points = _AnchoredPoints(target_root, tree)
     listing = tree if tree is not None else working_tree(target_root)
     unplaced = unplaced_files(discovery, listing)
+    standing = _Standing(discovery, listing)
 
     return {
         "schema_version": ARTEFACTS_SCHEMA_VERSION,
@@ -4475,6 +4571,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
                 "fields": _own_fields(artefact.carrier),
                 "span": _span_entry(artefact.span),
                 "part_anchors": _part_anchors(discovery, artefact, anchored_points),
+                "path_anchors": standing.path_anchors(artefact),
                 "in_scope_of": list(in_scope_of.get(artefact.location, ())),
                 **_type_entry(types.of(artefact), index),
             }
@@ -4671,6 +4768,43 @@ def _part_anchors(
                 if part is not None:
                     found.append(part)
     return found
+
+
+class _Standing:
+    """The files each path anchor of the artefacts document stands on, at the state the
+    document reads (COR-050 points 2 and 7), so a script reads them and matches no
+    pattern itself (ADR-057 point 2).
+
+    They are matched by the one rule both friction checks match a path pattern by
+    (`friction_check.Listing.stands_on`): the files of the state's one listing the
+    pattern matches, less those its `friction.exclude` leaves out and the answer
+    files. A dead anchor stands on no file. A pattern several anchors write is
+    matched once.
+    """
+
+    def __init__(self, discovery: Discovery, listing: RepositoryTree) -> None:
+        self.discovery = discovery
+        self.tree = listing
+        self._listing: Any = None
+        self._files: dict[str, list[str]] = {}
+
+    def path_anchors(self, artefact: Artefact) -> list[dict[str, Any]]:
+        """Each path anchor of `artefact`, in the order its block writes them, with the
+        files it stands on, sorted: `{value, files}`."""
+        return [
+            {"value": value, "files": self._standing_on(value)}
+            for value in artefact.anchors_of_kind("path")
+        ]
+
+    def _standing_on(self, pattern: str) -> list[str]:
+        if pattern not in self._files:
+            if self._listing is None:
+                # The change check imports this module; its listing reads the state's one.
+                from project_kit.friction_check import Listing
+
+                self._listing = Listing(self.tree.files(), self.discovery.settings)
+            self._files[pattern] = list(self._listing.matching(pattern))
+        return self._files[pattern]
 
 
 class _AnchoredPoints:

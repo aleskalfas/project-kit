@@ -1,0 +1,131 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - moved-c023390f2be9.yaml
+    revalidated:
+      at: 2026-10-26T03:59:46Z
+      outcome: unchanged
+      unchanged-because: The change regroups the adapter section's skills and agents by where pkit deployed them from. The use case reads only the rule-set section's pins and their fixes, which stay as they were.
+  - artefact: tech-docs/analysis/core/requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-70ec17efc0cd.yaml
+    revalidated:
+      at: 2026-10-26T03:59:51Z
+      outcome: unchanged
+      unchanged-because: The change adds tests of the adapter section's skill and agent groups. The test the requirement cites, that status shows an incomplete transition beside the backbone line, is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - moved-828a24ebf347.yaml
+    revalidated:
+      at: 2026-10-26T03:59:57Z
+      outcome: unchanged
+      unchanged-because: The change regroups the adapter section's skills and agents by where pkit deployed them from. The use case reads the capabilities section's suggestions and the connections, which stay as they were.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - moved-863d2120a84e.yaml
+    revalidated:
+      at: 2026-10-26T04:00:00Z
+      outcome: unchanged
+      unchanged-because: The change regroups the adapter section's skills and agents by where pkit deployed them from. The Source kit line that step 4 names, and the checkout it shows, are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - moved-c6041f71d67c.yaml
+    revalidated:
+      at: 2026-10-26T04:00:03Z
+      outcome: unchanged
+      unchanged-because: The change regroups the adapter section's skills and agents by where pkit deployed them from. The conflict line and the fix line per provider that the use case quotes are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-808bb37fbee5.yaml
+    revalidated:
+      at: 2026-10-26T04:00:06Z
+      outcome: unchanged
+      unchanged-because: The change regroups the adapter section's skills and agents by where pkit deployed them from. The agent workspace line and the two reports the use case quotes from it are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - moved-3c42621ce2ed.yaml
+    revalidated:
+      at: 2026-10-26T04:00:09Z
+      outcome: unchanged
+      unchanged-because: "Step 11 says status shows the adapter among its sections and writes nothing. Both still hold: the change only regroups the adapter's skills and agents by where pkit deployed them from."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-002-upgrade-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-1849fdf40a4b.yaml
+    revalidated:
+      at: 2026-10-26T04:00:12Z
+      outcome: unchanged
+      unchanged-because: The change regroups the adapter section's skills and agents by where pkit deployed them from. The journey reads only the rule-set pins status shows, which are unchanged.
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-65d082fdefb8.yaml
+    revalidated:
+      at: 2026-10-26T04:00:19Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, one home for every artefact's answers. #1779 builds it and rewrites the reference's account of the friction commands."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its friction commands write and read answers in the artefact's block, and friction resolve merges them, which COR-062 moves to answer files. #1779 builds it and rewrites the reference."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the reference keeps in the block. #1779 builds it and rewrites it."
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T220735Z-8e67b306.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261025T233736Z-b867ef8a.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-26T04:00:22Z
+      outcome: updated

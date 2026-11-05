@@ -1,0 +1,191 @@
+answers:
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183129Z-d1c2e7b6.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T023222Z-8e258fcb.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+    revalidated:
+      at: 2026-10-30T03:19:06Z
+      outcome: unchanged
+      unchanged-because: This change adds only the workspace group and its remove command to cli.py and rewords core rule 16 on removing workspace files, which the use case does not cite. The CI split (#2362), merged from main, runs the same checks as three parallel parts behind the one checks job, against the base its deciding job pins, and project rule 2 now says the hook runs check.sh whole and CI in parallel parts; every rule the use case cites, main's trim included, keeps its requirement, and the agent still runs the tests of what it changed and leaves the full suite to the hook and CI.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+    revalidated:
+      at: 2026-10-30T03:19:09Z
+      outcome: unchanged
+      unchanged-because: "This change adds only the workspace group and its remove command to cli.py and rewords core rule 16 on removing workspace files, on removing workspace files. The CI split (#2362), merged from main, runs the same checks as three parallel parts behind the one checks job, against the base its deciding job pins: the change check runs in the remainder's job with PKIT_CHECK_BASE and PKIT_CHECK_HEAD set, so step 9 holds, and trimmed core rule 20 still has an agent write the answers its change owes and leaves any other to a person's accepted words or the named delegate."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020925Z-e1e051d0.yaml
+    revalidated:
+      at: 2026-10-30T03:19:13Z
+      outcome: unchanged
+      unchanged-because: "This change adds only the workspace group and its remove command to cli.py and rewords core rule 16 on removing workspace files; no command, option or output the use case describes changes. The CI split (#2362), merged from main, runs the same checks as three parallel parts behind the one checks job, against the base its deciding job pins: the changeset guard runs in the remainder's job with --base the pinned commit, so steps 7, 7a and 7b hold."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-006-gate-merges.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020925Z-e1e051d0.yaml
+    revalidated:
+      at: 2026-10-30T03:19:17Z
+      outcome: unchanged
+      unchanged-because: "This change adds only the workspace group and its remove command to cli.py and rewords core rule 16 on removing workspace files; no command, option or output the use case describes changes. The CI split (#2362), merged from main, runs the same checks as three parallel parts behind the one checks job, against the base its deciding job pins: checks stays the required status, and ADR-055 point 5's refined clause keeps the aggregator, whole or in its parts behind one job, the unit GitHub requires, so step 3's job is still checks.yml and steps 4 to 7 and variant 3d hold."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+    revalidated:
+      at: 2026-10-30T03:19:20Z
+      outcome: unchanged
+      unchanged-because: This change adds only the workspace group and its remove command to cli.py and rewords core rule 16 on removing workspace files, on removing workspace files. The CI split (#2362), merged from main, runs the same checks as three parallel parts behind the one checks job, against the base its deciding job pins; ADR-055 point 5's refined clause concerns only the required check's unit, and the whole-repository check and friction-report.yml the use case rests on are unchanged. Trimmed core rule 20 still leaves an answer no change of the writer's owes to the person, word for word, or to the named delegate.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020925Z-e1e051d0.yaml
+    revalidated:
+      at: 2026-10-30T03:19:23Z
+      outcome: unchanged
+      unchanged-because: "This change adds only the workspace group and its remove command to cli.py and rewords core rule 16 on removing workspace files; no command the use case walks changes. The CI split (#2362), merged from main, runs the same checks as three parallel parts behind the one checks job, against the base its deciding job pins: the migration check runs in the remainder's job against the pinned commit, and check.sh still runs it as a line of its own, so step 7 holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-011-migrate-component-change.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020925Z-e1e051d0.yaml
+    revalidated:
+      at: 2026-10-30T03:19:26Z
+      outcome: unchanged
+      unchanged-because: "This change adds only the workspace group and its remove command to cli.py and rewords core rule 16 on removing workspace files; no command the use case walks changes. The CI split (#2362), merged from main, runs the same checks as three parallel parts behind the one checks job, against the base its deciding job pins: pkit migrations check-diff runs on every pull request in the remainder's job, and check.sh still runs it, so step 7 and the CI pipeline's line hold."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+    revalidated:
+      at: 2026-10-30T03:19:29Z
+      outcome: unchanged
+      unchanged-because: This change adds only the workspace group and its remove command to cli.py and rewords core rule 16 on removing workspace files, which no step of the journey relies on. The CI split (#2362), merged from main, runs the same checks as three parallel parts behind the one checks job, against the base its deciding job pins; ADR-055 point 5's refined clause makes the required unit the aggregator, whole or in its parts behind one job named checks, so the journey's needs from UC-006 hold, and trimmed core rule 2 still has the record accepted, by a person within its change, before work builds on it.

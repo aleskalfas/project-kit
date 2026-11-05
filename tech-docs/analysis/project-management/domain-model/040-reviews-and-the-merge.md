@@ -6,6 +6,7 @@ explains:
   - TERM-verdict
   - TERM-required-reviewer
   - TERM-merge-gate
+  - TERM-fixer
 pkit:
   friction:
     anchors:
@@ -15,26 +16,28 @@ pkit:
         - project-management:DEC-032
         - project-management:DEC-050
         - project-management:DEC-055#3
+        - project-management:DEC-056
       artefact:
         - TERM-verdict
         - TERM-required-reviewer
         - TERM-merge-gate
+        - TERM-fixer
 ---
 
 # VIEW-reviews-and-the-merge — Reviews and the merge
 
-In the `agent` review mode, no person is assigned to review, so an agent's review needs a signal that counts as approval. The signal must say these (DEC-028):
+Where the [project](../../core/glossary.md#term-project--project)'s settings leave review to agents (the `agent` mode of `review.mode`), no person is assigned to review. So an agent's review needs a signal that counts as approval. The signal must say these ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)):
 
 - whose review it is
 - what stops self-approval
 - when it goes stale
 
-A [verdict](../glossary.md#term-verdict--verdict) is that signal. A [required reviewer](../glossary.md#term-required-reviewer--required-reviewer) is an agent whose verdict the [change](../../core/glossary.md#term-change--change) needs. The [merge gate](../glossary.md#term-merge-gate--merge-gate) holds the [pull request](../../core/glossary.md#term-pull-request--pull-request) to their verdicts before it lands.
+A [verdict](../glossary.md#term-verdict--verdict) is that signal. A [required reviewer](../glossary.md#term-required-reviewer--required-reviewer) is an agent whose verdict the [change](../../core/glossary.md#term-change--change) needs. The [merge gate](../glossary.md#term-merge-gate--merge-gate) holds the [pull request](../../core/glossary.md#term-pull-request--pull-request) to their verdicts before it lands. After the merge, a [fixer](../glossary.md#term-fixer--fixer) the project granted proposes answers for what the merge left out of date.
 
 ```mermaid
 classDiagram
   accTitle: Reviews and the merge
-  accDescr: A required reviewer posts verdicts on a pull request, each naming the head and the base it reviewed. The merge gate holds the pull request to a standing approval from each required reviewer, and to the checkboxes of each issue it closes.
+  accDescr: A required reviewer posts verdicts on a pull request, each naming the head and the base it reviewed. The merge gate holds the pull request to a standing approval from each required reviewer, and to the checkboxes of each issue it closes. A fixer proposes answers for the artefacts of its artefact type that a merge left out of date.
   class Verdict {
     approves or requests changes
     head reviewed
@@ -46,6 +49,10 @@ classDiagram
     where it comes from
   }
   class MergeGate["Merge gate"]
+  class Fixer {
+    agent
+    artefact types
+  }
   class PullRequest["Pull request"]
   class Checkbox
   RequiredReviewer "1" --> "*" Verdict : posts
@@ -53,6 +60,7 @@ classDiagram
   MergeGate "1" --> "1" PullRequest : holds
   MergeGate ..> RequiredReviewer : needs a standing approval from each
   MergeGate ..> Checkbox : needs each ticked
+  Fixer ..> PullRequest : proposes answers after the merge of
 ```
 
 ```mermaid
@@ -72,7 +80,7 @@ flowchart LR
 
 Defined in [TERM-verdict](../glossary.md#term-verdict--verdict).
 
-**Why:** In the `agent` review mode, no person is assigned to review, so an agent's review needs a signal that counts as approval. A command must read the signal, tell whose it is, and see when new commits make it stale (DEC-028).
+**Why:** Where the [project](../../core/glossary.md#term-project--project)'s settings leave review to agents, no person is assigned to review. So an agent's review needs a signal that counts as approval. A command must read the signal, tell whose it is, and see when new commits make it stale ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 
 A verdict is a comment a [reviewer](../../core/glossary.md#term-reviewer--reviewer) agent posts on a [pull request](../../core/glossary.md#term-pull-request--pull-request). Its first line approves the [change](../../core/glossary.md#term-change--change) or requests changes, and a marker names the [head](../../core/glossary.md#term-head--head) and the [base](../../core/glossary.md#term-base--base) it reviewed. Its [findings](../../core/glossary.md#term-finding--finding) follow, each tagged for what it does to the merge.
 
@@ -85,7 +93,7 @@ A verdict is a comment a [reviewer](../../core/glossary.md#term-reviewer--review
 **Relations:**
 
 - A reviewer agent posts it on one pull request (DEC-028).
-- The [merge gate](../glossary.md#term-merge-gate--merge-gate) reads each [required reviewer](../glossary.md#term-required-reviewer--required-reviewer)'s latest verdict (DEC-028 and DEC-032 point D3).
+- The [merge gate](../glossary.md#term-merge-gate--merge-gate) reads each [required reviewer](../glossary.md#term-required-reviewer--required-reviewer)'s latest verdict (DEC-028 and [DEC-032 point D3](../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d3--the-resolved-set-is-and-composed-the-gate-checker-generalises-across-paths-the-singleton-cap-lifts)).
 
 **States:** A verdict approves the change or requests changes. An approval stands until the author changes something its reviewer checks, and is then stale. A verdict whose base the pull request no longer stands on is stale too (DEC-028).
 
@@ -93,20 +101,20 @@ A verdict is a comment a [reviewer](../../core/glossary.md#term-reviewer--review
 
 - Only a comment that carries the marker counts as a verdict (DEC-028).
 - A verdict that is missing or cannot be read never satisfies the merge gate (DEC-028).
-- Each `[person]` finding is shown whole to whoever authorises the merge (DEC-028 and DEC-055 point 3).
+- Each `[person]` finding is shown whole to whoever authorises the merge (DEC-028 and [DEC-055 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
 
 ## Required reviewer
 
 Defined in [TERM-required-reviewer](../glossary.md#term-required-reviewer--required-reviewer).
 
-**Why:** A [change](../../core/glossary.md#term-change--change) may carry a concern beyond the [project](../../core/glossary.md#term-project--project)'s own review, such as its design, which another [capability](../../core/glossary.md#term-capability--capability)'s [reviewer](../../core/glossary.md#term-reviewer--reviewer) checks. That capability contributes its reviewer, so project-management never names a discipline most projects never install. Every declared concern is then checked, and none is dropped silently (DEC-032).
+**Why:** A [change](../../core/glossary.md#term-change--change) may carry a concern beyond the [project](../../core/glossary.md#term-project--project)'s own review, such as its design, which another [capability](../../core/glossary.md#term-capability--capability)'s [reviewer](../../core/glossary.md#term-reviewer--reviewer) checks. That capability contributes its reviewer, so project-management never names a discipline most projects never [install](../../core/glossary.md#term-install--install). Every declared concern is then checked, and none is dropped silently ([DEC-032](../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md)).
 
 A required reviewer is an agent whose approving [verdict](../glossary.md#term-verdict--verdict) a [pull request](../../core/glossary.md#term-pull-request--pull-request) needs before it merges. The project names some in its settings. Installed capabilities contribute others, for changes whose classification or content meets a condition.
 
 **Attributes:**
 
-- its name, as the project registers it (DEC-028)
-- where it comes from: the project's settings, or a capability's contribution with its condition (DEC-032 points D1 and D2)
+- its name, as the project registers it ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md))
+- where it comes from: the project's settings, or a capability's contribution with its condition (DEC-032 points [D1](../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d1--the-required-local-reviewer-set-resolves-from-the-prs-closing-issues) and [D2](../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d2--capabilities-contribute-reviewer-requirements-pm-collects-them-by-walking-the-manifest))
 
 **Relations:**
 
@@ -117,15 +125,15 @@ A required reviewer is an agent whose approving [verdict](../glossary.md#term-ve
 
 **Always true:**
 
-- Every required reviewer must approve, and none stands in for another (DEC-032 point D3).
-- Where the set of required reviewers cannot be worked out, no command goes on with part of it (DEC-032 point D5).
+- Every required reviewer must approve, and none stands in for another ([DEC-032 point D3](../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d3--the-resolved-set-is-and-composed-the-gate-checker-generalises-across-paths-the-singleton-cap-lifts)).
+- Where the set of required reviewers cannot be worked out, no command goes on with part of it ([DEC-032 point D5](../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d5--activation-is-install-driven-the-resolved-set-is-recomputed-at-gate-time)).
 - A project declines a contributed reviewer only with its reason, in its settings (DEC-032 point D2).
 
 ## Merge gate
 
 Defined in [TERM-merge-gate](../glossary.md#term-merge-gate--merge-gate).
 
-**Why:** An approval counts only for what its [reviewer](../../core/glossary.md#term-reviewer--reviewer) saw. So the gate judges one [head](../../core/glossary.md#term-head--head), and the merge is pinned to it. A push between the two then fails the merge, rather than landing commits no [verdict](../glossary.md#term-verdict--verdict) covers (DEC-028). A [Task](../glossary.md#term-task--task)'s [checkboxes](../glossary.md#term-checkbox--checkbox) are checked before the merge, since closing the Task by the merge would otherwise pass them by (DEC-007).
+**Why:** An approval counts only for what its [reviewer](../../core/glossary.md#term-reviewer--reviewer) saw. So the gate judges one [head](../../core/glossary.md#term-head--head), and the merge is pinned to it. A push between the two then fails the merge, rather than landing commits no [verdict](../glossary.md#term-verdict--verdict) covers ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). A [Task](../glossary.md#term-task--task)'s [checkboxes](../glossary.md#term-checkbox--checkbox) are checked before the merge, since closing the Task by the merge would otherwise pass them by ([DEC-007](../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)).
 
 The merge gate is the set of conditions project-management holds a [pull request](../../core/glossary.md#term-pull-request--pull-request) to before it lands it. Each [required reviewer](../glossary.md#term-required-reviewer--required-reviewer)'s latest verdict must be a standing approval, and the pull request's checks must be green. The checkboxes of each [issue](../glossary.md#term-issue--issue) the pull request closes must be ticked.
 
@@ -142,5 +150,59 @@ The merge gate is the set of conditions project-management holds a [pull request
 **Always true:**
 
 - The merge is pinned to the head the gate judged (DEC-028).
-- A gate that passes gives no [authorisation](../glossary.md#term-authorisation--authorisation) to merge, which stays the person's (DEC-055 point 3).
-- A person bypasses one required reviewer only with a reason, which an [audit comment](../glossary.md#term-audit-comment--audit-comment) records (DEC-050).
+- A gate that passes gives no [authorisation](../glossary.md#term-authorisation--authorisation) to merge, which stays the person's ([DEC-055 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
+- A person bypasses one required reviewer only with a reason, which an [audit comment](../glossary.md#term-audit-comment--audit-comment) records ([DEC-050](../../../../.pkit/capabilities/project-management/decisions/DEC-050-per-reviewer-override.md)).
+
+## Fixer
+
+Defined in [TERM-fixer](../glossary.md#term-fixer--fixer).
+
+**Why:** A merge may leave [artefacts](../../core/glossary.md#term-artefact--artefact) of the [default branch](../../core/glossary.md#term-default-branch--default-branch) out of date, and a person must [answer](../../core/glossary.md#term-answer--answer) each one. An agent that owns the [artefact type](../../core/glossary.md#term-artefact-type--artefact-type) of an out-of-date artefact can propose that artefact's answer, but only where the person chose to let it. So each fixer starts only where the [project](../../core/glossary.md#term-project--project) granted it, and it only proposes ([DEC-056](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md)).
+
+A fixer is an agent a [capability](../../core/glossary.md#term-capability--capability), or the project, declares for one artefact type. After a merge, a command starts each fixer the project granted on the default branch's out-of-date artefacts of its artefact type. The fixer proposes an answer for each artefact, and a person decides each answer (DEC-056 points 1 to 3).
+
+**Attributes:**
+
+- the agent, and the artefact types it fixes ([DEC-056 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#1-a-capability-declares-its-fixers))
+- whether the project granted it, refused it or was never asked ([DEC-056 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#2-the-person-grants-each-fixer))
+
+**Relations:**
+
+- A capability declares it for the artefact types it owns, and the project may declare one for any artefact type (DEC-056 point 1).
+- A command starts it on the default branch's out-of-date artefacts of its artefact type, and on nothing else ([DEC-056 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)).
+
+**States:** A fixer is unanswered until the person is asked about it. The person's reply grants it or refuses it, and a revoke records a refusal. A grant counts once its [change](../../core/glossary.md#term-change--change) is on the default branch (DEC-056 point 2).
+
+**Always true:**
+
+- Nothing is granted by default, and only the person's own reply grants a fixer (DEC-056 point 2).
+- A fixer only proposes. Its proposals wait until a person, or the delegate they named, decides each one ([DEC-056 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)).
+
+## What is built on these concepts
+
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
+**Verdict:**
+
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md)
+- [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md)
+- [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
+- [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
+- [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
+
+**Required reviewer:**
+
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md)
+- [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md)
+- [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
+
+**Merge gate:**
+
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md)
+- [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md)
+- [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
+- [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
+
+**Fixer:**
+
+- [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md)

@@ -6,6 +6,8 @@ date: 2026-07-07
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [DEC-059](DEC-059-topology-of-seats.md).** The topology is the project's committed configuration, a list of seats that every clone reads from the default branch, and work reaches agents through one shared pool. Overturned: point 2's per-user file, every passage that places the topology in it, and the parts of points 4 to 8 that assume it. Among what stands: a clone's name, references to workstreams that never rebind them, the warning of a workstream no one takes, and the expected owner's three cases. DEC-059's "What this overturns, and what stands" lists each passage.
+
 **In plain terms:** [project-management:DEC-035-instance-ownership] tells one person's
 concurrent clones apart by an *interchangeable number*. In practice a person runs
 clones with *distinct jobs* — a "data" clone, a "map" clone — and wants each clone to
@@ -64,7 +66,9 @@ marking or clash mechanics.**
 git-ignored, clone-local runtime identity carries a **display name** (e.g. `data`,
 `map`, `main`) alongside the numeric id. The name is a self-awareness affordance and a
 routing key; the numeric id and the `(assignee, instance:N)` owner from DEC-035 are
-unchanged underneath.
+unchanged underneath. Where the project's topology declares seats, a clone's name is
+the name of the seat it holds, which no person types (refinement per
+[project-management:DEC-059-topology-of-seats]).
 
 ### 2. A per-user, machine-local topology file — not committed, not team-shared
 
@@ -109,7 +113,7 @@ The *expected* owner is derived from the per-user topology file (point 2); the *
 current owner is resolved separately through the ownership seam ([pkit:ADR-041]). The
 clash guard consumes **both** — comparing actual against expected — and, with listings,
 is the **only** consumer; **never** a gate, a transition, or the cascade fold.
-Realm-blindness (DEC-035 point 8, DEC-043 D6) is preserved: naming instances does
+Realm-blindness (DEC-035 point 8, DEC-043 point 6) is preserved: naming instances does
 not make ownership engine state. The named layer thus *refines* DEC-035 where the
 reference is unambiguous and *falls back* to it otherwise — the numeric model stays the
 floor.
@@ -205,7 +209,7 @@ the automatic version waits for lived use of the mechanical one.
   architect, not a new agent.
 - **Fold provisioning into a separate ADR-gated record.** Considered (a reviewer flagged
   the filesystem/session-boundary surface); kept in this record as per-user pm tooling
-  with the rule-8 confirmation and rule-18 own-repo-only constraints stated. If provisioning
+  with the core rule 8 confirmation and core rule 19 own-repo-only constraints stated. If provisioning
   grows beyond clone-plus-scaffold, split it out then.
 
 ## Implications
@@ -225,14 +229,11 @@ the automatic version waits for lived use of the mechanical one.
   engine and cascade fold never read it (DEC-035 point 8 / DEC-043 D6).
 - **Two new scripts:** the **guided assignment** (local, idempotent, reconciles DEC-018
   workstream-lifecycle drift, surfaces shared/unassigned at `warning`) and
-  **`create-instance`** (clone into a sibling folder + scaffold config; rule-8 confirm
-  before filesystem mutation; rule-18 own-machine only; wires pkit setup for the new clone).
-- **DEC-035 gains a reciprocal refinement note** — instances may carry a name and
-  reference workstreams for routing; the flat numeric model, the ownership marker, and the
-  clash mechanics are unchanged and remain the fallback. **This record refines accepted
-  foundational DEC-035, so promotion `proposed → accepted` requires explicit maintainer
-  sign-off**, the same class as DEC-035's handoff-contract sign-off and DEC-043's DEC-035
-  refinement.
+  **`create-instance`** (clone into a sibling folder + scaffold config; core rule 8 confirm
+  before filesystem mutation; core rule 19 own-machine only; wires pkit setup for the new clone).
+- **DEC-035 point 1 points here** — instances may carry a name and reference
+  workstreams for routing; the flat numeric model, the ownership marker, and the clash
+  mechanics stand and remain the fallback.
 - **No new mesh interaction** ([project-management:DEC-022-methodology-mesh]) — the
   topology is per-user-local operational state, repo-local by nature; `check-mesh` ignores
   it, the same stance DEC-025 takes for lanes. State this so a future author does not wire

@@ -500,7 +500,7 @@ def test_label_only_back_fill_does_not_gate_on_the_board(bf, tmp_path, monkeypat
         "_resolve_project_node_id",
         lambda _c: pytest.fail("a label-only back-fill must not resolve the board"),
     )
-    monkeypatch.setattr(bf, "_enumerate_corpus", lambda *a, **k: [_issue(1)])
+    monkeypatch.setattr(bf, "_enumerate_corpus", lambda *a, **k: ([_issue(1)], False))
     monkeypatch.setattr(bf, "_resolve_repo_name_with_owner", lambda _c: TARGET_REPO)
     args = bf.argparse.Namespace(json=True, apply=False, emit_script=False, limit=500, state="all")
     plan, gate_failed, _errs = bf._derive_plan(cap, dict(BOARD_CONFIG), args)

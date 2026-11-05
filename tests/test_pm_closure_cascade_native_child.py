@@ -21,15 +21,17 @@ Pinned, through the real engine and the shipped predicate scripts against a fake
   still holds and still counts;
 - a candidate whose issue cannot be read leaves the fold indeterminate, so the
   container is not eligible.
+
+Each predicate script the engine starts runs in the test's own process, found
+through the runner's one lookup (`tests/in_process.py`, `start_in_process`), and
+so does the fake `gh` it calls.
 """
 
 from __future__ import annotations
 
 import importlib.util
 import json
-import os
 import shutil
-import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -47,6 +49,15 @@ if str(CAP_SCRIPTS) not in sys.path:
 from _lib import body_parent_ref  # noqa: E402
 
 from project_kit.process import CascadeResolution, ProcessEngine, load_definition  # noqa: E402
+from tests.in_process import start_in_process  # noqa: E402
+from tests.pm_lifecycle_world import fake_gh_in_process  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def predicates_started(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
+    """The predicate scripts the engine's runner starts, each run in this process."""
+    return start_in_process(monkeypatch)
+
 
 ADDRESS = "project-management:issue-lifecycle"
 CONTAINER = 5
@@ -103,22 +114,17 @@ else:
 """
 
 
-def _executable(path: Path, text: str) -> None:
-    path.write_text(text, encoding="utf-8")
-    path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-
-
 @pytest.fixture
 def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A bootstrapped adopter project with the shipped capability, its scripts
-    run by this interpreter, and a fake `gh` first on PATH."""
+    """A bootstrapped adopter project with the shipped capability, its scripts the
+    ones this checkout ships, and a fake `gh` answering in this process."""
     root = tmp_path / "repo"
     root.mkdir()
     for args in (["init", "-q"], ["remote", "add", "origin", "git@github.com:acme/widget.git"]):
         subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
     cap = root / ".pkit" / "capabilities" / "project-management"
     shutil.copytree(CAP_SRC / "schemas", cap / "schemas")
-    shutil.copytree(CAP_SCRIPTS, cap / "scripts")
+    (cap / "scripts").symlink_to(CAP_SCRIPTS, target_is_directory=True)
     shutil.copy(CAP_SRC / "package.yaml", cap / "package.yaml")
     (cap / "project").mkdir()
     (cap / "project" / "config.yaml").write_text(_VALID_CONFIG, encoding="utf-8")
@@ -127,17 +133,11 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         "  capability_version: 0.53.0\n  by: bootstrap\n  repo: github.com/acme/widget\n",
         encoding="utf-8",
     )
-    for script in (cap / "scripts").glob("*.py"):
-        body = script.read_text(encoding="utf-8").split("\n", 1)[1]
-        script.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
     defs = root / ".pkit" / "schemas" / "_defs"
     defs.mkdir(parents=True)
     shutil.copy(REPO_ROOT / ".pkit" / "schemas" / "_defs" / "process.schema.json", defs)
 
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    _executable(bin_dir / "gh", f"#!{sys.executable}\n" + _FAKE_GH.format(root=str(root)))
-    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    fake_gh_in_process(monkeypatch, _FAKE_GH.format(root=str(root)))
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(root))
     return root
 

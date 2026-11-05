@@ -542,6 +542,8 @@ _READ_ONLY_EXEMPT = frozenset(
         "pre-check.py",
         "check-mesh.py",
         "check-doc-mapping.py",
+        # The topology's check (DEC-059): reads this clone, writes nothing.
+        "check-topology.py",
         # The doc-check point's filler (DEC-053): a query the backbone runs —
         # prints the mapping's obligations, writes nothing.
         "fill-doc-check.py",

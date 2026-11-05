@@ -22,6 +22,7 @@ core agent, no capability (COR-057 points 3 and 4). These tests hold that:
 
 from __future__ import annotations
 
+import ast
 import re
 import subprocess
 from pathlib import Path
@@ -120,8 +121,23 @@ def test_the_agent_reads_its_rules_from_the_backbone_answer() -> None:
     assert "`pkit rule-sets altered --base <base> --head <head> --json`" in body
 
 
+def _workspace_note() -> str:
+    """The sentence the deploy's resolver ends every agent body with (#2026)."""
+    resolver = REPO / ".pkit" / "adapters" / "claude-code" / "_resolve_agent.py"
+    for node in ast.parse(resolver.read_text(encoding="utf-8")).body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == "WORKSPACE_NOTE"
+            for target in node.targets
+        ):
+            value = ast.literal_eval(node.value)
+            assert isinstance(value, str)
+            return value
+    raise AssertionError("_resolve_agent.py assigns no WORKSPACE_NOTE")
+
+
 def test_the_deployed_copy_carries_the_source_body_and_is_tracked() -> None:
-    assert _body(DEPLOYED) == _body(SOURCE), (
+    expected = f"{_body(SOURCE).rstrip()}\n\n{_workspace_note()}\n"
+    assert _body(DEPLOYED) == expected, (
         "stale deployed copy: run `bash .pkit/adapters/claude-code/deploy-agents.sh`"
     )
     tracked = subprocess.run(

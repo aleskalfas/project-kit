@@ -18,9 +18,12 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from project_kit import capabilities as caps
 from project_kit import permissions as perm
 from project_kit import schemas_validate as schemas_mod
 from project_kit.cli import main
+from project_kit.manifest import ORIGIN_EXTERNALLY_SOURCED, ORIGIN_INCUBATED_IN_REPO
+from tests.adopter_repo import MakeAdopterRepo
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -137,6 +140,98 @@ def test_scaffold_cli_refuses_unknown_capability(tmp_path: Path, monkeypatch) ->
     result = CliRunner().invoke(main, ["permissions", "scaffold", "ghost"])
     assert result.exit_code != 0
     assert "unknown capability" in result.output
+
+
+# --- scaffold into a capability the project receives as a synced copy (#1988) ---
+
+
+def _as_methodology_source(root: Path) -> None:
+    """Give the tree the package source beside its `.pkit/`, which makes it the
+    methodology's source repository (`is_methodology_source` of the lifecycle)."""
+    package = root / "src" / "project_kit" / "__init__.py"
+    package.parent.mkdir(parents=True)
+    package.write_text("", encoding="utf-8")
+
+
+def _tree_outside_git(root: Path) -> dict[str, bytes | None]:
+    """Every path under `root` outside `.git`, a file's bytes or None for a dir."""
+    return {
+        p.relative_to(root).as_posix(): (p.read_bytes() if p.is_file() else None)
+        for p in sorted(root.rglob("*"))
+        if ".git" not in p.relative_to(root).parts
+    }
+
+
+def _scaffold_evidence() -> tuple[int, str]:
+    result = CliRunner().invoke(main, ["--color", "never", "permissions", "scaffold", "evidence"])
+    return result.exit_code, result.output
+
+
+def _evidence_permissions(root: Path) -> Path:
+    return root / ".pkit" / "capabilities" / "evidence" / "permissions"
+
+
+def test_scaffold_refuses_a_synced_capability_in_an_adopter_and_writes_nothing(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """In a project that receives the methodology by sync, a kit-shipped capability's
+    `permissions/` is a synced copy, and the next sync overwrites a fragment written
+    there (core rule 1). The command writes nothing, not even the folder, and names
+    where the project's own fragment and grants go."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    before = _tree_outside_git(repo.root)
+
+    code, output = _scaffold_evidence()
+
+    assert code == 1, output
+    assert _tree_outside_git(repo.root) == before
+    assert "capability 'evidence' arrives in this project as a synced copy" in output
+    assert ".pkit/capabilities/evidence/permissions/ is not the project's" in output
+    assert "`pkit permissions scaffold <capability>`" in output
+    assert "`pkit permissions grant`" in output
+
+
+def test_scaffold_refuses_an_externally_sourced_capability_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A capability authored in another repository is a copy even where the
+    methodology is authored (COR-041)."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    _as_methodology_source(repo.root)
+    caps.set_capability_origin(repo.root, "evidence", ORIGIN_EXTERNALLY_SOURCED)
+    before = _tree_outside_git(repo.root)
+
+    code, output = _scaffold_evidence()
+
+    assert code == 1, output
+    assert _tree_outside_git(repo.root) == before
+
+
+def test_scaffold_stamps_a_kit_shipped_capability_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Where the methodology is authored, its capabilities are the source, never a copy."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    _as_methodology_source(repo.root)
+
+    code, output = _scaffold_evidence()
+
+    assert code == 0, output
+    assert (_evidence_permissions(repo.root) / "grants.yaml").is_file()
+
+
+def test_scaffold_stamps_an_incubated_capability_in_an_adopter(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A capability the project incubates is its own (COR-031 D1)."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    caps.set_capability_origin(repo.root, "evidence", ORIGIN_INCUBATED_IN_REPO)
+
+    code, output = _scaffold_evidence()
+
+    assert code == 0, output
+    assert "Stamped: .pkit/capabilities/evidence/permissions/privilege-catalog.yaml" in output
+    assert (_evidence_permissions(repo.root) / "grants.yaml").is_file()
 
 
 # --- fragment-token-resolution lint ------------------------------------------

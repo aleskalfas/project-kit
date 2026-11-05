@@ -1,7 +1,7 @@
 """Tests for project-management's create-issue script's pure logic.
 
 Covers title composition, parent-ref line formatting, template body
-substitution, frontmatter stripping, adopter-workstream extraction.
+substitution, frontmatter stripping, the workstream check at filing.
 The gh subprocess invocations are not tested at unit level — they're
 thin wrappers; their behaviour is the same shape as evidence's
 validate.py call path.
@@ -11,10 +11,14 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
+
+from tests.pm_ownership_support import FakeGitHub, clone_with, topology_with, use
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
@@ -350,34 +354,6 @@ def test_compose_body_no_parent_ref_leaves_template_placeholder(ci, tmp_path: Pa
     assert "Feature: #" in body
 
 
-# --- adopter workstreams ---------------------------------------------
-
-
-def test_adopter_workstreams_bare_list(ci) -> None:
-    config = {"workstreams": ["cli", "schemas", "agents"]}
-    assert ci._adopter_workstreams(config) == {"cli", "schemas", "agents"}
-
-
-def test_adopter_workstreams_mapping_form(ci) -> None:
-    """DEC-018's v0.5.0 mapping form is also recognised (forward-compatible)."""
-    config = {
-        "workstreams": {
-            "cli": {"name": "cli", "status": "active"},
-            "schemas": {"name": "schemas", "status": "active"},
-        },
-    }
-    assert ci._adopter_workstreams(config) == {"cli", "schemas"}
-
-
-def test_adopter_workstreams_empty_when_absent(ci) -> None:
-    assert ci._adopter_workstreams({}) == set()
-
-
-def test_adopter_workstreams_skips_non_string_entries(ci) -> None:
-    config = {"workstreams": ["cli", 42, None, "schemas"]}
-    assert ci._adopter_workstreams(config) == {"cli", "schemas"}
-
-
 # --- titles.yaml checks at filing (#803) ----------------------------
 # main() runs against a staged capability tree carrying the SHIPPED titles.yaml,
 # with every gh call faked; a refused title must stop before `gh issue create`.
@@ -425,8 +401,11 @@ def _linked(ci):
     return SimpleNamespace(ok=True, detail="", outcome=ci.LinkOutcome.LINKED, refused=False)
 
 
-def _file_task(ci, tmp_path, monkeypatch, title: str) -> tuple[int, list[list[str]]]:
-    """Run create-issue main() for a Task titled ``title``; return (rc, every argv run)."""
+def _file_task(
+    ci, tmp_path, monkeypatch, title: str, extra: tuple[str, ...] = ()
+) -> tuple[int, list[list[str]]]:
+    """Run create-issue main() for a Task titled ``title``, with ``extra`` options;
+    return (rc, every argv run)."""
     root = _stage_filing_tree(tmp_path)
     calls: list[list[str]] = []
 
@@ -461,6 +440,7 @@ def _file_task(ci, tmp_path, monkeypatch, title: str) -> tuple[int, list[list[st
             "--capability-root",
             str(root),
             "--yes",
+            *extra,
         ],
     )
     return ci.main(), calls
@@ -468,6 +448,105 @@ def _file_task(ci, tmp_path, monkeypatch, title: str) -> tuple[int, list[list[st
 
 def _issue_created(calls: list[list[str]]) -> bool:
     return any("issue" in c and "create" in c for c in calls)
+
+
+# --- instance ownership: the claim at filing (DEC-035 point 3) ------------
+# With an instance id set, the filed issue (#55 here) is claimed for this clone
+# right after it is filed. The claim's `gh` calls reach an in-memory GitHub.
+
+_CLEAN_TITLE = "Evidence points are keyed so two providers can report one"
+
+
+def _file_with_instance(
+    ci, tmp_path, monkeypatch, *, instance: int | None, extra: tuple[str, ...] = ()
+) -> tuple[int, list[list[str]], FakeGitHub]:
+    github = FakeGitHub(author="filer-login")
+    assignee = extra[extra.index("--assignee") + 1] if "--assignee" in extra else "filer-login"
+    github.add(55, assignees=(assignee,))
+    clone_with(ci.instance_claims, monkeypatch, instance)
+    use(ci.instance_claims, monkeypatch, github)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, extra)
+    return rc, calls, github
+
+
+def test_with_no_instance_id_filing_is_unchanged(ci, tmp_path, monkeypatch, capsys) -> None:
+    rc, _calls, github = _file_with_instance(ci, tmp_path, monkeypatch, instance=None)
+    assert rc == 0
+    assert github.calls == []
+    captured = capsys.readouterr()
+    assert "ownership" not in captured.out + captured.err
+
+
+def test_the_filed_issue_is_claimed_for_this_clone(ci, tmp_path, monkeypatch, capsys) -> None:
+    rc, calls, github = _file_with_instance(ci, tmp_path, monkeypatch, instance=2)
+    assert rc == 0
+    assert _issue_created(calls)
+    assert [argv[2] for argv in github.writes()] == ["comment", "edit"]
+    claim = github.issues[55].comments[0]["body"]
+    assert "event=claim instance=2 " in claim
+    out = capsys.readouterr().out
+    assert "  ownership:  claimed for instance 2 (comment substrate)" in out
+    assert "[ok] ownership: #55 claimed for instance 2 (comment substrate)." in out
+
+
+def test_an_issue_filed_for_another_person_is_not_claimed(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """DEC-035 point 5: the creating clone's marker does not stick to an issue
+    assigned to someone else."""
+    rc, _calls, github = _file_with_instance(
+        ci, tmp_path, monkeypatch, instance=2, extra=("--assignee", "someone-else")
+    )
+    assert rc == 0
+    assert github.calls == []
+    assert "  ownership:  not claimed: assigned to @someone-else" in capsys.readouterr().out
+
+
+def _file_from_seat(ci, tmp_path, monkeypatch, role: str) -> tuple[int, list, FakeGitHub]:
+    """File from a clone that holds the topology's first seat, of `role`
+    (DEC-059), with the key `k1`."""
+    github = FakeGitHub(author="filer-login")
+    github.add(55, assignees=("filer-login",))
+    claims = ci.instance_claims
+    ownership = claims.ownership
+    holder = ownership.Holder(ownership.SEAT_HELD, "filer-login", "k1")
+    seat = claims.Seat("seat-1", 1, role)
+    topology_with(claims, monkeypatch, claims.Topology(seat, {"seat-1": holder}), key="k1")
+    use(claims, monkeypatch, github)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE)
+    return rc, calls, github
+
+
+def test_a_planners_seat_files_with_no_owner(ci, tmp_path, monkeypatch, capsys) -> None:
+    """DEC-059 point 7: the planner's work enters the shared pool."""
+    rc, calls, github = _file_from_seat(ci, tmp_path, monkeypatch, "planner")
+    assert rc == 0
+    assert _issue_created(calls)
+    assert github.calls == []
+    assert (
+        "  ownership:  not claimed: seat seat-1, instance 1 is a planner's seat, which files "
+        "with no owner, so the issue enters the shared pool"
+    ) in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("role", ["worker", "lead"])
+def test_any_other_seat_claims_what_it_files(ci, tmp_path, monkeypatch, capsys, role) -> None:
+    rc, _calls, github = _file_from_seat(ci, tmp_path, monkeypatch, role)
+    assert rc == 0
+    claim = github.issues[55].comments[0]["body"]
+    assert "event=claim instance=1 seat=seat-1 seat_number=1 clone=k1 " in claim
+    assert "#55 claimed for seat seat-1, instance 1" in capsys.readouterr().out
+
+
+def test_a_failed_claim_leaves_the_issue_filed(ci, tmp_path, monkeypatch, capsys) -> None:
+    github = FakeGitHub(author="filer-login", failing={"comment"})
+    github.add(55, assignees=("filer-login",))
+    clone_with(ci.instance_claims, monkeypatch, 2)
+    use(ci.instance_claims, monkeypatch, github)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE)
+    assert rc == 0
+    assert _issue_created(calls)
+    assert "[warn] ownership: the claim on #55 failed" in capsys.readouterr().err
 
 
 def test_filing_refuses_a_conventional_commits_title_before_gh(
@@ -863,6 +942,16 @@ def test_main_board_path_uses_cached_node_id_no_project_view(ci, tmp_path, monke
         config_path.read_text(encoding="utf-8") + "projects_v2_node_id: PVT_cached\n",
         encoding="utf-8",
     )
+    # The axes on the kit's own labels, and the state left out, so no board
+    # Status is written for it (DEC-062 point 5): the one board read left is the
+    # hook's, which the cache spares.
+    (root / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\naxes:\n"
+        "  type:\n    kit-label: true\n"
+        "  priority:\n    kit-label: true\n"
+        "  workstream:\n    kit-label: true\n",
+        encoding="utf-8",
+    )
 
     project_view_calls = {"n": 0}
 
@@ -1200,6 +1289,137 @@ def test_main_label_fallback_path_omits_board_keys_hook_skips(ci, tmp_path, monk
     # target, and skips. The seam `boom` above asserts no write was attempted.
     assert "board_item_id" not in captured_context["issue"]
     assert captured_context["project_node_id"] is None
+
+
+# --- the card's first Status (DEC-006, #2276) --------------------------------
+# Where the board's Status is a projection the project keeps — a board, and the
+# state not carried on it — the card create-issue adds gets the Status of the
+# state the new issue is in: Todo, or Backlog where it was filed with a
+# milestone, as `_lib/lifecycle_inference` reads it.
+
+
+#: A map that puts priority, workstream and state on the board, and keeps type on
+#: the kit's own labels.
+BOARD_AXES: dict = {
+    "type": {"kit-label": True},
+    "priority": {"board": True},
+    "workstream": {"board": True},
+    "state": {"board": True},
+}
+
+
+def _status_kept_filing(
+    ci, tmp_path: Path, monkeypatch, *, axes: dict | None, repository: str = "acme/repo"
+):
+    """Stage a board filing in ``repository``, whose owner owns the board, and
+    route the board's calls to a `BoardTracker`."""
+    import shutil
+
+    from tests.pm_board_world import BoardTracker
+
+    root = _stage_capability_tree(tmp_path, has_board=True)
+    shutil.copy(SCRIPT_PATH.parent.parent / "schemas" / "workflow.yaml", root / "schemas")
+    board = BoardTracker()
+    board.repository, board.owner = repository, repository.split("/", 1)[0]
+    benign = _gh_command_dispatcher(f"https://github.com/{repository}/issues/42")
+
+    def run(cmd, *args, **kwargs):
+        argv = [str(c) for c in cmd]
+        if argv[:2] == ["gh", "project"] or argv[1:3] == ["api", "graphql"]:
+            return board.gh(argv)
+        return benign(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", run)
+    substrate_map = None if axes is None else ci.axis_labels.SubstrateMap(axes=axes)
+    monkeypatch.setattr(ci.axis_labels, "load_substrate_map", lambda *a, **kw: substrate_map)
+    monkeypatch.setattr(ci, "fire_hooks", lambda *a, **kw: None)
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    argv = ["create-issue.py", "--type", "task", "--title", "do a thing", "--parent", "1"]
+    monkeypatch.setattr(ci.sys, "argv", [*argv, "--capability-root", str(root), "--yes"])
+    return board
+
+
+@pytest.mark.parametrize(
+    "repository",
+    [
+        pytest.param("acme/repo", id="an-organisations-board"),
+        pytest.param("alice/repo", id="a-persons-board"),
+    ],
+)
+def test_a_filed_issues_card_gets_its_first_status(
+    ci, tmp_path, monkeypatch, capsys, repository
+) -> None:
+    """With no `gh.default_owner`, the board is found under the owner the new
+    issue's url names, the repository's (the README, the `gh:` block)."""
+    from tests.pm_board_world import LABEL_STATE
+
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=LABEL_STATE, repository=repository)
+
+    assert ci.main() == 0
+
+    assert board.adds == [42]
+    assert board.edits == [(42, "Todo")]
+    assert "[board] #42: Status set to 'Todo'" in capsys.readouterr().out
+    owner = repository.split("/", 1)[0]
+    reads = [argv for argv in board.calls if argv[1:2] == ["project"] and argv[2] != "item-edit"]
+    assert {argv[argv.index("--owner") + 1] for argv in reads} == {owner}
+
+
+def test_a_first_status_not_written_is_one_line_and_the_issue_stands(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    from tests.pm_board_world import LABEL_STATE
+
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=LABEL_STATE)
+    del board.options["Todo"]
+
+    assert ci.main() == 0
+
+    assert board.adds == [42] and board.edits == []
+    assert (
+        "[warn] #42: the board's Status was not set to 'Todo': the board's Status field has "
+        "no 'Todo' option; the issue is filed, and `sync-board` sets it"
+    ) in capsys.readouterr().err
+
+
+def test_the_first_status_is_the_states_source_where_the_board_carries_it(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """The map binds state to the board: its Status is the state's source
+    (DEC-062 point 5), and the new card's Status puts the issue where it is filed,
+    Todo with no milestone (#2271)."""
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=BOARD_AXES)
+
+    assert ci.main() == 0
+
+    assert board.adds == [42] and board.edits == [(42, "Todo")]
+    out = capsys.readouterr().out
+    assert "the state the issue is filed into, the state's source (DEC-062 point 5)" in out
+    assert "[board] #42: Status set to 'Todo'" in out
+
+
+def test_a_first_status_not_written_where_the_board_carries_the_state_says_so(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=BOARD_AXES)
+    board.fail_edits.add(42)
+
+    assert ci.main() == 0
+
+    err = capsys.readouterr().err
+    assert "the board carries its state, so its position cannot be read until its card" in err
+    assert "sync-board" not in err
+
+
+def test_no_first_status_is_written_where_the_state_degrades(ci, tmp_path, monkeypatch) -> None:
+    """A present map leaving the state out writes no Status (DEC-062 point 5)."""
+    axes = {axis: binding for axis, binding in BOARD_AXES.items() if axis != "state"}
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=axes)
+
+    assert ci.main() == 0
+
+    assert board.adds == [42] and board.edits == []
+    assert not [argv for argv in board.calls if argv[2:3] == ["field-list"]]
 
 
 def _hooks_module(ci):
@@ -2470,6 +2690,121 @@ def test_main_label_fallback_greenfield_rejects_unknown_workstream_value(
     assert ci.main() == 2
 
 
+# --- #1933: the workstreams file is the allowed set at filing ----------------
+# DEC-018 makes `project/workstreams.yaml` authoritative, and DEC-012 refuses a
+# value outside the allowed set. The legacy `workstreams:` key of config.yaml is
+# read only where the file is absent.
+
+_WORKSTREAMS_FILE = (
+    "schema_version: 1\n"
+    "workstreams:\n"
+    "  spyre:\n"
+    "    name: spyre\n"
+    "    status: active\n"
+    "  legacy:\n"
+    "    name: legacy\n"
+    "    status: deprecated\n"
+)
+
+
+def _stage_with_workstreams_file(tmp_path: Path, *, legacy: str) -> Path:
+    """A label-fallback tree whose workstreams live in the file, the config's key `legacy`."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    (root / "project" / "config.yaml").write_text(legacy, encoding="utf-8")
+    (root / "project" / "workstreams.yaml").write_text(_WORKSTREAMS_FILE, encoding="utf-8")
+    return root
+
+
+def _file_with_workstream(ci, monkeypatch, root: Path, workstream: str) -> tuple[int, dict]:
+    """Run create-issue main() for a Task in ``workstream``; return (rc, what it created)."""
+    monkeypatch.setattr(
+        ci.subprocess, "run", _gh_command_dispatcher("https://github.com/acme/repo/issues/69")
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys,
+        "argv",
+        [
+            "create-issue.py",
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
+            "--workstream",
+            workstream,
+            "--capability-root",
+            str(root),
+            "--yes",
+        ],
+    )
+    return ci.main(), created
+
+
+def test_filing_refuses_a_workstream_the_file_lacks_where_the_legacy_key_is_empty(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """The reported gap: an empty legacy key, as in project-kit, let any value through."""
+    root = _stage_with_workstreams_file(tmp_path, legacy="workstreams: []\n")
+    rc, created = _file_with_workstream(ci, monkeypatch, root, "no-such-workstream")
+    err = capsys.readouterr().err
+    assert rc == 2
+    assert created == {}
+    assert "'no-such-workstream' is not in project/workstreams.yaml" in err
+    assert "Its active workstreams: spyre." in err
+
+
+def test_filing_refuses_a_deprecated_workstream(ci, tmp_path, monkeypatch, capsys) -> None:
+    root = _stage_with_workstreams_file(tmp_path, legacy="workstreams: []\n")
+    rc, created = _file_with_workstream(ci, monkeypatch, root, "legacy")
+    assert rc == 2
+    assert created == {}
+    assert "'legacy' is deprecated in project/workstreams.yaml" in capsys.readouterr().err
+
+
+def test_filing_takes_an_active_workstream_of_the_file(ci, tmp_path, monkeypatch) -> None:
+    root = _stage_with_workstreams_file(tmp_path, legacy="workstreams: []\n")
+    rc, created = _file_with_workstream(ci, monkeypatch, root, "spyre")
+    assert rc == 0
+    assert "workstream:spyre" in created["labels"]
+
+
+def test_a_workstream_add_workstream_adds_is_taken_at_the_next_filing(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """The other half of the gap: the 0.5.0 migration left `[spyre]` in config.yaml,
+    and a workstream added since lives only in the file."""
+    root = _stage_with_workstreams_file(tmp_path, legacy="workstreams: [spyre]\n")
+    spec = importlib.util.spec_from_file_location(
+        "pm_add_workstream_for_filing", SCRIPT_PATH.parent / "add-workstream.py"
+    )
+    assert spec is not None and spec.loader is not None
+    add_workstream = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(add_workstream)
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(add_workstream.session_guard, "enforce", lambda **k: True)
+    monkeypatch.setattr(
+        add_workstream.sys,
+        "argv",
+        ["add-workstream.py", "quantum", "--skip-label", "--capability-root", str(root), "--yes"],
+    )
+    assert add_workstream.main() == 0
+
+    rc, created = _file_with_workstream(ci, monkeypatch, root, "quantum")
+    assert rc == 0
+    assert "workstream:quantum" in created["labels"]
+
+
 # --- #454: a title-prefix-bound axis writes NO label -----------------------
 # In brownfield with a `substrate-map.yaml` binding the `type` axis via
 # `title-prefix` (structural remap task:[Task], feature:[Feature], …),
@@ -2599,17 +2934,19 @@ def test_build_labels_map_binding_beats_the_board_flag(ci) -> None:
 
 
 def test_build_labels_board_carried_axis_writes_no_label_and_no_advisory(ci) -> None:
-    """The map is silent about `priority`, so the flag still governs and the board
-    carries it: no label — and NO "unsupported" advisory, because the axis is
-    SERVED. `resolve_write` returns DEGRADE for a board-carried axis exactly as it
-    does for an absent one, so a writer keying on the resolver alone would report a
-    served axis as unsupported (ADR-053 decision point 6)."""
+    """The map binds `priority` to the board, so the board carries it: no label —
+    and NO "unsupported" advisory, because the axis is SERVED. `resolve_write`
+    returns DEGRADE for a board-carried axis exactly as it does for an absent one,
+    so a writer keying on the resolver alone would report a served axis as
+    unsupported (ADR-053 decision point 6)."""
     labels, advisories, resolved = ci._build_labels(
         kind="feature",
         priority="High",
         workstream=None,
         config=_BOARD_CONFIG_ONLY,
-        substrate_map=None,
+        substrate_map=ci.axis_labels.SubstrateMap(
+            axes={"type": {"kit-label": True}, "priority": {"board": True}}
+        ),
     )
     assert not any(lbl.startswith("priority") or lbl == "P0" for lbl in labels)
     assert "priority" not in resolved
@@ -2889,3 +3226,243 @@ def test_body_first_line_parent_in_textual_mode_skips_link_and_refreshes_view(
     assert rc == 0
     assert link_calls == [], "native link must not fire under containment: textual"
     assert refreshed == [{"parent": 77, "mode": "textual"}]
+
+
+# --- the body rules, checked before anything is written (DEC-010, #1932) -----
+# create-issue checks a body against `body-format.yaml` as validate-issue does,
+# through the one reader they share (`_lib/body_rules`): a missing required
+# section or a heading of the first level refuses, before any write and under
+# --dry-run too; a rule that only warns is printed, and filing goes on.
+
+_COMPLETE_TASK_BODY = (
+    "Feature: #77\n\n"
+    "## What\n\nthe work\n\n"
+    "## Acceptance criteria\n\n- [ ] it holds\n\n"
+    "## Doc impact\n\nNo doc impact: internal only.\n"
+)
+_PARENT = ["--parent", "77"]
+
+
+def _stage_shipped_body_tree(tmp_path: Path) -> Path:
+    """The real-schema tree, with the shipped body-format.yaml and templates."""
+    root = _stage_real_schema_tree(tmp_path)
+    shipped = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
+    (root / "schemas" / "body-format.yaml").write_text(
+        (shipped / "schemas" / "body-format.yaml").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    for name in ("EPIC.md", "Feature.md", "Umbrella.md", "Task.md"):
+        (root / "templates" / name).write_text(
+            (shipped / "templates" / name).read_text(encoding="utf-8"), encoding="utf-8"
+        )
+    return root
+
+
+def test_a_body_missing_a_required_section_is_refused_and_nothing_written(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    body = _COMPLETE_TASK_BODY.replace("## Doc impact\n\nNo doc impact: internal only.\n", "")
+    rc, link_calls, created = _file_from_body(
+        ci, tmp_path, monkeypatch, body=body, extra=_PARENT, root=_stage_shipped_body_tree(tmp_path)
+    )
+    assert rc == 2
+    assert created == {}, "nothing may be filed"
+    assert link_calls == []
+    err = capsys.readouterr().err
+    assert "body.required-section" in err
+    assert "'## Doc impact'" in err
+
+
+def test_the_refusal_holds_under_dry_run(ci, tmp_path, monkeypatch, capsys) -> None:
+    """The failing example of #1932: a --dry-run of a body with no `## Doc impact`
+    exited 0 and printed its summary."""
+    body = _COMPLETE_TASK_BODY.replace("## Doc impact\n\nNo doc impact: internal only.\n", "")
+    rc, _link_calls, created = _file_from_body(
+        ci,
+        tmp_path,
+        monkeypatch,
+        body=body,
+        extra=[*_PARENT, "--dry-run"],
+        root=_stage_shipped_body_tree(tmp_path),
+    )
+    assert rc == 2
+    assert created == {}
+    out, err = capsys.readouterr()
+    assert "about to create issue" not in out
+    assert "'## Doc impact'" in err
+
+
+def test_a_heading_of_the_first_level_is_refused(ci, tmp_path, monkeypatch, capsys) -> None:
+    body = _COMPLETE_TASK_BODY.replace("## What", "# The task\n\n## What")
+    rc, _link_calls, created = _file_from_body(
+        ci, tmp_path, monkeypatch, body=body, extra=_PARENT, root=_stage_shipped_body_tree(tmp_path)
+    )
+    assert rc == 2
+    assert created == {}
+    assert "body.h1" in capsys.readouterr().err
+
+
+def test_each_rule_that_only_warns_is_printed_and_the_task_filed(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    body = _COMPLETE_TASK_BODY + "\nSee foo/bar.py:42.\n\n## Implementation\n\nstep one\n"
+    rc, _link_calls, created = _file_from_body(
+        ci, tmp_path, monkeypatch, body=body, extra=_PARENT, root=_stage_shipped_body_tree(tmp_path)
+    )
+    assert rc == 0
+    assert created["body"].startswith("Feature: #77")
+    err = capsys.readouterr().err
+    assert "[warning] body.file-line-refs" in err
+    assert "[warning] body.implementation-recipe" in err
+
+
+def test_a_complete_body_raises_no_body_rule(ci, tmp_path, monkeypatch, capsys) -> None:
+    rc, _link_calls, created = _file_from_body(
+        ci,
+        tmp_path,
+        monkeypatch,
+        body=_COMPLETE_TASK_BODY,
+        extra=_PARENT,
+        root=_stage_shipped_body_tree(tmp_path),
+    )
+    assert rc == 0
+    assert created
+    err = capsys.readouterr().err
+    for label in ("body.required-section", "body.h1", "body.file-line-refs"):
+        assert label not in err
+
+
+@pytest.mark.parametrize(
+    ("issue_type", "parent"),
+    [
+        ("epic", []),
+        ("feature", ["--parent", "9"]),
+        ("umbrella", ["--parent", "9"]),
+        ("task", ["--parent", "9"]),
+    ],
+)
+def test_each_shipped_template_composes_a_body_the_rules_accept(
+    ci, tmp_path, monkeypatch, capsys, issue_type, parent
+) -> None:
+    """A body stamped from a type's shipped template holds each section the type
+    requires, so the check refuses no filing that names no body file."""
+    root = _stage_shipped_body_tree(tmp_path)
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _dispatcher_with_milestone("https://github.com/acme/repo/issues/400"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+    monkeypatch.setattr(
+        ci.sys,
+        "argv",
+        [
+            "create-issue.py",
+            "--type",
+            issue_type,
+            "--title",
+            "a stamped body filed from the template",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
+            "--dry-run",
+            *parent,
+        ],
+    )
+    assert ci.main() == 0
+    err = capsys.readouterr().err
+    assert "body.required-section" not in err
+    assert "body.h1" not in err
+
+
+def test_the_children_view_is_rendered_from_issues_of_work_alone(ci, monkeypatch) -> None:
+    """#2139: the corpus the children view renders from comes through the one
+    read of issues, which leaves a state issue out, even one whose first line
+    names the parent (DEC-058 point 3)."""
+    rows = [
+        {"number": 7, "title": "[Task] child", "body": "Feature: #5\n## What\n"},
+        {
+            "number": 8,
+            "title": "Seat planner",
+            "body": "Feature: #5\n<!-- pkit:state-issue v=1 key=seat-planner -->\n",
+        },
+    ]
+
+    def fake_gh(args, config):
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows), stderr="")
+
+    seen: dict = {}
+
+    def fake_refresh(config, *, parent_number, corpus, containment_mode, titles=None):
+        seen.update(corpus=corpus, titles=titles)
+        return SimpleNamespace(ok=True, detail="children view refreshed")
+
+    monkeypatch.setattr(ci.containment, "_gh_call", fake_gh)
+    monkeypatch.setattr(ci.containment, "refresh_children_comment", fake_refresh)
+    ci._refresh_parent_children_view({}, parent_number=5, containment_mode="textual")
+    assert set(seen["corpus"]) == {7}
+    assert set(seen["titles"]) == {7}
+
+
+# ---- pools of workers (DEC-061 point 6) ----------------------------------------------
+
+
+def _file_pooled(ci, tmp_path, monkeypatch, *, yes: bool, pool_line: str = "Pool: alpha"):
+    """File a Task into milestone #6, whose description carries ``pool_line``,
+    in a topology that declares alpha; return (rc, every argv run)."""
+    from types import SimpleNamespace
+
+    root = _stage_filing_tree(tmp_path)
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, *args, **kwargs):
+        calls.append(list(cmd))
+        stdout = "https://github.com/acme/repo/issues/55\n" if "create" in cmd else ""
+        return SimpleNamespace(returncode=0, stdout=stdout, stderr="")
+
+    rows = [
+        {"number": 6, "title": "Sprint 6", "description": f"Close trigger: either\n{pool_line}"}
+    ]
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci.subprocess, "run", fake_run)
+    monkeypatch.setattr(ci.session_guard, "enforce", lambda **k: True)
+    milestone = SimpleNamespace(number=6, title="Sprint 6")
+    monkeypatch.setattr(ci, "resolve_milestone", lambda _a, _c: milestone)
+    monkeypatch.setattr(ci, "list_open_milestones", lambda _c, gh=None: rows)
+    monkeypatch.setattr(ci.pools, "declared_pools", lambda _r: (("alpha",), None))
+    monkeypatch.setattr(ci.pools.consent, "at_a_terminal", lambda: False)
+    argv = ["create-issue.py", "--type", "task", "--title", "File the authentication work now"]
+    argv += ["--milestone", "6", "--workstream", "spyre", "--capability-root", str(root)]
+    monkeypatch.setattr(ci.sys, "argv", [*argv, *(["--yes"] if yes else [])])
+    return ci.main(), calls
+
+
+def test_a_task_filed_into_a_pool_off_a_terminal_without_yes_is_refused(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    rc, calls = _file_pooled(ci, tmp_path, monkeypatch, yes=False)
+    assert rc == 1
+    assert not _issue_created(calls)
+    assert "Putting the new Task into the pool alpha is the person's to authorise" in (
+        capsys.readouterr().err
+    )
+
+
+def test_a_task_filed_into_a_pool_with_consent_logs_it_on_the_task(
+    ci, tmp_path, monkeypatch
+) -> None:
+    rc, calls = _file_pooled(ci, tmp_path, monkeypatch, yes=True)
+    assert rc == 0
+    comments = [c for c in calls if c[:3] == ["gh", "issue", "comment"]]
+    consent = [c[c.index("--body") + 1] for c in comments if "pool-consent" in c[-1]]
+    assert len(consent) == 1
+    assert "into milestone #6, pool none → alpha, with the person's consent" in consent[0]
+
+
+def test_a_task_filed_into_a_milestone_of_no_pool_asks_nothing(ci, tmp_path, monkeypatch) -> None:
+    rc, calls = _file_pooled(ci, tmp_path, monkeypatch, yes=False, pool_line="")
+    assert rc == 0
+    assert _issue_created(calls)
+    assert not any("pool-consent" in c[-1] for c in calls if c)

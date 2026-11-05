@@ -21,19 +21,20 @@ from project_kit import friction_check as fc
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor
 from project_kit.friction_git import DiffEntry, FrictionCheckError
-from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, T1, T2, document, friction_config, guide
 from tests.test_answer_files import CLI, GUIDE, T3, answer_path, answers, bare_guide, entry
 from tests.test_friction_revisit import DECISION, SOURCE_DOC, TEST_FILE, declare_linker, requirement
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    return make_adopter_repo()
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    return committed_adopter
 
 
 def _start(adopter: AdopterRepo, files: dict[str, str], mode: str = "warning") -> None:
-    """Commit the base state on `main` and branch `feature` off it."""
+    """Commit the base state on `main`, on the install the template committed, and branch
+    `feature` off it."""
     adopter.write({CONFIG: friction_config(mode=mode), **SOURCE, **files})
     adopter.commit("base", files=None)
     adopter.checkout("feature", create=True)
@@ -330,13 +331,13 @@ def test_a_revisit_entry_on_a_target_no_link_takes_fails(repo: AdopterRepo) -> N
 
 
 def test_a_revisit_entry_answers_where_its_reason_differs_from_the_one_it_replaces(
-    make_adopter_repo: MakeAdopterRepo,
+    committed_adopter: AdopterRepo,
 ) -> None:
     """A changed statement asks the requirement to revisit both targets. In an answer
     file, an entry answers its target where its reason differs from that of each entry
     it replaces (COR-062 point 5): the decision's does, and the test's, repeating `a0`'s
     words, writes nothing, so its target is not revisited."""
-    adopter = make_adopter_repo()
+    adopter = committed_adopter
     declare_linker(adopter.root)
     test, decision = Anchor("path", TEST_FILE), Anchor("path", DECISION)
     adopter.write(
@@ -392,14 +393,16 @@ def test_an_entry_naming_nothing_is_reported_never_failed(repo: AdopterRepo) -> 
     assert not result.failed
 
 
-def test_an_answer_file_on_an_artefact_its_block_answers_is_reported(repo: AdopterRepo) -> None:
-    """Until the move, an artefact whose block holds answers is read from its block, so an
-    answer file on it is not read: the check says so, and fails nothing for it."""
+def test_an_answer_file_is_read_beside_a_block_still_holding_answers(repo: AdopterRepo) -> None:
+    """At head an artefact's answers are read from the answer files alone, its block's
+    left to validation, which fails them (COR-062 points 1 and 10). The base is history, so
+    its block is read there: the file's revalidation is a new value against it."""
     _start(repo, {GUIDE: guide()}, mode="enforcing")
     repo.commit("answer beside the block", {answer_path("x"): answers(entry(at=T2))})
     result = _run(repo)
-    assert _kinds(result) == [("answer-file-ignored", GUIDE, None)]
-    assert not result.failed and result.answers == ()
+    assert _kinds(result) == [("revalidated", GUIDE, "unchanged")]
+    assert not result.failed
+    assert [(a.answer, a.file) for a in result.answers] == [("unchanged", answer_path("x"))]
 
 
 # --- moved out of the block ------------------------------------------------------------
@@ -559,12 +562,16 @@ def test_the_command_reads_the_own_head_from_the_environment(
 # --- dormant -------------------------------------------------------------------------------
 
 
-def test_without_answer_files_nothing_is_read_from_them(repo: AdopterRepo) -> None:
+def test_without_answer_files_a_block_still_holding_answers_is_refused(
+    repo: AdopterRepo,
+) -> None:
+    """The project's answers have not moved: the change check reads no block at head, so it
+    says so once and names the move, never reporting the answer as missing (COR-062 point
+    11)."""
     _start(repo, {GUIDE: guide()})
     repo.commit("change the CLI only", CLI_CHANGE)
-    result = _run(repo)
-    assert [kind for kind, *_ in _kinds(result)] == ["friction"]
-    assert result.moved == () and result.apart_at_tip == ()
+    with pytest.raises(FrictionCheckError, match="have not moved into answer files"):
+        _run(repo)
 
 
 def test_a_document_without_a_block_answer_and_no_answer_file_reads_as_before(

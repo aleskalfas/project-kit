@@ -347,6 +347,66 @@ def test_a_run_that_cannot_be_told_makes_the_run_full(tmp_path: Path, job: dict[
     assert decision.mode == sc.FULL
 
 
+def _parts(checks: dict[str, Any]) -> list[dict[str, Any]]:
+    """A run's jobs as the layout of ADR-078 has them: the deciding job, the parts, each
+    with steps of its own, and `checks`, whose two steps hold the two forms."""
+    part_steps = [{"name": "Set up job", "conclusion": "success"}]
+    return [
+        {**_job(name="decide the form"), "steps": part_steps},
+        {**_job(name="the remainder"), "steps": part_steps},
+        {**_job(name="slice 1 of 2"), "steps": part_steps},
+        {**_job(name="slice 2 of 2"), "steps": part_steps},
+        checks,
+    ]
+
+
+class PartsGitHub(GitHub):
+    """Answers each run's jobs as the layout of ADR-078 has them."""
+
+    def __call__(self, path: str) -> Any:
+        answer = super().__call__(path)
+        if isinstance(answer, dict) and "jobs" in answer:
+            return {"jobs": _parts(answer["jobs"][0])}
+        return answer
+
+
+@pytest.mark.parametrize(
+    ("checks", "mode"),
+    [
+        (FULL_PASSED, sc.SHORT),
+        (FULL_FAILED, sc.FULL),
+        (_job(full="failure", short="skipped", conclusion="failure"), sc.FULL),
+    ],
+    ids=["a-full-run-that-passed", "a-full-run-that-failed", "no-form-named"],
+)
+def test_a_run_whose_parts_ran_in_jobs_of_their_own_reads_by_its_checks_job(
+    tmp_path: Path, checks: dict[str, Any], mode: str
+) -> None:
+    """`checks` holds each form in a step named as the step that ran it in one job did,
+    so a run of either layout reads alike (ADR-078 point 4). A run whose deciding job
+    named no form ran the full form's step, which failed: a full run that did not pass."""
+    github = PartsGitHub(
+        *_pairs((_run(95, OLDER), {**checks, "head_sha": OLDER}), (_run(90), FULL_PASSED))
+    )
+
+    decision = _decide(tmp_path, github, Since(_since_document(since=OLDER)))
+
+    assert decision.mode == mode, decision.why
+    if mode == sc.SHORT:
+        assert decision.basis is not None and decision.basis.number == 95
+
+
+def test_a_short_run_of_parts_is_passed_over(tmp_path: Path) -> None:
+    github = PartsGitHub(
+        *_pairs((_run(95, OLDER), {**SHORT_PASSED, "head_sha": OLDER}), (_run(90), FULL_PASSED))
+    )
+
+    decision = _decide(tmp_path, github, Since())
+
+    assert decision.mode == sc.SHORT
+    assert decision.basis is not None and decision.basis.number == 90
+
+
 def test_no_full_run_on_the_pull_request_makes_the_run_full(tmp_path: Path) -> None:
     decision = _decide(tmp_path, _github((_run(95), SHORT_PASSED)), Since())
 
@@ -425,7 +485,7 @@ def test_a_rewritten_branch_makes_the_run_full(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "document",
     [
-        _since_document(version=2),
+        _since_document(version=1),
         _since_document(since=OLDER),
         _since_document(head=OLDER),
         {**_since_document(), "all_inside": "yes"},
@@ -746,6 +806,16 @@ def test_the_summary_escapes_control_characters(tmp_path: Path) -> None:
 
 # --- end to end, over a real history ------------------------------------------------
 
+#: An answer file the branch adds (COR-062 point 1), and its text revalidating the page.
+ANSWER = ".pkit/project/friction/answers/20261002T094012Z-0a1b2c3d.yaml"
+
+
+def _answer_file(at: str, because: str) -> str:
+    return (
+        f"answers:\n  - artefact: {PAGE}\n    revalidated:\n      at: {at}\n"
+        f"      outcome: unchanged\n      unchanged-because: {because}\n"
+    )
+
 
 @pytest.fixture
 def history(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRepo:
@@ -773,9 +843,14 @@ def test_over_a_real_history_answers_are_short_and_code_is_full(
     history: AdopterRepo, tmp_path: Path
 ) -> None:
     basis = history.commit("the change", {"src/cli/main.py": "print('cli, renamed')\n"})
-    answered = history.commit("answer again", {PAGE: guide(at=T2, because="renamed, still true")})
+    answered = history.commit("answer again", {ANSWER: _answer_file(T2, "renamed, still true")})
 
     assert _decide_over(history, tmp_path, basis, answered).mode == sc.SHORT
+
+    in_block = history.commit("answer in the block", {PAGE: guide(at=T2, because="in a block")})
+    decision = _decide_over(history, tmp_path, basis, in_block)
+    assert decision.mode == sc.FULL
+    assert PAGE in decision.why
 
     coded = history.commit("a fix", {"src/core/engine.py": "ENGINE = 2\n"})
     decision = _decide_over(history, tmp_path, basis, coded)
@@ -831,6 +906,6 @@ def test_the_tests_that_read_the_repository_s_answers_carry_the_mark() -> None:
         ),
         (
             "test_software_analysis_rule_set.py",
-            "test_the_judgement_rules_ship_proposed_declaring_no_check",
+            "test_the_judgement_rules_ship_accepted_declaring_no_check",
         ),
     } <= marked

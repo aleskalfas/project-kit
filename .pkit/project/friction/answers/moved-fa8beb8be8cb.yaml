@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-workstream
+    revalidated:
+      at: 2026-10-24T10:37:33Z
+      outcome: unchanged
+      unchanged-because: The library gains the reading of the workstreams file that filing makes, to refuse a workstream the file does not hold as active. What a workstream is, and the file that declares it, are unchanged.

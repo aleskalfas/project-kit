@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/living-docs/rule-sets/user.md#RS-USER-001
+    revalidated:
+      at: 2026-10-19T16:10:30Z
+      outcome: unchanged
+      unchanged-because: living-docs DEC-001 point 3 names the two rules a later major of LDOC brings, a successor of the rule on one home and a rule on text alternatives, and adds diagrams' text alternatives to what validation checks where its rule binds. Its sentence that the user space adds one rule, that reader paths stay unbroken, is as it was, so this rule holds.

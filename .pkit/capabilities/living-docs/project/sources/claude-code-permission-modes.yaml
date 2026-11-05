@@ -1,0 +1,4 @@
+# yaml-language-server: $schema=../../schemas/source.schema.json
+title: Claude Code permission modes
+url: https://code.claude.com/docs/en/permission-modes
+version: "2026-10-25"

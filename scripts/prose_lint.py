@@ -15,9 +15,10 @@ What the lint checks:
   point 2).
 - **Which text:** a finding is the change's when its unit holds text the change
   adds or moves. The unit is a sentence or a paragraph for `count`, a list item
-  with every block of it for `nesting`, and the match itself for the other types. A list item is the
-  change's too when the change alters its marker's line, as an indent does. A
-  break the change only sits beside is not the change's.
+  with every block of it for `nesting`, and the match itself for the other types.
+  For `nesting`, a list item is the change's too when the change alters its
+  marker's line, as an indent does. A break the change only sits beside is not
+  the change's.
 - **Prose or the whole file:** a `forbid` entry reads the prose, or with
   `in: file` every character of the artefact: code, headings, front matter,
   link targets, comments and the `pkit` container.
@@ -31,9 +32,15 @@ How it reads text follows RS-WRITE-005's *How* (`tech-docs/rule-sets/writing.md`
   a space or a line end. Each block ends one too: a paragraph, a list item, a
   table cell and a front-matter value.
 - Headings, bold labels, code blocks and the quoted example of an item labelled
-  "Breaks the rule" are not read, and nor is an HTML comment. For a count, a
-  bare URL and an HTML entity are tokens like any other, and a link's target
-  is part of its link's last token. No pattern searches them.
+  "Breaks the rule" are not read, and nor is an HTML comment. A bold label is
+  bold text that opens a block and ends in a colon or a full stop, such as a
+  variant's `**2a.**`. For a count, a bare URL and an HTML entity are tokens
+  like any other, and a link's target is part of its link's last token. No
+  pattern searches them.
+
+How it reads a paragraph follows RS-WRITE-007's *How*: a list item counts as
+one, with every block indented to its text, so a use case's step and variant
+are one each. A nested item is a paragraph of its own.
 
 How it reads a list's levels follows RS-WRITE-017's *How*: an item of a list
 that sits in no other list is at level one. An item, or any other block, is
@@ -548,7 +555,7 @@ def block_of(
     - An HTML comment is removed. A link's target, a bare URL and an HTML
       entity outside code are markup, and so is the whole of a link definition.
     - A bold label opening the block is removed: bold text that ends in a
-      colon, inside its marks or right after them.
+      colon or a full stop, inside its marks or right after them.
     - Under a label that opens "Breaks the rule", the quoted example is removed:
       from the first quotation mark after the label to the last.
     - Bold marks outside code and markup are removed.
@@ -629,6 +636,10 @@ def _mark_code(raw: str, removed: list[bool], code: list[bool]) -> None:
         i = close + run
 
 
+#: What a bold label ends in: a colon, or a full stop, as a variant's `**2a.**` does.
+_LABEL_ENDS = (":", ".")
+
+
 def _mark_label(raw: str, removed: list[bool], code: list[bool]) -> int:
     """Mark a bold label opening the block, and a broken rule's quoted example under it.
 
@@ -641,9 +652,9 @@ def _mark_label(raw: str, removed: list[bool], code: list[bool]) -> int:
     if close <= lead + 2:
         return 0
     inner = raw[lead + 2 : close]
-    if inner.rstrip().endswith(":"):
+    if inner.rstrip().endswith(_LABEL_ENDS):
         end = close + 2
-    elif raw.startswith(":", close + 2):
+    elif raw.startswith(_LABEL_ENDS, close + 2):
         end = close + 3
     else:
         return 0
@@ -1027,7 +1038,8 @@ def check_source(
 
     `mask` marks the added text (`added_mask`). A finding names the line its
     unit's first word is on. A `nesting` entry is checked once for each list
-    item (`_nesting`). An entry that reads the whole file is not read here
+    item (`_nesting`), and a count in a paragraph once for each paragraph
+    (`_paragraph_counts`). An entry that reads the whole file is not read here
     (`check_whole`).
     """
     blocks = source.blocks()
@@ -1036,9 +1048,11 @@ def check_source(
         if item.type == "nesting":
             lines = mask if marker_lines is None else marker_lines
             found += _nesting(item, blocks, source, mask, lines, path, location)
+        elif _in_paragraph(item):
+            found += _paragraph_counts(item, blocks, source, mask, path, location)
     for block in blocks:
         for item in entries:
-            if item.whole_file or item.type == "nesting":
+            if item.whole_file or item.type == "nesting" or _in_paragraph(item):
                 continue
             if block.cell and "cells" in item.exceptions:
                 continue
@@ -1048,6 +1062,64 @@ def check_source(
                 first = next((i for i in range(start, end) if not block.text[i].isspace()), start)
                 line = source.line(block.offsets[first])
                 found.append(Finding(path, line, item.rule, message, location or path))
+    return found
+
+
+def _in_paragraph(item: Entry) -> bool:
+    return item.type == "count" and item.fields["in"] == "paragraph"
+
+
+def paragraphs(blocks: Iterable[Block]) -> list[list[Block]]:
+    """The paragraphs of a source's blocks, in order, as RS-WRITE-007's *How* reads them.
+
+    A list item counts as one, with every block that carries its marker: a nested
+    item carries its own. Any other block is one alone. A link definition is none.
+    """
+    found: list[list[Block]] = []
+    items: dict[int, list[Block]] = {}
+    for block in blocks:
+        if block.definition:
+            continue
+        if block.marker < 0:
+            found.append([block])
+            continue
+        held = items.get(block.marker)
+        if held is None:
+            held = items[block.marker] = []
+            found.append(held)
+        held.append(block)
+    return found
+
+
+def _paragraph_counts(
+    item: Entry,
+    blocks: Sequence[Block],
+    source: Source,
+    mask: bytearray,
+    path: str,
+    location: str,
+) -> list[Finding]:
+    """Each paragraph over the words or sentences a count in a paragraph allows.
+
+    A paragraph is the change's when one of its blocks holds added text. Its
+    finding names the line of its first word, and quotes the block that holds it.
+    """
+    limit: int = item.fields["max"]
+    what = item.fields["count"]
+    found: list[Finding] = []
+    for held in paragraphs(blocks):
+        if held[0].cell and "cells" in item.exceptions:
+            continue
+        read = [(block, sentences(block, block.view(item.exceptions))) for block in held]
+        units = [unit for _block, of_block in read for unit in of_block]
+        total = len(units) if what == "sentences" else sum(unit.words for unit in units)
+        if total <= limit or not any(mask[o] for block in held for o in block.offsets):
+            continue
+        first, (opening, *_rest) = next((block, of_block) for block, of_block in read if of_block)
+        at = next(i for i in range(opening.start, opening.end) if not first.text[i].isspace())
+        message = f"a paragraph of {total} {what}, over {limit}: {_excerpt(first.text)}"
+        line = source.line(first.offsets[at])
+        found.append(Finding(path, line, item.rule, message, location or path))
     return found
 
 
@@ -1174,24 +1246,13 @@ def _links(item: Entry, block: Block, path: str, exists: Exists) -> Iterable[tup
 
 
 def _count(item: Entry, block: Block, view: str) -> Iterable[tuple[int, int, str]]:
+    """Each sentence of a block over the words a count in a sentence allows. A count in a
+    paragraph is read whole (`_paragraph_counts`)."""
     limit: int = item.fields["max"]
-    counted = sentences(block, view)
-    if item.fields["in"] == "sentence":
-        for unit in counted:
-            if unit.words > limit:
-                excerpt = _excerpt(block.text[unit.start : unit.end])
-                yield (
-                    unit.start,
-                    unit.end,
-                    f"a sentence of {unit.words} words, over {limit}: {excerpt}",
-                )
-        return
-    if item.fields["count"] == "words":
-        total, what = sum(unit.words for unit in counted), "words"
-    else:
-        total, what = len(counted), "sentences"
-    if total > limit:
-        yield 0, len(view), f"a paragraph of {total} {what}, over {limit}: {_excerpt(block.text)}"
+    for unit in sentences(block, view):
+        if unit.words > limit:
+            excerpt = _excerpt(block.text[unit.start : unit.end])
+            yield unit.start, unit.end, f"a sentence of {unit.words} words, over {limit}: {excerpt}"
 
 
 # A Markdown link or image, `[text](target)` with an optional title (refs.LINK_RE's shape).

@@ -1,0 +1,28 @@
+answers:
+  - artefact: tech-docs/analysis/core/domain-model/070-artefacts-and-friction.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - moved-cd4ddc4f6d5e.yaml
+    revalidated:
+      at: 2026-10-26T04:43:08Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "The view has an artefact carry its answers, which COR-062 moves to answer files, and names no debt answered apart. #1779 builds it and rewrites the view."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the view shows them carried by the artefact. #1779 builds it and rewrites the view."
+  - artefact: tech-docs/analysis/core/domain-model/060-changes-review-and-releases.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - moved-fb33f94647c6.yaml
+    revalidated:
+      at: 2026-10-26T04:43:12Z
+      outcome: updated

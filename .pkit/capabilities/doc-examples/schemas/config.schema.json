@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "config.schema.json",
+  "title": "Project configuration — doc-examples capability",
+  "description": "Formal shape of the project's `.pkit/capabilities/doc-examples/project/config.yaml`: how the run of the project's console examples is set up (doc-examples DEC-001 points 3 to 5) — the types whose documents are the pages, the setup step that builds the scratch project, the folders put before the caller's `PATH`, the variables every command is given, and the project's own placeholders. Whether each type is declared, whether a placeholder's name is in upper case, and whether two placeholders of the project's form share a name, is the capability's validator's (`pkit doc-examples validate`), not this schema's. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "binds_to": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Repo-relative globs matching the adopter-data files this schema validates (COR-023 fallback binding). Present on the capability-side carrier; absent from a project's file."
+    },
+    "pkit_schema": {
+      "type": "string",
+      "description": "Self-describing adopter-data binding (COR-023). Expected value: `doc-examples:config`."
+    },
+    "types": {
+      "description": "The types whose documents are the pages the run reads (DEC-001 point 3): a component's type in full, such as `living-docs:page`, or a bare type of the project's own that a place in `friction.places` gives. Without it, the pages are the documents of living-docs' page type, where living-docs is installed.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "setup": {
+      "description": "The commands that build the scratch project (DEC-001 point 4): run once for each run, in order, in one POSIX shell, in an empty folder with a home of its own. Each is given the repository's path in `DOC_EXAMPLES_REPOSITORY`. A command that fails stops the run before any page's command runs.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "path": {
+      "description": "The folders put before the caller's `PATH`, in order (DEC-001 point 4). A folder may name the run's folders by their placeholders, such as `<project>/.venv/bin`.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "environment": {
+      "description": "The variables every command is given, by name (DEC-001 point 4): a value, which may name the run's folders by their placeholders, or null for the caller's value of that name. The run writes a caller's value as the placeholder of the variable's name in upper case before comparing. The run's own settings, `HOME`, `TMPDIR`, `PATH`, `LANG`, `LC_ALL`, `TERM` and `NO_COLOR`, take the run's value whatever this names.",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "placeholders": {
+      "description": "The project's own placeholders (DEC-001 point 5), by name, each with the command that prints the one line of text it stands for, such as the product's version. Each command runs once, after the setup step, in the scratch project. A name is in upper case, apart from the capability's own placeholders.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

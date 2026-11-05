@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-storyboard
+    revalidated:
+      at: 2026-10-24T04:34:19Z
+      outcome: unchanged
+      unchanged-because: The storyboard stamp now refuses an agent whose files the project receives as synced copies. A storyboard still scripts a dialogue for the file that carries it out, so the definition holds.

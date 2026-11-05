@@ -58,12 +58,12 @@ The optional `Integration: integration/<slug>` pre-line on the issue body — se
 
 ### Capability-derived regions are a third, distinct class
 
-> **Refined by [DEC-043](DEC-043-ownership-substrate-selection.md) / [pkit:ADR-041].** The wording-vs-scope taxonomy above governs **human-or-PM-authored** body content. A **capability-derived region** — a clearly-fenced, do-not-edit block the capability *generates and regenerates* from a source of truth living elsewhere — is a **third class this record did not previously model**, and neither the wording nor the scope rule applies to it:
->
-> - It is **not wording** (no human authored it) and **not scope** (editing it authorises nothing — the spec of record lives in the source substrate, not the region).
-> - A human edit to it is **neither free nor gated**: it is simply **overwritten on the next render**, safely, because the region is derived and the read seam regenerates it from its spine. This is a *lighter* interaction than gated scope content — there is nothing to authorise and nothing to lose.
->
-> The motivating instance is the instance-ownership description mirror (DEC-043's derived owner-mirror, whose regeneration spine is the comment log; contract pinned in [pkit:ADR-041]). The rule for validate-body: **recognise a fenced capability-derived region and exempt it from both the wording and scope checks** — do not treat a stray human edit to it as a scope violation, and do not gate the capability's own regeneration of it.
+The wording-vs-scope taxonomy above governs **human-or-PM-authored** body content. A **capability-derived region** — a clearly-fenced, do-not-edit block the capability *generates and regenerates* from a source of truth living elsewhere — is a **third class**, and neither the wording nor the scope rule applies to it (refinement per [project-management:DEC-043-ownership-substrate-selection]):
+
+- It is **not wording** (no human authored it) and **not scope** (editing it authorises nothing — the spec of record lives in the source substrate, not the region).
+- A human edit to it is **neither free nor gated**: it is simply **overwritten on the next render**, safely, because the region is derived and the read seam regenerates it from its spine. This is a *lighter* interaction than gated scope content — there is nothing to authorise and nothing to lose.
+
+The motivating instance is the instance-ownership description mirror (DEC-043's derived owner-mirror, whose regeneration spine is the comment log; contract pinned in [pkit:ADR-041]). The rule for validate-body: **recognise a fenced capability-derived region and exempt it from both the wording and scope checks** — do not treat a stray human edit to it as a scope violation, and do not gate the capability's own regeneration of it.
 
 ## Rationale
 
@@ -81,8 +81,8 @@ GitHub's edit history captures the diff automatically; the project-manager's aud
 
 ## Implications
 
-- The validate-body skill distinguishes wording-only edits (proceed silently) from scope-changing edits (require author authorisation, record audit comment) at edit time. The classification uses the "would a future reader's behaviour change" test; ambiguous cases default to gated.
+- The validate-body skill distinguishes wording-only edits (proceed silently) from scope-changing edits (require author authorisation, record audit comment) at edit time, and exempts a fenced capability-derived region from both. The classification uses the "would a future reader's behaviour change" test; ambiguous cases default to gated.
 - Acceptance criteria and other checkbox sets are *current best statements*, not contracts frozen at filing.
 - Reviewers reading a body see the latest spec; GitHub's edit history shows how it got there; audit comments explain why.
 - The Implementer's reconciliation responsibility extends across levels — when filing Features under an EPIC, the Implementer should sanity-check that the Feature's acceptance criteria collectively contribute to the EPIC's success criteria, and surface drift to the PM if not.
-- This rule applies to all issue body content, not just checkboxes — narrative sections (`## Context`, `## Approach`) are also editable under the same wording-vs-scope distinction.
+- This rule applies to all the issue body content a person or the PM authors, not just checkboxes — narrative sections (`## Context`, `## Approach`) are also editable under the same wording-vs-scope distinction. A capability-derived region is the third class, outside it.

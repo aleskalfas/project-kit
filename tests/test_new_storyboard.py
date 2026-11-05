@@ -9,8 +9,11 @@ import click
 import pytest
 from click.testing import CliRunner
 
+from project_kit import capabilities as caps
 from project_kit import storyboards
 from project_kit.cli import main
+from project_kit.manifest import ORIGIN_INCUBATED_IN_REPO
+from tests.adopter_repo import MakeAdopterRepo
 
 
 @pytest.fixture
@@ -309,3 +312,102 @@ def test_cli_refuses_outside_pkit_tree(tmp_path: Path, monkeypatch: pytest.Monke
     runner = CliRunner()
     result = runner.invoke(main, ["new", "storyboard", "agent", "anything"])
     assert result.exit_code != 0
+
+
+# --- an agent the project receives as a synced copy (#1953) ----------
+
+
+def _new_storyboard(*args: str) -> tuple[int, str]:
+    """Run `pkit new storyboard agent <args>`; return (exit code, output)."""
+    result = CliRunner().invoke(main, ["--color", "never", "new", "storyboard", "agent", *args])
+    return result.exit_code, result.output
+
+
+def _as_methodology_source(root: Path) -> None:
+    """Give the tree the package source beside its `.pkit/`, which makes it the
+    methodology's source repository (`is_methodology_source` of the lifecycle)."""
+    package = root / "src" / "project_kit" / "__init__.py"
+    package.parent.mkdir(parents=True)
+    package.write_text("", encoding="utf-8")
+
+
+def _tree(root: Path) -> dict[str, bytes | None]:
+    """Every path under `root` outside `.git`, a file's bytes or None for a dir."""
+    return {
+        p.relative_to(root).as_posix(): (p.read_bytes() if p.is_file() else None)
+        for p in sorted(root.rglob("*"))
+        if ".git" not in p.relative_to(root).parts
+    }
+
+
+def _flat_agent_of(root: Path, capability: str, name: str) -> Path:
+    """A flat agent in an installed capability's `agents/` folder."""
+    target = root / ".pkit" / "capabilities" / capability / "agents" / f"{name}.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(f"---\nname: {name}\ndescription: t\n---\n\n# {name}\n", encoding="utf-8")
+    return target
+
+
+@pytest.mark.parametrize("args", [(), ("--namespace", "core"), ("--dry-run",)])
+def test_new_storyboard_refuses_a_core_agent_in_an_adopter_and_writes_nothing(
+    make_adopter_repo: MakeAdopterRepo, args: tuple[str, ...]
+) -> None:
+    """In a project that receives the methodology by sync, a core agent's folder is a
+    synced copy (core rule 1). Neither the storyboard nor the agent's move to folder
+    form is written, whether the agent is found or named, and a dry run refuses too."""
+    repo = make_adopter_repo()
+    _make_flat_agent(repo.root, "core", "ours")
+    before = _tree(repo.root)
+
+    code, output = _new_storyboard("ours", *args)
+
+    assert code == 1, output
+    assert _tree(repo.root) == before
+    assert "the core namespace arrives in this project as a synced copy" in output
+    assert "`pkit new agent project <name> --with-storyboard`" in output
+
+
+def test_new_storyboard_refuses_a_kit_shipped_capability_s_agent_in_an_adopter(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo(capabilities=("evidence",))
+    _flat_agent_of(repo.root, "evidence", "ours")
+    before = _tree(repo.root)
+
+    code, output = _new_storyboard("ours")
+
+    assert code == 1, output
+    assert _tree(repo.root) == before
+    assert "capability 'evidence' arrives in this project as a synced copy" in output
+
+
+def test_new_storyboard_stamps_a_core_agent_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Where the methodology is authored, a core agent's folder is its source, so the
+    storyboard stamps as before."""
+    repo = make_adopter_repo()
+    _as_methodology_source(repo.root)
+    _make_flat_agent(repo.root, "core", "ours")
+
+    code, output = _new_storyboard("ours")
+
+    assert code == 0, output
+    assert "Stamped: .pkit/agents/core/ours/storyboard.md" in output
+
+
+def test_new_storyboard_stamps_a_project_agent_and_an_incubated_capability_s_agent(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The project's own agents, and a capability it incubates, are never a synced copy
+    (COR-031 D1)."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    caps.set_capability_origin(repo.root, "evidence", ORIGIN_INCUBATED_IN_REPO)
+    _make_flat_agent(repo.root, "project", "ours")
+    _flat_agent_of(repo.root, "evidence", "theirs")
+
+    assert _new_storyboard("ours")[0] == 0
+    code, output = _new_storyboard("theirs")
+
+    assert code == 0, output
+    assert "Stamped: .pkit/capabilities/evidence/agents/theirs/storyboard.md" in output

@@ -173,7 +173,7 @@ A command of its own checks a change's records against its base, since validatio
 
 ### 10. What this record governs
 
-- **Decision records' points, and the record numbers a change takes** (point 8). Rules in rule sets have permanent ids already (COR-051 point 3). The methodology's operational rules for agents, and other documents that number their parts, keep their own numbering.
+- **Decision records' points, and the record numbers a change takes** (point 8). Rules in rule sets have permanent ids already (COR-051 point 3). Operational rules in a loaded set have permanent ids (refinement per COR-068). Operational rules kept as a plain file, and other documents that number their parts, keep their own numbering.
 - **Whether and how an anchor names one point** is the anchors-and-friction record's to decide (COR-050), not this record's.
 
 ## Rationale

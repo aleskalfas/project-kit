@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md
+    revalidated:
+      at: 2026-10-24T20:51:23Z
+      outcome: unchanged
+      unchanged-because: ACT-operator's needs say the system's CLI for its tool, and its opening names the operator where it said role. What it needs is the same, so this requirement holds.

@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-checkbox
+    revalidated:
+      at: 2026-10-25T02:59:21Z
+      outcome: unchanged
+      unchanged-because: The change gives the predicted-decision-id rule of body-format.yaml its id and the forms of id it reads. The checkbox rules the term describes are untouched.

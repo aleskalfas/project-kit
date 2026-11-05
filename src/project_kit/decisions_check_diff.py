@@ -73,16 +73,49 @@ record id. The findings on a record's points are errors, and the rest
 warnings (COR-058 point 8). A point id another change took is not followed to
 what anchors it: the command compares records only, and what an anchor on a
 point finds is the friction checks' to report (COR-050 point 7).
+
+**What it lists beside them** (`ChangedRecord`): each record accepted at the
+branch point that the change alters, or removes. Whether such an edit changes
+what the record decides is for whoever accepts it to judge (the decisions
+README, "Refining an accepted record"). The list fails nothing, and adds no
+finding to those COR-058 point 8 decides.
+
+- **Each point** the head adds, alters, retires or removes, with its title. A
+  point is compared by its text read without its id
+  (`RecordPoints.point_text`), whitespace folded, so a reflowed point is no
+  change. Every point that holds an id is compared, so an edit to the second
+  of two points sharing one is found. A point the head neither holds nor
+  retires is listed as removed, beside the error.
+- **Each field every point stands on** that changed (`GROUND_FIELDS`: its
+  title, status and supersession fields), by name.
+- **The text its points stand on**: its preamble, its Summary and the
+  Decision's text outside every point and stub (`RecordPoints.shared_extents`),
+  whitespace folded.
+- **Its other text**: the body with the points, the stubs and that text cut
+  out, such as its Context, Rationale and Implications.
+- **A record in list form** at either state is listed whole, since its points
+  are not told apart. A record with neither point headings nor a list has no
+  points, and is read as one with headings: its Decision is text its points
+  stand on.
+- **A record the change removes**, or one no head record pairs with, such as
+  one moved to another id-space, is listed as removed.
+
+The head is the working tree, or a commit named with `--head` whose records
+are read from git objects. Where the ADR folder is, and which records the
+project receives by sync, is read from the working tree either way. The JSON
+document (`as_json`) gives the findings and the list, for a component that
+shows the list, such as a landing command.
 """
 
 from __future__ import annotations
 
+import json
 from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 import click
 
@@ -132,28 +165,103 @@ class Record:
         return document_parts.body_first_line(self.text, body) + body.count("\n", 0, start)
 
 
+#: The status of a record that binds: the only one whose edits the list names.
+ACCEPTED = "accepted"
+
+#: How the head changed one point of an accepted record.
+ADDED = "added"
+ALTERED = "altered"
+RETIRED = "retired"
+#: A point the head neither holds nor retires, which the check also fails.
+REMOVED = "removed"
+
+#: The version of the JSON document (`as_json`).
+SCHEMA_VERSION = 1
+
+
+@dataclass(frozen=True)
+class PointChange:
+    """One point of an accepted record the change alters: its id, how, and its title, at
+    the head where it holds one, else at the branch point."""
+
+    id: str
+    change: str
+    title: str = ""
+
+
+@dataclass(frozen=True)
+class ChangedRecord:
+    """A record accepted at the branch point that the change alters, or removes.
+
+    - `points`: the points the head adds, alters, retires or removes.
+    - `fields`: those of `GROUND_FIELDS` that changed, by name.
+    - `shared`: the text its points stand on changed (`RecordPoints.shared_extents`).
+    - `other`: its other text changed, such as its Rationale or Implications.
+    - `list_form`: it is in list form at one state or both, so its points are not
+      told apart and it is listed whole.
+    - `removed`: the head holds no state of it."""
+
+    rel: str
+    name: str
+    points: tuple[PointChange, ...] = ()
+    fields: tuple[str, ...] = ()
+    shared: bool = False
+    other: bool = False
+    list_form: bool = False
+    removed: bool = False
+
+    def said(self) -> str:
+        """What the change does to it, as a line says it: `point 1 (Scope) altered, point 4
+        (Who) added and its status altered`."""
+        if self.removed:
+            return "removed"
+        if self.list_form:
+            return "altered as a whole, since its points are a list"
+        parts = [
+            f"point {point.id}" + (f" ({point.title})" if point.title else "") + f" {point.change}"
+            for point in self.points
+        ]
+        if self.fields:
+            parts.append(f"its {_and(self.fields)} altered")
+        if self.shared:
+            parts.append("the text its points stand on altered")
+        if self.other:
+            parts.append("its other text altered")
+        return _and(parts)
+
+
 @dataclass(frozen=True)
 class Report:
-    """What the check found: the base compared with, the records compared, and the findings,
-    errors first."""
+    """What the check found: the base compared with, the records compared, the findings,
+    errors first, and the accepted records the change alters."""
 
     base: str
     fork: str
     tip: str
     compared: int
     findings: tuple[Finding, ...]
+    changed: tuple[ChangedRecord, ...] = ()
 
     @property
     def errors(self) -> int:
         return sum(1 for finding in self.findings if finding.severity.fails)
 
 
-def head_records(target_root: Path) -> dict[str, Record]:
-    """The records the working tree holds, a record the project receives by sync left out."""
-    ownership = lifecycle_ownership.load_ownership(target_root)
-    records = _read(
-        working_tree.working_tree(target_root), decisions_validate.adr_folder(target_root)
+def head_records(target_root: Path, commit: str | None = None) -> dict[str, Record]:
+    """The records the working tree holds, or the commit `commit` names, read from git
+    objects, a record the project receives by sync left out."""
+    tree: _Tree = (
+        working_tree.working_tree(target_root)
+        if commit is None
+        else CommitTree(target_root, commit)
     )
+    return _own(target_root, _read(tree, decisions_validate.adr_folder(target_root)))
+
+
+def _own(target_root: Path, records: Mapping[str, Record]) -> dict[str, Record]:
+    """`records` without those the project receives by sync, which are refined where they
+    are authored (`is_synced_copy`)."""
+    ownership = lifecycle_ownership.load_ownership(target_root)
     return {
         rel: record
         for rel, record in records.items()
@@ -176,6 +284,7 @@ def check(
         if rel not in pairs or pairs[rel].text != record.text
     ]
     found: list[Finding] = []
+    changed: list[ChangedRecord] = []
     for record in compared:
         before = pairs.get(record.rel)
         own = _points(record, before)
@@ -184,9 +293,16 @@ def check(
             if before is None:
                 own += _taken_record(record, at_fork, at_tip, head, base)
         found += sorted(own, key=_by_id)  # stable: one id's findings keep their order
+        altered = _accepted_change(record, before) if before is not None else None
+        if altered is not None:
+            changed.append(altered)
+    paired = {before.rel for before in pairs.values()}
+    for rel, before in sorted(_own(target_root, at_fork).items()):
+        if rel not in paired and before.points.front_matter.get("status") == ACCEPTED:
+            changed.append(ChangedRecord(rel, before.name, removed=True))
     errors = [finding for finding in found if finding.severity.fails]
     warnings = [finding for finding in found if not finding.severity.fails]
-    return Report(base, fork, tip, len(compared), (*errors, *warnings))
+    return Report(base, fork, tip, len(compared), (*errors, *warnings), tuple(changed))
 
 
 # --- reading and pairing -----------------------------------------------------------
@@ -673,29 +789,183 @@ def _next_record_id(record: Record, *states: Mapping[str, Record]) -> str:
     return f"{prefix}-{max(numbers, default=0) + 1:0{len(digits)}d}"
 
 
+# --- the accepted records the change alters ---------------------------------------------
+
+
+def _accepted_change(record: Record, before: Record) -> ChangedRecord | None:
+    """What the change does to a record accepted at the branch point: each point the head
+    adds, alters, retires or removes, each field every point stands on that changed, and
+    whether the text its points stand on, or its other text, changed. None for a record not
+    accepted there, or one that reads the same at both states, whitespace folded."""
+    base, head = before.points, record.points
+    if base.front_matter.get("status") != ACCEPTED:
+        return None
+    fields = tuple(
+        key for key in record_points.GROUND_FIELDS if _field(base, key) != _field(head, key)
+    )
+    if base.in_list_form or head.in_list_form:
+        if not fields and _folded(base.body.text) == _folded(head.body.text):
+            return None
+        return ChangedRecord(record.rel, record.name, fields=fields, list_form=True)
+    points = _point_changes(base, head)
+    shared = _shared(base) != _shared(head)
+    other = _other(base) != _other(head)
+    if not (points or fields or shared or other):
+        return None
+    return ChangedRecord(record.rel, record.name, points, fields, shared, other)
+
+
+def _point_changes(base: RecordPoints, head: RecordPoints) -> tuple[PointChange, ...]:
+    """Each point the head adds, alters, retires or removes, by id. Every point holding an
+    id is compared, so an edit to one of two points sharing an id is found."""
+    was = _texts(base)
+    now = _texts(head)
+    found: list[PointChange] = []
+    for point_id in _sorted(was.keys() | now.keys()):
+        title = _title(head, point_id) or _title(base, point_id)
+        if point_id not in was:
+            found.append(PointChange(point_id, ADDED, title))
+        elif point_id not in now:
+            found.append(
+                PointChange(point_id, RETIRED if point_id in head.retired else REMOVED, title)
+            )
+        elif was[point_id] != now[point_id]:
+            found.append(PointChange(point_id, ALTERED, title))
+    return tuple(found)
+
+
+def _texts(points: RecordPoints) -> dict[str, tuple[str, ...]]:
+    """Each live id with the text of every point that holds it, read without its id."""
+    texts: dict[str, list[str]] = {}
+    for point in points.points:
+        texts.setdefault(point.id, []).append(points.point_text(point))
+    return {point_id: tuple(found) for point_id, found in texts.items()}
+
+
+def _title(points: RecordPoints, point_id: str) -> str:
+    found = points.point(point_id)
+    return found.title if found is not None else ""
+
+
+def _field(points: RecordPoints, key: str) -> str:
+    """A field every point stands on, as JSON with its keys sorted, so a reformatted field
+    is no change; "" where the record writes none."""
+    if key not in points.front_matter:
+        return ""
+    return json.dumps(points.front_matter[key], sort_keys=True, default=str, ensure_ascii=False)
+
+
+def _shared(points: RecordPoints) -> str:
+    """The text a record's points stand on (`RecordPoints.shared_extents`), folded."""
+    return _folded("\n".join(points.body.text_of(e) for e in points.shared_extents()))
+
+
+def _other(points: RecordPoints) -> str:
+    """A record's other text: its body with its points, its stubs and the text they stand
+    on cut out, folded."""
+    text = points.body.text
+    cut = [*(p.extent for p in (*points.points, *points.stubs)), *points.shared_extents()]
+    kept: list[str] = []
+    cursor = 0
+    for extent in sorted(cut, key=_start):
+        kept.append(text[cursor : extent.start])
+        cursor = max(cursor, extent.end)
+    kept.append(text[cursor:])
+    return _folded("".join(kept))
+
+
+def _folded(text: str) -> str:
+    return " ".join(text.split())
+
+
+def _start(extent: document_parts.Extent) -> int:
+    return extent.start
+
+
 # --- the report ------------------------------------------------------------------------
 
 
 def print_report(report: Report) -> None:
-    """The records compared and the base, then each finding, errors first."""
+    """The records compared and the base, then each finding, errors first, then the
+    accepted records the change alters."""
     where = f"{report.base} ({report.tip[:SHORT]}; this branch left it at {report.fork[:SHORT]})"
     if report.tip == report.fork:
         where = f"{report.base} (this branch left it at {report.fork[:SHORT]})"
     if not report.compared:
         click.echo(f"  No decision record differs from {where}; nothing to check.")
+    else:
+        errors = report.errors
+        click.echo(
+            "  "
+            + cli_render.style(
+                "strong",
+                f"Compared {report.compared} decision record(s) with {where}: {errors} error(s) "
+                f"and {len(report.findings) - errors} warning(s) in their numbering ({_cite()}).",
+            )
+        )
+        for finding in report.findings:
+            click.echo(f"    {finding.severity.value:<9}{finding.location}")
+            click.echo(f"      → {finding.message}")
+    if not report.changed:
         return
-    errors = report.errors
     click.echo(
         "  "
         + cli_render.style(
             "strong",
-            f"Compared {report.compared} decision record(s) with {where}: {errors} error(s) and "
-            f"{len(report.findings) - errors} warning(s) in their numbering ({_cite()}).",
+            f"{len(report.changed)} accepted record(s) the change alters or removes. Whether "
+            f"each edit changes what its record decides is for whoever accepts it to judge "
+            f'(the decisions README, "Refining an accepted record"):',
         )
     )
-    for finding in report.findings:
-        click.echo(f"    {finding.severity.value:<9}{finding.location}")
-        click.echo(f"      → {finding.message}")
+    for changed in report.changed:
+        click.echo(f"    {changed.name} (`{changed.rel}`): {changed.said()}")
+
+
+def as_json(report: Report | None, head: str | None) -> dict[str, Any]:
+    """The check's JSON document: the base, the head named with `--head` (None for the
+    working tree), the findings and the accepted records the change alters. `report` is
+    None where the head holds no record, so no base was read."""
+    if report is None:
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "base": None,
+            "head": head,
+            "compared": 0,
+            "errors": 0,
+            "findings": [],
+            "accepted_changes": [],
+        }
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "base": {"ref": report.base, "fork": report.fork, "tip": report.tip},
+        "head": head,
+        "compared": report.compared,
+        "errors": report.errors,
+        "findings": [
+            {
+                "severity": finding.severity.value,
+                "location": finding.location,
+                "message": finding.message,
+            }
+            for finding in report.findings
+        ],
+        "accepted_changes": [
+            {
+                "path": changed.rel,
+                "record": changed.name,
+                "points": [
+                    {"id": point.id, "change": point.change, "title": point.title}
+                    for point in changed.points
+                ],
+                "fields": list(changed.fields),
+                "shared_text": changed.shared,
+                "other_text": changed.other,
+                "list_form": changed.list_form,
+                "removed": changed.removed,
+            }
+            for changed in report.changed
+        ],
+    }
 
 
 # --- helpers ---------------------------------------------------------------------------

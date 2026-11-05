@@ -7,26 +7,46 @@
 # ///
 """Project-management capability — close-issue (verb-subject per DEC-020).
 
-Closes a GitHub issue via either path declared in workflow.yaml's
+Closes a GitHub issue via a path declared in workflow.yaml's
 `closure_triggers`:
 
   * `--mode=wont-do` (default when --reason supplied or when caller is
     explicit) — posts a closing comment with the reason, verifies the
     checkbox close-gate per DEC-007, then closes via `gh issue close`.
   * `--mode=pr-merge` — issue closure was triggered by GitHub's
-    `Closes #N` keyword. The script runs the cascade pass on parents
-    after the fact; it does not itself close the issue.
+    `Closes #N` keyword. The script reconciles the labels of the issue GitHub
+    closed and runs the cascade pass on parents after the fact; it does not
+    itself close the issue, and refuses an open one (#1968).
     With `--pr <M>` it DOES close an open leaf (a Task) whose work landed in
-    merged PR M without the PR naming it: PR M is verified merged, the
-    DEC-007 checkbox close-gate runs, the reference is posted as a comment,
-    and the issue closes as completed before the cascade pass (#1049).
+    merged PR M where GitHub did not close it (#1049): PR M is verified
+    merged and related to the issue — its body closes the issue, or it was
+    merged from the issue's branch, `<type>/<N>-<slug>` (DEC-013) — and the
+    relation found is named (#1968). The DEC-007 checkbox close-gate runs, the
+    reference is posted as a comment, and the issue closes as completed before
+    the cascade pass. A merged PR that does not relate to the issue is refused.
   * `--mode=cascade-eligibility-close` — closes a container (epic/feature/
     umbrella) once every child is closed AND its own checkboxes are ticked
     (the DEC-007 gate is non-skippable here). Implements the
     `cascade-eligibility-close` trigger this script previously only reported.
     Closes via `gh issue close --reason completed`.
+  * `--mode=completed --result <where>` — closes a Task whose work was not a
+    pull request, such as an audit, an investigation or a decision walked with
+    the user, as completed (DEC-006, the `manual-completed` trigger; #2282).
+    Every checkbox must be ticked (the DEC-007 gate is non-skippable here), and
+    the close comment names where the work's result lives, posted once across a
+    retry before the close. A Task in Todo, Backlog or In Progress closes; one
+    in Review has a pull request open, and is refused, as is a container.
+    Completed work is progress, so the forward cascade then brings each
+    ancestor behind up to In Progress, before the closure cascade runs.
 
-All three paths reconcile the issue's ``state:*`` labels after closing: any
+A won't-do close, a container's close, a leaf's close through ``--pr`` and a
+Task's close as completed are moves the person authorises, a hard reject when
+that is missing (DEC-006), as ``move-issue`` holds such a move: ``--yes``
+authorises the close, a terminal asks, and with neither the close is refused
+before anything is written (#1936, #1968). A dry run writes nothing and asks
+for no authorisation.
+
+Every path reconciles the issue's ``state:*`` labels after closing: any
 non-terminal label (``state:todo``, ``state:backlog``, ``state:in-progress``,
 ``state:review``) is removed and ``state:done`` is ensured.  The reconcile
 logic is shared with ``move-issue`` via ``_lib.labels.reconcile_state_labels_to_done``
@@ -36,12 +56,24 @@ After closing, every path runs the closure cascade (DEC-006), which reports and
 never closes: each parent issue in this repository the close gate counts the
 issue under — its native parent and the parent its first line names, as the
 containment seam resolves them (``containment.resolve_parent``) — is checked for
-close eligibility, and so is each Milestone the issue sits in (its native
-Milestone field, or a ``Milestone: [#<n>](../milestone/<n>)`` body ref). A
+close eligibility. A parent is reported eligible only once it has no open child
+left, by the process engine's fold over its children (``pkit process cascade``,
+the reading ``--mode=cascade-eligibility-close`` takes), and its own checkboxes
+are ticked, with the command that closes it; a parent with an open child is
+reported with that child named (#1937). Each Milestone the issue sits in (its
+native Milestone field, or a ``Milestone: [#<n>](../milestone/<n>)`` body ref)
+is checked too. A
 content-based (or ``either``) Milestone whose every child issue is closed is
 reported as eligible, with the ``close-milestone`` command that closes it
 (#414); a date-based one closes on its date, so its children closing makes
 nothing eligible.
+
+A completed close runs the forward cascade first (DEC-006), composing over
+``move-issue <N> --to done`` (``_lib.composed_move``) as ``done-work`` does after
+a merge: move-issue finds the Task at done, tells the completed close by the
+close reason the tracker reports, and brings each ancestor behind up to
+in-progress. A move-issue that exits non-zero is a warning naming the re-run,
+and the close stands. ``--no-cascade`` skips both cascades.
 
 Each close is a governed move to done, recorded with the process engine through
 the path ``move-issue`` records its moves through (``_lib.move_journal``,
@@ -54,15 +86,32 @@ milestone (Backlog, inferred), else — for an issue still open — Todo, read a
 it were open, so an issue GitHub closed when a pull request merged reads where
 the merge found it. An issue GitHub closed with neither a state label nor a
 milestone carries nothing of where it was, and its close is not recorded from a
-guessed Todo. An issue whose label already says done was moved there by whoever wrote
-the label — ``move-issue``, or an earlier run of this script — and is not
-recorded again, so a re-run adds nothing. Whether the move is recorded is the
+guessed Todo. An issue whose label already says done was moved there by whoever
+wrote the label — ``move-issue``, or an earlier run of this script — and is not
+recorded again, so a re-run adds nothing.
+
+Where the substrate map binds the state to the board, an open issue's card's
+Status says where it was (DEC-062 point 5, ``_lib.issue_position.read_status``).
+The card of an issue a merge closed says where the merge found it until the
+card is set to Done, so a pr-merge close reads it as the move's origin
+(``read_status_before_close``, ADR-074 point 4; #2307). The card cannot say
+whether that move is recorded already, so the journal does
+(``move_journal.owes_board_close``): the card is read only while the last move
+the journal records is not to Done, and not at all where no journal is kept.
+``move-issue``, which ``done-work`` runs first on its own issue, records that
+close as it sets the card to Done, and a re-run finds the move recorded. A
+Status that places the issue nowhere records no move, with a warning naming
+which of the four outcomes it is (DEC-051 point 6); a closed issue's card at
+Done is one, since it says nothing of where the work stood. On an open Task it
+refuses a completed close too, which could not tell a Task in Review.
+
+Whether the move is recorded is the
 engine's: it appends to the journal where the project keeps one and records
 nothing where it does not. A move the workflow does not declare for the issue's
-type — a Task closed from In Progress, say — is not handed to the engine, which
-does not read a transition's ``applies_to``; it, and a move the engine refuses
-because its gate does not pass, are warned about as a direct move's refusal
-is, and the close stands.
+type — a container whose label was set to Review by hand, say — is not handed to
+the engine, which does not read a transition's ``applies_to``; it, and a move
+the engine refuses because its gate does not pass, are warned about as a direct
+move's refusal is, and the close stands.
 
 The ``state`` write is RESOLVED through the substrate-map seam (ADR-026
 sole-constructor + fail-closed), the same as ``move-issue``: greenfield (no
@@ -71,6 +120,21 @@ binds ``state`` to a ``derive`` predicate (or marks it ``unsupported`` / omits
 it) writes NO kit ``state:*`` label — the open/closed substrate carries terminal
 state, so closing the issue *is* the state write (ADR-026 §5). The map is loaded
 once in :func:`main` and threaded into every reconcile call.
+
+With an instance id set (`set-instance`, DEC-035 point 1), each path releases
+the issue's instance ownership once it has closed the issue, before the
+closure cascade (DEC-035 point 4), through `_lib/instance_claims`: whichever
+instance owned it, every owner is cleared, except a comment marker another
+account's clone wrote, which is left for that account's clone to release. A
+container that closes through `--mode=cascade-eligibility-close` is released
+here too, so the engine's fold stays realm-blind (DEC-035 point 8). `done-work`
+releases through this script, which it runs for each issue its merge closed. A
+release that fails is a warning, and the close stands. A dry run, and a run
+that finds the issue already closed in won't-do or cascade mode, release
+nothing. With no id set, nothing of this runs. In a project with a topology of
+seats, a clone in a seat releases as a clone with an id does (DEC-059 point 9).
+Its seat is confirmed on the seat's state issue first (DEC-059 point 6). Where
+it cannot be, the issue still closes, and nothing is released, with a warning.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -83,10 +147,14 @@ Or via the dispatcher (per COR-021):
 Exit codes:
   0  closed (or cascade reported)
   1  membership refusal / authorisation refusal / checkbox close-gate refusal /
-     `--pr` names a PR that is not merged
+     `--pr` names a PR that is not merged or does not relate to the issue /
+     pr-merge mode without `--pr` on an open issue / completed mode on a Task
+     in Review, or on one whose card's Status places it nowhere where the
+     board carries the state
   2  usage error (issue or PR not found; mode contradicts state; `--pr` outside
-     pr-merge mode or on a non-leaf)
-  3  gh failure
+     pr-merge mode or on a non-leaf; `--result` outside completed mode, or
+     missing in it; completed mode on anything but a Task)
+  3  gh failure, a board that carries the state and cannot be read included
 """  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
@@ -107,8 +175,12 @@ from _lib import audit as _audit
 from _lib import (
     axis_labels,
     bootstrap_gate,
+    composed_move,
     containment,
     engine_said,
+    instance_claims,
+    issue_branch,
+    issue_position,
     session_guard,
 )
 from _lib import lifecycle_inference as infer
@@ -139,20 +211,31 @@ from _lib.move_journal import (
     PR_MERGE_CLOSE,
     PROCESS_ADDRESS,
     journal_move,
+    owes_board_close,
     pr_merge_close_reason,
+    read_journal,
     report_unrecorded,
 )
+from _lib.pr_validation import extract_closing_issues
 from _lib.structural_type import infer_structural_type
 
-VALID_MODES = ("wont-do", "pr-merge", "cascade-eligibility-close")
+VALID_MODES = ("wont-do", "pr-merge", "cascade-eligibility-close", "completed")
 DEFAULT_MODE = "wont-do"
 
 # The lifecycle state every close moves an issue to.
 DONE_STATE = "done"
 
+# The state a Task with a pull request open is in: a completed close refuses it,
+# since such a Task closes through its pull request's merge (DEC-006).
+REVIEW_STATE = "review"
+
 # The writer name in the idempotency key of the `--pr` close comment, so a
 # retry after a failed close does not post the reference twice (`_lib.audit`).
 PR_MERGE_CLOSE_WRITER = "close-issue-pr-merge"
+
+# The writer name in the idempotency key of the completed close's comment, so a
+# retry after a failed close does not post the result twice.
+COMPLETED_CLOSE_WRITER = "close-issue-completed"
 
 
 def main() -> int:
@@ -175,11 +258,14 @@ def main() -> int:
         help=(
             f"Closure mode. Default: {DEFAULT_MODE}. "
             "`wont-do` posts a closing comment + closes; "
-            "`pr-merge` is the cascade-only hook after GitHub-native close "
-            "(with --pr, it closes an open leaf itself); "
+            "`pr-merge` is the cascade-only hook after GitHub-native close, "
+            "refusing an open issue (with --pr, it closes an open leaf itself); "
             "`cascade-eligibility-close` closes a container (epic/feature/"
             "umbrella) once all children are closed and its own checkboxes "
-            "are ticked (non-skippable gate)."
+            "are ticked (non-skippable gate); "
+            "`completed` closes a Task whose work was not a pull request as "
+            "completed, naming where its result lives (--result), once every "
+            "checkbox is ticked (non-skippable gate)."
         ),
     )
     parser.add_argument(
@@ -188,18 +274,31 @@ def main() -> int:
         default=None,
         metavar="M",
         help=(
-            "pr-merge mode only: the merged PR that completed this issue "
-            "without naming it in a `Closes #N` line. An OPEN leaf (a Task) is "
-            "closed as completed — PR M is verified merged, the DEC-007 "
+            "pr-merge mode only: the merged PR that completed this issue where "
+            "GitHub did not close it. An OPEN leaf (a Task) is closed as "
+            "completed only where PR M is merged and relates to it — its body "
+            "closes the issue, or it was merged from the issue's branch "
+            "(`<type>/<N>-<slug>`); the relation found is named, the DEC-007 "
             "checkbox close-gate runs, the reference is posted as a comment, "
             "then the closure cascade runs. Without --pr, pr-merge mode only "
-            "reconciles labels after GitHub's own close."
+            "reconciles labels after GitHub's own close, and refuses an open "
+            "issue."
         ),
     )
     parser.add_argument(
         "--reason",
         default=None,
         help=("Closing reason recorded in the closing comment. Required in wont-do mode."),
+    )
+    parser.add_argument(
+        "--result",
+        default=None,
+        metavar="WHERE",
+        help=(
+            "completed mode only, and required there: where the work's result "
+            "lives, such as an issue, a record or a comment. Posted in the close "
+            "comment before the Task closes as completed (DEC-006)."
+        ),
     )
     parser.add_argument(
         "--skip-checkbox-gate",
@@ -212,7 +311,10 @@ def main() -> int:
     parser.add_argument(
         "--no-cascade",
         action="store_true",
-        help="Skip the closure-cascade walk on parent issues.",
+        help=(
+            "Skip the closure-cascade walk on parent issues, and the forward "
+            "cascade a completed close runs before it."
+        ),
     )
     parser.add_argument(
         "--capability-root",
@@ -231,7 +333,12 @@ def main() -> int:
     parser.add_argument(
         "--yes",
         action="store_true",
-        help="Skip the confirmation prompt.",
+        help=(
+            "Skip the confirmation prompt. A won't-do close, a container's "
+            "close, a leaf's close through --pr and a Task's close as "
+            "completed are the person's to authorise (DEC-006): with no "
+            "terminal to ask at, they are refused without --yes."
+        ),
     )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
@@ -239,6 +346,19 @@ def main() -> int:
     if args.pr is not None and args.mode != "pr-merge":
         print(
             f"error: --pr applies to --mode=pr-merge only (got --mode={args.mode}).",
+            file=sys.stderr,
+        )
+        return 2
+    if args.result is not None and args.mode != "completed":
+        print(
+            f"error: --result applies to --mode=completed only (got --mode={args.mode}).",
+            file=sys.stderr,
+        )
+        return 2
+    if args.mode == "completed" and not (args.result or "").strip():
+        print(
+            "error: --result is required in completed mode: name where the work's "
+            "result lives, such as an issue, a record or a comment.",
             file=sys.stderr,
         )
         return 2
@@ -294,23 +414,46 @@ def main() -> int:
         for lbl in (issue.get("labels") or [])
     ]
     structural_type = infer_structural_type(title, issue_types, classification=classification)
+    workflow = _read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader)
     # The move to done each path below records once it has closed the issue
-    # (#1231), read before anything is written.
+    # (#1231), read before anything is written. Where the map binds the state to
+    # the board, the open issue's card's Status says where it was (DEC-062 point
+    # 5), and so does the card of an issue a merge closed (#2307), read here once.
     close_move = _CloseMove.read(
         args.issue_number,
         issue,
         labels,
         structural_type,
-        workflow=_read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader),
+        workflow=workflow,
         substrate_map=substrate_map,
         actor=invoker.github_login,
+        status=_card_before_close(
+            args, issue, state, config=config, substrate_map=substrate_map, workflow=workflow
+        ),
     )
+
+    # Instance ownership (DEC-035): None unless this clone set an instance id,
+    # or holds a seat of a topology (DEC-059), and then nothing below changes. A
+    # seat that cannot be confirmed releases nothing, and the close goes on: the
+    # release is the instance's write, and the close is not (DEC-059 point 6).
+    try:
+        clone = instance_claims.this_clone(
+            capability_root, invoker.github_login, config, dry_run=args.dry_run
+        )
+    except instance_claims.Unconfirmed as exc:
+        print(
+            f"[warn] ownership: #{args.issue_number} is closed without a release: {exc}",
+            file=sys.stderr,
+        )
+        clone = None
 
     print(f"close-issue: #{args.issue_number}")
     print(f"  title:        {title}")
     print(f"  type:         {structural_type or '<unrecognised prefix>'}")
     print(f"  current state: {state}")
     print(f"  mode:         {args.mode}")
+    if clone is not None:
+        print(f"  ownership:    {instance_claims.release_plan(clone)}")
 
     if args.mode == "wont-do":
         if state == "closed":
@@ -343,11 +486,13 @@ def main() -> int:
         if args.dry_run:
             print("\n[dry-run] gh would be invoked; nothing written.")
             return 0
-        if not args.yes and sys.stdin.isatty():
-            reply = input("Proceed? [y/N] ").strip().lower()
-            if reply not in ("y", "yes"):
-                print("aborted.", file=sys.stderr)
-                return 0
+        held = _authorise(
+            args.yes,
+            close=f"closing #{args.issue_number} as won't do",
+            prompt="Proceed? [y/N] ",
+        )
+        if held is not None:
+            return held
 
         comment_body = (
             f"[wont-do close] {args.reason}\n\n"
@@ -389,28 +534,51 @@ def main() -> int:
         if rc is not None:
             return rc
 
+    elif args.mode == "completed":
+        # A Task whose work was not a pull request closes as completed, naming
+        # where its result lives (DEC-006, `manual-completed`).
+        rc = _close_completed(
+            args,
+            structural_type=structural_type,
+            state=state,
+            body=body,
+            labels=labels,
+            config=config,
+            substrate_map=substrate_map,
+            close_move=close_move,
+        )
+        if rc is not None:
+            return rc
+
     elif args.mode == "pr-merge":
         # In pr-merge mode the issue is expected to be already-closed
         # via GitHub's Closes #N. The script's job is the cascade pass
         # plus label reconciliation (GitHub's auto-close does not touch
         # state:* labels).
+        if state != "closed":
+            # No merged PR is named, so nothing says this issue's work landed:
+            # a move to Done is the merge's that completed it, a person's close
+            # of a Task completed without one, or a person's won't-do (DEC-006).
+            # Refused before anything is written (#1968).
+            lines = [
+                f"\n[refused] #{args.issue_number} is open, and pr-merge mode without "
+                "--pr moves no open issue to Done: it reconciles the labels of an "
+                "issue GitHub closed as a PR merged.",
+                "          → If a merged PR completed it, re-run with --pr <M>, naming that PR.",
+            ]
+            if structural_type == "task":
+                lines.append(_completed_remedy(args.issue_number))
+            lines.append(
+                "          → Otherwise close it as won't do, which asks the person: "
+                f'close-issue {args.issue_number} --reason "<R>".'
+            )
+            print("\n".join(lines), file=sys.stderr)
+            return 1
         if args.pr is not None:
             print(
                 f"\n[noop] #{args.issue_number} is already closed; --pr is not "
                 "needed — reconciling labels only."
             )
-        elif state != "closed":
-            print(
-                "\n[warn] pr-merge mode but issue is still open. "
-                "GitHub's Closes #N should have closed it on PR merge. "
-                "Re-check the merged PR's body for `Closes #N`; if the PR did "
-                "not name this issue, re-run with --pr <M> to close it through "
-                "that PR.",
-                file=sys.stderr,
-            )
-        # Reconcile state:* labels regardless of open/closed state warning
-        # above — the caller explicitly indicated a PR-merge close, so the
-        # terminal label must be correct.
         if not args.dry_run:
             if not reconcile_state_labels_to_done(
                 args.issue_number,
@@ -423,6 +591,9 @@ def main() -> int:
             # GitHub closed the issue and wrote no label: the move to done is
             # recorded here, from where the merge found it — unless its label
             # already says done (done-work's move-issue wrote it, or a re-run).
+            # Where the map binds the state to the board, the card read above
+            # says where the merge found it, and the journal whether the move
+            # is recorded already (`_card_before_close`).
             close_move.record(
                 pr_merge_close_reason(args.pr, closed_by_merge=True)
                 if args.pr is not None
@@ -506,11 +677,13 @@ def main() -> int:
                 "gh would close with --reason completed."
             )
             return 0
-        if not args.yes and sys.stdin.isatty():
-            reply = input("Close cascade-eligible container? [y/N] ").strip().lower()
-            if reply not in ("y", "yes"):
-                print("aborted.", file=sys.stderr)
-                return 0
+        held = _authorise(
+            args.yes,
+            close=f"closing container #{args.issue_number}",
+            prompt="Close cascade-eligible container? [y/N] ",
+        )
+        if held is not None:
+            return held
 
         comment_body = (
             "[cascade-eligibility close] all children closed and the container's "
@@ -533,6 +706,18 @@ def main() -> int:
             return 3
         close_move.record("cascade-eligibility close: every child closed and every checkbox ticked")
         print(f"\n[ok] closed #{args.issue_number} (cascade-eligibility, completed).")
+
+    # Release the closed issue's instance ownership (DEC-035 point 4). Every path
+    # that reaches here closed the issue, or found it closed by a merge, except
+    # a pr-merge dry run, which writes nothing.
+    if clone is not None and not args.dry_run:
+        instance_claims.say(instance_claims.release(args.issue_number, clone, config))
+
+    # Forward cascade (DEC-006), ahead of the closure cascade: a completed close
+    # is progress, so each ancestor behind the Task is brought level. A dry run
+    # of a completed close has returned before here.
+    if args.mode == "completed" and not args.no_cascade:
+        _bring_ancestors_level(args)
 
     # Closure cascade — semi-automatic per DEC-006: it reports eligibility and
     # closes nothing, over the parent issues and the Milestones alike.
@@ -570,6 +755,38 @@ def main() -> int:
     return 0
 
 
+# ---- the person's authorisation (#1936) ------------------------------
+
+
+def _authorise(yes: bool, *, close: str, prompt: str) -> int | None:
+    """Ask for the person's authorisation of a close DEC-006 holds for them.
+
+    A won't-do close (Backlog/Todo → Done), a container's close (In Progress
+    → Done), a leaf's close through the merged PR ``--pr`` names (#1968) and a
+    Task's close as completed without a pull request (#2282) are
+    user-authorised, a hard reject when the authorisation is missing — as
+    ``move-issue`` holds such a move. ``--yes`` gives it; at a terminal the
+    person is asked. With neither, the close is refused before anything is
+    written. Returns None once authorised, else the exit code to stop with: 1
+    for the refusal, 0 where the person declined at the prompt.
+    """
+    if yes:
+        return None
+    if not sys.stdin.isatty():
+        print(
+            f"[refused] {close} is user-authorised (hard-reject on violation).\n"
+            "          → Pass --yes to confirm the authorisation, "
+            "or re-run from an interactive shell.",
+            file=sys.stderr,
+        )
+        return 1
+    reply = input(prompt).strip().lower()
+    if reply not in ("y", "yes"):
+        print("aborted.", file=sys.stderr)
+        return 0
+    return None
+
+
 # ---- pr-merge close through a named PR (#1049) -----------------------
 
 
@@ -585,12 +802,14 @@ def _close_leaf_through_pr(
 ) -> int | None:
     """Close an open leaf as completed through merged PR ``args.pr``.
 
-    The `pr-merge-into-main` closure trigger, for a leaf whose PR closed another
-    issue and never named this one. Refuses a container (containers close
-    through the cascade), a PR that is not merged, and — as every closure path
-    does — an unticked checkbox (DEC-007). Returns the exit code to stop with,
-    or None once the issue is closed, labelled and ``close_move`` recorded, so
-    the caller runs the closure cascade and the after-close hooks.
+    The `pr-merge-into-main` closure trigger, for a leaf GitHub did not close
+    as the PR merged — a base it does not close issues on, or a PR from the
+    leaf's branch whose body does not name it. Refuses a container (containers
+    close through the cascade), a PR that is not merged, a merged PR that does
+    not relate to the leaf (:func:`_relation`, #1968), and — as every closure
+    path does — an unticked checkbox (DEC-007). Returns the exit code to stop
+    with, or None once the issue is closed, labelled and ``close_move``
+    recorded, so the caller runs the closure cascade and the after-close hooks.
     """
     issue_number = args.issue_number
     if structural_type != "task":
@@ -615,6 +834,23 @@ def _close_leaf_through_pr(
             file=sys.stderr,
         )
         return 1
+    relation = _relation(pr, issue_number)
+    if relation is None:
+        head = str(pr.get("headRefName") or "")
+        branch = f"its branch `{head}`" if head else "its branch"
+        print(
+            f"\n[refused] PR #{args.pr} has merged, but nothing in it relates it to "
+            f"#{issue_number}: its body does not close #{issue_number}, and {branch} is "
+            f"not #{issue_number}'s (`<type>/{issue_number}-<slug>`). A leaf closes as "
+            "completed only through the merged PR that completed it.\n"
+            f"          → If PR #{args.pr} did, name #{issue_number} in it "
+            f"(`edit-pr {args.pr} --closes {issue_number}`), then run this again.\n"
+            f"{_completed_remedy(issue_number)}\n"
+            "          → Otherwise close it as won't do, which asks the person: "
+            f'close-issue {issue_number} --reason "<R>".',
+            file=sys.stderr,
+        )
+        return 1
 
     unticked = [] if args.skip_checkbox_gate else _unticked_boxes(body)
     if unticked:
@@ -631,7 +867,7 @@ def _close_leaf_through_pr(
         )
         return 1
 
-    print(f"\ncompleted by: PR #{args.pr} (merged)")
+    print(f"\ncompleted by: PR #{args.pr} (merged), {relation}")
     if args.dry_run:
         print(
             "\n[dry-run] would comment the reference, close "
@@ -639,13 +875,15 @@ def _close_leaf_through_pr(
             "written."
         )
         return 0
-    if not args.yes and sys.stdin.isatty():
-        reply = input("Proceed? [y/N] ").strip().lower()
-        if reply not in ("y", "yes"):
-            print("aborted.", file=sys.stderr)
-            return 0
+    held = _authorise(
+        args.yes,
+        close=f"closing #{issue_number} as completed through PR #{args.pr}",
+        prompt="Proceed? [y/N] ",
+    )
+    if held is not None:
+        return held
 
-    key, comment_body = _pr_merge_close_comment(args.pr)
+    key, comment_body = _pr_merge_close_comment(args.pr, relation)
     if not post_audit_once("issue", issue_number, key, comment_body, config, run=gh_run):
         return 3
     if not _gh_close_issue(issue_number, reason="completed", config=config):
@@ -668,15 +906,35 @@ def _pr_is_merged(pr: dict) -> bool:
     return str(pr.get("state") or "").upper() == "MERGED" or bool(pr.get("mergedAt"))
 
 
-def _pr_merge_close_comment(pr_number: int) -> tuple[str, str]:
-    """The reference comment a `--pr` close posts, and its idempotency key.
+def _relation(pr: dict, issue_number: int) -> str | None:
+    """What relates merged PR ``pr`` to the issue, in words, or None (#1968).
+
+    A PR relates to an issue where its body closes it — the closing references
+    as `open-pr`, `validate-pr` and `done-work` read them — or where it was
+    merged from the issue's branch, `<type>/<N>-<slug>` (DEC-013), the shape the
+    verbs find an issue's branch by. Both found, both are named. A merged PR
+    with neither records nothing of having completed the issue, so it is no
+    evidence for closing it as completed.
+    """
+    found: list[str] = []
+    if issue_number in extract_closing_issues(str(pr.get("body") or "")):
+        found.append(f"whose body closes #{issue_number}")
+    head = str(pr.get("headRefName") or "")
+    if issue_branch.is_issue_branch(head, issue_number):
+        found.append(f"whose branch `{head}` is #{issue_number}'s")
+    return " and ".join(found) or None
+
+
+def _pr_merge_close_comment(pr_number: int, relation: str) -> tuple[str, str]:
+    """The reference comment a `--pr` close posts, naming the relation found,
+    and its idempotency key.
 
     The key makes the comment retry-safe: a run that posted it and then failed
     to close finds it on the re-run and does not post it again.
     """
     key = _audit.audit_key(PR_MERGE_CLOSE_WRITER, str(pr_number))
     body = (
-        f"[pr-merge close] completed by merged PR #{pr_number}.\n\n"
+        f"[pr-merge close] completed by merged PR #{pr_number}, {relation}.\n\n"
         "Closed via `pkit project-management close-issue --mode=pr-merge "
         f"--pr {pr_number}` "
         "(per [project-management:DEC-006-state-machine-and-cascade]).\n"
@@ -685,7 +943,208 @@ def _pr_merge_close_comment(pr_number: int) -> tuple[str, str]:
     return key, body
 
 
+def _completed_remedy(issue_number: int) -> str:
+    """The remedy line naming the completed close, for a refusal that leaves a
+    Task open: its work may not have been a pull request at all (#2282)."""
+    return (
+        "          → If its work was not a pull request, close it as completed, naming "
+        f"where the result lives: close-issue {issue_number} --mode=completed "
+        '--result "<where the result lives>".'
+    )
+
+
+# ---- a Task completed without a pull request (#2282) -----------------
+
+
+def _close_completed(
+    args: argparse.Namespace,
+    *,
+    structural_type: str | None,
+    state: str,
+    body: str,
+    labels: list[str],
+    config: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
+    close_move: _CloseMove,
+) -> int | None:
+    """Close a Task whose work was not a pull request as completed.
+
+    The `manual-completed` closure trigger (DEC-006): an audit, an
+    investigation or a decision walked with the user, whose result lives in an
+    issue, a record or a comment, which ``args.result`` names. Refuses anything
+    but a Task, a Task in Review, which has a pull request open and closes
+    through its merge, and — not skippably — an unticked checkbox (DEC-007).
+    Returns the exit code to stop with, or None once the issue is closed,
+    labelled and ``close_move`` recorded, so the caller releases the owner and
+    runs the forward cascade, the closure cascade and the after-close hooks.
+    """
+    issue_number = args.issue_number
+    if structural_type != "task":
+        kind = structural_type or "of an unrecognised type"
+        print(
+            f"\nerror: --mode=completed closes a Task whose work was not a pull "
+            f"request; #{issue_number} is {kind}. A container closes through "
+            "--mode=cascade-eligibility-close once every child has closed.",
+            file=sys.stderr,
+        )
+        return 2
+    if state == "closed":
+        print("\n[noop] issue already closed.")
+        return 0
+    # Where the board carries the state, a card that places the Task nowhere
+    # cannot tell a Task in Review from one that may close: nothing is guessed
+    # (DEC-051 point 6).
+    unplaced = close_move.unplaced()
+    if unplaced is not None:
+        print(
+            "\n"
+            + issue_position.unplaced_refusal(
+                "close-issue", issue_number, unplaced, untouched="the Task is still open"
+            ),
+            file=sys.stderr,
+        )
+        return 3 if unplaced.outcome == "unreadable" else 1
+    if close_move.from_state == REVIEW_STATE:
+        print(
+            f"\n[refused] #{issue_number} is in Review: it has a pull request open, so "
+            "its work is that pull request, and it closes through the pull request's "
+            "merge.\n"
+            f"          → Land it: done-work {issue_number}.",
+            file=sys.stderr,
+        )
+        return 1
+
+    # The DEC-007 gate, not skippable: every checkbox ticked is what says the
+    # work is done (DEC-006).
+    unticked = _unticked_boxes(body)
+    if unticked:
+        print(
+            "\n"
+            + _checkbox_refusal(
+                unticked,
+                scope="completed",
+                remedy=(
+                    "a Task closes as completed only when every checkbox is "
+                    "ticked. This gate is not skippable in completed mode."
+                ),
+            ),
+            file=sys.stderr,
+        )
+        return 1
+
+    result = str(args.result).strip()
+    print(f"\nresult: {result}")
+    if args.dry_run:
+        print(
+            "\n[dry-run] would comment where the result lives, close "
+            f"#{issue_number} as completed, reconcile its labels and bring its "
+            "ancestors level; nothing written."
+        )
+        return 0
+    held = _authorise(
+        args.yes,
+        close=f"closing #{issue_number} as completed without a pull request",
+        prompt="Proceed? [y/N] ",
+    )
+    if held is not None:
+        return held
+
+    key, comment_body = _completed_close_comment(result)
+    if not post_audit_once("issue", issue_number, key, comment_body, config, run=gh_run):
+        return 3
+    if not _gh_close_issue(issue_number, reason="completed", config=config):
+        return 3
+    if not reconcile_state_labels_to_done(
+        issue_number,
+        labels,
+        config,
+        gh_run=gh_run,
+        substrate_map=substrate_map,
+    ):
+        return 3
+    close_move.record(f"completed close: {result}")
+    print(f"\n[ok] closed #{issue_number} (completed, without a pull request).")
+    return None
+
+
+def _completed_close_comment(result: str) -> tuple[str, str]:
+    """The comment a completed close posts, naming where the work's result
+    lives, and its idempotency key.
+
+    The key makes the comment retry-safe: a run that posted it and then failed
+    to close finds it on the re-run and does not post it again.
+    """
+    key = _audit.audit_key(COMPLETED_CLOSE_WRITER, result)
+    body = (
+        f"[completed close] the work's result: {result}\n\n"
+        "Closed as completed without a pull request via `pkit project-management "
+        'close-issue --mode=completed --result "<where>"` '
+        "(per [project-management:DEC-006-state-machine-and-cascade]).\n"
+        f"{key}"
+    )
+    return key, body
+
+
+def _bring_ancestors_level(args: argparse.Namespace) -> None:
+    """Run the forward cascade after a completed close, through move-issue.
+
+    Completed work is progress, so each ancestor behind the closed Task is
+    brought up to In Progress (DEC-006), from Todo or Backlog as from In
+    Progress. ``move-issue <N> --to done`` finds the Task at done and walks its
+    ancestors, telling a completed close by the close reason the tracker
+    reports, as it does after a merge. A cascade cut short is move-issue's own
+    warning. A move-issue that exits non-zero is a warning here, naming the
+    re-run, and the close stands.
+    """
+    rc = composed_move.invoke_move_issue(
+        args.issue_number,
+        DONE_STATE,
+        capability_root_arg=args.capability_root,
+        allow_foreign_repo=args.allow_foreign_repo,
+    )
+    if rc != 0:
+        print(
+            f"\n[warn] the forward cascade from #{args.issue_number} did not run: "
+            f"move-issue exited {rc}, and the close stands.\n"
+            f"          → Fix what move-issue reported, then run `move-issue "
+            f"{args.issue_number} --to done`: the cascade is idempotent, and brings "
+            "level what is still behind.",
+            file=sys.stderr,
+        )
+
+
 # ---- recording the close (#1231) ------------------------------------
+
+
+def _card_before_close(
+    args: argparse.Namespace,
+    issue: dict,
+    state: str,
+    *,
+    config: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
+    workflow: dict,
+) -> infer.StatusRead | None:
+    """Where the issue's card's Status says it stood before this close, where the
+    map binds the state to the board; None elsewhere.
+
+    An open issue's card says where it is (DEC-062 point 5). A closed issue's
+    card says where its work stood until it is set to Done ([pkit:ADR-074] point
+    4), and is read only for the move a pr-merge close records of a close a
+    merge made (#2307), while the journal still owes that move
+    (`move_journal.owes_board_close`). `done-work` runs move-issue on its own
+    issue first, which records the close as it sets the card to Done, so that
+    close is not recorded twice. A dry run records nothing, and reads no closed
+    issue's card."""
+    if state != "closed":
+        return issue_position.read_status(args.issue_number, issue, config, substrate_map, workflow)
+    if args.mode != "pr-merge" or args.dry_run or not infer.state_is_board_carried(substrate_map):
+        return None
+    if not owes_board_close(read_journal(args.issue_number), DONE_STATE):
+        return None
+    return issue_position.read_status_before_close(
+        args.issue_number, issue, config, substrate_map, workflow
+    )
 
 
 @dataclass(frozen=True)
@@ -696,13 +1155,18 @@ class _CloseMove:
 
     issue_number: int
     #: Where the issue was before the close (`state_before_close`), or None when
-    #: nothing records it (a `derive`-bound state, or an issue already closed
-    #: with neither a state label nor a milestone).
+    #: nothing records it (a `derive`-bound state, an issue already closed with
+    #: neither a state label nor a milestone, or a board-carried state whose card's
+    #: Status places the issue nowhere, or whose card was not read).
     from_state: str | None
     #: Why the move is not recorded although it is one: the workflow declares
     #: no `from_state → done` for the issue's type. Empty when it does.
     undeclared: str
     actor: str | None
+    #: The card's Status, where the map binds the state to the board
+    #: (`_card_before_close`): an open issue's, and a closed one's in a pr-merge
+    #: close the journal still owes; None elsewhere.
+    status: infer.StatusRead | None = None
 
     @classmethod
     def read(
@@ -715,14 +1179,17 @@ class _CloseMove:
         workflow: dict,
         substrate_map: axis_labels.SubstrateMap | None,
         actor: str | None,
+        status: infer.StatusRead | None = None,
     ) -> _CloseMove:
         """The move closing ``issue`` makes, read from the issue as fetched —
-        before this run writes anything."""
+        before this run writes anything — and, where the board carries the
+        state, from ``status``."""
         from_state = infer.state_before_close(
             milestone=issue.get("milestone"),
             labels=labels,
             closed=str(issue.get("state", "")).lower() == "closed",
             substrate_map=substrate_map,
+            status=status,
         )
         undeclared = ""
         if from_state is not None and from_state != DONE_STATE:
@@ -735,7 +1202,14 @@ class _CloseMove:
                     f"no transition {from_state!r} → {DONE_STATE!r} declared in "
                     f"workflow.yaml for {kind}"
                 )
-        return cls(issue_number, from_state, undeclared, actor)
+        return cls(issue_number, from_state, undeclared, actor, status)
+
+    def unplaced(self) -> infer.StatusRead | None:
+        """The card's Status, where the board carries the state and that Status
+        places the issue nowhere (DEC-051 point 6), so where it was is not known;
+        None otherwise. A closed issue's card at Done is one such: it says
+        nothing of where the work stood."""
+        return self.status if self.status is not None and self.from_state is None else None
 
     def record(self, reason: str) -> None:
         """Hand the move to the engine with ``reason`` — the close mode — on its
@@ -746,8 +1220,17 @@ class _CloseMove:
         move, so a re-run adds nothing), or nothing says where it was. A move
         the workflow does not declare for the issue's type is not handed over
         and is warned about as a refused one is; a move the engine refuses is
-        warned about by the shared path. Neither fails the close.
+        warned about by the shared path. So is a board-carried state whose card
+        places the issue nowhere, never recorded from a guessed origin. None of
+        them fails the close.
         """
+        unplaced = self.unplaced()
+        if unplaced is not None:
+            report_unrecorded(
+                self.issue_number,
+                f"this move was not recorded: {unplaced.finding(self.issue_number)}",
+            )
+            return
         if self.from_state is None or self.from_state == DONE_STATE:
             return
         if self.undeclared:
@@ -833,11 +1316,18 @@ def _report_parents(
 
 
 def _check_parent_eligibility(parent_num: int, config: dict) -> None:
-    """Report whether a parent is eligible to close.
+    """Report whether a parent has an open child left, and whether it is
+    eligible to close.
 
-    Eligibility per DEC-006: every open child has closed, AND parent's
-    own checkboxes are ticked. We surface the report; we do not auto-
-    close (DEC-006 explicit: closure is never auto).
+    Eligibility per DEC-006 is the conjunction DEC-034 names: the parent has no
+    open child left, AND its own checkboxes are ticked. Whether a child is open
+    is the process engine's fold over the parent's children, read as
+    ``--mode=cascade-eligibility-close`` reads it (:func:`_engine_cascade_fold`,
+    #1937), so a parent is reported eligible only where that close would close
+    it, with the command that asks the person to authorise the close. A fold
+    that did not open is said with what holds it (:func:`_report_held_parent`).
+    We surface the report; we do not auto-close (DEC-006 explicit: closure is
+    never auto).
     """
     parent = _gh_get_issue(parent_num, config)
     if parent is None:
@@ -847,15 +1337,52 @@ def _check_parent_eligibility(parent_num: int, config: dict) -> None:
     if state == "closed":
         print(f"  · parent #{parent_num} already closed")
         return
-    body = str(parent.get("body") or "")
-    unticked = _unticked_boxes(body)
+    fold = _engine_cascade_fold(parent_num)
+    if fold is None or not fold.get("opened"):
+        _report_held_parent(parent_num, fold, config)
+        return
+    unticked = _unticked_boxes(str(parent.get("body") or ""))
     if unticked:
-        print(f"  · parent #{parent_num} open; not eligible ({len(unticked)} unticked box(es))")
+        print(
+            f"  · parent #{parent_num} open; no open child left, but not eligible "
+            f"({len(unticked)} unticked box(es))"
+        )
         return
     print(
-        f"  · parent #{parent_num} open; checkboxes complete — "
-        "eligible to close pending sibling check"
+        f"  · parent #{parent_num} open; no open child left and checkboxes complete — "
+        f"eligible to close: run `pkit pm close-issue {parent_num} "
+        "--mode=cascade-eligibility-close`"
     )
+
+
+def _report_held_parent(parent_num: int, fold: dict | None, config: dict) -> None:
+    """Say why a parent the engine's fold did not open is not eligible.
+
+    Its open children are named, from the containment seam's reading of them
+    (:func:`_find_open_children`), as the refusal of a held container names
+    them. Where the engine could not be run, its fold stopped on a read before
+    it counted a member (:func:`_stopped_on_a_read`), or no open child is
+    found, whether one is open is not known: the engine's reason is said, with
+    what a predicate it could not evaluate said.
+    """
+    if fold is None:
+        print(
+            f"  · parent #{parent_num} open; not eligible — the process engine could not "
+            "fold its children, so whether one is open is not known"
+        )
+        return
+    if not _stopped_on_a_read(fold):
+        children = _find_open_children(parent_num, config)
+        if children.open:
+            named = ", ".join(_child_named(child) for child in children.open)
+            print(f"  · parent #{parent_num} open; not eligible — open child(ren): {named}")
+            return
+    print(
+        f"  · parent #{parent_num} open; not eligible — whether a child is open is not "
+        f"known: {fold.get('reason') or 'the fold did not open.'}"
+    )
+    for line in engine_said.said_lines(fold.get("stderr_tail"), "      "):
+        print(line)
 
 
 def _check_milestone_eligibility(
@@ -1192,7 +1719,10 @@ def _find_open_children(parent_num: int, config: dict) -> _OpenChildren:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(issue_number, config, fields="title,body,state,labels,milestone,closedAt")
+    """The issue, with the fields its card is read by
+    (`issue_position.ISSUE_FIELDS`)."""
+    fields = f"title,body,state,labels,milestone,closedAt,{issue_position.ISSUE_FIELDS}"
+    return gh_get_issue(issue_number, config, fields=fields)
 
 
 def _closed_at(issue_number: int, config: dict) -> str:
@@ -1222,7 +1752,7 @@ def _gh_comment(issue_number: int, body: str, config: dict) -> bool:
 
 
 def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
-    return gh_get_pr(pr_number, config, fields="number,state,mergedAt,url")
+    return gh_get_pr(pr_number, config, fields="number,state,mergedAt,url,headRefName,body")
 
 
 def _gh_close_issue(issue_number: int, *, reason: str = "completed", config: dict) -> bool:

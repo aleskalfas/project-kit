@@ -12,12 +12,16 @@ Held to software-analysis DEC-001 point 1 and DEC-003 point 8:
   record is one of the use case's record anchors, and accepted;
 - **the overview** — a section of its reference, "Not built yet", before the diagrams,
   lists each entry of a use case in force, and the fingerprint reads them.
+
+The check and the overview run in the test's own process, their `pkit` calls answered
+there too (`tests/in_process.py`, #2324).
 """
 
 from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -34,7 +38,7 @@ from tests.analysis_repo import (
     installed,
     load_lib,
     prepare,
-    run_script,
+    run_in_process,
     stamped,
 )
 
@@ -157,7 +161,8 @@ def _use_case(
 
 
 def _validate(repo: AdopterRepo) -> dict[str, Any]:
-    completed = run_script(repo, VALIDATE, "--json")
+    """The validator's findings document, run in the test's own process (`run_in_process`)."""
+    completed = run_in_process(repo, VALIDATE, "--json")
     assert completed.returncode in (0, 1), completed.stderr
     return json.loads(completed.stdout)
 
@@ -434,6 +439,68 @@ def test_an_entry_s_record_names_a_record_the_repository_holds(project: AdopterR
     ]
 
 
+def _looked_up(asked: list[list[str]]) -> Any:
+    """A stand-in for `pkit`, answering `refs lookup --json` as the backbone does: PRJ-001
+    lies in `a.md`, and no other id names a record. Each command it is given is kept in
+    `asked`."""
+
+    def run(argv: list[str], **_kw: Any) -> subprocess.CompletedProcess[str]:
+        asked.append(argv)
+        lookups = [
+            {
+                "id": named,
+                "resolved": named == "PRJ-001",
+                "paths": ["a.md"] if named == "PRJ-001" else [],
+                "problem": None if named == "PRJ-001" else f"no record matches {named!r}",
+            }
+            for named in argv[argv.index("--") + 1 :]
+        ]
+        document = {"schema_version": 1, "lookups": lookups}
+        return subprocess.CompletedProcess(argv, 0, json.dumps(document), "")
+
+    return run
+
+
+def test_the_records_a_check_reads_are_asked_of_the_backbone_at_once(tmp_path: Path) -> None:
+    """The backbone is asked where each record lies once, for every record named before
+    the first is read, and again only for a record named later. Each status is read from
+    the record's own front matter, and an id that names no record has none (#2025)."""
+    backbone: Any = load_lib("backbone")[0]
+    (tmp_path / "a.md").write_text("---\nid: PRJ-001\nstatus: accepted\n---\n", encoding="utf-8")
+    asked: list[list[str]] = []
+    files = backbone.RecordFiles(tmp_path, ["PRJ-001", "PRJ-009", "PRJ-001"], _looked_up(asked))
+    assert files.status("PRJ-001") == "accepted" and files.file("PRJ-001") == "a.md"
+    assert files.file("PRJ-009") is None and files.status("PRJ-009") is None
+    assert asked == [["pkit", "refs", "lookup", "--json", "--", "PRJ-001", "PRJ-009"]]
+    assert files.status("COR-002") is None
+    assert asked[1:] == [["pkit", "refs", "lookup", "--json", "--", "COR-002"]]
+
+
+def test_a_lookup_that_fails_is_asked_again_and_an_old_backbone_is_named(tmp_path: Path) -> None:
+    """Where `pkit` gives no document, each record asked with it cannot be read, and is
+    asked again when it is read next. A backbone too old to answer several records in one
+    document is named, with the upgrade (#2025)."""
+    backbone: Any = load_lib("backbone")[0]
+    (tmp_path / "a.md").write_text("---\nstatus: proposed\n---\n", encoding="utf-8")
+    asked: list[list[str]] = []
+    answer = _looked_up(asked)
+    calls = iter([subprocess.CompletedProcess([], 1, "", "boom\n")])
+
+    def flaky(argv: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
+        return next(calls, None) or answer(argv, **kw)
+
+    files = backbone.RecordFiles(tmp_path, ["PRJ-001"], flaky)
+    with pytest.raises(backbone.Unreadable, match="boom"):
+        files.status("PRJ-001")
+    assert files.status("PRJ-001") == "proposed"
+
+    def old(argv: list[str], **_kw: Any) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, 2, "", "Error: No such option: --json\n")
+
+    with pytest.raises(backbone.Unreadable, match="predates it"):
+        backbone.RecordFiles(tmp_path, run=old).file("PRJ-001")
+
+
 def test_a_withdrawn_use_case_is_history(project: AdopterRepo) -> None:
     """A withdrawn use case's boxes and entries are not read: its records may have been
     superseded since."""
@@ -470,7 +537,7 @@ def test_the_overview_lists_each_open_shortfall_before_the_diagrams(project: Ado
     a changed entry leaves the overview stale until it is rewritten (DEC-003 point 8)."""
     project.write({SETTINGS: "pkit_schema: software-analysis:config\nschema_version: 1\n"})
     project.write({EXPORT: _use_case()})
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     text = (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")
     assert "## Reference" in text.split("\n")
     assert re.findall(r"^### .*$", text, re.M)[-2:] == [
@@ -484,7 +551,7 @@ def test_the_overview_lists_each_open_shortfall_before_the_diagrams(project: Ado
         f"- {link}: step 2, decided by `PRJ-001`, tracked in `#12`\n"
         f"- {link}: variant 2a, decided by `software-analysis:DEC-001#1`, tracked in `#13`"
     )
-    assert f"reads={overview.VERSION} " in text and overview.VERSION == 4
+    assert f"reads={overview.VERSION} " in text and overview.VERSION == 5
 
     entries = [ENTRIES[0], {**ENTRIES[1], "issue": "https://example.com/issues/13"}]
     project.write(
@@ -496,7 +563,7 @@ def test_the_overview_lists_each_open_shortfall_before_the_diagrams(project: Ado
     )
     stale = [f for f in _validate(project)["findings"] if f["location"] == OVERVIEW_FILE]
     assert [f["severity"] for f in stale] == ["error"]
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     text = (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")
     assert _section(text, "### Not built yet").endswith(
         "tracked in <https://example.com/issues/13>"
@@ -504,5 +571,5 @@ def test_the_overview_lists_each_open_shortfall_before_the_diagrams(project: Ado
 
     plain = _use_case(main_path="1. The analyst chooses `Export`.", variants="None.", entries=None)
     project.write({EXPORT: plain})
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     assert "### Not built yet" not in (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")

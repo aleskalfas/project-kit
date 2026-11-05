@@ -5,7 +5,8 @@ backbone runs a capability's command, over an adopter repository with the
 capability installed (the fixture of `test_living_docs_spaces.py`):
 
 - **a page** — stamped into each root and into a place outside the roots that
-  is assigned to a space, with its reader, kind and anchors; refused, with
+  is assigned to a space, with its reader, kind and anchors, a guide with its
+  parts in order (living-docs DEC-003); refused, with
   nothing written, for a space or kind the project lacks, a file that exists, a
   path that is no Markdown file of the repository or is reached through a link,
   a reader that is not a word and a title validation does not read; refused
@@ -33,15 +34,24 @@ capability installed (the fixture of `test_living_docs_spaces.py`):
   definition.
 
 Each dry run writes nothing.
+
+The command's `main` runs in the test's own process, off a terminal, and every
+`pkit` it calls is answered by the backbone's CLI in this process too
+(`tests/in_process.py`). Two tests keep a real process, each marked with why:
+the space form's and the page form's end-to-end tests. There the `pkit` the
+script calls is the real CLI under this interpreter (`pkit_on_path`), so no test
+reaches `uv` or the network.
 """
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import re
 import subprocess
 import sys
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +61,7 @@ from click.testing import CliRunner
 from project_kit.cli import main
 from project_kit.friction_validate import validate_friction
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.in_process import InProcessPkit, load, route_pkit, run_main
 from tests.test_living_docs_spaces import (
     CONFIG,
     DEFINITIONS,
@@ -65,51 +76,6 @@ from tests.test_living_docs_spaces import (
 
 NEW = LD / "scripts" / "new.py"
 
-#: Runs a stamp in-process with one of its readings made to fail, as the command
-#: would meet it, and prints how it ended. A capability's `_lib` is imported only in
-#: a process of its own, never beside another capability's.
-PROBE = """
-import sys
-from pathlib import Path
-
-sys.path.insert(0, sys.argv[1])
-from _lib import stamp
-from _lib.binding import Unreadable, read_binding
-
-case, root, calls = sys.argv[2], Path.cwd(), []
-
-
-def flaky(error):
-    def reach(at):
-        calls.append(at)
-        if error is not None and len(calls) > (0 if case == "unread-before" else 1):
-            raise error
-        return read_binding(at)
-
-    return reach
-
-
-def fail(_root):
-    raise stamp.NotRecorded("the backbone could not write it")
-
-
-page = stamp.PageRequest("docs/new.md", "user", "signpost", "user", "New")
-try:
-    if case in ("unread-before", "unread-after"):
-        stamp.stamp_page(root, page, reach=flaky(Unreadable("no answer")))
-    elif case == "interrupted":
-        stamp.stamp_space(root, stamp.SpaceRequest("user"), reach=flaky(KeyboardInterrupt()))
-    elif case == "record-fails":
-        stamp.stamp_space(
-            root, stamp.SpaceRequest("user"), record=fail, is_recorded=lambda _root: False
-        )
-except stamp.Refused as exc:
-    print(f"refused: {exc}")
-except KeyboardInterrupt:
-    print("interrupted")
-else:
-    print("stamped")
-"""
 LOCATIONS = f"{LD.as_posix()}/project/docs-locations.yaml"
 
 #: The top-level README as a place outside the roots that gives the page type, as a
@@ -124,7 +90,7 @@ UNDEFINED = {
 
 
 @pytest.fixture
-def project(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRepo:
+def project(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
     """An adopter with living-docs installed, two separate roots, one page per
     space's entry, a decision record, and both spaces' definitions — clean."""
     repo = make_adopter_repo(capabilities=("living-docs",))
@@ -150,38 +116,99 @@ def fresh(project: AdopterRepo) -> AdopterRepo:
     return project
 
 
-def new(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
-    """`pkit living-docs new …`, run as the backbone runs it."""
-    return subprocess.run(
-        [sys.executable, str(repo.root / NEW), *args],
-        cwd=repo.root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+def new(
+    repo: AdopterRepo, *args: str, in_a_process: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """`pkit living-docs new …`, as the backbone runs it, off a terminal: its `main` in
+    this process from the repository's root, standard input no terminal, every `pkit` it
+    calls answered here too. `in_a_process` runs the adopter's copy of the script as a
+    process of its own instead, its standard input empty, for a test marked `process`."""
+    if in_a_process:
+        return subprocess.run(
+            [sys.executable, str(repo.root / NEW), *args],
+            cwd=repo.root,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    script, backbone = load("living-docs", "new.py", "backbone")
+    with pytest.MonkeyPatch.context() as patched:
+        route_pkit(patched, backbone)
+        patched.setattr(sys, "stdin", io.StringIO())
+        return run_main(script, *args, cwd=repo.root)
 
 
 def page(
-    repo: AdopterRepo, file: str, *args: str, dry_run: bool = False
+    repo: AdopterRepo, file: str, *args: str, dry_run: bool = False, in_a_process: bool = False
 ) -> subprocess.CompletedProcess[str]:
     """A page stamp with the space, reader, kind and title a test does not care about."""
     defaults = {"--space": "user", "--kind": "signpost", "--reader": "user", "--title": "Guide"}
     given = dict(zip(args[::2], args[1::2], strict=True))
     flags = [part for key, value in {**defaults, **given}.items() for part in (key, value)]
-    return new(repo, "page", file, *flags, *(["--dry-run"] if dry_run else []))
+    dry = ["--dry-run"] if dry_run else []
+    return new(repo, "page", file, *flags, *dry, in_a_process=in_a_process)
 
 
 def probe(repo: AdopterRepo, case: str) -> str:
-    """How the stamp ended in `case` of `PROBE`."""
-    completed = subprocess.run(
-        [sys.executable, "-c", PROBE, str(repo.root / LD / "scripts"), case],
-        cwd=repo.root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert completed.returncode == 0, completed.stderr
-    return completed.stdout.strip()
+    """How a stamp ended in `case`, with one of its readings made to fail as the command
+    would meet it: the stamp's own functions called in this process, from the repository's
+    root, every `pkit` they call answered here too. What the stamp prints, and how it
+    ended, are the lines returned."""
+    stamp, binding, backbone = load("living-docs", "stamp", "binding", "backbone")
+    root = repo.root
+    calls: list[Path] = []
+
+    def flaky(error: BaseException | None) -> Callable[[Path], Any]:
+        def reach(at: Path) -> Any:
+            calls.append(at)
+            if error is not None and len(calls) > (0 if case == "unread-before" else 1):
+                raise error
+            return binding.read_binding(at)
+
+        return reach
+
+    def fail(_root: Path) -> None:
+        raise stamp.NotRecorded("the backbone could not write it")
+
+    def answered(code: int) -> Callable[..., subprocess.CompletedProcess[str]]:
+        def run(argv: list[str], **_options: Any) -> subprocess.CompletedProcess[str]:
+            print(" ".join(argv))
+            return subprocess.CompletedProcess(argv, code)
+
+        return run
+
+    page = stamp.PageRequest("docs/new.md", "user", "signpost", "user", "New")
+    out = io.StringIO()
+    with pytest.MonkeyPatch.context() as patched, contextlib.redirect_stdout(out):
+        route_pkit(patched, backbone)
+        try:
+            if case in ("asked", "declined"):
+                stamp.separate_roots(
+                    root,
+                    "user",
+                    stamp.Separation(),
+                    rerun="pkit living-docs new space user",
+                    run=answered(0 if case == "asked" else 1),
+                    interactive=lambda: True,
+                )
+            elif case in ("unread-before", "unread-after"):
+                stamp.stamp_page(root, page, reach=flaky(binding.Unreadable("no answer")))
+            elif case == "interrupted":
+                stamp.stamp_space(
+                    root, stamp.SpaceRequest("user"), reach=flaky(KeyboardInterrupt())
+                )
+            elif case == "record-fails":
+                stamp.stamp_space(
+                    root, stamp.SpaceRequest("user"), record=fail, is_recorded=lambda _root: False
+                )
+        except stamp.Refused as exc:
+            print(f"refused: {exc}")
+        except KeyboardInterrupt:
+            print("interrupted")
+        else:
+            print("stamped")
+    return out.getvalue().strip()
 
 
 def refused(completed: subprocess.CompletedProcess[str]) -> str:
@@ -257,19 +284,53 @@ def test_a_page_is_stamped_into_each_root_and_an_assigned_place(project: Adopter
     assert errors(run(project)) == []
 
 
+@pytest.mark.process(
+    "the page form's end-to-end test: the command as a process of its own, its exit code "
+    "and the notes a person reads, and the pkit it starts"
+)
 def test_the_stamp_lists_the_template_placeholders_left_and_never_a_title_of_its_own(
-    project: AdopterRepo,
+    project: AdopterRepo, pkit_on_path: Path
 ) -> None:
-    out = stamped(page(project, "docs/maps.md", "--title", "Map<K, V> reference"))
-    assert "\n# Map<K, V> reference\n" in (project.root / "docs/maps.md").read_text(
-        encoding="utf-8"
-    )
+    title = "Map<K, V> reference"
+    out = stamped(page(project, "docs/maps.md", "--title", title, in_a_process=True))
+    assert f"\n# {title}\n" in (project.root / "docs/maps.md").read_text(encoding="utf-8")
     listed = [line.strip() for line in out.splitlines() if line.startswith("  docs/maps.md:")]
     assert listed == [
         "docs/maps.md:10: <One sentence: what this folder is for, for this reader.>",
         "docs/maps.md:12: - [<entry>](<entry>) — <what the reader finds there, in a line>.",
     ]
     assert "run `pkit living-docs validate`, `pkit validate` and `pkit friction check`" in out
+
+
+def test_a_guide_is_stamped_with_its_parts_in_order_and_checked_for_its_title(
+    project: AdopterRepo,
+) -> None:
+    """The guide's template shows its parts in their order (living-docs DEC-003 point
+    2): the stamp writes them under the title given and lists each one the writer
+    words. Its structure is its title alone (point 4), so the page passes validation
+    before its other sections are worded."""
+    out = stamped(page(project, "docs/turning-on.md", "--kind", "guide", "--title", "Turning on"))
+    assert out.splitlines()[0] == (
+        "stamped docs/turning-on.md: a guide page of space 'user', for reader 'user'."
+    )
+    assert front(project, "docs/turning-on.md") == {
+        "reader": "user",
+        "kind": "guide",
+        "pkit": {"friction": {}},
+    }
+    text = (project.root / "docs/turning-on.md").read_text(encoding="utf-8")
+    parts = [
+        "## <Why the subject exists>",
+        "## <A task the reader does>",
+        "## <The folder's pages>",
+    ]
+    assert [line for line in text.splitlines() if line.startswith("#")] == [
+        "# Turning on",
+        *parts,
+    ]
+    listed = [line.split(": ", 1)[1] for line in out.splitlines() if "docs/turning-on.md:" in line]
+    assert [line for line in listed if line.startswith("#")] == parts
+    assert errors(run(project)) == []
 
 
 @pytest.mark.parametrize(
@@ -566,7 +627,7 @@ def test_a_space_the_project_adds_is_declared_by_its_entry(fresh: AdopterRepo) -
         "types": ["living-docs:page"],
     }
     stamped(page(fresh, "api/endpoints.md", "--space", "api", "--kind", "reference"))
-    reach = subprocess.run(
+    reach = InProcessPkit()(
         ["pkit", "rule-sets", "reach", "--json"],
         cwd=fresh.root,
         capture_output=True,
@@ -615,19 +676,26 @@ def test_a_definition_on_disk_the_configuration_does_not_name_is_refused(
     assert snapshot(project) == before
 
 
-def test_roots_that_are_one_folder_select_no_space_yet(fresh: AdopterRepo) -> None:
+def test_a_space_the_project_adds_sets_the_roots_apart_and_a_page_of_it_does_not(
+    fresh: AdopterRepo,
+) -> None:
+    """Every definition lies in the technical space, but a page of a space the project adds
+    lies in its own places (DEC-001 points 1 and 2)."""
+    api: Any = {"path": "api/**", "type": "living-docs:page"}
     declare(
         fresh,
         roots={"user": "docs/", "internal": "docs/"},
-        places=[],
-        assignments={},
+        places=[README, api],
+        assignments={"README.md": "user", "api/**": "api"},
         spaces=UNDEFINED,
     )
-    before = snapshot(fresh)
-    message = refused(new(fresh, "space", "user"))
-    assert "the two documentation roots are one folder, 'docs'" in message
-    assert "separate the roots first" in message
-    assert snapshot(fresh) == before
+    assert "The two documentation roots are one folder" in refused(new(fresh, "space", "api"))
+    flags = ("--space", "api", "--kind", "reference", "--reader", "user", "--title", "API")
+    message = refused(new(fresh, "page", "api/x.md", *flags, "--internal-root", "handbook"))
+    assert "a page of space 'api' lies in places of its own" in message
+    out = stamped(new(fresh, "space", "api", "--yes"))
+    assert "set docs.internal = tech-docs" in out
+    assert front(fresh, f"{DEFINITIONS}/api.md")["scope"]["paths"] == ["api/**"]
 
 
 def test_an_untyped_place_outside_the_roots_is_put_back(fresh: AdopterRepo) -> None:
@@ -689,6 +757,182 @@ def test_a_space_dry_run_prints_both_files_and_writes_nothing(fresh: AdopterRepo
     assert snapshot(fresh) == before
 
 
+# --- roots that are one folder (#2084) ------------------------------------------------------------
+
+#: The two roots of a fresh project: one folder, as both default (COR-049 point 1).
+SHARED = {"user": "docs/", "internal": "docs/"}
+
+#: What the stamp says before the backbone's configuration command runs.
+WHY = (
+    "The two documentation roots are one folder, 'docs', and living-docs keeps the user and "
+    "technical spaces apart (DEC-001 point 1). The internal root goes to 'tech-docs' first, "
+    "outside the user root."
+)
+
+
+@pytest.fixture
+def shared(fresh: AdopterRepo) -> AdopterRepo:
+    """The fresh project with its two roots one folder."""
+    declare(fresh, roots=SHARED, places=[README], spaces=UNDEFINED)
+    return fresh
+
+
+def _internal_root(repo: AdopterRepo) -> Any:
+    from ruamel.yaml import YAML
+
+    return YAML(typ="safe").load((repo.root / CONFIG).read_text(encoding="utf-8"))["docs"]
+
+
+@pytest.mark.process(
+    "the space form's end-to-end test: the stamp's own line and the output of the pkit "
+    "config set it starts share one standard output, in order, across two processes"
+)
+def test_roots_that_are_one_folder_are_set_apart_before_the_space(
+    shared: AdopterRepo, pkit_on_path: Path
+) -> None:
+    out = stamped(new(shared, "space", "user", "--yes", in_a_process=True))
+    assert out.startswith(f"{WHY}\nset docs.internal = tech-docs  (.pkit/project/config.yaml)\n")
+    assert _internal_root(shared) == {"user": "docs/", "internal": "tech-docs"}
+    assert f"stamped {DEFINITIONS}/user.md: the definition of space 'user'" in out
+    assert front(shared, f"{DEFINITIONS}/user.md")["scope"]["paths"] == ["docs/**", "README.md"]
+    # Apart now, the next stamp asks nothing.
+    assert WHY not in stamped(new(shared, "space", "technical"))
+    assert errors(run(shared)) == []
+
+
+def test_a_page_of_either_space_sets_them_apart_too(shared: AdopterRepo) -> None:
+    flags = ("--space", "user", "--kind", "signpost", "--reader", "user", "--title", "Guide")
+    out = stamped(new(shared, "page", "docs/guide-2.md", *flags, "--yes"))
+    assert out.startswith(WHY)
+    assert _internal_root(shared) == {"user": "docs/", "internal": "tech-docs"}
+    assert "stamped docs/guide-2.md: a signpost page of space 'user'" in out
+
+
+def test_off_a_terminal_without_yes_nothing_is_written_and_the_rerun_is_named(
+    shared: AdopterRepo,
+) -> None:
+    before = snapshot(shared)
+    message = refused(new(shared, "space", "user"))
+    assert WHY in message
+    assert "takes consent (COR-048 point 5), and stdin is not a terminal" in message
+    assert "To consent, run: pkit living-docs new space user --yes" in message
+    assert snapshot(shared) == before
+
+
+@pytest.mark.parametrize(
+    ("folder", "said"),
+    [
+        ("docs/internal", "the internal root 'docs/internal' would lie in the user root 'docs'"),
+        (".", "is not a folder of the repository"),
+        ("../elsewhere", "is not a folder of the repository"),
+        ("/tech-docs", "is not a folder of the repository"),
+    ],
+)
+def test_a_folder_that_is_not_beside_the_user_root_is_refused(
+    shared: AdopterRepo, folder: str, said: str
+) -> None:
+    before = snapshot(shared)
+    assert said in refused(new(shared, "space", "user", "--internal-root", folder, "--yes"))
+    assert snapshot(shared) == before
+
+
+def test_roots_that_are_the_repository_itself_are_refused_with_the_fix(
+    shared: AdopterRepo,
+) -> None:
+    declare(shared, roots={"user": ".", "internal": "."}, places=[], spaces=UNDEFINED)
+    message = refused(new(shared, "space", "user", "--yes"))
+    assert "the user root is the repository itself" in message
+    assert "`pkit config set docs.user <path>`" in message
+
+
+def test_internal_root_is_refused_where_the_roots_are_apart(project: AdopterRepo) -> None:
+    message = refused(new(project, "space", "api", "--internal-root", "handbook"))
+    assert "only where the two documentation roots are one folder" in message
+
+
+@pytest.mark.parametrize(
+    ("named", "folder"), [((), "tech-docs"), (("--internal-root", "handbook/"), "handbook")]
+)
+def test_a_dry_run_says_it_would_set_the_root_first_and_writes_nothing(
+    shared: AdopterRepo, named: tuple[str, ...], folder: str
+) -> None:
+    before = snapshot(shared)
+    out = stamped(new(shared, "space", "user", *named, "--dry-run"))
+    assert out == (
+        f"dry run: nothing written. {WHY.replace('tech-docs', folder)} The stamp would run `pkit "
+        f"config set docs.internal {folder}` first, under that command's consent; its checks run "
+        "once the roots are apart.\n"
+    )
+    assert snapshot(shared) == before
+
+
+def test_at_a_terminal_the_backbone_asks_and_a_decline_stamps_nothing(shared: AdopterRepo) -> None:
+    # The stamp passes no `--yes` of its own: the backbone's command asks the person.
+    asked = probe(shared, "asked").splitlines()
+    assert asked == [WHY, "pkit config set docs.internal tech-docs", "stamped"]
+    declined = probe(shared, "declined").splitlines()
+    assert declined[-1] == (
+        "refused: the internal root was not set apart (`pkit config set docs.internal tech-docs` "
+        "exited 1), so nothing is written"
+    )
+
+
+#: The four capabilities a trial installed, in two orders their dependencies allow.
+ORDERS = (
+    ("project-management", "software-engineering", "software-analysis", "living-docs"),
+    ("living-docs", "software-analysis", "project-management", "software-engineering"),
+)
+
+
+def _layout(repo: AdopterRepo) -> dict[str, str]:
+    """The documentation layout: every file under a root, and the files that say where."""
+    named = [
+        CONFIG,
+        LD_CONFIG,
+        LOCATIONS,
+        ".pkit/agents/project/overlay.yaml",
+        ".pkit/capabilities/software-analysis/project/docs-locations.yaml",
+    ]
+    files = [p for top in ("docs", "tech-docs") for p in sorted((repo.root / top).rglob("*"))]
+    return {
+        rel: (repo.root / rel).read_text(encoding="utf-8")
+        for rel in [*(p.relative_to(repo.root).as_posix() for p in files if p.is_file()), *named]
+        if (repo.root / rel).is_file()
+    }
+
+
+def test_a_fresh_project_gets_one_layout_whatever_order_it_installs_in(
+    make_adopter_repo: MakeAdopterRepo,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    pkit_on_path: Path,
+) -> None:
+    """`pkit init`, the four installs in either order, then the first space: no step comes
+    first, and the layouts are one (#2084)."""
+    from project_kit import install
+
+    monkeypatch.setattr(install, "provision_query_commands", lambda *_a, **_k: None)
+    layouts = []
+    for index, order in enumerate(ORDERS):
+        repo = make_adopter_repo(root=tmp_path / f"order-{index}")
+        for name in order:
+            result = CliRunner().invoke(main, ["capabilities", "install", name])
+            assert result.exit_code == 0, (name, result.output)
+        assert (repo.root / "docs/rule-sets/analysis.md").is_file()
+        out = stamped(new(repo, "space", "user", "--yes"))
+        assert "recorded project rule sets = docs/rule-sets" in out
+        assert "kept adr-records = docs/architecture/decisions" in out
+        stamped(new(repo, "space", "technical"))
+        assert errors(run(repo)) == []
+        layouts.append(_layout(repo))
+    assert layouts[0] == layouts[1]
+    assert {
+        "docs/rule-sets/analysis.md",
+        f"{DEFINITIONS}/user.md",
+        f"{DEFINITIONS}/technical.md",
+    } <= set(layouts[0])
+
+
 # --- both, filled --------------------------------------------------------------------------------
 
 
@@ -711,7 +955,7 @@ def test_a_space_and_a_page_so_created_pass_validation_once_filled(fresh: Adopte
     assert validate_friction(fresh.root).errors == ()
     result = CliRunner().invoke(main, ["--color", "never", "validate", "--only", "rule-sets"])
     assert result.exit_code == 0, result.output
-    reach = subprocess.run(
+    reach = InProcessPkit()(
         ["pkit", "rule-sets", "reach", "--json"],
         cwd=fresh.root,
         capture_output=True,

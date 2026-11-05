@@ -178,11 +178,11 @@ For richer entries, write to a YAML file and pass via `--from`. For simple ones,
 
 ### 11. Self-check against the disciplines
 
-Walk the new schema against the kit's authoring disciplines (per `CONTRIBUTING.md`):
+Walk the new schema against the authoring disciplines the dispatcher's shared framing lists (`schema.md`, "Disciplines"):
 
-- *Axiom*: every term used in the schema's prose has a prior definition, is generic English / YAML / JSON Schema vocabulary, or names a known external tool.
-- *Project-neutrality* (when the schema ships kit-side): would this fit naturally in `example-brownfield` or `example-greenfield` adopting the methodology?
 - *Principles-not-inventory*: the schema captures rules-among-alternatives, not state inventories. (The *entries* may be a closed set when the methodology defines it — e.g., the three severity classes; but the schema's *shape* expresses the rule.)
+- *Axiom* (a schema core ships, the methodology maintainers' case): every term used in the schema's prose has a prior definition, is generic English / YAML / JSON Schema vocabulary, or names a known external tool.
+- *Project-neutrality* (a schema core ships, the methodology maintainers' case): would the schema make sense, and apply, in any project that adopts the methodology?
 
 ### 12. Commit
 
@@ -210,7 +210,7 @@ joins.
 ## Variations
 
 - **Stamping a CONSUMER or document schema** (one that doesn't own a namespace). Pass `--no-namespace` — the stamp omits `x-pkit-id-collection`, the `$defs.entry` placeholder, and the collection wrapper; you fill flat top-level `properties` in the companion and the resource's own fields in the YAML body.
-- **Stamping into a non-default capability layout** — if the capability ships its own `_defs/` for narrowed reference patterns, declare them there. For v1, narrowed patterns live alongside their namespace owner; see the schemas area README's "References between schemas" subsection.
+- **Stamping into a non-default capability layout** — if the capability ships its own `_defs/` for narrowed reference patterns, declare them there. For v1, narrowed patterns live alongside their namespace owner; see the schemas reference's page `shape-patterns.md`, "Reusable fragments via `$defs`".
 - **Stamping a schema before its capability exists** — refuses. Run `pkit new capability <name>` first.
 
 ## Adopter-data schemas — the `pkit_schema:` field + `binds_to:` fallback

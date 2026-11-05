@@ -8,9 +8,9 @@
 """Project-management capability — promote-issue (DEC-026 workflow wrapper).
 
 Promotes an issue from Todo → Backlog, recording the authorisation source.
-Per DEC-026 (as amended for issue #61):
+Per DEC-026, "The seven commands":
 
-    promote-issue <N> [--milestone "<M>"] --reason "<R>"
+    promote-issue <N> [--milestone "<M>"] --reason "<R>" [--bypass-owner "<reason>"]
 
 Two paths:
   - `--milestone` given → resolves <M> to an OPEN milestone (by number or
@@ -29,6 +29,24 @@ Gates per DEC-026:
     OPEN milestone in the repo (given-but-unresolvable is still an error;
     it is never silently downgraded to milestone-free).
   - Current Status = Todo (delegated to `move-issue`'s state machine).
+  - The clash guard (DEC-035 point 6), with an instance id set or a seat of
+    a topology held: an issue another instance owns is refused before the
+    move and before any milestone is attached, at bypassable-with-audit
+    (DEC-014), through `_lib/instance_claims`. `--bypass-owner "<reason>"`
+    posts the reason on the issue as an audit comment first, and the composed
+    move-issue is handed the same reason, so it posts no second one. The flag
+    is qualified per DEC-046, since `--reason` already carries the bypass of
+    the move's own gate. In a project with a topology, a claim whose clone no
+    longer holds its seat is no claim, and one that cannot be judged refuses
+    (DEC-059 point 9). Before the guard, a clone that took a seat confirms it
+    on the seat's state issue, and the promotion refuses where it cannot
+    (DEC-059 point 6).
+
+A Task scheduled with `--milestone` into a Milestone of a pool of workers
+enters that pool, or moves between pools, which is the person's act (DEC-061
+point 6): asked at a terminal, or `--yes` on their word, and off a terminal
+without it nothing is moved. The consent is recorded in the one audit comment
+move-issue posts, with the reason.
 
 Composes over `move-issue.py`: this wrapper invokes `move-issue --to backlog`,
 **threading `--reason` to move-issue's `--bypass-reason`**, then attaches the
@@ -46,7 +64,9 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  promoted
-  1  membership refusal
+  1  membership refusal / the clash guard refused an issue another instance
+     owns / this clone's seat could not be confirmed / a Task scheduled into a
+     pool off a terminal without --yes
   2  usage error / gate failure / gh failure
 """  # noqa: E501 — a usage line is a command, kept whole
 
@@ -62,7 +82,15 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    bootstrap_gate,
+    instance_claims,
+    pools,
+    session_guard,
+)
+from _lib.comment import post_comment
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -70,7 +98,8 @@ from _lib.membership import (
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.milestone import resolve_milestone
+from _lib.milestone import list_open_milestones, resolve_milestone
+from _lib.structural_type import infer_structural_type
 from _lib.substrate_writes import write_milestone
 
 
@@ -120,6 +149,17 @@ def main() -> int:
         action="store_true",
         help="Skip the confirmation prompt.",
     )
+    parser.add_argument(
+        "--bypass-owner",
+        default=None,
+        metavar="REASON",
+        help=(
+            "Bypass the clash guard, which refuses an issue another instance owns "
+            "(bypassable-with-audit per DEC-014, DEC-035 point 6): the reason is "
+            "posted on the issue as an audit comment before the move. Qualified "
+            "per DEC-046, since --reason already bypasses the move's own gate."
+        ),
+    )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
@@ -164,8 +204,10 @@ def main() -> int:
     # The title is what downstream `gh issue edit --milestone` wants, so
     # normalise to the title form regardless of input shape.
     # When --milestone is omitted, skip resolution entirely — promoting on
-    # --reason alone is a valid path per the DEC-026 #61 amendment.
+    # --reason alone is a valid path (DEC-026, "The seven commands").
     milestone_title: str | None = None
+    milestone_number: int | None = None
+    pool_move = pools.Move(False)
     if args.milestone is not None:
         resolved = resolve_milestone(str(args.milestone), config)
         if resolved is None:
@@ -177,12 +219,47 @@ def main() -> int:
             )
             return 2
         milestone_title = resolved.title
+        milestone_number = resolved.number
+        # A Task scheduled into a Milestone of a pool enters that pool, or
+        # moves between pools, which is the person's act (DEC-061 point 6).
+        pool_move = _pool_move(args.issue_number, milestone_number, capability_root, config)
+
+    # The clash guard (DEC-035 point 6), before the move and before any
+    # milestone is attached: an issue another instance owns is refused, unless a
+    # bypass posts its reason. The move this run composes is handed the same
+    # reason, and finds its audit comment posted.
+    # A seat is confirmed on its state issue first (DEC-059 point 6).
+    owner_bypass: str | None = None
+    try:
+        clone = instance_claims.this_clone(
+            capability_root, invoker.github_login, config, dry_run=args.dry_run
+        )
+    except instance_claims.Unconfirmed as exc:
+        return instance_claims.say_unconfirmed("promote-issue", args.issue_number, exc)
+    if clone is not None:
+        decision = instance_claims.guard(
+            args.issue_number,
+            clone,
+            config,
+            verb="promote-issue",
+            flag="--bypass-owner",
+            bypass=args.bypass_owner,
+            invoker=invoker,
+            dry_run=args.dry_run,
+        )
+        instance_claims.say_guard(decision)
+        if decision.refused:
+            return 1
+        if decision.bypassed:
+            owner_bypass = args.bypass_owner
 
     print(f"promote-issue: #{args.issue_number}")
     if milestone_title is not None:
         print(f"  milestone: {milestone_title}")
     else:
         print("  milestone: unchanged (no --milestone given)")
+    if pool_move.asks:
+        print(f"  pool:      {pool_move.said()}  (the person's consent, DEC-061 point 6)")
     print(f"  reason:    {reason}")
 
     if args.dry_run:
@@ -198,7 +275,15 @@ def main() -> int:
             )
         return 0
 
-    if not args.yes and sys.stdin.isatty():
+    if pool_move.asks:
+        stop = pools.authorise(
+            pool_move, subject=f"#{args.issue_number}", yes=args.yes, verb="promote-issue"
+        )
+        if stop is not None:
+            return stop
+        # The consent is recorded in the one audit comment move-issue posts.
+        reason = f"{reason}; {pool_move.logged()}"
+    elif not args.yes and sys.stdin.isatty():
         reply = input("Proceed? [y/N] ").strip().lower()
         if reply not in ("y", "yes"):
             print("aborted.", file=sys.stderr)
@@ -232,6 +317,19 @@ def main() -> int:
             args.issue_number, milestone_title, config
         ):
             return 2
+        # No transition carries an audit comment here, so the consent gets its own.
+        if pool_move.asks and not post_comment(
+            "issue",
+            args.issue_number,
+            pools.consent_comment("promote-issue", pool_move, milestone_number),
+            config,
+            run=gh_run,
+        ):
+            print(
+                f"[warn] the audit comment recording the person's consent to "
+                f"{pool_move.said()} could not be posted on #{args.issue_number}.",
+                file=sys.stderr,
+            )
         idempotent_detail = (
             "milestone attached; no state transition needed"
             if milestone_title is not None
@@ -254,7 +352,12 @@ def main() -> int:
     # Compose over move-issue for the actual state transition. move-issue posts
     # the single canonical audit comment from the reason threaded here (DEC-049).
     rc = _invoke_move_issue(
-        args.issue_number, "backlog", reason, args.capability_root, args.allow_foreign_repo
+        args.issue_number,
+        "backlog",
+        reason,
+        args.capability_root,
+        args.allow_foreign_repo,
+        **({"bypass_owner": owner_bypass} if owner_bypass else {}),
     )
     if rc != 0:
         if milestone_title is not None:
@@ -323,10 +426,10 @@ def _detect_current_state(
     `lifecycle_inference` with the full open/closed + milestone signal this
     label-only read does not fetch:
 
-      * `board` — the value is on a Projects-v2 field. This function does NOT
-        read it: the board value read (and the rule that an unreadable board
-        raises) belongs to the board read-path contract, and is specified there
-        but not yet built. Returning nothing is the honest answer until it is.
+      * `board` — the value is the card's Status on the board. This label-only
+        read does not fetch it: move-issue, which runs next, reads the Status as
+        the classifier does, and refuses a move it does not place
+        ([project-management:DEC-051-axis-carriage-activation] point 6).
       * `derived` — open/closed carries it, which needs a signal this label-only
         read does not fetch; `lifecycle_inference.infer_current_state` is the
         home of that read and move-issue performs it.
@@ -365,6 +468,52 @@ def _detect_current_state(
 # or title input. Call sites switched to the lib resolver.
 
 
+def _pool_move(issue_number: int, target: int, capability_root: Path, config: dict) -> pools.Move:
+    """What scheduling the issue into the milestone ``target`` does to its pool
+    (DEC-061 point 6): only a Task enters a pool. The issue's title and native
+    milestone are read here; where they cannot be, the issue is judged as a
+    Task in no milestone, so the write asks rather than skip the person. The
+    issue is read only where the milestone carries a `Pool:` line."""
+    rows = list_open_milestones(config, gh=lambda argv: gh_run(argv, config, check=False))
+    if not pools.may_ask(target, rows):
+        return pools.Move(False)
+    issue: dict = {}
+    try:
+        proc = gh_run(
+            ["gh", "issue", "view", str(issue_number), "--json", "title,milestone"],
+            config,
+            check=False,
+        )
+        if proc.returncode == 0:
+            loaded = json.loads(proc.stdout)
+            issue = loaded if isinstance(loaded, dict) else {}
+    except (FileNotFoundError, ValueError, TypeError):
+        issue = {}
+    yaml = YAML(typ="safe")
+    issue_types = _read_schema(capability_root, "issue-types.yaml", yaml)
+    classification = _read_schema(capability_root, "classification.yaml", yaml)
+    title = str(issue.get("title") or "")
+    if title and (
+        infer_structural_type(title, issue_types, classification=classification) != "task"
+    ):
+        return pools.Move(False)
+    return pools.move(
+        pools.native_number(issue), target, rows=rows, capability_root=capability_root
+    )
+
+
+def _read_schema(capability_root: Path, name: str, yaml_loader: YAML) -> dict:
+    """A parsed capability schema (`schemas/<name>`), or {} where it cannot be read."""
+    path = capability_root / "schemas" / name
+    if not path.is_file():
+        return {}
+    try:
+        data = yaml_loader.load(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 # ---- side-effects ------------------------------------------------------
 
 
@@ -384,6 +533,7 @@ def _invoke_move_issue(
     reason: str,
     capability_root_arg: Path | None,
     allow_foreign_repo: bool,
+    bypass_owner: str | None = None,
 ) -> int:
     """Shell out to `move-issue.py --to <target>` as the substrate transition.
 
@@ -395,6 +545,10 @@ def _invoke_move_issue(
     override into the composed move-issue so the foreign-repo gate (COR-039 /
     ADR-034) is confirmed once at the wrapper, not re-prompted by the inner
     transition.
+
+    ``bypass_owner`` is the reason this run's clash guard was bypassed with
+    (DEC-035 point 6): move-issue's own guard finds its audit comment posted,
+    and posts none of its own.
     """
     cmd = [
         sys.executable,
@@ -409,6 +563,8 @@ def _invoke_move_issue(
     ]
     if allow_foreign_repo:
         cmd.append("--allow-foreign-repo")
+    if bypass_owner:
+        cmd += ["--bypass-owner", bypass_owner]
     if capability_root_arg is not None:
         cmd += ["--capability-root", str(capability_root_arg)]
     proc = subprocess.run(cmd, check=False)

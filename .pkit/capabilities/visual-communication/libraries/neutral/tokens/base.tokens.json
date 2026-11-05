@@ -1,0 +1,388 @@
+{
+  "$description": "The neutral brand at its defaults: the light colour scheme, standard contrast.",
+  "scheme": {
+    "$description": "What each colour scheme paints with; private. The dark scheme redefines it.",
+    "$type": "color",
+    "paper": {
+      "$value": "{palette.white}"
+    },
+    "raised": {
+      "$value": "{palette.grey.50}"
+    },
+    "ink": {
+      "$value": "{palette.grey.900}"
+    },
+    "ink-soft": {
+      "$value": "{palette.grey.600}"
+    },
+    "rule": {
+      "$value": "{palette.grey.200}"
+    },
+    "accent": {
+      "$value": "{palette.blue.600}"
+    },
+    "strong-ink": {
+      "$value": "{palette.black}"
+    },
+    "strong-ink-soft": {
+      "$value": "{palette.grey.800}"
+    },
+    "strong-paper": {
+      "$value": "{palette.white}"
+    },
+    "strong-accent": {
+      "$value": "{palette.blue.800}"
+    },
+    "blue": {
+      "fill": {
+        "$value": "{palette.blue.50}"
+      },
+      "line": {
+        "$value": "{palette.blue.600}"
+      },
+      "text": {
+        "$value": "{palette.blue.800}"
+      },
+      "strong-line": {
+        "$value": "{palette.blue.800}"
+      },
+      "strong-text": {
+        "$value": "{palette.blue.900}"
+      }
+    },
+    "green": {
+      "fill": {
+        "$value": "{palette.green.50}"
+      },
+      "line": {
+        "$value": "{palette.green.600}"
+      },
+      "text": {
+        "$value": "{palette.green.800}"
+      },
+      "strong-line": {
+        "$value": "{palette.green.800}"
+      },
+      "strong-text": {
+        "$value": "{palette.green.900}"
+      }
+    },
+    "orange": {
+      "fill": {
+        "$value": "{palette.orange.50}"
+      },
+      "line": {
+        "$value": "{palette.orange.600}"
+      },
+      "text": {
+        "$value": "{palette.orange.800}"
+      },
+      "strong-line": {
+        "$value": "{palette.orange.800}"
+      },
+      "strong-text": {
+        "$value": "{palette.orange.900}"
+      }
+    },
+    "purple": {
+      "fill": {
+        "$value": "{palette.purple.50}"
+      },
+      "line": {
+        "$value": "{palette.purple.600}"
+      },
+      "text": {
+        "$value": "{palette.purple.800}"
+      },
+      "strong-line": {
+        "$value": "{palette.purple.800}"
+      },
+      "strong-text": {
+        "$value": "{palette.purple.900}"
+      }
+    },
+    "red": {
+      "fill": {
+        "$value": "{palette.red.50}"
+      },
+      "line": {
+        "$value": "{palette.red.600}"
+      },
+      "text": {
+        "$value": "{palette.red.800}"
+      },
+      "strong-line": {
+        "$value": "{palette.red.800}"
+      },
+      "strong-text": {
+        "$value": "{palette.red.900}"
+      }
+    }
+  },
+  "background": {
+    "$type": "color",
+    "$value": "{scheme.paper}"
+  },
+  "surface": {
+    "$type": "color",
+    "$value": "{scheme.raised}"
+  },
+  "text-primary": {
+    "$type": "color",
+    "$value": "{scheme.ink}"
+  },
+  "text-secondary": {
+    "$type": "color",
+    "$value": "{scheme.ink-soft}"
+  },
+  "accent": {
+    "$type": "color",
+    "$value": "{scheme.accent}"
+  },
+  "line": {
+    "$type": "color",
+    "$value": "{scheme.rule}"
+  },
+  "family": {
+    "$description": "The members of the foundations' colour families: the neutral family paints with the surface, the line and the primary text, and each hue with what the colour scheme gives it.",
+    "$type": "color",
+    "neutral": {
+      "fill": {
+        "$value": "{surface}"
+      },
+      "line": {
+        "$value": "{line}"
+      },
+      "text": {
+        "$value": "{text-primary}"
+      }
+    },
+    "blue": {
+      "fill": {
+        "$value": "{scheme.blue.fill}"
+      },
+      "line": {
+        "$value": "{scheme.blue.line}"
+      },
+      "text": {
+        "$value": "{scheme.blue.text}"
+      }
+    },
+    "green": {
+      "fill": {
+        "$value": "{scheme.green.fill}"
+      },
+      "line": {
+        "$value": "{scheme.green.line}"
+      },
+      "text": {
+        "$value": "{scheme.green.text}"
+      }
+    },
+    "orange": {
+      "fill": {
+        "$value": "{scheme.orange.fill}"
+      },
+      "line": {
+        "$value": "{scheme.orange.line}"
+      },
+      "text": {
+        "$value": "{scheme.orange.text}"
+      }
+    },
+    "purple": {
+      "fill": {
+        "$value": "{scheme.purple.fill}"
+      },
+      "line": {
+        "$value": "{scheme.purple.line}"
+      },
+      "text": {
+        "$value": "{scheme.purple.text}"
+      }
+    },
+    "red": {
+      "fill": {
+        "$value": "{scheme.red.fill}"
+      },
+      "line": {
+        "$value": "{scheme.red.line}"
+      },
+      "text": {
+        "$value": "{scheme.red.text}"
+      }
+    }
+  },
+  "space": {
+    "$type": "dimension",
+    "1": {
+      "$value": {
+        "value": 4,
+        "unit": "px"
+      }
+    },
+    "2": {
+      "$value": {
+        "value": 8,
+        "unit": "px"
+      }
+    },
+    "3": {
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      }
+    },
+    "4": {
+      "$value": {
+        "value": 32,
+        "unit": "px"
+      }
+    }
+  },
+  "size": {
+    "$type": "dimension",
+    "figure": {
+      "$description": "The width of a figure's page.",
+      "$value": {
+        "value": 960,
+        "unit": "px"
+      }
+    },
+    "slide": {
+      "$description": "The width of a slide.",
+      "$value": {
+        "value": 1280,
+        "unit": "px"
+      }
+    }
+  },
+  "stroke": {
+    "$type": "dimension",
+    "thin": {
+      "$value": {
+        "value": 1,
+        "unit": "px"
+      }
+    },
+    "thick": {
+      "$description": "A line drawn on its own, such as a connector, whose arrowheads it sizes.",
+      "$value": {
+        "value": 2,
+        "unit": "px"
+      }
+    }
+  },
+  "font": {
+    "$type": "fontFamily",
+    "body": {
+      "$value": [
+        "Source Sans Pro"
+      ],
+      "$extensions": {
+        "pkit.visual-communication": {
+          "files": {
+            "Source Sans Pro": "fonts/SourceSansPro-Regular.otf"
+          },
+          "measure": "file"
+        }
+      }
+    },
+    "heading": {
+      "$value": [
+        "Source Sans Pro Semibold"
+      ],
+      "$extensions": {
+        "pkit.visual-communication": {
+          "files": {
+            "Source Sans Pro Semibold": "fonts/SourceSansPro-Semibold.otf"
+          },
+          "measure": "file"
+        }
+      }
+    }
+  },
+  "typeface": {
+    "$description": "The families the brand's types take beside the shared ones; private.",
+    "$type": "fontFamily",
+    "code": {
+      "$description": "A monospace family, for the type of code.",
+      "$value": [
+        "Source Code Pro"
+      ],
+      "$extensions": {
+        "pkit.visual-communication": {
+          "files": {
+            "Source Code Pro": "fonts/SourceCodePro-Regular.ttf"
+          },
+          "measure": "file"
+        }
+      }
+    }
+  },
+  "type": {
+    "$type": "typography",
+    "body": {
+      "$value": {
+        "fontFamily": "{font.body}",
+        "fontSize": {
+          "value": 16,
+          "unit": "px"
+        },
+        "fontWeight": 400,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.4
+      }
+    },
+    "heading": {
+      "$value": {
+        "fontFamily": "{font.heading}",
+        "fontSize": {
+          "value": 24,
+          "unit": "px"
+        },
+        "fontWeight": 600,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.2
+      }
+    },
+    "strong": {
+      "$description": "A strong phrase in the body's text: the body's size and line height, in the heading's semibold family.",
+      "$value": {
+        "fontFamily": "{font.heading}",
+        "fontSize": {
+          "value": 16,
+          "unit": "px"
+        },
+        "fontWeight": 600,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.4
+      }
+    },
+    "code": {
+      "$description": "Code, as a terminal or a file shows it: Source Code Pro, a monospace family, a little smaller than the body's text.",
+      "$value": {
+        "fontFamily": "{typeface.code}",
+        "fontSize": {
+          "value": 14,
+          "unit": "px"
+        },
+        "fontWeight": 400,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.5
+      }
+    }
+  }
+}

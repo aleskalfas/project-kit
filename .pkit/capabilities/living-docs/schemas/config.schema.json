@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "config.schema.json",
   "title": "Project configuration — living-docs capability",
-  "description": "Formal shape of the project's `.pkit/capabilities/living-docs/project/config.yaml`: what the capability needs that the backbone does not (living-docs DEC-001 point 1) — each documentation space's entry point, and the space each place outside every documentation root belongs to. The places themselves are declared in the backbone configuration's `friction.places` (COR-050), which a capability may not extend (COR-048); this file assigns them, joined by path. A place inside a documentation root belongs to that root's space unless assigned here; a place outside every root must be assigned here, unless it is declared to hold rule sets and gives no type. Such a place gives no space until it is assigned. `places` is a mapping so that each place names exactly one space. Whether an assignment names a declared place, whether every out-of-root place has one, and whether each entry point and definition resolves, is the capability's validator's (`pkit living-docs validate`), not this schema's. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
+  "description": "Formal shape of the project's `.pkit/capabilities/living-docs/project/config.yaml`: what the capability needs that the backbone does not (living-docs DEC-001 point 1) — each documentation space's audience, entry point and definition, and the space each place outside every documentation root belongs to. The places themselves are declared in the backbone configuration's `friction.places` (COR-050), which a capability may not extend (COR-048); this file assigns them, joined by path. A place inside a documentation root belongs to that root's space unless assigned here; a place outside every root must be assigned here, unless it is declared to hold rule sets and gives no type. Such a place gives no space until it is assigned. `places` is a mapping so that each place names exactly one space. Whether an assignment names a declared place, whether every out-of-root place has one, and whether each entry point and definition resolves, is the capability's validator's (`pkit living-docs validate`), not this schema's. Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
   "type": "object",
   "required": [
     "schema_version"
@@ -29,7 +29,7 @@
       "description": "Self-describing adopter-data binding (COR-023). Expected value: `living-docs:config`."
     },
     "spaces": {
-      "description": "The project's documentation spaces, keyed by id, each with its entry point and its definition. `user` and `technical` are the two every project has (DEC-001 point 1); a project may add others.",
+      "description": "The project's documentation spaces, keyed by id, each with its audience, its entry point and its definition. `user` and `technical` are the two every project has (DEC-001 point 1); a project may add others.",
       "type": "object",
       "propertyNames": {
         "$ref": "#/$defs/space-id"
@@ -59,6 +59,12 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "audience": {
+          "description": "Who the space serves, in words (DEC-001 point 1): `users` for the user space and `maintainers` for the technical space, as DEC-001 gives them, or the audience a space the project adds serves, such as `integrators who call the HTTP API`. The living-docs agent reads a page of the space as this audience until the readers point resolves.",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
         "entry-point": {
           "description": "The page a reader of this space starts from: a path relative to the repository root.",
           "$ref": "#/$defs/repo-relative-path"

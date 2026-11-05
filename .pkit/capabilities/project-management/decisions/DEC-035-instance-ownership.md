@@ -6,16 +6,20 @@ date: 2026-06-23
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [DEC-059](DEC-059-topology-of-seats.md).** In a project that declares a topology of seats in its committed configuration, a clone takes part by taking a seat, and its number is the seat's. Overturned for such a project: point 1's typed number as the sign that a clone takes part, point 2's pool of four numbers for each assignee, point 3's claim at creation by a clone in a planner's seat, and the Rationale's statement that no committed registry is needed. A project with no topology keeps this record whole. DEC-059's "What this overturns, and what stands" lists each passage.
+
 When one person runs several clones of the same repository — each with its own
 agent session driving the work-tracker — every issue shows the same human as
 assignee, so no clone can tell which in-flight work belongs to which clone, and
 the clones step on each other. This decision adds an **opt-in** mechanism so each
 clone marks the issues it owns, sees whose-is-whose at a glance, can hand work
 between clones, and is guarded (advisorily) against acting on another clone's
-work. A clone that does not opt in behaves exactly as today.
+work. A clone that does not opt in behaves as if the facility were not there,
+except that it cannot move back from In Progress an issue an instance owns, since
+it cannot release that owner (point 4).
 
 The mechanism is deliberately small: a per-clone identity the clone sets for
-itself, a GitHub label that marks ownership, and ownership side-effects layered
+itself, a marker on the issue that records ownership, and ownership side-effects layered
 onto the lifecycle commands the capability already owns. It is **not** a lock —
 GitHub offers no atomic claim — so the guard *catches and resolves* clashes
 rather than *preventing* them.
@@ -52,21 +56,21 @@ A clone sets its own identity with a
 `set-instance <N>` command that writes a clone-local **instance id** to a
 git-ignored runtime file (declared via the capability's `runtime_ignore:`
 key per [pkit:ADR-009] rule 7, so it is never committed). A clone with
-no instance id set behaves exactly as today — no marking, no guard, no
-signing. The presence of the id is the sole activation gate.
+no instance id set behaves as if the facility were not there — no marking, no guard, no
+signing — with one exception: it cannot move back from In Progress an issue an
+instance owns, since it cannot release that owner (point 4). The presence of the
+id is the sole activation gate. The same runtime file
+keeps a key the clone generates the first time it claims on a state issue (refinement
+per [project-management:DEC-058-state-issues]).
 
-> **Refined by [DEC-045](DEC-045-named-per-user-instances.md).** Opt-in and
-> additive on top of the numeric id: a clone's identity may also carry a
-> human-readable **name** (e.g. `data`, `map`), and a **per-user-local topology
-> file** (never committed) may list the person's named instances and the
-> workstreams each *references* for routing. The *expected* owner of an issue is
-> then derived from its workstream's referencing instance (feeding the pm-layer
-> guard only — realm-blindness preserved); where the reference is absent or
-> shared, the guard falls back to the flat numeric commons behaviour described
-> here. The numeric model, the ownership marker, and the clash mechanics are
-> unchanged and remain the fallback — refinement-in-place, not a supersession.
+A clone's identity may also carry a
+human-readable **name**, such as `data` or `map`, on top of its number. An issue's
+*expected* owner may then come from the instance that references its workstream, and
+that expected owner feeds the pm-layer guard only. Where no instance or several reference the workstream,
+the guard keeps the numeric behaviour described here (refinement per
+[project-management:DEC-045-named-per-user-instances]).
 
-### 2. Ownership is carried by an `instance:N` GitHub label, paired with the assignee
+### 2. Ownership is carried by a marker paired with the assignee
 
 The label reuses the label substrate of
 [project-management:DEC-012-classification-axes] but is **not** a
@@ -77,33 +81,56 @@ pair**: the pool of instance numbers (default 4) is *per-assignee*, so one
 assignee's `instance:2` is distinct from another's. Labels are created lazily
 on first use, so default `bootstrap` is untouched.
 
-> **Refined by [DEC-043](DEC-043-ownership-substrate-selection.md).** The
-> ownership marker's substrate is now *selectable*, "substrate-where-available":
-> the `instance:N` label described here is one binding, kept for repos that can
-> create labels; where they cannot, the marker is carried by a per-instance
-> append-only comment log (source of truth) plus a derived, regenerable
-> owner-mirror in the issue description. Comment-create is per-object atomic, so
-> the same-instant tie-break in point 6 holds unchanged. Refinement-in-place,
-> not a supersession — this label mechanism and the clash-guard semantics stand.
+The marker's substrate is selectable, "substrate-where-available". The `instance:N`
+label described here is one binding, which an operator who knows the repository can
+create labels opts into. By default a per-instance, append-only comment log carries the
+marker as its source of truth, with a derived, regenerable owner mirror in the issue
+description. Comment
+creation is atomic per object, so the same-instant tie-break of point 6 holds on
+either substrate (refinement per [project-management:DEC-043-ownership-substrate-selection]).
+
+Where this record names the label, it means the marker on whichever substrate carries
+it: each stamp, strip, transfer and re-read below acts on that marker.
 
 ### 3. A clone claims at creation, for the whole tree
 
 `create-issue` stamps the
 creating clone's instance label; the clone owns the entire filed arc
 (containers + leaves) from birth. `start-work` claims an issue that has no
-owner yet (legacy / human-filed / pre-feature — the *commons*).
+owner, the *commons*. An issue has none where it was filed with none, such as
+before this facility or by a person. It has none too where its owner was
+released or its claim stopped counting (point 4), and where it was assigned to
+another person (point 5). An issue moved back from In Progress loses its owner
+(point 4). In a project with no topology, it is then unowned while the rest of
+its tree stays owned from creation.
 
-### 4. Ownership releases on terminal transitions and transfers on reclaim
+### 4. Ownership releases when the work ends or stops, and transfers on reclaim
 
 The
-label is stripped when the issue closes (PR-merge or won't-do). For a
+label is stripped when the issue closes (PR-merge, a Task's close as completed
+without a pull request, or won't-do). For a
 container that closes via the cascade fold
 ([project-management:DEC-034-cascade-slot-binding]), the **pm closure wrapper
 that observes the fold strips the label** — the engine fold itself stays
 realm-blind. Work is redistributed with `handoff-issue` extended by
 `--to-instance <N>` (push), `--to-instance self` (pull/claim), and
 `--recursive` (subtree). Reclaim between one person's own clones changes only
-the label, not the assignee.
+the label, not the assignee. In a project with a topology, an owner also releases
+a Task once it stops work on it, and its work renews the claim as it goes on. A
+claim on a Task In Progress that its work has not renewed within a generous limit
+lapses, and a claim counts only while its clone holds the claim's seat (refinement
+per [project-management:DEC-059-topology-of-seats]). A Task its owner releases
+without moving it back is left In Progress with no owner, which the move back
+below mends.
+
+The owner is also released when a person moves the issue back from In Progress,
+for every issue type and in every project. The move back is refused, naming the
+owner, where the clone making it cannot release that owner. That is any owner
+where the clone takes no part in instance ownership, and a claim another account
+made on the comment log, which only that account's clone can release
+([project-management:DEC-043-ownership-substrate-selection] point 3). The owner's
+clone then moves the issue back, or the owner releases the claim first
+([project-management:DEC-006-state-machine-and-cascade]).
 
 ### 5. Changing the assignee strips the label
 
@@ -127,7 +154,11 @@ no atomic claim), the claiming verb **re-reads after stamping**; if two
 instance labels are present it has detected a collision and the
 **higher-numbered instance auto-backs-off** (removes its label, abandons the
 claim, notifies). The **lowest instance number wins** — a tie-break both
-clones compute identically from the labels alone, with no coordination.
+clones compute identically from the labels alone, with no coordination. In a
+project with a topology, a claim that no longer counts is no claim, so the guard
+does not refuse on it. Every command that writes as the owner reads the claim
+first, and a session whose claim no longer counts parks its work (refinement per
+[project-management:DEC-059-topology-of-seats]).
 
 ### 7. Listings show every issue, signed by owner
 
@@ -147,19 +178,21 @@ shared substrate content-free.
 ### How this record extends DEC-026
 
 This DEC **extends the `handoff-issue` contract** of
-[project-management:DEC-026-work-ownership-lifecycle] (new `--to-instance` modes
-and `--recursive`, and a same-assignee/label-only transfer mode); a reciprocal
-note lands on DEC-026 in the same change-set. This is a refinement-in-place, not
-a supersession — DEC-026's existing cross-human handoff behaviour stands.
+[project-management:DEC-026-work-ownership-lifecycle] with the `--to-instance`
+modes, `--recursive`, and a transfer between one person's clones that keeps the
+assignee. DEC-026's handoff between people stands, and its "The seven commands"
+points here.
 
 ## Rationale
 
 **Why opt-in by clone-local id, no committed config.** The single-clone case is
 the overwhelming common one and must stay zero-ceremony; gating on the presence
-of a clone-local id means a non-participating clone is byte-for-byte unchanged.
-Clones coordinate through the GitHub labels (the shared substrate per DEC-003),
-so no committed registry is needed — the feature's entire persistent state is
-the per-clone id plus the labels.
+of a clone-local id means a non-participating clone is byte-for-byte unchanged,
+but for one refusal: it cannot move back an issue an instance owns, since that
+would leave on the issue a claim it cannot release (point 4). Clones coordinate
+through the ownership markers on GitHub (the shared substrate per
+DEC-003), so no committed registry is needed — the feature's entire persistent state
+is the per-clone id plus the markers.
 
 **Why a label paired with the assignee, not the assignee alone or a synthetic
 handle.** GitHub assignees must be real accounts, so a `user@instance` assignee
@@ -220,14 +253,13 @@ principle — noted so a future maintainer does not re-derive it as a COR.
   trips no migration).
 - **`create-issue`, `start-work`, `done-work`, `close-issue`, `edit-issue`,
   `move-issue` gain ownership side-effects** (stamp / claim-commons / strip /
-  guard) as wrapper-level behaviour — additive, the same class as branch-
-  creation; the engine is untouched.
+  guard, and on a move back from In Progress a release through the release a
+  close uses, point 4) as wrapper-level behaviour — additive, the same class as
+  branch-creation; the engine is untouched.
 - **`handoff-issue` gains `--to-instance <N>`, `--to-instance self`,
-  `--recursive`** and a same-assignee label-only transfer mode — a contract
+  `--recursive`** and a same-assignee, marker-only transfer mode — a contract
   extension on [project-management:DEC-026-work-ownership-lifecycle], which
-  receives a reciprocal note in the same change-set. **Acceptance of this DEC
-  requires explicit human sign-off on this command-contract extension** (the
-  architectural escalation point).
+  points here.
 - **A new schema home for the ownership marker** (its own section/file, not a
   slot in `classification.yaml`), referencing the
   [project-management:DEC-014-validation-severity-model] tokens for the guard.

@@ -8,7 +8,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Summary
 
-**In plain terms:** the backbone now validates four kinds of file it does not write — the configuration file, rule-set files, the project files that answer a data point, and the methodology's block in an artefact's front matter. The core records say those schemas exist, are strict, and how their versions work. This record fixes project-kit's realisation: the schemas are propagated files under `.pkit/schemas/backbone/`; each finds its files by *where they are*, in a fixed order; the binary reads the tree's copy; and one renderer produces every "unknown key, did you mean …" message.
+**In plain terms:** the backbone now validates four kinds of file it does not write — the configuration file, rule-set files, the project files that answer a data point, and the methodology's block in an artefact's front matter or its sidecar. The core records say those schemas exist, are strict, and how their versions work. This record fixes project-kit's realisation: the schemas are propagated files under `.pkit/schemas/backbone/`; each finds its files by *where they are*, in a fixed order; the binary reads the tree's copy; and one renderer produces every "unknown key, did you mean …" message.
 
 ## Context
 
@@ -28,8 +28,9 @@ A file is claimed by the first rule that matches; a claimed file never reaches t
 - **Fixed path** — the configuration file at the path the CLI reference documents (COR-048 point 1).
 - **Answer file** — a YAML file in the folder of friction answers, which the backbone fixes ([COR-062](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md) point 2), bound to the answer files' schema (refinement per [ADR-068](ADR-068-friction-answer-folder.md)).
 - **Filler path** — the path derived from a point address under the backbone-owned sub-path beneath the internal documentation root (COR-052 point 2). The mapping from `<publisher>::<role>:<point>` to a path is **injective on valid addresses**, so that no two points share a file and no path binds the wrong schema; the reference shows the mapping and its inverse.
+- **Sidecar** — a file the sidecar rule reads as a document's sidecar, at a path derived from its document's, in a place or not ([COR-063](../../../.pkit/decisions/core/COR-063-document-sidecars.md) point 1). The rule only claims the file, and checks nothing in it itself (refinement per [ADR-070](ADR-070-document-sidecar-place.md)).
 - **Rule-set file** — a collection file in a place declared to hold rule sets (COR-051 point 2). Its entries also carry the container, so the container rule applies inside it.
-- **Container** — the front matter of a Markdown document, or a collection entry, in a declared place (COR-050 point 1). A plain YAML data file in a declared place is not a document: it falls through to COR-023.
+- **Container** — the data of a Markdown document, in its front matter or its sidecar, or a collection entry, in a declared place (COR-050 point 1). A document's container is checked once, in the home that holds its data, where the backbone reads that data (COR-063 point 3). Any other plain YAML data file in a declared place is not a document: it falls through to COR-023.
 
 Consequences stated so nobody discovers them: `pkit data validate` delegates a location-claimed path to this pass rather than refusing it for lack of a binding; a capability whose `binds_to:` glob would match a claimed path is a capability defect, not an ambiguity; a filler whose point has no active provider has its envelope validated and its body left alone, reported as inert (COR-052 point 2).
 

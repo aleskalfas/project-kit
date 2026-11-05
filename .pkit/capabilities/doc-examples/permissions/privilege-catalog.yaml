@@ -1,0 +1,37 @@
+schema_version: 1
+
+# doc-examples' privilege-catalog fragment (ADR-021): the privilege that
+# recognizes a call to the run, merged as `doc-examples:run-examples`.
+#
+# The run is a program a person or CI starts by its path, never a command of
+# the methodology's CLI (DEC-001 point 9). It runs every command a page, the
+# setup step and the placeholders hold, as the caller and unconfined, so this
+# capability ships no grant of the privilege, and no grants fragment at all:
+# the privilege is inert until a project grants it. A project that wants an
+# agent to run its pages' examples grants it by this name, to whom it chooses:
+#
+#   - subject: agent:<name>
+#     privilege: '[privilege-catalog:doc-examples:run-examples]'
+#     effect: allow
+#
+# Recognized by the program's path relative to the folder the call runs in,
+# alone or after `python3` or `python` named bare. A path written otherwise,
+# such as an absolute one, is not recognized. A recognizer sees no folder,
+# and the decision core reads a leading `cd` as no change of folder. So a
+# grant also allows a program at that relative path under any folder the
+# grantee can enter, one it wrote included: grant it only to a subject you
+# would let run a program of its own.
+privileges:
+  run-examples:
+    description: >-
+      Run the console examples of the project's pages as tests, through the
+      doc-examples run, `.pkit/capabilities/doc-examples/scripts/run-examples.py`.
+      The run starts every command of the project's setup step, its
+      placeholders and its pages, as the caller and confined by nothing of its
+      own, so a grant of it allows each of those commands (DEC-001 point 9).
+      It is recognized by the program's path relative to the folder the call
+      runs in, so a grant also allows a program at that path under another
+      folder. No grant ships: a project grants it by this name.
+    recognize:
+      bash:
+        - pattern: '^(?:python3?\s+)?(?:\./)?\.pkit/capabilities/doc-examples/scripts/run-examples\.py(?:\s|$)'

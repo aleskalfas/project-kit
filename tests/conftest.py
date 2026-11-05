@@ -10,20 +10,40 @@ from pathlib import Path
 
 import pytest
 
-from project_kit import command_runner, default_branch, migrations, run_cache, session_guard
+from project_kit import (
+    command_runner,
+    default_branch,
+    migrations,
+    project_config,
+    run_cache,
+    session_guard,
+)
+from tests import in_process, slices
 from tests.adopter_repo import (
     AdopterRepo,
     AdopterTemplates,
     MakeAdopterRepo,
     Prepare,
     build_adopter_repo,
+    building_template,
     prepared,
     refusing_global_config,
     stub_adapter_primitives,
 )
+from tests.friction_documents import commit_install, settled_commit, settled_write
 
 #: What a run of the command runner sets in the environment of what it runs.
 RUN_VARIABLES = (command_runner.DEADLINE_ENV, command_runner.STRAYS_ENV, run_cache.CACHE_ENV)
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """`--shard`, `--shard-table` and `--test-report`: the suite's slices, as a full run
+    in CI cuts them (`tests/slices.py`, ADR-078)."""
+    slices.addoption(parser)
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    slices.configure(config)
 
 
 @pytest.fixture(autouse=True)
@@ -73,6 +93,76 @@ def outside_any_session(monkeypatch: pytest.MonkeyPatch) -> None:
     command runs (`session_guard`) answers the same in a session and in CI. A
     test that needs a session sets the anchor itself."""
     monkeypatch.delenv(session_guard.CLAUDE_CODE_ANCHOR, raising=False)
+
+
+@pytest.fixture(scope="session")
+def unguarded_modules() -> frozenset[str]:
+    """The test modules the process guard does not hold yet (`in_process.BASELINE`)."""
+    return in_process.baseline()
+
+
+@pytest.fixture(autouse=True)
+def process_starts(
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+    unguarded_modules: frozenset[str],
+) -> Iterator[in_process.ProcessStarts]:
+    """The guard (#2314, choice 4): every process of `pkit` or a capability script the
+    test starts, its setting-up and its tearing-down included, counted. A test that
+    starts one without `@pytest.mark.process(<reason>)` fails, unless its module is in
+    the guard's baseline (`in_process.BASELINE`). A test may ask for this fixture to read what
+    it started (`started`)."""
+    starts = in_process.ProcessStarts(building_template).watch(monkeypatch)
+    yield starts
+    why = in_process.judge(request.node, starts, unguarded_modules)
+    if why is not None:
+        pytest.fail(why, pytrace=False)
+
+
+#: Where a clone of a project-management adopter keeps its instance id (DEC-035
+#: point 1), below the capability's folder.
+CLONE_ID_PARTS = ("project", "instance", "clone.json")
+
+
+@pytest.fixture(autouse=True)
+def outside_any_clone(
+    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Every test runs as a clone with no instance id, whatever this checkout set
+    with `set-instance`. With an id set, a project-management script run against
+    this repository's own capability claims and releases issues on GitHub, which
+    no test may reach. A clone id file outside this session's temporary
+    directories reads as absent. A test that needs an id writes one in a
+    capability of its own, or stands in for the reading."""
+    base = tmp_path_factory.getbasetemp().resolve()
+    session = base.parent if os.environ.get("PYTEST_XDIST_WORKER") else base
+    is_file = Path.is_file
+
+    def outside_the_session(path: Path, **kwargs: object) -> bool:
+        if path.parts[-3:] == CLONE_ID_PARTS and not path.resolve().is_relative_to(session):
+            return False
+        return is_file(path, **kwargs)
+
+    monkeypatch.setattr(Path, "is_file", outside_the_session)
+
+
+@pytest.fixture
+def at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The test's stdin counts as a terminal, so a confirmation that guards a
+    person's decision asks and reads the answer the test feeds it. Without
+    this, the runner's stdin is a pipe, and such a confirmation refuses
+    without reading it (#2003)."""
+    monkeypatch.setattr(project_config, "stdin_is_tty", lambda: True)
+
+
+@pytest.fixture
+def answers_in_files(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each write and commit of an adopter repository takes the answers out of the blocks
+    of the artefacts it writes into answer files, as a change writes them (COR-062 point 1;
+    `friction_documents.settle_answers`), and each commit stages them. For a module whose
+    documents say an artefact's answers beside its anchors (`friction_documents.document`)."""
+    monkeypatch.setattr(AdopterRepo, "write", settled_write)
+    monkeypatch.setattr(AdopterRepo, "commit", settled_commit)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -157,6 +247,15 @@ def adopter_repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
     """An adopter repository at `tmp_path` with the backbone installed and the
     scripted history laid down (`adopter_repo.history` holds the SHAs)."""
     return make_adopter_repo(history=True)
+
+
+@pytest.fixture
+def committed_adopter(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
+    """An adopter repository at `tmp_path` with the backbone installed and the install
+    committed on `main`, one commit dated `INSTALLED_AT` (`friction_documents.commit_install`).
+    Its template is built once per session and copied for each test, so a test that
+    commits a base commits only its own files, not the whole installed `.pkit/` (#2320)."""
+    return make_adopter_repo(prepare=commit_install)
 
 
 @pytest.fixture

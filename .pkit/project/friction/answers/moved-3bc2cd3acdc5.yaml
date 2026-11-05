@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/evidence/glossary.md#TERM-citation
+    revalidated:
+      at: 2026-10-24T01:22:31Z
+      outcome: unchanged
+      unchanged-because: The check now finds a fence indented in a list item or set in a block quote, and leaves nested scopes out. A citation is still the token that names a record by its id. The check still skips a fenced code block, an HTML comment and the scope's evidence.yaml.

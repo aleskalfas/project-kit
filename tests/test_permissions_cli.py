@@ -2861,13 +2861,44 @@ def _extract_func_source(source: str, name: str) -> str:
     raise AssertionError(f"function or assignment {name!r} not found in module source")
 
 
+def _verdict_path_divergences(
+    base: str,
+    working: str,
+    frozen: tuple[str, ...],
+    sanctioned: dict[str, tuple[tuple[str, str], ...]],
+    introduced: tuple[str, ...] = (),
+) -> list[str]:
+    """The names in `frozen` whose source in `working` is neither main's
+    (`base`) as it stands nor main's after the name's sanctioned rewrite.
+
+    A rewrite pair that inserts text main's side already carries is skipped,
+    since applied again it would insert the text twice (#2011). Any other pair
+    whose change main carries finds no old text left to replace."""
+    import re
+
+    diverged = []
+    for fn in frozen:
+        if fn in introduced and not re.search(rf"^(def {fn}\(|{fn} = )", base, re.M):
+            continue  # compared once main defines it
+        ours = _extract_func_source(working, fn)
+        expected = _extract_func_source(base, fn)
+        if ours == expected:
+            continue  # main as it stands
+        for old, new in sanctioned.get(fn, ()):
+            if old in new and new in expected:
+                continue  # an insertion main already carries
+            expected = expected.replace(old, new)
+        if ours != expected:
+            diverged.append(fn)
+    return diverged
+
+
 def test_decide_verdict_path_byte_identical_to_main():
     # ADR-032: `load_model` gains an additive edit to read
     # `active_profile` from its per-machine home, so decide.py is NOT frozen
     # whole-file. What MUST stay byte-identical is the `decide()` VERDICT path —
     # the verdict logic, not the model-loader. Guard exactly that function (and
     # the pure helpers it composes) against `main`, not the whole file.
-    import re
     import subprocess
 
     root = Path(__file__).resolve().parent.parent
@@ -2932,16 +2963,32 @@ def test_decide_verdict_path_byte_identical_to_main():
     # a deliberate, reviewed edit to this list.
     #
     # Transitive call graph (verified against decide.py):
-    #   decide        → _strip_leading_cd, recognized_privileges,
+    #   decide        → _strip_leading_cd, recognized_privileges, _deny_forms,
     #                   _effective_grants, _privilege_ids, _scope_ok,
     #                   _uncovered_segments, _shown_program, _doubts
+    #                   (+ _UNSEEN_KIND)
     #   hook_decide   → _read_default_agent, decide
     #   recognized_privileges → segments, _segment_privileges
-    #   segments      → _segment_words, _assignments (+ _SEP/_UNTRUSTED)
+    #   segments      → _without_harmless_redirections, _segment_words,
+    #                   _assignments (+ _SEP/_UNTRUSTED)
+    #   _without_harmless_redirections → _segment_words, _assignments
+    #                   (+ _HARMLESS_REDIRECTION/_SEP/_SHELL_KEYWORDS)
     #   _segment_words        → _words
     #   _assignments          → (+ _ENVVAR)
-    #   _doubts       → _words, _assignments (+ _SEP/_UNTRUSTED/_UNTRUSTED_KIND/
-    #                   _ODD_SPACE/_PROGRAM_VAR/_QUOTED/_EXPORT_OPERAND), _brace_expansion
+    #   _doubts       → _without_harmless_redirections, _words, _assignments
+    #                   (+ _SEP/_UNTRUSTED/_UNTRUSTED_KIND/_ODD_SPACE/_PROGRAM_VAR/
+    #                   _QUOTED/_EXPORT_OPERAND), _brace_expansion
+    #   _deny_forms   → _without_harmless_redirections, _segment_words, _assignments,
+    #                   _export_prefix, _rule_form (+ _SEP/_CONFIG_VAR)
+    #   _rule_form    → _structured_form, _pattern_form
+    #   _structured_form      → _program_name, _globbed, _glob_head, _may_open_flag,
+    #                           _subcommand_candidates, _flag_form
+    #   _pattern_form         → _program_name, _globbed, _subcommand_candidates
+    #                           (+ _PATTERN_PROGRAM)
+    #   _may_open_flag        → _globbed (+ _FLAG_OPENERS)
+    #   _globbed              → (+ _GLOB)
+    #   _glob_head            → (+ _GLOB)
+    #   _flag_form            → (+ _BUNDLE)
     #   _uncovered_segments   → segments, _segment_privileges
     #   _segment_privileges   → _matches_bash
     #   _shown_program        → (+ _BARE_WORD)
@@ -2979,6 +3026,18 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_assignments",
         "_doubts",
         "_brace_expansion",
+        "_export_prefix",
+        "_deny_forms",
+        "_rule_form",
+        "_structured_form",
+        "_pattern_form",
+        "_program_name",
+        "_flag_form",
+        "_subcommand_candidates",
+        "_may_open_flag",
+        "_globbed",
+        "_glob_head",
+        "_without_harmless_redirections",
         # module-level verdict regexes the above close over
         "_TOKEN",
         "_SEP",
@@ -2992,170 +3051,108 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_QUOTED",
         "_BARE_CD",
         "_BARE_WORD",
+        "_GLOB",
+        "_FLAG_OPENERS",
+        "_BUNDLE",
+        "_CONFIG_VAR",
+        "_PATTERN_PROGRAM",
+        "_UNSEEN_KIND",
+        "_HARMLESS_REDIRECTION",
+        "_SHELL_KEYWORDS",
     )
-    # Deliberate, reviewed wording change (#1421): `_scope_ok` cited
-    # "ADR-004 §61", in its docstring and in the reason it gives for refusing a
-    # negation glob. ADR-004 now writes its points as headings, so its line 61
-    # no longer holds the alternative those words named. Both now cite that
-    # alternative by section. Only the citation's words change, not the logic
-    # or a verdict, so this one rewrite is applied to main's side and the rest
-    # of `_scope_ok` is compared byte for byte. Once this is on main, main
-    # carries the new words, the rewrite finds nothing to replace, and the
-    # guard compares main as it stands, and this entry may be deleted.
-    sanctioned = {
-        "_scope_ok": (
-            (
-                "      (ADR-004 §61).  Only positive allow-lists are honest at this layer.",
-                '      (ADR-004, Alternatives considered, "Relabel `network-egress` as\n'
-                '      natively enforced…").  Only positive allow-lists are honest at this\n'
-                "      layer.",
-            ),
-            (
-                '            f"(ADR-004 §61); use positive allow-list globs only"',
-                "            f'(ADR-004, Alternatives considered, \"Relabel `network-egress` as '\n"
-                "            f'natively enforced…\"); use positive allow-list globs only'",
-            ),
-        ),
-        # Deliberate, reviewed verdict change (#1942): the core reads each word
-        # of a Bash command as the shell does before it matches, removing quotes
-        # and backslashes (`_words`), so a quote alone no longer keeps a grant
-        # from allowing, and a deny binds on `"--force"` as on `--force`. A
-        # word it cannot read so, an expansion opened by `$`, or a leading
-        # assignment that changes which program runs, or is written with a
-        # quote or a backslash, keeps every grant from
-        # allowing (`_doubts`), and `decide` names each kind in its reason
-        # (ADR-025 point 2). `_ENVVAR` reads `NAME+=value` as an assignment
-        # too, as the shell does. `decide` strips no leading `cd` from a
-        # command holding such a construct, and `_BARE_CD` parts `cd` from its
-        # path with a space or a tab alone. These rewrites apply exactly that change to main's
-        # side, and the rest of each is compared byte for byte. Once this is on
-        # main, the rewrites find nothing to replace, and these entries may be
-        # deleted.
-        "_UNTRUSTED": (
-            (
-                '_UNTRUSTED = re.compile(r"""[\'"`<>(]""")',
-                '_UNTRUSTED = re.compile(r"""[$`<>(]""")',
-            ),
-        ),
-        "_ENVVAR": (
-            (
-                '_ENVVAR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")',
-                '_ENVVAR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\\+?=")',
-            ),
-        ),
-        "_BARE_CD": (
-            (
-                '_BARE_CD = re.compile(r"""^cd\\s+([^\\s\'"`$<>|&;()]+)$""")',
-                '_BARE_CD = re.compile(r"""^cd[ \\t]+([^\\s\'"`$<>|&;()]+)$""")',
-            ),
-        ),
-        "segments": (
-            (
-                "    false-prompt that the flat settings matcher couldn't catch.\n\n",
-                "    false-prompt that the flat settings matcher couldn't catch.\n\n"
-                "    Each word is the word the shell passes on, with its quotes and backslashes\n"
-                '    removed (#1942), so a grant or a deny matches `"--force"` as `--force`.\n\n',
-            ),
-            (
-                "        toks = raw.split()\n"
-                "        rest = toks\n"
-                '        while rest and (rest[0] == "export" or _ENVVAR.match(rest[0])):\n'
-                "            rest = rest[1:]\n"
-                "        if rest:\n"
-                "            out.append(rest)\n"
-                "        elif any(_UNTRUSTED.search(tok) for tok in toks):\n"
-                "            out.append(toks)\n",
-                "        words = _segment_words(raw)\n"
-                "        rest = words[_assignments(words):]\n"
-                "        if rest:\n"
-                "            out.append([word for _, word in rest])\n"
-                "        elif any(_UNTRUSTED.search(text) for text, _ in words):\n"
-                "            out.append([word for _, word in words])\n",
-            ),
-        ),
-        "decide": (
-            (
-                "    # construct below covers it as it covers a command with no `cd` (#1917);\n"
-                "    # the bare `cd` it strips cannot hold one.\n",
-                "    # construct below covers it as it covers a command with no `cd` (#1917).\n"
-                "    # A command holding such a construct anywhere, its `cd` included, is not\n"
-                "    # stripped at all (#1942): it is decided whole, where every deny still\n"
-                "    # binds on each segment and the construct then keeps every grant from\n"
-                "    # allowing, so a `cd` whose word the shell reads otherwise, such as\n"
-                "    # `cd {a,b}`, never hides what it runs.\n",
-            ),
-            (
-                '    if request.get("type") == "bash":\n'
-                '        remainder = _strip_leading_cd(request.get("command", ""))\n',
-                '    if request.get("type") == "bash" and '
-                'not _doubts(request.get("command", "")):\n'
-                '        remainder = _strip_leading_cd(request.get("command", ""))\n',
-            ),
-            (
-                "    # commands the shell runs. It is checked after the grants, so a deny still\n"
-                "    # wins. The reason lists the kinds of construct, never the command's text.\n"
-                '    if request.get("type") == "bash" and '
-                '_UNTRUSTED.search(request.get("command", "")):\n'
-                '        if posture == "strict":\n'
-                '            return "deny", (\n'
-                '                "strict posture: an untrusted construct '
-                '(quote / substitution / "\n'
-                '                "backtick / redirection) in the command"\n'
-                "            )\n"
-                '        return "abstain", (\n'
-                '            "an untrusted construct (quote / substitution / backtick / "\n'
-                '            "redirection) in the command — fail closed, '
-                "defer to the harness's \"\n"
-                '            "normal flow"\n'
-                "        )\n",
-                "    # commands the shell runs. So does a word the core cannot read as the shell\n"
-                "    # does, or an assignment that changes which program runs (#1942): the\n"
-                "    # words matched may not be the words the shell passes on, or the program\n"
-                "    # not the one the grant names. It is checked after the grants, so a deny\n"
-                "    # still wins. The reason lists the kinds of construct, never the command's\n"
-                "    # text.\n"
-                '    doubts = _doubts(request.get("command", "")) '
-                'if request.get("type") == "bash" else []\n'
-                "    if doubts:\n"
-                '        kinds = " / ".join(doubts)\n'
-                '        if posture == "strict":\n'
-                '            return "deny", f"strict posture: an untrusted construct '
-                '({kinds}) in the command"\n'
-                '        return "abstain", (\n'
-                '            f"an untrusted construct ({kinds}) in the command — fail closed, "\n'
-                '            f"defer to the harness\'s normal flow"\n'
-                "        )\n",
-            ),
-        ),
-    }
-    introduced = (
-        "_segment_privileges",
-        "_uncovered_segments",
-        "_shown_program",
-        "_BARE_WORD",
-        "_words",
-        "_segment_words",
-        "_assignments",
-        "_doubts",
-        "_brace_expansion",
-        "_UNTRUSTED_KIND",
-        "_ODD_SPACE",
-        "_EXPORT_OPERAND",
-        "_PROGRAM_VAR",
-        "_QUOTED",
+    # A deliberate, reviewed change to a function above names here the rewrite
+    # that turns main's side into the change, as (old, new) pairs, so the rest
+    # is compared byte for byte. A function as main has it always passes, and a
+    # pair that inserts text main already carries is skipped (#2011). So an
+    # entry left in place once its change is on main does no harm, even beside
+    # a later change to the same function. Delete it in any change after that
+    # one merges. A name in `introduced` is new to the change, and is compared
+    # once main defines it.
+    sanctioned: dict[str, tuple[tuple[str, str], ...]] = {}
+    introduced: tuple[str, ...] = ()
+    diverged = _verdict_path_divergences(base, working, frozen, sanctioned, introduced)
+    named = ", ".join(
+        f"`{fn}`" + (" (after its sanctioned rewrite)" if fn in sanctioned else "")
+        for fn in diverged
     )
-    for fn in frozen:
-        if fn in introduced and not re.search(rf"^(def {fn}\(|{fn} = )", base, re.M):
-            continue  # #1908, #1942: compared once main defines it
-        base_source = _extract_func_source(base, fn)
-        for old, new in sanctioned.get(fn, ()):
-            base_source = base_source.replace(old, new)
-        rewritten = " (after its sanctioned rewrite)" if fn in sanctioned else ""
-        assert _extract_func_source(working, fn) == base_source, (
-            f"the `{fn}` verdict path diverged from main{rewritten} — ADR-032 "
-            f"requires it byte-identical (only `load_model` / `active_profile` / "
-            f"`_active_profile_grants` may change)"
+    assert not diverged, (
+        f"the verdict path diverged from main in {named} — ADR-032 requires it "
+        f"byte-identical (only `load_model` / `active_profile` / "
+        f"`_active_profile_grants` may change)"
+    )
+
+
+# A small module standing in for decide.py, and a sanctioned change to it: an
+# insertion into a function, and a replacement in a module-level pattern.
+_GUARDED_MAIN = "\n".join(
+    (
+        "def verdict(command):",
+        "    # the anchor",
+        "    return command",
+        "",
+        "",
+        'PATTERN = r"a|b"',
+        "",
+    )
+)
+_GUARDED_CHANGE = {
+    "verdict": (("    # the anchor\n", "    # the anchor\n    command = command.strip()\n"),),
+    "PATTERN": (('r"a|b"', 'r"a|b|c"'),),
+}
+_GUARDED_FROZEN = ("verdict", "PATTERN")
+
+
+def _changed(source: str, *pairs: tuple[str, str]) -> str:
+    for old, new in pairs:
+        assert old in source, old
+        source = source.replace(old, new)
+    return source
+
+
+_GUARDED_CHANGED = _changed(_GUARDED_MAIN, *_GUARDED_CHANGE["verdict"], *_GUARDED_CHANGE["PATTERN"])
+
+
+def test_the_verdict_guard_passes_an_entry_main_already_carries():
+    # Once the sanctioned change merges, main carries its text: the insertion
+    # is not made a second time, and the replacement finds nothing to replace.
+    assert (
+        _verdict_path_divergences(
+            _GUARDED_CHANGED, _GUARDED_CHANGED, _GUARDED_FROZEN, _GUARDED_CHANGE
         )
+        == []
+    )
+    # A later change to the same function, sanctioned beside the stale entry.
+    later = ("return command", "return command.lower()")
+    sanctioned = {**_GUARDED_CHANGE, "verdict": (*_GUARDED_CHANGE["verdict"], later)}
+    working = _changed(_GUARDED_CHANGED, later)
+    assert _verdict_path_divergences(_GUARDED_CHANGED, working, _GUARDED_FROZEN, sanctioned) == []
+    # The stale entry still lets no other edit through.
+    edited = _changed(working, ("command.lower()", "command.upper()"))
+    assert _verdict_path_divergences(_GUARDED_CHANGED, edited, _GUARDED_FROZEN, sanctioned) == [
+        "verdict"
+    ]
+
+
+def test_the_verdict_guard_compares_a_pending_entry_as_before():
+    def diverged(working: str) -> list[str]:
+        return _verdict_path_divergences(_GUARDED_MAIN, working, _GUARDED_FROZEN, _GUARDED_CHANGE)
+
+    assert diverged(_GUARDED_CHANGED) == []
+    # Each name is compared on its own: one as main has it passes.
+    assert diverged(_GUARDED_MAIN) == []
+    assert diverged(_changed(_GUARDED_MAIN, *_GUARDED_CHANGE["verdict"])) == []
+    # Any other edit of a guarded name fails, beside the sanctioned change or
+    # in place of it.
+    assert diverged(_changed(_GUARDED_CHANGED, ("return command", "return None"))) == ["verdict"]
+    assert diverged(_changed(_GUARDED_MAIN, ("return command", "return None"))) == ["verdict"]
+    assert diverged(_changed(_GUARDED_CHANGED, ('r"a|b|c"', 'r"a|b|c|d"'))) == ["PATTERN"]
+    other = _changed(_GUARDED_MAIN, ("    # the anchor\n", "    # the anchor\n    command = 1\n"))
+    assert diverged(other) == ["verdict"]
+
+
+def test_the_verdict_guard_fails_an_unsanctioned_edit():
+    working = _changed(_GUARDED_MAIN, ("return command", "return None"))
+    assert _verdict_path_divergences(_GUARDED_MAIN, working, _GUARDED_FROZEN, {}) == ["verdict"]
 
 
 def test_setup_autonomy_seeds_profile_recommendations(tmp_path, monkeypatch):
@@ -4387,6 +4384,82 @@ def test_detect_clean_local_finds_nothing(tmp_path, monkeypatch):
     assert _perm._detect_overlay_overrides(proj) == []
 
 
+def test_detect_auto_allow_off_is_override_on_viable_platform(tmp_path, monkeypatch):
+    # A local `autoAllowBashIfSandboxed: false`, as the `/sandbox` panel writes,
+    # wins over the committed `true`: the box confines yet every command still
+    # prompts (#2280) → an OVERRIDE, named with how it defeats the posture.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(proj, {"sandbox": {"enabled": True, "autoAllowBashIfSandboxed": False}})
+    findings = _perm._detect_overlay_overrides(proj)
+    assert [f.key for f in findings] == ["autoAllowBashIfSandboxed"]
+    assert findings[0].kind == "override"
+    assert "autoAllowBashIfSandboxed: false" in findings[0].current
+    assert "prompts" in findings[0].why
+
+
+def test_detect_auto_allow_off_reported_beside_the_other_overrides(tmp_path, monkeypatch):
+    # Reported beside the other overrides, in the stable order, and each named
+    # in the loud block.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(
+        proj,
+        {
+            "sandbox": {
+                "enabled": False,
+                "allowUnsandboxedCommands": True,
+                "autoAllowBashIfSandboxed": False,
+            }
+        },
+    )
+    findings = _perm._detect_overlay_overrides(proj)
+    assert [f.key for f in findings] == [
+        "enabled",
+        "allowUnsandboxedCommands",
+        "autoAllowBashIfSandboxed",
+    ]
+    text = "\n".join(_perm._overlay_override_report(proj, findings, confirm=None))
+    assert "✗ local `autoAllowBashIfSandboxed: false`" in text
+
+
+def test_detect_auto_allow_on_is_not_flagged(tmp_path, monkeypatch):
+    # A local `true` agrees with the posture → no finding.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(proj, {"sandbox": {"enabled": True, "autoAllowBashIfSandboxed": True}})
+    assert _perm._detect_overlay_overrides(proj) == []
+
+
+def test_detect_auto_allow_off_not_flagged_on_macos(tmp_path, monkeypatch):
+    # On macOS the intended posture is sandbox-OFF (#336): with no box, auto-allow
+    # suppresses no prompt, so a local `false` defeats nothing → NOT an override.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "darwin")
+    _write_local(proj, {"sandbox": {"autoAllowBashIfSandboxed": False}})
+    assert _perm._detect_overlay_overrides(proj) == []
+
+
+def test_remove_auto_allow_off_keeps_the_rest_of_the_local_file(tmp_path, monkeypatch):
+    # Consent-gated removal strips ONLY the auto-allow key; every other local key
+    # survives verbatim.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(
+        proj,
+        {
+            "sandbox": {"enabled": True, "autoAllowBashIfSandboxed": False},
+            "permissions": {"allow": ["Bash(ls:*)"]},
+        },
+    )
+    findings = _perm._detect_overlay_overrides(proj)
+    lines = _perm._overlay_override_report(proj, findings, confirm=lambda _m: True)
+    assert any("removed `sandbox.autoAllowBashIfSandboxed`" in line for line in lines)
+    data = json.loads((proj / ".claude" / "settings.local.json").read_text())
+    assert data["sandbox"] == {"enabled": True}
+    assert data["permissions"] == {"allow": ["Bash(ls:*)"]}
+
+
 def test_remove_whole_file_when_purely_overriding(tmp_path, monkeypatch):
     # Local file holds ONLY overriding attributes → whole-file removal.
     proj = _with_adapter(_setup(tmp_path))
@@ -4504,6 +4577,68 @@ def test_setup_autonomy_cli_unseal_warned_then_reconciled_by_seal_reassert(tmp_p
     assert "allowUnsandboxedCommands: true" in out  # named the override
     assert "already reconciled" in out  # seal re-assert resolved it
     assert _sb_local(proj)["allowUnsandboxedCommands"] is False  # ends SEALED
+
+
+def test_setup_autonomy_cli_removes_auto_allow_off_with_consent(tmp_path, monkeypatch):
+    # End to end on a viable platform: the confinement step writes the committed
+    # `true`, which the local `false` still beats, so only the consented removal
+    # restores auto-allow; the rest of the local file is kept.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(
+        proj,
+        {
+            "sandbox": {"enabled": True, "autoAllowBashIfSandboxed": False},
+            "permissions": {"allow": ["Bash(ls:*)"]},
+        },
+    )
+    out = _run(proj, monkeypatch, "setup", "autonomy", "--remove-overrides")
+    assert "autoAllowBashIfSandboxed: false" in out  # warned loudly
+    assert "removed `sandbox.autoAllowBashIfSandboxed`" in out
+    assert "autoAllowBashIfSandboxed" not in _sb_local(proj)
+    assert _sb_committed(proj)["autoAllowBashIfSandboxed"] is True
+    assert _sb(proj)["autoAllowBashIfSandboxed"] is True  # effective: prompt-free again
+    assert _sb_local(proj)["enabled"] is True  # the rest of the local file kept
+    local = json.loads((proj / ".claude" / "settings.local.json").read_text())
+    assert "Bash(ls:*)" in local["permissions"]["allow"]
+
+
+def test_setup_autonomy_cli_leaves_auto_allow_off_without_consent(tmp_path, monkeypatch):
+    # Never silent: without consent the override is warned of and left in place.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(proj, {"sandbox": {"autoAllowBashIfSandboxed": False}})
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "autoAllowBashIfSandboxed: false" in out
+    assert "left in place — no consent" in out
+    assert _sb_local(proj)["autoAllowBashIfSandboxed"] is False
+
+
+def _removal_answers(proj: Path, monkeypatch) -> list[bool]:
+    """Run `setup autonomy` with a `y` piped in, recording what its removal
+    question answers; the setup itself is stubbed to ask once."""
+    answers: list[bool] = []
+
+    def setup(target_root, *, profile, confirm):
+        answers.append(confirm("Remove these overrides?"))
+        return "Result: stubbed\n", True
+
+    monkeypatch.setattr(_perm, "setup_autonomy", setup)
+    monkeypatch.chdir(proj)
+    result = CliRunner().invoke(main, ["permissions", "setup", "autonomy"], input="y\n")
+    assert result.exit_code == 0, result.output
+    return answers
+
+
+def test_setup_autonomy_a_piped_yes_does_not_remove_overrides(tmp_path, monkeypatch):
+    # Off a terminal the removal question is never asked, so a `y` piped in is not
+    # read as consent: the overrides are warned of only (#2003).
+    assert _removal_answers(_with_adapter(_setup(tmp_path)), monkeypatch) == [False]
+
+
+@pytest.mark.usefixtures("at_a_terminal")
+def test_setup_autonomy_asks_about_removal_at_a_terminal(tmp_path, monkeypatch):
+    assert _removal_answers(_with_adapter(_setup(tmp_path)), monkeypatch) == [True]
 
 
 def test_setup_autonomy_cli_warns_only_without_consent(tmp_path, monkeypatch):

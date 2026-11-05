@@ -1,0 +1,70 @@
+answers:
+  - artefact: .pkit/release/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - moved-9dcf3fafafed.yaml
+    revalidated:
+      at: 2026-10-27T16:47:49Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - moved-5f19baa7e5e5.yaml
+    revalidated:
+      at: 2026-10-27T16:47:52Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - moved-6f054c5e641d.yaml
+    revalidated:
+      at: 2026-10-27T16:47:55Z
+      outcome: unchanged
+      unchanged-because: The release workflow loses only its weekly schedule and is started by hand alone. The use case releases a component through the same release PR and tag, which nothing in it ties to the schedule, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-002-upgrade-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261027T133722Z-42862485.yaml
+      - moved-1849fdf40a4b.yaml
+    revalidated:
+      at: 2026-10-27T16:49:49Z
+      outcome: unchanged
+      unchanged-because: UC-008's trigger now has the maintainer start the release workflow by hand, with no weekly schedule. The journey upgrades a project to a release once it exists, and says nothing of how a release is started, so it holds.

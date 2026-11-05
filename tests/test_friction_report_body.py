@@ -5,11 +5,17 @@ check (COR-050 point 6), `pkit friction check --all --json`, as one Markdown
 body, and counts the findings that need an answer. It is a function of that
 document, so the tests call it over a document the real backbone wrote for a
 real history, or one shaped like it where the backbone cannot be made to report
-a kind; the command itself runs as a subprocess, as the workflow runs it.
+a kind. The history is laid on an install committed once per session
+(`committed_adopter`). The command runs its `main` in the test's own process,
+and as a process, as the workflow runs it, in one test.
 
 Held to: stale debt with what changed and since when; deferrals listed with
-their reason and never counted; the other findings; both measures, never
-counted; the same findings giving the same body; what the findings carry staying
+their reason and never counted; revalidations answered apart listed and counted
+apart from what needs an answer (COR-062 point 7, #2206); the other findings;
+over-broad anchors listed apart and never counted (ADR-055 point 5), the second
+bar's on one artefact as one entry (ADR-080 point 3); both
+measures, never counted; the same findings giving the same body; what the
+findings carry staying
 inert text, a path that is no UTF-8 included; the body within its size, cut by
 whole entries, the findings that need an answer last; and nothing rendered from
 a document it cannot fully read.
@@ -17,6 +23,8 @@ a document it cannot fully read.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import re
 import subprocess
@@ -29,8 +37,15 @@ import pytest
 from scripts import friction_report_body as report
 
 from project_kit import friction_repository as fr
-from tests.adopter_repo import HISTORY_EPOCH, Author, MakeAdopterRepo
-from tests.friction_documents import T1, Timeline, document, friction_config, guide
+from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author
+from tests.friction_documents import T1, T2, Timeline, document, friction_config, guide
+from tests.shipped_rule_sets import without_shipped_rule_sets
+from tests.test_answer_files import GUIDE, answer_path, answers, bare_guide
+from tests.test_answer_files import entry as revalidation
+
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
 
 REPO = Path(__file__).resolve().parent.parent
 SCRIPT = REPO / "scripts" / "friction_report_body.py"
@@ -42,7 +57,7 @@ LATER = "2026-11-01T00:00:00Z"
 
 
 def _run(*args: str, stdin: str | None = None) -> subprocess.CompletedProcess[str]:
-    """The script as the workflow runs it."""
+    """The script as the workflow runs it: a process."""
     return subprocess.run(
         [sys.executable, str(SCRIPT), *args],
         input=stdin,
@@ -51,6 +66,25 @@ def _run(*args: str, stdin: str | None = None) -> subprocess.CompletedProcess[st
         encoding="utf-8",
         check=False,
     )
+
+
+def _main(*args: str, stdin: str | None = None) -> subprocess.CompletedProcess[str]:
+    """The script's `main(argv)` in the test's own process, as `_run` runs its process:
+    `stdin` its standard input, its standard output and standard error read apart, and
+    its exit code what `main` returned."""
+    given = io.TextIOWrapper(io.BytesIO((stdin or "").encode("utf-8")), encoding="utf-8")
+    printed = io.BytesIO()
+    out = io.TextIOWrapper(printed, encoding="utf-8", newline="", write_through=True)
+    err = io.StringIO()
+    saved = sys.stdin
+    sys.stdin = given
+    try:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = report.main(list(args))
+    finally:
+        sys.stdin = saved
+    text = printed.getvalue().decode("utf-8")
+    return subprocess.CompletedProcess([str(SCRIPT), *args], code, text, err.getvalue())
 
 
 def _notes(**overrides: Any) -> str:
@@ -129,8 +163,8 @@ def _section(body: str, title: str) -> str:
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    return Timeline(committed_adopter)
 
 
 # --- what needs an answer, and what the body says ------------------------------------------
@@ -170,6 +204,7 @@ def test_with_only_deferrals_nothing_needs_an_answer_and_they_stay_listed(
 
 
 def test_the_measures_are_rendered_and_never_counted(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     _history(timeline)
     root = timeline.adopter.root
     measures = _section(report.publication(_check(root))["body"], "Measures")
@@ -261,6 +296,53 @@ def test_a_dormant_check_needs_no_answer() -> None:
     assert "The check is dormant" in made["body"]
 
 
+# --- answered apart: debt, reported only (COR-062 point 7) ----------------------------------
+
+
+def _answered_apart(timeline: Timeline) -> str:
+    """Two lines of work revalidate the guide, neither reading the other's answer file,
+    and both merge. Returns the merge that first holds both."""
+    repo = timeline.adopter
+    timeline.start({GUIDE: bare_guide()})
+    repo.checkout("one", create=True)
+    timeline.commit("answer on one", {answer_path("one"): answers(revalidation(at=T1))})
+    repo.checkout("main")
+    repo.checkout("two", create=True)
+    timeline.commit("answer on two", {answer_path("two"): answers(revalidation(at=T2))})
+    repo.checkout("main")
+    timeline.merge("one")
+    return timeline.merge("two")
+
+
+def test_answered_apart_is_listed_and_counted_apart_and_needs_no_answer(
+    timeline: Timeline,
+) -> None:
+    """Debt no change owes: it holds the tracking issue open no more than a deferral
+    does, and the headline counts it apart from what needs an answer."""
+    both = _answered_apart(timeline)
+    made = report.publication(_check(timeline.adopter.root))
+    assert made["needs_answer"] == 0
+    body = made["body"]
+    assert body.startswith("**Nothing needs an answer.** Reported only: 1 answered apart.\n")
+    assert "### Other findings" not in body
+    apart = _section(body, "Answered apart")
+    assert f"- `docs/guide.md` · since `{_day(5)}`" in apart
+    assert "one.yaml and two.yaml" in apart and both[:7] in apart
+
+
+def test_answered_apart_is_counted_beside_what_needs_an_answer() -> None:
+    apart = [
+        _finding("answered-apart", f"docs/page_{n}.md", "answered apart: a.yaml and b.yaml")
+        for n in range(2)
+    ]
+    made = report.publication(_document(findings=[_stale(1), *apart]))
+    assert made["needs_answer"] == 1
+    assert made["body"].startswith(
+        "**Needs an answer: 1 stale.** Reported only: 2 answered apart.\n"
+    )
+    assert "answered-apart" not in _section(made["body"], "Stale")
+
+
 # --- how the body is made -----------------------------------------------------------------
 
 
@@ -275,16 +357,21 @@ def test_the_same_findings_render_the_same_body(timeline: Timeline) -> None:
     assert report.publication(later) == report.publication(earlier)
 
 
-def test_an_over_broad_anchor_keeps_the_body_while_the_tracked_files_change(
-    timeline: Timeline,
+def test_an_over_broad_anchor_is_listed_apart_and_holds_nothing_open(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The check's message counts the tracked files, which most pushes change; the
-    body tells the finding without the count."""
+    """An over-broad anchor is reported only, and its count moves as the window of
+    commits slides, with no anchor changed (ADR-055 point 5; ADR-080). So it is listed in
+    a section of its own, counted for nothing, in words that keep the body while the
+    check's message, which gives the counts, moves with most pushes. Each check reads a
+    window as long as the line."""
     timeline.start({"docs/guide.md": guide(anchors={"path": ["**"]})})
     root = timeline.adopter.root
     timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 2)
     earlier = _check(root)
     timeline.commit("add a module", {"src/extra/tool.py": "TOOL = 1\n"})
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 3)
     later = _check(root)
 
     def over_broad(check: dict[str, Any]) -> str:
@@ -292,9 +379,61 @@ def test_an_over_broad_anchor_keeps_the_body_while_the_tracked_files_change(
         return finding["message"]
 
     assert over_broad(earlier) != over_broad(later)  # the count moved
-    body = report.publication(later)["body"]
-    assert body == report.publication(earlier)["body"]
-    assert "- `docs/guide.md` · `over-broad` · `path:**`\n  matches most of the tracked" in body
+    made = report.publication(later)
+    assert made["body"] == report.publication(earlier)["body"]
+    assert made["needs_answer"] == 1  # the stale guide alone
+    assert made["body"].startswith("**Needs an answer: 1 stale.**\n")
+    assert "### Other findings" not in made["body"]
+    section = _section(made["body"], "Over-broad: reported, holding nothing open")
+    assert (
+        "- `docs/guide.md` · `path:**`\n  flagged its artefact in most of the recent commits"
+    ) in section
+
+    alone = report.publication(_document(findings=[later["findings"][-1]]))
+    assert later["findings"][-1]["kind"] == "over-broad"
+    assert alone["needs_answer"] == 0
+    assert alone["body"].startswith("**Nothing needs an answer.**\n")
+
+
+def test_the_second_bar_s_anchors_on_one_artefact_are_one_entry() -> None:
+    """Grouped as the check's own view groups them (ADR-080 point 3): the anchors the
+    second bar names on one artefact are one entry, in the document's order, the largest
+    share first; an anchor over the first bar is an entry of its own, and so is the
+    same anchor named by the second; a finding with no `bar`, from an older backbone,
+    is listed apart, in words that cover either bar."""
+
+    def broad(location: str, value: str, bar: str | None) -> dict[str, Any]:
+        anchor = {"kind": "path", "value": value}
+        finding = _finding("over-broad", location, "counts", anchor=anchor)
+        return {**finding, "bar": bar}
+
+    findings = [
+        broad("docs/guide.md", "src/cli/**", "flags"),
+        broad("docs/guide.md", "src/lib/**", "asks"),
+        broad("docs/guide.md", "src/cli/**", "asks"),
+        broad("docs/other.md", "src/core/**", "asks"),
+        broad("docs/older.md", "src/a/**", None),
+        broad("docs/older.md", "src/b/**", None),
+    ]
+    made = report.publication(_document(findings=findings))
+    assert made["needs_answer"] == 0
+    section = _section(made["body"], "Over-broad: reported, holding nothing open")
+    entries = [line for line in section.splitlines() if line.startswith("- ")]
+    assert entries == [
+        "- `docs/guide.md` · `path:src/cli/**`",
+        "- `docs/guide.md` · `path:src/lib/**` · `path:src/cli/**`",
+        "- `docs/other.md` · `path:src/core/**`",
+        "- `docs/older.md` · `path:src/a/**`",
+        "- `docs/older.md` · `path:src/b/**`",
+    ]
+    said = [line.strip() for line in section.splitlines() if line.startswith("  ")]
+    assert said == [
+        report.OVER_BROAD_SAID[report.FLAGS],
+        report.OVER_BROAD_SAID[report.ASKS],
+        report.OVER_BROAD_SAID[report.ASKS],
+        report.OVER_BROAD_SAID[None],
+        report.OVER_BROAD_SAID[None],
+    ]
 
 
 def test_since_when_is_the_utc_day_the_checks_message_names() -> None:
@@ -347,9 +486,9 @@ def test_a_path_that_is_no_utf8_is_set_escaped() -> None:
     body.encode("utf-8")  # nothing left that cannot be written
 
     text = json.dumps(document_)
-    plain = _run("-", stdin=text)
+    plain = _main("-", stdin=text)
     assert plain.returncode == 0 and plain.stdout == body, plain.stderr
-    as_json = _run("-", "--json", stdin=text)
+    as_json = _main("-", "--json", stdin=text)
     assert as_json.returncode == 0 and json.loads(as_json.stdout)["body"] == body
 
 
@@ -476,6 +615,7 @@ def test_one_entry_larger_than_the_budget_is_left_out_whole() -> None:
 # --- the command ---------------------------------------------------------------------------
 
 
+@pytest.mark.process("the script as the workflow runs it: its arguments, exit code and output")
 def test_the_command_prints_the_body_or_the_publication(tmp_path: Path) -> None:
     document_ = _document(findings=[_stale(1)])
     path = tmp_path / "friction.json"
@@ -516,7 +656,7 @@ def test_a_document_it_cannot_fully_read_is_refused_and_nothing_is_rendered(
 ) -> None:
     path = tmp_path / "friction.json"
     path.write_text(text, encoding="utf-8")
-    proc = _run(str(path), "--json")
+    proc = _main(str(path), "--json")
     assert proc.returncode == 1 and proc.stdout == ""
     assert says in proc.stderr and "nothing to render" in proc.stderr
 
@@ -528,12 +668,12 @@ def test_a_document_without_its_version_reads_as_version_1(tmp_path: Path) -> No
     unversioned = {key: value for key, value in versioned.items() if key != "schema_version"}
     path = tmp_path / "friction.json"
     path.write_text(json.dumps(unversioned), encoding="utf-8")
-    proc = _run(str(path), "--json")
+    proc = _main(str(path), "--json")
     assert proc.returncode == 0, proc.stderr
     assert json.loads(proc.stdout) == report.publication(versioned)
 
 
 def test_a_file_that_is_not_there_is_refused(tmp_path: Path) -> None:
-    proc = _run(str(tmp_path / "missing.json"))
+    proc = _main(str(tmp_path / "missing.json"))
     assert proc.returncode == 1 and proc.stdout == ""
     assert "cannot be read" in proc.stderr and "nothing to render" in proc.stderr

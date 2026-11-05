@@ -1,0 +1,104 @@
+answers:
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - moved-e5885d842901.yaml
+    revalidated:
+      at: 2026-10-27T12:02:31Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - moved-8a82930f46b2.yaml
+    revalidated:
+      at: 2026-10-27T12:02:34Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-081-decide-unasked-answers.md
+    read:
+      - 20261025T003621Z-53316d8f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T030318Z-e822997a.yaml
+    revalidated:
+      at: 2026-10-27T12:02:42Z
+      outcome: unchanged
+      unchanged-because: "Read with the changes main made beside this one, the core rules naming the migration check and the agents' deploy script as built and the docs-reviewer judging revalidations answered apart: this change has the software-engineer write a walking skeleton's conventions in the skeleton's change, for a person to accept with it. How an answer the check did not ask for is found, decided, named and checked, which is all UC-081 describes, is unchanged."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T085608Z-061b0816.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T141053Z-7af348ef.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261026T234220Z-40dc2662.yaml
+      - 20261027T002549Z-a8936977.yaml
+    revalidated:
+      at: 2026-10-27T12:02:45Z
+      outcome: unchanged
+      unchanged-because: DEC-060 points 2 and 5 now have a skeleton's conventions written into the corpus in its change, where software-engineering is installed, and the change merges only once a person accepts them. Read with main's Scenario 14 of the storyboard, a worker's later round, step 4's first plan, which files only the EPIC and the foundation's Feature, and the second plan once that Feature closes are unchanged.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T220801Z-d7fabd5e.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - 20261025T231337Z-53180504.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T082834Z-c7589ca5.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - 20261026T094058Z-3fc2f464.yaml
+      - 20261026T095314Z-f64018af.yaml
+      - 20261026T095828Z-f467a572.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T114729Z-f148365c.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T125321Z-c79100d7.yaml
+      - 20261026T135447Z-827d6480.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T141439Z-0ec32467.yaml
+      - 20261026T145332Z-136a7129.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161512Z-bb142951.yaml
+      - 20261026T162345Z-546e92b5.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T174848Z-c4211455.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261026T221544Z-4570798b.yaml
+      - 20261026T223507Z-b0cc1cc6.yaml
+      - 20261026T224120Z-47cea1c1.yaml
+      - 20261026T234220Z-40dc2662.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T002733Z-bfea56ce.yaml
+      - 20261027T003455Z-b3aa7ce8.yaml
+      - moved-d6149a5e477e.yaml
+    revalidated:
+      at: 2026-10-27T12:02:48Z
+      outcome: unchanged
+      unchanged-because: "DEC-060 points 2 and 5 point to software-engineering DEC-004, with a skeleton's conventions written in its change and accepted with it before it merges, and a reason and an open question of their own. The README's account of the two planning stages holds, read with main's updates to it: revisit entries in answer files, a worker mending its pull requests, seats naming the Tasks in Review a released seat left, and show-pr's mergeable field."
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."

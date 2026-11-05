@@ -1,0 +1,32 @@
+[
+  {
+    "id": "pe-subject-after-json",
+    "file": "src/project_kit/process.py",
+    "find": "run = run_command(script, [self.subject, \"--json\"], cwd=self.repo_root)",
+    "replace": "run = run_command(script, [\"--json\", self.subject], cwd=self.repo_root)"
+  },
+  {
+    "id": "pe-predicate-stderr-dropped",
+    "file": "src/project_kit/process.py",
+    "find": "return PredicateFailure(run.ending_described, run.stderr_tail)",
+    "replace": "return PredicateFailure(run.ending_described, \"\")"
+  },
+  {
+    "id": "pe-non-object-said-otherwise",
+    "file": "src/project_kit/process.py",
+    "find": "return PredicateFailure(\"answered with JSON that is not an object\", run.stderr_tail)",
+    "replace": "return PredicateFailure(\"answered JSON that is not an object\", run.stderr_tail)"
+  },
+  {
+    "id": "pe-count-strictly-above-threshold",
+    "file": "src/project_kit/process.py",
+    "find": "opened = reached >= threshold",
+    "replace": "opened = reached > threshold"
+  },
+  {
+    "id": "ph-resolve-error-said-otherwise",
+    "file": "src/project_kit/process_health.py",
+    "find": "reason=f\"{downstream_ids.why}; an error is never read as absence\",",
+    "replace": "reason=f\"{downstream_ids.why}; an error is not absence\","
+  }
+]

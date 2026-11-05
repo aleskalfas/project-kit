@@ -125,3 +125,62 @@ def test_full_model_projection_routes_each_grant(projection, catalog):
     # operator's vcs/issue-tracker/kit (bash) + agent:pm's vcs (bash) → runtime.
     assert {r["privilege"] for r in out["runtime"]} == {"vcs", "issue-tracker", "kit"}
     assert {u["privilege"] for u in out["unprojectable"]} == {"docker"}  # scoped
+
+
+# ---- the read-only text filters and `uv run` (#2000) -------------------------
+#
+# Only the hook realizes `text-filter` and `uv-run` (ADR-005 point 5). Each of
+# their recognizers is a `pattern` or carries a `subcommand`, which no native
+# prefix can say, so a grant of either writes no `Bash(...)` rule: neither a
+# shipped profile nor project-kit's own grants put one in an adopter's
+# settings through `profile activate` or `apply`.
+
+_NEW = ("text-filter", "uv-run")
+_SHIPPED_PROFILES = ("read-only", "non-destructive", "autonomous")
+
+
+def _ids(value) -> list:
+    values = value if isinstance(value, list) else [value]
+    return [v.removeprefix("[privilege-catalog:").removesuffix("]") for v in values]
+
+
+def _without_new(grants: list) -> list:
+    out = []
+    for grant in grants:
+        kept = [t for t in _ids(grant["privilege"]) if t not in _NEW]
+        if kept:
+            out.append({**grant, "privilege": [_tok(t) for t in kept]})
+    return out
+
+
+def test_text_filter_and_uv_run_write_no_native_rule(projection, catalog):
+    model = {
+        "grants": [
+            {"subject": "all", "privilege": [_tok(p) for p in _NEW], "effect": "allow"},
+        ]
+    }
+    out = projection.project(model, catalog)
+    assert out["settings"]["allow"] == []
+    # One entry per grant, however many recognizers the privilege holds, so
+    # the gap report's count of grants no native layer expresses is a count
+    # of grants.
+    assert [u["privilege"] for u in out["unprojectable"]] == list(_NEW)
+
+
+@pytest.mark.parametrize("profile", _SHIPPED_PROFILES)
+def test_a_shipped_profile_projects_no_rule_for_text_filter(projection, catalog, profile):
+    grants = _load(DECIDE_PATH, "decide_for_profiles").load_yaml(
+        str(REPO / ".pkit" / "permissions" / "profiles" / f"{profile}.yaml")
+    )["grants"]
+    assert any("text-filter" in _ids(g["privilege"]) for g in grants)
+    ours = projection.project({"grants": grants}, catalog)["settings"]
+    assert ours == projection.project({"grants": _without_new(grants)}, catalog)["settings"]
+
+
+def test_project_kits_own_grants_project_no_rule(projection, catalog):
+    grants = _load(DECIDE_PATH, "decide_for_self_host").load_yaml(
+        str(REPO / ".pkit" / "permissions" / "project" / "grants.yaml")
+    )["grants"]
+    assert any("uv-run" in _ids(g["privilege"]) for g in grants)
+    out = projection.project({"grants": grants}, catalog)
+    assert out["settings"]["allow"] == []

@@ -653,6 +653,34 @@ def test_cli_visibility_untrack_subcommand(repo: Path, monkeypatch: pytest.Monke
     assert CliRunner().invoke(main, ["untrack"]).exit_code != 0
 
 
+@pytest.mark.parametrize("command", [["untrack"], ["private"]])
+def test_cli_visibility_refuses_a_piped_yes_to_untrack(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, command: list[str]
+) -> None:
+    """Off a terminal a `y` piped in does not untrack: the command is refused and
+    the footprint stays tracked (#2003)."""
+    monkeypatch.chdir(repo)
+    before = vis._tracked_footprint(repo, vis.footprint(repo))
+    result = CliRunner().invoke(main, ["visibility", *command], input="y\n")
+    assert result.exit_code == 1
+    assert "stdin is not a terminal" in result.output
+    assert "Run `pkit visibility untrack` at a terminal." in result.output
+    # `private` wrote its exclude region before asking, and says so.
+    assert ("now lists them" in result.output) == (command == ["private"])
+    assert vis._tracked_footprint(repo, vis.footprint(repo)) == before
+
+
+@pytest.mark.usefixtures("at_a_terminal")
+def test_cli_visibility_untrack_at_a_terminal_untracks_on_a_yes(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(repo)
+    result = CliRunner().invoke(main, ["visibility", "untrack"], input="y\n")
+    assert result.exit_code == 0, result.output
+    assert "Proceed?" in result.output
+    assert vis._tracked_footprint(repo, vis.footprint(repo)) == []
+
+
 def test_cli_visibility_never_load_bearing(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from project_kit import cli_render
 
@@ -661,3 +689,53 @@ def test_cli_visibility_never_load_bearing(repo: Path, monkeypatch: pytest.Monke
     never = CliRunner().invoke(main, ["--color", "never", "visibility"]).output
     assert "\033[" in always
     assert cli_render.strip_ansi(always) == never
+
+
+# --- the private region, rendered again by install and sync ----------------------------
+
+
+def _exclude_file(root: Path) -> Path:
+    return root / ".git" / "info" / "exclude"
+
+
+def test_install_and_sync_render_a_present_region_again_from_the_footprint(repo: Path) -> None:
+    """A component installed since `pkit visibility private` ran may declare footprint the
+    region does not hold; install and sync render the region again where it is present
+    (ADR-009 point 3), keeping the rest of the file."""
+    _exclude_file(repo).write_text(f"mine\n\n{vis._BEGIN}\n.pkit/\n{vis._END}\n", encoding="utf-8")
+    assert vis.refresh_private_region(repo, dry_run=True) is not None
+    assert vis._region_lines(_exclude_file(repo).read_text(encoding="utf-8")) == [".pkit/"]
+    line = vis.refresh_private_region(repo)
+    assert line is not None and line.split()[0] == "rendered"
+    text = _exclude_file(repo).read_text(encoding="utf-8")
+    assert text.startswith("mine\n")
+    assert vis._region_lines(text) == vis.footprint(repo)
+    assert vis.refresh_private_region(repo) is None
+
+
+def test_a_shared_project_s_exclude_file_is_left_as_it_is(repo: Path) -> None:
+    _exclude_file(repo).write_text("mine\n", encoding="utf-8")
+    assert vis.refresh_private_region(repo) is None
+    assert _exclude_file(repo).read_text(encoding="utf-8") == "mine\n"
+
+
+def test_outside_a_repository_no_region_is_looked_for(tmp_path: Path) -> None:
+    assert vis.refresh_private_region(tmp_path) is None
+
+
+def test_sync_renders_the_region_with_the_derivable_state(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from project_kit import install, sync
+
+    _exclude_file(repo).write_text(f"{vis._BEGIN}\n.pkit/\n{vis._END}\n", encoding="utf-8")
+    for step in (
+        "render_rules_index",
+        "run_installed_adapter_primitives",
+        "_render_runtime_ignore",
+        "ensure_agent_workspace",
+        "provision_query_commands",
+    ):
+        monkeypatch.setattr(install, step, lambda *_a, **_k: None, raising=False)
+    sync.regenerate_derivable_state(install.InstallContext(repo, repo / ".pkit", dry_run=False))
+    assert vis._region_lines(_exclude_file(repo).read_text(encoding="utf-8")) == vis.footprint(repo)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -734,6 +735,67 @@ def test_cli_refs_lookup_errors_on_missing_record(kit_target: Path) -> None:
     assert "no record matches" in result.output
 
 
+def test_cli_refs_lookup_json_answers_every_id_in_one_document(kit_target: Path) -> None:
+    """`--json` answers each id given, in its order, in one document: where it lies, or why
+    it does not resolve. The exit is 0 either way, since the document says which, so a
+    script asks once for every record it reads (#2025)."""
+    _write_decision(kit_target, "core", "COR", "001", "thing")
+    folder = kit_target / ".pkit" / "capabilities" / "widgets" / "decisions"
+    folder.mkdir(parents=True)
+    (folder / "DEC-004-thing.md").write_text("---\nid: DEC-004\n---\n", encoding="utf-8")
+    ids = ["COR-001", "widgets:DEC-004", "COR-999", "-x"]
+    result = CliRunner().invoke(main, ["refs", "lookup", "--json", "--", *ids])
+    assert result.exit_code == 0, result.output
+    document = json.loads(result.output)
+    # Each answer also gives its file, the anchor of a cited point's or rule's heading and
+    # whether the file is a synced copy (tests/test_refs_lookup_points.py).
+    assert [(e["path"], e["anchor"]) for e in document["lookups"]] == [
+        (".pkit/decisions/core/COR-001-thing.md", None),
+        (".pkit/capabilities/widgets/decisions/DEC-004-thing.md", None),
+        (None, None),
+        (None, None),
+    ]
+    shared = ("id", "resolved", "paths", "problem")
+    assert {
+        "schema_version": document["schema_version"],
+        "lookups": [{k: e[k] for k in shared} for e in document["lookups"]],
+    } == {
+        "schema_version": 1,
+        "lookups": [
+            {
+                "id": "COR-001",
+                "resolved": True,
+                "paths": [".pkit/decisions/core/COR-001-thing.md"],
+                "problem": None,
+            },
+            {
+                "id": "widgets:DEC-004",
+                "resolved": True,
+                "paths": [".pkit/capabilities/widgets/decisions/DEC-004-thing.md"],
+                "problem": None,
+            },
+            {
+                "id": "COR-999",
+                "resolved": False,
+                "paths": [],
+                "problem": "no record matches 'COR-999'",
+            },
+            {"id": "-x", "resolved": False, "paths": [], "problem": "no record matches '-x'"},
+        ],
+    }
+    one = CliRunner().invoke(main, ["refs", "lookup", "--json", "COR-001"])
+    assert json.loads(one.output)["lookups"] == json.loads(result.output)["lookups"][:1]
+
+
+def test_cli_refs_lookup_takes_several_ids_only_with_json(kit_target: Path) -> None:
+    """Without `--json` it prints one id's paths, so several ids are refused rather
+    than printed with nothing to tell whose line is whose."""
+    _write_decision(kit_target, "core", "COR", "001", "thing")
+    result = CliRunner().invoke(main, ["refs", "lookup", "COR-001", "COR-001"])
+    assert result.exit_code == 2
+    assert "--json" in result.output
+
+
 def test_cli_hooks_list_shows_winning_provider(kit_target: Path) -> None:
     skill_body = """---
 name: provider
@@ -1174,6 +1236,185 @@ Cites `.pkit/does-not-exist.md`.
     artifacts = refs.load_artifacts(kit_target)
     issues = refs.find_rot(kit_target, artifacts)
     assert any("missing path" in i.diagnosis and "does-not-exist" in i.diagnosis for i in issues)
+
+
+def _record(path: Path, record_id: str, status: str, body: str = "") -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"---\nid: {record_id}\ntitle: t\nstatus: {status}\ndate: 2026-01-01\nauthor: a\n---\n\n"
+        + body,
+        encoding="utf-8",
+    )
+    return path
+
+
+def _cap_record(root: Path, cap: str, num: str, slug: str, status: str, body: str = "") -> Path:
+    path = root / ".pkit" / "capabilities" / cap / "decisions" / f"DEC-{num}-{slug}.md"
+    return _record(path, f"DEC-{num}", status, body)
+
+
+def _resting(kit_target: Path) -> list[refs.Issue]:
+    return [i for i in refs.find_rot(kit_target, []) if "proposed record" in i.diagnosis]
+
+
+def test_status_index_holds_capability_decisions(kit_target: Path) -> None:
+    """A capability's decision is indexed by its capability and its number."""
+    _cap_record(kit_target, "cap-a", "001", "lanes", "proposed")
+    _write_decision(kit_target, "core", "COR", "001", "thing")
+    index = refs._index_decision_statuses(kit_target)
+    assert index["cap-a:DEC-001"] == "proposed"
+    assert index["COR-001"] == "accepted"
+    assert "DEC-001" not in index
+
+
+def test_rot_flags_accepted_record_citing_proposed_one_bare_in_its_capability(
+    kit_target: Path,
+) -> None:
+    """A bare `DEC-NNN` inside a capability's record cites that capability's decision."""
+    _cap_record(kit_target, "cap-a", "001", "lanes", "proposed")
+    _cap_record(
+        kit_target, "cap-a", "002", "instances", "accepted", "Per DEC-001.\n\nAgain DEC-001.\n"
+    )
+    issues = _resting(kit_target)
+    assert len(issues) == 1, issues
+    assert issues[0].location == ".pkit/capabilities/cap-a/decisions/DEC-002-instances.md"
+    assert "'cap-a:DEC-001'" in issues[0].diagnosis
+    assert "lines 9, 11" in issues[0].diagnosis
+
+
+def test_rot_flags_accepted_record_citing_proposed_one_qualified(kit_target: Path) -> None:
+    """`[<capability>:DEC-NNN-slug]` cites that capability's decision from any record."""
+    _cap_record(kit_target, "cap-a", "001", "lanes", "proposed")
+    _record(
+        kit_target / ".pkit" / "decisions" / "core" / "COR-001-thing.md",
+        "COR-001",
+        "accepted",
+        "Builds on [cap-a:DEC-001-lanes].\n",
+    )
+    issues = _resting(kit_target)
+    assert [i.location for i in issues] == [".pkit/decisions/core/COR-001-thing.md"]
+    assert "'cap-a:DEC-001'" in issues[0].diagnosis
+    assert "line 9" in issues[0].diagnosis
+
+
+def test_rot_flags_accepted_record_citing_proposed_record_of_another_namespace(
+    kit_target: Path,
+) -> None:
+    _record(kit_target / ".pkit" / "decisions" / "project" / "PRJ-001-x.md", "PRJ-001", "proposed")
+    _cap_record(kit_target, "cap-a", "001", "lanes", "accepted", "Rests on PRJ-001.\n")
+    issues = _resting(kit_target)
+    assert [i.location for i in issues] == [".pkit/capabilities/cap-a/decisions/DEC-001-lanes.md"]
+    assert "'PRJ-001'" in issues[0].diagnosis
+
+
+def test_rot_reads_only_accepted_records_and_proposed_grounds(kit_target: Path) -> None:
+    """A proposed record may cite a proposed one; an accepted one citing accepted is clean."""
+    _cap_record(kit_target, "cap-a", "001", "lanes", "proposed")
+    _cap_record(kit_target, "cap-a", "002", "draft", "proposed", "Per DEC-001.\n")
+    _cap_record(kit_target, "cap-a", "003", "base", "accepted")
+    _cap_record(kit_target, "cap-a", "004", "on-base", "accepted", "Per DEC-003 and DEC-004.\n")
+    _cap_record(kit_target, "cap-a", "005", "old", "superseded", "Per DEC-001.\n")
+    assert _resting(kit_target) == []
+
+
+_SCOPE = "### 1. Scope\n\nAll of it.\n"
+
+#: Each way a new record, PRJ-002, changes the accepted PRJ-001: PRJ-001's status and body
+#: once the edit is made, citing PRJ-002.
+_EDITS_TO_THE_OLD_RECORD = {
+    "refines": ("accepted", "### 1. Scope\n\nAll of it (refinement per PRJ-002).\n"),
+    "overturns in part": ("accepted", f"*Partially superseded by PRJ-002.*\n\n{_SCOPE}"),
+    "replaces whole": ("superseded", f"*Superseded by PRJ-002.*\n\n{_SCOPE}"),
+}
+
+
+@pytest.mark.parametrize("how", list(_EDITS_TO_THE_OLD_RECORD))
+def test_rot_finds_nothing_where_a_new_record_is_accepted_before_its_edits(
+    kit_target: Path, how: str
+) -> None:
+    """A new record is accepted in its change, and its edits to the accepted record it
+    refines, overturns in part or replaces whole follow there, citing it (the decisions
+    README, "The acceptance gate"). The report finds nothing at any of those steps."""
+    project = kit_target / ".pkit" / "decisions" / "project"
+    old, new = project / "PRJ-001-base.md", project / "PRJ-002-new.md"
+    _record(old, "PRJ-001", "accepted", _SCOPE)
+    _record(new, "PRJ-002", "proposed", "### 1. Narrower\n\nChanges PRJ-001.\n")
+    assert _resting(kit_target) == []
+
+    _record(new, "PRJ-002", "accepted", "### 1. Narrower\n\nChanges PRJ-001.\n")
+    assert _resting(kit_target) == []
+
+    status, edited = _EDITS_TO_THE_OLD_RECORD[how]
+    _record(old, "PRJ-001", status, edited)
+    assert _resting(kit_target) == []
+    result = CliRunner().invoke(main, ["refs", "rot"])
+    assert result.exit_code == 0, result.output
+    assert "no rotten references found." in result.output
+
+
+@pytest.mark.parametrize("how", ["refines", "overturns in part"])
+def test_rot_lists_an_edit_made_before_its_new_record_is_accepted(
+    kit_target: Path, how: str
+) -> None:
+    """An edit that cites a new record still proposed rests on a proposal, against the
+    acceptance gate: the report lists the edited record, which stays accepted."""
+    project = kit_target / ".pkit" / "decisions" / "project"
+    _record(project / "PRJ-002-new.md", "PRJ-002", "proposed", "### 1. Narrower\n\nPart.\n")
+    status, edited = _EDITS_TO_THE_OLD_RECORD[how]
+    _record(project / "PRJ-001-base.md", "PRJ-001", status, edited)
+
+    issues = _resting(kit_target)
+    assert [i.location for i in issues] == [".pkit/decisions/project/PRJ-001-base.md"]
+    assert "'PRJ-002'" in issues[0].diagnosis
+
+
+def test_rot_attributes_a_citation_to_the_capability_it_names(kit_target: Path) -> None:
+    """A qualified citation, or a bare id after another capability's name, is not the
+    citing record's own capability's decision."""
+    _cap_record(kit_target, "cap-a", "001", "lanes", "proposed")
+    _cap_record(kit_target, "cap-b", "001", "base", "accepted")
+    _cap_record(
+        kit_target,
+        "cap-a",
+        "002",
+        "on-b",
+        "accepted",
+        "Per [cap-b:DEC-001-base], and cap-b DEC-001 point 1.\n",
+    )
+    assert _resting(kit_target) == []
+
+
+def test_rot_skips_citations_in_code_blocks_and_comments(kit_target: Path) -> None:
+    _cap_record(kit_target, "cap-a", "001", "lanes", "proposed")
+    _cap_record(
+        kit_target,
+        "cap-a",
+        "002",
+        "quoted",
+        "accepted",
+        "```\nDEC-001\n```\n\n<!-- DEC-001 -->\n\n~~DEC-001~~\n",
+    )
+    assert _resting(kit_target) == []
+
+
+def test_rot_flags_artifact_citing_superseded_capability_decision(kit_target: Path) -> None:
+    """The superseded check reads capability citations too, now that they are indexed."""
+    _cap_record(kit_target, "cap-a", "001", "lanes", "superseded")
+    body = "---\nname: skill-a\ndescription: t\n---\n# A\nPer [cap-a:DEC-001-lanes].\n"
+    _write_skill(kit_target, "core", "skill-a", body)
+    issues = refs.find_rot(kit_target, refs.load_artifacts(kit_target))
+    assert any("superseded" in i.diagnosis and "cap-a:DEC-001" in i.diagnosis for i in issues), (
+        issues
+    )
+
+
+def test_cli_refs_rot_reports_a_proposed_ground_and_exits_zero(kit_target: Path) -> None:
+    _cap_record(kit_target, "cap-a", "001", "lanes", "proposed")
+    _cap_record(kit_target, "cap-a", "002", "instances", "accepted", "Per DEC-001.\n")
+    result = CliRunner().invoke(main, ["refs", "rot"])
+    assert result.exit_code == 0, result.output
+    assert "DEC-002-instances.md" in result.output
+    assert "cites proposed record 'cap-a:DEC-001'" in result.output
 
 
 def test_rot_clean_corpus_returns_no_issues(kit_target: Path) -> None:

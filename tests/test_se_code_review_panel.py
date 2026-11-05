@@ -461,23 +461,38 @@ def test_the_docs_reviewer_blocks_on_each_answer_that_does_not_hold(lead, says):
         assert words in item, (lead, words)
 
 
-def test_an_answer_that_is_a_person_s_decision_is_named_not_blocked():
-    """Whether a person accepted an answer on an artefact the change was not asked
-    about, or a reason for having no anchors, is a fact no reviewer can read (COR-050
-    point 3): the reviewer names it, as an advisory, and judges a reworded deferral on
-    an artefact it was asked about by the other rules. The sentence on such an
-    `updated` answer is still checked, since COR-050 point 3 asks it of every one."""
-    lead = "- **Some answers are a person's decision, not yours to judge.**"
-    (item,) = [line for line in _answers_check() if line.startswith(lead)]
+_NOT_OWED_LEAD = "- **An answer no change owes is decided by someone else, and you check it.**"
+
+
+def test_an_answer_no_change_owes_is_checked_and_named():
+    """An answer on an artefact the change was not asked about, or a reason for having
+    no anchors, is decided by a person or by the delegate a person named, and a reviewer
+    checks it whoever decided it (COR-050 point 3, COR-064 point 4). Who decided it is a
+    fact no reviewer can read, so the reviewer also names it, as an advisory. A reworded
+    deferral on an artefact the check asked about is judged by the other rules."""
+    (item,) = [line for line in _answers_check() if line.startswith(_NOT_OWED_LEAD)]
     for words in (
         "An answer on an artefact the change check asked nothing about",
         "every reason for having no anchors",
-        "so do not block on it",
-        "in an `[advisory]` finding",
-        "such as a deferral the change rewords, is judged by the bullets above",
-        "Where such an answer is `updated`, its sentence is still checked",
+        "or the delegate a person named (COR-050 point 3; COR-064)",
     ):
         assert words in item, words
+    items = _sub_items(_answers_check(), _NOT_OWED_LEAD)
+    check = items["Check each, whoever decided it"]
+    for words in (
+        "`pkit friction explain <artefact>`, run at the base",
+        "A revisit entry answers its source and its target as they stand at the head.",
+        "A reason for having no anchors answers what the artefact says.",
+        "One that does not hold is a `[block]`",
+        "Where such an answer is `updated`, its sentence is checked",
+    ):
+        assert words in check, words
+    assert "in an `[advisory]` finding" in items["Name each, too."]
+    assert "`[block]`" in items["Never as the delegate."]
+    assert (
+        "such as a deferral the change rewords, is judged by the bullets above"
+        in items["On an artefact the check asked about."]
+    )
 
 
 def test_the_docs_reviewer_s_answers_check_raises_findings_not_a_verdict_line():
@@ -496,7 +511,9 @@ def test_the_docs_reviewer_reads_the_sentences_as_the_commands_read_them():
     lead = "- **Each `updated` document needs its sentence, and the sentence must match.**"
     (item,) = [line for line in _answers_check() if line.startswith(lead)]
     for words in (
-        "Read that section as the commands that write the list read it",
+        "Read that section as the project-management commands read it",
+        "The description carries no list of the answers",
+        "read each sentence from that section alone",
         '"Where the sentences live" of `.pkit/capabilities/project-management/README.md`',
         "starts in the line's first column with the document in a code span",
         f"The form to write is ``{answers.SENTENCE_FORM}``.",
@@ -519,6 +536,64 @@ def test_the_docs_reviewer_reads_the_sentences_as_the_commands_read_them():
     # Of two items for one document, the first.
     two = heading + "- `path`: First.\n- `path`: Second.\n"
     assert answers.sentences(two) == {"path": "First."}
+
+
+# ---------------------------------------------------------------------------
+# docs-reviewer judges revalidations answered apart (COR-062 point 7, #2206)
+# ---------------------------------------------------------------------------
+
+_APART_LEAD = (
+    "- **A revalidation that replaces revalidations answered apart must judge their"
+    " combined state**"
+)
+_REPORTED_ONLY_LEAD = (
+    "- **Revalidations answered apart that the change does not replace are reported only.**"
+)
+
+
+def test_the_docs_reviewer_judges_the_combined_state_of_revalidations_answered_apart():
+    """The change check flags each revalidation that replaces revalidations answered
+    apart, and the reviewer checks that it judges their combined state, as core rule 20
+    asks of its writer. The body quotes the flag as the check words it, and names the
+    key of the machine-readable list, so a change to either fails here first."""
+    from project_kit import friction_check as fc
+
+    flagged = fc.WrittenAnswer(
+        artefact="guide",
+        location="docs/guide.md",
+        answer="unchanged",
+        anchor=None,
+        reason="both lines hold",
+        kept=(),
+        asked=True,
+        status=fc.AnswerStatus.STANDS,
+        new=False,
+        replaces_apart=("a.yaml", "b.yaml"),
+    )
+    (flag,) = [f for f in fc._answer_flags(flagged) if "a.yaml and b.yaml" in f]
+    (item,) = [line for line in _answers_check() if line.startswith(_APART_LEAD)]
+    assert f'"{flag.split(" a.yaml", 1)[0]}"' in item
+    assert "replaces_apart" in flagged.as_json() and "`replaces_apart`" in item
+    assert "`pkit friction explain <artefact>`, run at the base" in item
+    # Each outcome a revalidation can give, in the list's own words.
+    items = _sub_items(_answers_check(), _APART_LEAD)
+    assert {label.strip('"') for label in items} == {
+        fc.OUTCOME_WORDS[outcome][:1].upper() + fc.OUTCOME_WORDS[outcome][1:]
+        for outcome in ("updated", "unchanged")
+    }
+    for said in items.values():
+        assert "what changed since each replaced revalidation" in said, said
+        assert "is a `[block]`" in said, said
+
+
+def test_an_answered_apart_finding_is_reported_only_never_a_block():
+    """Answered apart is debt no change owes (COR-062 point 7): the reviewer blocks on
+    none of the check's `answered-apart` findings."""
+    from project_kit import friction_check as fc
+
+    (item,) = [line for line in _answers_check() if line.startswith(_REPORTED_ONLY_LEAD)]
+    assert f"An `{fc.FindingKind.ANSWERED_APART.value}` finding" in item
+    assert "It is never a `[block]`" in item and "as information" in item
 
 
 # ---------------------------------------------------------------------------
@@ -628,23 +703,21 @@ def test_a_target_revisited_by_its_change_needs_no_sentence():
         assert words in lead, words
 
 
-def test_a_revisit_entry_not_asked_for_is_named_not_judged():
-    """An entry the change check does not ask for is a person's decision (COR-050
-    point 16): one for a target that owes no answer, or one whose outcome alone
-    changed, which also answers nothing. The blocking rules never judge it,
-    wherever its document sits."""
-    lead = "- **Some answers are a person's decision, not yours to judge.**"
-    (item,) = [line for line in _answers_check() if line.startswith(lead)]
+def test_a_revisit_entry_not_asked_for_is_an_answer_no_change_owes():
+    """An entry the change check does not ask for is an answer no change owes (COR-050
+    point 16, COR-064 point 1): one for a target that owes no answer, or one whose
+    outcome alone changed, which also answers nothing. The reviewer checks it against
+    its source and its target, whoever decided it, wherever its document sits."""
+    (item,) = [line for line in _answers_check() if line.startswith(_NOT_OWED_LEAD)]
     for words in (
-        'A revisit entry the list flags "not asked for by this change" is a person\'s decision,'
-        " even on a document the check asked about, and the bullets above never judge it"
-        " (COR-050 point 16)",
+        'A revisit entry the list flags "not asked for by this change" is such an answer too,'
+        " even on a document the check asked about (COR-050 point 16)",
         "Its target owes no answer, or only its outcome changed",
         "An entry whose outcome alone changed also answers nothing.",
     ):
         assert words in item, words
-    # The revisit sentences come before the advisory instruction that covers them.
-    assert item.index("A revisit entry the list flags") < item.index("so do not block on it")
+    check = _sub_items(_answers_check(), _NOT_OWED_LEAD)["Check each, whoever decided it"]
+    assert "(COR-064 point 4)" in check
 
 
 def _friction_answers() -> str:
@@ -655,14 +728,18 @@ def _friction_answers() -> str:
 def test_the_software_engineer_writes_the_revisit_entries_its_change_owes():
     """The producer may run `pkit friction revisit` for what its own change owes, as
     the agents README's "Friction writers" lets an agent making a change (COR-050
-    points 3 and 16), and leaves any other entry to the person."""
+    points 3 and 16), and leaves any other entry to the person. It commits what the
+    writers write, and judges the combined state of revalidations answered apart where
+    the check flags it (COR-062 points 1 and 7); no answer is owed for a conflict, a
+    rule COR-062 overturns."""
     section = _friction_answers()
     for words in (
         "`pkit friction revalidate`, `pkit friction defer` or `pkit friction revisit`",
-        "The third writes an entry in its `revisited` list",
-        "the revalidation of a combined state after you resolved a conflict (COR-050 point 3)",
-        "After you resolve a conflict in a `revisited` list, write the entry again for the"
-        " combined state (COR-050 point 16)",
+        "The third writes a revisit entry, the answer for a target the artefact links to",
+        "You run them only for what your own change owes: the answers the check asks of it.",
+        "Where the check flags one of your revalidations as replacing revalidations answered"
+        " apart, make that revalidation's reason judge their combined state (COR-062 point 7).",
+        "Commit what the writers write with your change, a new answer file among it",
         "against the change, and each target you revisited by changing it.",
         "Each deferral, and each `deferred` revisit entry, you write names an open follow-up",
         "told those sentences and what is left out of date",
@@ -675,6 +752,7 @@ def test_the_software_engineer_writes_the_revisit_entries_its_change_owes():
         "Changing only an entry's outcome answers nothing, and is not yours to write.",
     ):
         assert words in section, words
+    assert "after you resolved a conflict" not in section
 
 
 def test_dec_002_and_the_readme_name_the_same_revisit_blocks():
@@ -700,3 +778,81 @@ def test_dec_002_and_the_readme_name_the_same_revisit_blocks():
         assert words.lower() in readme.lower(), ("README", words)
     for words in ("contradicts what the modified trigger fields now say", "contradicts nothing"):
         assert words in body, words
+
+
+# ---------------------------------------------------------------------------
+# The `[person]` tag — one clause, three bodies, as DEC-028 decides (#1976)
+# ---------------------------------------------------------------------------
+
+_PERSON_LEAD = "- **A finding for the person who authorises the merge is tagged `[person]`**"
+
+#: When a panel finding is `[person]`: DEC-028's "Finding tags" conditions, with the
+#: rule drawn from the corpus the panel judges. The README and each body say them alike.
+_PERSON_CONDITIONS = (
+    "a passage the change owns",
+    "cites by id an accepted rule of the `<project-conventions>` corpus that binds on an"
+    " artefact the change alters or brings under a rule",
+    "Judging the passage against that rule needs a reading the rule does not settle, or a"
+    " fact the rule does not name.",
+    "It withholds no approval, and it is shown to the person who authorises the merge",
+)
+
+
+def _person_clause(path: Path) -> str:
+    lines = [
+        line
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.startswith(_PERSON_LEAD)
+    ]
+    assert len(lines) == 1, f"{path}: expected exactly one `[person]` clause, found {len(lines)}"
+    return lines[0]
+
+
+def _canonical(agent: str) -> Path:
+    return _SE_DIR / "agents" / f"{agent}.md"
+
+
+def test_person_clause_is_identical_across_the_panel():
+    """The three bodies tag a finding for the person alike, so they must not drift."""
+    clauses = {agent: _person_clause(_canonical(agent)) for agent in _PANEL_AGENTS}
+    assert len(set(clauses.values())) == 1, "`[person]` clause differs between panel agents"
+
+
+def test_person_clause_says_when_as_dec_028_decides():
+    """A `[person]` finding cites an accepted rule the reviewer judges, on a passage the
+    change owns, that the rule does not settle; it withholds no approval and goes to the
+    person who authorises the merge. Anything softer that no such rule backs stays
+    `[advisory]` (DEC-028 "Finding tags", "What a reviewer tags")."""
+    clause = _person_clause(_canonical(_PANEL_AGENTS[0]))
+    for words in (
+        '[project-management:DEC-028-agent-as-approver-paths], "Finding tags"',
+        *_PERSON_CONDITIONS,
+        "even where this section would otherwise make it advisory",
+        "A judgement call that no such rule backs, and a point of taste, stay `[advisory]`",
+    ):
+        assert words in clause, words
+
+
+@pytest.mark.parametrize("agent", _PANEL_AGENTS)
+def test_the_verdict_names_the_three_tags(agent):
+    """Each body's verdict step tags its findings with all three of DEC-028's tags."""
+    body = _canonical(agent).read_text(encoding="utf-8")
+    verdict = body.split("\n### 4. Emit the verdict\n", 1)[1].split("\n### ", 1)[0]
+    assert "each tagged `[block]`, `[person]` or `[advisory]`" in verdict
+    assert "each tagged `[block]` or `[advisory]`" not in verdict
+
+
+def test_the_readme_and_the_agents_say_the_same_of_person():
+    """The README's item on the `[person]` tag says what each body's clause says."""
+    readme = (_SE_DIR / "README.md").read_text(encoding="utf-8")
+    (item,) = [line for line in readme.splitlines() if line.startswith("- **`[person]`**")]
+    assert "- **`[person]`** marks a finding on a passage the change owns." in item
+    for words in _PERSON_CONDITIONS:
+        assert words in item, words
+
+
+@pytest.mark.parametrize("agent", _PANEL_AGENTS)
+def test_deployed_copy_carries_the_person_clause(agent):
+    """The adapter's deploy step carries the clause into the copy the harness loads."""
+    deployed = REPO_ROOT / ".claude" / "agents" / f"{agent}.md"
+    assert _person_clause(deployed) == _person_clause(_canonical(agent))

@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-default-branch
+    revalidated:
+      at: 2026-10-22T22:12:33Z
+      outcome: unchanged
+      unchanged-because: The change only names PKIT_CHECK_HEAD, the change's own head, beside the base override, and no reader of the default branch reads it. The definition holds.

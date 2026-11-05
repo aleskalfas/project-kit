@@ -1,0 +1,933 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-863d2120a84e.yaml
+    revalidated:
+      at: 2026-10-26T04:50:38Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-015-package-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-bca813b8718e.yaml
+    revalidated:
+      at: 2026-10-26T04:50:41Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-016-keep-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-82a9f92cf8a6.yaml
+    revalidated:
+      at: 2026-10-26T04:50:45Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-018-check-shareable.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-14cab8fa596f.yaml
+    revalidated:
+      at: 2026-10-26T04:50:48Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-f13c9b0b08f5.yaml
+    revalidated:
+      at: 2026-10-26T04:50:51Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-bf75f5ef5635.yaml
+    revalidated:
+      at: 2026-10-26T04:50:56Z
+      outcome: unchanged
+      unchanged-because: refs.py and cli.py change only pkit refs lookup, which now resolves a record's point to its file and heading anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. pkit refs validate, which checks this use case's references, is as it was, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-50d19a823f20.yaml
+    revalidated:
+      at: 2026-10-26T04:50:59Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main updated this use case, read here, for pkit config set naming the locations a change of docs.internal leaves behind. Its steps run no lookup of a citation, so they hold as main wrote them.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-584f4319317a.yaml
+    revalidated:
+      at: 2026-10-26T04:51:01Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-66d5b1529575.yaml
+    revalidated:
+      at: 2026-10-26T04:51:04Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, and no install sets a root, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-828a24ebf347.yaml
+    revalidated:
+      at: 2026-10-26T04:51:08Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-c6041f71d67c.yaml
+    revalidated:
+      at: 2026-10-26T04:51:11Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set for docs.internal, while a provider selection writes another key. This use case runs no lookup, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-f6d0acdf7905.yaml
+    revalidated:
+      at: 2026-10-26T04:51:14Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-718f3fc69ca5.yaml
+    revalidated:
+      at: 2026-10-26T04:51:17Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged the output of pkit config set for docs.internal. Neither changes which repository a command writes in or who is asked, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-b3d2acfd0824.yaml
+    revalidated:
+      at: 2026-10-26T04:51:24Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-59a2bc69643a.yaml
+    revalidated:
+      at: 2026-10-26T04:51:29Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-525e5f95da00.yaml
+    revalidated:
+      at: 2026-10-26T04:51:35Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-244f393a77cc.yaml
+    revalidated:
+      at: 2026-10-26T04:51:38Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-042-challenge-and-check.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-677ab7326b1b.yaml
+    revalidated:
+      at: 2026-10-26T04:51:43Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-5f19baa7e5e5.yaml
+    revalidated:
+      at: 2026-10-26T04:51:48Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-6f054c5e641d.yaml
+    revalidated:
+      at: 2026-10-26T04:51:52Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-012-report-problem.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-16225f01f42e.yaml
+    revalidated:
+      at: 2026-10-26T04:51:56Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-013-link-reports.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-441b89549614.yaml
+    revalidated:
+      at: 2026-10-26T04:52:00Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-048-install-cli.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-6f7d516c3c81.yaml
+    revalidated:
+      at: 2026-10-26T04:52:05Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-3c42621ce2ed.yaml
+    revalidated:
+      at: 2026-10-26T04:52:09Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. Installing the system sets no root and runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-2c7587c72eb1.yaml
+    revalidated:
+      at: 2026-10-26T04:52:12Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-203f03bc9c96.yaml
+    revalidated:
+      at: 2026-10-26T04:52:16Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-0fa0e5e94473.yaml
+    revalidated:
+      at: 2026-10-26T04:52:21Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-c023390f2be9.yaml
+    revalidated:
+      at: 2026-10-26T04:52:24Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - moved-4859ed958bd4.yaml
+    revalidated:
+      at: 2026-10-26T04:52:28Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, for a cited point's file and anchor. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. This use case runs neither command, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-e74c084a6ef5.yaml
+    revalidated:
+      at: 2026-10-26T04:52:30Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON. Main's answer, read here, judged pkit config set, which no step runs, and COR-053 point 10's container in a sidecar. A capability still declares its roles, points and processes in its package metadata, and runs no lookup, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-006-gate-merges.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-c95d6fad77f9.yaml
+    revalidated:
+      at: 2026-10-26T04:52:34Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON. Main's answer, read here, judged pkit config set, which no step runs, and the check skipping answer files older than an artefact's last addition. Gating merges on the change check runs no lookup, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-63b1bb583d90.yaml
+    revalidated:
+      at: 2026-10-26T04:52:38Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON. Main's answer, read here, judged pkit config set, which no step runs, and the console fences moving to the doc-examples run. The migration check stays a line of the aggregator and runs no lookup, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-011-migrate-component-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-ae9063e8a9c0.yaml
+    revalidated:
+      at: 2026-10-26T04:52:44Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON. Main's answer, read here, judged pkit config set, which no step runs, and the console fences moving to the doc-examples run. The migration check a component's change needs stays a line of the aggregator and runs no lookup, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-6a06cb9b0a21.yaml
+    revalidated:
+      at: 2026-10-26T04:52:48Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, and the decisions README gains Looking a citation up. Main's answer, read here, judged pkit config set, which no step runs, and a record's front matter kept in its own file. Recording a decision stamps it so and runs no lookup, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-da785d36ef16.yaml
+    revalidated:
+      at: 2026-10-26T04:52:51Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON. Main's answer, read here, judged pkit config set, which no step runs, and COR-051 point 2's rule-set file keeping its data in its front matter. Authoring a rule set runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-e4c6c09d69df.yaml
+    revalidated:
+      at: 2026-10-26T04:52:55Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, and the decisions README gains Looking a citation up. Main's answer, read here, judged pkit config set, which no step runs, and the README's line on a record's own front matter. Accepting a record through review runs no lookup, so it holds.
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - moved-ff7f7cafea74.yaml
+    revalidated:
+      at: 2026-10-26T04:53:01Z
+      outcome: unchanged
+      unchanged-because: This change gives pkit refs lookup a point's heading anchor in cli.py. Main's answer, read here, judged pkit config set naming the locations a change of the internal root leaves behind. How the core layer copies, registers and runs each adapter holds against both.
+  - artefact: .pkit/agents/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-fcb206299a38.yaml
+    revalidated:
+      at: 2026-10-26T04:53:04Z
+      outcome: unchanged
+      unchanged-because: refs.py's lookup now resolves a point of a record to its heading's anchor, and pkit refs validate, which this README describes, is as it was. Main's answer, read here, judged docs_roots.py reading the locations a change of the internal root leaves behind. The overlay and an agent definition's front matter work as the page says.
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T204758Z-da0e1865.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - moved-7bd9bf62ec3a.yaml
+      - moved-a08ed9a38659.yaml
+    revalidated:
+      at: 2026-10-26T04:53:08Z
+      outcome: unchanged
+      unchanged-because: The Surface table now says pkit refs lookup gives a point's heading anchor. Main's answer, read here, judged its row on config set docs.internal naming the locations it leaves behind. The permissions commands this README cites the Surface for, and their privilege, hold against both.
+  - artefact: docs/permissions/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T204758Z-da0e1865.yaml
+      - 20261025T214334Z-3176bb1a.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+    revalidated:
+      at: 2026-10-26T04:53:12Z
+      outcome: unchanged
+      unchanged-because: The Surface table now says pkit refs lookup gives a point's file and heading anchor. Main's answer, read here, judged its row on config set docs.internal naming the locations it leaves behind. This guide shows neither command, so it holds.
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T220735Z-8e67b306.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261025T233736Z-b867ef8a.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-26T04:53:19Z
+      outcome: unchanged
+      unchanged-because: This change gives pkit refs lookup a point's file, its heading's anchor and whether the file is a synced copy. Main updated the README, read here, to say the first living-docs space offers to move the internal root. The README shows no lookup, so it holds.
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-65d082fdefb8.yaml
+    revalidated:
+      at: 2026-10-26T04:53:24Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, one home for every artefact's answers. #1779 builds it and rewrites the reference's account of the friction commands."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its friction commands write and read answers in the artefact's block, and friction resolve merges them, which COR-062 moves to answer files. #1779 builds it and rewrites the reference."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the reference keeps in the block. #1779 builds it and rewrites it."
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - moved-2dccacfe6269.yaml
+    revalidated:
+      at: 2026-10-26T04:53:29Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It keeps an artefact's revalidation in the core friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the README keeps them in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passages #1779 rewrites, since a revalidation would claim the whole README holds."
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-artefact-kind
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:53:33Z
+      outcome: unchanged
+      unchanged-because: The kinds' hints' examples now cite a project's own record, and DEC-001 point 1 says the link command links citations too. Main's answer, read here, judged a view's closing section, which is no part of any kind. What an artefact kind is holds against both.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-candidate
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-a9ec29110af1.yaml
+    revalidated:
+      at: 2026-10-26T04:53:38Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes. Main's answer, read here, judged the views' closing sections, which change what is built, not what a candidate is. What a candidate is holds against both.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-declared-structure
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-a8c0e3229666.yaml
+    revalidated:
+      at: 2026-10-26T04:53:42Z
+      outcome: unchanged
+      unchanged-because: The kinds' hints' examples now cite a project's own record, and the link command links citations too. Main's answer, read here, judged a view's closing section, which is no part of any structure. What a declared structure is holds against both.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-hint
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:53:45Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the link command links each citation a body makes, and the shipped examples cite a project's own record. Main's answer, read here, judged point 1's sentences on what a tool reads moving to a bullet of their own. What a hint is holds against both.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-shortfall
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:53:49Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes. Main's answer, read here, judged point 1 restating what a tool reads, under which shortfalls and boxes stand. What a shortfall is holds against both.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-tightening
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:53:53Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes. Main's answer, read here, judged a view's closing section, which is nothing a project tightens. What a tightening is, and the rule it names, holds against both.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-use-case
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:53:57Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes. Main's answer, read here, judged a view's closing section listing a use case under the concepts its body links. What a use case is, and the parts it carries, holds against both.
+  - artefact: tech-docs/analysis/software-analysis/domain-model/010-analyses-and-use-cases.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:54:01Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes. Main updated this view, read here, with its closing section on what is built on its concepts. How analyses, their artefacts and their ids move together holds against both.
+  - artefact: tech-docs/analysis/software-analysis/domain-model/020-revalidations.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-9593b9f5285b.yaml
+    revalidated:
+      at: 2026-10-26T04:54:06Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes. Main updated this view, read here, with its closing section on what is built on its concepts. How a revalidation is proposed, decided and recorded holds against both.
+  - artefact: tech-docs/analysis/software-analysis/domain-model/030-kinds-and-structures.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-47cbe686e4db.yaml
+    revalidated:
+      at: 2026-10-26T04:54:12Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes. Main updated this view, read here, with its closing section on what is built on its concepts. What it explains of kinds and their structures holds against both.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-61845b86011c.yaml
+    revalidated:
+      at: 2026-10-26T04:54:16Z
+      outcome: unchanged
+      unchanged-because: The resolver's commands now run pkit analysis link before an updated answer, and the skill's second step links what a body cites. Main's answer, read here, judged the links and overview commands the skill runs, which decide nothing. The agent still proposes and a person still decides each answer.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-4b37d865f237.yaml
+    revalidated:
+      at: 2026-10-26T04:54:19Z
+      outcome: unchanged
+      unchanged-because: check.py now holds the links of citations, whatever any rule's status, as it holds the links to terms. Main's answer, read here, judged the check reading a view's closing section as no part. A body is still held to its declared structure only where the format rule binds.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-070-choose-parts.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:54:25Z
+      outcome: unchanged
+      unchanged-because: The hints' shipped examples now cite a project's own record, and the link command links each citation a body makes. Main's answer, read here, judged a view's closing section, which is no part a project chooses. Choosing each kind's parts holds against both.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-071-describe-existing-project.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - moved-a7d5eb0e91b3.yaml
+    revalidated:
+      at: 2026-10-26T04:54:29Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-072-revise-before-change.md
+    read:
+      - 20261025T042132Z-00433cb6.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:54:33Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-073-revalidate-after-change.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - moved-2ac1be36d925.yaml
+    revalidated:
+      at: 2026-10-26T04:54:38Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-074-free-uncited-ids.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-cac80ba8834a.yaml
+    revalidated:
+      at: 2026-10-26T04:54:43Z
+      outcome: unchanged
+      unchanged-because: The authoring skill's second step now runs pkit analysis link in every analysis, to link what a body cites. Main's answer, read here, judged the skill running the links command then the overview's. Freeing the ids of artefacts nothing cites is untouched by both.
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-001
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-e075489b6421.yaml
+    revalidated:
+      at: 2026-10-26T04:54:46Z
+      outcome: unchanged
+      unchanged-because: software-analysis DEC-001 point 1 now says the command that links terms also links each citation a body makes. Main's answer, read here, judged point 1 restating what a tool reads, under which its hints stand. The actor's voice in needs and goals holds against both.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-001
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-cfb5a5e6377e.yaml
+    revalidated:
+      at: 2026-10-26T04:54:50Z
+      outcome: unchanged
+      unchanged-because: DEC-001 gains point 13, which links the analysis's citations of records, and point 1 lets the link command read a body to place them. Main's answer, read here, judged a view's closing section, no part of the view. The rule asks each artefact to carry its kind's structure, which neither changes.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-003
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-0d5d5e362e2b.yaml
+    revalidated:
+      at: 2026-10-26T04:54:54Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now lets the command that links terms place a link at each citation a body makes too. Main's answer, read here, judged point 1 restating what a tool reads and a view's closing section. Whose goal a use case serves, which this rule asks about, holds against both.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-004
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-7499b6f74bf4.yaml
+    revalidated:
+      at: 2026-10-26T04:54:59Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now lets the command that links terms place a link at each citation a body makes too. Main's answer, read here, judged what a tool reads and a view's closing section, neither a goal nor a need. That a use case's goal is one of its actor's needs holds against both.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-007
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-9bc4a100eab6.yaml
+    revalidated:
+      at: 2026-10-26T04:55:03Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now lets the command that links terms place a link at each citation a body makes too. Main's answer, read here, judged points 1 and 11 restating what a tool reads and the stored reverses. A source a goal or a guarantee names is still named in its words.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-008
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-e5b931beeb5e.yaml
+    revalidated:
+      at: 2026-10-26T04:55:07Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now lets the link command place a link at each citation too, and a citation is never read as a mention of a term. Main updated this rule, read here, to read a view's closing section as no statement. How an artefact uses a concept holds against both.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-009
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-9c96c36c753c.yaml
+    revalidated:
+      at: 2026-10-26T04:55:10Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now lets the command that links terms place a link at each citation a body makes too. Main's answer, read here, judged what a tool reads and a view's closing section. What a use case's preconditions must rest on holds against both.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-012
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-98ed394a1c20.yaml
+    revalidated:
+      at: 2026-10-26T04:55:14Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now lets the command that links terms place a link at each citation a body makes too. Main's answer, read here, judged point 1 restating only what a tool reads. One name still means one concept, as this rule asks.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-013
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-9b0cd39c4c82.yaml
+    revalidated:
+      at: 2026-10-26T04:55:18Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now lets the command that links terms place a link at each citation a body makes too. Main's answer, read here, judged what a tool reads and a view's closing section. A step the system does not carry out still rests on an accepted record.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-014
+    read:
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:55:23Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes. Main's answer, read here, judged the overview giving each area its concepts in DEC-003 point 8. Where a use case lies, and which journey tells a path, holds against both.
+  - artefact: tech-docs/analysis/core/domain-model/010-the-system-and-its-methodology.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - moved-172e742805fb.yaml
+    revalidated:
+      at: 2026-10-26T04:55:27Z
+      outcome: updated

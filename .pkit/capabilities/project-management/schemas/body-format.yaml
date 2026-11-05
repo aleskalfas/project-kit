@@ -6,7 +6,8 @@
 # checkbox semantics (validated at tick, hard-stop at close, sticky
 # ticks, two ticked-states); and the sub-task promotion procedure.
 #
-# Consumed by create-issue (generates the right scaffold at filing) and
+# Consumed by create-issue (generates the right scaffold at filing, and
+# checks the required sections and universal rules before it files) and
 # validate-body (checks required sections, universal rules, integration
 # marker shape, checkbox close-gate, sub-task promotion mechanics).
 
@@ -114,23 +115,36 @@ universal_body_rules:
       `hierarchy: gated` keeps the hard-reject below. The containment
       invariants in issue-types.yaml are NOT softened by advisory mode.
     severity: "[validation-severity:hard-reject]"
-  - rule: |
+  - id: body.h1
+    rule: |
       No h1 (`# ...`) headings — the issue title is the h1. Sections
       use `## Title`.
     severity: "[validation-severity:hard-reject]"
-  - rule: |
+  - id: body.file-line-refs
+    rule: |
       No `file:line` references like `foo/bar.py:42`. Line numbers go
       stale; name the file and the identifier separately.
     severity: "[validation-severity:warning]"
-  - rule: |
+  - id: body.implementation-recipe
+    rule: |
       No `## Implementation` or `## How` recipes. Bodies describe
       outcomes, not how to build them. Implementation belongs in the
       PR or a separate design doc.
     severity: "[validation-severity:warning]"
-  - rule: |
-      No predicted decision IDs (e.g., references to DEC-NNN that
-      haven't been authored yet). Reference only IDs that already
-      exist.
+  - id: body.predicted-decision-id
+    rule: |
+      No predicted decision IDs (e.g., a `COR-NNN`, or a capability's
+      `DEC-NNN`, that hasn't been authored yet). Reference only IDs that
+      already exist. A core, project or architecture record's id
+      (`COR-NNN`, `PRJ-NNN`, `ADR-NNN`) and a capability's decision
+      named with its capability (`[<capability>:DEC-NNN-<slug>]`, or
+      `<capability>:DEC-NNN`) are looked up through `pkit refs lookup`,
+      and each one no record holds is reported. A bare `DEC-NNN` names
+      no record until its capability is named, so it is not checked. An
+      id in a fenced code block, an HTML comment or a struck-through
+      span is not read. A report, never a refusal, at the severity
+      below. When the records cannot be read, one notice says which ids
+      were not checked, and why, at the same severity.
     severity: "[validation-severity:warning]"
   - id: body.use-case-citation
     rule: |
@@ -212,57 +226,52 @@ provenance_marker:
     - "No checkbox (`- [ ]` / `- [x]`)."
   misplacement_severity: "[validation-severity:warning]"
 
-# The answers a change wrote, in its PR body (per DEC-055). A section the
-# capability's scripts write from the change check's own list — open-pr,
-# edit-pr and land-work, never an agent — replaced whole on every write.
-# The artefacts' words are never input: every reader of the body strips
-# the section before it scans.
+# The list of the answers a change wrote, which earlier runs of the
+# capability's scripts wrote into a PR body (per DEC-055). No script writes
+# it any longer (DEC-065 point 1): the answers are read from the change
+# check. land-work removes a section an earlier run left, open-pr and edit-pr
+# drop one from the body they write, and every reader of the body strips it
+# before it scans, so the artefacts' words are never input.
 friction_answers_marker:
   heading: "## Documentation this change affects"
   start_marker: "<!-- pkit-friction-answers:start"
   end_marker: "<!-- pkit-friction-answers:end -->"
   position: |
-    The last section of the body, before the provenance footer. Each
-    marker is a line of its own, and counts only as a whole line; the
-    start marker's line goes on to name the head the list is for and the
-    merge-base it was taken against (`head=<oid> base=<oid> -->`). A
-    change that wrote no answers and alters no friction setting has no
-    such section.
+    Where an earlier run wrote it: the last section of the body, before
+    the provenance footer. Each marker is a line of its own, and counts
+    only as a whole line; the start marker's line goes on to name the head
+    the list was for and the merge-base it was taken against
+    (`head=<oid> base=<oid> -->`). No script writes the section.
   agent_managed: true
   strip_before_scan: true
   strip_rule: |
     Strip each region — the start marker's line through the end marker's
     — with the heading directly above it, before a reader scans the body:
     the closing references, the Doc impact requirement, the mapping's
-    override and the placeholder check read the body without it. A start
-    marker with no end marker after it is stripped with everything after
-    it up to the provenance footer, or the end of the body; an end marker
-    with no start marker is stripped alone. The heading with no marker
-    under it — a list no command wrote — is stripped with everything
-    under it, up to the next heading of level one or two outside a fenced
-    code block, a marker, or the provenance footer. `## Friction answers`,
-    the heading an earlier run of these scripts wrote the section under,
-    is read as the heading in each of these rules, so a section it left
-    is stripped and replaced whole. No text the section lists holds
-    `<!--` or `-->`: the commands that write it never write such a list.
-  # The author's own section, outside the list: the sentences live here
-  # between writes, and every write of the list gives each beside its
-  # `updated` document.
+    override and the placeholder check read the body without it.
+    `## Friction answers`, the heading an earlier run of these scripts wrote
+    the section under, is read as the heading too. Only a region with both
+    its markers is stripped. A marker with no partner, and a section under
+    either heading with no markers, are the body's own text: a start marker
+    with no end marker draws a warning, and nothing is removed. No text an
+    earlier run listed holds `<!--` or `-->`: the commands that wrote it
+    never wrote such a list.
+  # The author's own section: the sentences on what changed in each
+  # `updated` document live here, where the reviewer of the answers and the
+  # person who authorises the merge read them (DEC-065 point 1).
   sentences_heading: "## What changed in each updated document"
   sentences_rule: |
     One top-level list item per document the change revalidated as
     `updated`, bulleted or numbered and starting in the line's first
-    column: the document in a code span, named as the list names it
-    (its path, or `path#id` for an entry of a collection), then a colon
+    column: the document in a code span, named as the change check names
+    it (its path, or `path#id` for an entry of a collection), then a colon
     or a dash, then one sentence on what changed in it. An item runs on
     over the lines under it up to a blank line, another list item, a
-    heading, an HTML comment or a thematic break. Of two items for one document, the first is read. The
-    section ends at the next heading of level one or two. open-pr and
-    land-work give each sentence beside its document in the list, and
-    edit-pr gives each as the edited body has it; an `updated` document
-    with no sentence is listed as having none. A sentence that reads as
-    a closing reference or holds `<!--` or `-->` is never written into
-    the list.
+    heading, an HTML comment or a thematic break. Of two items for one
+    document, the first is read. The section ends at the next heading of
+    level one or two. review-work refuses an `updated` document the change
+    check marks at the PR's head with no sentence here, and land-work tells
+    the person who authorises the merge each sentence beside its document.
 
 checkbox_rules:
   validation_timing: |

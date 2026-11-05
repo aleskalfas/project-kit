@@ -1,0 +1,266 @@
+answers:
+  - artefact: .pkit/rules/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - moved-eceee50c8cfd.yaml
+    revalidated:
+      at: 2026-10-27T00:47:23Z
+      outcome: unchanged
+      unchanged-because: It describes who owns core.md and project.md, how the host instruction file includes them, and the include convention of rule 13. The change only rewords rules 7 and 12 to name the migration check and the deploy script for agents as built, so none of that moves.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-operational-rule
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - moved-ed9b7bd1a76e.yaml
+    revalidated:
+      at: 2026-10-27T00:47:30Z
+      outcome: unchanged
+      unchanged-because: The term defines an operational rule by core rule 8 and project rule 4, and tells core rules from rules of a rule set. The change rewords only rules 7 and 12 to state built parts as built, and keeps their numbers, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-agent-workspace
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - moved-0101adbcf4c4.yaml
+    revalidated:
+      at: 2026-10-27T00:47:35Z
+      outcome: unchanged
+      unchanged-because: The term rests on core rule 16, the workspace rule, which the change leaves as it was. The change rewords only rules 7 and 12, on the migration check and the deploy scripts, so the term holds.
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-017-backbone-migration-safe.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - moved-3d8663c5b43a.yaml
+    revalidated:
+      at: 2026-10-27T00:47:38Z
+      outcome: unchanged
+      unchanged-because: It rests on core rule 5, that a backbone migration is safe over any state, which the change leaves as it was. Rule 7 now names the migration check without the words when available and asks the same, so the requirement holds.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-081-decide-unasked-answers.md
+    read:
+      - 20261025T003621Z-53316d8f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T161217Z-677bd19b.yaml
+    revalidated:
+      at: 2026-10-27T00:47:42Z
+      outcome: unchanged
+      unchanged-because: It cites core rule 20 on answers a change was not asked about, which the change leaves as it was. Only rules 7 and 12 change, to name the migration check and the deploy script for agents as built.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - moved-8a82930f46b2.yaml
+    revalidated:
+      at: 2026-10-27T00:47:48Z
+      outcome: unchanged
+      unchanged-because: It binds the builder to core rules 2, 8, 14, 15, 17, 19, 21 and 22, none of which the change touches. Rules 7 and 12 now name the migration check and the deploy script for agents as built, and ask the same.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-e4c6c09d69df.yaml
+    revalidated:
+      at: 2026-10-27T00:47:51Z
+      outcome: unchanged
+      unchanged-because: It cites core rule 2, the acceptance gate, which the change leaves as it was. Rules 7 and 12 change only to name the migration check and the deploy script for agents as built, which no step of acceptance reads.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - moved-a4cb7bc0b417.yaml
+    revalidated:
+      at: 2026-10-27T00:47:54Z
+      outcome: unchanged
+      unchanged-because: Its path loads the core rules into each session, and step 5 runs the adapter deploy primitives without saying what each one writes. The change rewords rules 7 and 12 to state built parts as built, and the file still loads as the steps say.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - moved-808bb37fbee5.yaml
+    revalidated:
+      at: 2026-10-27T00:47:57Z
+      outcome: unchanged
+      unchanged-because: It rests on core rule 16, where intermediate files go, which the change leaves as it was. Rules 7 and 12 change only to name the migration check and the deploy script for agents as built.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-718f3fc69ca5.yaml
+    revalidated:
+      at: 2026-10-27T00:48:03Z
+      outcome: unchanged
+      unchanged-because: It rests on core rule 19, the boundary on mutating another repository, which the change leaves as it was. The change rewords only rules 7 and 12 to state the migration check and the deploy script for agents as built.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T040712Z-31bfc9a3.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - moved-7a369d906fdb.yaml
+    revalidated:
+      at: 2026-10-27T00:48:07Z
+      outcome: unchanged
+      unchanged-because: It cites core rule 20 on writing the answers a change owes, which the change leaves as it was. Rules 7 and 12 now name the migration check and the deploy script for agents as built, which no step of answering reads.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T230218Z-61712646.yaml
+      - moved-a164d961d8b1.yaml
+    revalidated:
+      at: 2026-10-27T00:49:10Z
+      outcome: unchanged
+      unchanged-because: Judged with the two re-checks made apart, the use case still holds. core.md has gained rule 22 and now states rules 7 and 12 as built, while rule 20, which governs the answers that resolve debt, stands as it was. The whole-repository check, the debt listing and the explanation tell an upgrade whose move is uncommitted to commit it. On a default branch whose answers have moved, where this use case starts, each step reads and lists debt as before.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-59a2bc69643a.yaml
+    revalidated:
+      at: 2026-10-27T00:48:13Z
+      outcome: unchanged
+      unchanged-because: It cites core rule 20 on telling the merge authoriser what a change updated, which the change leaves as it was. Rule 7 still asks to check the diff for migrations before committing, now naming the check as built, so landing holds as written.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-6a06cb9b0a21.yaml
+    revalidated:
+      at: 2026-10-27T00:48:19Z
+      outcome: unchanged
+      unchanged-because: It cites core rules 1 and 2, the no-shared-files invariant and the acceptance gate, which the change leaves as they were. Rules 7 and 12 change only to name built parts as built, which recording a decision does not read.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261026T230218Z-61712646.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - moved-ae8fedaca13d.yaml
+    revalidated:
+      at: 2026-10-27T00:48:22Z
+      outcome: unchanged
+      unchanged-because: It cites core rule 2, the acceptance gate, which the change leaves as it was. The change rewords only rules 7 and 12 to name the migration check and the deploy script for agents as built, and no stage of delivering a change moves.
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T220735Z-8e67b306.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261025T233736Z-b867ef8a.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T040712Z-31bfc9a3.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145332Z-136a7129.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162052Z-c165917d.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-27T00:48:25Z
+      outcome: unchanged
+      unchanged-because: It shows core.md included in CLAUDE.md and refreshed by sync, and lists the migration check among the checks that gate on day one. Rule 7 now names that check as built rather than when available, which agrees with the README.

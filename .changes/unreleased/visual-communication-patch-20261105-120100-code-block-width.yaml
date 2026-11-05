@@ -1,0 +1,9 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The starter's README says a code block is as wide as its widest line or its
+  head, as the block draws it (#2566). It named the widest line alone. The
+  README lies in the starter's version being built, which `pkit visual add`
+  copies, so the change declares a patch (DEC-013 point 4).

@@ -1,0 +1,464 @@
+"""The record lookup's points and anchors (software-analysis DEC-001 point 13; COR-058).
+
+`pkit refs lookup` resolves a point of a record, `COR-050#14`, to its record's file and
+the anchor a repository host gives its heading, reading the record's points as
+validation reads them (`record_points`). A rule resolves to its place and its heading's
+anchor. `--json` answers several citations in one document, each with its file, its
+anchor and whether the file is a synced copy, which a capability's script reads instead
+of looking for a record itself.
+
+A citation of a point in prose, `COR-058 point 3`, `PRJ-002 D1` or `COR-050#14`, is
+held to its record the same way (`refs.point_citations`, `refs.CitedPoints`): one that
+names a point its record neither holds nor retires is a warning of
+`pkit decisions validate`, in a record, and of `pkit refs validate`, in an agent or a
+skill, and fails neither.
+
+The host's anchor (`document_parts.host_anchors`) is GitHub's: the heading's text as it
+renders, in lower case, every character but letters, digits, underscores, spaces and
+hyphens dropped, each space a hyphen, and a repeat numbered.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+from click.testing import CliRunner
+
+from project_kit import document_parts, refs
+from project_kit.cli import main
+
+REPO = Path(__file__).resolve().parents[1]
+
+
+# --- the host's anchor ------------------------------------------------------------------------
+
+
+def _anchors(*titles: str) -> tuple[str, ...]:
+    body = "\n\n".join(f"### {title}" for title in titles) + "\n"
+    return document_parts.host_anchors(document_parts.Body.read(body).headings)
+
+
+@pytest.mark.parametrize(
+    ("title", "anchor"),
+    [
+        # A numbered point: its full stop dropped, each space a hyphen.
+        ("14. Project settings", "14-project-settings"),
+        # A labelled point: the em dash dropped, the spaces around it two hyphens.
+        ("D1 — Surface changes are declared", "d1--surface-changes-are-declared"),
+        # A code span's text kept as written, its underscore with it.
+        ("3. The `run_rules` table", "3-the-run_rules-table"),
+        # Emphasis dropped; an underscore inside a word kept.
+        (
+            "2. Enforced edges are *derived*, _not_ annotated",
+            "2-enforced-edges-are-derived-not-annotated",
+        ),
+        ("5. A snake_case name", "5-a-snake_case-name"),
+        # A link's text kept, its target dropped; a bracketed citation's text kept.
+        ("4. Deferred ([COR-007](../COR-007.md))", "4-deferred-cor-007"),
+        ("2. Per [demo:DEC-002-three-layers]", "2-per-demodec-002-three-layers"),
+        # Symbols and other punctuation dropped; letters of any script kept, lowered.
+        ("2. Pins ≠ me → re-exec `uvx`", "2-pins--me--re-exec-uvx"),
+        ("7. Žluťoučký kůň", "7-žluťoučký-kůň"),
+        # An HTML tag dropped, an entity read, then dropped as a symbol.
+        ("1. A <code>tag</code> &amp; more", "1-a-tag--more"),
+    ],
+)
+def test_the_host_anchor_is_the_rendered_text_slugged_as_github_does(
+    title: str, anchor: str
+) -> None:
+    assert _anchors(title) == (anchor,)
+
+
+def test_a_repeated_anchor_takes_a_number_and_differs_from_the_slug() -> None:
+    """GitHub numbers a heading whose anchor an earlier heading gives, from 1; the
+    backbone's own slug numbers none and drops an underscore (COR-050 point 2)."""
+    assert _anchors("Notes", "Notes", "Other", "Notes") == ("notes", "notes-1", "other", "notes-2")
+    assert document_parts.heading_slug("3. The `run_rules` table") == "3-the-runrules-table"
+
+
+# --- the lookup -------------------------------------------------------------------------------
+
+FRONT = "---\nid: {id}\ntitle: A record\nstatus: accepted\ndate: 2026-10-21\n{extra}---\n\n"
+
+
+def _record(root: Path, rel: str, decision: str, *, extra: str = "", lead: str = "") -> None:
+    record_id = Path(rel).name.split("-", 2)
+    path = root / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        FRONT.format(id="-".join(record_id[:2]), extra=extra)
+        + lead
+        + "## Context\n\nWhy.\n\n## Decision\n\n**The choice.**\n\n"
+        + decision
+        + "\n## Rationale\n\n### 2. Not a point\n\nA heading outside the Decision.\n",
+        encoding="utf-8",
+    )
+
+
+#: The top line of the fixture's records that a later record overturns in part.
+PARTIAL = (
+    "**Partially superseded by [COR-904](COR-904-later.md).** Overturned: point 1's "
+    "single write. Among what stands: the rest."
+)
+
+
+@pytest.fixture
+def records(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A core record with numbered points and a stub, a project record with labelled
+    points, and a core record whose points are still a list; and two records another
+    overturns in part, one with points and a stub, one whose points are a list."""
+    for ns in ("core", "project"):
+        (tmp_path / ".pkit" / "decisions" / ns).mkdir(parents=True)
+    _record(
+        tmp_path,
+        ".pkit/decisions/core/COR-900-anchors.md",
+        "### 1. Anchors name parts\n\nText.\n\n### 2. Retired\nIts content is in point 3.\n\n"
+        "### 3. The `run_rules` *table*\n\nText.\n",
+        extra='retired-points:\n  "2": ["3"]\n',
+    )
+    _record(
+        tmp_path,
+        ".pkit/decisions/project/PRJ-002-versions.md",
+        "### D1 — Surface changes are declared, not applied\n\nText.\n\n"
+        "### D3 — Release-driven\n\nText.\n",
+    )
+    _record(
+        tmp_path, ".pkit/decisions/core/COR-901-listed.md", "1. **First.** Text.\n2. **Second.**\n"
+    )
+    _record(
+        tmp_path,
+        ".pkit/decisions/core/COR-902-overturned.md",
+        "### 1. Seeds are written once\n\nText.\n\n### 2. Retired\nIts content is in point 1.\n",
+        extra='retired-points:\n  "2": ["1"]\n',
+        lead=f"> {PARTIAL}\n\nWhat the record decides.\n\n",
+    )
+    _record(
+        tmp_path,
+        ".pkit/decisions/core/COR-903-overturned-listed.md",
+        "1. **First.** Text.\n2. **Second.**\n",
+        lead=f"> {PARTIAL}\n\n",
+    )
+    monkeypatch.chdir(tmp_path)
+    return tmp_path
+
+
+def _found(root: Path, *citations: str) -> list[tuple[str | None, str | None, str | None]]:
+    return [(f.path, f.anchor, f.problem) for f in refs.lookup_citations(root, citations)]
+
+
+def test_a_point_resolves_to_its_record_and_its_heading_s_anchor(records: Path) -> None:
+    core = ".pkit/decisions/core/COR-900-anchors.md"
+    assert _found(records, "COR-900", "COR-900#1", "COR-900#3", "PRJ-002#D1") == [
+        (core, None, None),
+        (core, "1-anchors-name-parts", None),
+        (core, "3-the-run_rules-table", None),
+        (
+            ".pkit/decisions/project/PRJ-002-versions.md",
+            "d1--surface-changes-are-declared-not-applied",
+            None,
+        ),
+    ]
+
+
+def test_a_retired_point_leads_to_its_stub_and_a_listed_one_to_its_record(records: Path) -> None:
+    """A retired id's stub says where its content went (COR-058 point 4); a record whose
+    points are a list gives a point no heading, so no anchor and no problem."""
+    assert _found(records, "COR-900#2", "COR-901#1") == [
+        (".pkit/decisions/core/COR-900-anchors.md", "2-retired", None),
+        (".pkit/decisions/core/COR-901-listed.md", None, None),
+    ]
+
+
+def test_what_resolves_to_nothing_says_why(records: Path) -> None:
+    """A point its record neither holds nor retires names its record and a problem; a
+    record the lookup does not find names none. A heading outside the Decision is no
+    point."""
+    assert _found(records, "COR-900#9", "PRJ-002#2", "COR-999#1") == [
+        (".pkit/decisions/core/COR-900-anchors.md", None, "COR-900 holds no point 9"),
+        (".pkit/decisions/project/PRJ-002-versions.md", None, "PRJ-002 holds no point 2"),
+        (None, None, "no record matches 'COR-999'"),
+    ]
+
+
+def test_a_rule_resolves_to_its_place_and_its_heading_s_anchor() -> None:
+    """In this repository, a rule of a project set and a method rule cited with its
+    component: each its set's file and the anchor of its heading, `### RS-… — Title`."""
+    found = refs.lookup_citations(REPO, ["RS-WRITE-005", "software-analysis:RS-SAN-001"])
+    assert [f.path for f in found] == [
+        "tech-docs/rule-sets/writing.md",
+        ".pkit/capabilities/software-analysis/rule-sets/san.md",
+    ]
+    assert found[0].anchor is not None and found[0].anchor.startswith("rs-write-005--")
+    assert found[1].anchor is not None and found[1].anchor.startswith("rs-san-001--")
+    assert found[0].paths == ("tech-docs/rule-sets/writing.md#RS-WRITE-005",)
+
+
+def test_a_capability_s_decision_resolves_its_points_too() -> None:
+    """In this repository, a point of a capability's decision, with its slug or without,
+    resolves as a core record's does: its file and its heading's anchor."""
+    found = refs.lookup_citations(
+        REPO,
+        [
+            "software-analysis:DEC-001#13",
+            "software-analysis:DEC-001-software-analysis-discipline#1",
+        ],
+    )
+    path = ".pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md"
+    assert [(f.path, f.problem) for f in found] == [(path, None), (path, None)]
+    assert found[0].anchor == "13-a-citation-of-a-record-links-to-what-it-cites"
+    assert found[1].anchor == "1-what-it-keeps-and-in-what-shape"
+
+
+# --- a point of a record another overturns in part --------------------------------------------
+
+
+def test_a_point_of_a_partly_superseded_record_comes_with_its_top_line(records: Path) -> None:
+    """A point overturned in part stays as it stood, and only the record's top line says
+    so (COR-058 point 5), so the lookup gives that line with any point it returns: a live
+    point, a retired one's stub, and a point of a record whose points are a list. A record
+    looked up whole, a point that does not resolve, and a record no other overturns give
+    none."""
+    found = refs.lookup_citations(
+        records,
+        ["COR-902#1", "COR-902#2", "COR-903#1", "COR-902", "COR-902#9", "COR-900#1"],
+    )
+    assert [(f.anchor, f.partial_supersession) for f in found] == [
+        ("1-seeds-are-written-once", PARTIAL),
+        ("2-retired", PARTIAL),
+        (None, PARTIAL),
+        (None, None),
+        (None, None),
+        ("1-anchors-name-parts", None),
+    ]
+    assert found[4].problem == "COR-902 holds no point 9"
+
+
+@pytest.mark.parametrize(
+    ("body", "line"),
+    [
+        # The top line as records write it, quoted, its marks dropped.
+        (f"> {PARTIAL}\n\n## Context\n", PARTIAL),
+        # A paragraph wrapped over several lines reads as one line.
+        (
+            "> **Partially superseded by COR-904.** Overturned:\n> point 1.\n\n## Context\n",
+            "**Partially superseded by COR-904.** Overturned: point 1.",
+        ),
+        # Unquoted, in italics, and below a first-level heading that titles the body.
+        (
+            "# A record\n\n*Partially superseded by COR-904.*\n\nMore.\n",
+            "*Partially superseded by COR-904.*",
+        ),
+        # A quote that goes on after its first paragraph: the first paragraph alone.
+        (
+            "> **Partially superseded by COR-904.** Of three rules, one is overturned:\n>\n"
+            "> - **One** — *overturned*.\n",
+            "**Partially superseded by COR-904.** Of three rules, one is overturned:",
+        ),
+        # A record superseded whole, a line further down, the words inside a sentence,
+        # and a body that opens with its first section: no partial supersession.
+        ("> **Superseded by COR-904.**\n\n## Context\n", None),
+        ("What it decides.\n\n> **Partially superseded by COR-904.**\n", None),
+        ("> This record is partially superseded by COR-904.\n", None),
+        ("## Context\n\n> **Partially superseded by COR-904.**\n", None),
+    ],
+)
+def test_the_top_line_is_the_first_paragraph_of_the_body(body: str, line: str | None) -> None:
+    assert refs.partial_supersession(document_parts.Body.read(body)) == line
+
+
+def test_a_point_of_a_record_this_repository_overturns_in_part_says_so() -> None:
+    """In this repository, project-management DEC-059 overturns DEC-035 point 1 for a
+    project with a topology, while the point stands as it stood: its lookup carries
+    DEC-035's top line, which names DEC-059."""
+    found = refs.lookup_citations(REPO, ["project-management:DEC-035#1", "COR-001"])
+    line = found[0].partial_supersession
+    assert line is not None
+    assert line.startswith("**Partially superseded by [DEC-059](DEC-059-topology-of-seats.md).**")
+    assert found[1].partial_supersession is None
+
+
+def test_the_command_answers_a_point_and_several_citations_as_data(records: Path) -> None:
+    """Plain, a point's file and its heading's anchor on a line, and exit 1 naming a point
+    that does not resolve; with `--json`, each citation answered in one document, in
+    order, its file, its anchor and whether it is a synced copy among the answer, and
+    exit 0."""
+    runner = CliRunner()
+    plain = runner.invoke(main, ["refs", "lookup", "PRJ-002#D3"])
+    assert plain.exit_code == 0, plain.output
+    assert plain.output.splitlines() == [
+        ".pkit/decisions/project/PRJ-002-versions.md#d3--release-driven",
+    ]
+    failed = runner.invoke(main, ["refs", "lookup", "COR-900#9"])
+    assert failed.exit_code == 1
+    assert "COR-900 holds no point 9." in failed.output
+    as_json = runner.invoke(main, ["refs", "lookup", "--json", "COR-900#1", "COR-999"])
+    assert as_json.exit_code == 0, as_json.output
+    assert json.loads(as_json.output) == {
+        "schema_version": 1,
+        "lookups": [
+            {
+                "id": "COR-900#1",
+                "resolved": True,
+                "paths": [".pkit/decisions/core/COR-900-anchors.md#1-anchors-name-parts"],
+                "problem": None,
+                "path": ".pkit/decisions/core/COR-900-anchors.md",
+                "anchor": "1-anchors-name-parts",
+                "received": False,
+                "partial_supersession": None,
+            },
+            {
+                "id": "COR-999",
+                "resolved": False,
+                "paths": [],
+                "problem": "no record matches 'COR-999'",
+                "path": None,
+                "anchor": None,
+                "received": False,
+                "partial_supersession": None,
+            },
+        ],
+    }
+
+
+def test_the_command_prints_a_partly_superseded_record_s_top_line_after_its_point(
+    records: Path,
+) -> None:
+    """Plain, the record's top line on the line after the point's place, so a reader sent
+    to the point reads it; with `--json`, in `partial_supersession`, the point's place
+    alone in `paths`, so a script that reads the places reads what it read before."""
+    record = ".pkit/decisions/core/COR-902-overturned.md"
+    runner = CliRunner()
+    plain = runner.invoke(main, ["refs", "lookup", "COR-902#1"])
+    assert plain.exit_code == 0, plain.output
+    assert plain.output.splitlines() == [f"{record}#1-seeds-are-written-once", PARTIAL]
+    whole = runner.invoke(main, ["refs", "lookup", "COR-902"])
+    assert whole.output.splitlines() == [record]
+    as_json = runner.invoke(main, ["refs", "lookup", "--json", "COR-902#1"])
+    assert as_json.exit_code == 0, as_json.output
+    (answer,) = json.loads(as_json.output)["lookups"]
+    assert answer["paths"] == [f"{record}#1-seeds-are-written-once"]
+    assert answer["partial_supersession"] == PARTIAL
+
+
+# --- a citation of a point in prose -----------------------------------------------------------
+
+
+def _cited(text: str, capability: str | None = None) -> list[tuple[int, str, tuple[str, ...]]]:
+    return [(c.line, c.record, c.points) for c in refs.point_citations(text, capability=capability)]
+
+
+def test_each_form_of_a_point_citation_is_read_with_its_record_and_its_points() -> None:
+    """A number, a list of numbers, a label alone, an anchor's mark; the record bare, as a
+    link's text, or in brackets with its component; a possessive between them."""
+    text = (
+        "Per COR-058 point 3, and COR-050 points 3, 4 and 16.\n"
+        "PRJ-002 D1 holds, as COR-050#14 and COR-033's P5 do.\n"
+        "See [COR-058](core/COR-058-record-points.md) point 9 and [pkit:COR-010] point 2.\n"
+        "A capability's: [project-management:DEC-035-instance-ownership] D6.\n"
+    )
+    assert _cited(text) == [
+        (1, "COR-058", ("3",)),
+        (1, "COR-050", ("3", "4", "16")),
+        (2, "PRJ-002", ("D1",)),
+        (2, "COR-050", ("14",)),
+        (2, "COR-033", ("P5",)),
+        (3, "COR-058", ("9",)),
+        (3, "COR-010", ("2",)),
+        (4, "project-management:DEC-035", ("D6",)),
+    ]
+
+
+def test_a_citation_may_break_a_line_but_not_a_paragraph() -> None:
+    """A wrapped citation is read on the line it starts on, a block quote's included; a
+    point after a blank line is no part of it, and a record cited whole is no citation."""
+    text = (
+        "Per [project-management:DEC-043-ownership-substrate-selection]\nD3.\n\n"
+        "> As DEC-043\n> point 2 says.\n\nCOR-058\n\nD1 is a heading.\n"
+    )
+    assert _cited(text, "project-management") == [
+        (1, "project-management:DEC-043", ("D3",)),
+        (4, "project-management:DEC-043", ("2",)),
+    ]
+
+
+def test_quoted_material_holds_no_citation() -> None:
+    """Front matter, fenced code, inline code, HTML comments and strikethrough are not
+    prose."""
+    text = (
+        "---\ntitle: COR-058 point 9\n---\n"
+        "`COR-058 point 9` is quoted.\n<!-- COR-058 point 9 -->\n"
+        "```\nCOR-058 point 9\n```\n"
+        "~~COR-058 point 9~~ is struck. COR-058 point 1 is prose.\n"
+    )
+    assert _cited(text) == [(9, "COR-058", ("1",))]
+
+
+def test_a_bare_decision_is_its_text_s_capability_s_or_the_one_cited_in_full() -> None:
+    """In a capability's text a bare `DEC-NNN` is that capability's; elsewhere it is the
+    decision of the one capability the text cites it of in full, and a citation the text
+    does not settle is left out. A link into a capability's folder names its capability."""
+    assert _cited("DEC-035 point 6.", "project-management") == [
+        (1, "project-management:DEC-035", ("6",))
+    ]
+    settled = "[project-management:DEC-035-instance-ownership] says so. DEC-035 D6 too."
+    assert _cited(settled)[-1] == (1, "project-management:DEC-035", ("D6",))
+    assert _cited("DEC-035 D6 alone.") == []
+    assert _cited("[a-cap:DEC-001] and [b-cap:DEC-001]; DEC-001 point 2.") == []
+    linked = "[DEC-002](../../capabilities/software-analysis/decisions/DEC-002-x.md) point 4"
+    assert _cited(linked) == [(1, "software-analysis:DEC-002", ("4",))]
+
+
+def test_a_point_its_record_does_not_hold_is_unheld_and_any_other_is_not(records: Path) -> None:
+    """A live point, a retired one and a number a list shows are held; a number or a label
+    the record neither holds nor retires, or one past a list's end, is not; a record the
+    lookup does not find is left to what resolves records."""
+    text = (
+        "COR-900 point 1, COR-900 point 2, COR-900 point 9, COR-900 D1, PRJ-002 D1, "
+        "PRJ-002 point 2, COR-901 point 2, COR-901 point 3, COR-999 point 1.\n"
+    )
+    unheld = refs.CitedPoints(records).unheld(refs.point_citations(text))
+    assert [(u.citation.record, u.point, u.path) for u in unheld] == [
+        ("COR-900", "9", ".pkit/decisions/core/COR-900-anchors.md"),
+        ("COR-900", "D1", ".pkit/decisions/core/COR-900-anchors.md"),
+        ("PRJ-002", "2", ".pkit/decisions/project/PRJ-002-versions.md"),
+        ("COR-901", "3", ".pkit/decisions/core/COR-901-listed.md"),
+    ]
+    assert unheld[1].message == (
+        "'COR-900 D1' names point D1, which COR-900 does not hold: a point is cited by the id "
+        "its heading carries, as `pkit refs lookup` resolves it (COR-058 point 1)."
+    )
+
+
+def test_decisions_validate_warns_of_a_record_citing_a_point_it_does_not_hold(
+    records: Path,
+) -> None:
+    """At `<file>:<line>`, after the points' findings, and the command still passes."""
+    _record(
+        records,
+        ".pkit/decisions/core/COR-905-cites.md",
+        "### 1. Cites\n\nAs COR-900 point 1 and PRJ-002 D1 say, and COR-900 D3.\n",
+    )
+    result = CliRunner().invoke(main, ["decisions", "validate"])
+    assert result.exit_code == 0, result.output
+    assert "1 warning(s) of a citation naming a point its record does not hold" in result.output
+    assert ".pkit/decisions/core/COR-905-cites.md:18" in result.output
+    assert "'COR-900 D3' names point D3, which COR-900 does not hold" in result.output
+
+
+def test_refs_validate_warns_of_an_agent_citing_a_point_and_passes(records: Path) -> None:
+    """An agent's body is read the same way: a warning at `<file>:<line>`, exit 0."""
+    agents = records / ".pkit" / "agents" / "core"
+    agents.mkdir(parents=True)
+    (agents / "reader.md").write_text(
+        "---\nname: reader\ndescription: t\nreads:\n  records: [COR-900]\n---\n"
+        "# Reader\n\nPer COR-900 point 1, and COR-900 point 7.\n",
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(main, ["refs", "validate"])
+    assert result.exit_code == 0, result.output
+    assert "All checks passed." in result.output
+    assert ".pkit/agents/core/reader.md:9" in result.output
+    assert "'COR-900 point 7' names point 7, which COR-900 does not hold" in result.output
+    assert "COR-900 point 1'" not in result.output

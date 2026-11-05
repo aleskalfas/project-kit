@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/evidence/glossary.md#TERM-outside-fact
+    revalidated:
+      at: 2026-10-24T01:21:57Z
+      outcome: unchanged
+      unchanged-because: The add operation now says that a nested directory with its own evidence.yaml is validated separately. It says nothing new of which facts lie beyond the project.

@@ -1788,6 +1788,25 @@ def test_bypass_reviewer_name_is_stripped(dw, monkeypatch):
     assert seen["override_reviewers"] == ("design-reviewer",)
 
 
+def test_agent_gate_gets_the_issue_number_for_its_refusal(dw, monkeypatch, capsys):
+    """The agent gate's refusal names `review-pr` with the issue's number, the
+    number that command takes (DEC-028, #1935), so main() hands the gate the
+    issue's number beside the pull request's."""
+    seen: dict = {}
+
+    def fake_agent_gate(pr_number, pr, config, mode_source, cap_root, **kwargs):
+        seen["pr_number"] = pr_number
+        seen["issue_number"] = kwargs.get("issue_number")
+        return dw._GateResult(passed=False, refusal_message="[refused] agent gate")
+
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP, mode="agent")
+    monkeypatch.setattr(dw, "_check_agent_gate", fake_agent_gate)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 1
+    assert seen == {"pr_number": 496, "issue_number": 42}
+    assert "[refused] agent gate" in capsys.readouterr().err
+
+
 def test_agent_mode_override_happy_path_merges_after_audit(dw, monkeypatch):
     """Full agent-mode happy path across the main() seam: --bypass-reviewer with
     --bypass-reviewer-reason drives main() → _check_agent_gate (passing WITH an
@@ -1994,7 +2013,6 @@ def test_abbreviated_canonical_flag_cannot_evade_the_ambiguity_refusal(
 # mechanic itself (`_lib.pr_merge`) is unit-tested in test_pm_pr_merge_lib.py;
 # these tests cover done-work's sequencing of it.
 
-_DETACHED_HEAD_ERR = "could not determine current branch: failed to run git: not on any branch"
 _MAIN_HELD_ELSEWHERE_ERR = "fatal: 'main' is already used by worktree at '/repo/wt-main'"
 
 
@@ -2014,17 +2032,33 @@ def test_transition_runs_immediately_after_merge_before_cleanup(dw, monkeypatch)
     ]
 
 
-def _fake_git(monkeypatch, dw, *, checkout_stderr="", branch_d_stderr=""):
-    """Stub `subprocess.run` for the local git steps: `checkout main` and
-    `branch -D` fail with the given stderr (empty = succeed); `pull` succeeds,
-    and the local head is the head that merged (`rev-parse` answers it, and
-    nothing on it is unmerged). Returns the list of git argvs seen."""
+def _fake_git(
+    monkeypatch, dw, *, checkout_stderr="", branch_d_stderr="", current="fix/42-slug", changes=""
+):
+    """Stub `subprocess.run` for the local git steps: the clone is on `current`
+    (empty: a detached HEAD), its working tree holding `changes` (`git status
+    --porcelain`'s lines; empty: clean); `checkout main` and `branch -D` fail
+    with the given stderr (empty = succeed); `pull` succeeds, and the local
+    head is the head that merged (`rev-parse` answers it, and nothing on it is
+    unmerged). Returns the list of git argvs seen."""
     import subprocess
 
     seen: list[list[str]] = []
+    real_run = subprocess.run
 
     def fake_run(argv, **kwargs):
+        # Only git is faked: any other command, such as `pkit repository base`, which
+        # project-management's one pkit start looks `subprocess.run` up for when it
+        # runs (#2322), runs as it would without this fake.
+        if not argv or argv[0] != "git":
+            return real_run(argv, **kwargs)
         seen.append(list(argv))
+        if argv[:2] == ["git", "symbolic-ref"]:
+            return subprocess.CompletedProcess(
+                argv, 0 if current else 1, stdout=f"{current}\n", stderr=""
+            )
+        if argv[:2] == ["git", "status"]:
+            return subprocess.CompletedProcess(argv, 0, stdout=changes, stderr="")
         if argv[:2] == ["git", "rev-parse"]:
             return subprocess.CompletedProcess(argv, 0, stdout="sha-head\n", stderr="")
         if argv[:2] == ["git", "rev-list"]:
@@ -2035,6 +2069,10 @@ def _fake_git(monkeypatch, dw, *, checkout_stderr="", branch_d_stderr=""):
             return subprocess.CompletedProcess(argv, 1, stdout="", stderr=branch_d_stderr)
         return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
 
+    # The settled branch is the backbone's answer, read through pm's one start
+    # of a `pkit` call, which this global stub of `subprocess.run` would answer
+    # too; the clean-up's subject is git, so the branch is stood in here.
+    monkeypatch.setattr(dw.pr_merge.default_branch, "name", lambda config: "main")
     monkeypatch.setattr(dw.subprocess, "run", fake_run)
     return seen
 
@@ -2048,26 +2086,120 @@ def test_detached_head_worktree_completes_merge_and_transition(
     monkeypatch,
     capsys,
 ):
-    """Trigger 1 (#878): the working tree is on a detached HEAD. The local step
-    reports it as a warning; the merge and the transition both complete."""
+    """Trigger 1 (#878): the working tree is on a detached HEAD. The merge and
+    the transition both complete. A detached HEAD is not the branch that
+    merged, so the local clean-up leaves the clone there (#2183)."""
     real_cleanup = dw.pr_merge.cleanup_local
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
-    seen = _fake_git(monkeypatch, dw, checkout_stderr=_DETACHED_HEAD_ERR)
+    seen = _fake_git(monkeypatch, dw, current="")
 
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
 
-    err = capsys.readouterr().err
+    captured = capsys.readouterr()
     assert rc == 0
     assert calls["merged"] is True
     assert calls["moved"] is True
     assert ("remote_delete", "sha-head") in calls["order"]
-    assert f"[warn] git checkout main failed: {_DETACHED_HEAD_ERR}" in err
-    assert _script_error_lines(err) == []
-    # The pull is skipped when main could not be checked out; the local head
-    # is not checked out on a detached HEAD, so its delete is still attempted.
-    assert ["git", "pull", "--ff-only"] not in seen
+    assert _script_error_lines(captured.err) == []
+    assert not any(argv[:2] in (["git", "checkout"], ["git", "pull"]) for argv in seen)
+    assert ["git", "branch", "-D", "fix/42-slug"] not in seen
+    assert "  left this clone where it is: it is on a detached HEAD" in captured.out
+
+
+def test_a_clone_mid_task_on_another_branch_is_left_there(dw, monkeypatch, capsys):
+    """#2183: a worker's clone is on its next Task's branch, with changes not
+    yet committed, when a PR lands from it. The merge and the transition
+    complete, and the clone stays on its branch with its changes: nothing is
+    checked out or pulled, and the merged branch's local copy is kept."""
+    real_cleanup = dw.pr_merge.cleanup_local
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
+    seen = _fake_git(monkeypatch, dw, current="feat/43-next", changes=" M src/next.py\n")
+
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert calls["merged"] is True
+    assert calls["moved"] is True
+    assert not any(argv[:2] in (["git", "checkout"], ["git", "pull"]) for argv in seen)
+    assert ["git", "branch", "-D", "fix/42-slug"] not in seen
+    assert (
+        "  left this clone where it is: it is on feat/43-next, not on fix/42-slug, the branch "
+        "that merged. Local branch fix/42-slug is kept."
+    ) in captured.out
+
+
+def test_a_clone_with_uncommitted_changes_on_the_merged_branch_is_left_there(
+    dw, monkeypatch, capsys
+):
+    """#2183: on the branch that merged, with changes not committed, the clone
+    is not switched to main: the next commit would land there."""
+    real_cleanup = dw.pr_merge.cleanup_local
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
+    seen = _fake_git(monkeypatch, dw, changes="?? draft.md\n")
+
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+
+    assert not any(argv[:2] in (["git", "checkout"], ["git", "pull"]) for argv in seen)
+    assert (
+        "  left this clone where it is: its working tree has uncommitted changes. "
+        "Local branch fix/42-slug is kept."
+    ) in capsys.readouterr().out
+
+
+def test_a_clean_clone_on_the_merged_branch_moves_to_main(dw, monkeypatch, capsys):
+    """#2183: the clean case is as before — on the branch that merged, nothing
+    uncommitted, the clone switches to main, pulls it and deletes the branch."""
+    real_cleanup = dw.pr_merge.cleanup_local
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
+    seen = _fake_git(monkeypatch, dw)
+
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+
+    assert ["git", "checkout", "main"] in seen
+    assert ["git", "pull", "--ff-only"] in seen
     assert ["git", "branch", "-D", "fix/42-slug"] in seen
+    assert "left this clone" not in capsys.readouterr().out
+
+
+def test_a_clean_clone_on_main_is_fast_forwarded_and_stays_there(dw, monkeypatch, capsys):
+    """#2183: the person's landing clone sits on main with a clean working
+    tree. After the merge it is fast-forwarded and stays on main: nothing is
+    checked out, and the merged branch's local copy is kept."""
+    real_cleanup = dw.pr_merge.cleanup_local
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
+    seen = _fake_git(monkeypatch, dw, current="main")
+
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+
+    assert ["git", "pull", "--ff-only"] in seen
+    assert not any(argv[:2] in (["git", "checkout"], ["git", "branch"]) for argv in seen)
+    assert (
+        "  brought main up to date in this clone, which is on it, not on fix/42-slug, the "
+        "branch that merged. Local branch fix/42-slug is kept."
+    ) in capsys.readouterr().out
+
+
+def test_a_clone_on_main_with_uncommitted_changes_is_left_there(dw, monkeypatch, capsys):
+    """#2183: on main, but with changes not committed, the clone is not
+    pulled: it is left as it is."""
+    real_cleanup = dw.pr_merge.cleanup_local
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
+    seen = _fake_git(monkeypatch, dw, current="main", changes=" M README.md\n")
+
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+
+    assert not any(argv[:2] in (["git", "checkout"], ["git", "pull"]) for argv in seen)
+    assert (
+        "  left this clone where it is: its working tree has uncommitted changes. "
+        "Local branch fix/42-slug is kept."
+    ) in capsys.readouterr().out
 
 
 def test_main_held_by_other_worktree_completes_merge_and_transition(
@@ -2076,18 +2208,12 @@ def test_main_held_by_other_worktree_completes_merge_and_transition(
     capsys,
 ):
     """Trigger 2 (#878): `main` is checked out in a different worktree, so the
-    local checkout is refused and the head branch (the one checked out here)
-    cannot be deleted. Both are warnings; merge and transition complete."""
+    local checkout is refused, a warning, and the head branch, still the one
+    checked out here, is kept. Merge and transition complete."""
     real_cleanup = dw.pr_merge.cleanup_local
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
-    branch_err = "error: cannot delete branch 'fix/42-slug' used by worktree at '/repo/wt-42'"
-    seen = _fake_git(
-        monkeypatch,
-        dw,
-        checkout_stderr=_MAIN_HELD_ELSEWHERE_ERR,
-        branch_d_stderr=branch_err,
-    )
+    seen = _fake_git(monkeypatch, dw, checkout_stderr=_MAIN_HELD_ELSEWHERE_ERR)
 
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
 
@@ -2096,10 +2222,13 @@ def test_main_held_by_other_worktree_completes_merge_and_transition(
     assert calls["merged"] is True
     assert calls["moved"] is True
     assert ("remote_delete", "sha-head") in calls["order"]
-    assert f"[warn] git checkout main failed: {_MAIN_HELD_ELSEWHERE_ERR}" in err
-    assert f"[warn] git branch -D fix/42-slug failed: {branch_err}" in err
+    assert (
+        f"[warn] git checkout main failed: {_MAIN_HELD_ELSEWHERE_ERR}. This clone stays on "
+        "fix/42-slug, and local branch fix/42-slug is kept."
+    ) in err
     assert _script_error_lines(err) == []
     assert ["git", "pull", "--ff-only"] not in seen
+    assert ["git", "branch", "-D", "fix/42-slug"] not in seen
 
 
 @pytest.mark.parametrize("remote", ["deleted", "gone", "kept", "refused", "unconfirmed"])
@@ -2397,16 +2526,34 @@ sys.exit(0)
 """
 
 
+_BRANCH_42 = "whose branch `fix/42-slug` is #42's"
+
+
+@pytest.mark.parametrize(
+    ("pr_body", "relation_42"),
+    [
+        pytest.param(
+            _TWO_ISSUE_PR_BODY, f"whose body closes #42 and {_BRANCH_42}", id="both-named"
+        ),
+        pytest.param(
+            _TWO_ISSUE_PR_BODY.replace("Closes #42\n", ""), _BRANCH_42, id="primary-by-its-branch"
+        ),
+    ],
+)
 def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
     dw,
     tmp_path,
     monkeypatch,
     capfd,
+    pr_body: str,
+    relation_42: str,
 ):
     """End to end past the merge: done-work runs the real close-issue on each
     closing issue against a fake `gh`. Both issues are still open after the
     merge (a base branch GitHub does not auto-close on), so each is closed as
-    completed, and each one's closure cascade visits its parent."""
+    completed, and each one's closure cascade visits its parent. The PR was
+    merged from #42's branch, so it relates to #42 even where its body names
+    only #43 (#1968)."""
     import shutil
 
     cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
@@ -2435,7 +2582,14 @@ def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
                 "body": "## What\n\nw\n\n## Acceptance criteria\n\n- [x] shipped\n",
             },
         },
-        "pr": {"number": 496, "state": "MERGED", "mergedAt": "2026-09-29T10:00:00Z", "url": "u"},
+        "pr": {
+            "number": 496,
+            "state": "MERGED",
+            "mergedAt": "2026-09-29T10:00:00Z",
+            "url": "u",
+            "headRefName": "fix/42-slug",
+            "body": pr_body,
+        },
     }
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -2455,7 +2609,7 @@ def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
         dw,
         monkeypatch,
         rollup=_GREEN_ROLLUP,
-        pr_body=_TWO_ISSUE_PR_BODY,
+        pr_body=pr_body,
         issues={42: _open_issue(_TICKED_BODY), 43: _open_issue(_TICKED_BODY)},
     )
     monkeypatch.setattr(dw, "_invoke_close_issue", real_close)
@@ -2468,18 +2622,22 @@ def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
     for number in ("42", "43"):
         assert ["issue", "close", number, "--reason", "completed"] in calls
         assert f"[ok] closed #{number} (pr-merge through PR #496, completed)." in out
+    assert f"completed by: PR #496 (merged), {relation_42}\n" in out
+    assert "completed by: PR #496 (merged), whose body closes #43\n" in out
     assert out.count("[cascade] parents to check for eligibility: #7") == 2
 
 
 # ---- an issue that never reached Review (#1162) -------------------------
 #
-# workflow.yaml declares a Task's move to done from Review — the merge's move —
-# and no In Progress → Done. A Task whose PR was opened without `review-work`
-# is still In Progress when done-work runs, so `move-issue --to done` after the
-# merge refused, and done-work warned about a state that did not exist while
-# the pr-merge close went on to set state:done. done-work now moves such an
-# issue to Review just before the merge, so each move it makes is a declared
-# one. The tests read the real schemas: the transition table decides.
+# workflow.yaml declares a Task's move to done from Review — the merge's move,
+# the one done-work makes. Its In Progress → Done is close-issue's, the close
+# of a Task completed without a pull request (#2282). A Task whose PR was
+# opened without `review-work` is still In Progress when done-work runs, so
+# `move-issue --to done` after the merge refused, and done-work warned about a
+# state that did not exist while the pr-merge close went on to set state:done.
+# done-work now moves such an issue to Review just before the merge, so the
+# merge's move is the declared one. The tests read the real schemas: the
+# transition table decides.
 
 
 _Issue = dict[str, Any]
@@ -2500,6 +2658,8 @@ def _task(state_label: str, *, state: str = "OPEN") -> _Issue:
 
 
 _LEAD_IN_CASES: list[tuple[_Issue | None, tuple[str, str] | None]] = [
+    # In Progress → Done is declared for a Task, as close-issue's completed
+    # close; the merge's own move is done-work's, from Review.
     (_task("state:in-progress"), ("in-progress", "review")),
     (_task("state:review"), None),
     (_task("state:review", state="CLOSED"), None),
@@ -2507,6 +2667,8 @@ _LEAD_IN_CASES: list[tuple[_Issue | None, tuple[str, str] | None]] = [
     ({**_task("state:in-progress"), "title": "no type prefix"}, None),
     # A container may move In Progress → Done directly; nothing leads in.
     ({**_task("state:in-progress"), "title": "[Feature] widgets"}, None),
+    # No single declared move leads a Backlog Task to the merge's move.
+    (_task("state:backlog"), None),
 ]
 
 
@@ -2520,6 +2682,7 @@ _LEAD_IN_CASES: list[tuple[_Issue | None, tuple[str, str] | None]] = [
         "unread",
         "untyped",
         "container-in-progress",
+        "task-in-backlog",
     ],
 )
 def test_the_lead_in_is_read_from_the_transition_table(
@@ -2533,7 +2696,20 @@ def test_the_lead_in_is_read_from_the_transition_table(
     if expected is None:
         assert lead_in is None
     else:
+        assert lead_in is not None
         assert (lead_in.from_state, lead_in.to_state) == expected
+
+
+def test_the_lead_in_says_where_the_merge_s_move_is_declared(dw: ModuleType) -> None:
+    from ruamel.yaml import YAML
+
+    lead_in = dw._lead_in_to_done(_task("state:in-progress"), CAPABILITY_ROOT_DW, YAML(typ="safe"))
+    assert lead_in is not None
+    assert lead_in.describe() == (
+        "in-progress → review before the merge, review → done after it (workflow.yaml "
+        "declares the merge's move to done from review, not from in-progress, for this "
+        "issue's type)"
+    )
 
 
 def _wire_lead_in(
@@ -2690,7 +2866,7 @@ if args[:1] == ["issue"] and len(args) > 2:
         issue["state"] = "CLOSED"
     elif args[1] == "comment":
         issue.setdefault("comments", []).append({
-            "body": option("--body"), "viewerDidAuthor": True,
+            "body": option("--body"), "viewerDidAuthor": True, "includesCreatedEdit": False,
             "lastEditedAt": None, "author": {"login": "octocat"},
         })
     with open(path, "w", encoding="utf-8") as fh:
@@ -2768,19 +2944,29 @@ def _run_done_work_end_to_end(
     *,
     milestone: dict[str, Any] | None = None,
     merged_by_queue: bool = False,
+    claimed_by: int | None = None,
+    instance: int | None = None,
+    extra: tuple[str, ...] = (),
 ) -> _EndToEnd:
     """done-work on #42, carrying `primary_label`, with the REAL move-issue and
     close-issue run against the stateful fake `gh`. With `milestone` (a
     Milestone as `gh api` returns it), #42 is scheduled into it by its native
     field — the only issue in it. With `merged_by_queue`, the run is the one
     after a merge queue merged PR #496 (#1011): no open PR, the merged one from
-    the branch, and #42 closed by GitHub as it merged."""
+    the branch, and #42 closed by GitHub as it merged. With `claimed_by`, #42 is
+    assigned to the fake's account and claimed by it for that instance, and this
+    clone is `instance`, that instance by default (DEC-035). `extra` adds to the
+    command line."""
     import shutil
 
     cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
     cap_root.mkdir(parents=True)
     _mark_bootstrapped(cap_root)
     shutil.copytree(CAPABILITY_ROOT_DW / "schemas", cap_root / "schemas")
+    if claimed_by is not None:
+        from _lib.instance_identity import write_instance_id
+
+        write_instance_id(cap_root, instance if instance is not None else claimed_by)
 
     feature = {
         "title": "[Feature] widgets",
@@ -2797,10 +2983,26 @@ def _run_done_work_end_to_end(
     merged_at = "2026-09-30T10:00:00Z"
     if merged_by_queue:
         task = {**task, "state": "CLOSED", "closedAt": "2026-09-30T10:00:04Z"}
+    if claimed_by is not None:
+        from _lib.instance_ownership import format_event_comment
+
+        claim = format_event_comment(event="claim", instance=claimed_by)
+        task = {
+            **task,
+            "assignees": [{"login": "octocat"}],
+            "comments": [{"body": claim, "author": {"login": "octocat"}}],
+        }
     state = {
         "issues": {"42": task, "7": feature},
         "milestones": milestones,
-        "pr": {"number": 496, "state": "MERGED", "mergedAt": merged_at, "url": "u"},
+        "pr": {
+            "number": 496,
+            "state": "MERGED",
+            "mergedAt": merged_at,
+            "url": "u",
+            "headRefName": "fix/42-slug",
+            "body": "Closes #42\n",
+        },
         "merged_prs": [
             {
                 "number": 496,
@@ -2866,7 +3068,7 @@ def _run_done_work_end_to_end(
     rc: int = _run_main(
         dw,
         monkeypatch,
-        ["42", "--yes", "--capability-root", str(cap_root)],
+        ["42", "--yes", "--capability-root", str(cap_root), *extra],
     )
 
     captured = capfd.readouterr()
@@ -2919,6 +3121,77 @@ def test_an_issue_in_review_is_closed_as_before(
     ]
     assert run.calls.index(edits[0]) >= run.calls_at_merge
     assert "lead-in" not in run.out
+
+
+def test_a_merge_releases_the_issues_instance_ownership(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    """With an instance id set, the close-issue done-work runs after the merge
+    releases the issue's owner (DEC-035 point 4): done-work writes no marker
+    itself."""
+    run = _run_done_work_end_to_end(dw, tmp_path, monkeypatch, capfd, "state:review", claimed_by=2)
+    assert run.rc == 0, run.out + run.err
+    assert run.end["state"] == "CLOSED"
+    bodies = [comment["body"] for comment in run.end["comments"]]
+    assert "event=claim instance=2 " in bodies[0]
+    assert "completed by merged PR #496" in bodies[1]
+    assert "event=release instance=2 " in bodies[2]
+    assert "[ok] ownership: #42 released (instance 2)." in run.out
+    release = next(i for i, c in enumerate(run.calls) if "--body" in c and "release" in c[-1])
+    assert release > run.calls_at_merge
+
+
+def test_the_clash_guard_refuses_to_land_another_instances_issue(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    """DEC-035 point 6: refused before anything is posted, moved or merged."""
+    run = _run_done_work_end_to_end(
+        dw, tmp_path, monkeypatch, capfd, "state:review", claimed_by=3, instance=2
+    )
+    assert run.rc == 1
+    assert run.calls_at_merge == 0
+    assert run.end["state"] == "OPEN"
+    assert len(run.end["comments"]) == 1
+    assert "[refused] done-work #42: #42 is owned by instance 3, and this clone is instance 2." in (
+        run.err
+    )
+
+
+def test_bypass_owner_lands_with_one_audit_comment(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    """The reason is posted before the merge, and the move done-work composes
+    finds it posted, so the issue carries it once."""
+    # The child move-issue resolves the same person as the stubbed parent does.
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
+    monkeypatch.setenv("GIT_CONFIG_KEY_0", "user.email")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_0", "o@e.com")
+    run = _run_done_work_end_to_end(
+        dw,
+        tmp_path,
+        monkeypatch,
+        capfd,
+        "state:review",
+        claimed_by=3,
+        instance=2,
+        extra=("--bypass-owner", "instance 3's session is gone"),
+    )
+    assert run.rc == 0, run.out + run.err
+    key = "pkit-audit-key: ownership-guard"
+    audits = [c["body"] for c in run.end["comments"] if key in c["body"]]
+    assert len(audits) == 1
+    assert "instance 3's session is gone" in audits[0]
+    posted = next(i for i, c in enumerate(run.calls) if "--body" in c and key in c[-1])
+    assert posted < run.calls_at_merge
 
 
 # ---- a merge that finishes a Milestone (#414) ---------------------------
@@ -3819,6 +4092,8 @@ def test_a_later_run_on_a_stale_local_branch_completes_it_and_keeps_the_branch(
         if argv[:1] != ["git"]:
             return real_run(argv, **kwargs)
         seen.append(list(argv))
+        if argv[:2] == ["git", "symbolic-ref"]:
+            return subprocess.CompletedProcess(argv, 0, stdout="fix/42-slug\n", stderr="")
         if argv[:2] == ["git", "rev-parse"]:
             return subprocess.CompletedProcess(argv, 0, stdout="sha-newer\n", stderr="")
         if argv[:2] == ["git", "rev-list"]:

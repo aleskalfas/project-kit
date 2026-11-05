@@ -1,7 +1,7 @@
 """The living-docs project configuration: its schema and its COR-023 binding.
 
 What the capability needs that the backbone does not (living-docs DEC-001
-point 1): each space's entry point, and the space each place belongs to. The
+point 1): each space's audience and entry point, and the space each place belongs to. The
 places themselves are the backbone configuration's `friction.places`; this
 file assigns them, joined by path, and `places` is a mapping so each place
 names exactly one space.
@@ -64,6 +64,17 @@ def test_a_project_adds_a_space_and_assigns_places_to_it(
     assert _errors(validator, doc) == []
 
 
+def test_each_space_may_name_its_audience(validator: Draft202012Validator) -> None:
+    doc = _config(
+        spaces={
+            "user": {"audience": "users", "entry-point": "README.md"},
+            "technical": {"audience": "maintainers"},
+            "interface-reference": {"audience": "integrators who call the HTTP API"},
+        },
+    )
+    assert _errors(validator, doc) == []
+
+
 def test_only_the_version_is_required(validator: Draft202012Validator) -> None:
     assert _errors(validator, _config()) == []
 
@@ -77,6 +88,9 @@ def test_only_the_version_is_required(validator: Draft202012Validator) -> None:
         _config(spaces={"user": {"entry-point": "/README.md"}}),
         _config(spaces={"user": {"entry": "README.md"}}),  # unknown key in a space
         _config(spaces={"User": {}}),  # not a space id
+        _config(spaces={"user": {"audience": ""}}),  # an audience names someone
+        _config(spaces={"user": {"audience": "  "}}),
+        _config(spaces={"user": {"audience": ["users"]}}),  # one audience, in words
         _config(assignments={"README.md": "user"}),  # unknown top-level key
     ],
 )
@@ -98,6 +112,31 @@ def test_the_project_file_binds_to_the_schema(make_adopter_repo: MakeAdopterRepo
     assert dv.validate_data_file(path, repo.root) == []
 
     path.write_text("schema_version: 1\nplaces:\n  README.md: [user]\n", encoding="utf-8")
+    assert dv.validate_data_file(path, repo.root)
+
+
+@pytest.mark.parametrize(
+    "space",
+    ["{audience: users, entry-point: README.md}", "{entry-point: README.md}"],
+    ids=["with-audience", "without-audience"],
+)
+def test_the_project_file_validates_with_an_audience_and_without(
+    make_adopter_repo: MakeAdopterRepo, space: str
+) -> None:
+    repo = make_adopter_repo(capabilities=("living-docs",))
+    path = repo.root / PROJECT_CONFIG
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f"schema_version: 1\nspaces:\n  user: {space}\n", encoding="utf-8")
+    assert dv.validate_data_file(path, repo.root) == []
+
+
+def test_the_project_file_refuses_an_audience_that_names_nobody(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo(capabilities=("living-docs",))
+    path = repo.root / PROJECT_CONFIG
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("schema_version: 1\nspaces:\n  user: {audience: ''}\n", encoding="utf-8")
     assert dv.validate_data_file(path, repo.root)
 
 

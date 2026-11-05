@@ -98,12 +98,18 @@ closes on its line, so a body may quote the mark. A mark inside another
 comment opens no hint. A field's text is read the same way (`hint_in`).
 The placeholder check reports a hint left in whatever the format rule's
 status, as it reports any placeholder (DEC-001 point 1). So a field's text
-that still holds its hint is never judged against the field's form here.
+that still holds its hint is never judged against the field's form here. Nor
+is a part that still holds one, where the caller's placeholder check reports
+each hint left in, as it does an artefact's (`hints_checked`): the part is
+reported once, by that check, never again as empty or missing (#2088). A
+record's body and a collection's head are no artefact's, so a part there
+that holds only a hint is still empty.
 """
 
 from __future__ import annotations
 
 import dataclasses
+import functools
 import json
 import re
 from collections.abc import Iterator, Mapping, Sequence
@@ -302,17 +308,34 @@ class FieldDeparture:
 
 def read_kinds(path: Path = KINDS_FILE, schema: Path = KINDS_SCHEMA) -> dict[str, Kind]:
     """Each kind's declared structure, read whole from the declaration at `path`.
-    Raises `Unreadable` when the file is absent, is not YAML, or does not fit its schema."""
+    Raises `Unreadable` when the file is absent, is not YAML, or does not fit its schema.
+    Both files are read on each call, and what they declare is worked out once for each
+    pair of texts, so a check that asks again parses nothing again."""
     try:
-        data = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
+        text = path.read_text(encoding="utf-8")
     except OSError as exc:
         raise Unreadable(f"it cannot be read ({exc.strerror or exc})") from exc
     except UnicodeDecodeError as exc:
         raise Unreadable("it is not UTF-8 text") from exc
+    try:
+        schema_text: str | None = schema.read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        schema_text = None
+    if schema_text is None:
+        return _kinds(text, schema, None)  # never kept, so a later read tries the schema again
+    return dict(_declared_kinds(text, schema, schema_text))
+
+
+def _kinds(text: str, schema: Path, schema_text: str | None) -> dict[str, Kind]:
+    """`read_kinds`' answer for the declaration's `text` and its schema's: a schema with
+    no text is read again, so the error says why it cannot be."""
+    try:
+        data = YAML(typ="safe").load(text)
     except YAMLError as exc:
         raise Unreadable(f"it is not YAML ({_yaml_problem(exc)})") from exc
     try:
-        validator = Draft202012Validator(json.loads(schema.read_text(encoding="utf-8")))
+        written = schema_text if schema_text is not None else schema.read_text(encoding="utf-8")
+        validator = Draft202012Validator(json.loads(written))
     except (OSError, ValueError) as exc:
         raise Unreadable(f"its schema, {schema.name}, cannot be read ({exc})") from exc
     errors = sorted(validator.iter_errors(data), key=lambda e: [str(s) for s in e.absolute_path])
@@ -321,6 +344,10 @@ def read_kinds(path: Path = KINDS_FILE, schema: Path = KINDS_SCHEMA) -> dict[str
         pointer = "".join(f"/{segment}" for segment in first.absolute_path)
         raise Unreadable(f"it does not fit {schema.name}: at `{pointer or '/'}`, {first.message}")
     return {name: _kind(name, entry) for name, entry in data["kinds"].items()}
+
+
+#: `_kinds`, kept for each pair of texts the declaration and its schema had when read.
+_declared_kinds = functools.lru_cache(maxsize=4)(_kinds)
 
 
 def _kind(name: str, entry: Mapping[str, Any]) -> Kind:
@@ -423,7 +450,9 @@ class _Body:
     blanks: tuple[bool, ...] = ()
 
 
-def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
+def _read(lines: Sequence[Line], labels: frozenset[str], *, lead: bool = False) -> _Body:
+    """`lines` read as a body. With `lead`, the first line is the text after a label on the
+    label's line, so it opens no fenced code and holds no mark (`as_part`)."""
     content: list[str] = []
     fences: list[int] = []
     blanks: list[bool] = []
@@ -444,7 +473,7 @@ def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
         content.append(visible)
         fences.append(0)
         blanks.append(not line.strip() and not started_in_comment)
-        if started_in_comment:
+        if started_in_comment or (lead and index == 0):
             continue
         opening = _FENCE.match(visible)
         if opening is not None and not (
@@ -570,6 +599,7 @@ def departures(
     head: bool = False,
     fields: Mapping[str, Any] | None = None,
     titles: Mapping[str, str] | None = None,
+    hints_checked: bool = False,
 ) -> list[Departure]:
     """How a body with `lines` departs from `kind`'s structure — its file head's, with
     `head` — in declared order: an element missing or out of order, once, and otherwise
@@ -577,18 +607,23 @@ def departures(
     matches the front matter reads `fields`, the artefact's or record's own, and a
     journey's steps read each use case's title in `titles`, by id, as a domain-model
     view's sections read each term's name. A kind with a repeated section is read one
-    section at a time (`_repeating`)."""
+    section at a time (`_repeating`). With `hints_checked`, the caller's placeholder
+    check reports each hint left in, so a part that still holds one is left to it and
+    reported once (`_holds_hint`)."""
     repeated = next((i for i, e in enumerate(kind.sections) if e.type == REPEATED), None)
     if not head and repeated is not None:
-        return _repeating(lines, kind, repeated, fields, titles)
+        return _repeating(lines, kind, repeated, fields, titles, hints_checked)
     elements = kind.head if head else kind.sections
     body = _read(lines, kind.labels)
     found, at = _located(body, elements, kind)
     carried = {i: part for i in range(len(elements)) if (part := _part(i, elements, at, body))}
     context = _context(elements, carried, fields, titles)
+    hinted = frozenset(number for number, _said in hints(lines)) if hints_checked else frozenset()
     for i, element in enumerate(elements):
         if i in found or not element.filled:
             continue
+        if _holds_hint(i, elements, at, body, hinted):
+            continue  # the placeholder check reports the hint, and the part with it
         part = carried.get(i)
         if part is None:
             if element.type == OPENING and element.required:
@@ -607,6 +642,7 @@ def _repeating(
     at: int,
     fields: Mapping[str, Any] | None,
     titles: Mapping[str, str] | None,
+    hints_checked: bool,
 ) -> list[Departure]:
     """How a body departs from a kind whose element at `at` is a repeated section, a
     domain-model view's section for each concept (DEC-004 point 2). Every heading of the
@@ -624,13 +660,18 @@ def _repeating(
     ]
     above = starts[0][0] if starts else len(lines)
     head = dataclasses.replace(kind, sections=kind.sections[:at])
-    found = departures(lines[:above], head, fields=fields, titles=titles)
+    found = departures(
+        lines[:above], head, fields=fields, titles=titles, hints_checked=hints_checked
+    )
     section = dataclasses.replace(kind, sections=section_elements(repeated))
     for n, (start, text) in enumerate(starts):
         end = starts[n + 1][0] if n + 1 < len(starts) else len(lines)
+        within = departures(
+            lines[start:end], section, fields=fields, titles=titles, hints_checked=hints_checked
+        )
         found += [
             dataclasses.replace(departure, within=text)
-            for departure in departures(lines[start:end], section, fields=fields, titles=titles)
+            for departure in within
             if not (departure.element.type == HEADING and departure.element.id == repeated.id)
         ]
     if not starts:
@@ -656,6 +697,26 @@ def parts(lines: Sequence[Line], kind: Kind) -> list[tuple[Element, forms.Part]]
         for i in range(len(elements))
         if (part := _part(i, elements, at, body)) is not None
     ]
+
+
+def part_of(lines: Sequence[Line], kind: Kind, element_id: str) -> forms.Part | None:
+    """The part of `kind`'s body whose permanent id is `element_id`, as `parts` finds it:
+    the text after its label on the label's line, then each line to the part's end, its
+    comments left out and a fenced line whole. `None` where the body carries no such part,
+    or the kind declares none. A requirement's fingerprint reads a text in the body here
+    (DEC-006 point 7; `_lib/obligation.py`)."""
+    return next((part for element, part in parts(lines, kind) if element.id == element_id), None)
+
+
+def as_part(text: str) -> forms.Part:
+    """`text` read as the part it would be after a label, on the label's line, as `parts`
+    reads a part: its first line the part's lead, which opens no fenced code, and each line
+    below it a row, its comments left out and a fenced line whole. A front-matter field's
+    text is read so, and the same text moved after its label in the body reads the same
+    (DEC-006 point 7; `_lib/obligation.py`)."""
+    lines = [(number, line) for number, line in enumerate(_lines(text), start=1)]
+    body = _read(lines, frozenset(), lead=True)
+    return forms.Part(1, _rows(body, range(1, len(lines))), forms.Row(1, body.content[0]))
 
 
 def _located(
@@ -736,6 +797,16 @@ def _undeclared(
     return found
 
 
+def marks(lines: Sequence[Line], kind: Kind) -> list[tuple[int, str, int, str]]:
+    """Where a body's parts open, as the structure reads its marks: each heading, and each
+    label `kind`'s `labels` holds, outside fenced code and comments, in order. Each is given
+    as the index of its line among `lines`, its type, its level and its text as written.
+    The mentions' links read an actor's, a use case's, a journey's and a requirement's
+    body one part at a time here (`_lib/links.py`)."""
+    body = _read(lines, kind.labels)
+    return [(mark.index, mark.type, mark.level, mark.text) for mark in body.marks]
+
+
 def rows(lines: Sequence[Line]) -> tuple[forms.Row, ...]:
     """A body's lines as a part's rows are read: comments left out, and fenced code marked.
     The check of a use case's boxes reads the whole body so (`_lib/shortfalls.py`)."""
@@ -763,6 +834,29 @@ def _part(
     item = body.content[mark.index] if mark.offset else ""
     extent = _extent(mark, body, paragraph=_before_opening(i, elements))
     return forms.Part(line, _rows(body, extent), lead, item)
+
+
+def _holds_hint(
+    i: int,
+    elements: Sequence[Element],
+    at: Mapping[int, int],
+    body: _Body,
+    hinted: frozenset[int],
+) -> bool:
+    """Whether the part of the element at `i` still holds a hint, one of the lines in
+    `hinted`: on its label's or heading's line, on a line below it within its part, or on
+    any line of an opening's, one with no text of its own included (DEC-001 point 1)."""
+    if not hinted:
+        return False
+    if elements[i].type == OPENING:
+        extent = _until_next_mark(_after_previous(i, elements, at, body), body)
+    elif i in at:
+        mark = body.marks[at[i]]
+        below = _extent(mark, body, paragraph=_before_opening(i, elements))
+        extent = range(mark.index, below.stop)
+    else:
+        return False
+    return any(body.numbers[k] in hinted for k in extent)
 
 
 def _before_opening(i: int, elements: Sequence[Element]) -> bool:

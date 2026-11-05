@@ -5,6 +5,8 @@ status: active
 explains:
   - TERM-system
   - TERM-harness
+  - TERM-harness-requirement
+  - TERM-instruction-file
   - TERM-decision-record
   - TERM-point
   - TERM-scratchpad-note
@@ -24,10 +26,14 @@ pkit:
         - COR-047
         - COR-051
         - COR-058
+        - COR-070#2
+        - ADR-076#2
         - PRJ-011
       artefact:
         - TERM-system
         - TERM-harness
+        - TERM-harness-requirement
+        - TERM-instruction-file
         - TERM-decision-record
         - TERM-point
         - TERM-scratchpad-note
@@ -35,27 +41,28 @@ pkit:
         - TERM-acceptance-gate
         - TERM-operational-rule
         - TERM-methodology
-    revalidated:
-      at: 2026-10-23T08:53:38Z
-      outcome: updated
 ---
 
 # VIEW-the-system-and-its-methodology — The system and its methodology
 
-A way of working that only a few people know cannot be handed on, and one written as loose prose cannot be trusted (COR-007, COR-051). Each choice needs its reasons recorded, and each part that others cite needs a name that never moves (COR-025, COR-051, COR-058). Nothing should bind before a review accepts it (COR-051). The [methodology](../glossary.md#term-methodology--methodology) also works inside sessions that another tool hosts, and relies on behaviour it cannot set (COR-047).
+A way of working that only a few people know cannot be handed on, and one written as loose prose cannot be trusted ([COR-007](../../../../.pkit/decisions/core/COR-007-pattern-extraction.md), [COR-051](../../../../.pkit/decisions/core/COR-051-rule-sets.md)). Each choice needs its reasons recorded, and each part that others cite needs a name that never moves ([COR-025](../../../../.pkit/decisions/core/COR-025-adr-decision-space.md), COR-051, [COR-058](../../../../.pkit/decisions/core/COR-058-record-points.md)). Nothing should bind before a review accepts it (COR-051). The [methodology](../glossary.md#term-methodology--methodology) also works inside sessions that another tool hosts, and relies on behaviour it cannot set ([COR-047](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)).
 
 The methodology is that way of working, written down as [decision records](../glossary.md#term-decision-record--decision-record), rules, [operational rules](../glossary.md#term-operational-rule--operational-rule) and conventions. Decision records keep the reasons, and their points, like rules, keep names that never move. The [acceptance gate](../glossary.md#term-acceptance-gate--acceptance-gate) lets work build only on decision records and rules already accepted. Operational rules hold the instructions every session loads, and conventions are agreed ways of working.
 
-The [system](../glossary.md#term-system--system) is the software that ships the methodology and enforces it. A [harness](../glossary.md#term-harness--harness) hosts the sessions where the methodology is used.
+The [system](../glossary.md#term-system--system) is the software that ships the methodology and enforces it. A [harness](../glossary.md#term-harness--harness) hosts the sessions where the methodology is used, and loads an [instruction file](../glossary.md#term-instruction-file--instruction-file) into each. The methodology states what it relies on a harness to do as [harness requirements](../glossary.md#term-harness-requirement--harness-requirement).
 
-Some questions are too large for a decision record at first, and the work that maps them needs a home of its own (COR-012). A [scratchpad note](../glossary.md#term-scratchpad-note--scratchpad-note) holds that work, binding nothing, until it produces decision records or other documents, or is dropped.
+Some questions are too large for a decision record at first, and the work that maps them needs a home of its own ([COR-012](../../../../.pkit/decisions/core/COR-012-scratchpad-notes.md)). A [scratchpad note](../glossary.md#term-scratchpad-note--scratchpad-note) holds that work, binding nothing, until it produces decision records or other documents, or is dropped.
 
 ```mermaid
 classDiagram
   accTitle: The system and its methodology
-  accDescr: The system ships and enforces the methodology. The methodology is made of decision records, rules, operational rules and conventions. A decision record holds points. A scratchpad note may produce decision records. Work builds only on accepted decision records and rules, as the acceptance gate says. A harness loads the operational rules through its include.
+  accDescr: The system ships and enforces the methodology. The methodology is made of decision records, rules, operational rules and conventions, and states harness requirements. A harness meets each harness requirement or not. A decision record holds points. A scratchpad note may produce decision records. Work builds only on accepted decision records and rules, as the acceptance gate says. A harness loads an instruction file into each session, and the instruction file includes the operational rules.
   class System["System"]
   class Harness["Harness"]
+  class HarnessRequirement["Harness requirement"]
+  HarnessRequirement : observation point
+  class InstructionFile["Instruction file"]
+  InstructionFile : includes
   class Methodology["Methodology"]
   class DecisionRecord["Decision record"]
   DecisionRecord : id
@@ -79,7 +86,10 @@ classDiagram
   ScratchpadNote ..> DecisionRecord : may produce
   AcceptanceGate ..> DecisionRecord : admits only accepted
   AcceptanceGate ..> Rule : admits only accepted
-  Harness ..> OperationalRule : loads
+  Methodology --> HarnessRequirement : states
+  Harness ..> HarnessRequirement : meets or not
+  Harness --> InstructionFile : loads into each session
+  InstructionFile ..> OperationalRule : includes
 ```
 
 ```mermaid
@@ -105,7 +115,7 @@ flowchart LR
 
 Defined in [TERM-system](../glossary.md#term-system--system).
 
-**Why:** A way of working passes between people and repositories, and grows, only once tooling carries it (COR-007). Without such tooling, it stays the folklore of those who began it (COR-007).
+**Why:** A way of working passes between people and repositories, and grows, only once tooling carries it ([COR-007](../../../../.pkit/decisions/core/COR-007-pattern-extraction.md)). Without such tooling, it stays the folklore of those who began it (COR-007).
 
 The system is the software this analysis describes: the one you set up on a machine, run and extend.
 
@@ -126,45 +136,94 @@ The system is the software this analysis describes: the one you set up on a mach
 
 Defined in [TERM-harness](../glossary.md#term-harness--harness).
 
-**Why:** The [methodology](../glossary.md#term-methodology--methodology) works inside sessions that another tool hosts, and relies on behaviour it cannot set itself (COR-047). Left unnamed, that reliance stays hidden, and its failure can look like a correct result (COR-047).
+**Why:** The [methodology](../glossary.md#term-methodology--methodology) works inside sessions that another tool hosts, and relies on behaviour it cannot set itself ([COR-047](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)). Left unnamed, that reliance stays hidden, and its failure can look like a correct result (COR-047).
 
 A harness is an external tool that hosts working sessions and runs the tool calls made in them. Claude Code is one. The methodology depends on how the harness behaves, which the methodology cannot set.
 
 **Attributes:**
 
-- its include: the line in its instruction file that pulls another file into each session, as `@.pkit/rules/core.md` does
+- its include: the line in its [instruction file](../glossary.md#term-instruction-file--instruction-file) that pulls another file into each session, as `@.pkit/rules/core.md` does
 
 **Relations:**
 
 - Its include loads the [operational rules](../glossary.md#term-operational-rule--operational-rule) into each session it hosts.
 - It is no part of the [system](../glossary.md#term-system--system).
+- The methodology states what it relies on a harness to do as [harness requirements](../glossary.md#term-harness-requirement--harness-requirement), which a harness meets or not ([COR-047 point 1](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#1-requirements-are-stated-as-observable-behaviour-never-in-a-harnesss-vocabulary)).
+
+**States:** None.
+
+**Always true:** None.
+
+## Harness requirement
+
+Defined in [TERM-harness-requirement](../glossary.md#term-harness-requirement--harness-requirement).
+
+**Why:** The [methodology](../glossary.md#term-methodology--methodology)'s design relied on how a [harness](../glossary.md#term-harness--harness) behaves, and that reliance lived only in the reasoning behind it ([COR-047](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)). Configuration that removed such a behaviour went unnoticed, and its failure often read as a correct result (COR-047).
+
+A harness requirement is a behaviour the methodology needs of any harness, stated so that one can observe whether it holds. It names no key, flag or tool of one harness. `delegated-result-complete` is one: a delegated agent's result reaches the session that delegated it whole.
+
+**Attributes:**
+
+- its name, such as `delegated-result-complete`
+- the behaviour it names, in terms any harness could meet ([COR-047 point 1](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#1-requirements-are-stated-as-observable-behaviour-never-in-a-harnesss-vocabulary))
+- where one can see whether it holds, such as from configuration, or only from within a running session ([COR-047 point 4](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#4-every-requirement-names-its-observation-point-what-cannot-be-observed-is-reported-not-passed))
+
+**Relations:**
+
+- The methodology states it (COR-047 point 1).
+- Whether a harness meets it is graded, never a plain yes or no. The grades tell apart a harness that cannot meet it from one that meets it at a cost ([COR-047 point 2](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
 
 **States:** None.
 
 **Always true:**
 
-- What the methodology needs of a harness is stated as behaviour one can observe, never in any harness's own vocabulary (COR-047 [point](../glossary.md#term-point--point) 1).
-- A need that no declaration covers for the harness in use is unknown, never met (COR-047 point 3).
+- It is stated as behaviour one can observe, never in any harness's own vocabulary (COR-047 point 1).
+- Where nothing grades it for the harness in use, it is indeterminate, never met ([COR-047 point 3](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#3-silence-is-indeterminate-never-satisfaction)).
+- Where its observation point cannot be reached, a check reports it as indeterminate, naming what could settle it (COR-047 point 4). It never passes it.
+
+## Instruction file
+
+Defined in [TERM-instruction-file](../glossary.md#term-instruction-file--instruction-file).
+
+**Why:** None.
+
+An instruction file is the document a [harness](../glossary.md#term-harness--harness) loads into each session it hosts, such as Claude Code's `CLAUDE.md`. Through its includes, every session takes in the [operational rules](../glossary.md#term-operational-rule--operational-rule). A repository's own instructions follow the includes.
+
+**Attributes:**
+
+- its includes, each a line that pulls another file into the session, such as `@.pkit/rules/core.md` ([ADR-076 point 2](../../../architecture/decisions/ADR-076-capability-rules-index.md#2-the-backbone-renders-an-index-and-claudemd-includes-it))
+
+**Relations:**
+
+- A harness loads it into each session, from the session's start ([COR-070 point 2](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#2-the-adapter-delivers-the-loaded-file-by-the-route-that-carries-cores-rules)).
+- Its includes load the [methodology](../glossary.md#term-methodology--methodology)'s operational rules first, and the repository's own after them (ADR-076 point 2).
+
+**States:** None.
+
+**Always true:**
+
+- An include it needs is kept present, inserted wherever it is absent (COR-070 point 2).
+- Nothing that keeps its includes present removes or rewrites the text the repository wrote there (COR-070 point 2).
 
 ## Decision record
 
 Defined in [TERM-decision-record](../glossary.md#term-decision-record--decision-record).
 
-**Why:** A choice made with no record of its reasons, or of what else was weighed, leaves later readers unable to rebuild them (COR-025). Kept apart from the steps that carry it out, the choice stays stable while those steps evolve (COR-006).
+**Why:** A choice made with no record of its reasons, or of what else was weighed, leaves later readers unable to rebuild them ([COR-025](../../../../.pkit/decisions/core/COR-025-adr-decision-space.md)). Kept apart from the steps that carry it out, the choice stays stable while those steps evolve ([COR-006](../../../../.pkit/decisions/core/COR-006-artifact-roles.md)).
 
 A decision record is a document that states one choice among alternatives, with the context that called for it and the reasons for it. It binds only once it is accepted, so work builds on it only from then.
 
 **Attributes:**
 
-- an id: its namespace's prefix and a number, such as COR-050
+- an id: its namespace's prefix and a number, such as [COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)
 - a status: `proposed`, `accepted` or `superseded`
 - its sections: the context, the decision, the reasons and what follows from it
 
 **Relations:**
 
 - It belongs to one namespace, which numbers its records on its own. COR, the namespace of the core records, is one.
-- Its decision may hold points (COR-058 [point](../glossary.md#term-point--point) 1).
-- A [rule](../glossary.md#term-rule--rule)'s origin may cite it. The record says what was chosen and why, and the rule says what must hold (COR-051 point 1).
+- Its decision may hold points ([COR-058 point 1](../../../../.pkit/decisions/core/COR-058-record-points.md#1-a-point-is-a-heading-with-its-id-and-title)).
+- A [rule](../glossary.md#term-rule--rule)'s origin may cite it. The record says what was chosen and why, and the rule says what must hold ([COR-051 point 1](../../../../.pkit/decisions/core/COR-051-rule-sets.md#1-what-a-rule-is)).
 
 **States:** A record is `proposed` until it is accepted in review, and `accepted` until a newer record supersedes it. It never moves back, and a superseded record is kept.
 
@@ -185,19 +244,19 @@ stateDiagram-v2
 
 Defined in [TERM-point](../glossary.md#term-point--point).
 
-**Why:** A [decision record](../glossary.md#term-decision-record--decision-record) often decides several things at once, and other records, rules and documents cite each one by its number (COR-058). A number that moves sends every such citation to another part, and nothing says so (COR-058). A permanent id keeps each citation on the part it names (COR-058).
+**Why:** A [decision record](../glossary.md#term-decision-record--decision-record) often decides several things at once, and other records, rules and documents cite each one by its number ([COR-058](../../../../.pkit/decisions/core/COR-058-record-points.md)). A number that moves sends every such citation to another part, and nothing says so (COR-058). A permanent id keeps each citation on the part it names (COR-058).
 
-A point is one numbered or labelled part of a decision record's Decision. Once the record writes it as a heading, its id names it for good, so a citation such as COR-050 point 3 stays true. A record that writes its points as a numbered list still works, but its numbers may move until it is converted (COR-058 point 9).
+A point is one numbered or labelled part of a decision record's Decision. Once the record writes it as a heading, its id names it for good, so a citation such as [COR-050 point 3](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) stays true. A record that writes its points as a numbered list still works, but its numbers may move until it is converted ([COR-058 point 9](../../../../.pkit/decisions/core/COR-058-record-points.md#9-a-record-in-list-form-keeps-working-until-it-is-converted)).
 
 **Attributes:**
 
 - an id: a number, such as `3`, or a label, such as `D1`
-- a title of a few words, and its text, which runs to the next heading of the same or a higher level (COR-058 point 1)
+- a title of a few words, and its text, which runs to the next heading of the same or a higher level ([COR-058 point 1](../../../../.pkit/decisions/core/COR-058-record-points.md#1-a-point-is-a-heading-with-its-id-and-title))
 
 **Relations:**
 
 - It belongs to one decision record, inside that record's Decision (COR-058 point 1).
-- A retired point names the points that took its text, where any did (COR-058 points 4 and 5).
+- A retired point names the points that took its text, where any did (COR-058 points [4](../../../../.pkit/decisions/core/COR-058-record-points.md#4-a-retired-point-leaves-an-entry-and-a-stub) and [5](../../../../.pkit/decisions/core/COR-058-record-points.md#5-successors-are-points-of-the-same-record)).
 
 **States:** A point written as a heading is live until it is retired, by being dropped, split or merged. A stub then stays where it stood, and its id stays in the record's front matter (COR-058 point 4).
 
@@ -211,14 +270,14 @@ stateDiagram-v2
 
 **Always true:**
 
-- In a record whose points are headings, no point is renumbered, and no id is used again, a retired one included (COR-058 point 3).
+- In a record whose points are headings, no point is renumbered, and no id is used again, a retired one included ([COR-058 point 3](../../../../.pkit/decisions/core/COR-058-record-points.md#3-a-new-point-takes-the-next-unused-number-and-no-point-is-renumbered)).
 - In such a record, a new point takes the next unused number (COR-058 point 3).
 
 ## Scratchpad note
 
 Defined in [TERM-scratchpad-note](../glossary.md#term-scratchpad-note--scratchpad-note).
 
-**Why:** Some questions are too large to settle in a [decision record](../glossary.md#term-decision-record--decision-record) on a first pass, since their alternatives are not mapped yet (COR-012). With no home, that exploration scatters, or is skipped, and a record comes too early (COR-012).
+**Why:** Some questions are too large to settle in a [decision record](../glossary.md#term-decision-record--decision-record) on a first pass, since their alternatives are not mapped yet ([COR-012](../../../../.pkit/decisions/core/COR-012-scratchpad-notes.md)). With no home, that exploration scatters, or is skipped, and a record comes too early (COR-012).
 
 A scratchpad note is a working draft that explores one such question, and binds nothing. Once decision records or other documents hold its content, it retires. When its line of thought fails, it is dropped. Either way, it is kept.
 
@@ -251,16 +310,16 @@ stateDiagram-v2
 
 Defined in [TERM-rule](../glossary.md#term-rule--rule).
 
-**Why:** A standard that work is held to must be written down, and loose prose is not enough to trust it (COR-051). Each rule needs a lasting name to cite, a record of its origin and a visible way to retire it (COR-051). A [decision record](../glossary.md#term-decision-record--decision-record) gives all three, at a weight too great for a statement of one sentence (COR-051).
+**Why:** A standard that work is held to must be written down, and loose prose is not enough to trust it ([COR-051](../../../../.pkit/decisions/core/COR-051-rule-sets.md)). Each rule needs a lasting name to cite, a record of its origin and a visible way to retire it (COR-051). A [decision record](../glossary.md#term-decision-record--decision-record) gives all three, at a weight too great for a statement of one sentence (COR-051).
 
-A rule is a statement that every document or collection entry it binds on must satisfy, once it is accepted. It has a permanent id, such as RS-WRITE-005, and a recorded origin that says when, by whom and why it was decided.
+A rule is a statement that every document or collection entry it binds on must satisfy, once it is accepted. It has a permanent id, such as [RS-WRITE-005](../../../rule-sets/writing.md#rs-write-005--at-most-25-words-a-sentence), and a recorded origin that says when, by whom and why it was decided.
 
 **Attributes:**
 
-- an id, such as `RS-WRITE-005` (COR-051 [point](../glossary.md#term-point--point) 3)
+- an id, such as `RS-WRITE-005` ([COR-051 point 3](../../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers))
 - its statement
-- an origin: when, by whom and why it was decided, or the decision record it cites (COR-051 point 5)
-- a status: proposed, accepted, superseded or withdrawn (COR-051 point 4)
+- an origin: when, by whom and why it was decided, or the decision record it cites ([COR-051 point 5](../../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically))
+- a status: proposed, accepted, superseded or withdrawn ([COR-051 point 4](../../../../.pkit/decisions/core/COR-051-rule-sets.md#4-statuses-and-the-gate))
 
 **Relations:**
 
@@ -289,7 +348,7 @@ stateDiagram-v2
 
 Defined in [TERM-acceptance-gate](../glossary.md#term-acceptance-gate--acceptance-gate).
 
-**Why:** If a [decision record](../glossary.md#term-decision-record--decision-record) or a [rule](../glossary.md#term-rule--rule) bound as soon as it was written, any draft would take effect before anyone reviewed it (COR-051).
+**Why:** If a [decision record](../glossary.md#term-decision-record--decision-record) or a [rule](../glossary.md#term-rule--rule) bound as soon as it was written, any draft would take effect before anyone reviewed it ([COR-051](../../../../.pkit/decisions/core/COR-051-rule-sets.md)).
 
 The acceptance gate is the condition that work builds only on what is already accepted. A decision record or a rule that is still proposed is a draft. Work that would rest on it waits, or has it accepted first.
 
@@ -303,15 +362,15 @@ The acceptance gate is the condition that work builds only on what is already ac
 
 **Always true:**
 
-- An accepted rule whose origin cites a decision record cites an accepted one (COR-051 [point](../glossary.md#term-point--point) 5).
+- An accepted rule whose origin cites a decision record cites an accepted one ([COR-051 point 5](../../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically)).
 
 ## Operational rule
 
 Defined in [TERM-operational-rule](../glossary.md#term-operational-rule--operational-rule).
 
-**Why:** An instruction shipped to every repository must fit any of them, since one that fits a single repository cannot apply elsewhere (COR-014). So a repository keeps its own instructions in a file of its own (COR-014).
+**Why:** An instruction shipped to every repository must fit any of them, since one that fits a single repository cannot apply elsewhere ([COR-014](../../../../.pkit/decisions/core/COR-014-universal-applicability.md)). So a repository keeps its own instructions in a file of its own (COR-014).
 
-An operational rule is an instruction that every session loads through the [harness](../glossary.md#term-harness--harness)'s include. It is cited by its number in its file, such as core rule 8, and carries no id, origin or status.
+An operational rule is an instruction that every session loads through the [harness](../glossary.md#term-harness--harness)'s include.
 
 **Attributes:**
 
@@ -321,19 +380,25 @@ An operational rule is an instruction that every session loads through the [harn
 **Relations:**
 
 - The harness's include loads it into each session.
-- It shares only the word with a [rule](../glossary.md#term-rule--rule): it has none of a rule's id, origin or status (COR-051 [point](../glossary.md#term-point--point) 1).
 
-**States:** None.
+**States:** In a plain file, none. Elsewhere, those that [VIEW-artefacts-and-friction](070-artefacts-and-friction.md) states.
 
 **Always true:**
 
-- An operational rule that fits any repository is in the file the [system](../glossary.md#term-system--system) ships. One that fits only one repository is in that repository's own file (COR-014).
+- An operational rule that fits only one repository is in that repository's own file (COR-014).
+
+**Note:** VIEW-artefacts-and-friction states, of the operational rules:
+
+- their layers
+- how each layer keeps and cites its rules
+- how each layer's file reaches a session
+- which layer binds
 
 ## Methodology
 
 Defined in [TERM-methodology](../glossary.md#term-methodology--methodology).
 
-**Why:** The work of starting and running development practices recurs across repositories (COR-007). The methodology captures what is known about doing that work well, as one accumulated discipline (COR-007).
+**Why:** The work of starting and running development practices recurs across repositories ([COR-007](../../../../.pkit/decisions/core/COR-007-pattern-extraction.md)). The methodology captures what is known about doing that work well, as one accumulated discipline (COR-007).
 
 The methodology is the body of [decision records](../glossary.md#term-decision-record--decision-record), rules, [operational rules](../glossary.md#term-operational-rule--operational-rule) and conventions that the [system](../glossary.md#term-system--system) ships and enforces. Its conventions are agreed ways of working, such as how a commit's message is written. A repository keeps its own records, rules and operational rules beside the methodology's. They are no part of it, yet the [acceptance gate](../glossary.md#term-acceptance-gate--acceptance-gate) holds for them too.
 
@@ -347,3 +412,201 @@ The methodology is the body of [decision records](../glossary.md#term-decision-r
 **States:** None.
 
 **Always true:** None.
+
+## What is built on these concepts
+
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
+**System:**
+
+- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md)
+- [UC-003 — Declare what my change means for the next release](../use-case-model/use-cases/030-change/UC-003-declare-changeset.md)
+- [UC-004 — Know before I push that my change passes my project's checks](../use-case-model/use-cases/030-change/UC-004-check-before-push.md)
+- [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
+- [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/020-set-up/UC-006-gate-merges.md)
+- [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
+- [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/040-release/UC-011-migrate-component-change.md)
+- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/060-report/UC-012-report-problem.md)
+- [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/060-report/UC-013-link-reports.md)
+- [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
+- [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
+- [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
+- [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
+- [UC-018 — Know my capability is ready to share](../use-case-model/use-cases/010-develop/UC-018-check-shareable.md)
+- [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
+- [UC-020 — Turn recurring work into my project's own skill or agent definition](../use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md)
+- [UC-021 — Declare my project's backbone configuration once, and have it validated](../use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md)
+- [UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's](../use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md)
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
+- [UC-024 — See what a capability would connect to before I install it](../use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md)
+- [UC-025 — Choose which installed capability provides a role](../use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md)
+- [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md)
+- [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md)
+- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/070-work-within-limits/UC-028-keep-intermediate-files.md)
+- [UC-029 — Get a delegated agent's result back whole](../use-case-model/use-cases/070-work-within-limits/UC-029-get-result-whole.md)
+- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/070-work-within-limits/UC-030-work-unprompted.md)
+- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/070-work-within-limits/UC-031-keep-per-machine-choices.md)
+- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md)
+- [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/070-work-within-limits/UC-033-find-why-prompted.md)
+- [UC-034 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-034-land-change.md)
+- [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
+- [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
+- [UC-039 — Think a question through in a scratchpad note, and retire it](../use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md)
+- [UC-040 — Have a drafted record or rule become binding only through my own review](../use-case-model/use-cases/030-change/UC-040-accept-through-review.md)
+- [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
+- [UC-048 — Put the system's CLI on my machine at a release](../use-case-model/use-cases/050-adopt/UC-048-install-cli.md)
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
+- [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md)
+- [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md)
+- [UC-052 — Run each project at the version it pins](../use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md)
+- [UC-053 — Re-pin an inherited rule set once I have reviewed its new major](../use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md)
+- [UC-054 — Upgrade one capability on its own](../use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md)
+- [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
+- [JRN-002 — Upgrade the system](../use-case-model/journeys/JRN-002-upgrade-system.md)
+- [JRN-003 — Deliver a change](../use-case-model/journeys/JRN-003-deliver-change.md)
+- [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
+- [JRN-006 — Start working on a project on a new machine](../use-case-model/journeys/JRN-006-start-on-new-machine.md)
+- [REQ-002 · Functional · Project-owned content is written only by the writers records name](../requirements/functional/REQ-002-project-owned-writers.md)
+- [REQ-014 · Functional · A later edit of a documentation root moves no document](../requirements/functional/020-set-up/REQ-014-root-change-moves-nothing.md)
+- [REQ-016 · Constraint · The permission code needs only the operating system's `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
+- [REQ-026 · Quality · An interrupted version transition never reads as finished, and the next one completes it](../requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md)
+- [REQ-028 · Quality · The router never fails a command over a version pin it cannot resolve](../requirements/quality/050-adopt/REQ-028-unresolved-pin-runs-installed.md)
+
+**Harness:**
+
+- [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
+- [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
+- [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
+- [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
+- [UC-020 — Turn recurring work into my project's own skill or agent definition](../use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md)
+- [UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's](../use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md)
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
+- [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md)
+- [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md)
+- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/070-work-within-limits/UC-028-keep-intermediate-files.md)
+- [UC-029 — Get a delegated agent's result back whole](../use-case-model/use-cases/070-work-within-limits/UC-029-get-result-whole.md)
+- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/070-work-within-limits/UC-030-work-unprompted.md)
+- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/070-work-within-limits/UC-031-keep-per-machine-choices.md)
+- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md)
+- [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/070-work-within-limits/UC-033-find-why-prompted.md)
+- [UC-041 — Keep each core record true for any project that adopts it](../use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md)
+- [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
+- [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md)
+- [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
+- [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
+- [JRN-006 — Start working on a project on a new machine](../use-case-model/journeys/JRN-006-start-on-new-machine.md)
+
+**Harness requirement:**
+
+- [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
+- [UC-029 — Get a delegated agent's result back whole](../use-case-model/use-cases/070-work-within-limits/UC-029-get-result-whole.md)
+
+**Instruction file:**
+
+- [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
+- [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
+- [UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's](../use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md)
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
+- [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md)
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
+- [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
+
+**Decision record:**
+
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/040-release/UC-011-migrate-component-change.md)
+- [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
+- [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
+- [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
+- [UC-039 — Think a question through in a scratchpad note, and retire it](../use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md)
+- [UC-040 — Have a drafted record or rule become binding only through my own review](../use-case-model/use-cases/030-change/UC-040-accept-through-review.md)
+- [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
+
+**Point:**
+
+- [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
+- [UC-041 — Keep each core record true for any project that adopts it](../use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md)
+- [JRN-003 — Deliver a change](../use-case-model/journeys/JRN-003-deliver-change.md)
+- [REQ-020 · Functional · A dead anchor is an error, never silence](../requirements/functional/030-change/REQ-020-dead-anchor-error.md)
+
+**Scratchpad note:**
+
+- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/060-report/UC-012-report-problem.md)
+- [UC-039 — Think a question through in a scratchpad note, and retire it](../use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md)
+
+**Rule:**
+
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
+- [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
+- [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
+- [UC-040 — Have a drafted record or rule become binding only through my own review](../use-case-model/use-cases/030-change/UC-040-accept-through-review.md)
+- [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
+- [UC-053 — Re-pin an inherited rule set once I have reviewed its new major](../use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md)
+- [JRN-002 — Upgrade the system](../use-case-model/journeys/JRN-002-upgrade-system.md)
+- [JRN-003 — Deliver a change](../use-case-model/journeys/JRN-003-deliver-change.md)
+- [JRN-007 — Upgrade one capability, and re-pin its rule set](../use-case-model/journeys/JRN-007-upgrade-one-capability.md)
+
+**Acceptance gate:**
+
+- [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
+- [JRN-003 — Deliver a change](../use-case-model/journeys/JRN-003-deliver-change.md)
+
+**Operational rule:**
+
+- [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
+- [UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's](../use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md)
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
+- [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md)
+- [UC-029 — Get a delegated agent's result back whole](../use-case-model/use-cases/070-work-within-limits/UC-029-get-result-whole.md)
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
+- [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
+- [REQ-002 · Functional · Project-owned content is written only by the writers records name](../requirements/functional/REQ-002-project-owned-writers.md)
+
+**Methodology:**
+
+- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md)
+- [UC-003 — Declare what my change means for the next release](../use-case-model/use-cases/030-change/UC-003-declare-changeset.md)
+- [UC-004 — Know before I push that my change passes my project's checks](../use-case-model/use-cases/030-change/UC-004-check-before-push.md)
+- [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
+- [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/020-set-up/UC-006-gate-merges.md)
+- [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
+- [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
+- [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
+- [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
+- [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
+- [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
+- [UC-020 — Turn recurring work into my project's own skill or agent definition](../use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md)
+- [UC-021 — Declare my project's backbone configuration once, and have it validated](../use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md)
+- [UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's](../use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md)
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
+- [UC-024 — See what a capability would connect to before I install it](../use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md)
+- [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md)
+- [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md)
+- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/070-work-within-limits/UC-028-keep-intermediate-files.md)
+- [UC-029 — Get a delegated agent's result back whole](../use-case-model/use-cases/070-work-within-limits/UC-029-get-result-whole.md)
+- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/070-work-within-limits/UC-030-work-unprompted.md)
+- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/070-work-within-limits/UC-031-keep-per-machine-choices.md)
+- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md)
+- [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/070-work-within-limits/UC-033-find-why-prompted.md)
+- [UC-034 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-034-land-change.md)
+- [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
+- [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
+- [UC-039 — Think a question through in a scratchpad note, and retire it](../use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md)
+- [UC-041 — Keep each core record true for any project that adopts it](../use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md)
+- [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
+- [UC-048 — Put the system's CLI on my machine at a release](../use-case-model/use-cases/050-adopt/UC-048-install-cli.md)
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
+- [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md)
+- [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md)
+- [UC-052 — Run each project at the version it pins](../use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md)
+- [UC-054 — Upgrade one capability on its own](../use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md)
+- [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
+- [JRN-008 — Release a breaking backbone change with its migration](../use-case-model/journeys/JRN-008-release-breaking-backbone-change.md)
+- [REQ-002 · Functional · Project-owned content is written only by the writers records name](../requirements/functional/REQ-002-project-owned-writers.md)
+- [REQ-013 · Functional · Where an allow and a deny conflict, the deny wins](../requirements/functional/020-set-up/REQ-013-deny-wins.md)
+- [REQ-028 · Quality · The router never fails a command over a version pin it cannot resolve](../requirements/quality/050-adopt/REQ-028-unresolved-pin-runs-installed.md)
+- [REQ-030 · Functional · A choice in a version transition that needs a person is never taken silently](../requirements/functional/050-adopt/REQ-030-person-choice-never-silent.md)

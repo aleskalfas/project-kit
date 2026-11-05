@@ -17,8 +17,11 @@ Naming rules (DEC-018 + workstreams.schema.json):
 
 The library is dependency-free at import time so it can be imported
 from any PEP 723 script regardless of its declared dependencies.
-YAML loading is the caller's responsibility — scripts load the file
-themselves and pass the parsed dict to `parse_workstreams()`.
+YAML loading is mostly the caller's responsibility — scripts load the
+file themselves and pass the parsed dict to `parse_workstreams()`.
+`read_declared()` is the exception: it loads the file with ruamel.yaml,
+imported when it is called, so only a script that declares ruamel.yaml
+calls it.
 """
 
 from __future__ import annotations
@@ -30,6 +33,14 @@ from pathlib import Path
 SLUG_PATTERN = re.compile(r"^[a-z][a-z0-9-]*[a-z0-9]$")
 WORKSTREAMS_RELATIVE = "project/workstreams.yaml"
 CONFIG_RELATIVE = "project/config.yaml"
+
+# DEC-018's naming and value-space rules, the bounds the schema also holds.
+SLUG_MIN_LENGTH = 2
+SLUG_MAX_LENGTH = 40
+NAME_MAX_LENGTH = 64
+DESCRIPTION_MAX_LENGTH = 200
+DEPRECATED_REASON_MAX_LENGTH = 200
+STATUSES = ("active", "deprecated")
 
 
 @dataclass(frozen=True)
@@ -50,6 +61,92 @@ class WorkstreamsParse:
     entries: tuple[Workstream, ...]
     form: str  # "mapping" | "list" | "empty"
     errors: tuple[str, ...] = ()
+
+
+def validate_slug(slug: object) -> str | None:
+    """Why ``slug`` breaks DEC-018's slug rule, or None when it keeps it.
+
+    The rule in full: the pattern, no consecutive hyphens, and 2 to 40
+    characters. Every mutator that takes a new slug checks it here, so no
+    command accepts a slug the file's reader would then drop.
+    """
+    if not isinstance(slug, str) or not slug:
+        return "slug must be a non-empty string"
+    if not SLUG_PATTERN.match(slug):
+        return (
+            f"slug {slug!r} does not match `^[a-z][a-z0-9-]*[a-z0-9]$`. "
+            "Kebab-case, lowercase, no leading or trailing hyphen, no underscores."
+        )
+    if "--" in slug:
+        return f"slug {slug!r} contains consecutive hyphens (forbidden)."
+    if not (SLUG_MIN_LENGTH <= len(slug) <= SLUG_MAX_LENGTH):
+        return (
+            f"slug {slug!r} length must be {SLUG_MIN_LENGTH}–{SLUG_MAX_LENGTH} chars; "
+            f"got {len(slug)}."
+        )
+    return None
+
+
+def _single_line(value: str) -> bool:
+    return "\n" not in value and "\r" not in value
+
+
+def validate_attributes(
+    *,
+    name: str | None = None,
+    description: str | None = None,
+    status: str | None = None,
+    deprecated_reason: str | None = None,
+) -> list[str]:
+    """Each way the given attributes break DEC-018's rules; empty when none do.
+
+    An attribute passed as None is not being set, so it is not checked. A
+    name is non-empty, at most 64 characters and one line. A description
+    and a deprecation reason are at most 200 characters and one line. A
+    status is `active` or `deprecated`.
+    """
+    errors: list[str] = []
+    if name is not None:
+        if not name.strip():
+            errors.append("`name` must not be empty.")
+        elif len(name) > NAME_MAX_LENGTH:
+            errors.append(f"`name` is {len(name)} chars; at most {NAME_MAX_LENGTH} are allowed.")
+        if not _single_line(name):
+            errors.append("`name` must be one line.")
+    if description is not None:
+        if len(description) > DESCRIPTION_MAX_LENGTH:
+            errors.append(
+                f"`description` is {len(description)} chars; at most "
+                f"{DESCRIPTION_MAX_LENGTH} are allowed."
+            )
+        if not _single_line(description):
+            errors.append("`description` must be one line.")
+    if status is not None and status not in STATUSES:
+        errors.append(f"`status` must be `active` or `deprecated`; got {status!r}.")
+    if deprecated_reason is not None:
+        if len(deprecated_reason) > DEPRECATED_REASON_MAX_LENGTH:
+            errors.append(
+                f"`deprecated_reason` is {len(deprecated_reason)} chars; at most "
+                f"{DEPRECATED_REASON_MAX_LENGTH} are allowed."
+            )
+        if not _single_line(deprecated_reason):
+            errors.append("`deprecated_reason` must be one line.")
+    return errors
+
+
+def rewrite_references(text: str, old_label: str, new_label: str) -> tuple[str, int]:
+    """``text`` with each typed reference to ``old_label`` made ``new_label``.
+
+    DEC-018 rewrites only the typed forms, `workstream:<slug>` and
+    `[workstream:<slug>]`. A bare slug is left alone. The caller passes both
+    labels whole, as the axis-label seam builds them. A reference is matched
+    only where the label stands on its own, so rewriting `workstream:cli`
+    leaves `workstream:cli-tools` and `myworkstream:cli` as they are.
+
+    Returns the new text and how many references it changed.
+    """
+    pattern = re.compile(r"(?<![A-Za-z0-9_-])" + re.escape(old_label) + r"(?![A-Za-z0-9_-])")
+    return pattern.subn(lambda _match: new_label, text)
 
 
 def workstreams_path(capability_root: Path) -> Path:
@@ -185,6 +282,82 @@ def _parse_mapping_form(mapping: dict) -> WorkstreamsParse:
 
 def find_active(parse: WorkstreamsParse) -> tuple[Workstream, ...]:
     return tuple(w for w in parse.entries if w.status == "active")
+
+
+@dataclass(frozen=True)
+class Declared:
+    """The workstreams a project declares, and where it declares them."""
+
+    source: str  # the file, as a message names it
+    parse: WorkstreamsParse
+
+
+def read_declared(capability_root: Path) -> Declared | None:
+    """The project's declared workstreams, or None when it declares none.
+
+    `project/workstreams.yaml` is authoritative wherever it exists (DEC-018),
+    an empty one included. Without it, the legacy `workstreams:` key of
+    `project/config.yaml` is read, and an empty or missing key declares none.
+    A file that cannot be read declares no entry, and its parse says why.
+    """
+    from ruamel.yaml import YAML
+    from ruamel.yaml.error import YAMLError
+
+    def load(path: Path) -> object:
+        return YAML(typ="safe").load(path.read_text(encoding="utf-8"))
+
+    path = workstreams_path(capability_root)
+    if path.is_file():
+        try:
+            data = load(path)
+        except (OSError, YAMLError) as exc:
+            reason = "it cannot be read: " + " ".join(str(exc).split())
+            return Declared(WORKSTREAMS_RELATIVE, WorkstreamsParse((), "empty", (reason,)))
+        return Declared(WORKSTREAMS_RELATIVE, parse_workstreams(data))
+
+    legacy_path = config_path(capability_root)
+    try:
+        config = load(legacy_path) if legacy_path.is_file() else None
+    except (OSError, YAMLError):
+        config = None
+    legacy = config.get("workstreams") if isinstance(config, dict) else None
+    if not legacy or not isinstance(legacy, (list, dict)):
+        return None
+    return Declared(
+        f"the `workstreams:` key of {CONFIG_RELATIVE}",
+        parse_workstreams({"workstreams": legacy}),
+    )
+
+
+def filing_refusal(slug: str, declared: Declared | None) -> str | None:
+    """Why an issue may not take workstream ``slug``, or None when it may.
+
+    DEC-012 refuses a value outside the project's allowed set, and DEC-018
+    makes the workstreams file that set: an issue takes a workstream the file
+    holds as active. Where the project declares none, nothing is checked.
+    """
+    if declared is None:
+        return None
+    entry = next((w for w in declared.parse.entries if w.slug == slug), None)
+    if entry is not None and entry.status == "active":
+        return None
+    active = sorted(w.slug for w in find_active(declared.parse))
+    if entry is not None:
+        reason = f": {entry.deprecated_reason}" if entry.deprecated_reason else ""
+        message = f"workstream {slug!r} is deprecated in {declared.source}{reason}."
+    elif active:
+        message = f"workstream {slug!r} is not in {declared.source}."
+    else:
+        message = (
+            f"workstream {slug!r} is not in {declared.source}, which holds no active workstream."
+        )
+    if active:
+        message += f" Its active workstreams: {', '.join(active)}."
+    if declared.parse.errors:
+        message += " Problems in the file: " + "; ".join(declared.parse.errors) + "."
+    if entry is None:
+        message += " Add the workstream with `pkit pm add-workstream <slug>` first."
+    return message
 
 
 def slug_set(parse: WorkstreamsParse) -> set[str]:

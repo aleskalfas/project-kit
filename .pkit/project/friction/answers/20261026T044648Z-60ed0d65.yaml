@@ -1,0 +1,368 @@
+answers:
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - moved-2dccacfe6269.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-001
+          reason: "DEC-006 refines DEC-001 so that an actor's needs and a term's definition are texts of the body, read by a tool through their parts, and the actor's summary goes. The README still describes them as front-matter fields a tool reads there. #2069 and #2072 build the move and rewrite those passages."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-002
+          reason: "DEC-006 partly supersedes DEC-002, so a requirement's statement, measure and scope become texts of its body and its revisits fire on a fingerprint of them. The README still says a tool reads the three from front matter and that they trigger the link. #2069 and #2072 build it and rewrite those passages."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-003
+          reason: "DEC-006 refines DEC-003 point 8 so that the overview shows the first sentence of each actor's opening, read from the body, where the README says it shows the actor's summary. #2069 and #2072 build it and rewrite that passage."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-004
+          reason: "DEC-006 refines DEC-004 point 7 so that a term's definition and a requirement's texts take links in the body, and an actor's first sentence takes them too, having no summary to say again. The README still says these stay plain as data. #2069 and #2072 build it and rewrite those passages."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-005
+          reason: "DEC-006 refines DEC-005 point 3 to say the overview reads each actor's first sentence from the body, where the README says it reads a summary from front matter. #2069 builds it and rewrites that passage."
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-001
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-cfb5a5e6377e.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-001
+          reason: "DEC-006 refines DEC-001 point 1 so that an actor's summary goes and the texts become parts of the body. The rule's checkable part still names the form that holds a summary equal to its opening, and front-matter fields for the texts. #2072 ends the data home and rewrites it."
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-004
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-7499b6f74bf4.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-001#1
+          reason: "DEC-006 refines DEC-001 point 1 so that an actor's needs are a text of its body. The rule still tells a reviewer to read them in the actor's front matter, which misleads once they move. #2072 rewrites it with the end of the data home."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-001#2
+          reason: "DEC-006 refines DEC-001 point 2 so that the needs a glossary's head lists are its text alone. The rule reads a listed actor's needs in the head, which holds, but it reads an actor's own needs in front matter. #2072 rewrites it with the end of the data home."
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-006
+    read:
+      - moved-e5f38b228546.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-002#4
+          reason: "DEC-006 partly supersedes DEC-002 point 4, so a requirement's statement, measure and scope become parts of its body. The rule says it compares none of the body, which would leave the three out once they move. #2072 rewrites it with the end of the data home."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-002#6
+          reason: "DEC-002 gains only the line that DEC-006 partly supersedes it, which moves the three texts the rule compares into the body. The rule says it compares none of the body. #2072 rewrites it with the end of the data home."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-002#8
+          reason: "DEC-002 gains only the line that DEC-006 partly supersedes it, which moves the three texts the rule compares into the body. The rule says it compares none of the body. #2072 rewrites it with the end of the data home."
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-analysis
+    read:
+      - 20261026T012010Z-c6210192.yaml
+    revalidated:
+      at: 2026-10-26T04:47:35Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 2 adds only that the needs a glossary's head lists beside an actor are the head's text alone, no longer data. An analysis is still one component's account of what it must do and for whom, so the definition holds.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-artefact-kind
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:47:38Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 adds that an artefact's texts, such as a term's definition, are parts of its body a tool reads by permanent id, and drops an actor's summary. A kind's members still share one schema, place and layout of parts, so the definition holds.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-candidate
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-a9ec29110af1.yaml
+    revalidated:
+      at: 2026-10-26T04:47:41Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 adds that an artefact's texts are parts of its body a tool reads by permanent id, and drops an actor's summary. A candidate is still an artefact or record not yet committed that a person confirms, so the definition holds.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-declared-structure
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-a8c0e3229666.yaml
+    revalidated:
+      at: 2026-10-26T04:47:44Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 adds that an artefact's texts become parts of its kind's structure, each with a permanent id a tool reads. A declared structure still lists in order the parts each member carries, with their ids, labels and examples, so the definition holds.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-hint
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:47:46Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 adds that an artefact's texts are parts of its body a tool reads by permanent id. A hint still marks where a writer fills a part or a front-matter field, and the moved texts' hints become parts' hints, which the definition covers.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-shortfall
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:47:49Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 adds that an artefact's texts are parts of its body a tool reads by permanent id, and drops an actor's summary. A shortfall is still a step an accepted record decides and the system lacks, marked by a box, so the definition holds.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-tightening
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:47:52Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 adds that an artefact's texts are parts of its body a tool reads by permanent id. A tightening still adds parts to a kind's structure, or asks more of it, naming the project's rule, so the definition holds.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-use-case
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:47:54Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 adds that an actor's needs and its opening's first sentence are texts of its body, and drops its summary. A use case still describes how the system fulfils one actor's goal in a main path and its variants, so the definition holds.
+  - artefact: tech-docs/analysis/software-analysis/domain-model/020-revalidations.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-9593b9f5285b.yaml
+    revalidated:
+      at: 2026-10-26T04:48:22Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 adds that an artefact's texts are parts of its body a tool reads by permanent id, and drops an actor's summary. The view's revalidations, outcomes, records and shortfalls, each box with its entry in front matter, read as they did.
+  - artefact: tech-docs/analysis/software-analysis/domain-model/030-kinds-and-structures.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-47cbe686e4db.yaml
+    revalidated:
+      at: 2026-10-26T04:48:25Z
+      outcome: unchanged
+      unchanged-because: DEC-001 points 1 and 2 add that an artefact's texts are parts of its body a tool reads by permanent id, and that a glossary's head states its needs alone. The view's kinds, structures, schemas, hints and tightenings read true, since a moved text becomes one more part a structure lists.
+  - artefact: tech-docs/analysis/software-analysis/domain-model/010-analyses-and-use-cases.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:48:27Z
+      outcome: unchanged
+      unchanged-because: DEC-001 points 1 and 2 add that an artefact's texts are parts of its body a tool reads by permanent id, and that a glossary's head states its needs alone. The view's analyses, areas, use cases and ids are untouched.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-61845b86011c.yaml
+    revalidated:
+      at: 2026-10-26T04:48:30Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 adds that an artefact's texts are parts of its body a tool reads by permanent id, and drops an actor's summary. That an agent proposes each outcome, candidate, freed id and change to a structure, and a person decides, is untouched.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-4b37d865f237.yaml
+    revalidated:
+      at: 2026-10-26T04:48:32Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 adds that an artefact's texts are parts of its body, whose presence and form bind where the format rule binds. That is what the requirement states of a body's structure, so it holds.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-070-choose-parts.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:48:35Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 adds that an artefact's texts are parts of its body a tool reads by permanent id, and drops an actor's summary. Choosing each kind's parts on a candidate reads the same, a moved text being one more part a project reviews.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-071-describe-existing-project.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - moved-a7d5eb0e91b3.yaml
+    revalidated:
+      at: 2026-10-26T04:48:37Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 adds that an artefact's texts are parts of its body a tool reads by permanent id, and DEC-004 point 7 links a requirement's texts once they lie in the body. Describing an existing project's candidates, and linking each after it is stamped, read the same.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-072-revise-before-change.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:48:40Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 adds that an artefact's texts are parts of its body a tool reads by permanent id, and drops an actor's summary. Revising the analysis before a planned change, and recording it, is untouched.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-073-revalidate-after-change.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - moved-2ac1be36d925.yaml
+    revalidated:
+      at: 2026-10-26T04:48:42Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 adds that an artefact's texts are parts of its body a tool reads by permanent id, and drops an actor's summary. The agent's revalidation after a change, and what a person decides, are untouched.
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-001
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-e075489b6421.yaml
+    revalidated:
+      at: 2026-10-26T04:48:47Z
+      outcome: unchanged
+      unchanged-because: DEC-001 points 1 and 2 make an actor's needs, and those a glossary's head lists, texts of the body. The rule judges each need's voice as an item of the actor's needs, the part's id too, wherever it lies, so it holds.
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-003
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - moved-39b95d82f432.yaml
+    revalidated:
+      at: 2026-10-26T04:48:50Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 2 adds only that the needs a glossary's head lists are its text alone. The rule on an area folder's three-digit number is untouched.
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-004
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - moved-8ae28aa712ae.yaml
+    revalidated:
+      at: 2026-10-26T04:48:53Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 2 adds only that the needs a glossary's head lists are its text alone. The rule that an artefact lies in its component's analysis is untouched.
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-005
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - moved-18e6f556365d.yaml
+    revalidated:
+      at: 2026-10-26T04:48:55Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 2 adds only that the needs a glossary's head lists are its text alone. The rule that the core's use cases lie in its five areas is untouched.
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-006
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - moved-2df4b0ac7338.yaml
+    revalidated:
+      at: 2026-10-26T04:48:58Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 2 adds only that the needs a glossary's head lists are its text alone, beside the links whose version this rule sets. The rule that a capability's links name the floor it requires is untouched.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-003
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-0d5d5e362e2b.yaml
+    revalidated:
+      at: 2026-10-26T04:49:02Z
+      outcome: unchanged
+      unchanged-because: DEC-001 points 1 and 2 make an actor's needs, and those a glossary's head lists, texts of the body, and drop the summary. That a use case's actor is the one whose goal it is reads the same.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-005
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - moved-cf1897716e93.yaml
+    revalidated:
+      at: 2026-10-26T04:49:04Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 2 makes a glossary head's needs its text, and DEC-002 gains only its partial-supersession line. What each kind anchors is untouched. The rule's statements are a body and its fields together, which holds in either home.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-007
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-9bc4a100eab6.yaml
+    revalidated:
+      at: 2026-10-26T04:49:08Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 and DEC-006's partial supersession of DEC-002 move a requirement's statement and measure into its body. The rule names what the statement asks and what the measure sets, wherever they lie, so it holds.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-008
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-e5b931beeb5e.yaml
+    revalidated:
+      at: 2026-10-26T04:49:11Z
+      outcome: unchanged
+      unchanged-because: DEC-001 points 1 and 2 and DEC-006's partial supersession of DEC-002 move the texts into the body. The rule reads a body and its fields together as statements, a term's definition and a head's needs among them, which holds in either home.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-009
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-9c96c36c753c.yaml
+    revalidated:
+      at: 2026-10-26T04:49:18Z
+      outcome: unchanged
+      unchanged-because: DEC-001 points 1 and 2 make an actor's needs, and those a glossary's head lists, texts of the body, and drop the summary. A use case's preconditions, their producers and its after list read the same.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-010
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - moved-10d4577c2d01.yaml
+    revalidated:
+      at: 2026-10-26T04:49:22Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 2 adds only that the needs a glossary's head lists are its text alone. That an analysis names only the analyses its component depends on is untouched.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-012
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-98ed394a1c20.yaml
+    revalidated:
+      at: 2026-10-26T04:49:26Z
+      outcome: unchanged
+      unchanged-because: DEC-001 points 1 and 2 make a term's definition and an actor's needs texts of the body. Names, noun forms and other senses stay data, so the rule that one name means one concept reads the same.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-013
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-9b0cd39c4c82.yaml
+    revalidated:
+      at: 2026-10-26T04:49:30Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 adds that an artefact's texts are parts of its body a tool reads by permanent id. A shortfall's box, its entry in front matter and its accepted record read the same.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-014
+    read:
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:49:34Z
+      outcome: unchanged
+      unchanged-because: DEC-001 points 1 and 2 make an actor's needs texts of the body, and DEC-003 point 8 has the overview read each actor's first sentence. An area's function, its use cases and the journeys that tell each path read the same.

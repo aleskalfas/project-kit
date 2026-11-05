@@ -97,6 +97,12 @@ What is checked, each against the record's words:
   of the three kinds, never itself; one in force names none withdrawn. The
   rule is the model's (`Analysis.unfit`, `Analysis.unfit_requirement`), for
   the stamp of a requirement to read as well.
+- **A requirement's fingerprint** (DEC-006 point 6), whatever any rule's status,
+  a withdrawn requirement included: its `obligation` is the fingerprint of its
+  statement, its measure and where it holds, under the version of the form it
+  names. One missing, one that is no fingerprint and one that no longer matches
+  its texts fail, naming `pkit analysis obligation`, and so does one whose
+  version or hash this release does not read (`_lib/obligation.py`).
 - **A requirement's anchors match its fields** (DEC-002 point 6): its
   artefact anchors within the analysis — those that are the id of one of its
   kinds — are exactly its `actors` and its `refines`. A cycle through
@@ -124,9 +130,21 @@ What is checked, each against the record's words:
   with no domain model meets none of this.
 - **The links between terms and views** (DEC-004 point 7), whatever any rule's
   status, in an analysis that keeps a domain model: each view section's link to
-  its term, and each mention's link to a term's entry, against what `pkit
-  analysis link` writes (`_lib/links.py`) — a link missing, extra or stale, the
-  message naming the command.
+  its term, and each mention's link to a term's entry, in the glossary, the views
+  and each part of an actor, a use case, a journey and a requirement, against what
+  `pkit analysis link` writes (`_lib/links.py`) — a link missing, extra or stale,
+  the message naming the command.
+- **The links of citations** (DEC-001 point 13), whatever any rule's status, in
+  every analysis: the first citation of each record, point and rule in each
+  section of an artefact in force, against what `pkit analysis link` writes from
+  `pkit refs lookup` — a link missing, extra or stale fails, naming the command;
+  one missing or stale into a file the project receives as a synced copy, a
+  citation that resolves to nothing, or a point its record does not hold, and a
+  `DEC-NNN` that names no capability, are warned of (`_lib/citations.py`).
+- **The links of ids** (point 14), whatever any rule's status, in every analysis:
+  each first mention of an artefact by its id in each section, in the same files and
+  parts, against what `pkit analysis link` writes — a link missing, extra or stale,
+  the message naming the command.
 - **One name, one concept** (points 1 and 2), whatever any rule's status, as a
   shared id is refused: no two terms in force of an analysis share a name, a
   noun form counted, and none takes a name another replaces; no term takes a
@@ -192,11 +210,14 @@ What is checked, each against the record's words:
 And a finding that never fails:
 
 - **An open regression** (point 5), a report: a record's `code-regressed`
-  artefact not revalidated since the record — its `at` on no later day (UTC)
-  than the record's date, or no `at` at all. The defect the record names is
-  still open, or its fix was never revalidated against the artefact. Derived
-  from the records and the artefacts in the working tree each time, never
-  kept in a ledger (COR-050 point 9).
+  artefact not revalidated since the record — the `at` of none of its live
+  revalidations on a later day (UTC) than the record's date, or no `at` at
+  all. The defect the record names is still open, or its fix was never
+  revalidated against the artefact. Derived each time from the records in the
+  working tree and the artefact's live revalidations at HEAD, as the
+  backbone's explanation gives them (`pkit friction explain --json`, COR-062
+  Implications), never kept in a ledger (COR-050 point 9). An artefact the
+  backbone cannot explain is reported with why.
 
 Always, whatever any rule's status:
 
@@ -230,7 +251,8 @@ And where the format rule binds, at its status:
   withdrawn artefact is never failed for a part it lacks or for a form, since
   either may have come after its withdrawal. A document's missing title
   heading is the heading check's, above, which holds it whatever the rule's
-  status.
+  status. A part that still holds its hint is the placeholder check's, above,
+  so it is reported once, never again as empty or missing (#2088).
 - **Where the rule binds.** `SAN` takes no scope, so its rules bind only
   through a set of the project's own that inherits it, as the backbone's one
   reading of where rules bind says (`pkit rule-sets reach`, COR-051 point 7).
@@ -283,7 +305,8 @@ errors, the project mending its own file (COR-055 point 1). A group whose rule
 is superseded or withdrawn binds nothing, and is reported.
 
 It reads the working tree — and, when a record copies evidence, the evidence
-point — so the same tree gets the same answer as long as the evidence fillers
+point, and for a `code-regressed` outcome the artefact's revalidations at HEAD —
+so the same tree and HEAD get the same answer as long as the evidence fillers
 read the tree alone.
 
 **Not here.** A number two branches took (point 3) is `pkit analysis
@@ -316,9 +339,11 @@ from _lib import (
     analyses,
     backbone,
     chain,
+    citations,
     evidence,
     links,
     markdown,
+    obligation,
     overview,
     project_structure,
     render,
@@ -350,7 +375,6 @@ from _lib.model import (
     RELIES_ON,
     REQUIREMENTS,
     REQUIREMENTS_FOLDER,
-    REVALIDATED_AT,
     REVALIDATIONS,
     SHORTFALLS,
     TERM,
@@ -427,6 +451,7 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
 
     records = list(analysis.records)
     listing = analyses.read(root)
+    record_files = backbone.RecordFiles(root, _records_read(analysis, listing))
     outcome.summary.append(_counts(analysis, len(records)))
     outcome.summary += _listed_summary(listing)
     outcome.findings += [Finding(ERROR, s.path, s.why) for s in analysis.strays]
@@ -441,6 +466,7 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _named_otherwise(analysis)
     outcome.findings += _references(analysis, listing)
     outcome.findings += _requirement_references(analysis, listing)
+    outcome.findings += obligation.findings(root, analysis)
     outcome.findings += _listed_requirements(analysis)
     outcome.findings += _built_on(root, analysis, listing)
     outcome.findings += _lists_apart(analysis)
@@ -455,7 +481,7 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _term_links(root, analysis)
     outcome.findings += _names(analysis, listing)
     outcome.findings += _mention_links(root, analysis, listing)
-    outcome.findings += overview.findings(root, analysis, listing)
+    outcome.findings += overview.findings(root, analysis, listing, record_files)
     record_findings, copies, read = _record_findings(root, records, analysis)
     outcome.findings += record_findings
     if copies:
@@ -465,7 +491,7 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _open_regressions(root, read, analysis)
     own = _own(root)
     outcome.findings += _own_findings(analysis, own)
-    outcome.findings += _shortfalls(root, analysis, own)
+    outcome.findings += _shortfalls(root, analysis, own, record_files)
     reached = _Reach(root, backbone.reach)
     summary, departing = _structure(root, analysis, preview=preview, own=own, reach=reached)
     outcome.summary.append(summary)
@@ -477,6 +503,21 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.summary += lines
     outcome.findings += departing
     return outcome
+
+
+def _records_read(analysis: Analysis, listing: analyses.Listing) -> list[str]:
+    """The records whose status the check reads, named before the first is read, so the
+    backbone is asked where they lie once for all of them: each record an entry of
+    `shortfalls` of a use case in force names, and each analysis's purpose."""
+    named = [
+        entry.record_named
+        for use_case in analysis.of_kind(USE_CASE)
+        if not use_case.withdrawn
+        for entry in shortfalls.entries(use_case) or ()
+    ]
+    return named + [
+        purpose for folder in listing.kept() if (purpose := listing.purpose_of(folder)) is not None
+    ]
 
 
 def _counts(analysis: Analysis, records: int) -> str:
@@ -1231,8 +1272,15 @@ def _built_on(root: Path, analysis: Analysis, listing: analyses.Listing) -> list
       declares as `requires_backbone`.
 
     The head's text against its data is the head's form, held where the format rule
-    binds (`forms.BUILDS_ON_MATCH`)."""
-    found = _declared_dependencies(root, listing)
+    binds (`forms.BUILDS_ON_MATCH`). Each component's package metadata is read once."""
+    read: dict[str, analyses.Declared | None] = {}
+
+    def declared_by(component: str) -> analyses.Declared | None:
+        if component not in read:
+            read[component] = analyses.declared(root, component)
+        return read[component]
+
+    found = _declared_dependencies(listing, declared_by)
     for path in sorted(analysis.glossaries):
         folder = analysis.folders.get(path)
         head = analyses.head(analysis, folder)
@@ -1257,7 +1305,7 @@ def _built_on(root: Path, analysis: Analysis, listing: analyses.Listing) -> list
                     )
                 )
             continue
-        declared = analyses.declared(root, listed.component)
+        declared = declared_by(listed.component)
         for taken in head.taken:
             entry = f"{where}/{taken.index}"
             if listed.built_on(taken.analysis) is None:
@@ -1289,12 +1337,14 @@ def _built_on(root: Path, analysis: Analysis, listing: analyses.Listing) -> list
     return found
 
 
-def _declared_dependencies(root: Path, listing: analyses.Listing) -> list[Finding]:
+def _declared_dependencies(
+    listing: analyses.Listing, declared_by: Callable[[str], analyses.Declared | None]
+) -> list[Finding]:
     """Each analysis a listed one builds on, against what its component declares it
     depends on, where it declares it (DEC-001 point 2)."""
     found: list[Finding] = []
     for listed in listing.analyses:
-        declared = analyses.declared(root, listed.component)
+        declared = declared_by(listed.component)
         if declared is None:
             continue
         depends = ", ".join(sorted(declared.depends)) or "nothing"
@@ -1507,25 +1557,59 @@ def _senses(own: Sequence[Artefact]) -> list[Finding]:
 
 
 def _mention_links(root: Path, analysis: Analysis, listing: analyses.Listing) -> list[Finding]:
-    """Each section's link to its term, and the mentions' links, in every analysis that
-    keeps a domain model (DEC-004 point 7), whatever any rule's status: a link missing,
-    one extra and one whose target is stale, each against what `pkit analysis link`
-    writes (`_lib/links.py`). An analysis whose folder of views holds none is not read."""
+    """The links `pkit analysis link` writes (`_lib/links.py`), whatever any rule's
+    status: in every analysis, the links of citations (DEC-001 point 13) and the links of
+    the ids its text names (DEC-001 point 14); in every analysis that keeps a domain
+    model, each section's link to its term and the mentions' links, in the glossary, the
+    views, and the actors, use cases, journeys and requirements (DEC-004 point 7). A link
+    missing, one extra and one whose target is stale fail; a citation that resolves to
+    nothing is warned of. Where the lookup cannot be run, that fails, and no link is held.
+    Where the kinds' declared structure cannot be read, which the structure check reports,
+    the four kinds' parts are not read for mentions nor for ids."""
+    try:
+        kinds: Mapping[str, structure.Kind] | None = links.parted(root)
+    except structure.Unreadable:
+        kinds = None
     texts: dict[str, str | None] = {}
     read: dict[str, str | None] = {}
     for rel in links.files(analysis, listing):
         text = _cached(root, rel, texts)
         read[rel] = text.replace("\r\n", "\n") if text is not None else None
+    try:
+        lookups = backbone.lookup(root, links.asked(analysis, listing, read, kinds))
+    except Unreadable as exc:
+        return [
+            Finding(
+                ERROR,
+                ".",
+                f"the citations of the analysis could not be looked up, so no link is held: "
+                f"{exc} (DEC-001 point 13)",
+            )
+        ]
     found: list[Finding] = []
-    for linked in links.plan(analysis, listing, read):
+    for linked in links.plan(analysis, listing, read, kinds, lookups):
         for d in linked.departures:
-            found.append(Finding(ERROR, d.location, _link_message(d)))
+            warned = d.how == links.UNRESOLVED or (d.received and d.how != links.EXTRA)
+            found.append(Finding(WARNING if warned else ERROR, d.location, _link_message(d)))
     return found
 
 
 def _link_message(d: links.Departure) -> str:
     """What a departure of a link says, and what mends it."""
     mend = "run `pkit analysis link`, which writes the links (DEC-004 point 7)"
+    if d.cited:
+        return _cited_message(d)
+    if d.closing:
+        what = (
+            f"the view ends with no section `## {links.CLOSING}`"
+            if d.how == links.MISSING
+            else f"line {d.line} heads the view's section `## {links.CLOSING}`, which is stale"
+        )
+        return (
+            f"{what}: the view's one closing section, at its end, lists under each concept it "
+            f"explains each use case, journey and requirement in force of its analysis that "
+            f"links the concept's term — {mend}"
+        )
     if d.defined:
         if d.how == links.MISSING:
             return (
@@ -1542,6 +1626,8 @@ def _link_message(d: links.Departure) -> str:
             f"`{d.written}`: a section's one link to its term is its first line below its "
             f"heading, to its own term while that term is in force — {mend}"
         )
+    if d.of_id:
+        return _id_link_message(d)
     if d.how == links.MISSING:
         return (
             f"line {d.line}: `{d.text}` is the first mention of {d.term} in its section, and "
@@ -1556,6 +1642,58 @@ def _link_message(d: links.Departure) -> str:
         f"line {d.line}: `{d.text}` links to a glossary entry, `{d.written}`, where no link "
         f"belongs: only the first mention of a term in force in each section takes one, never "
         f"in its own section, nor after `{links.ESCAPE}` — {mend}"
+    )
+
+
+def _cited_message(d: links.Departure) -> str:
+    """What a departure of a citation's link says, and what mends it (DEC-001 point 13). A
+    link into a file the project receives as a synced copy says why it is only warned of."""
+    mend = "run `pkit analysis link`, which writes the links (DEC-001 point 13)"
+    if d.received:
+        mend = (
+            "run `pkit analysis link`; it is warned of, since the project receives that file as "
+            "a synced copy (DEC-001 point 13)"
+        )
+    if d.how == links.UNRESOLVED:
+        return (
+            f"line {d.line}: `{d.text}` takes no link, since {d.wanted} — mend the citation, "
+            f"or mark one that is no citation with `{citations.ESCAPE}` (DEC-001 point 13)"
+        )
+    if d.how == links.MISSING:
+        return (
+            f"line {d.line}: `{d.text}` is the first citation of what it cites in its "
+            f"section, and takes a link to it, `{d.wanted}` — {mend}"
+        )
+    if d.how == links.STALE:
+        return (
+            f"line {d.line}: `{d.text}` links to `{d.written}`, and what it cites lies at "
+            f"`{d.wanted}`, as `pkit refs lookup` finds it — {mend}"
+        )
+    return (
+        f"line {d.line}: `{d.text}` links to `{d.written}` where no link belongs: only the "
+        f"first citation of each record, point or rule in each section takes one, never one "
+        f"that resolves to nothing, nor after `{citations.ESCAPE}` — {mend}"
+    )
+
+
+def _id_link_message(d: links.Departure) -> str:
+    """What a departure of an id's link says, and what mends it (DEC-001 point 14)."""
+    mend = "run `pkit analysis link`, which writes the links (DEC-001 point 14)"
+    if d.how == links.MISSING:
+        return (
+            f"line {d.line}: `{d.text}` is the first mention of {d.term} in its section, and "
+            f"takes a link to it, `{d.wanted}` — {mend}"
+        )
+    if d.how == links.STALE:
+        return (
+            f"line {d.line}: `{d.text}` links to `{d.written}`, and {d.term} is `{d.wanted}` "
+            f"— {mend}"
+        )
+    return (
+        f"line {d.line}: `{d.text}` links to `{d.written}`, where no link belongs: only the "
+        f"first mention of an artefact of the analysis, or of one it builds on, by its id in "
+        f"each section takes one, never in the artefact itself, a goal or an actor's first "
+        f"sentence — {mend}"
     )
 
 
@@ -2014,10 +2152,19 @@ def _cited(rel: str, outcomes: object, analysis: Analysis) -> list[Finding]:
     ]
 
 
-def _open_regressions(root: Path, records: list[Record], analysis: Analysis) -> list[Finding]:
+#: The backbone's explanation of one artefact, `pkit friction explain <artefact>
+#: --json`, as `backbone.explain` reads it: a test stands it in.
+Explain = Callable[[Path, str], Mapping[str, Any]]
+
+
+def _open_regressions(
+    root: Path, records: list[Record], analysis: Analysis, explain: Explain = backbone.explain
+) -> list[Finding]:
     """Each `code-regressed` outcome whose artefact was not revalidated on a later day
-    than its record: reported, never failed (DEC-001 point 5)."""
+    than its record: reported, never failed (DEC-001 point 5). Each artefact is
+    explained once, however many records cite it."""
     found: list[Finding] = []
+    days: dict[str, str | None | Unreadable] = {}
     for rel, data in records:
         day, outcomes = data.get("date"), data.get("outcomes")
         if not isinstance(day, str) or not isinstance(outcomes, dict):
@@ -2026,10 +2173,18 @@ def _open_regressions(root: Path, records: list[Record], analysis: Analysis) -> 
             artefact = analysis.find(cited) if isinstance(cited, str) else None
             if outcome != REGRESSED or artefact is None:
                 continue
-            last = _revalidated_on(root, artefact)
-            if last is not None and last > day[:10]:
+            if artefact.location not in days:
+                try:
+                    days[artefact.location] = _revalidated_on(root, artefact, explain)
+                except Unreadable as exc:
+                    days[artefact.location] = exc
+            last = days[artefact.location]
+            if isinstance(last, Unreadable):
+                since = f"its revalidations could not be read ({last})"
+            elif last is not None and last > day[:10]:
                 continue
-            since = f"last revalidated {last}" if last else "never revalidated"
+            else:
+                since = f"last revalidated {last}" if last else "never revalidated"
             found.append(
                 Finding(
                     REPORT,
@@ -2043,20 +2198,29 @@ def _open_regressions(root: Path, records: list[Record], analysis: Analysis) -> 
     return found
 
 
-def _revalidated_on(root: Path, artefact: Artefact) -> str | None:
-    """The day, `YYYY-MM-DD` in UTC, of the artefact's revalidation marker as the
-    working tree holds it; `None` without one. The marker is inside the container,
-    which the backbone's reading leaves out of an artefact's own fields, so it is
-    read from the file."""
-    try:
-        front, _body = markdown.split((root / artefact.path).read_text(encoding="utf-8"))
-        data = markdown.load(front) if front is not None else None
-    except (OSError, UnicodeDecodeError, YAMLError):
-        return None  # the core reports a file it cannot read
-    node: object = data.get(artefact.id) if artefact.entry and isinstance(data, dict) else data
-    for key in (CONTAINER, *REVALIDATED_AT):
-        node = node.get(key) if isinstance(node, dict) else None
-    return node[:10] if isinstance(node, str) and len(node) >= 10 else None
+def _revalidated_on(
+    root: Path, artefact: Artefact, explain: Explain = backbone.explain
+) -> str | None:
+    """The latest day, `YYYY-MM-DD` in UTC, of the artefact's live revalidations at
+    HEAD, as the backbone gives their `at`: `answers` in `pkit friction explain
+    --json`, read from the artefact's block or from the answer files (COR-062
+    Implications). It is never read from a file. `None` without one. Two live
+    revalidations made apart each count. Raises Unreadable where the backbone
+    cannot explain the artefact, or gives no `answers`."""
+    document = explain(root, artefact.location)
+    if "answers" not in document:
+        raise Unreadable(
+            "`pkit friction explain --json` gives no `answers`: the installed backbone "
+            "predates them — upgrade it (`pkit upgrade`)"
+        )
+    answers = document.get("answers")
+    revalidations = answers.get("revalidations") if isinstance(answers, Mapping) else None
+    days = [
+        at[:10]
+        for entry in (revalidations if isinstance(revalidations, list) else [])
+        if isinstance(entry, Mapping) and isinstance(at := entry.get("at"), str) and len(at) >= 10
+    ]
+    return max(days, default=None)
 
 
 # --- evidence a record copies (DEC-001 point 7) --------------------------------------------
@@ -2645,17 +2809,21 @@ _BOX_SHOWN = f"`> {shortfalls.CALLOUT}`, then `> {shortfalls.LABEL}`"
 _NO_RECORD = "\x00no record"
 
 
-def _shortfalls(root: Path, analysis: Analysis, own: project_structure.Own | None) -> list[Finding]:
+def _shortfalls(
+    root: Path,
+    analysis: Analysis,
+    own: project_structure.Own | None,
+    record_files: backbone.RecordFiles,
+) -> list[Finding]:
     """Each use case in force against what it says the system does not do yet, whatever
     any rule's status, since the overview lists its entries wherever it is kept (DEC-001
     point 1; `_lib/shortfalls.py`). Each box stands right below a step or a variant and is
     matched to an entry, and each entry to a box. Each entry's step or variant is one the
     body numbers. Each entry's record is one of the use case's record anchors, and
-    accepted. Where the use case's structure cannot be read, its boxes are not read, and
-    the check of its body says why. A use case whose `shortfalls` is off its schema's
-    shape is the schema's."""
+    accepted, its status read through `record_files`. Where the use case's structure
+    cannot be read, its boxes are not read, and the check of its body says why. A use
+    case whose `shortfalls` is off its schema's shape is the schema's."""
     kind = _use_case_kind(own)
-    statuses: dict[str, str] = {}
     found: list[Finding] = []
     for use_case in sorted(analysis.of_kind(USE_CASE), key=lambda u: u.path):
         listed = None if use_case.withdrawn else shortfalls.entries(use_case)
@@ -2665,17 +2833,16 @@ def _shortfalls(root: Path, analysis: Analysis, own: project_structure.Own | Non
         reading = shortfalls.read(text, kind) if text is not None and kind is not None else None
         if not listed and (reading is None or not reading.boxes):
             continue
-        found += _shortfall_records(root, use_case, listed, statuses)
+        found += _shortfall_records(use_case, listed, record_files)
         if reading is not None:
             found += _boxes(use_case, listed, reading)
     return found
 
 
 def _shortfall_records(
-    root: Path,
     use_case: Artefact,
     listed: Sequence[shortfalls.Entry],
-    statuses: dict[str, str],
+    record_files: backbone.RecordFiles,
 ) -> list[Finding]:
     """Each entry's record, against the use case's record anchors and the record's own
     status: anchored as written, and accepted."""
@@ -2694,7 +2861,7 @@ def _shortfall_records(
                 )
             )
         try:
-            status = _record_status(root, entry.record_named, statuses)
+            status = _record_status(record_files, entry.record_named)
         except Unreadable as exc:
             found.append(
                 Finding(
@@ -2721,25 +2888,13 @@ def _shortfall_records(
     return found
 
 
-def _record_status(root: Path, record: str, known: dict[str, str]) -> str:
+def _record_status(record_files: backbone.RecordFiles, record: str) -> str:
     """The status a record's front matter gives, as written, read once per record: empty
     where it gives none, and `_NO_RECORD` where the id names no record. Where the record
-    lies is the backbone's answer (`backbone.record_file`). Raises Unreadable where `pkit`
-    cannot be run."""
-    if record not in known:
-        rel = backbone.record_file(root, record)
-        text = _read(root / rel) if rel is not None else None
-        if text is None:
-            known[record] = _NO_RECORD
-        else:
-            yaml_text = markdown.split(text)[0]
-            try:
-                front = markdown.load(yaml_text) if yaml_text is not None else None
-            except YAMLError:
-                front = None
-            status = front.get("status") if isinstance(front, Mapping) else None
-            known[record] = status if isinstance(status, str) else ""
-    return known[record]
+    lies is the backbone's answer (`backbone.RecordFiles`). Raises Unreadable where `pkit`
+    gives no answer."""
+    status = record_files.status(record)
+    return _NO_RECORD if status is None else status
 
 
 def _boxes(
@@ -3243,9 +3398,17 @@ def _artefact_structure(
             else structure.body_lines(text)
         )
         if artefact.kind == VIEW:
-            # A section's link to its term is no content of its explanation (DEC-004 point 7).
-            lines = [(n, "" if links.DEFINED_LINE.match(t) else t) for n, t in lines]
-        departing = structure.departures(lines, kind, fields=artefact.fields, titles=titles)
+            # A section's link to its term is no content of its explanation, and the
+            # closing section is no part of the view (DEC-004 points 2 and 7).
+            closing = links.closing_lines([t for _n, t in lines])
+            lines = [
+                (n, "" if index in closing or links.DEFINED_LINE.match(t) else t)
+                for index, (n, t) in enumerate(lines)
+            ]
+        # A part still holding its hint is `_placeholders`', which reports it once (#2088).
+        departing = structure.departures(
+            lines, kind, fields=artefact.fields, titles=titles, hints_checked=True
+        )
     found: list[tuple[Finding, tuple[object, ...]]] = [
         (
             Finding(

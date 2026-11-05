@@ -7,10 +7,13 @@ both bootstrap of a fresh file and append to an existing one).
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+from tests.pm_workstream_fakes import FakeBoard, FakeRepo, stage_project
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
@@ -129,3 +132,166 @@ def test_add_to_file_upgrades_list_to_mapping(aw, tmp_path) -> None:
     assert "agent-platform" in content
     # Mapping form has nested attributes.
     assert "name:" in content
+
+
+# --- main(): every attribute checked, and the board kept in step (#1940) -----
+
+WORKSTREAMS = "schema_version: 1\nworkstreams:\n  cli:\n    name: cli\n    status: active\n"
+
+
+def _run(aw, monkeypatch, cap_root: Path, *argv: str, yes: bool = True) -> int:
+    # The invoker's login, without asking GitHub for it.
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "me")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["add-workstream.py", *argv, "--capability-root", str(cap_root)]
+        + (["--yes"] if yes else []),
+    )
+    return aw.main()
+
+
+def _lib():
+    if str(SCRIPT_PATH.parent) not in sys.path:
+        sys.path.insert(0, str(SCRIPT_PATH.parent))
+    from _lib import board_fields, substrate_writes
+
+    return board_fields, substrate_writes
+
+
+def test_main_refuses_a_description_over_200_chars_and_writes_nothing(
+    aw, tmp_path, monkeypatch
+) -> None:
+    """The reported gap: a 250-char description was written, and the file's
+    reader then dropped the whole entry."""
+    stage_project(tmp_path, WORKSTREAMS)
+    repo = FakeRepo()
+    monkeypatch.setattr(aw, "gh_run", repo)
+    rc = _run(aw, monkeypatch, tmp_path, "docs", "--description", "d" * 250)
+    assert rc == 1
+    assert "docs" not in (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8")
+    assert repo.mutations() == []
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        ["--name", "n" * 65],
+        ["--name", "two\nlines"],
+        ["--status", "deprecated", "--deprecated-reason", "r" * 201],
+    ],
+)
+def test_main_refuses_each_attribute_outside_the_rules(aw, tmp_path, monkeypatch, extra) -> None:
+    stage_project(tmp_path, WORKSTREAMS)
+    monkeypatch.setattr(aw, "gh_run", FakeRepo())
+    assert _run(aw, monkeypatch, tmp_path, "docs", *extra) == 1
+
+
+def test_main_writes_no_file_when_the_label_is_not_created(aw, tmp_path, monkeypatch) -> None:
+    """The label comes before the file, so a failure leaves the file as it was."""
+    stage_project(tmp_path, WORKSTREAMS)
+
+    def refuse(cmd, config, **kwargs):
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="HTTP 502")
+
+    monkeypatch.setattr(aw, "gh_run", refuse)
+    assert _run(aw, monkeypatch, tmp_path, "docs") == 3
+    assert "docs" not in (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8")
+
+
+def test_main_creates_the_label_and_the_entry(aw, tmp_path, monkeypatch) -> None:
+    stage_project(tmp_path, WORKSTREAMS)
+    repo = FakeRepo(labels={"workstream:cli"})
+    monkeypatch.setattr(aw, "gh_run", repo)
+    assert _run(aw, monkeypatch, tmp_path, "docs") == 0
+    assert repo.labels == {"workstream:cli", "workstream:docs"}
+    assert "docs" in (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8")
+
+
+def test_main_adds_the_option_to_the_boards_field(aw, tmp_path, monkeypatch) -> None:
+    stage_project(tmp_path, WORKSTREAMS, board=True)
+    board = FakeBoard(["cli"])
+    board.install(monkeypatch, *_lib())
+    monkeypatch.setattr(aw, "gh_run", FakeRepo())
+    assert _run(aw, monkeypatch, tmp_path, "docs", "--description", "The docs.") == 0
+    assert board.option_names() == ["cli", "docs"]
+    assert board.options[-1]["description"] == "The docs."
+    # The existing option keeps its id, so its cards keep their value.
+    assert board.options[0]["id"] == "opt_cli"
+    assert "docs" in (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8")
+
+
+def test_main_writes_no_option_the_board_already_offers(aw, tmp_path, monkeypatch) -> None:
+    stage_project(tmp_path, WORKSTREAMS, board=True)
+    board = FakeBoard(["cli", "docs"])
+    board.install(monkeypatch, *_lib())
+    monkeypatch.setattr(aw, "gh_run", FakeRepo())
+    assert _run(aw, monkeypatch, tmp_path, "docs") == 0
+    assert board.writes == []
+
+
+def test_main_refuses_a_board_with_no_workstream_field(aw, tmp_path, monkeypatch) -> None:
+    stage_project(tmp_path, WORKSTREAMS, board=True)
+    FakeBoard(has_field=False).install(monkeypatch, *_lib())
+    monkeypatch.setattr(aw, "gh_run", FakeRepo())
+    assert _run(aw, monkeypatch, tmp_path, "docs") == 1
+    assert "docs" not in (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8")
+
+
+def test_main_writes_no_file_when_the_board_write_fails(aw, tmp_path, monkeypatch) -> None:
+    stage_project(tmp_path, WORKSTREAMS, board=True)
+    board = FakeBoard(["cli"])
+    board_fields, substrate_writes = _lib()
+    board.install(monkeypatch, board_fields, substrate_writes)
+
+    def refuse(cmd, config):
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="no project scope")
+
+    monkeypatch.setattr(substrate_writes, "_gh_call", refuse)
+    monkeypatch.setattr(aw, "gh_run", FakeRepo())
+    assert _run(aw, monkeypatch, tmp_path, "docs") == 3
+    assert "docs" not in (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8")
+
+
+# --- the addition is the person's (#2015) ------------------------------------
+
+
+class _Stdin:
+    """A standard input that is a terminal or, as `echo y | …` gives, a pipe."""
+
+    def __init__(self, terminal: bool) -> None:
+        self.terminal = terminal
+
+    def isatty(self) -> bool:
+        return self.terminal
+
+
+def _never_asked(question: str) -> str:
+    raise AssertionError(f"asked off a terminal: {question!r}")
+
+
+def test_off_a_terminal_without_yes_nothing_is_added(aw, tmp_path, monkeypatch, capsys) -> None:
+    stage_project(tmp_path, WORKSTREAMS)
+    repo = FakeRepo(labels={"workstream:cli"})
+    monkeypatch.setattr(aw, "gh_run", repo)
+    monkeypatch.setattr(sys, "stdin", _Stdin(terminal=False))
+    monkeypatch.setattr("builtins.input", _never_asked)
+    assert _run(aw, monkeypatch, tmp_path, "docs", yes=False) == 1
+    assert repo.mutations() == []
+    assert (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8") == WORKSTREAMS
+    err = capsys.readouterr().err
+    assert "[refused] Adding workstream 'docs' is the person's to authorise" in err
+    assert "pkit pm add-workstream docs --capability-root" in err and "--yes" in err
+
+
+@pytest.mark.parametrize(("reply", "added"), [("y", True), ("n", False)])
+def test_at_a_terminal_the_addition_is_asked(aw, tmp_path, monkeypatch, reply, added) -> None:
+    stage_project(tmp_path, WORKSTREAMS)
+    repo = FakeRepo(labels={"workstream:cli"})
+    monkeypatch.setattr(aw, "gh_run", repo)
+    monkeypatch.setattr(sys, "stdin", _Stdin(terminal=True))
+    monkeypatch.setattr("builtins.input", lambda q: reply)
+    assert _run(aw, monkeypatch, tmp_path, "docs", yes=False) == 0
+    assert ("workstream:docs" in repo.labels) is added
+    text = (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8")
+    assert ("docs" in text) is added

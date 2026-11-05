@@ -27,6 +27,7 @@ import importlib.util
 import sys
 from pathlib import Path
 from types import MappingProxyType
+from typing import Any
 
 import pytest
 
@@ -1110,6 +1111,84 @@ def test_satisfied_floors_reads_only_what_the_list_leaves(rr) -> None:
         [_CHANGESET],
         rr.NotCode(patterns=()),
     ) == {rr.FLOOR_TOUCHES_CODE}
+
+
+#: An answer file, in the folder the backbone gives (COR-062 point 2).
+_FOLDER = ".pkit/project/friction/answers"
+_ANSWER_FILE = f"{_FOLDER}/20261022T090000Z-1a2b3c4d.yaml"
+
+
+def _folder_reader(folder: str | None) -> tuple[list[None], Any]:
+    """A stand-in for the backbone's folder of friction answers, and each time it is
+    asked."""
+    asked: list[None] = []
+
+    def read() -> str | None:
+        asked.append(None)
+        return folder
+
+    return asked, read
+
+
+@pytest.mark.parametrize("patterns", [(".changes/**",), (), ("generated/**",)])
+def test_an_answer_file_is_never_code_whatever_the_not_code_list_says(rr, patterns) -> None:
+    """A path in the backbone's folder of friction answers satisfies no `touches-code`
+    floor, whether or not the list names it, so a change that only answers draws no
+    code review, and a push that only answers stales no such approval (DEC-032 D1)."""
+    asked, read = _folder_reader(_FOLDER)
+    listed = rr.NotCode(patterns=patterns)
+    not_code = rr.NotCode(patterns=patterns, answers_folder=read)
+    assert rr.satisfied_floors([_ANSWER_FILE], not_code) == set()
+    assert rr.satisfied_floors([_ANSWER_FILE, "docs/a.md"], not_code) == set()
+    assert rr.satisfied_floors([_ANSWER_FILE, "src/app.py"], not_code) == {rr.FLOOR_TOUCHES_CODE}
+    assert asked  # read from the backbone, never named here
+    assert not_code == listed  # the reader is no part of the list's identity
+
+
+def test_the_folder_is_asked_only_where_the_floor_turns_on_it(rr) -> None:
+    """Paths the list leaves that touch no code reach no floor whatever the folder
+    holds, so the backbone is not asked."""
+    asked, read = _folder_reader(_FOLDER)
+    not_code = rr.NotCode(answers_folder=read)
+    assert rr.satisfied_floors([_CHANGESET, "docs/a.md"], not_code) == set()
+    assert rr.satisfied_floors([], not_code) == set()
+    assert asked == []
+
+
+@pytest.mark.parametrize("folder", [None, ""])
+def test_a_folder_the_backbone_does_not_give_sets_no_path_apart(rr, folder) -> None:
+    """Without the backbone's folder, an answer file is read by the suffix test, as
+    before: more review, never less (DEC-032 D5)."""
+    _asked, read = _folder_reader(folder)
+    assert rr.satisfied_floors([_ANSWER_FILE], rr.NotCode(answers_folder=read)) == {
+        rr.FLOOR_TOUCHES_CODE
+    }
+    assert rr.satisfied_floors([_ANSWER_FILE]) == {rr.FLOOR_TOUCHES_CODE}  # no reader at all
+
+
+def test_the_resolver_requires_no_code_review_of_a_change_that_only_answers(rr, rc) -> None:
+    """Through the resolver: the code panel's floor is not reached by answer files, and
+    is by code beside them."""
+    asked, read = _folder_reader(_FOLDER)
+
+    def resolved(changed: list[str]) -> Any:
+        return rr.resolve_required_local_reviewers(
+            99,
+            baseline_local=["reviewer"],
+            repo_root=REPO,
+            closing_issue_numbers=lambda _pr: [],
+            issue_labels=lambda _n: [],
+            changed_files=lambda _pr: list(changed),
+            not_code=rr.NotCode(answers_folder=read),
+            collect_contributions=lambda _root: _se_collection(rc),
+            ruled_artefacts=lambda _pr: (),
+        )
+
+    only_answers = resolved([_ANSWER_FILE, _CHANGESET])
+    assert only_answers.ok and only_answers.required_local == ("reviewer",)
+    with_code = resolved([_ANSWER_FILE, "src/app.py"])
+    assert with_code.ok and "code-reviewer" in with_code.required_local
+    assert asked
 
 
 # ---- which reviewers only a floor requires (#1179) ----------------------

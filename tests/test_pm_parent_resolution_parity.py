@@ -23,8 +23,9 @@ every reader driven over it through its real code path:
 Each row of the table says the parent the seam resolves, the parents the close
 gate counts the child under (which close-issue reports on), the ancestors the
 forward cascade brings level (none on every row but the two walking ones), and
-where show-tree lists it. The `gh` the readers call answers from the world;
-any call it does not expect fails the test.
+where show-tree lists it. The `gh` the readers call answers from the world, and
+the engine's fold over a checked parent's children (`pkit process cascade`)
+opens; any call it does not expect fails the test.
 """
 
 from __future__ import annotations
@@ -115,6 +116,9 @@ class World:
     def run(self, argv: Any, *_args: Any, **_kwargs: Any) -> subprocess.CompletedProcess[str]:
         args = [str(arg) for arg in argv]
         self.calls.append(args)
+        if args[:3] == ["pkit", "process", "cascade"]:
+            # The closure report's read of the engine's fold (#1937): it opens.
+            return self._answer(args, {"cascade": {"opened": True, "indeterminate": False}})
         if args[:3] == ["gh", "issue", "list"]:
             fields = args[args.index("--json") + 1].split(",")
             rows = [
@@ -518,7 +522,10 @@ def test_a_close_reads_the_closed_issue_once_and_each_checked_parent_once(
     assert world.record_reads(CHILD) == 1
     views = [argv[3] for argv in world.calls if argv[1:3] == ["issue", "view"]]
     assert views == ["3", "2"]
-    assert len(world.calls) == 3
+    # The engine folds each open parent's children once (#1937).
+    folds = [argv[5] for argv in world.calls if argv[:3] == ["pkit", "process", "cascade"]]
+    assert folds == ["3", "2"]
+    assert len(world.calls) == 5
 
 
 def test_the_members_half_of_the_fold_costs_what_it_did(monkeypatch) -> None:

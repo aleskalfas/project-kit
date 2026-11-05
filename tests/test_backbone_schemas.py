@@ -100,18 +100,17 @@ def test_shipped_container_schema_is_draft_2020_12() -> None:
 
 
 def test_readme_example_validates_clean(schema: dict) -> None:
-    """The example in the schemas README's container section is a valid carrier."""
+    """The example in the backbone file schemas' container section is a valid carrier."""
     text = """
 pkit:
   friction:
     anchors: { path: [src/cli/**] }
-    revalidated: { at: 2026-10-02T09:40:12Z, outcome: unchanged, unchanged-because: "…" }
   documentation:
     reading-evidence:
       schema_version: 1
       last-run: 2026-10-01
 """
-    carrier = YAML(typ="safe").load(text)  # `at` parses to an aware datetime here
+    carrier = YAML(typ="safe").load(text)
     report = bs.validate_container(carrier, schema, wiring=WIRING)
     # No finding at all: the point block is compatible and its body (`last-run`
     # read back as written text) passes the provider's point schema.

@@ -226,3 +226,33 @@ def test_the_lead_s_span_counts_the_file_s_lines() -> None:
     _front, body = dp.split_front_matter(text)
     read = dp.Body.read(body)
     assert read.span_of(read.lead(), dp.body_first_line(text, body)) == dp.SectionSpan(4, 6)
+
+
+# --- the links in running text: a code span ends within its paragraph (#1912) ------------
+
+
+def _every_link(_target: str) -> bool:
+    return True
+
+
+@pytest.mark.parametrize(
+    "between",
+    [
+        pytest.param("\n\n", id="a blank line"),
+        pytest.param("\n   \n", id="a line of spaces"),
+        pytest.param("\n## A heading\n", id="a heading"),
+        pytest.param("\n```\ncode\n```\n", id="fenced code"),
+    ],
+)
+def test_an_unmatched_backtick_opens_no_code_span_past_its_paragraph(between: str) -> None:
+    """A code span never reaches past its paragraph (COR-050 point 5): a lone backtick does
+    not pair with one paragraphs later, so a link between them is in running text."""
+    body = f"A lone ` here.{between}See [order](#term-order).\n\nA second ` there.\n"
+    expected = f"A lone ` here.{between}See order.\n\nA second ` there.\n"
+    assert dp.links_set_aside(body, _every_link) == expected
+
+
+def test_a_code_span_still_runs_across_a_line_break_within_its_paragraph() -> None:
+    body = "Write `[order](#term-order)\nlike this` and [order](#term-order) so.\n"
+    expected = "Write `[order](#term-order)\nlike this` and order so.\n"
+    assert dp.links_set_aside(body, _every_link) == expected

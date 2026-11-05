@@ -1,0 +1,158 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - moved-e8b5c957d8c2.yaml
+    revalidated:
+      at: 2026-10-26T15:15:02Z
+      outcome: unchanged
+      unchanged-because: "Read with the answer that moved it into the area 010-plan: DEC-046 calls its change to DEC-014 a refinement and names the point that holds it, and DEC-051 cites what DEC-012, DEC-036 and ADR-026 hold. Judged together, each step and variant still holds."
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - moved-c1c76fd062d5.yaml
+    revalidated:
+      at: 2026-10-26T15:15:11Z
+      outcome: unchanged
+      unchanged-because: "Judged with every earlier answer, the planner's new need and close-issue's state-issue test among them: DEC-006 states its amendments as plain fact, DEC-014 points to DEC-046 for --force, and workflow.yaml and the move-issue tests changed in comments only. A held move still waits on its person's authorisation."
+  - artefact: tech-docs/analysis/project-management/domain-model/060-parallel-work.md
+    revalidated:
+      at: 2026-10-26T15:16:29Z
+      outcome: unchanged
+      unchanged-because: DEC-035 folds its refinement blocks into points 1 and 2 as plain fact, with pointers to DEC-045 and DEC-043, and retitles point 2 for the marker, so the view's links follow the new heading. DEC-043 and DEC-045 restate their pointers. No claim changed, so the view holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-instance
+    revalidated:
+      at: 2026-10-26T15:16:32Z
+      outcome: unchanged
+      unchanged-because: DEC-035 point 1 states DEC-045's named instances as plain fact with a refinement pointer, and a clone that does not opt in behaves as if the facility were not there. What an instance is holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-owner
+    revalidated:
+      at: 2026-10-26T15:16:35Z
+      outcome: unchanged
+      unchanged-because: DEC-035 point 2 is retitled for the marker and states DEC-043's selectable substrate as plain fact, the comment log by default, and point 6's tie-break holds on either substrate. The owner is still the marker paired with the assignee, so the term holds, its link following the new heading.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-topology
+    revalidated:
+      at: 2026-10-26T15:16:38Z
+      outcome: unchanged
+      unchanged-because: DEC-045 changed only its Implications' pointer from DEC-035 and one citation of DEC-043's point, outside a passage DEC-059 overturned. What a topology is holds.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/040-work-in-parallel/REQ-061-one-owner-per-issue.md
+    revalidated:
+      at: 2026-10-26T15:16:41Z
+      outcome: unchanged
+      unchanged-because: DEC-035's points 3 and 6 are unchanged, and the record's summary and point 2 now name the marker on either substrate, which the requirement's comment-log tie-break already relies on. One owner per issue holds.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md
+    revalidated:
+      at: 2026-10-26T15:16:43Z
+      outcome: unchanged
+      unchanged-because: DEC-035's point 7 is unchanged, and point 1 states DEC-045's named instances as plain fact with a pointer. The work is still found from the tracker, so the requirement holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-lead-agent.md
+    revalidated:
+      at: 2026-10-26T15:16:49Z
+      outcome: unchanged
+      unchanged-because: DEC-035's point 3 is unchanged, and its summary and point 2 now name the marker on either substrate. What the lead agent does and needs holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-worker-agent.md
+    revalidated:
+      at: 2026-10-26T15:16:52Z
+      outcome: unchanged
+      unchanged-because: DEC-035's point 3 is unchanged, and DEC-026 folds its promote-issue amendment and DEC-035's handoff extension as plain fact. What the worker agent does and needs holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    revalidated:
+      at: 2026-10-26T15:16:54Z
+      outcome: unchanged
+      unchanged-because: DEC-035 states its refinements as plain fact with pointers, points 1 and 8 keeping their claims, DEC-045 changed only a pointer and a citation, and DEC-028 names its own heading. Setting up and adjusting a topology holds as the journey says.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T085608Z-061b0816.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T141053Z-7af348ef.yaml
+    revalidated:
+      at: 2026-10-26T15:16:57Z
+      outcome: unchanged
+      unchanged-because: "Read with the answer that moved it into the area 010-plan: DEC-005 and DEC-014 state their refinements as plain fact with pointers, and DEC-006 folds its two amendments the same way. No claim changed, so planning an intent holds."
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-029
+          reason: "DEC-060's two stages of planning, which DEC-029 step 3 now points to, are not built yet. #2143 builds them in batch planning and adds them to this use case's slicing step."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-060-file-task.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+    revalidated:
+      at: 2026-10-26T15:17:00Z
+      outcome: unchanged
+      unchanged-because: "Read with the answer that moved it into the area 020-file-and-move: DEC-005 states DEC-039's native-where-available as plain fact, DEC-014 points to DEC-046 for --force, and DEC-041 point 1 states DEC-052's comment footer. Filing a Task holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+    revalidated:
+      at: 2026-10-26T15:17:03Z
+      outcome: unchanged
+      unchanged-because: "Read with the answer that moved it into the area 020-file-and-move: the records it anchors state their amendments as plain fact, DEC-033 gains the line DEC-034 calls for, and workflow.yaml, move-issue and promote-issue changed in comments only. Moving an issue holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+    revalidated:
+      at: 2026-10-26T15:17:09Z
+      outcome: unchanged
+      unchanged-because: "Read with the answer that moved it into the area 030-review-and-land: DEC-026 folds its amendments as plain fact, DEC-028 names its own heading, and DEC-050 point 1 states its deprecated alias as plain fact. Reviewing and landing holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    revalidated:
+      at: 2026-10-26T15:17:12Z
+      outcome: unchanged
+      unchanged-because: DEC-005 states DEC-039's native-where-available as plain fact with a pointer, and DEC-035's point 3 is unchanged while its summary names the marker. Planning across scopes holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    revalidated:
+      at: 2026-10-26T15:17:15Z
+      outcome: unchanged
+      unchanged-because: DEC-035 states its refinements as plain fact with pointers and names the marker on either substrate, points 3, 4, 6, 7 and 8 keeping their claims. DEC-005, DEC-026 and DEC-045 restate pointers and citations only. Taking the next Task holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    revalidated:
+      at: 2026-10-26T15:17:18Z
+      outcome: unchanged
+      unchanged-because: DEC-035 names the marker on either substrate, points 3, 4, 6 and 8 keeping their claims, DEC-014 points to DEC-046 for --force, and DEC-026 folds its amendments as plain fact. Leaving a Task to its owner holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md
+    revalidated:
+      at: 2026-10-26T15:17:21Z
+      outcome: unchanged
+      unchanged-because: DEC-035 states its refinements as plain fact with pointers, points 1, 4, 6 and 7 keeping their claims, and DEC-026 folds its amendments the same way. Resuming after a session died holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md
+    revalidated:
+      at: 2026-10-26T15:17:25Z
+      outcome: unchanged
+      unchanged-because: DEC-005 and DEC-026 state their refinements as plain fact with pointers, and DEC-035's points 3 and 4 keep their claims while the record names the marker. Handing over to the next scope holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    revalidated:
+      at: 2026-10-26T15:17:31Z
+      outcome: unchanged
+      unchanged-because: DEC-026 folds its promote-issue amendment and DEC-035's handoff extension as plain fact, and DEC-035's point 3 keeps its claim while the record names the marker. Delegating to an agent holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    revalidated:
+      at: 2026-10-26T15:17:35Z
+      outcome: unchanged
+      unchanged-because: DEC-026 folds its amendments as plain fact, and DEC-028 changed only a cross-reference to its own heading. Landing alongside others holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    revalidated:
+      at: 2026-10-26T15:17:40Z
+      outcome: unchanged
+      unchanged-because: DEC-006 folds its two amendments as plain fact, and DEC-035's points 1 and 7 keep their claims, point 1 stating DEC-045's named instances with a pointer. Seeing who works on what holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md
+    revalidated:
+      at: 2026-10-26T15:17:44Z
+      outcome: unchanged
+      unchanged-because: DEC-028 changed only a cross-reference to its own heading, and DEC-049's point 2 keeps its projection levels while point 4 states DEC-052's house style with a pointer. Measuring topologies holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md
+    revalidated:
+      at: 2026-10-26T15:17:49Z
+      outcome: unchanged
+      unchanged-because: DEC-035 point 1 states DEC-045's named instances as plain fact with a pointer, and its activation and runtime file keep their claims. Taking a seat holds.

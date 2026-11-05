@@ -1,0 +1,61 @@
+answers:
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-012-ask-before-another-repository.md
+    revalidated:
+      at: 2026-10-24T20:54:50Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: src/project_kit/session_guard.py
+        outcome: unchanged
+        reason: The measure and applies-to say a write where they said a change, for the same act in another repository. This target still backs the guard as written.
+      - anchor:
+          kind: path
+          value: tests/test_pull_request_land.py
+        outcome: unchanged
+        reason: The measure and applies-to say a write where they said a change, for the same act in another repository. This target still backs the guard as written.
+      - anchor:
+          kind: path
+          value: tests/test_pull_request_landing.py
+        outcome: unchanged
+        reason: The measure and applies-to say a write where they said a change, for the same act in another repository. This target still backs the guard as written.
+      - anchor:
+          kind: path
+          value: tests/test_release.py
+        outcome: unchanged
+        reason: The measure and applies-to say a write where they said a change, for the same act in another repository. This target still backs the guard as written.
+      - anchor:
+          kind: path
+          value: tests/test_release_merge.py
+        outcome: unchanged
+        reason: The measure and applies-to say a write where they said a change, for the same act in another repository. This target still backs the guard as written.
+      - anchor:
+          kind: path
+          value: tests/test_release_publish_notes.py
+        outcome: unchanged
+        reason: The measure and applies-to say a write where they said a change, for the same act in another repository. This target still backs the guard as written.
+      - anchor:
+          kind: path
+          value: tests/test_session_guard.py
+        outcome: unchanged
+        reason: The measure and applies-to say a write where they said a change, for the same act in another repository. This target still backs the guard as written.
+      - anchor:
+          kind: path
+          value: tests/test_versioning.py
+        outcome: unchanged
+        reason: The measure and applies-to say a write where they said a change, for the same act in another repository. This target still backs the guard as written.
+      - anchor:
+          kind: record
+          value: ADR-034#1
+        outcome: unchanged
+        reason: The measure and applies-to say a write where they said a change, for the same act in another repository. This target still backs the guard as written.
+      - anchor:
+          kind: record
+          value: ADR-047#1
+        outcome: unchanged
+        reason: The measure and applies-to say a write where they said a change, for the same act in another repository. This target still backs the guard as written.
+      - anchor:
+          kind: record
+          value: COR-039
+        outcome: unchanged
+        reason: The measure and applies-to say a write where they said a change, for the same act in another repository. This target still backs the guard as written.

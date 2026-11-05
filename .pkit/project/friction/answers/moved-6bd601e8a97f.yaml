@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-sandbox
+    revalidated:
+      at: 2026-10-24T06:19:12Z
+      outcome: unchanged
+      unchanged-because: The change has permissions scaffold refuse a capability the project receives as a synced copy. The sandbox, and what it bounds, are as they were.

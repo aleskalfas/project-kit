@@ -11,14 +11,14 @@ pkit:
         - .changie.yaml
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
+        - scripts/latest_tag.py
+        - .pkit/capabilities/visual-communication/scripts/release.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
       record: [COR-010, COR-030, COR-041, PRJ-002, PRJ-004, ADR-040]
       artefact:
         - .pkit/lifecycle/README.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/README.md#the-replay-a-missing-completion
       source: [common-changelog, keep-a-changelog]
-    revalidated:
-      at: 2026-10-19T06:39:17Z
-      outcome: updated
 ---
 
 # Release flow — changesets + the release step
@@ -518,7 +518,7 @@ PR** a human merges — it is *not* auto-run on every merge.
 | `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). Refuses a release `apply` would refuse. |
 | `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors, on the backbone and on capabilities → widen declared upper bounds on capabilities → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
 | `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. Runs the cross-repository guard first; `--allow-foreign-repo` confirms a merge in another repository than the session's anchor's. |
-| `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes without calling `gh`. Runs the cross-repository guard first; `--allow-foreign-repo` confirms publishing in another repository than the session's anchor's. |
+| `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section, or short notes pointing to it when it is longer than a Release keeps (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes, and which of the two forms they take, without calling `gh`. Runs the cross-repository guard first; `--allow-foreign-repo` confirms publishing in another repository than the session's anchor's. |
 | `pkit release check` | no | The CI guard (below). |
 | `pkit release check-shareable <component>` | no | Pre-sharing lint: is a capability ready to be consumed externally-sourced (COR-041)? (below). |
 
@@ -540,6 +540,11 @@ before anything is written.
 In project-kit's own source no capability has a manifest (ADR-059), so the
 `version:` line `apply` writes in a capability's `package.yaml` is the version
 `pkit validate` reads for it.
+
+The release of a library the visual-communication capability ships reads
+this step's work too (`pkit visual release <library> --shipped`): the
+capability's `CHANGELOG.md` entry, the change that wrote it, and the version in
+its `package.yaml`.
 
 ### A replay may restore a removed default
 
@@ -773,8 +778,8 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   would ask. The guard and its residual gaps are the CLI reference's
   (`.pkit/cli/README.md`, "Pull-request commands").
 - **Guards to release PRs only.** It refuses unless the PR's head branch is
-  `release/*` **and** its title is a `chore(release):` one — a non-release PR is
-  refused with a pointer back to `pkit project-management merge-pr`. It is not a
+  `release/*` **and** its title is a `chore(release):` one — a PR on another
+  head branch is refused with a pointer to `pkit pull-request land`. It is not a
   general issue-PR-gate bypass.
 - **Checks preconditions.** The PR must be open, mergeable, and have all
   required checks green; a conflicting, red, or still-running PR is refused with
@@ -845,10 +850,10 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   head branch deleted — on GitHub by the backbone's deletion (`pkit
   pull-request delete-branch`'s, imported), only while its tip is the head
   the PR merged at, in one compare-and-delete request, so a push made after
-  the merge is not lost; then a best-effort local cleanup (switch to the
-  base, fast-forward, delete the local head), so a run from a worktree or a
-  detached HEAD completes once the merge lands. What became of the remote
-  branch is said in one line and does not fail the run: kept — its tip
+  the merge is not lost; then a best-effort local cleanup (below), so a run
+  from a worktree or a detached HEAD completes once the merge lands. What
+  became of the remote branch is said in one line and does not fail the
+  run: kept — its tip
   moved, another open PR uses it as its head or as its base, or GitHub
   refuses to delete it — not there, or asked for with no answer that tells
   whether it was deleted; where it was not deleted, the line names the
@@ -861,6 +866,22 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   the one whose checks were read is warned about. A head that lives in a fork
   is never deleted — its name is the fork author's choice and could name an
   unrelated branch here. No `Closes #N` requirement — a release PR has none.
+- **Leaves a clone with work in progress where it is** (#2189). After the
+  merge, the local cleanup depends on where the clone is:
+  - **On the head branch with a clean working tree**, the run switches the
+    clone to the base and fast-forwards the base. The run deletes the local
+    head on the terms above. Where the switch fails, as when another
+    worktree holds the base, the run warns and keeps the clone on the head
+    branch
+  - **On the base with a clean working tree**, where a release is usually
+    merged from, the run only fast-forwards the base. Any local head is
+    kept, and a fast-forward that fails warns and changes nothing
+  - **Anywhere else**, the run leaves the clone where it is, pulls nothing
+    and keeps any local head, saying so in one line. That is a clone on
+    another branch or a detached HEAD, one with uncommitted changes,
+    untracked files included, or one whose working tree git cannot read. A
+    checkout would move such a clone, with any changes, onto the base,
+    where its next commit could land
 - **Lands through the merge queue** where the base has one, rather than
   around it. The queue makes the squash commit itself, by its own merge
   method and from the repository's squash-commit defaults, ignoring what a
@@ -940,11 +961,24 @@ publishes it as the body of a GitHub Release for tag `v<version>`.
   choice — see **PRJ-004** for the why; in short, install stays the git URL at a
   tag, and the Release is a **notes overlay** on that tag, never an
   artifact/download channel. Do not add an upload.
+- **A section too long for a Release gets short notes.** GitHub keeps at most
+  125,000 characters in a Release's body, and a section within that is
+  published whole. A longer section is replaced by short notes, which hold:
+  - the section's heading;
+  - a link to that section of `CHANGELOG.md` at the tag, on the GitHub
+    repository `origin` names (without a GitHub `origin`, the file and the
+    section are named, unlinked);
+  - each component's bump, from the version an older section last records
+    for it to the one this section gives it.
+
+  The notes reach `gh` on its standard input, never as an argument, so their
+  length never meets the system's limit on one argument.
 - **Idempotent.** Re-running **updates** the Release's notes rather than
   erroring; it creates the Release the first time and edits it thereafter. A
   **missing tag is a clear error** (the create path passes `--verify-tag`, so
   `gh` refuses to publish notes for a tag that does not exist).
-- **`--dry-run`** prints the notes it would publish without calling `gh`.
+- **`--dry-run`** prints the notes it would publish, and whether they are the
+  whole section or the short notes, without calling `gh`.
 - **Project-neutral.** The repo is derived from the ambient `gh` context (the
   git remote in the working directory), with no hardcoded owner/repo — the same
   discipline as `pkit release merge`.
@@ -971,8 +1005,8 @@ human-gated automation. They **never auto-merge** — a human reviews the releas
 PR and merges it with `pkit release merge <pr>` (the sanctioned path above); the
 automation only proposes and, post-merge, tags.
 
-**1. `release-pr.yml` — open the release PR.** Triggered by `workflow_dispatch`
-(manual) or a weekly `schedule`. It:
+**1. `release-pr.yml` — open the release PR.** Started by hand only
+(`workflow_dispatch`): a release is cut when the maintainer starts it. It:
 
 - Computes the release from the pending changesets (`pkit release plan --json`)
   and **no-ops cleanly** when nothing moves a version (an empty release, or only
@@ -996,10 +1030,34 @@ merge, squash, or rebase, so the head commit's message is unreliable): if the
 tag matching `.pkit/VERSION` does not yet exist, it cuts it via `pkit version
 tag --push`, then — **only when it just cut a tag** — publishes the notes-only
 GitHub Release for that version via `pkit release publish-notes` (body = the
-`CHANGELOG.md` section; **no artifact**, per the guard above). Naturally
+`CHANGELOG.md` section, or its short notes when it is too long; **no
+artifact**, per the guard above). Naturally
 **idempotent** — a non-release push doesn't change `.pkit/VERSION`, so that
 version's tag already exists, the publish step is skipped, and the job no-ops.
 Backbone tag only (per-component tags were dropped by design, PRJ-004).
+
+On every run, tag cut or not, it then points the tag **`latest`** at the
+commit of the highest release tag, through `python3 scripts/latest_tag.py
+--push` (PRJ-004). That is what `uv tool install …@latest` installs. The script
+creates `latest` where it is missing and moves it where it lags. Where `latest`
+already points there, it pushes nothing.
+
+- **The push** is forced, since git moves no tag without force, and leased on
+  the value the run read. A run that read an older state never moves `latest`
+  back. Where its push fails, the script reads `origin` again: the run passes
+  where `latest` already points at the highest release, and fails otherwise,
+  and the next push to `main` mends it.
+- **The writer:** by design this step alone writes `latest`, and nothing on the
+  host enforces it. Outside GitHub Actions the script's `--push` refuses, and
+  without it the script says what it would do.
+- **No branch named `latest`:** uv can take a branch before a tag of the same
+  name. While such a branch exists on `origin`, the script refuses and the run
+  fails.
+- **The readers:** a release tag is `v<major>.<minor>.<patch>`, judged as `pkit
+  upgrade` judges every tag the release step cuts, so the script and every reader
+  of release tags skip `latest`.
+- **What it needs:** the standard library and git, on the runner's own
+  `python3`. Nothing is installed for it.
 
 ### One-time repo setup (enable the automation)
 
@@ -1036,8 +1094,8 @@ rule a PR it opens does **not** trigger `on: pull_request` workflows — so
 
 Workflow permissions are minimal: `release-pr.yml` gets `contents: write`
 (branch) + `pull-requests: write` (the PR); `release-tag.yml` gets `contents:
-write` (the tag **and** the notes-only Release — both are `contents`). Neither
-has merge authority.
+write` (the tag, `latest` **and** the notes-only Release — all are `contents`).
+Neither has merge authority.
 
 ### Migration-dir prediction warning (#465)
 
@@ -1151,15 +1209,19 @@ writers rewrite them by (a `package.yaml`'s `version:` line and a
 `requires_backbone:` range the broaden widens or a declared floor raises, a
 `requires_capabilities` entry's `version:` range a declared floor raises or a
 declared bound widens, the
-manifest's `backbone_version:`). A diff that is *only* those writes, and more
-than the consumed changesets, is the release itself, not a new surface change,
-and passes the surface check with no `skip-changeset` label. The signal is the
-content rather than the branch name, so it is self-contained (works locally
+manifest's `backbone_version:`). A release PR may also carry the answers its
+writes need, in answer files the diff adds: an answer file is no surface, so it
+may stand beside the writes, though it shows no release on its own. A diff that
+is *only* those writes and the answer files it adds, and more than the consumed
+changesets and those answer files, is the release itself, not a new surface
+change, and passes the surface check with no `skip-changeset` label. The signal
+is the content rather than the branch name, so it is self-contained (works locally
 and in CI, on any branch, in any adopter's repo) and a branch named `release/*`
 does not produce it; CI raises no hatch for one. It is strict — a single stray
-file or line outside the list (a `src/` edit riding along, a manifest line
-beside `backbone_version`, a `requires_backbone` range the release never
-writes, such as `"*"`) makes the diff no longer the release, so the guard
+file or line outside the list (a `src/` edit riding along, a document, an
+answer file the diff edits or removes, a manifest line beside
+`backbone_version`, a `requires_backbone` range the release never writes, such
+as `"*"`) makes the diff no longer the release, so the guard
 runs normally and the exemption can never smuggle real surface through. A write
 the release step gains joins the list in the same change; otherwise the guard
 fails the next release PR that makes it.

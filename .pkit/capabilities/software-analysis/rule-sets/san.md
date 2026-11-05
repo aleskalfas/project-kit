@@ -1,6 +1,6 @@
 ---
 rule-set: SAN
-version: 1.0.0
+version: 2.0.0
 rules:
   RS-SAN-001:
     status: accepted
@@ -8,43 +8,27 @@ rules:
     pkit:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
-        revalidated:
-          at: 2026-10-23T09:50:52Z
-          outcome: unchanged
-          unchanged-because: DEC-001's rationale now says a renamed term's moved links flag nothing, since friction reads them as their words alone. The rule asks each artefact to carry its kind's structure, which this leaves as it was.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
         anchors: {record: ["software-analysis:DEC-001#3"]}
-        revalidated:
-          at: 2026-10-19T19:00:00Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 3 gives a domain-model view its id, VIEW- and the slug after its number. A use case's steps and variants stay append-only, so this rule holds as written.
   RS-SAN-003:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2", "software-analysis:DEC-001#3", "software-analysis:DEC-001#4"]
-        revalidated:
-          at: 2026-10-22T16:24:50Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
   RS-SAN-004:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
         anchors: {record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]}
-        revalidated:
-          at: 2026-10-22T16:24:51Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
   RS-SAN-005:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
@@ -61,24 +45,16 @@ rules:
             - "COR-050#1"
             - "COR-050#2"
             - "COR-050#5"
-        revalidated:
-          at: 2026-10-23T08:13:39Z
-          outcome: unchanged
-          unchanged-because: COR-050 point 5 reads derived links as their words alone when it compares a body. What an artefact's anchors must name is unchanged, so the rule holds.
   RS-SAN-006:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-002"}
     pkit:
       friction:
         anchors:
           record: ["software-analysis:DEC-002#4", "software-analysis:DEC-002#6", "software-analysis:DEC-002#8"]
-        revalidated:
-          at: 2026-10-19T14:38:33Z
-          outcome: unchanged
-          unchanged-because: DEC-002 point 6 lets a requirement's actors name another analysis's actor, anchoring the records behind it, and keeps refines within its own analysis. The statement, measure and applies-to this rule compares with the records a requirement rests on read as before, so the rule holds as written.
   RS-SAN-007:
-    status: proposed
-    origin: {date: 2026-10-17, by: "Aleš Kalfas"}
+    status: accepted
+    origin: {date: 2026-10-17, by: "Aleš Kalfas", why: "Analysis written first lets an agent invent what the system must do, and everything after builds on it. Naming each item's source is the defence."}
     pkit:
       friction:
         anchors:
@@ -89,12 +65,8 @@ rules:
             - "software-analysis:DEC-002#4"
             - "software-analysis:DEC-002#6"
             - "software-analysis:DEC-002#8"
-        revalidated:
-          at: 2026-10-22T16:24:53Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
   RS-SAN-008:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
@@ -106,12 +78,8 @@ rules:
             - "software-analysis:DEC-002#4"
             - "software-analysis:DEC-003#10"
             - "software-analysis:DEC-004#3"
-        revalidated:
-          at: 2026-10-22T16:24:59Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, which repeats the first sentence of its opening. So it uses no concept the opening does not, and the rule holds.
   RS-SAN-009:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
@@ -120,12 +88,8 @@ rules:
             - "software-analysis:DEC-001#1"
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#12"
-        revalidated:
-          at: 2026-10-22T16:24:55Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
   RS-SAN-010:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
@@ -134,43 +98,45 @@ rules:
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#4"
             - "COR-030"
-        revalidated:
-          at: 2026-10-20T22:11:37Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 2 calls the overview the reader's entry point, kept in each analysis's folder. Which analyses an analysis builds on, and what it names of them, are untouched.
   RS-SAN-011:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-004"}
     pkit:
       friction:
         anchors:
           record: ["software-analysis:DEC-004#4", "software-analysis:DEC-004#6"]
-        revalidated:
-          at: 2026-10-20T21:11:17Z
-          outcome: unchanged
-          unchanged-because: The change adds a flow to a view's opening, and changes nothing of the views' order or their numbers. The flow's labels are diagram labels, which this rule already reads.
   RS-SAN-012:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
-        revalidated:
-          at: 2026-10-22T16:24:56Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
   RS-SAN-013:
-    status: proposed
+    status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#5"]
-        revalidated:
-          at: 2026-10-22T16:24:58Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
+  RS-SAN-014:
+    status: accepted
+    origin: {decision: "software-analysis:DEC-005"}
+    pkit:
+      friction:
+        anchors:
+          record:
+            - "software-analysis:DEC-001#1"
+            - "software-analysis:DEC-001#2"
+            - "software-analysis:DEC-001#12"
+            - "software-analysis:DEC-003#8"
+            - "software-analysis:DEC-005#1"
+            - "software-analysis:DEC-005#2"
+            - "software-analysis:DEC-005#5"
+            - "software-analysis:DEC-007#1"
+            - "software-analysis:DEC-007#2"
+            - "software-analysis:DEC-007#3"
+            - "software-analysis:DEC-007#4"
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
@@ -182,7 +148,7 @@ rules:
 # only where its rule binds. Whoever judges the rest of a rule leaves that part
 # to the check. Where a project's rule tightens a structure, the project's set
 # declares what the check enforces of that rule. RS-SAN-003 to RS-SAN-008,
-# RS-SAN-010 to RS-SAN-013 declare no check: a reviewer judges each.
+# RS-SAN-010 to RS-SAN-014 declare no check: a reviewer judges each.
 checks:
   RS-SAN-001:
     - check: "software-analysis:validate"
@@ -233,9 +199,9 @@ checks:
 
 # SAN — the software-analysis method
 
-The rules for a project's analysis artefacts, whatever the project. They rest on software-analysis DEC-001 points 1 to 5, 9, 11 and 12, and DEC-002 points 4 to 8. They also rest on DEC-003 point 10 and DEC-004 points 3 to 6. Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
+The rules for a project's analysis artefacts, whatever the project. They rest on software-analysis DEC-001 points 1 to 5, 9, 11 and 12, and DEC-002 points 4 to 8. Others are DEC-003 points 8 and 10, DEC-004 points 3 to 6, DEC-005 points 1, 2 and 5, and DEC-007 points 1 to 4. Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
 
-A rule's statement and its *How* bind. Inside a *How*, a "such as" phrase and a sentence that starts with "So" only illustrate.
+A rule's statement and its *How* bind. Inside a *How*, a "such as" phrase, a sentence that starts with "So" and the items labelled *Examples* only illustrate.
 
 ## RS-SAN-001 — An analysis artefact carries its kind's structure
 
@@ -297,10 +263,10 @@ A use case's goal is one of its actor's needs.
 An analysis artefact's anchors name what its statements rest on. A use case's or a requirement's anchors also name the decisions that answer it and the architecture views that realise it.
 
 - **How:**
-  - **Its statements.** They are its body and the front-matter fields a writer fills, such as an actor's `needs` or a term's `definition`.
+  - **Its statements.** They are its body and the front-matter fields a writer fills, such as an actor's `needs` or a term's `definition`. A domain-model view's closing section is none (software-analysis DEC-004 point 7).
   - **Views.** A *view* named alone in this rule is an architecture view. A domain-model view is always named in full.
   - **What its anchors name.** What its kind anchors to, where a change to it can make one of its statements false. This list is whole:
-    - An actor or a term rests on the code and the decisions that embody it. A term whose `definition` names a term the glossary's head lists also rests on that term.
+    - An actor or a term rests on the code and the decisions that embody it. A term whose `definition` names a term the glossary's head lists also rests on that term. A term rests on no record that only its distinctions or its example cite. A distinction describes the concept it tells apart, and an example only illustrates the definition.
     - A domain-model view rests on each term it explains, and the decisions its statements cite or apply. Each fact it states as always true rests on the record that decides it. Each reason its opening or a section's *Why* gives rests on the record whose Context or Rationale gives it. It rests on no code, since it describes the domain, never the software.
     - A use case rests on its `actor` and its `other-actors`, each requirement in its `requirements`, the code it exercises and the decisions it cites or applies. Its anchors also name each decision that answers it and each architecture view that realises it. Each is asked for even where none of the use case's statements names it, since a change to it can leave the use case untrue of the system.
     - A journey rests on its actor, the use cases of its `steps` and its `relies-on`, each requirement in its `requirements`, and the code and decisions at its seams.
@@ -315,20 +281,25 @@ An analysis artefact's anchors name what its statements rest on. A use case's or
     - a view the project does not keep, or keeps outside its repository
   - **Where to find it.**
     - **Code** lies in the repository, within the surface the project declares for its analysis where it declares one.
-    - **The decisions an artefact rests on** are the records its statements cite or apply, such as the decision to use git, for a use case that runs on git. An actor's or a term's are also the records that embody it.
+    - **The decisions an artefact rests on** are the records its statements cite or apply, such as the decision to use git, for a use case that runs on git. An actor's or a term's are also the records that embody it. A record that only a term's distinctions or its example cite is none of them.
     - **The decisions that answer a use case or a requirement** are the records made to meet what it asks, such as one that names it by its id. So the decision to write a report as CSV answers a use case that must export the report as a file. Each may be a core record, a capability's record or the project's own.
     - **The views that realise a use case or a requirement** are the architecture views the project keeps to show how the system carries it out. Such a view may name it by its id.
     - **The files that verify a requirement** are the files of the tests and checks named in its part whose id is `verified-by`.
     - **The code that holds a requirement** is the code that keeps it, never all the code its `applies-to` reaches.
   - **Which anchor names it.** A path anchor names code, a record anchor a decision, and an artefact anchor another artefact. A view a place holds takes an artefact anchor, and any other view takes a path anchor on its file. An anchor on one part of a record or a document names only what that part stands on.
   - **Where to read the anchors.** An artefact's anchors are in its friction block. A glossary term's are in its entry.
-  - **What the check holds.** The capability's check requires a use case's anchors on its `actor` and on each of its `other-actors`. It requires a journey's on its actor, and on exactly the use cases of its `steps` and its `relies-on`. It requires the anchors of a use case and of a journey on exactly the requirements each lists in `requirements`. Once the domain-model view is built, it requires a view's anchors on exactly the terms its `explains` lists, and refuses a path anchor on one. It requires a use case's anchor on the record each entry of its `shortfalls` names. It does so whatever any rule's status, and this rule does not cover it.
+  - **What the check holds.** The capability's check requires each of these, whatever any rule's status, and this rule does not cover them:
+    - a use case's anchors on its `actor` and on each of its `other-actors`
+    - a journey's anchors on its actor, and on exactly the use cases of its `steps` and its `relies-on`
+    - the anchors of a use case and of a journey on exactly the requirements each lists in `requirements`
+    - once the domain-model view is built, a view's anchors on exactly the terms its `explains` lists, and never a path anchor on one
+    - a use case's anchor on the record each entry of its `shortfalls` names
+    - a requirement's anchors within its analysis on exactly the actors of its `actors` and the requirements of its `refines`
   - **What this rule judges.** The rest:
     - the code and the decisions a statement rests on
     - the decisions that answer a use case or a requirement, and the views that realise one
-    - a requirement's anchors on its `actors` and its `refines`
     - the records behind an actor or a term of another analysis
-  - **A break.** A statement that rests on code or a decision that no anchor of the artefact names breaks this rule, until the artefact anchors it. An anchor on another analysis's artefact breaks it too, until the artefact anchors the records behind that one instead. So a use case's minimal guarantee that cites a decision breaks it while no record anchor names the decision. A use case or a requirement also breaks it while no anchor names a decision that answers it, or a view that realises it. A requirement breaks it too while no anchor names an actor in its `actors`, or a requirement in its `refines`.
+  - **A break.** A statement that rests on code or a decision that no anchor of the artefact names breaks this rule, until the artefact anchors it. An anchor on another analysis's artefact breaks it too, until the artefact anchors the records behind that one instead. So a use case's minimal guarantee that cites a decision breaks it while no record anchor names the decision. A use case or a requirement also breaks it while no anchor names a decision that answers it, or a view that realises it.
   - **No anchors.** The core reports an artefact with no anchors, and no check fails on it. This rule still judges what its statements rest on.
   - **A reason for no anchors.** An actor or a term that gives a reason for having none is not judged under this rule. Nor is a requirement that gives one, with no `actors` and no `refines`. The reason is a person's answer, and only a person decides it.
   - **History.** This rule judges an artefact in force. A withdrawn artefact is history.
@@ -382,6 +353,7 @@ An analysis artefact uses a domain concept only where a term of the glossary def
     - a form made from the name in the term's sense, such as a plural, a possessive or a verb
     - a phrase whose other words keep their dictionary meaning, such as "the last release". A phrase that names a thing of its own, such as "release tag", is a concept of its own. It names a thing of its own where the system keeps, shows or acts on what it names as one thing.
     - a pronoun or a shortened name that points back to the term, where the same part already named it
+    - in a domain-model view, a pronoun or a shortened name that points back to the term the heading of its section names
   - **A term's name in another sense.** Once a term holds a name, the name means the term's concept wherever a statement uses it, a sense a dictionary gives it included. The exception is a sense the term tells apart from its own. Each phrase a term lists in its `other-senses` is such a sense, which its distinctions tell apart.
   - **A definition and its own name.** The `definition` form refuses a word of the term's own name, and whether a definition holds one is that form's to check. Where such a word is the name of a term the definition relates to, such as its broader kind, the definition names that concept in other words. That is no break.
   - **What uses no concept.**
@@ -390,7 +362,7 @@ An analysis artefact uses a domain concept only where a term of the glossary def
     - the names of the analysis's kinds and of their parts, such as "use case", "precondition" or "minimal guarantee"
     - words quoted from a person or a document, such as a decision quoted as a source, or the wording of a law
     - text in a code span or a fenced block, which quotes code. A Mermaid fence quotes no code. The labels its diagram shows, its `accTitle` and its `accDescr` are statements. An id the diagram never shows uses no concept.
-    - a part's label, and text the stamp writes from another artefact, such as a journey's step line, which copies a use case's title. A break in that text is the other artefact's.
+    - a part's label, and text the stamp writes from another artefact, such as a journey's step line, which copies a use case's title. A break in that text is the other artefact's. So is a domain-model view's closing section, which the links command writes (software-analysis DEC-004 point 7).
   - **The glossary's head.** Wherever this rule binds on a term, each need that the head of its glossary states beside a listed actor is a statement too.
   - **A domain-model view.** Each of its sections explains the concept that the term its heading names defines, in that term's sense.
     - **A break.** A section breaks this rule where what it states widens or narrows what the term's `definition` fits. It then holds of something the definition does not fit, or fails of something the definition fits.
@@ -461,7 +433,7 @@ A domain-model view names a concept that another view of its analysis explains o
 - **How:**
   - **A view's number.** The number its file's name opens with, compared as a number. Two views may share one, and then neither names a concept the other explains.
   - **What a view explains.** Each concept whose term its `explains` lists, while the view is in force.
-  - **What it names.** A concept whose term one of its statements uses, by the term's name or a form made from it, such as a plural. Its statements are its body, the labels of its diagrams included.
+  - **What it names.** A concept whose term one of its statements uses, by the term's name or a form made from it, such as a plural. Its statements are its body, the labels of its diagrams included, save its closing section, which states nothing (software-analysis DEC-004 point 7).
   - **The glossary first.** A view may name any term in force that no view of its analysis explains, since the glossary comes before the views.
   - **Another analysis.** A term the head of its glossary lists from another analysis is used as that analysis defines it. Whatever explains it there, this rule asks nothing of it.
   - So a relation between the concepts of two views is stated in the view with the higher number.
@@ -501,3 +473,46 @@ A use case describes a step or a variant the system has never carried out only w
   - **Only what is in force.** A proposed record decides nothing yet, and a superseded one no longer does. Nor does a point another record overturns.
   - **A step that is built.** A box below a step or a variant the system carries out breaks this rule. So the change that builds the behaviour removes the box and its entry.
   - **History.** This rule judges a use case in force. A withdrawn use case is history.
+
+## RS-SAN-014 — Each use case lies in its function's area, and a journey tells each path
+
+Each use case lies in a functional area whose goal it is a step toward, and no two areas serve one function. Where one actor's use cases make a path, a journey tells it.
+
+- **How:**
+  - **A functional area.** A folder of use cases, below the use cases' place, that serve one function of the component. A use case's area is the folder it lies in.
+  - **One function.** One summary goal, one level above the area's use cases, which are the steps toward it (software-analysis DEC-003 point 8). The area's goal in software-analysis's project configuration states it. A use case is a step toward it where what its part whose id is `goal` states brings the actor nearer to that goal.
+    - **Read, never judged.** The area's goal is a setting, so this rule judges none of its words. It reads the goal to judge whether a use case is a step toward it. How many functions an area holds, its use cases decide.
+    - **No goal.** Where that configuration gives none, the area's function is the one summary goal its use cases serve together, as a reader names it.
+    - **Two areas, one function.** Two areas serve one function where one area's goal is a step toward the other's, or a reader cannot tell the two goals apart.
+  - **What cuts an area.** What its use cases do. Their number cuts none. Nor does their actor, a concept they act on or the code that carries them out, unless that is also what they do together.
+  - **A path.** Several of one actor's own use cases, which it takes in turn, end to end, toward one goal that none of them reaches alone. Each step takes up what an earlier one left, such as a state its postconditions make true.
+    - **The actor's own.** Each use case whose `actor` it is, whoever starts it or carries out its steps (software-analysis DEC-007 point 1). So other actors may do all of a use case's work, and it may still be a step of its actor's path.
+    - **A sign, never proof.** A use case that states a hand-over with another use case of the same actor gives a sign of a path (DEC-007 point 2). It takes up what the other leaves, or the other takes up what it leaves. The actor may still never take the two toward one goal.
+    - **Where a sign stands.** In a precondition, in the trigger, or in a step of the main path or of a variant. It names the other use case by its id, or only by what it leaves, such as a log it wrote.
+    - **No sign.** A mention that takes nothing up, such as a step that works as another use case does.
+    - **A step that names the next use case.** Where an event other than that step starts the named use case, the step hands over to it, and is a sign. That event may be its actor's own choice, or the end of the use case that names it (DEC-007 point 3).
+    - **Part of it.** A use case that runs only inside that step, started by it and by nothing else, is part of the use case that names it. The two make no path.
+    - **What a use case reaches alone.** What its own steps make true. A postcondition that only another use case's steps make true is reached through that use case (DEC-007 point 3).
+    - **A standing condition.** A state one use case leaves standing, which any number of later runs rely on. It joins a later use case in a path only where the actor takes the two in turn toward one goal (DEC-007 point 4). A goal served again each time a later run relies on the state joins no path. A hand-over that the next run takes up once is no standing condition.
+    - **A goal a run did not meet.** What one run leaves where it did not meet the actor's goal is a sign like any other. It makes a path with the use case that takes it up only where one goal joins the two (DEC-007 point 4).
+    - **A remedy.** A use case that only restores the other's goal makes no path toward it, where the other's main path reaches that goal alone. What later runs meet because of a state left standing is read as a standing condition.
+    - **No path.** A single use case with its variants makes none. Nor do use cases the actor never takes in turn toward one goal, however many it has.
+    - **Another actor's use case** on the way is no step of the path. The journey relies on it.
+    - **The actor's own use case off the path,** which the actor does not take toward the path's goal, is no step either. The journey may rely on it too.
+  - **Told.** A journey in force of the path's actor tells the path where its `steps`, or the steps one of its variants takes, run through the path's use cases in their order. So a stretch of a longer path is told by the journey of that path. Its steps may lie in several areas.
+  - **A break.**
+    - A use case breaks this rule while it lies in no area, or while it is no step toward its area's goal.
+    - Each use case of an area breaks it while the area's use cases serve more than one summary goal one level above them, whatever the area's goal says. So an area cut by actor, by concept or by the code breaks it, unless that is also what its use cases do together.
+    - Each use case of an area breaks it while that area serves one function with another area.
+    - The change that adds a use case to an area, or moves one into it, owns the breaks of that area and of the area it shares a function with. To judge them, a reviewer reads the goals of the analysis's other areas.
+    - Each use case of a path breaks it while no journey in force tells the path. The change that leaves the path untold owns that break. Such a change adds a use case that completes a path, or edits what a use case takes up or leaves, in any part. It may also withdraw or shorten the journey that told the path, or change a use case's `actor` or goal. To judge it, a reviewer reads the use cases and the journeys of each actor whose use case or journey the change adds or alters.
+    - A journey breaks it while its steps make no path.
+  - **A goal changed.** A change to an area's goal alters no artefact, so it brings none of the area's use cases before a reviewer. Whoever changes a goal reads the area's use cases against it.
+  - **What a check can hold.** A script can read, from its path, that each use case in force lies in an area's folder. Until this set declares a check of it under `checks`, a reviewer judges it too.
+  - **Its limits.** No script reads what a use case does. So a reviewer judges whether two goals name one function, and whether a use case is a step toward its area's goal. A reviewer also judges what one use case takes up from another, and whether use cases make a path. The overview's list of each area's journeys shows where a path may be untold, and settles nothing.
+  - **Examples,** from an online shop:
+    - Areas `010-catalogue`, `020-ordering` and `030-delivery`, whose goals read "Find a product and compare it", "Place an order and pay for it" and "Deliver an order to its customer", keep this rule.
+    - An area `customer`, which holds every use case whose actor is the customer, breaks it, since its use cases serve all three summary goals. So does an area `025-payment` beside `020-ordering`, whose goal "Pay for an order" is a step toward "Place an order and pay for it".
+    - The customer's "Buy a product" is a path: find a product, place an order, pay for it and track its delivery, across the three areas. Each step takes up what the one before left, so a journey tells it. Comparing two products hands nothing on to a later step, so it is no step of that path.
+  - **History.** This rule judges a use case and a journey in force. A withdrawn one is history.
+  - **Note:** software-analysis DEC-005 calls this the rule on areas and journeys.

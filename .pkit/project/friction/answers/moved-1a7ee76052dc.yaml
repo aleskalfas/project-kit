@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/demo-recording/glossary.md#TERM-after-record-hook
+    revalidated:
+      at: 2026-10-24T01:18:34Z
+      outcome: unchanged
+      unchanged-because: The change says that a run with --no-recording runs no hook, and drops the claim that DCR_VIDEO_PATH can be empty. The term already says a hook runs once a recording's video is saved, with that video's path, so it holds.

@@ -17,7 +17,7 @@ The hierarchy from [project-management:DEC-004-six-level-hierarchy] needs a mech
 
 ## Decision
 
-> **Refined by [project-management:DEC-039-containment-substrate-selection]:** native sub-issues are canonical *where the tracker supports them*; where unavailable (older GHES) or the operator deliberately selects textual, containment degrades to a textual representation (the child-side parent-ref + a render-on-demand children view). This narrows the unconditional "always native" below to native-*where-available* — the native ideal is unchanged; the fallback is project-kit's substrate adaptation per DEC-036.
+Native sub-issues are canonical *where the tracker supports them*, and the native reads and writes below apply there. Where they are unavailable (older GHES), or the operator deliberately selects textual, containment degrades to a textual representation: the child-side parent-ref and a render-on-demand children view. That fallback is the substrate adaptation of [project-management:DEC-036-substrate-pluggable-adoption] (refinement per [project-management:DEC-039-containment-substrate-selection]).
 
 ### Canonical mechanism: native sub-issues
 
@@ -56,7 +56,7 @@ The containment graph formalises the Feature/Umbrella distinction from [project-
 
 ### Alternatives considered
 
-- **Textual only (no native sub-issues).** Rejected — fails the parent-side visibility test. Even with agent-maintained textual conventions, GitHub's UI doesn't render parents without native links.
+- **Textual only (no native sub-issues), where the tracker supports them.** Rejected — fails the parent-side visibility test. Even with agent-maintained textual conventions, GitHub's UI doesn't render parents without native links.
 - **Native only (no textual projection).** Rejected — loses readability outside the GitHub Issue UI.
 - **Loose containment (anything contains anything).** Rejected — erases the Feature/Umbrella distinction.
 

@@ -32,6 +32,10 @@ from project_kit import package_validate as pv
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import CONFIG, MAIN, REQUIREMENT_PLACES, actor_at, installed
 
+#: Each write takes a requirement's answers out of its block into answer files, where the
+#: change check reads them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
+
 #: The trigger fields (DEC-002 point 4).
 TRIGGERS = ("statement", "measure", "applies-to")
 

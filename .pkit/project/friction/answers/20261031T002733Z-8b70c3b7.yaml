@@ -1,0 +1,42 @@
+answers:
+  - artefact: tech-docs/living-docs/rule-sets/guide.md#RS-GUIDE-001
+    revalidated:
+      at: 2026-10-31T00:27:33Z
+      outcome: updated
+  - artefact: tech-docs/living-docs/rule-sets/guide.md#RS-GUIDE-003
+    revalidated:
+      at: 2026-10-31T00:27:37Z
+      outcome: updated
+  - artefact: tech-docs/living-docs/rule-sets/guide.md#RS-GUIDE-004
+    revalidated:
+      at: 2026-10-31T00:27:41Z
+      outcome: updated
+  - artefact: tech-docs/living-docs/rule-sets/rework.md#RS-REWORK-001
+    revalidated:
+      at: 2026-10-31T00:27:45Z
+      outcome: updated
+  - artefact: tech-docs/living-docs/rule-sets/guide.md#RS-GUIDE-002
+    revalidated:
+      at: 2026-10-31T00:27:54Z
+      outcome: unchanged
+      unchanged-because: ADR-069's refinement places each guide's folder at its reference's path and makes a README that only lists guides a signpost. Point 4, whose style rules this rule writes down, reads as before, and the rule asks a bold claim with a proof of any page that claims an advantage, wherever its folder sits.
+  - artefact: tech-docs/living-docs/rule-sets/guide.md#RS-GUIDE-010
+    revalidated:
+      at: 2026-10-31T00:27:59Z
+      outcome: unchanged
+      unchanged-because: The rule binds only on the entry README, README.md, whose place and kind ADR-069's refinement leaves alone. The refinement moves guide folders under docs/ and makes a README that only lists guides a signpost, and point 4's style rules, the highlights among them, read as before.
+  - artefact: tech-docs/living-docs/rule-sets/rework.md#RS-REWORK-002
+    revalidated:
+      at: 2026-10-31T00:28:09Z
+      outcome: unchanged
+      unchanged-because: ADR-069's refinement decides where guide folders sit and what kind a README that only lists guides is. Point 4's rule that a move mends every link and keeps a moved section's old address reads as before, and this rule's How names no folder layout.
+  - artefact: tech-docs/living-docs/rule-sets/rework.md#RS-REWORK-003
+    revalidated:
+      at: 2026-10-31T00:28:13Z
+      outcome: unchanged
+      unchanged-because: The rule has a page that ships link its guide's README at the latest tag (ADR-069 point 2), without naming the address's path. The refinement puts that README at the path of the reference's folder, which the rule leaves to the record, and point 4's rules on citations read as before.
+  - artefact: tech-docs/living-docs/rule-sets/rework.md#RS-REWORK-004
+    revalidated:
+      at: 2026-10-31T00:28:17Z
+      outcome: unchanged
+      unchanged-because: A component's page reaches a backbone page through its area's README, which stays its folder's stable address under ADR-069 point 3. Point 3's additions, a signpost for a README that only lists guides and no anchor from a guide's README upward, bear on docs/, which this rule leaves out, and point 4 reads as before.

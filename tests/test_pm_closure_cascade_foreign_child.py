@@ -17,9 +17,13 @@ what releases the container; or a read that failed, with the re-run advice — a
 only then.
 
 Pinned through the real engine and the shipped predicate scripts against a fake
-`gh` on PATH, which logs every call it is given (the pattern of
-`tests/test_pm_closure_cascade_native_child.py`), and `close-issue` run as a
-script with the real `pkit` on PATH.
+`gh`, which logs every call it is given (the pattern of
+`tests/test_pm_closure_cascade_native_child.py`), and `close-issue`'s `main`
+asking the real `pkit`. Each runs in the test's own process: the predicates the
+engine starts, found through the runner's one lookup (`tests/in_process.py`,
+`start_in_process`), the fake `gh`, and close-issue's `pkit` call, answered by the
+in-process `pkit`. A test marked `process` runs close-issue as a script, with the
+real `pkit` and the fake `gh` on PATH.
 """
 
 from __future__ import annotations
@@ -47,6 +51,8 @@ from _lib import containment  # noqa: E402
 from _lib import lifecycle_predicates as predicates  # noqa: E402
 
 from project_kit.process import CascadeResolution, ProcessEngine, load_definition  # noqa: E402
+from tests.in_process import MARK, InProcessPkit, load, run_main, start_in_process  # noqa: E402
+from tests.pm_lifecycle_world import fake_gh_in_process  # noqa: E402
 
 ADDRESS = "project-management:issue-lifecycle"
 CONTAINER = 5
@@ -143,17 +149,53 @@ def _executable(path: Path, text: str) -> None:
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
+@pytest.fixture(autouse=True)
+def predicates_started(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> list[Path]:
+    """The predicate scripts the engine's runner starts, each run in this process
+    (`start_in_process`), but in a test that keeps its process."""
+    if request.node.get_closest_marker(MARK) is not None:
+        return []
+    return start_in_process(monkeypatch)
+
+
+def _pkit_in_process(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Answer each `pkit` call `subprocess.run` makes with the in-process `pkit`: the
+    one function close-issue's `pkit` call goes through."""
+    pkit = InProcessPkit()
+    run = subprocess.run
+
+    def answer(args: Any, *rest: Any, **kwargs: Any) -> subprocess.CompletedProcess[Any]:
+        if Path(str(args[0])).name == "pkit":
+            return pkit(args, *rest, **kwargs)
+        return run(args, *rest, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", answer)
+
+
 @pytest.fixture
-def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A bootstrapped adopter project with the shipped capability, its scripts
-    run by this interpreter, and a fake `gh` first on PATH."""
+def project(
+    request: pytest.FixtureRequest, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """A bootstrapped adopter project with the shipped capability and a fake `gh`.
+    In a test marked `process`, its scripts are copies run by this interpreter and the
+    fake `gh` is first on PATH. Elsewhere its scripts are this checkout's, and the fake
+    `gh` and `pkit` answer in this process."""
+    as_processes = request.node.get_closest_marker(MARK) is not None
     root = tmp_path / "repo"
     root.mkdir()
     for args in (["init", "-q"], ["remote", "add", "origin", "git@github.com:acme/widget.git"]):
         subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
     cap = root / ".pkit" / "capabilities" / "project-management"
     shutil.copytree(CAP_SRC / "schemas", cap / "schemas")
-    shutil.copytree(CAP_SCRIPTS, cap / "scripts")
+    if as_processes:
+        shutil.copytree(CAP_SCRIPTS, cap / "scripts")
+        for script in (cap / "scripts").glob("*.py"):
+            body = script.read_text(encoding="utf-8").split("\n", 1)[1]
+            script.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
+    else:
+        (cap / "scripts").symlink_to(CAP_SCRIPTS, target_is_directory=True)
     shutil.copy(CAP_SRC / "package.yaml", cap / "package.yaml")
     (cap / "project").mkdir()
     (cap / "project" / "config.yaml").write_text(_VALID_CONFIG, encoding="utf-8")
@@ -162,17 +204,19 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         "  capability_version: 0.53.0\n  by: bootstrap\n  repo: github.com/acme/widget\n",
         encoding="utf-8",
     )
-    for script in (cap / "scripts").glob("*.py"):
-        body = script.read_text(encoding="utf-8").split("\n", 1)[1]
-        script.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
     defs = root / ".pkit" / "schemas" / "_defs"
     defs.mkdir(parents=True)
     shutil.copy(REPO_ROOT / ".pkit" / "schemas" / "_defs" / "process.schema.json", defs)
 
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    _executable(bin_dir / "gh", f"#!{sys.executable}\nROOT = {str(root)!r}\n" + _FAKE_GH)
-    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    gh = f"ROOT = {str(root)!r}\n" + _FAKE_GH
+    if as_processes:
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        _executable(bin_dir / "gh", f"#!{sys.executable}\n" + gh)
+        monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    else:
+        fake_gh_in_process(monkeypatch, gh)
+        _pkit_in_process(monkeypatch)
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(root))
     monkeypatch.setenv("PM_INVOKER_LOGIN", "operator")
     return root
@@ -609,14 +653,21 @@ def test_a_child_here_costs_what_it_did_and_one_elsewhere_one_read(project: Path
 # --- close-issue: what holds a container, and nothing written elsewhere --------
 
 
+_CLOSE_ARGS = (str(CONTAINER), "--mode=cascade-eligibility-close", "--yes")
+
+
 def _close(root: Path) -> subprocess.CompletedProcess[str]:
+    """close-issue's `main` on the container, run in this process as its process ran."""
+    (script,) = load(
+        root / ".pkit" / "capabilities" / "project-management" / "scripts", "close-issue.py"
+    )
+    return run_main(script, *_CLOSE_ARGS, cwd=root)
+
+
+def _close_as_a_process(root: Path) -> subprocess.CompletedProcess[str]:
     script = root / ".pkit" / "capabilities" / "project-management" / "scripts" / "close-issue.py"
     return subprocess.run(
-        [str(script), str(CONTAINER), "--mode=cascade-eligibility-close", "--yes"],
-        cwd=root,
-        capture_output=True,
-        text=True,
-        timeout=300,
+        [str(script), *_CLOSE_ARGS], cwd=root, capture_output=True, text=True, timeout=300
     )
 
 
@@ -637,7 +688,7 @@ def _writes(root: Path) -> list[list[str]]:
 
 
 def test_a_container_held_by_an_open_child_names_it_and_what_releases_it(
-    project: Path, pkit_on_path: Path
+    project: Path,
 ) -> None:
     issues = {CONTAINER: _container(), 11: _issue("OPEN", "Feature: #5\n")}
     _tracker(project, issues)
@@ -653,7 +704,7 @@ def test_a_container_held_by_an_open_child_names_it_and_what_releases_it(
 
 
 def test_a_container_held_by_an_open_child_elsewhere_names_its_repository(
-    project: Path, pkit_on_path: Path
+    project: Path,
 ) -> None:
     issues = {CONTAINER: _container()}
     _tracker(project, issues, native={CONTAINER: [FOREIGN]}, foreign={FOREIGN: _issue("OPEN")})
@@ -671,7 +722,7 @@ def test_a_container_held_by_an_open_child_elsewhere_names_its_repository(
 
 
 def test_a_child_elsewhere_that_cannot_be_read_is_named_with_its_two_ways_out(
-    project: Path, pkit_on_path: Path
+    project: Path,
 ) -> None:
     issues = {CONTAINER: _container()}
     foreign = {FOREIGN: _issue("OPEN")}
@@ -696,7 +747,7 @@ def test_a_child_elsewhere_that_cannot_be_read_is_named_with_its_two_ways_out(
 
 
 def test_a_child_whose_issue_cannot_be_read_gets_the_re_run_advice(
-    project: Path, pkit_on_path: Path
+    project: Path,
 ) -> None:
     # #14 is natively under #5, but no read finds it: not in the issue list, and
     # its record cannot be read — the fold stops at its membership.
@@ -716,7 +767,7 @@ def test_a_child_whose_issue_cannot_be_read_gets_the_re_run_advice(
 
 
 def test_an_open_child_whose_record_cannot_be_read_is_said_both_ways(
-    project: Path, pkit_on_path: Path
+    project: Path,
 ) -> None:
     # #13 is open in the issue list, and its record cannot be read: the fold
     # stops at its membership — a read the engine could not make — and what the
@@ -734,7 +785,7 @@ def test_an_open_child_whose_record_cannot_be_read_is_said_both_ways(
 
 
 def test_an_open_child_and_a_failed_read_are_both_said_each_with_its_remedy(
-    project: Path, pkit_on_path: Path
+    project: Path,
 ) -> None:
     # #11 here is open; acme/other#42 cannot be read. Each cause gets its block,
     # and the open child's account never sits under the failed-read header.
@@ -764,7 +815,7 @@ def test_an_open_child_and_a_failed_read_are_both_said_each_with_its_remedy(
 
 
 def test_a_fold_stopped_on_a_read_is_said_as_a_failed_read(
-    project: Path, pkit_on_path: Path
+    project: Path,
 ) -> None:
     # #13 is closed in the issue list, and its record cannot be read: the fold
     # stops at its membership before counting a member that holds it — a read
@@ -782,7 +833,7 @@ def test_a_fold_stopped_on_a_read_is_said_as_a_failed_read(
 
 
 def test_a_hold_the_children_do_not_explain_claims_no_cause(
-    project: Path, pkit_on_path: Path
+    project: Path,
 ) -> None:
     # #13 is closed in the issue list and its record reads; only its state read
     # (`gh issue view`) fails, so the fold counts it and stops there unresolved
@@ -802,6 +853,9 @@ def test_a_hold_the_children_do_not_explain_claims_no_cause(
     assert _RERUN not in done.stderr
 
 
+@pytest.mark.process(
+    "close-issue end to end: the script, the pkit it starts and each predicate, processes"
+)
 def test_closing_over_a_closed_child_elsewhere_writes_nothing_there(
     project: Path, pkit_on_path: Path
 ) -> None:
@@ -809,7 +863,7 @@ def test_closing_over_a_closed_child_elsewhere_writes_nothing_there(
     foreign = {FOREIGN: _issue("CLOSED", labels=[])}
     _tracker(project, issues, native={CONTAINER: [FOREIGN]}, foreign=foreign)
 
-    done = _close(project)
+    done = _close_as_a_process(project)
 
     assert done.returncode == 0, done.stderr
     assert "[ok] closed #5 (cascade-eligibility, completed)." in done.stdout
@@ -821,7 +875,7 @@ def test_closing_over_a_closed_child_elsewhere_writes_nothing_there(
 
 
 def test_the_refusal_reads_a_child_elsewhere_once_more_than_the_fold(
-    project: Path, pkit_on_path: Path
+    project: Path,
 ) -> None:
     issues = {CONTAINER: _container()}
     _tracker(project, issues, native={CONTAINER: [FOREIGN]}, foreign={FOREIGN: _issue("OPEN")})

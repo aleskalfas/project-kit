@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "produced-record.schema.json",
+  "title": "The record of a produced output — visual-communication capability",
+  "description": "Formal shape of `produced/<output>/record.yaml` in a piece (DEC-006 points 2 to 5): the fingerprint of what the producer read (form 1), each variant's file, pixel size and hash, the variant serving each combination, each exposed point in each variant's pixels (origin at the top-left corner, y down), what the producer lost (DEC-005 point 9), and what is only recorded. `pkit visual produce` writes it. Document-shaped schema. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "fingerprint",
+    "variants",
+    "combinations",
+    "points",
+    "losses",
+    "recorded"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:produced-record`.",
+      "const": "visual-communication:produced-record"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "fingerprint": {
+      "$ref": "defs.schema.json#/$defs/fingerprint"
+    },
+    "variants": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/key"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "file",
+          "pixels",
+          "sha256"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "file": {
+            "type": "string",
+            "pattern": "^[^/\\\\]+\\.png$"
+          },
+          "pixels": {
+            "type": "object",
+            "required": [
+              "width",
+              "height"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "width": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "sha256": {
+            "$ref": "defs.schema.json#/$defs/sha256"
+          }
+        }
+      },
+      "minProperties": 1
+    },
+    "combinations": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/key"
+      },
+      "additionalProperties": {
+        "$ref": "defs.schema.json#/$defs/key"
+      },
+      "minProperties": 1
+    },
+    "points": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "$ref": "defs.schema.json#/$defs/key"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "required": [
+            "x",
+            "y"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": 0
+            },
+            "y": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "minProperties": 1
+      }
+    },
+    "losses": {
+      "description": "What the producer could not make as it was handed, each loss once, in the seam's one form; empty when it lost nothing. The check reports each the piece does not accept under `accept-losses`.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "defs.schema.json#/$defs/loss"
+      }
+    },
+    "recorded": {
+      "$ref": "defs.schema.json#/$defs/recorded"
+    }
+  }
+}

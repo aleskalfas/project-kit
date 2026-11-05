@@ -5,6 +5,7 @@ status: active
 actor: ACT-component-author
 other-actors:
   - ACT-ci-pipeline
+  - ACT-methodology-maintainer
   - ACT-operator
 after:
   - [UC-003]
@@ -29,6 +30,7 @@ pkit:
         - src/project_kit/versioning.py
         - src/project_kit/changesets.py
         - src/project_kit/cli.py
+        - src/project_kit/migrations.py
         - .github/workflows/release-pr.yml
       record:
         - PRJ-002#D1
@@ -37,18 +39,17 @@ pkit:
         - PRJ-004
         - COR-010
         - COR-041
+        - COR-059#3
         - COR-004
         - ADR-034#1
       artefact:
         - ACT-component-author
         - ACT-ci-pipeline
+        - ACT-methodology-maintainer
         - ACT-operator
         - REQ-005
         - REQ-009
         - REQ-012
-    revalidated:
-      at: 2026-10-23T18:46:42Z
-      outcome: updated
 ---
 
 # UC-009 — Release my component on its own version
@@ -57,64 +58,66 @@ pkit:
 
 **Other actors:**
 
-- **CI pipeline** (`ACT-ci-pipeline`): in project-kit, opens the release pull request that carries the component's new version. That pull request carries the new versions of the backbone and of other components too (UC-008).
-- **Operator** (`ACT-operator`): is asked before `pkit release apply` changes a repository other than the session's own. So no such change happens silently (REQ-012).
+- **CI pipeline** (`ACT-ci-pipeline`): in project-kit, opens the [release pull request](../../../glossary.md#term-release-pull-request--release-pull-request) that carries the [component](../../../glossary.md#term-component--component)'s new [version](../../../glossary.md#term-version--version). That [pull request](../../../glossary.md#term-pull-request--pull-request) carries the new versions of the [backbone](../../../glossary.md#term-backbone--backbone) and of other components too ([UC-008](UC-008-release-backbone.md)).
+- **Methodology maintainer** (`ACT-methodology-maintainer`): in project-kit, merges the pull request the CI pipeline opens, as UC-008 says (variant 1a).
+- **Operator** (`ACT-operator`): is asked before `pkit release apply` changes a repository other than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:**
 
-- **From UC-003:** Changes to the component declare, in changesets naming it, what each means for its release.
-- **From UC-034:** The component's changes landed on the default branch, so their changesets wait under `.changes/unreleased/`.
-- **From UC-009, UC-015 or UC-019:** The component's `package.yaml` gives its `version` and a `requires_backbone` range. The component's last release wrote them, or its author did when packaging it as a capability or writing it as an adapter.
+- **From [UC-003](../030-change/UC-003-declare-changeset.md):** Changes to the [component](../../../glossary.md#term-component--component) declare, in [changesets](../../../glossary.md#term-changeset--changeset) naming it, what each means for the component's next [version](../../../glossary.md#term-version--version).
+- **From [UC-034](../030-change/UC-034-land-change.md):** The component's changes landed on the [default branch](../../../glossary.md#term-default-branch--default-branch), so their changesets wait under `.changes/unreleased/`.
+- **From UC-009, [UC-015](../010-develop/UC-015-package-capability.md) or [UC-019](../010-develop/UC-019-adapt-harness.md):** The component's `package.yaml` gives its `version` and a `requires_backbone` [range](../../../glossary.md#term-range--range). The component's last [release step](../../../glossary.md#term-release-step--release-step) wrote them, or its author did when packaging it as a [capability](../../../glossary.md#term-capability--capability) or writing it as an [adapter](../../../glossary.md#term-adapter--adapter).
 
 **Assumptions:**
 
-- The component's repository declares, in changesets under `.changes/unreleased/`, what each change means for its release step, as project-kit does (PRJ-002 D1).
-- The author has run the component on the backbone the repository carries. The new version claims that the component works with that backbone, and the author owns that claim (COR-041).
+- The [component](../../../glossary.md#term-component--component)'s repository declares, in [changesets](../../../glossary.md#term-changeset--changeset) under `.changes/unreleased/`, what each [change](../../../glossary.md#term-change--change) means for its [release step](../../../glossary.md#term-release-step--release-step), as project-kit does ([PRJ-002 D1](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr)).
+- The author has run the component on the [backbone](../../../glossary.md#term-backbone--backbone) the repository carries. The new [version](../../../glossary.md#term-version--version) claims that the component works with that backbone, and the author owns that claim ([COR-041](../../../../../../.pkit/decisions/core/COR-041-external-source-distribution.md)).
 
-**Trigger:** The component author decides to release what the component's changesets declare.
+**Trigger:** The component author decides to ship, as a new [version](../../../glossary.md#term-version--version), what the [component](../../../glossary.md#term-component--component)'s [changesets](../../../glossary.md#term-changeset--changeset) declare.
 
 **Main path:**
 
 1. The component author runs `pkit release plan`.
-2. The system groups the pending changesets by what each names, and takes the highest segment for each. It prints the component's move as `<component>: <old> -> <new> (<segment>)`, with each floor and upper bound a changeset declares for the component.
-3. The author runs `pkit release apply` on a release branch, and confirms `Write these versions and consume the changesets?`.
-10. At its entry, before it prints its plan, `pkit release apply` checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+2. The [system](../../../glossary.md#term-system--system) groups the pending [changesets](../../../glossary.md#term-changeset--changeset) by what each names, and takes the highest [bump segment](../../../glossary.md#term-bump-segment--bump-segment) for each. It prints the [component](../../../glossary.md#term-component--component)'s move as `<component>: <old> -> <new> (<segment>)`, with each floor and upper bound a changeset declares for the component.
+3. The author runs `pkit release apply` on a `release/` branch, and confirms `Write these versions and consume the changesets?`.
+10. At its entry, before it prints its plan, `pkit release apply` checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
-> **Not built yet:** `pkit release apply` runs the check only when `--tag --push` asks it to push a tag. Without them, it writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+> **Not built yet:** `pkit release apply` runs the check only when `--tag --push` asks it to push a tag. Without them, it writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-4. The system writes the component's new version in the `version:` line of its `package.yaml`.
-5. The system widens the upper bound of the component's `requires_backbone` to cover the backbone the repository carries, the one the author releases under. The system never narrows an upper bound, and moves no floor unless a changeset declares that floor (`versioning.py`).
-6. The system raises each floor a changeset declares for the component, on the backbone or on another capability. It also widens each upper bound on a capability that a changeset says the component runs on (PRJ-002 D4).
+4. The system writes the component's new [version](../../../glossary.md#term-version--version) in the `version:` line of its `package.yaml`.
+5. The system widens the upper bound of the component's `requires_backbone` to cover the [backbone](../../../glossary.md#term-backbone--backbone) the repository carries, the one the author releases under. The system never narrows an upper bound, and moves no floor unless a changeset declares that floor (`versioning.py`).
+6. The system raises each floor a changeset declares for the component, on the backbone or on another [capability](../../../glossary.md#term-capability--capability). It also widens each upper bound on a capability that a changeset says the component runs on ([PRJ-002 D4](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
 7. The system adds an entry at the top of `CHANGELOG.md`, headed by the date, since the backbone does not move. The system heads each of the component's notes with `**<component> <version>**`, and states each raised floor, such as `Requires backbone >=1.149.0.`
 8. The system deletes the changesets it consumed.
-9. The author commits the release step's writes, and merges them into the default branch. They get no tag, since a tag names a backbone version, read from `.pkit/VERSION` (PRJ-004 and `versioning.py`).
+9. The author commits the [release step](../../../glossary.md#term-release-step--release-step)'s writes, and merges them into the [default branch](../../../glossary.md#term-default-branch--default-branch). They get no [release tag](../../../glossary.md#term-release-tag--release-tag), since a release tag names a backbone version, read from `.pkit/VERSION` ([PRJ-004](../../../../../../.pkit/decisions/project/PRJ-004-distribution-channel.md) and `versioning.py`).
 
 **Variants:**
 
-- **1a.** In project-kit, `release-pr.yml` runs the release step for the component, with the backbone where the backbone moves (UC-008). A release step that moves no backbone takes the branch `release/<run id>`. The maintainer merges the release pull request as UC-008 says, and the use case ends with no tag cut.
+- **1a.** In project-kit, `release-pr.yml` runs the [release step](../../../glossary.md#term-release-step--release-step) for the [component](../../../glossary.md#term-component--component), with the [backbone](../../../glossary.md#term-backbone--backbone) where the backbone moves ([UC-008](UC-008-release-backbone.md)). A release step that moves no backbone takes the branch `release/<run id>`. The maintainer merges the [release pull request](../../../glossary.md#term-release-pull-request--release-pull-request) as UC-008 says, and the use case ends with no [release tag](../../../glossary.md#term-release-tag--release-tag) cut.
+- **2a.** A folder of the component's [migrations](../../../glossary.md#term-migration--migration) names a [version](../../../glossary.md#term-version--version) above the component's version, and the release step computes another version than the folder names. `pkit release plan` and `pkit release apply` each warn that the folder `does not match the computed capability <name> release`, or for an [adapter](../../../glossary.md#term-adapter--adapter) `the computed adapter <name> release` (`release.py`). The release step goes on ([UC-011](UC-011-migrate-component-change.md) variant 8a), and in project-kit the release pull request's body shows the warning. Where the new version is below the folder's, an upgrade of the component to the new version runs none of the folder's migrations (`migrations.py`).
 - **3a.** The author runs `pkit release apply --no-broaden`, to keep the upper bound as written, such as for a patch known not to work on the newest backbone. Step 5 is skipped, and each declared floor and upper bound is still written.
-- **3b.** A changeset declares `requires_backbone: release`, and the release step moves no backbone. The floor rises to the current backbone. The plan adds `backbone does not move this release`, asking the author to confirm that the needed surface shipped there.
-- **3c.** On the path of 3b, the current backbone is a pre-release, such as `1.150.0rc1`. The system refuses the release step before writing anything, since no floor rises to a pre-release (PRJ-002 D4). The use case ends.
-- **3d.** A changeset declares a floor or an upper bound the release step cannot write. Examples are an explicit floor above the backbone the tree carries, and a `release` floor on a capability the release step does not move. The system refuses before writing anything, and the use case ends (PRJ-002 D4).
-- **3e.** A declared floor would leave a range that admits no backbone, such as where `--no-broaden` keeps an upper bound at or below the floor. The system refuses the release step before writing anything, and the use case ends.
-- **3f.** The release step would leave another capability whose range excludes the component's new version. The system refuses before writing anything, naming that capability, its range and the version (PRJ-002 D4). The use case ends.
+- **3b.** A [changeset](../../../glossary.md#term-changeset--changeset) declares `requires_backbone: release`, and the release step moves no backbone. The floor rises to the current backbone. The plan adds `backbone does not move this release`, asking the author to confirm that the needed surface shipped there.
+- **3c.** On the path of 3b, the current backbone is a pre-release, such as `1.150.0rc1`. The [system](../../../glossary.md#term-system--system) refuses the release step before writing anything, since no floor rises to a pre-release ([PRJ-002 D4](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)). The use case ends.
+- **3d.** A changeset declares a floor or an upper bound the release step cannot write. Examples are an explicit floor above the backbone the tree carries, and a `release` floor on a [capability](../../../glossary.md#term-capability--capability) the release step does not move. The system refuses before writing anything, and the use case ends ([PRJ-002 D4](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
+- **3e.** A declared floor would leave a [range](../../../glossary.md#term-range--range) that admits no backbone, such as where `--no-broaden` keeps an upper bound at or below the floor. The system refuses the release step before writing anything, and the use case ends.
+- **3f.** The release step would leave another capability whose range excludes the component's new version. The system refuses before writing anything, naming that capability, its range and the version ([PRJ-002 D4](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)). The use case ends.
 - **3g.** The release step moves the backbone too. Step 5 instead widens every component's upper bound to cover the new backbone's minor, and the backbone is released as UC-008 says.
-- **3h.** The author first passes `--dry-run` to `pkit release apply`, to see each edit it would make. The system names each edit, and writes nothing (REQ-009).
+- **3h.** The author first passes `--dry-run` to `pkit release apply`, to see each edit it would make. The system names each edit, and writes nothing ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)).
 
 > [!WARNING]
-> **Not built yet:** `pkit release apply` takes no `--dry-run`, and refuses the flag. COR-004 decides that it offers one, and #1884 tracks it.
+> **Not built yet:** `pkit release apply` takes no `--dry-run`, and refuses the flag. [COR-004](../../../../../../.pkit/decisions/core/COR-004-cli-surface.md) decides that it offers one, and #1884 tracks it.
 
 - **6a.** A floor already stands at or above the version a changeset declares. The floor stays as it is, and the plan says `requires_backbone floor stays`.
 
 **Postconditions:**
 
-- The component's `package.yaml` carries its new version. The component's `requires_backbone` range admits the backbone it was released under, unless the author kept the upper bound.
+- The [component](../../../glossary.md#term-component--component)'s `package.yaml` carries its new [version](../../../glossary.md#term-version--version). The component's `requires_backbone` [range](../../../glossary.md#term-range--range) admits the [backbone](../../../glossary.md#term-backbone--backbone) it was released under, unless the author kept the upper bound.
 - The changelog entry says what changed in the component, and what the component now requires.
-- A repository that pulls the component whole receives the new version through a transition of the component. The transition moves the component to a ref holding that version (COR-041 and COR-059 point 3). In project-kit, a release step that moves only components reaches a tagged install with the next release (PRJ-004).
+- A repository that pulls the component whole receives the new version through a [version transition](../../../glossary.md#term-version-transition--version-transition) of the component. The transition moves the component to a ref holding that version ([COR-041](../../../../../../.pkit/decisions/core/COR-041-external-source-distribution.md) and [COR-059 point 3](../../../../../../.pkit/decisions/core/COR-059-version-transition.md#3-a-version-transition-is-the-only-operation-of-the-core-layer-that-moves-a-recorded-version)). In project-kit, a [release step](../../../glossary.md#term-release-step--release-step) that moves only components reaches a CLI taken from a [release tag](../../../glossary.md#term-release-tag--release-tag) with the next [release](../../../glossary.md#term-release--release) ([PRJ-004](../../../../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
 
 **Minimal guarantees:**
 
-- No floor rises unless a changeset declares it, so a release step never claims a need no changeset declared (`release.py` and PRJ-002 D4).
+- No floor rises unless a [changeset](../../../glossary.md#term-changeset--changeset) declares it, so a [release step](../../../glossary.md#term-release-step--release-step) never claims a need no changeset declared (`release.py` and [PRJ-002 D4](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
 - The release step only widens an upper bound, and never narrows one (`versioning.py` and PRJ-002 D4).
-- A release step the system refuses for a changeset's declaration, or for a range, writes nothing. Each of those refusals comes before the first write (`release.py`).
+- A release step the [system](../../../glossary.md#term-system--system) refuses for a changeset's declaration, or for a [range](../../../glossary.md#term-range--range), writes nothing. Each of those refusals comes before the first write (`release.py`).

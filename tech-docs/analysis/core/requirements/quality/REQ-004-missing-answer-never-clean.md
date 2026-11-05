@@ -1,10 +1,11 @@
 ---
 id: REQ-004
-title: A check never reads a missing answer as one that found nothing
+title: A check never reads a missing result as one that found nothing
 status: active
-statement: A check of the backbone never reads a missing answer, from a command it runs or from git, as one that found nothing.
-measure: No check passes on a command that gave no answer, or on a default branch git could not resolve. Each such case fails the check or is reported, as *Verified by* lists.
+statement: A check of the backbone never reads a missing result, from a command it runs or from git, as one that found nothing.
+measure: No check passes on a command that gave no result, or on a default branch git could not resolve. Each such case fails the check or is reported, as *Verified by* lists.
 applies-to: Each check the backbone runs and each value the backbone resolves for one, whichever component's command fills the value.
+obligation: v1:sha256:8b4f6d4aba36add058beac83e2b1ba452a39b6bd8865166238397cbf73bdda0c
 actors:
   - ACT-ci-pipeline
   - ACT-adopter
@@ -14,6 +15,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/command_runner.py
+        - src/project_kit/default_branch.py
         - tests/test_command_runner.py
         - tests/test_friction_anchor_kinds.py
         - tests/test_validators.py
@@ -22,33 +24,30 @@ pkit:
       record:
         - COR-050#2
         - COR-050#12
+        - COR-055
         - COR-055#6
         - COR-052#6
         - COR-054#4
       artefact:
         - ACT-ci-pipeline
         - ACT-adopter
-    revalidated:
-      at: 2026-10-23T08:53:53Z
-      outcome: unchanged
-      unchanged-because: The adopter's needs that only a capability meets moved to its analysis, and two needs were reworded to their terms. A check still never reads a missing answer as one that found nothing.
 ---
 
-# REQ-004 · Quality · A check never reads a missing answer as one that found nothing
+# REQ-004 · Quality · A check never reads a missing result as one that found nothing
 
-**Verified by:** Tests run commands that give no answer in each way the command runner recognises:
+**Verified by:** Tests run commands that give no result in each way the command runner recognises:
 
 - it cannot start
 - it ends abnormally
 - it overruns its time
 - it prints output that cannot be read
 
-Each is reported as giving no answer, and tests find that:
+Each is reported as giving no result, and tests find that:
 
-- validation fails on such a command
-- the change check fails on it where the project enforces the check
-- the whole-repository check never reports its artefact `current`
-- a data point declared `fail` stays unresolved when its command gives no answer
-- a default branch the clone cannot read is reported, never guessed
+- [validation](../../glossary.md#term-validation--validation) fails on such a command
+- the [change check](../../glossary.md#term-change-check--change-check) fails on it where the [project](../../glossary.md#term-project--project) enforces the check
+- the [whole-repository check](../../glossary.md#term-whole-repository-check--whole-repository-check) never reports its [artefact](../../glossary.md#term-artefact--artefact) `current`
+- a [data point](../../glossary.md#term-data-point--data-point) declared `fail` stays unresolved when its command gives no result
+- a [default branch](../../glossary.md#term-default-branch--default-branch) the clone cannot read is reported, never guessed
 
-**Rationale:** A missing answer "is never an answer naming nothing" (COR-050 point 2). COR-055 gives the reason, under "Why no answer fails": "Silence must not read as health". A pass nobody earned means that "the gate reports the project in order when a check never ran, and nothing prompts anyone to look". So the CI pipeline can gate a merge on a check's exit status, and an adopter's merges wait on checks that ran.
+**Rationale:** A missing <!-- pkit:not-the-term -->answer "is never an <!-- pkit:not-the-term -->answer naming nothing" ([COR-050 point 2](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#2-anchors)). [COR-055](../../../../../.pkit/decisions/core/COR-055-validation.md) gives the reason, under "Why no <!-- pkit:not-the-term -->answer fails": "Silence must not read as health". A pass nobody earned means that "the gate reports the [project](../../glossary.md#term-project--project) in order when a check never ran, and nothing prompts anyone to look". So the CI pipeline can gate a merge on a check's exit status, and an adopter's merges wait on checks that ran.

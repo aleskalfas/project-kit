@@ -31,10 +31,6 @@ TERM-after-record-hook:
           - COR-001
           - COR-003
           - COR-059#2
-      revalidated:
-        at: 2026-10-24T01:18:34Z
-        outcome: unchanged
-        unchanged-because: The change says that a run with --no-recording runs no hook, and drops the claim that DCR_VIDEO_PATH can be empty. The term already says a hook runs once a recording's video is saved, with that video's path, so it holds.
 TERM-demo-bundle:
   name: demo bundle
   status: active
@@ -50,10 +46,6 @@ TERM-demo-bundle:
           - COR-001
           - COR-003
           - COR-059#2
-      revalidated:
-        at: 2026-10-24T01:18:37Z
-        outcome: unchanged
-        unchanged-because: The change to record.sh rewords a comment on when after-record hooks run, and the code is the same. What a demo bundle holds has not changed, so the term holds.
 TERM-directive:
   name: directive
   noun-forms: [directives]
@@ -69,10 +61,6 @@ TERM-directive:
         record:
           - demo-recording:DEC-001
           - demo-recording:DEC-002
-      revalidated:
-        at: 2026-10-24T01:18:40Z
-        outcome: unchanged
-        unchanged-because: The change makes a fenced block whose tag no loaded plugin provides a warning rather than an error, and rewords the docstring of a ready timeout. Every fenced block in a step is still read as a directive, and its tag still selects what is done, so the term holds.
 TERM-executable-storyboard:
   name: executable storyboard
   noun-forms: [executable storyboards]
@@ -130,7 +118,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **demo-recording's own files:** the format, the commands and the skill, which demo-recording ships. demo-recording never holds a demo bundle, which stays in the project's tree (DEC-001).
+- **demo-recording's own files:** the format, the commands and the skill, which demo-recording ships. demo-recording never holds a demo bundle, which stays in the project's tree ([DEC-001](../../../.pkit/capabilities/demo-recording/decisions/DEC-001-storyboard-as-executable-format.md)).
 
 ## TERM-directive — directive
 
@@ -138,7 +126,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Prose:** the text of a step around its directives. People read it, and nothing carries it out (DEC-001).
+- **Prose:** the text of a step around its directives. People read it, and nothing carries it out ([DEC-001](../../../.pkit/capabilities/demo-recording/decisions/DEC-001-storyboard-as-executable-format.md)).
 - **Code block:** in other Markdown, a fenced block that shows code and runs nothing. In a step of an executable storyboard, every fenced block is read as a directive. Before the first step, a fenced block is part of the opening prose (`parser.py`).
 
 ## TERM-executable-storyboard — executable storyboard
@@ -147,7 +135,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Storyboard:** the core's term for a document that scripts a dialogue with a person, which a file written after it follows. No separate file follows an executable storyboard: demo-recording's commands carry it out directly (DEC-001).
+- **Storyboard:** the core's term for a document that scripts a dialogue with a person, which a file written after it follows. No separate file follows an executable storyboard: demo-recording's commands carry it out directly ([DEC-001](../../../.pkit/capabilities/demo-recording/decisions/DEC-001-storyboard-as-executable-format.md)).
 - **Driver script:** a script written for one demo that types its keystrokes itself. DEC-001 rejected it, since a reader would have to run the script in their head to recover the demo.
 - **Data file and generator:** a structured file that a generator reads to drive a demo or to render its readable form. DEC-001 rejected it too: the executable storyboard is the one source, and nothing is generated from it.
 

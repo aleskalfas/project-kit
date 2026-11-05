@@ -34,7 +34,7 @@ from typing import TYPE_CHECKING, Any
 
 from ruamel.yaml import YAML
 
-from project_kit import cli_render
+from project_kit import cli_render, lifecycle_ownership
 
 if TYPE_CHECKING:
     from packaging.version import Version
@@ -904,8 +904,10 @@ def scaffold_fragment(target_root: Path, capability: str) -> list[Path]:
 
     Refuses an unknown capability (no `package.yaml`) and refuses to clobber an
     existing fragment file — the same no-overwrite discipline the other
-    `new`/scaffold commands hold. Returns the paths stamped (a subset of the
-    two, since an already-present file is left untouched).
+    `new`/scaffold commands hold. Refuses, before it writes anything, a
+    capability whose `permissions/` the project receives as a synced copy, which
+    the next sync overwrites (core rule 1). Returns the paths stamped (a subset
+    of the two, since an already-present file is left untouched).
     """
     if not _PRIV_ID.match(capability) or ":" in capability:
         raise PermissionsError(f"invalid capability name {capability!r}; expected kebab-case.")
@@ -918,6 +920,17 @@ def scaffold_fragment(target_root: Path, capability: str) -> list[Path]:
             f"the name."
         )
     perms_dir = cap_dir / "permissions"
+    refusal = lifecycle_ownership.synced_copy_refusal(
+        target_root,
+        perms_dir,
+        f"capability {capability!r}",
+        "Scaffold the project's own fragment in a capability the project incubates, with "
+        "`pkit permissions scaffold <capability>`, or record the project's own grant with "
+        "`pkit permissions grant`. A capability's own fragment is authored where the "
+        "capability is authored.",
+    )
+    if refusal is not None:
+        raise PermissionsError(refusal)
     perms_dir.mkdir(parents=True, exist_ok=True)
     stamped: list[Path] = []
     for filename, template in (
@@ -4745,11 +4758,11 @@ def _required_confirm_line(cmd: str) -> str:
 # such attributes, classifies each as a genuine OVERRIDE (defeats the posture)
 # or inert CRUFT (harmless leftover), and — consent-gated — REMOVES them.
 #
-# Boundary vs #313: the required-for-autonomy attribute (`autoAllowBash
-# IfSandboxed`) is AUTO-enforced ON by `sandbox_enable` (loud, no ask — its
-# whole payoff). This pass handles the OTHER overrides, which may be the
-# operator's deliberate choice, so they get warn + consent-to-remove, NEVER
-# silent removal. The two compose: #313 is not in this detector's scope.
+# Every override may be the operator's deliberate choice, so each gets warn +
+# consent-to-remove, NEVER silent removal. That holds for auto-allow too
+# (#2280): `sandbox_enable` writes the committed `autoAllowBashIfSandboxed:
+# true`, but a local `false` (the `/sandbox` panel's choice) wins over it, so
+# the confinement step cannot reconcile it and only the consented removal does.
 #
 # Edits ONLY the gitignored `settings.local.json` — the committed
 # `settings.json` baseline is never read-for-write nor written here.
@@ -4802,11 +4815,15 @@ def _detect_overlay_overrides(target_root: Path) -> list[_OverlayFinding]:
       - `sandbox.allowUnsandboxedCommands: true` → OVERRIDE: un-seals the strict
         seal (ADR-028), re-arming the per-command `dangerouslyDisableSandbox`
         escape autonomy mode exists to inert.
+      - `sandbox.autoAllowBashIfSandboxed: false` where the box is intended ON →
+        OVERRIDE (#2280): the box confines, yet every sandboxed command still
+        prompts. Where the box is intended OFF (macOS) auto-allow suppresses no
+        prompt, so a local `false` there defeats nothing and is not reported.
       - `sandbox.excludedCommands` while the effective sandbox is OFF → CRUFT: a
         dead exclusion list (nothing is confined, so nothing is excluded-from).
 
-    Order is stable (enabled, seal, then cruft) so the report and removal are
-    deterministic."""
+    Order is stable (enabled, seal, auto-allow, then cruft) so the report and
+    removal are deterministic."""
     local_sb = _sandbox_block_in(_read_settings_local(target_root))
     if not local_sb:
         return []
@@ -4850,6 +4867,23 @@ def _detect_overlay_overrides(target_root: Path) -> list[_OverlayFinding]:
                 "`dangerouslyDisableSandbox` escape autonomy mode seals shut",
                 restore="re-run `pkit permissions setup autonomy` (re-asserts the seal), "
                 "or `pkit permissions sandbox enable --strict`",
+            )
+        )
+
+    # --- autoAllowBashIfSandboxed: false → the confined box still prompts -----
+    # The committed floor is `true` (ADR-032 Rule A); a scalar local `false` wins
+    # over it at runtime (ADR-029). Only an override where the box is intended on.
+    if intended_on and local_sb.get("autoAllowBashIfSandboxed") is False:
+        findings.append(
+            _OverlayFinding(
+                key="autoAllowBashIfSandboxed",
+                kind="override",
+                current="local `autoAllowBashIfSandboxed: false` (intended: true — the "
+                "committed floor)",
+                why="the box confines, yet every sandboxed command still prompts — "
+                "defeating the prompt-free half of the autonomy posture",
+                restore="re-run `pkit permissions setup autonomy`, or "
+                "`pkit permissions sandbox enable` (asserts the committed `true`)",
             )
         )
 
@@ -4997,7 +5031,7 @@ def _overlay_override_report(
     # Re-detect at removal time so we strip only what is STILL a finding on the
     # live local file. In the autonomy flow the confinement step may have already
     # reconciled a finding between detection and here (e.g. the seal re-assert,
-    # #313's auto-enforce, flipping `allowUnsandboxedCommands` to false) — that
+    # ADR-028, flipping `allowUnsandboxedCommands` to false) — that
     # one is no longer an override and must not be removed. The re-detect makes
     # the two passes compose without double-handling.
     live = _detect_overlay_overrides(target_root)

@@ -40,8 +40,12 @@ from ruamel.yaml import YAML
 from scripts import friction_tracking_issue as publisher
 
 from project_kit import friction_repository as fr
-from tests.adopter_repo import MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo
 from tests.friction_documents import Timeline, guide
+
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
 
 REPO = Path(__file__).resolve().parent.parent
 PUBLISHER = REPO / "scripts" / "friction_tracking_issue.py"
@@ -631,8 +635,8 @@ def test_a_body_no_utf8_can_hold_is_published_escaped(gh: FakeGh) -> None:
 # --- end to end ----------------------------------------------------------------------------
 
 
-def test_a_real_history_end_to_end(make_adopter_repo: MakeAdopterRepo, gh: FakeGh) -> None:
-    timeline = Timeline(make_adopter_repo())
+def test_a_real_history_end_to_end(committed_adopter: AdopterRepo, gh: FakeGh) -> None:
+    timeline = Timeline(committed_adopter)
     timeline.start({"docs/guide.md": guide()})
     timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
     root = timeline.adopter.root
@@ -799,14 +803,20 @@ def test_the_full_history_is_fetched_and_confirmed_before_the_check(
 def test_the_query_commands_are_provisioned_before_the_check_as_the_required_check_does(
     workflow: dict[str, Any],
 ) -> None:
-    """The same step, in the same place, as `checks.yml` runs before its aggregator."""
+    """The same step, in the same place, as each part of `checks.yml` runs before its
+    part of the aggregator (ADR-078 point 1). A part may give the step an id of its own."""
     checks = YAML(typ="safe").load((WORKFLOW.parent / "checks.yml").read_text(encoding="utf-8"))
-    (theirs,) = [
-        s for s in checks["jobs"]["checks"]["steps"] if s.get("name", "").startswith("Sync")
+    theirs = [
+        {key: value for key, value in step.items() if key != "id"}
+        for job in checks["jobs"].values()
+        for step in job["steps"]
+        if step.get("name", "").startswith("Sync")
     ]
+    assert len(theirs) == 3
     sync = _index(workflow, RENDER, "Sync")
-    assert _steps(workflow, RENDER)[sync] == theirs
-    assert theirs["run"] == "uv run pkit sync"
+    for step in theirs:
+        assert _steps(workflow, RENDER)[sync] == step
+        assert step["run"] == "uv run pkit sync"
     assert _index(workflow, RENDER, "Install project") < sync
     assert sync < _index(workflow, RENDER, "Whole-repository friction check")
 

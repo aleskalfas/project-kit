@@ -155,11 +155,14 @@ def test_init_recommends_the_committed_gitignore_line(capsys: pytest.CaptureFixt
     # The local exclude covers this clone only; the backbone never writes the
     # adopter's .gitignore (ADR-009), so it recommends the line that covers
     # every clone.
-    install._print_next_steps()
+    ctx = install.InstallContext(
+        target_root=Path("."), source_kit=install.find_source_kit(), dry_run=False
+    )
+    install._print_next_steps(ctx, settings_backed_up=False, pkit_found=False)
 
     out = capsys.readouterr().out
     steps = out.split("Add to your .gitignore")[1]
-    assert workspace.EXCLUDE_ENTRY in steps.split("5.")[0]
+    assert workspace.EXCLUDE_ENTRY in steps.split("To keep pkit private")[0]
 
 
 # --- the common git directory: git's answer and the decision core's agree --------

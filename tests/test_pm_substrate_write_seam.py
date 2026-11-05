@@ -267,6 +267,46 @@ def test_write_missing_gh_binary_is_carried_not_raised(substrate_writes, monkeyp
     assert result.error is not None
 
 
+# --- the field option-list write (the workstream mutators, #1940) --------
+
+
+def test_field_options_args_keeps_each_option_id_and_escapes_its_text(substrate_writes) -> None:
+    args = substrate_writes.field_options_args(
+        field_id="PVTSSF_ws",
+        options=[
+            {"id": "opt_cli", "name": "cli", "color": "BLUE", "description": 'The "CLI".'},
+            {"name": "docs", "description": ""},
+        ],
+    )
+    assert args[:4] == ["gh", "api", "graphql", "-f"]
+    query = args[4].removeprefix("query=")
+    assert query.startswith('mutation { updateProjectV2Field(input: {fieldId: "PVTSSF_ws"')
+    # A kept option passes its id, so every card keeps its value.
+    assert '{id: "opt_cli", name: "cli", color: BLUE, description: "The \\"CLI\\"."}' in query
+    # A new option has no id, and an option with no colour is gray.
+    assert '{name: "docs", color: GRAY, description: ""}' in query
+
+
+def test_field_options_args_makes_an_unknown_colour_gray(substrate_writes) -> None:
+    args = substrate_writes.field_options_args(
+        field_id="F", options=[{"id": "o", "name": "x", "color": "TEAL", "description": ""}]
+    )
+    assert "color: GRAY" in args[4]
+
+
+def test_write_field_options_is_failure_posture_neutral(substrate_writes, monkeypatch) -> None:
+    def fake_gh(args, config):
+        return subprocess.CompletedProcess(args, 1, stdout="", stderr="no project scope")
+
+    monkeypatch.setattr(substrate_writes, "_gh_call", fake_gh)
+    result = substrate_writes.write_field_options(
+        {}, field_id="F", options=[{"name": "cli", "description": ""}]
+    )
+    assert result.ok is False
+    assert result.error == "no project scope"
+    assert result.argv[:3] == ("gh", "api", "graphql")
+
+
 # --- the converged sites obtain their write FROM the primitive -----------
 
 

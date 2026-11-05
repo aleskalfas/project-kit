@@ -332,6 +332,35 @@ def test_apply_from_another_repository_goes_with_the_flag_or_without_a_push(
     assert applied == [passed]
 
 
+def test_apply_refuses_a_piped_yes_and_writes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A `y` piped into stdin is no person's answer: without `--yes` the release is
+    refused, naming the command with `--yes`, and nothing is written (#2003)."""
+    source_kit = _make_kit(tmp_path)
+    _add(source_kit, "backbone", "minor", "x", "a.yaml")
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(main, ["release", "apply", "--no-broaden"], input="y\n")
+    assert result.exit_code == 1
+    assert "refusing to release: stdin is not a terminal" in result.stderr
+    assert "pkit release apply --no-broaden --yes" in result.stderr
+    assert (source_kit / "VERSION").read_text().strip() == "1.5.0"
+    assert list(changesets.unreleased_dir(tmp_path).glob("*.yaml"))
+
+
+@pytest.mark.usefixtures("at_a_terminal")
+def test_apply_at_a_terminal_writes_on_a_yes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source_kit = _make_kit(tmp_path)
+    _add(source_kit, "backbone", "minor", "x", "a.yaml")
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(main, ["release", "apply"], input="y\n")
+    assert result.exit_code == 0, result.output
+    assert "Write these versions and consume the changesets?" in result.output
+    assert (source_kit / "VERSION").read_text().strip() == "1.6.0"
+
+
 def test_apply_pushing_a_tag_without_the_guards_clearance_writes_nothing(tmp_path: Path) -> None:
     source_kit = _make_kit(tmp_path)
     _add(source_kit, "backbone", "minor", "x", "a.yaml")

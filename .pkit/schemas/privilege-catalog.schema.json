@@ -28,7 +28,7 @@
     "bash_matcher": {
       "type": "object",
       "additionalProperties": false,
-      "description": "One Bash-command recognizer. Either a structured matcher (cmd [+ subcommand] [+ flag_any]) or a regex escape hatch (pattern). The runtime matcher segments compound commands and strips env-var prefixes before matching.",
+      "description": "One Bash-command recognizer. Either a structured matcher (cmd [+ subcommand] [+ flag_any] [+ word_prefix_any]) or a regex escape hatch (pattern). The runtime matcher segments compound commands and strips env-var prefixes before matching. For a deny, the decision core also reads a structured matcher's program, subcommand and flags in the forms programs read them (ADR-025 point 5), and a pattern's flags as written.",
       "properties": {
         "cmd": {
           "type": "string",
@@ -48,6 +48,13 @@
           "minItems": 1,
           "uniqueItems": true,
           "description": "If present, the command must carry at least one of these flags (e.g. `[-rf, -fr]` for a destructive-rm guardrail)."
+        },
+        "word_prefix_any": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "If present, a word after `cmd` must open with one of these (e.g. `[+]` for a git refspec that forces the update of its ref)."
         },
         "pattern": {
           "type": "string",

@@ -1,0 +1,36 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-seat
+    read:
+      - 20261028T013353Z-b3364ebc.yaml
+    revalidated:
+      at: 2026-10-28T02:08:48Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 2 adds the pools a seat that builds serves, where the topology declares them, and point 4 reads as it did. The entry says what a seat holds of its role and agent definition, as it says nothing of a scope, and its example names no pool, which stays valid.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-topology
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+    revalidated:
+      at: 2026-10-28T02:08:53Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 1 adds the pools a topology may declare, and a guard on code that cannot read it in full, and point 2 adds the pools a seat that builds serves. The examples declare no pools, which stays valid, and the distinctions from the per-user file, a seat, an instance and a batch plan hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+    revalidated:
+      at: 2026-10-28T02:13:20Z
+      outcome: unchanged
+      unchanged-because: DEC-006 is the one anchor of the use case this change alters, and its pools of workers are deferred below. In a project with no pools, step 9 still schedules each issue on the planner's approval as its audited reason, so the steps hold there.
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-006
+          reason: "DEC-006 holds putting a Task into a Milestone in a pool of workers like the moves the user authorises at hard-reject severity, never bypassed with an audit. Step 9 gives the planner's approval as an audited reason, and DEC-061 has that approval cover a pool only where the plan names it, which step 6 does not show. #2256 adds the pool to the plan and rewrites both steps."

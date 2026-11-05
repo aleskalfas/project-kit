@@ -27,6 +27,11 @@ checks the owning records ask for:
   pass is the one owner of these findings and of the `friction.mode` enum
   (the schema); the friction pass reads the settings and reports only on the
   artefacts.
+- **The delegate** (COR-064 point 2): `friction.delegate` names an agent of the
+  project, one whose definition the project, a capability or the methodology
+  ships (`agents.agent_locations`) — otherwise an error naming the fix. One
+  whose definition does not declare that it reads COR-064 is a warning, since
+  it says nothing of when it decides as the delegate.
 - **Types on the project's places** (COR-056 points 2 and 3): the type
   findings artefact discovery raises and names this pass to report, at the
   severity it names (`friction_discovery.TYPE_FINDINGS`; ADR-057 point 2). A
@@ -47,7 +52,7 @@ checks the owning records ask for:
 
 Findings are structured records (a JSON Pointer into the file, a severity,
 a message) in a deterministic order: shape findings by position, then the
-repository checks in a fixed order — docs, friction, types, connections — each entry
+repository checks in a fixed order — docs, friction, the delegate, types, connections — each entry
 in written order. Only errors fail validation.
 """
 
@@ -58,17 +63,19 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Protocol, cast
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
+from jsonschema.protocols import Validator
 from referencing import Registry, Resource
-from referencing.jsonschema import DRAFT202012
+from referencing.jsonschema import DRAFT202012, SchemaRegistry
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from project_kit import backbone_schemas, validators
 from project_kit import connections as wiring
+from project_kit.agents import agent_locations, find_agent_file
 from project_kit.friction_discovery import (
     CONFIGURATION_MEMBER,
     SettingsPath,
@@ -92,6 +99,9 @@ METHODOLOGY_TREE = ".pkit"
 DOCS_KEY = "docs"
 FRICTION_KEY = "friction"
 FRICTION_PATTERN_KEYS = ("places", "surface", "exclude")
+DELEGATE_KEY = "delegate"
+# The record an agent that takes the delegate's role declares it reads (COR-064 point 2).
+DELEGATE_RECORD = "COR-064"
 CONNECTIONS_KEY = "connections"
 PROVIDERS_KEY = "providers"
 SELECTIONS_KEY = "selections"
@@ -207,6 +217,7 @@ def run_configuration_pass(target_root: Path) -> ConfigReport:
     flagged = frozenset(f.path for f in findings)
     findings.extend(_docs_findings(target_root, config.get(DOCS_KEY), flagged))
     findings.extend(_friction_findings(target_root, config.get(FRICTION_KEY), flagged))
+    findings.extend(_delegate_findings(target_root, config.get(FRICTION_KEY), flagged))
     findings.extend(_type_findings(target_root))
     findings.extend(_connections_findings(target_root, config.get(CONNECTIONS_KEY), flagged))
     return ConfigReport(
@@ -223,11 +234,13 @@ def _shape_findings(config: Mapping[str, Any], schema: Mapping[str, Any]) -> lis
     Sorted by position, then message, so the order never depends on the
     validator's traversal.
     """
-    registry = Registry().with_resource(
+    empty: SchemaRegistry = Registry()
+    registry = empty.with_resource(
         uri=schema.get("$id", f"{CONFIG_SCHEMA_KIND}.schema.json"),
         resource=Resource.from_contents(schema, default_specification=DRAFT202012),
     )
-    validator = Draft202012Validator(schema, registry=registry)
+    # Typed by the protocol: the class's own `iter_errors` keeps an untyped overload.
+    validator = cast(Validator, Draft202012Validator(schema, registry=registry))
     findings: list[ConfigFinding] = []
     for error in validator.iter_errors(config):
         findings.extend(_render_schema_error(error))
@@ -241,7 +254,9 @@ def _render_schema_error(error: ValidationError) -> list[ConfigFinding]:
     if not unknown:
         return [ConfigFinding(pointer, Severity.ERROR, error.message)]
 
-    known = tuple((error.schema.get("properties") or {}).keys())
+    # An `additionalProperties` violation, the one `unknown_keys` reports, has an object schema.
+    properties: Mapping[str, Any] = cast("Mapping[str, Any]", error.schema).get("properties") or {}
+    known = tuple(properties.keys())
     findings: list[ConfigFinding] = []
     for key in unknown:
         key_pointer = f"{pointer}/{_pointer_token(key)}"
@@ -260,7 +275,7 @@ def _docs_findings(target_root: Path, docs: Any, flagged: frozenset[str]) -> lis
     if not isinstance(docs, Mapping):
         return []
     findings: list[ConfigFinding] = []
-    for audience, value in docs.items():
+    for audience, value in cast("Mapping[str, Any]", docs).items():
         pointer = f"/{DOCS_KEY}/{audience}"
         if pointer in flagged or not isinstance(value, str) or not value:
             continue  # the shape pass already reported it
@@ -384,6 +399,88 @@ def _pattern_findings(
     return []
 
 
+# --- the delegate (COR-064) ----------------------------------------------------
+
+
+def _delegate_findings(
+    target_root: Path, friction: Any, flagged: frozenset[str]
+) -> list[ConfigFinding]:
+    """The delegate names an agent of the project, one that knows the role (COR-064
+    point 2).
+
+    An agent of the project is one whose definition the project, a capability
+    under `.pkit/capabilities/` or the methodology ships, in the folders the
+    adapter deploys from, the first in its precedence winning. A name no such
+    definition carries is an error. A definition that does not declare it reads
+    COR-064 (`reads.records`, COR-013) says nothing of when it decides as the
+    delegate, so naming it makes no agent decide: a warning. A name the shape
+    pass refused is not judged again: one finding per mistake.
+    """
+    if not isinstance(friction, Mapping):
+        return []
+    name: Any = cast("Mapping[str, Any]", friction).get(DELEGATE_KEY)
+    pointer = f"/{FRICTION_KEY}/{DELEGATE_KEY}"
+    if pointer in flagged or not isinstance(name, str) or not name:
+        return []  # absent, or the shape pass already reported it
+    definition = next(
+        (
+            found
+            for _, folder in agent_locations(target_root)
+            if (found := find_agent_file(folder, name)) is not None
+        ),
+        None,
+    )
+    if definition is None:
+        return [
+            ConfigFinding(
+                pointer,
+                Severity.ERROR,
+                f"delegate {name!r} names no agent of the project: none the project, a "
+                f"capability or the methodology ships. Name another agent, or remove the "
+                f"key, and until then nobody decides as the delegate (COR-064 point 2).",
+            )
+        ]
+    if DELEGATE_RECORD not in _records_read(definition):
+        return [
+            ConfigFinding(
+                pointer,
+                Severity.WARNING,
+                f"delegate {name!r} is an agent whose definition does not declare that it "
+                f"reads {DELEGATE_RECORD} (`reads.records`), so it says nothing of when it "
+                f"decides as the delegate, and naming it makes no agent decide. Name an "
+                f"agent whose definition takes the role (COR-064 point 2).",
+            )
+        ]
+    return []
+
+
+def _records_read(definition: Path) -> frozenset[str]:
+    """The records an agent's definition declares it reads, from its front matter's
+    `reads.records` (COR-013); none where the front matter cannot be read."""
+    try:
+        lines = definition.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return frozenset()
+    if not lines or lines[0].strip() != "---":
+        return frozenset()
+    end = next((i for i, line in enumerate(lines[1:], start=1) if line.strip() == "---"), None)
+    if end is None:
+        return frozenset()
+    try:
+        data = _safe_load("\n".join(lines[1:end]))
+    except YAMLError:
+        return frozenset()
+    if not isinstance(data, Mapping):
+        return frozenset()
+    reads: Any = cast("Mapping[str, Any]", data).get("reads")
+    records: Any = (
+        cast("Mapping[str, Any]", reads).get("records") if isinstance(reads, Mapping) else None
+    )
+    if not isinstance(records, list):
+        return frozenset()
+    return frozenset(str(record) for record in cast("list[Any]", records))
+
+
 # --- types on the project's places (COR-056) ----------------------------------
 
 
@@ -414,10 +511,10 @@ def _connections_findings(
     resolved = functools.cache(lambda: wiring.shared_wiring(target_root))
     findings: list[ConfigFinding] = []
     for key in (PROVIDERS_KEY, SELECTIONS_KEY):
-        entries = connections.get(key)
+        entries = cast("Mapping[str, Any]", connections).get(key)
         if not isinstance(entries, Mapping):
             continue
-        for address, capability in entries.items():
+        for address, capability in cast("Mapping[str, Any]", entries).items():
             pointer = f"/{CONNECTIONS_KEY}/{key}/{_pointer_token(address)}"
             if pointer in flagged or not isinstance(capability, str) or not capability:
                 continue  # the shape pass already reported it
@@ -583,17 +680,30 @@ def _load_yaml(path: Path) -> tuple[Any, str | None]:
     except OSError as exc:
         return None, f"unreadable: {exc}."
     try:
-        return YAML(typ="safe").load(text), None
+        return _safe_load(text), None
     except YAMLError as exc:
         return None, f"does not parse as YAML: {str(exc).splitlines()[0]}"
+
+
+class _SafeLoader(Protocol):
+    """The part of ruamel.yaml's `YAML` this module calls, typed: the library leaves
+    `load`'s stream parameter untyped."""
+
+    def load(self, stream: str) -> object: ...
+
+
+def _safe_load(text: str) -> object:
+    """The YAML text as ruamel.yaml's safe loader reads it."""
+    loader = cast(_SafeLoader, YAML(typ="safe"))
+    return loader.load(text)
 
 
 def _string_keys(obj: Any) -> Any:
     """Every mapping key as text, recursively — JSON Schema and the renderer know only text keys."""
     if isinstance(obj, Mapping):
-        return {str(k): _string_keys(v) for k, v in obj.items()}
+        return {str(k): _string_keys(v) for k, v in cast("Mapping[object, object]", obj).items()}
     if isinstance(obj, list):
-        return [_string_keys(x) for x in obj]
+        return [_string_keys(x) for x in cast("list[object]", obj)]
     return obj
 
 

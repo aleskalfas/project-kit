@@ -12,8 +12,12 @@ shape: titles.yaml's title checks per type, per-type required sections,
 classification axes presence + uniqueness, parent-ref first line, and
 the use cases the body cites in its `## Use cases` section against the
 use-case point, read only for a Feature or Task body that cites one
-(DEC-054). Emits findings tagged by the severity tokens from
-validation-severity.yaml (hard-reject / bypassable-with-audit / warning).
+(DEC-054), and the decision ids the body cites, asked of the backbone
+only for a body that cites one (DEC-010). Emits findings tagged by the
+severity tokens from validation-severity.yaml (hard-reject /
+bypassable-with-audit / warning).
+The body's required sections and universal rules are read by
+`_lib/body_rules`, the reader create-issue and edit-issue share.
 
 Which substrate carries each classification axis — and therefore what the
 presence gate may demand — is asked of `_lib/axis_carriage`, never of the board
@@ -56,8 +60,10 @@ from _lib import (
     axis_carriage,
     axis_labels,
     body_parent_ref,
+    body_rules,
     bootstrap_gate,
     classification_rules,
+    decision_ids,
     title_rules,
     use_case_citations,
 )
@@ -200,6 +206,9 @@ def main() -> int:
         # The use-case point (DEC-054): read only for a Feature or Task body
         # that cites a use case.
         use_cases=use_case_citations.read_point,
+        # The records (DEC-010): asked of the backbone only for a body that
+        # cites a decision id.
+        records=decision_ids.lookup,
     )
 
     if args.json:
@@ -236,6 +245,7 @@ def _validate_issue(
     hierarchy: str = axis_labels.HIERARCHY_GATED,
     substrate_map: axis_labels.SubstrateMap | None = None,
     use_cases: use_case_citations.Reader | None = None,
+    records: decision_ids.Reader | None = None,
 ) -> list[Finding]:
     findings: list[Finding] = []
     title = str(issue.get("title", ""))
@@ -268,7 +278,9 @@ def _validate_issue(
     # Title format / pattern.
     #
     # The kit's title vocabulary (issue-types prefixes + the titles.yaml regex)
-    # is the authority ONLY in greenfield. Under a substrate-map:
+    # is the authority ONLY where the kit's own labels carry `type`: with no map,
+    # or under `type: {kit-label: true}`, which reads as no map does (DEC-062
+    # point 4). Elsewhere under a substrate-map:
     #   * `type` bound to title-prefix ⇒ the type IS title-carried, and the
     #     yardstick is the ADOPTER's prefixes (resolved above). A title matching
     #     none of them resolves to NO structural type — an undeterminable
@@ -281,12 +293,11 @@ def _validate_issue(
     #   * `type` bound to label/derive/unsupported/absent ⇒ the type is NOT
     #     title-carried; no title-format demand is made (its presence gate / the
     #     capability matrix covers the axis via its own substrate).
-    type_title_carried = substrate_map is None or axis_labels.axis_is_title_carried(
-        "type", substrate_map
-    )
+    kit_type = axis_labels.axis_expects_kit_labels("type", substrate_map)
+    type_title_carried = kit_type or axis_labels.axis_is_title_carried("type", substrate_map)
     if type_title_carried and structural_type is None:
         expected = _expected_type_prefixes(issue_types, substrate_map, classification)
-        if substrate_map is None:
+        if kit_type:
             findings.append(
                 Finding(
                     SEVERITY_HARD_REJECT,
@@ -305,7 +316,7 @@ def _validate_issue(
                     f"(expected one of {', '.join(expected)}).",
                 )
             )
-    elif structural_type is not None and substrate_map is None:
+    elif structural_type is not None and kit_type:
         # Greenfield: also run the type's titles.yaml checks — the pattern and
         # every declared wording rule (#803). Under a present map they do not
         # apply (the adopter owns the title format). At a transition a blocking
@@ -440,7 +451,7 @@ def _validate_issue(
             if (
                 kind is not None
                 and structural_type is not None
-                and substrate_map is None
+                and kit_type
                 and classification_rules.kind_drives_title(structural_type, classification or {})
             ):
                 expected_prefix = classification_rules.title_prefix_by_value(
@@ -662,25 +673,11 @@ def _validate_issue(
                 )
             )
 
-    # Per-type required body sections.
+    # Per-type required body sections, read by the reader create-issue and
+    # edit-issue share (DEC-010).
     if structural_type is not None:
-        bodies = body_format.get("bodies") or {}
-        type_body = bodies.get(structural_type)
-        if isinstance(type_body, dict):
-            required = type_body.get("required_sections") or []
-            for section in required:
-                if not isinstance(section, dict):
-                    continue
-                heading = str(section.get("heading", ""))
-                if heading and heading not in body:
-                    severity = _severity_from_token(section.get("severity"))
-                    findings.append(
-                        Finding(
-                            severity,
-                            "body.required-section",
-                            f"missing required section {heading!r} ({structural_type} body).",
-                        )
-                    )
+        for sev, label, detail in body_rules.required_sections(body, structural_type, body_format):
+            findings.append(Finding(sev, label, detail))
 
         # DEC-013 marker form (#763 AC3). When the first content line *attempts*
         # an integration marker (`Integration:` key) but does not match the valid
@@ -789,24 +786,10 @@ def _validate_issue(
             ):
                 findings.append(Finding(sev, label, detail))
 
-    # Universal body rules — minimal subset.
-    if re.search(r"^# [^#]", body, flags=re.MULTILINE):
-        findings.append(
-            Finding(
-                SEVERITY_HARD_REJECT,
-                "body.h1",
-                "body contains an h1 (`# ...`) heading; the issue title "
-                "is the h1. Use `## Title` for sections.",
-            )
-        )
-    if re.search(r"[A-Za-z0-9_/\.\-]+\.[a-z]+:\d+\b", body):
-        findings.append(
-            Finding(
-                SEVERITY_WARNING,
-                "body.file-line-refs",
-                "body contains file:line references; line numbers go stale.",
-            )
-        )
+    # The universal body rules the shared reader checks (DEC-010), each at the
+    # severity body-format.yaml gives it.
+    for sev, label, detail in body_rules.universal(body, body_format):
+        findings.append(Finding(sev, label, detail))
     # The use cases a Feature or Task body cites (DEC-054), at the severity the
     # body-format schema gives the rule: those the use-case point does not hold,
     # or that they could not be checked. `use_cases` reads the point, and only
@@ -814,6 +797,11 @@ def _validate_issue(
     for sev, label, detail in use_case_citations.findings(
         body, structural_type, body_format, use_cases
     ):
+        findings.append(Finding(sev, label, detail))
+    # The decision ids the body cites that no record holds (DEC-010), or that
+    # they could not be checked. `records` asks the backbone, and only for a
+    # body that cites one; None asks nothing.
+    for sev, label, detail in decision_ids.findings(body, body_format, records):
         findings.append(Finding(sev, label, detail))
 
     return findings

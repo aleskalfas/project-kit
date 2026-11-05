@@ -1,48 +1,82 @@
 """Tests for the whole-repository friction check, `pkit friction check --all` (Task #991, COR-050).
 
-Every test stands up a real adopter repository (`make_adopter_repo`) and lays
-down real history — dated commits by named authors, renames, a squash merge,
-merge commits, a shallow clone — before running the check at HEAD. The
-documents come from `tests.friction_documents`.
+Every test stands up a real adopter repository, its install committed once per
+session (`committed_adopter`), and lays down real history — dated commits by
+named authors, renames, a squash merge, merge commits, a shallow clone — before
+running the check at HEAD. The documents come from `tests.friction_documents`,
+each write taking its answers into answer files. A history only blocks can hold
+— a merge resolving a conflict in a block, a revert putting an `at` back, a time
+typed by hand — is laid down in blocks (`blocks_in_history`), then moved as an
+upgrade moves it (`_moved`): the checks read it as history, and judge as they
+did before the move (COR-062 points 6 and 11).
 """
 
 from __future__ import annotations
 
 import json
+import re
+import textwrap
+from collections import Counter
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
 import pytest
 from click.testing import CliRunner
 
+from project_kit import answer_files as af
 from project_kit import friction_check as fc
 from project_kit import friction_history as fh
 from project_kit import friction_report as frep
 from project_kit import friction_repository as fr
 from project_kit.cli import main
-from project_kit.friction_discovery import Anchor
+from project_kit.friction_discovery import Anchor, ArtefactKind, discover_artefacts
 from project_kit.friction_git import BlobReader, TreeReader
-from tests.adopter_repo import HISTORY_EPOCH, Author, GitRepo, MakeAdopterRepo
+from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author, GitRepo, MakeAdopterRepo
+from tests.anchor_kind_capabilities import register_kinds
 from tests.friction_documents import (
     ADR,
     ADR_OVERLAY,
     CONFIG,
     NOTES,
     NOTES_HOLD,
+    SOURCE,
     T1,
     T2,
     Timeline,
     adr,
+    answer_file_names,
+    blocks_in_history,
+    commit_install,
     document,
     friction_config,
     guide,
+    move_answers,
     notes,
+    without_over_broad,
 )
+from tests.in_process import start_in_process
+from tests.shipped_rule_sets import without_shipped_rule_sets
+from tests.test_friction_anchor_kinds import ANSWERING
+from tests.test_friction_derived_links import LINKS_MOVED, declare_deriver, note, note_body
+from tests.test_friction_derived_links import NOTE as PLACED_NOTE
+
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
 
 ALICE = Author("Alice", "alice@example.com")
 BOB = Author("Bob", "bob@example.com")
+
+
+def _moved(timeline: Timeline) -> str:
+    """The working tree's block answers moved into answer files, as an upgrade moves them,
+    committed (COR-062 point 11): a history laid down in blocks, read as history from here
+    on."""
+    move_answers(timeline.adopter.root)
+    return timeline.commit("move the answers")
+
 
 # A fixed "now" for ages in the human view, well after every scripted commit.
 NOW = HISTORY_EPOCH + timedelta(days=100)
@@ -51,16 +85,21 @@ CLI = Anchor("path", "src/cli/**")
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    return Timeline(committed_adopter)
 
 
 def _run(timeline: Timeline, **kwargs: Any) -> fr.RepositoryCheck:
     return fr.run_repository_check(timeline.adopter.root, **kwargs)
 
 
-def _summary(result: fr.RepositoryCheck) -> list[tuple[str, str | None, str | None, str | None]]:
-    """(kind, location, anchor, origin commit) per finding, in report order."""
+def _summary(
+    result: fr.RepositoryCheck, *, over_broad: bool = False
+) -> list[tuple[str, str | None, str | None, str | None]]:
+    """(kind, location, anchor, origin commit) per finding, in report order. An over-broad
+    anchor is left out unless `over_broad`: in a history of a few commits, most anchors
+    flagged their artefacts in more than half of them (ADR-080 point 3), and the tests
+    that read this judge the other kinds."""
     return [
         (
             f.kind.value,
@@ -69,7 +108,13 @@ def _summary(result: fr.RepositoryCheck) -> list[tuple[str, str | None, str | No
             None if f.origin is None else f.origin.sha,
         )
         for f in result.findings
+        if over_broad or f.kind is not fr.RepositoryFindingKind.OVER_BROAD
     ]
+
+
+def _explained(root: Path, artefact: str) -> tuple[frep.ExplainedFinding, ...]:
+    """`explain`'s findings on `artefact` but the over-broad anchors, as `_summary`."""
+    return without_over_broad(frep.run_explain(root, artefact).findings)
 
 
 def _point(result: fr.RepositoryCheck, location: str = "docs/guide.md") -> str | None:
@@ -167,7 +212,7 @@ def test_stale_debt_originates_in_the_first_change_after_the_point(timeline: Tim
     first = timeline.commit("first change", {"src/cli/main.py": "print('1')\n"}, author=ALICE)
     timeline.commit("second change", {"src/cli/main.py": "print('2')\n"}, author=BOB)
 
-    (finding,) = _run(timeline).findings
+    (finding,) = without_over_broad(_run(timeline).findings)
     assert finding.origin is not None
     assert (finding.origin.sha, finding.origin.author, finding.origin.subject) == (
         first,
@@ -207,7 +252,7 @@ def test_a_record_s_container_alone_makes_no_stale_debt_on_a_whole_record_anchor
 
     edited = timeline.commit("the record's decision edited", {ADR: SPLIT})
     assert _summary(_run(timeline)) == [("stale", "docs/guide.md", "record:ADR-007", edited)]
-    (finding,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    (finding,) = _explained(timeline.adopter.root, "docs/guide.md")
     assert [c.commit.sha for c in finding.commits] == [edited]
 
 
@@ -223,7 +268,7 @@ def test_a_deferral_of_a_whole_record_anchor_lists_no_container_only_commit(
     deferred = timeline.commit("defer the guide", {"docs/guide.md": deferring})
 
     assert _summary(_run(timeline)) == [("deferred", "docs/guide.md", "record:ADR-007", deferred)]
-    (finding,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    (finding,) = _explained(timeline.adopter.root, "docs/guide.md")
     assert [c.commit.sha for c in finding.commits] == [edited]
 
 
@@ -244,7 +289,7 @@ def test_a_revalidation_alone_makes_no_stale_debt_through_a_path_anchor(
 
     edited = timeline.commit("the notes edited", {NOTES: NOTES_SPLIT})
     assert _summary(_run(timeline)) == [("stale", "docs/guide.md", f"path:{NOTES}", edited)]
-    (finding,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    (finding,) = _explained(timeline.adopter.root, "docs/guide.md")
     assert [c.commit.sha for c in finding.commits] == [edited]
 
 
@@ -289,7 +334,7 @@ def test_container_only_commits_before_an_edit_leave_the_edit_as_the_origin(
         "revalidate the notes, their content as it is", {NOTES: notes(at=T2, body="Edited.")}
     )
     assert _summary(_run(timeline)) == [("stale", "docs/guide.md", f"path:{NOTES}", edited)]
-    (finding,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    (finding,) = _explained(timeline.adopter.root, "docs/guide.md")
     assert [c.commit.sha for c in finding.commits] == [edited]
 
 
@@ -301,7 +346,7 @@ def test_a_deferral_of_a_path_anchor_lists_no_container_only_commit(timeline: Ti
     deferred = timeline.commit("defer the guide", {"docs/guide.md": deferring})
 
     assert _summary(_run(timeline)) == [("deferred", "docs/guide.md", f"path:{NOTES}", deferred)]
-    (finding,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    (finding,) = _explained(timeline.adopter.root, "docs/guide.md")
     assert [c.commit.sha for c in finding.commits] == [edited]
 
 
@@ -327,7 +372,7 @@ def test_an_edit_on_a_merged_line_is_dated_from_the_edit(timeline: Timeline) -> 
     timeline.commit("unrelated on main", {"src/cli/main.py": "print('x')\n"})
     timeline.merge("side")
     assert _summary(_run(timeline)) == [("stale", "docs/guide.md", f"path:{NOTES}", edited)]
-    (finding,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    (finding,) = _explained(timeline.adopter.root, "docs/guide.md")
     assert [c.commit.sha for c in finding.commits] == [edited]
 
 
@@ -383,6 +428,49 @@ def test_collection_entries_have_their_own_points(timeline: Timeline) -> None:
         "docs/rules.md#RS-1": fr.ArtefactState.STALE,
         "docs/rules.md#RS-2": fr.ArtefactState.CURRENT,
     }
+
+
+# --- derived links, read under HEAD's name across a rename (#1912, COR-050 point 5) -------
+
+
+def _as_main(body: str) -> str:
+    """A resolver's script `body` as the body of a `main`, so the runner's start runs it in
+    the test's own process (`start_in_process`)."""
+    return (
+        f'def main():\n{textwrap.indent(body, "    ")}\n\nif __name__ == "__main__":\n    main()\n'
+    )
+
+
+def test_a_placed_file_renamed_with_only_its_derived_links_moved_is_not_behind_a_deferral(
+    committed_adopter: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An anchor of a registered kind on a file a place holds, deferred: `explain` lists no
+    commit that renamed the file and moved only its derived links, since both versions are
+    read under the derived links HEAD sets aside in the file. A word changed still counts."""
+    started = start_in_process(monkeypatch)
+    repo = committed_adopter
+    declare_deriver(repo.root)
+    renamed = "notes/renamed.md"
+    resolver = _as_main(ANSWERING.format({"paths": [renamed]}))
+    register_kinds(repo.root, "sources", kinds={"source": "resolve"}, script_body=resolver)
+    anchors = {"path": ["src/cli/**"], "source": ["iso-8601"]}
+    files = {CONFIG: friction_config(), **SOURCE, PLACED_NOTE: note()}
+    repo.write({**files, "docs/guide.md": guide(anchors=anchors)})
+    repo.commit("base", files=None)
+    repo.git("mv", PLACED_NOTE, renamed)
+    moved = repo.commit("rename the notes, move their links", {renamed: LINKS_MOVED[PLACED_NOTE]})
+    listed = repo.git("diff-tree", "-r", "-M", "--name-status", "--no-commit-id", moved)
+    status, *names = listed.stdout.split()
+    assert status.startswith("R") and names == [PLACED_NOTE, renamed]  # git follows the file
+    edited = repo.commit("reword the notes", {renamed: note(body=note_body(lead="An order."))})
+    deferring = guide(anchors=anchors, deferred=[("source", "iso-8601", "rewrite after #1")])
+    repo.commit("defer the guide's source", {"docs/guide.md": deferring})
+
+    explained = frep.run_explain(repo.root, "docs/guide.md").findings
+    [behind] = [f for f in explained if f.finding.anchor == Anchor("source", "iso-8601")]
+    assert behind.finding.kind is fr.RepositoryFindingKind.DEFERRED
+    assert [c.commit.sha for c in behind.commits] == [edited]
+    assert started and all(script.name == "resolve.py" for script in started)
 
 
 # --- deferrals ---------------------------------------------------------------------------
@@ -584,23 +672,27 @@ def test_the_change_check_and_the_whole_repository_check_agree_on_that_point(
 
 def test_a_merge_that_keeps_a_sides_revalidation_is_not_its_point(timeline: Timeline) -> None:
     repo = timeline.adopter
-    timeline.start({"docs/guide.md": guide()})
-    repo.checkout("side", create=True)
-    revalidated = timeline.commit(
-        "side: revalidate the guide", {"docs/guide.md": guide(at=T2, because="checked on side")}
-    )
-    repo.checkout("main")
-    changed = timeline.commit(
-        "change the CLI", {"src/cli/main.py": "print('cli v2')\n"}, author=ALICE
-    )
-    timeline.commit("main: edit the body", {"docs/guide.md": guide(body="Edited on main.")})
-    merge = timeline.merge("side")
+    with blocks_in_history():
+        timeline.start({"docs/guide.md": guide()})
+        repo.checkout("side", create=True)
+        revalidated = timeline.commit(
+            "side: revalidate the guide",
+            {"docs/guide.md": guide(at=T2, because="checked on side")},
+        )
+        repo.checkout("main")
+        changed = timeline.commit(
+            "change the CLI", {"src/cli/main.py": "print('cli v2')\n"}, author=ALICE
+        )
+        timeline.commit("main: edit the body", {"docs/guide.md": guide(body="Edited on main.")})
+        merge = timeline.merge("side")
 
     # The merge combined both sides' edits of the guide, so git lists it among its paths...
     newest = fr.read_history(repo.root, merge).commits[0]
     assert (newest.sha, [e.path for e in newest.entries]) == (merge, ["docs/guide.md"])
     # ...but its `at` is the side's: the side's commit wrote it, before the CLI changed. A
-    # merge keeping one side's timestamp claims no revalidation (COR-050 point 3).
+    # merge keeping one side's timestamp claims no revalidation (COR-050 point 3), read so
+    # once the answers moved.
+    _moved(timeline)
     result = _run(timeline)
     assert _point(result) == revalidated
     assert _summary(result) == [("stale", "docs/guide.md", "path:src/cli/**", changed)]
@@ -660,35 +752,45 @@ class KeptBaseSide:
 def _kept_base_side(timeline: Timeline, *, edits_body: bool) -> KeptBaseSide:
     """`base`; on main the CLI changed and the guide revalidated; on `topic`, off `base` and
     dated after both, the CLI changed elsewhere and the guide revalidated — its `at` conflicting
-    with main's; then `topic` merges main and keeps main's revalidation, the state `pkit
-    friction resolve` leaves where both sides revalidated. With `edits_body`, topic's
-    revalidation edited the body too, kept by the merge beside main's block, so the merge
+    with main's; then `topic` merges main and keeps main's revalidation, the state a conflict
+    resolved to the base side's answer leaves where both sides revalidated. With
+    `edits_body`, topic's revalidation edited the body too, kept by the merge beside main's
+    block, so the merge
     commit lists the guide; without, the merged guide is main's, and the merge lists nothing.
+    A conflict in a block is history before the move, so the history is laid down in
+    blocks, and `topic` then moves its answers (`_moved`).
     """
     repo = timeline.adopter
-    timeline.start({"docs/guide.md": guide()})
-    repo.checkout("topic", create=True)
-    repo.checkout("main")
-    timeline.commit("main: change the CLI", {"src/cli/main.py": "print('cli v2')\n"}, author=ALICE)
-    revalidated = timeline.commit(
-        "main: revalidate the guide", {"docs/guide.md": guide(at=T2, because="checked on main")}
-    )
-    repo.checkout("topic")
-    changed = timeline.commit(
-        "topic: add a flag", {"src/cli/flags.py": "FLAGS = ('--all',)\n"}, author=BOB
-    )
-    body = "Edited on topic." if edits_body else "Body."
-    answer: dict[str, Any] = (
-        {"outcome": "updated", "because": None} if edits_body else {"because": "checked on topic"}
-    )
-    dropped = timeline.commit(
-        "topic: revalidate the guide", {"docs/guide.md": guide(at=T3, body=body, **answer)}
-    )
-    merging = repo.git("merge", "-q", "--no-ff", "--no-commit", "main", check=False)
-    assert merging.returncode == 1, merging.stdout + merging.stderr  # the blocks conflict
-    merge = timeline.commit(
-        "merge main", {"docs/guide.md": guide(at=T2, because="checked on main", body=body)}
-    )
+    with blocks_in_history():
+        timeline.start({"docs/guide.md": guide()})
+        repo.checkout("topic", create=True)
+        repo.checkout("main")
+        timeline.commit(
+            "main: change the CLI", {"src/cli/main.py": "print('cli v2')\n"}, author=ALICE
+        )
+        revalidated = timeline.commit(
+            "main: revalidate the guide",
+            {"docs/guide.md": guide(at=T2, because="checked on main")},
+        )
+        repo.checkout("topic")
+        changed = timeline.commit(
+            "topic: add a flag", {"src/cli/flags.py": "FLAGS = ('--all',)\n"}, author=BOB
+        )
+        body = "Edited on topic." if edits_body else "Body."
+        answer: dict[str, Any] = (
+            {"outcome": "updated", "because": None}
+            if edits_body
+            else {"because": "checked on topic"}
+        )
+        dropped = timeline.commit(
+            "topic: revalidate the guide", {"docs/guide.md": guide(at=T3, body=body, **answer)}
+        )
+        merging = repo.git("merge", "-q", "--no-ff", "--no-commit", "main", check=False)
+        assert merging.returncode == 1, merging.stdout + merging.stderr  # the blocks conflict
+        merge = timeline.commit(
+            "merge main", {"docs/guide.md": guide(at=T2, because="checked on main", body=body)}
+        )
+    _moved(timeline)
     return KeptBaseSide(revalidated, changed, dropped, merge)
 
 
@@ -833,7 +935,9 @@ def test_findings_run_upstream_first_along_artefact_anchors(timeline: Timeline) 
         },
     )
     result = _run(timeline)
-    assert [(f.location, f.anchor and f.anchor.value) for f in result.findings] == [
+    assert [
+        (f.location, f.anchor and f.anchor.value) for f in without_over_broad(result.findings)
+    ] == [
         ("docs/z-target.md", "src/core/**"),
         ("docs/a-dependant.md", "target"),
     ]
@@ -874,24 +978,97 @@ def test_dead_anchors_and_unresolved_kinds_are_all_reported(timeline: Timeline) 
 def test_a_dead_anchor_leaves_the_artefact_judged_on_its_other_anchors(timeline: Timeline) -> None:
     timeline.start({"docs/guide.md": guide(anchors={"path": ["src/cli/**", "src/gone/**"]})})
     result = _run(timeline)
-    assert [f.kind for f in result.findings] == [fr.RepositoryFindingKind.DEAD_ANCHOR]
+    assert [f.kind for f in without_over_broad(result.findings)] == [
+        fr.RepositoryFindingKind.DEAD_ANCHOR
+    ]
     assert result.artefact_reports[0].state is fr.ArtefactState.CURRENT
 
 
-def test_an_over_broad_anchor_is_warned_about(timeline: Timeline) -> None:
+def test_an_over_broad_anchor_is_warned_about_and_leaves_the_artefact_current(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Reported, never failed, and no answer owed (COR-050 point 12): over a window as long
+    as the line, `.` flagged the guide in the base and the unrelated commit, 2 of 3, more
+    than half; the CLI's anchor, in the base alone, is not over-broad
+    (`test_friction_over_broad` holds the bars)."""
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 3)
     timeline.start({"docs/guide.md": guide(anchors={"path": [".", "src/cli/**"]})})
+    timeline.commit("unrelated", {"README.md": "Hello.\n"})
+    timeline.commit(
+        "revalidate the guide",
+        {"docs/guide.md": guide(anchors={"path": [".", "src/cli/**"]}, at=T2, because="holds")},
+    )
     result = _run(timeline)
-    assert _summary(result) == [("over-broad", "docs/guide.md", "path:.", None)]
-    assert fr.OVER_BROAD_SHARE == 0.5
-    message = result.findings[0].message
-    assert "tracked files (100%)" in message and "most changes" in message
+    assert _summary(result, over_broad=True) == [("over-broad", "docs/guide.md", "path:.", None)]
+    assert result.findings[0].message.startswith(
+        "flagged its artefact in 2 of the last 3 commits on the first-parent line, more than "
+        "50% of them"
+    )
     assert result.artefact_reports[0].state is fr.ArtefactState.CURRENT
+
+
+#: Paths whose names sort next to one another: `-`, `.` and `0` fall either side of `/`.
+_NEIGHBOURS = (
+    "a",
+    "a-b",
+    "a.md",
+    "a/b",
+    "a/b-c",
+    "a/b.md",
+    "a/b/c.md",
+    "a/b/d/e.md",
+    "a/b0",
+    "a/bc",
+    "a0",
+    "b/a/b",
+    ".hidden/a",
+    "docs/guide.md",
+)
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        "a", "a/", "./a", "a//b", "a/b", "a/b/", "a/b/c.md", "a/b/c", "a/b0", "b", "b/a",
+        "docs/guide.md", "docs", "c", "", ".", "..", "../a", ".hidden", "*", "a/*", "a/**",
+        "**/b", "a/b/**/*.md", "a?", "[ab]/b", "z",
+    ],
+)  # fmt: skip
+def test_an_index_of_paths_matches_what_the_pattern_reading_matches(pattern: str) -> None:
+    """The index finds a literal path's files by bisection, the same paths, in the same
+    order, as reading every path with the one pattern reading does."""
+    from project_kit.friction_discovery import PathIndex, pattern_matcher
+
+    index = PathIndex(reversed(_NEIGHBOURS))
+    expected = tuple(sorted(filter(pattern_matcher(pattern), _NEIGHBOURS)))
+    assert index.matching(pattern) == expected
+    assert PathIndex(()).matching(pattern) == ()
+    assert index.paths == tuple(sorted(_NEIGHBOURS))
+
+
+def test_an_over_broad_anchor_two_artefacts_share_is_warned_about_on_each(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The count is taken once for a pattern, and every artefact anchored by it is told."""
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 2)
+    timeline.start(
+        {
+            "docs/guide.md": guide(anchors={"path": [".", "src/cli/**"]}),
+            "docs/notes.md": notes(anchors={"path": ["."]}),
+        }
+    )
+    timeline.commit("unrelated", {"README.md": "Hello.\n"})
+    result = _run(timeline)
+    broad = [f for f in result.findings if f.kind is fr.RepositoryFindingKind.OVER_BROAD]
+    assert sorted(str(f.location) for f in broad) == ["docs/guide.md", "docs/notes.md"]
+    assert len({f.message for f in broad}) == 1
 
 
 # --- the two measures, excluded paths ---------------------------------------------------------
 
 
 def test_the_two_measures(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start(
         {
             "docs/guide.md": guide(),
@@ -918,6 +1095,7 @@ def test_an_artefact_accepted_unanchored_is_listed_apart_and_never_counted(
     """COR-050 points 1 and 8: an artefact whose block gives the reason a person accepted
     it with no anchors is listed apart, with its reason; only the forgotten ones count.
     An excluded one is in neither list (point 7)."""
+    without_shipped_rule_sets(timeline.adopter)
     sponsor = "No code embodies the sponsor: it funds the project."
     timeline.start(
         {
@@ -959,6 +1137,7 @@ def test_an_artefact_accepted_unanchored_is_listed_apart_and_never_counted(
 
 
 def test_the_measures_are_reported_while_nothing_is_anchored_yet(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start(
         {"docs/plain.md": "---\ntitle: Plain\n---\n\nText.\n"}, friction_config(surface=["src"])
     )
@@ -974,7 +1153,7 @@ def test_a_capability_surface_is_measured_repository_relative(
     """A capability's `friction.surface` names repository paths (the package
     schema), so its uncovered paths are the repository's — not paths under one
     of the capability's documentation locations."""
-    timeline = Timeline(make_adopter_repo(capabilities=("evidence",)))
+    timeline = Timeline(make_adopter_repo(capabilities=("evidence",), prepare=commit_install))
     package = ".pkit/capabilities/evidence/package.yaml"
     declared = (timeline.adopter.root / package).read_text(encoding="utf-8") + (
         "docs:\n  locations:\n    runs: {path: evidence}\nfriction:\n  surface: [src/core]\n"
@@ -1006,6 +1185,7 @@ def test_an_artefact_under_an_excluded_path_is_left_out_of_the_measures(
     """COR-050 point 7: an excluded artefact is neither listed nor counted as
     unanchored, and never judged stale or deferred — while what it declares is
     still checked, since a dead anchor is never silence."""
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start(
         {
             "docs/guide.md": guide(),
@@ -1128,7 +1308,7 @@ def test_a_widening_never_hides_a_change_to_the_same_anchor(timeline: Timeline) 
     assert "`friction.exclude`" not in result.findings[0].message
     human = fr.render_human(result, now=NOW)
     assert "1 stale, 1 left-out anchor" in human
-    assert "  left-out  `friction.exclude` took files from an anchor" in human
+    assert re.search(r"\n  left-out +`friction\.exclude` took files from an anchor", human)
 
 
 def test_an_exclusion_narrowed_since_the_point_is_stale_from_the_narrowing(
@@ -1356,6 +1536,7 @@ def test_exit_zero_in_enforcing_mode(timeline: Timeline) -> None:
 
 
 def test_dormant_without_places(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start(
         {"docs/guide.md": guide()}, json.dumps({"friction": {"mode": "enforcing"}}) + "\n"
     )
@@ -1380,7 +1561,7 @@ def test_uncommitted_work_is_not_read(timeline: Timeline) -> None:
     timeline.start({"docs/guide.md": guide()})
     timeline.adopter.write({"src/cli/main.py": "print('uncommitted')\n"})
     result = _run(timeline)
-    assert result.findings == ()
+    assert without_over_broad(result.findings) == ()
     assert result.head is not None and result.head.uncommitted == 1
     assert "1 uncommitted path not read" in fr.render_human(result, now=NOW)
 
@@ -1391,6 +1572,7 @@ def test_unparsable_front_matter_is_reported(timeline: Timeline) -> None:
 
 
 def test_json_document_shape(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start({"docs/guide.md": guide()}, friction_config(mode="enforcing"))
     changed = timeline.commit("change the CLI", {"src/cli/main.py": "print('j')\n"}, author=ALICE)
     result = _cli("--json")
@@ -1433,13 +1615,14 @@ def test_json_document_shape(timeline: Timeline) -> None:
         "unanchored": [],
         "uncovered_surface": [],
     }
-    # The answer folder, the files in it and those a prune would remove (COR-062 point 8).
+    # The answer folder, the files in it — the guide's — and those a prune would remove
+    # (COR-062 point 8).
     assert doc["answers"] == {
         "folder": ".pkit/project/friction/answers",
-        "files": 0,
+        "files": 1,
         "prunable": [],
     }
-    (finding,) = doc["findings"]
+    (finding,) = [f for f in doc["findings"] if f["kind"] != "over-broad"]
     assert finding == {
         "artefact": "guide",
         "location": "docs/guide.md",
@@ -1452,6 +1635,8 @@ def test_json_document_shape(timeline: Timeline) -> None:
             "change": "change the CLI",
         },
         "message": finding["message"],
+        "bar": None,  # the bar an over-broad finding crossed, and none for another kind
+        "share": None,  # a second bar's finding's share of its artefact's asks
     }
     (report,) = doc["artefacts"]
     assert sorted(report) == [
@@ -1472,13 +1657,14 @@ def test_json_document_shape(timeline: Timeline) -> None:
         "date",
     ]
     assert report["revalidation_points"] == [report["revalidation_point"]]
-    # Its live answers, read from its block, each with the points it keeps (COR-062).
+    # Its live answers, read from its answer file, each with the points it keeps (COR-062).
+    (name,) = answer_file_names(timeline.adopter.root)
     assert report["answers"] == {
-        "home": "block",
+        "home": "files",
         "folder": ".pkit/project/friction/answers",
         "revalidations": [
             {
-                "file": None,
+                "file": name,
                 "at": T1,
                 "outcome": "unchanged",
                 "unchanged_because": "the CLI surface is as described",
@@ -1502,7 +1688,7 @@ def test_output_is_deterministic(timeline: Timeline) -> None:
     first, second = _run(timeline), _run(timeline)
     assert fr.render_json(first) == fr.render_json(second)
     assert fr.render_human(first, now=NOW) == fr.render_human(second, now=NOW)
-    assert [(f.location, f.kind.value) for f in first.findings] == [
+    assert [(f.location, f.kind.value) for f in without_over_broad(first.findings)] == [
         ("docs/a-engine.md", "stale"),
         ("docs/guide.md", "stale"),
         ("docs/guide.md", "deferred"),
@@ -1530,11 +1716,12 @@ def test_a_shallow_clone_that_cannot_reach_a_point_is_reported_not_guessed(
     assert "git fetch --unshallow" in result.findings[0].message
     assert "shallow clone" in fr.render_human(result, now=NOW)
 
-    # A depth of exactly four still records the root commit as the cut — the
-    # clone cannot tell a root from a cut, so it is reported the same way. One
-    # deeper than the history is not shallow: the same answer as the full clone.
+    # A depth of exactly five, the install's commit and the four after it, still
+    # records the root commit as the cut — the clone cannot tell a root from a cut,
+    # so it is reported the same way. One deeper than the history is not shallow:
+    # the same answer as the full clone.
     deep = tmp_path / "deep"
-    repo.git("clone", "-q", "--depth", "5", f"file://{repo.root}", str(deep))
+    repo.git("clone", "-q", "--depth", "6", f"file://{repo.root}", str(deep))
     deep_result = fr.run_repository_check(deep)
     assert deep_result.shallow is False
     assert _summary(deep_result)[0][0] == "stale"
@@ -1544,8 +1731,10 @@ def test_a_shallow_clone_that_cannot_reach_a_point_is_reported_not_guessed(
 
 
 def test_the_root_commit_is_read_whatever_log_showroot_says(
-    timeline: Timeline, tmp_path: Path
+    make_adopter_repo: MakeAdopterRepo, tmp_path: Path
 ) -> None:
+    # The install is not committed apart, so the base is the root commit.
+    timeline = Timeline(make_adopter_repo())
     repo = timeline.adopter
     repo.git("config", "log.showRoot", "false")
     base = timeline.start({"docs/guide.md": guide()})
@@ -1671,16 +1860,19 @@ def test_a_record_edited_and_re_answered_then_both_reverted(
 def test_an_at_written_back_names_only_what_this_change_modifies(timeline: Timeline) -> None:
     """An `at` written back is judged against its earlier point, so it is asked about the
     record amended since. This change touches only the guide: the answers list names no
-    anchor as one this change modifies (#1468)."""
+    anchor as one this change modifies (#1468). The revert's `at` is history before the
+    move, moved on `undo`."""
     repo = timeline.adopter
-    timeline.start({"docs/guide.md": guide(anchors=ANCHORED)})
-    timeline.commit("amend the record", {RECORD: _record(timeline) + "\nAmended.\n"})
-    revalidated = timeline.commit(
-        "revalidate the guide",
-        {"docs/guide.md": guide(anchors=ANCHORED, at=T2, because="checked the record")},
-    )
-    repo.checkout("undo", create=True)
-    timeline.revert(revalidated)
+    with blocks_in_history():
+        timeline.start({"docs/guide.md": guide(anchors=ANCHORED)})
+        timeline.commit("amend the record", {RECORD: _record(timeline) + "\nAmended.\n"})
+        revalidated = timeline.commit(
+            "revalidate the guide",
+            {"docs/guide.md": guide(anchors=ANCHORED, at=T2, because="checked the record")},
+        )
+        repo.checkout("undo", create=True)
+        timeline.revert(revalidated)
+    _moved(timeline)
 
     change = fc.run_change_check(repo.root, "main")
     assert _friction(change) == [("docs/guide.md", "record:COR-050")]  # asked since the point
@@ -1696,21 +1888,27 @@ def test_reverting_a_revalidation_with_the_change_it_answered_owes_nothing(
 ) -> None:
     """A revalidation and the record change it answered, reverted together as their own pull
     request: the written-back `at` answers nothing and is no bump, and nothing differs from
-    its point — so no friction; once landed the guide is current at that first point."""
+    its point — so no friction; once landed the guide is current at that first point. The
+    revert's `at` is history before the move, moved on `undo`."""
     repo = timeline.adopter
-    base = timeline.start({"docs/guide.md": guide(anchors=ANCHORED)})
-    text = _record(timeline)
-    answer: dict[str, Any] = (
-        {"because": "checked the amended record"}
-        if outcome == "unchanged"
-        else {"outcome": "updated", "because": None, "body": "Rewritten for the record."}
-    )
-    amended = timeline.commit(
-        "amend the record and revalidate the guide",
-        {RECORD: text + "\nAmended.\n", "docs/guide.md": guide(anchors=ANCHORED, at=T2, **answer)},
-    )
-    repo.checkout("undo", create=True)
-    timeline.revert(amended)
+    with blocks_in_history():
+        base = timeline.start({"docs/guide.md": guide(anchors=ANCHORED)})
+        text = _record(timeline)
+        answer: dict[str, Any] = (
+            {"because": "checked the amended record"}
+            if outcome == "unchanged"
+            else {"outcome": "updated", "because": None, "body": "Rewritten for the record."}
+        )
+        amended = timeline.commit(
+            "amend the record and revalidate the guide",
+            {
+                RECORD: text + "\nAmended.\n",
+                "docs/guide.md": guide(anchors=ANCHORED, at=T2, **answer),
+            },
+        )
+        repo.checkout("undo", create=True)
+        timeline.revert(amended)
+    _moved(timeline)
 
     change = fc.run_change_check(repo.root, "main")
     assert [f.kind for f in change.findings] == []
@@ -1793,8 +1991,9 @@ def test_reverting_a_revalidation_brings_back_the_debt_it_answered(timeline: Tim
 
 
 def test_reverting_the_revert_owes_nothing(timeline: Timeline) -> None:
-    """The revert landed, then reverted in turn: X's `at` comes back, written back to the
-    point that answered Y and X, and nothing differs from it — no friction; current at X."""
+    """The revert landed, then reverted in turn: X's answer file comes back with the path
+    and content history held, so it writes no answer (COR-062 point 3), and X's `at` keeps
+    the point that answered Y and X, nothing differing from it — no friction; current at X."""
     history = _answered_then_reverted(timeline)
     repo = timeline.adopter
     repo.checkout("main")
@@ -1804,7 +2003,7 @@ def test_reverting_the_revert_owes_nothing(timeline: Timeline) -> None:
 
     change = fc.run_change_check(repo.root, "main")
     assert [f.kind for f in change.findings] == []
-    assert [a.status for a in change.answers] == [fc.AnswerStatus.WRITTEN_BACK]
+    assert change.answers == ()
     repo.checkout("main")
     timeline.merge("redo")
     result = _run(timeline)
@@ -1890,11 +2089,15 @@ def test_a_dropped_deferral_put_back_covers_only_what_it_did(timeline: Timeline,
     """Reverting the revalidation that dropped a deferral — or writing the same entry back by
     hand — puts back an entry the guide carried before: it keeps its first point, d0, and
     covers the CLI only as it stood there. The CLI changed since, so the change check asks,
-    naming the put-back; once landed, the guide is stale from c2, its deferral point d0."""
-    history = _deferral_dropped(timeline)
+    naming the put-back; once landed, the guide is stale from c2, its deferral point d0. A
+    revert putting the entry back in a block is history before the move, moved on `undo`."""
     if how == "revert":
-        timeline.revert(history.revalidated)
+        with blocks_in_history():
+            history = _deferral_dropped(timeline)
+            timeline.revert(history.revalidated)
+        _moved(timeline)
     else:
+        history = _deferral_dropped(timeline)
         timeline.commit(
             "write the deferral back",
             {"docs/guide.md": guide(deferred=[("path", "src/cli/**", REASON)])},
@@ -2083,17 +2286,26 @@ def _rules(**entries: dict[str, Any]) -> str:
     return f"---\n{json.dumps(front)}\n---\n\n{body}"
 
 
-def test_a_collection_entry_deleted_and_restored_reads_as_new_in_both_checks(
+def test_a_collection_entry_deleted_and_restored_starts_its_answers_again_in_both_checks(
     timeline: Timeline,
 ) -> None:
+    """An entry's history starts again where it was last added to its file (COR-050 point 3,
+    COR-062 point 6). Restored with the `at` it carried, it writes no answer: the answer file
+    that answered it before its deletion is still there, and answers it no more. The change
+    that restores it finds it new; merged, it has no live answer and its point is where it was
+    restored, so a later change to its anchor is debt from that change. The entry kept beside
+    it keeps its answer file and its point."""
     repo = timeline.adopter
     timeline.start({"docs/rules.md": _rules(**{"RS-1": {"at": T1}, "RS-2": {"at": T1}})})
+    files = answer_file_names(repo.root)
     changed = timeline.commit("change the engine", {"src/core/engine.py": "ENGINE = 2\n"})
     timeline.commit("drop RS-1", {"docs/rules.md": _rules(**{"RS-2": {"at": T1}})})
     repo.checkout("restore", create=True)
     restored = timeline.commit(
-        "restore RS-1", {"docs/rules.md": _rules(**{"RS-1": {"at": T1}, "RS-2": {"at": T1}})}
+        "restore RS-1",
+        {"docs/rules.md": _rules(**{"RS-1": {"at": T1}, "RS-2": {"at": T1}})},
     )
+    assert answer_file_names(repo.root) == files and len(files) == 2
     change = fc.run_change_check(repo.root, "main")
     assert [(f.location, f.answer) for f in change.findings] == [
         ("docs/rules.md#RS-1", fc.Answer.NEW)
@@ -2103,6 +2315,28 @@ def test_a_collection_entry_deleted_and_restored_reads_as_new_in_both_checks(
     result = _run(timeline)
     assert _point(result, "docs/rules.md#RS-1") == restored
     assert _summary(result) == [("stale", "docs/rules.md#RS-2", "path:src/core/**", changed)]
+    revalidated = {
+        r.location: [found["file"] for found in r.answers["revalidations"]]
+        for r in result.artefact_reports
+        if r.answers is not None
+    }
+    assert revalidated["docs/rules.md#RS-1"] == []
+    assert len(revalidated["docs/rules.md#RS-2"]) == 1
+    assert len(result.prunable) == 1
+
+    repo.checkout("again", create=True)
+    again = timeline.commit("change the engine again", {"src/core/engine.py": "ENGINE = 3\n"})
+    change = fc.run_change_check(repo.root, "main")
+    assert _friction(change) == [
+        ("docs/rules.md#RS-1", "path:src/core/**"),
+        ("docs/rules.md#RS-2", "path:src/core/**"),
+    ]
+    repo.checkout("main")
+    timeline.merge("again")
+    assert _summary(_run(timeline)) == [
+        ("stale", "docs/rules.md#RS-1", "path:src/core/**", again),
+        ("stale", "docs/rules.md#RS-2", "path:src/core/**", changed),
+    ]
 
 
 def test_an_entry_moved_to_another_collection_with_an_earlier_at_reads_as_new(
@@ -2134,6 +2368,63 @@ def test_an_entry_moved_to_another_collection_with_an_earlier_at_reads_as_new(
     result = _run(timeline)
     assert _point(result, "docs/more.md#RS-1") == moved
     assert _summary(result) == []
+
+
+class _CountingBlobs(BlobReader):
+    """A `BlobReader` that counts how often each object is read from git."""
+
+    def __init__(self, root: Path) -> None:
+        super().__init__(root)
+        self.reads: Counter[str] = Counter()
+
+    def read_object(self, obj: str) -> bytes | None:
+        self.reads[obj] += 1
+        return super().read_object(obj)
+
+
+def test_the_walk_to_where_each_entry_was_added_reads_each_version_of_its_file_once(
+    timeline: Timeline,
+) -> None:
+    """Where each entry of a collection file was last added is a walk back through the file's
+    versions, one per entry (`Walker.added`). However many entries it seeks, each version is
+    read from git once — the file having more versions than the walker keeps between a
+    prefilter and a parse."""
+
+    def collection(held: list[str]) -> str:
+        """The file holding the entries `held`, each anchored to the engine, none answered."""
+        block = {"pkit": {"friction": {"anchors": {"path": ["src/core/**"]}}}}
+        body = "".join(f"## {entry} — Rule\n\nText of {entry}.\n\n" for entry in held)
+        return f"---\n{json.dumps(dict.fromkeys(held, block))}\n---\n\n{body}"
+
+    repo = timeline.adopter
+    # One entry's walk reads every version but the newest, more than the walker keeps.
+    ids = [f"RS-{n}" for n in range(1, fh._RECENT + 3)]
+    timeline.start({"docs/rules.md": collection(ids[:1])})
+    for count in range(2, len(ids) + 1):
+        # Committed by git alone: the file holds no answer to take into answer files.
+        (repo.root / "docs/rules.md").write_text(collection(ids[:count]), encoding="utf-8")
+        repo.git("commit", "-q", "-m", f"add {ids[count - 1]}", "--", "docs/rules.md")
+    adds = dict(zip(ids, reversed(repo.shas("docs/rules.md")), strict=True))
+    history = fh.read_history(repo.root, repo.head())
+    entries = [
+        a
+        for a in discover_artefacts(repo.root).artefacts
+        if a.path == "docs/rules.md" and a.kind is ArtefactKind.ENTRY
+    ]
+    blobs = _CountingBlobs(repo.root)
+    try:
+        walker = fh.Walker(history, blobs)
+        starts: dict[str, str] = {}
+        for entry in entries:
+            start = walker.added(entry)
+            assert start is not None
+            starts[entry.id] = history.commits[start].sha
+    finally:
+        blobs.close()
+    assert starts == adds
+    versions = {v.entry.after[1] for v in history.versions("docs/rules.md") if v.entry.after}
+    assert len(versions) == len(ids) and set(blobs.reads) == versions
+    assert set(blobs.reads.values()) == {1}
 
 
 def test_a_mode_change_is_a_change_in_both_checks(timeline: Timeline) -> None:
@@ -2277,13 +2568,18 @@ def test_a_value_first_carried_inside_a_shallow_clone_has_its_point_there(
 def test_the_change_check_reads_a_write_back_past_the_cut_as_new_and_says_so(
     timeline: Timeline, tmp_path: Path
 ) -> None:
-    timeline.start({"docs/guide.md": guide()})
-    timeline.commit("revalidate", {"docs/guide.md": guide(at=T2, because="checked")})
-    timeline.commit("cli 2", {"src/cli/main.py": "print('2')\n"})
-    timeline.commit("cli 3", {"src/cli/main.py": "print('3')\n"})
+    """The history before the move, in blocks: the first `at` written back lies beyond the
+    cut, so it is read as new, and the header names the artefact."""
+    with blocks_in_history():
+        timeline.start({"docs/guide.md": guide()})
+        timeline.commit("revalidate", {"docs/guide.md": guide(at=T2, because="checked")})
+        timeline.commit("cli 2", {"src/cli/main.py": "print('2')\n"})
+        timeline.commit("cli 3", {"src/cli/main.py": "print('3')\n"})
     clone = _clone(timeline.adopter, tmp_path / "shallow", depth=2)
     clone.checkout("topic", create=True)
-    clone.commit("write the first at back", {"docs/guide.md": guide(because="read again")})
+    clone.write({"docs/guide.md": guide(because="read again")})
+    move_answers(clone.root)
+    clone.commit("write the first at back, moving the answers", files=None)
 
     change = fc.run_change_check(clone.root, "main")
     assert (change.shallow, change.cut) == (True, ("docs/guide.md",))
@@ -2300,17 +2596,20 @@ def test_the_change_check_reads_a_write_back_past_the_cut_as_new_and_says_so(
 def test_a_value_first_written_by_a_merge_resolution_is_found_by_the_write_back_search(
     timeline: Timeline,
 ) -> None:
-    """The search is `git log -S` read against each parent of a merge (`-m`): an `at` first
-    written while resolving a merge is found, so writing it back later is a write-back."""
-    history = _revalidated_while_merging(timeline)
+    """The walk reads a merge against each of its parents: an `at` first written while
+    resolving a merge is found, so writing it back later is a write-back. The history
+    before the move, in blocks, the revert's answer moved on `undo`."""
     repo = timeline.adopter
-    repo.checkout("main")
-    timeline.merge("topic")
-    later = timeline.commit(
-        "revalidate again", {"docs/guide.md": guide(at=T4, because="checked once more")}
-    )
-    repo.checkout("undo", create=True)
-    timeline.revert(later)
+    with blocks_in_history():
+        history = _revalidated_while_merging(timeline)
+        repo.checkout("main")
+        timeline.merge("topic")
+        later = timeline.commit(
+            "revalidate again", {"docs/guide.md": guide(at=T4, because="checked once more")}
+        )
+        repo.checkout("undo", create=True)
+        timeline.revert(later)
+    _moved(timeline)
     change = fc.run_change_check(repo.root, "main")
     assert [a.status for a in change.answers] == [fc.AnswerStatus.WRITTEN_BACK]
     assert [f.kind for f in change.findings] == []
@@ -2321,9 +2620,9 @@ def test_a_value_first_written_by_a_merge_resolution_is_found_by_the_write_back_
 
 # --- an `at` in any spelling YAML's timestamp grammar allows (COR-050 point 3) -----------
 #
-# Validation accepts any spelling YAML's timestamp grammar resolves to a UTC instant, so
-# both checks must find a value however it was typed: the walk's byte prefilter and the
-# change check's reading of a file's history (`friction_history.stamps_in`).
+# Validation accepted any spelling YAML's timestamp grammar resolves to a UTC instant in a
+# block, so both checks must find a value in history however it was typed: the walk's
+# byte prefilter reads every spelling (`friction_history.stamps_in`).
 
 #: The instant 2026-01-01T09:00:00Z as a hand might type it, each a spelling validation
 #: accepts — unquoted, the parsed time is what is checked; quoted, only the canonical form.
@@ -2359,29 +2658,21 @@ def test_every_spelling_of_a_time_reads_as_the_instant_it_denotes(written: str) 
     assert fh.stamps_in(f"at: {written}\n".encode()) == {"2026-01-01T09:00:00": 1}
 
 
-def test_the_history_reading_lists_a_time_changed_in_its_last_digit(timeline: Timeline) -> None:
-    """A collection's front matter is one line, so a revalidation that changes one entry's
-    `at` in its last digit shares all but that with the line before it: the reading still
-    lists the commit for both times, and for no time it left alone."""
-    base = timeline.start(
-        {"docs/rules.md": _rules(**{"RS-1": {"at": "2026-10-01T09:00:01Z"}, "RS-2": {"at": T1}})}
+def test_the_walk_seeks_a_time_in_a_version_s_front_matter_alone() -> None:
+    """A time a body writes is no artefact's value, so the prefilter reads only the front
+    matter, cut as a parse cuts it: a long document's body is never scanned for times. A
+    version with no front matter cut, or not UTF-8, is scanned whole, so data held some
+    other way is never passed over."""
+    front = "---\nid: guide\nat: 2026-01-01T09:00:00Z\n---\n"
+    body = "Changed on 2026-02-02T10:00:00Z.\n" * 3
+    assert fh.stamps_in(fh._data_of((front + body).encode())) == {"2026-01-01T09:00:00": 1}
+    assert fh._data_of(front.replace("\n", "\r\n").encode() + b"Body.") == (
+        b"id: guide\nat: 2026-01-01T09:00:00Z\n"
     )
-    changed = timeline.commit(
-        "revalidate RS-1",
-        {
-            "docs/rules.md": _rules(
-                **{"RS-1": {"at": "2026-10-01T09:00:02Z", "because": "checked"}, "RS-2": {"at": T1}}
-            )
-        },
+    assert fh._data_of(body.encode()) == body.encode()
+    assert fh._data_of(b"---\nat: 2026-01-01T09:00:00Z\n\xff---\n") == (
+        b"---\nat: 2026-01-01T09:00:00Z\n\xff---\n"
     )
-
-    def at(text: str) -> datetime:
-        return datetime.fromisoformat(text.replace("Z", "+00:00"))
-
-    writes = fh.read_writes(timeline.adopter.root, "HEAD", "docs/rules.md")
-    assert writes.of(at("2026-10-01T09:00:02Z")) == {changed}
-    assert writes.of(at("2026-10-01T09:00:01Z")) == {base, changed}
-    assert writes.of(at(T1)) == {base}
 
 
 @pytest.mark.parametrize("spelling", sorted(SPELLINGS))
@@ -2392,22 +2683,26 @@ def test_reverting_a_revalidation_back_to_a_stamp_in_any_spelling_brings_back_it
     unanswered; X amends it again and revalidates with a canonical `at`; a branch reverts
     X. The value written back is found whatever its spelling: the change check judges it
     against c0 and asks about the record — enforcing mode fails — and once landed the
-    guide is stale from Y, at c0."""
+    guide is stale from Y, at c0. A time typed by hand is history before the move: the
+    blocks are read there, the revert's answer moved on `undo`."""
     repo = timeline.adopter
-    base = timeline.start(
-        {"docs/guide.md": _typed_guide(SPELLINGS[spelling])}, friction_config(mode="enforcing")
-    )
-    text = _record(timeline)
-    owed = timeline.commit("Y: amend the record", {RECORD: text + "\nY.\n"})
-    answered = timeline.commit(
-        "X: amend the record again, revalidate the guide",
-        {
-            RECORD: text + "\nY.\n\nX.\n",
-            "docs/guide.md": _typed_guide(T2, "checked against Y and X"),
-        },
-    )
-    repo.checkout("undo", create=True)
-    timeline.revert(answered)
+    with blocks_in_history():
+        base = timeline.start(
+            {"docs/guide.md": _typed_guide(SPELLINGS[spelling])},
+            friction_config(mode="enforcing"),
+        )
+        text = _record(timeline)
+        owed = timeline.commit("Y: amend the record", {RECORD: text + "\nY.\n"})
+        answered = timeline.commit(
+            "X: amend the record again, revalidate the guide",
+            {
+                RECORD: text + "\nY.\n\nX.\n",
+                "docs/guide.md": _typed_guide(T2, "checked against Y and X"),
+            },
+        )
+        repo.checkout("undo", create=True)
+        timeline.revert(answered)
+    _moved(timeline)
 
     change = fc.run_change_check(repo.root, "main")
     assert _friction(change) == [("docs/guide.md", "record:COR-050")]
@@ -2546,26 +2841,29 @@ def test_an_at_written_back_with_two_points_is_asked_only_where_it_differs_from_
     points. Main revalidates again and a branch reverts that: the `at` written back is
     judged against both points, and the change check asks only where the anchor differs
     from each — not where the CLI matches main's point and differs only from the release
-    line's, yes once main changed it again. `check --all` agrees once it lands."""
+    line's, yes once main changed it again. `check --all` agrees once it lands. An `at`
+    put back by a revert is history before the move, moved on `undo`."""
     repo = timeline.adopter
-    timeline.start({"docs/guide.md": guide()})
-    repo.checkout("release", create=True)
-    repo.checkout("main")
-    timeline.commit("main: change the CLI", {"src/cli/main.py": "print('main')\n"})
-    revalidated = timeline.commit(
-        "main: revalidate", {"docs/guide.md": guide(at=T2, because="checked on main")}
-    )
-    repo.checkout("release")
-    timeline.cherry_pick(revalidated)
-    repo.checkout("main")
-    timeline.merge("release")
-    if both:
-        timeline.commit("main: change the CLI again", {"src/cli/main.py": "print('again')\n"})
-    again = timeline.commit(
-        "main: revalidate again", {"docs/guide.md": guide(at=T3, because="checked once more")}
-    )
-    repo.checkout("undo", create=True)
-    timeline.revert(again)
+    with blocks_in_history():
+        timeline.start({"docs/guide.md": guide()})
+        repo.checkout("release", create=True)
+        repo.checkout("main")
+        timeline.commit("main: change the CLI", {"src/cli/main.py": "print('main')\n"})
+        revalidated = timeline.commit(
+            "main: revalidate", {"docs/guide.md": guide(at=T2, because="checked on main")}
+        )
+        repo.checkout("release")
+        timeline.cherry_pick(revalidated)
+        repo.checkout("main")
+        timeline.merge("release")
+        if both:
+            timeline.commit("main: change the CLI again", {"src/cli/main.py": "print('again')\n"})
+        again = timeline.commit(
+            "main: revalidate again", {"docs/guide.md": guide(at=T3, because="checked once more")}
+        )
+        repo.checkout("undo", create=True)
+        timeline.revert(again)
+    _moved(timeline)
 
     change = fc.run_change_check(repo.root, "main")
     assert [a.status for a in change.answers] == [fc.AnswerStatus.WRITTEN_BACK]
@@ -2669,7 +2967,7 @@ def _cli_taken_back(timeline: Timeline, resolution: str) -> str:
         repo.checkout("main")
         repo.checkout("land", create=True)
         _merge_no_commit(timeline, "kept")
-        repo.git("checkout", "main", "--", "docs/guide.md")
+        repo.git("checkout", "main", "--", "docs/guide.md", af.FOLDER)  # with its answers
         timeline.commit("land kept, keeping main's guide")
         return taken
     repo.checkout("land", create=True)
@@ -2698,7 +2996,7 @@ def test_a_merge_taking_a_file_back_from_before_the_point_is_a_change_in_both_ch
     timeline.merge("land")
     assert _summary(_run(timeline)) == [("stale", "docs/guide.md", "path:src/cli/**", taken)]
 
-    (traced,) = frep.run_explain(repo.root, "docs/guide.md").findings
+    (traced,) = _explained(repo.root, "docs/guide.md")
     behind = {c.commit.sha: c.paths for c in traced.commits}
     assert behind[taken] == ("src/cli/main.py",)
 
@@ -2987,7 +3285,7 @@ def test_a_merge_taking_the_points_own_part_is_no_change_behind_the_finding(
     edited = timeline.commit("e2: edit the CLI", {"src/cli/main.py": "print('e2')\n"})
 
     assert _summary(_run(timeline)) == [("stale", "docs/guide.md", "path:src/cli/**", edited)]
-    (traced,) = frep.run_explain(repo.root, "docs/guide.md").findings
+    (traced,) = _explained(repo.root, "docs/guide.md")
     assert [c.commit.sha for c in traced.commits] == [edited]
     assert kept not in {c.commit.sha for c in traced.commits}
 
@@ -3121,7 +3419,7 @@ def test_explain_names_behind_a_merge_only_the_files_it_took_whole(timeline: Tim
     landed = timeline.merge("land")
 
     assert _summary(_run(timeline)) == [("stale", "docs/guide.md", "path:src/cli/**", added)]
-    (traced,) = frep.run_explain(repo.root, "docs/guide.md").findings
+    (traced,) = _explained(repo.root, "docs/guide.md")
     behind = {c.commit.sha: c.paths for c in traced.commits}
     assert behind == {
         added: ("src/cli/extra.py",),
@@ -3148,13 +3446,14 @@ def test_an_artefact_deleted_and_restored_after_the_point_stands_as_it_stood(
 # --- the change check's write-back paths, and its answers list (COR-050 points 3, 4, 6) -----
 
 
-def test_an_at_removed_is_judged_against_the_blocks_introduction_and_listed_edited(
+def test_an_at_removed_is_judged_against_the_blocks_introduction_and_lists_nothing(
     timeline: Timeline,
 ) -> None:
-    """The CLI changed and was answered; a branch removes the `at`. The block's own marker
-    is written back, so the guide is judged against the commit that introduced the block
-    and asked about the CLI; the revalidation it removed is listed `edited`, never
-    `written-back`, and no bump."""
+    """The CLI changed and was answered; a branch takes every answer on the guide away,
+    removing their answer files. With no live revalidation the block's own marker is
+    written back, so the guide is judged against the commit that introduced the block and
+    asked about the CLI; a removal writes no answer to list, and is no bump (COR-062
+    point 8)."""
     repo = timeline.adopter
     timeline.start({"docs/guide.md": guide()})
     timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
@@ -3165,8 +3464,7 @@ def test_an_at_removed_is_judged_against_the_blocks_introduction_and_listed_edit
     change = fc.run_change_check(repo.root, "main")
     assert _friction(change) == [("docs/guide.md", "path:src/cli/**")]
     assert change.count(fc.FindingKind.BUMP) == 0
-    (answer,) = change.answers
-    assert (answer.status, answer.asked, answer.kept) == (fc.AnswerStatus.EDITED, False, ())
+    assert change.answers == ()
 
 
 def test_a_write_back_of_a_value_the_cut_already_carries_answers_nothing(
@@ -3174,17 +3472,18 @@ def test_a_write_back_of_a_value_the_cut_already_carries_answers_nothing(
 ) -> None:
     """In a shallow clone whose cut already carries the value written back, its point is
     beyond the clone: the value answers nothing and is no bump, the guide is judged
-    against the base — asked about the CLI the change edits — and the header names it."""
-    timeline.start({"docs/guide.md": guide()})
-    timeline.commit("cli 2", {"src/cli/main.py": "print('2')\n"})
-    timeline.commit("revalidate", {"docs/guide.md": guide(at=T2, because="checked cli 2")})
-    timeline.commit("cli 3", {"src/cli/main.py": "print('3')\n"})
+    against the base — asked about the CLI the change edits — and the header names it. The
+    history before the move, in blocks, the change's answer moved on `topic`."""
+    with blocks_in_history():
+        timeline.start({"docs/guide.md": guide()})
+        timeline.commit("cli 2", {"src/cli/main.py": "print('2')\n"})
+        timeline.commit("revalidate", {"docs/guide.md": guide(at=T2, because="checked cli 2")})
+        timeline.commit("cli 3", {"src/cli/main.py": "print('3')\n"})
     clone = _clone(timeline.adopter, tmp_path / "shallow", depth=3)
     clone.checkout("topic", create=True)
-    clone.commit(
-        "write the first at back, edit the CLI",
-        {"docs/guide.md": guide(because="read again"), "src/cli/main.py": "print('4')\n"},
-    )
+    clone.write({"docs/guide.md": guide(because="read again"), "src/cli/main.py": "print('4')\n"})
+    move_answers(clone.root)
+    clone.commit("write the first at back, edit the CLI, move the answers", files=None)
 
     change = fc.run_change_check(clone.root, "main")
     assert change.cut == ("docs/guide.md",)
@@ -3203,7 +3502,7 @@ def test_a_submodule_bumped_under_a_path_anchor_is_a_change_in_both_checks(
     first = timeline.start({"docs/guide.md": guide()})
     repo.git("update-index", "--add", "--cacheinfo", f"160000,{first},src/cli/vendor")
     repo.write({"docs/guide.md": guide(at=T2, because="checked with the submodule")})
-    repo.git("add", "docs/guide.md")
+    repo.git("add", "docs/guide.md", af.FOLDER)  # the guide, and its answer file
     other = timeline.commit_index("vendor a submodule under the CLI, revalidate")
     assert _summary(_run(timeline)) == []
 
@@ -3223,19 +3522,22 @@ def test_a_deferral_put_back_that_covers_its_anchor_stands_flagged_put_back(
     """The CLI changes, d0 defers it, r1 revalidates and drops the deferral; a branch
     reverts r1. The `at` written back answers nothing; the deferral put back keeps d0's
     point and covers the CLI as it stood there, which it still is — so the check accepts
-    it: `stands`, flagged `put_back`, asked for. Once landed the guide is deferred."""
+    it: `stands`, flagged `put_back`, asked for. Once landed the guide is deferred. The
+    history before the move, in blocks, the revert's answers moved on `undo`."""
     repo = timeline.adopter
-    base = timeline.start({"docs/guide.md": guide()}, friction_config(mode="enforcing"))
-    timeline.commit("change the CLI", {"src/cli/main.py": "print('cli v2')\n"})
-    deferred = timeline.commit(
-        "defer the CLI", {"docs/guide.md": guide(deferred=[("path", "src/cli/**", REASON)])}
-    )
-    revalidated = timeline.commit(
-        "revalidate, dropping the deferral",
-        {"docs/guide.md": guide(at=T2, because="the CLI rework settled")},
-    )
-    repo.checkout("undo", create=True)
-    timeline.revert(revalidated)
+    with blocks_in_history():
+        base = timeline.start({"docs/guide.md": guide()}, friction_config(mode="enforcing"))
+        timeline.commit("change the CLI", {"src/cli/main.py": "print('cli v2')\n"})
+        deferred = timeline.commit(
+            "defer the CLI", {"docs/guide.md": guide(deferred=[("path", "src/cli/**", REASON)])}
+        )
+        revalidated = timeline.commit(
+            "revalidate, dropping the deferral",
+            {"docs/guide.md": guide(at=T2, because="the CLI rework settled")},
+        )
+        repo.checkout("undo", create=True)
+        timeline.revert(revalidated)
+    _moved(timeline)
 
     change = fc.run_change_check(repo.root, "main")
     assert [(f.kind, f.answer) for f in change.findings] == [
@@ -3262,18 +3564,20 @@ def test_a_deferral_put_back_that_covers_its_anchor_stands_flagged_put_back(
 def test_a_written_back_revalidation_names_the_deferrals_it_kept(timeline: Timeline) -> None:
     """A revalidation that kept the engine's deferral, reverted: its `at` is written back
     and answers nothing, and like any revalidation whose `at` changed it names the
-    deferral it keeps."""
+    deferral it keeps. The history before the move, in blocks, moved on `undo`."""
     repo = timeline.adopter
     anchors = {"path": ["src/cli/**", "src/core/**"]}
     kept = [("path", "src/core/**", "waiting on the engine")]
-    timeline.start({"docs/guide.md": guide(anchors=anchors, deferred=kept)})
-    timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
-    revalidated = timeline.commit(
-        "revalidate, keeping the engine's deferral",
-        {"docs/guide.md": guide(anchors=anchors, deferred=kept, at=T2, because="checked")},
-    )
-    repo.checkout("undo", create=True)
-    timeline.revert(revalidated)
+    with blocks_in_history():
+        timeline.start({"docs/guide.md": guide(anchors=anchors, deferred=kept)})
+        timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
+        revalidated = timeline.commit(
+            "revalidate, keeping the engine's deferral",
+            {"docs/guide.md": guide(anchors=anchors, deferred=kept, at=T2, because="checked")},
+        )
+        repo.checkout("undo", create=True)
+        timeline.revert(revalidated)
+    _moved(timeline)
 
     (answer,) = fc.run_change_check(repo.root, "main").answers
     assert answer.status is fc.AnswerStatus.WRITTEN_BACK

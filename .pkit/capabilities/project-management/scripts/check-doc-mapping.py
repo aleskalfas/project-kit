@@ -20,8 +20,21 @@ and this check applies them to the diff:
   section names the code path or the rule's glob.
 - **A contributed obligation** — from a documentation capability, or the
   project's own filler file — that names a `document` is met only by the
-  page's answer in the diff: a changed file matches its `document`; the form
-  of the answer is the core change check's to verify (`pkit friction check`).
+  page's answer in the diff: a changed file matches its `document`, or the
+  core change check (`pkit friction check --json`, run against the same base
+  as the gate runs it) lists an answer the change adds on the page — updated,
+  unchanged or deferred — that it accepts. A deferral the change rewrote, which
+  the change check lists as edited, meets the page where the change check counts
+  the deferral for its anchor and its reason names a follow-up that the host,
+  asked through `gh`, does not say is closed (COR-050 point 3). A follow-up the
+  host could not be asked about counts, with a warning, and the deferral's
+  reviewer checks it. The change check compares the base
+  with the head, the one squash commit the pull request lands as (DEC-013), so
+  an answer meets the obligation wherever it falls among the branch's commits:
+  a fix round that edits an anchor after the commit that answered for it
+  leaves the page stale at the head, as the whole-repository check reads the
+  branch, and not once it lands. Where the change check gives no list, the
+  check says why and meets the page only by its change in the diff.
   One that names no `document` — a `code-undocumented` path — is met only by
   leaving the point: its filler reads the branch's HEAD, so once a page anchors
   the path it is no longer given. Still given, it is unmet, whatever else the
@@ -125,7 +138,8 @@ def _changed_files(fork: str) -> list[str] | None:
 
 def _doc_impact_section(body: str) -> str:
     """Return the text of the PR body's `## Doc impact` section (lowercased), read
-    without the friction answers' section, which overrides no mapping (DEC-055)."""
+    without a list of the answers an earlier run left, which overrides no mapping
+    (DEC-065 point 1)."""
     if not body:
         return ""
     lines = friction_answers.strip(body).splitlines()
@@ -162,6 +176,73 @@ def _matches(glob: str, path: str) -> bool:
     """gitignore-style match of a single glob against a single path."""
     spec = pathspec.PathSpec.from_lines("gitignore", [glob])
     return spec.match_file(path)
+
+
+def _answered(base: str, config: dict) -> dict[str, str]:
+    """The pages the change's answers meet the obligation of, each with the file that
+    holds its answer, from the change check against `base` as the gate runs it
+    (DEC-053 point 2). The check compares the base with the head, the one squash
+    commit the pull request lands as (DEC-013), so an answer meets the obligation
+    wherever it falls among the branch's commits. A deferral the change rewrote meets
+    it where the check counts it and its follow-up is open, as the host says
+    (`_follow_up_state`). Where the check gives no list, it says why and meets none:
+    never a pass on an answer it could not read."""
+    derived = friction_answers.written(base)
+    if derived.problem is not None:
+        print(
+            "warn: the change check gives no list of the answers this change adds, so a "
+            f"page is met only by its change in the diff: {derived.problem}",
+            file=sys.stderr,
+        )
+        return {}
+    findings = (derived.document or {}).get("findings")
+    return doc_check.answer_files(
+        derived.answers,
+        [f for f in findings if isinstance(f, dict)] if isinstance(findings, list) else [],
+        _follow_up_state(config),
+    )
+
+
+#: How long the host may take to say whether a follow-up is open.
+GH_TIMEOUT = 60
+
+
+def _follow_up_state(config: dict) -> doc_check.OpenFollowUp:
+    """Whether a follow-up a rewritten deferral names is open, as the host answers
+    through `gh` (DEC-023), each asked once a run. None where the host could not be
+    asked, such as with no `gh`, no token or no network, which a warning says: the
+    deferral then counts on its words, and its reviewer checks the follow-up is open
+    (COR-050 point 3). Any failure of `gh` counts as not asked, a number that is no
+    issue included, since its exit code does not tell them apart."""
+    states: dict[doc_check.FollowUp, bool | None] = {}
+
+    def state(follow_up: doc_check.FollowUp) -> bool | None:
+        if follow_up not in states:
+            states[follow_up] = _ask_host(follow_up, config)
+        return states[follow_up]
+
+    return state
+
+
+def _ask_host(follow_up: doc_check.FollowUp, config: dict) -> bool | None:
+    repo = ["--repo", follow_up.repo] if follow_up.repo else []
+    argv = ["gh", "issue", "view", str(follow_up.number), *repo, "--json", "state"]
+    try:
+        proc = gh_run([*argv, "--jq", ".state"], config, check=False, timeout=GH_TIMEOUT)
+    except (OSError, subprocess.SubprocessError) as exc:
+        why = f"`gh` could not be run: {exc}"
+    else:
+        if proc.returncode == 0:
+            return proc.stdout.strip() == "OPEN"
+        said = (proc.stderr or "").strip().splitlines()
+        why = f"`gh issue view` exited {proc.returncode}" + (f": {said[-1]}" if said else "")
+    print(
+        f"warn: could not ask whether {follow_up} is open ({why}); a rewritten deferral "
+        "naming it counts on its words, and its reviewer checks the follow-up "
+        "(COR-050 point 3).",
+        file=sys.stderr,
+    )
+    return None
 
 
 def main() -> int:
@@ -282,11 +363,13 @@ def main() -> int:
         unsatisfied.append(code_glob)
 
     # Contributed obligations. One naming a page is met by the page's answer in
-    # the diff — the page changed. One naming none is met only by leaving the
+    # the diff: the page changed, or the change check lists an answer the change
+    # adds on it, which it accepts. One naming none is met only by leaving the
     # point: the filler read HEAD, so an obligation still here is unmet, however
     # much else the diff changed. The `## Doc impact` section is not read.
     unanswered: dict[str, int] = {}
     unanchored: dict[str, int] = {}
+    answered: dict[str, str] | None = None  # read once, at the first page left to meet
     for obligation in contributed:
         source = str(obligation["source"])
         reason = obligation["reason"]
@@ -301,6 +384,14 @@ def main() -> int:
         page = str(obligation["document"])
         if any(_matches(page, f) for f in changed_set):
             print(f"  ✓ [{source}] {page} → answered in the diff")
+            continue
+        if answered is None:
+            answered = _answered(base.ref, config)
+        # The answer's location is the page's exactly: read as a pattern, `README.md`
+        # would take an answer on any README in the tree for the root's.
+        file = answered.get(page)
+        if file is not None:
+            print(f"  ✓ [{source}] {page} → answered in the diff ({file})")
             continue
         print(f"  ✗ [{source}] {page} → no answer in the diff ({reason})")
         unanswered[source] = unanswered.get(source, 0) + 1

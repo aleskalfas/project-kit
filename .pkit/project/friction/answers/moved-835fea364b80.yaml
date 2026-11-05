@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/requirements/constraints/REQ-003-python-floor.md
+    revalidated:
+      at: 2026-10-22T22:12:47Z
+      outcome: unchanged
+      unchanged-because: The workflow only names the pull request's own head to the change check. The package's Python floor and what verifies it are unchanged.

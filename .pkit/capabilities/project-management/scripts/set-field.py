@@ -19,7 +19,8 @@ Signature (batch-capable — set several fields in one call):
   - --kind        one of the adopter's classification type values; swaps the
                   prior `type:*` label and realigns the title prefix.
   - --priority    one of the adopter's classification priority values.
-  - --workstream  one of the adopter's declared workstream slugs.
+  - --workstream  a slug `project/workstreams.yaml` holds as active (the
+                  legacy `workstreams:` key of config.yaml only without it).
   - --parent      a parent issue number; rewrites the body's first parent-ref
                   line to the issue type's `parent_ref_form` AND moves the
                   native sub-issue link to the same parent (see below).
@@ -60,12 +61,11 @@ classification.yaml), so --kind labels regardless of board substrate.
 Board-carried axes (#724, from #723 / report #708)
 -------------------------------------------------
 Where `_lib/axis_carriage` resolves priority/workstream to the BOARD — a map that
-binds the axis `board: true`, or a configured board on an axis the map is silent
-about ([project-management:DEC-051-axis-carriage-activation]) — the value lives on
-a Projects-v2 single-select field rather than a label, and set-field WRITES it. A
-map that binds the axis to a label wins over the board flag, and the value is
-written as that label instead: the flag is not consulted for an axis the adopter
-has explicitly bound.
+binds the axis `board: true` ([project-management:DEC-051-axis-carriage-activation],
+[project-management:DEC-062-axes-chosen-in-the-map]) — the value lives on a
+Projects-v2 single-select field rather than a label, and set-field WRITES it. The
+board flag carries no axis: an axis the map binds to a label is written as that
+label, and one the map does not bind reads as it does with no board.
 
 Everything about the board write is resolved from names the adopter already
 speaks, at runtime, through the board READ seam (`_lib/board_fields`): the board
@@ -173,6 +173,7 @@ from _lib import (
     provenance,
     session_guard,
     substrate_writes,
+    workstreams,
 )
 from _lib import lifecycle_inference as infer
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
@@ -332,16 +333,14 @@ def main() -> int:
             f"({', '.join(sorted(valid_priorities))})"
         )
 
-    adopter_workstreams = _adopter_workstreams(config)
-    if (
-        args.workstream is not None
-        and adopter_workstreams
-        and args.workstream not in adopter_workstreams
-    ):
-        errors.append(
-            f"workstream {args.workstream!r} is not in the adopter's declared "
-            f"workstreams ({', '.join(sorted(adopter_workstreams))})"
+    # The workstream must be one `project/workstreams.yaml` holds as active
+    # (DEC-012 and DEC-018, #1933) — the same reading create-issue makes.
+    if args.workstream is not None:
+        refusal = workstreams.filing_refusal(
+            args.workstream, workstreams.read_declared(capability_root)
         )
+        if refusal is not None:
+            errors.append(refusal)
 
     parent_ref_line: str | None = None
     parent_ref_warning: str | None = None
@@ -617,21 +616,15 @@ def _route_axes(
 
     **Which substrate owns the axis is asked of `_lib/axis_carriage`, and of
     nothing else** ([project-management:DEC-051-axis-carriage-activation] decision
-    points 1 and 4). Where the map binds the axis, the binding is the answer and
-    `has_projects_v2_board` is not consulted for it; where the map is silent, the
-    flag governs exactly as before. This replaces the previous predicate — the flag
-    crossed with `axis_is_label_bound` — which was the same pair pre-check's
-    cross-substrate conflict check keyed on. That statement of the invariant is
-    updated rather than preserved: the two claimants no longer *conflict*, so what
-    the two sides must share is the ANSWER, not a duplicated cross, and one
-    composition is the stronger guarantee of that.
+    points 1 and 4). The map's binding is the answer, and `has_projects_v2_board`
+    carries no axis ([project-management:DEC-062-axes-chosen-in-the-map] point 1).
+    This replaces the previous predicate — the flag crossed with
+    `axis_is_label_bound` — so what the writer and the gate share is the ANSWER,
+    not a duplicated cross, and one composition is the stronger guarantee of that.
 
-    **The gate agrees with this writer.** pre-check reports the same
-    configuration as a warning, not a refusal — the two were briefly out of step
-    while the consumers were rewired ahead of the softening, deliberately, since
-    relaxing the gate first would have made the reported state less detectable
-    than the bug. Both sides now ask the one accessor, which is what makes the
-    agreement structural rather than a convention each has to remember.
+    **The gate agrees with this writer.** Both sides ask the one accessor, which
+    is what makes the agreement structural rather than a convention each has to
+    remember.
     """
     label_axes: dict[str, str] = {}
     board_axes: dict[str, str] = {}
@@ -799,7 +792,8 @@ def _read_board_state(
     through the board READ seam (`_lib/board_fields`) and mutate nothing — so this
     runs unchanged under `--dry-run`, which is what lets a dry-run report the
     concrete write (and refuse a knowably-impossible one) without touching the
-    board.
+    board. The board is read under its owner (`board_fields.board_owner`):
+    `gh.default_owner`, else the repository's, which the issue's url names.
 
     Any failure is captured in `BoardState.error` with gh's stderr VERBATIM: the
     likely cause is a token without the `project` scope, and the remedy is in that
@@ -809,8 +803,8 @@ def _read_board_state(
     """
     number = board_fields.board_number(config)
     board_ref = f"Projects-v2 board #{number}" if number else "the Projects-v2 board"
-    owner = board_fields.default_owner(config)
     issue_url = issue.get("url") if isinstance(issue.get("url"), str) else None
+    owner = board_fields.board_owner(config, repository_owner=board_fields.url_owner(issue_url))
     remediation = (
         f"gh project item-add {number or '<board-number>'} "
         f"--owner {owner or '<board-owner>'} "
@@ -1330,16 +1324,6 @@ def _axis_values(classification: dict, axis: str) -> set[str]:
     return out
 
 
-def _adopter_workstreams(config: dict) -> set[str]:
-    """The adopter's declared workstream slugs (list or mapping form)."""
-    ws = config.get("workstreams")
-    if isinstance(ws, list):
-        return {entry for entry in ws if isinstance(entry, str)}
-    if isinstance(ws, dict):
-        return set(ws.keys())
-    return set()
-
-
 def _parent_ref_line(type_entry: dict, parent_num: int, parent_label: str | None = None) -> str:
     """Build the `<Label>: #<N>` parent-ref line (:func:`_parent_line`'s line)."""
     return _parent_line(type_entry, parent_num, parent_label).line
@@ -1549,7 +1533,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--workstream",
         default=None,
         help=(
-            "Workstream slug (one of the adopter's declared workstreams). Written "
+            "Workstream slug, one project/workstreams.yaml holds as active. Written "
             "as a label, or — under a Projects-v2 board — as the board's "
             "`Workstream` single-select option."
         ),

@@ -19,7 +19,12 @@ reads:
     - COR-008
   paths:
     - .pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md
+    - .pkit/capabilities/living-docs/decisions/DEC-003-guide-kind.md
     - .pkit/capabilities/living-docs/README.md
+    - .pkit/capabilities/living-docs/pages.md
+    - .pkit/capabilities/living-docs/spaces.md
+    - .pkit/capabilities/living-docs/validation.md
+    - .pkit/capabilities/living-docs/agent.md
     - .pkit/capabilities/living-docs/rule-sets/ldoc.md
     - .pkit/capabilities/living-docs/project/config.yaml
     - .pkit/project/config.yaml
@@ -32,7 +37,7 @@ This is the **living-docs** capability's authoring skill. It covers the two thin
 - **The command owns what it writes:** a page's front matter from its template, a definition's scope and pin, and the check of the write.
 - **This skill owns the choices behind it:** which space, which kind, which reader, where the file goes, and what each statement rests on.
 
-The rule is [living-docs:DEC-001-living-docs-discipline], and the shared rules are `LDOC`, in `.pkit/capabilities/living-docs/rule-sets/ldoc.md`. The layout, the configuration and every command are in `.pkit/capabilities/living-docs/README.md`.
+The rule is [living-docs:DEC-001-living-docs-discipline], and the shared rules are `LDOC`, in `.pkit/capabilities/living-docs/rule-sets/ldoc.md`. Every command is in `.pkit/capabilities/living-docs/README.md`. A page's fields and kinds are in `pages.md` beside it, and the layout and the configuration are in `spaces.md`.
 
 ## Acceptance gate
 
@@ -63,9 +68,11 @@ The stamp writes a page's front matter from its kind's template, and a definitio
 
 Each command takes `--dry-run`, which makes the checks before the write, prints each file it would write and writes nothing.
 
-### Separate roots first
+### Roots that are one folder
 
-Both documentation roots default to `docs/`. Two roots that are one folder give no space (DEC-001 point 1). On a fresh project, set the user and internal roots to two folders first, under `docs` in `.pkit/project/config.yaml`. That is onboarding's first step. It is an edit of the backbone configuration, so an agent asks the person first.
+Both documentation roots default to `docs/`. Two roots that are one folder give no space (DEC-001 point 1). So the first stamp of a space, or of a page of the user or technical space, offers to set the internal root apart, at `tech-docs/`. It sets the internal root through `pkit config set`, which edits the backbone configuration.
+
+An agent asks the person first, naming the folder, and passes `--yes` only once they accept. Pass `--internal-root <path>` when they choose another folder. Off a terminal without `--yes`, the stamp refuses and writes nothing.
 
 ### After stamping
 

@@ -16,13 +16,26 @@ Held to software-analysis DEC-004 point 7 and DEC-001 points 1 and 2:
   never read for them;
 - **across analyses** — a term the head lists from an analysis the repository holds
   links to its entry there, by a path from the file;
+- **the four kinds** — each part of an actor's, a use case's, a journey's and a
+  requirement's body takes the links once, as the project's own structures label its
+  parts; a goal, a journey's step lines and an actor's first sentence, which say a datum
+  again, stay plain, and a link written there is extra;
+- **a view's closing section** — each view ends with what is built on its concepts: the
+  use cases, journeys and requirements whose bodies link a term it explains, written by
+  the command and the stamp, held by the check, and no part of the view's structure
+  (#2104);
 - **one name, one concept** — validation refuses two terms in force of one name, a
   plural among the names, and a name another term replaces, within an analysis and
   across the analyses it builds on, two of those included, whatever any rule's status.
+
+The validator, the links and the stamp run in the test's own process, their `pkit` calls
+answered there too (`tests/in_process.py`, #2326). One test keeps a process: the link
+command's exit code and the lines it prints.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import re
 from collections.abc import Sequence
@@ -33,18 +46,27 @@ import pytest
 
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
+    ACTORS,
     ANALYSIS,
+    ANALYSIS_SET,
+    ANALYSIS_SET_TEXT,
+    CONSTRAINTS,
     DOMAIN_MODEL,
+    FUNCTIONAL,
     GLOSSARY,
+    JOURNEYS,
+    LINK,
+    QUALITY,
     SA,
     SETTINGS_TEXT,
+    USE_CASES,
     VALIDATE,
-    accepting_san,
     fill,
     installed,
     link,
     load_lib,
     prepare,
+    run_in_process,
     run_script,
     stamped,
 )
@@ -117,8 +139,20 @@ def _view(linked: bool) -> str:
     )
 
 
+#: The sentence that opens a view's closing section, as the command writes it.
+CLOSING_OPENING = (
+    "Each concept below lists the use cases, journeys and requirements whose text links its term."
+)
+
+#: The view's closing section where nothing in the analysis links a term it explains, as
+#: the command writes it (DEC-004 point 7).
+CLOSING_NONE = (
+    f"\n## What is built on these concepts\n\n{CLOSING_OPENING}\n\n"
+    "**Order:** None.\n\n**Payment:** None.\n"
+)
+
 VIEW_BODY = _view(linked=False)
-VIEW_LINKED = _view(linked=True)
+VIEW_LINKED = _view(linked=True) + CLOSING_NONE
 
 #: Each term's entry below its heading, as a writer fills it, by its id: the example and
 #: the distinctions, the term's link to its section left as the stamp wrote it.
@@ -211,7 +245,8 @@ def bare(
 
 
 def _validate(repo: AdopterRepo) -> list[tuple[str, str]]:
-    completed = run_script(repo, VALIDATE, "--json")
+    """The validator's errors, `--json` alone, in the test's own process."""
+    completed = run_in_process(repo, VALIDATE, "--json")
     assert completed.returncode == 0, completed.stderr
     return [
         (f["location"], f["message"])
@@ -257,16 +292,21 @@ def test_the_stamp_opens_each_section_with_its_link_to_its_term(
 # --- the command writes the links ------------------------------------------------------------
 
 
+@pytest.mark.process(
+    "the link command's end-to-end test: its exit code and the lines it prints, from a "
+    "process of its own, and the pkit it starts"
+)
 def test_the_command_links_each_first_mention_with_every_safeguard(project: AdopterRepo) -> None:
     """Each first mention in a section links to its term's entry; the safeguards keep a
     link off the rest (DEC-004 point 7). The view and the glossary's entries come out
     exactly as `VIEW_LINKED` and `ENTRIES_LINKED` show them, and a term's definition, in
     front matter, stays plain."""
     before = _read(project, GLOSSARY).split("\n---\n", 1)[0]
-    completed = link(project)
+    completed = run_script(project, LINK)
+    assert completed.returncode == 0, completed.stderr
     assert completed.stdout.splitlines() == [
         f"linked {GLOSSARY} (5 link(s) written or mended)",
-        f"linked {VIEW} (8 link(s) written or mended)",
+        f"linked {VIEW} (9 link(s) written or mended)",
     ]
     assert _body(project, VIEW) == VIEW_LINKED
     for term, (example, distinctions) in ENTRIES_LINKED.items():
@@ -284,11 +324,18 @@ def test_the_check_reports_each_link_missing_extra_or_stale_and_names_the_comman
     it would not write, and one whose target is stale are each reported, with the line,
     and mended by the command (DEC-004 point 7)."""
     found = _validate(project)
-    assert len(found) == 13, "\n".join(f"{where} | {m}" for where, m in found)
+    assert len(found) == 14, "\n".join(f"{where} | {m}" for where, m in found)
     assert all(
         m.endswith("run `pkit analysis link`, which writes the links (DEC-004 point 7)")
         for _l, m in found
     )
+    assert (
+        VIEW,
+        "the view ends with no section `## What is built on these concepts`: the view's one "
+        "closing section, at its end, lists under each concept it explains each use case, "
+        "journey and requirement in force of its analysis that links the concept's term — run "
+        "`pkit analysis link`, which writes the links (DEC-004 point 7)",
+    ) in found
     assert (
         VIEW,
         "line 33: `customer` is the first mention of TERM-customer in its section, and takes "
@@ -346,7 +393,7 @@ def test_a_section_s_link_to_its_term_is_no_content_of_its_explanation(
     """Where the format rule binds, a section whose explanation holds only its link to its
     term lacks its explanation (DEC-004 point 7)."""
     link(project)
-    project.write(accepting_san(project))
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     assert _validate(project) == []
     view = _read(project, VIEW).replace(
         "An order is what a [customer](../glossary.md#term-customer--customer) asks the shop "
@@ -429,15 +476,18 @@ def test_two_sections_naming_each_other_s_terms_are_each_mended(project: Adopter
 
 
 def test_an_analysis_with_no_domain_model_takes_no_link(bare: AdopterRepo) -> None:
-    """A glossary with no view beside it is never linked nor held, a link written in it by
-    hand included (DEC-004 point 7)."""
+    """A glossary with no view beside it is never linked to its terms nor held, a link
+    written in it by hand included (DEC-004 point 7). It cites no record and names no
+    artefact by its id, so the links of citations and of ids write nothing either (DEC-001
+    points 13 and 14)."""
     stamped(bare, "term", "order", "--name", "order", "--path", "src/run.py")
     stamped(bare, "term", "payment", "--name", "payment", "--path", "src/run.py")
     fill(bare)
-    _set_entries(bare, {"TERM-order": ("a payment settles an order.", " None.")})
+    hand = "a [payment](#term-payment--payment) settles an order."
+    _set_entries(bare, {"TERM-order": (hand, " None.")})
     before = _read(bare, GLOSSARY)
     completed = link(bare)
-    assert "No analysis keeps a domain model" in completed.stdout
+    assert completed.stdout.strip() == "Every link is as it should be; nothing written."
     assert _read(bare, GLOSSARY) == before
     assert _validate(bare) == []
 
@@ -523,12 +573,71 @@ def test_a_mention_is_read_with_its_safeguards(text: str, linked: str) -> None:
     assert _linked(text, None, *terms) == linked
 
 
+@pytest.mark.parametrize(
+    "phrase",
+    [
+        "change",
+        "Change check",
+        "glossary's head",
+        f"n{TYPOGRAPHERS}s",
+        "a",
+        "x y",
+        "über",
+        "co-author",
+        "decision\trecords",
+    ],
+)
+def test_a_text_without_a_phrase_s_needle_is_not_searched_and_nothing_else_changes(
+    phrase: str,
+) -> None:
+    """A text is searched for a phrase only where it holds the phrase's needle: the longest
+    run of it matched as written, past its first letter, within one word and with no
+    apostrophe. The mentions found are the ones the phrase's pattern finds in any text:
+    the first letter in either case, an apostrophe of either kind, any white space
+    between the words, whole words only (#2025)."""
+    texts = [
+        "",
+        "A change; the Change check, change-checks and changes.",
+        f"The Glossary{TYPOGRAPHERS}s head and the glossary's\nhead, not glossarys head.",
+        f"N's, n{TYPOGRAPHERS}s and an's.",
+        "a x  y, X\ny and xy.",
+        "Über and über, Uber.",
+        "A co-author, Co-author and coauthor.",
+        "Decision records, decision\nrecords and decision-records.",
+    ]
+    needle = links._needle(phrase)
+    for text in texts:
+        found = [m.span() for m in links._found(phrase, text)]
+        assert found == [m.span() for m in links._pattern(phrase).finditer(text)], text
+        if needle not in text:
+            assert found == []
+    assert links._needle("glossary's head") == "lossary"
+    assert links._needle("a") == ""
+
+
 def test_a_term_is_never_linked_in_its_own_section_and_its_name_consumes_its_words() -> None:
     """The section's own term takes no link, and a shorter term inside it takes none
     either: `record` is never linked inside `decision record`."""
     assert _linked(
         "A decision record is a record.", "TERM-decision-record", DECISION_RECORD, RECORD
     ) == ("A decision record is a [record](#term-record--record).")
+
+
+def test_an_actor_s_name_holds_no_mention_of_a_term_only_part_of_it() -> None:
+    """An actor named by its name uses no concept: a term whose name is only part of an
+    actor's name takes no link inside it, and its next mention counts as the first. A term
+    whose name is an actor's whole name is still mentioned by it (DEC-004 point 7)."""
+    component = links.Term("TERM-component", "component", "glossary.md")
+    vocabulary = links.Vocabulary(
+        (component, RECORD),
+        {component.id: ("component",), RECORD.id: ("record",)},
+        ("Component author", "Record"),
+    )
+    text = "The component author writes a component, and a record."
+    assert links.section(text, None, vocabulary, "glossary.md", 1)[0] == (
+        "The component author writes a [component](#term-component--component), and a "
+        "[record](#term-record--record)."
+    )
 
 
 def test_a_name_two_terms_share_links_neither() -> None:
@@ -783,3 +892,507 @@ def test_a_link_leads_by_a_path_from_the_file_that_holds_it() -> None:
     assert term.target("tech-docs/analysis/billing/glossary.md") == (
         "../core/glossary.md#term-adapter--adapter"
     )
+
+
+# --- an actor, a use case, a journey and a requirement (DEC-004 point 7) ----------------------
+
+ACTOR_FILE = f"{ACTORS}/ACT-shopper.md"
+PLACE = f"{USE_CASES}/UC-001-place-order.md"
+PAY = f"{USE_CASES}/UC-002-pay-order.md"
+JOURNEY = f"{JOURNEYS}/JRN-001-first-order.md"
+QUICK = f"{QUALITY}/REQ-001-settle-quickly.md"
+ONCE = f"{FUNCTIONAL}/REQ-002-settle-once.md"
+NETWORK = f"{CONSTRAINTS}/REQ-003-card-network.md"
+
+#: The actor's summary, the first sentence of its opening.
+SHOPPER_SUMMARY = "A customer who places an order and pays for it."
+
+
+def _bodies(linked: bool) -> dict[str, str]:
+    """Each of the four kinds' artefacts' body below its front matter, as a writer fills it
+    or, `linked`, as `pkit analysis link` writes it. Every one lies two folders below the
+    glossary. A goal, a journey's step lines and the actor's first sentence say a datum
+    again, and stay plain. Every other part links each term's first mention in it."""
+
+    def k(text: str, slug: str) -> str:
+        return f"[{text}](../../glossary.md#term-{slug}--{slug})" if linked else text
+
+    def case(case_id: str, slug: str) -> str:
+        """A use case's id in a journey, linked to its file (DEC-001 point 14)."""
+        return f"[{case_id}](../use-cases/{case_id}-{slug}.md)" if linked else case_id
+
+    order, customer = k("order", "order"), k("customer", "customer")
+    payment, method = k("payment", "payment"), k("payment method", "payment-method")
+    return {
+        ACTOR_FILE: "\n".join(
+            [
+                "# ACT-shopper — Shopper",
+                "",
+                f"{SHOPPER_SUMMARY} Each {order} waits for a {payment}.",
+                "",
+                f"**Occasions:** Whenever the {customer} wants goods, once a {method} is chosen.",
+                "",
+                "**Context:** None.",
+                "",
+            ]
+        ),
+        PLACE: "\n".join(
+            [
+                "# UC-001 — Place an order",
+                "",
+                "**Goal:** Place an order and pay for it with my payment method.",
+                "",
+                "**Other actors:** None.",
+                "",
+                f"**Preconditions:** The {customer} holds a {method}.",
+                "",
+                "**Assumptions:** None.",
+                "",
+                f"**Trigger:** The {customer} asks to place an {order}.",
+                "",
+                "**Main path:**",
+                "",
+                f"1. The {customer} chooses goods, and the system opens an {order}.",
+                f"2. The system asks for a {payment}, and the customer's payment settles the "
+                "order.",
+                "",
+                "**Variants:**",
+                "",
+                f"- **2a.** No {payment} arrives. The system keeps the {order} open, and the use "
+                "case ends.",
+                "",
+                f"**Postconditions:** A {payment} settles the {order}.",
+                "",
+                "**Minimal guarantees:** None.",
+                "",
+            ]
+        ),
+        PAY: "\n".join(
+            [
+                "# UC-002 — Pay for an order",
+                "",
+                "**Goal:** Pay for my order.",
+                "",
+                "**Other actors:** None.",
+                "",
+                "**Preconditions:** None.",
+                "",
+                "**Assumptions:** None.",
+                "",
+                f"**Trigger:** The {customer} opens the {order}.",
+                "",
+                "**Main path:**",
+                "",
+                f"1. The system takes the {payment}.",
+                "",
+                "**Variants:** None.",
+                "",
+                f"**Postconditions:** The {order} is paid.",
+                "",
+                "**Minimal guarantees:** None.",
+                "",
+            ]
+        ),
+        JOURNEY: "\n".join(
+            [
+                "# JRN-001 — Place and pay for a first order",
+                "",
+                "**Goal:** Place my first order and pay for it.",
+                "",
+                "**Steps:**",
+                "",
+                f"1. {case('UC-001', 'place-order')} — Place an order",
+                f"2. {case('UC-002', 'pay-order')} — Pay for an order",
+                f"   - **Needs from step 1 (UC-001):** the {order} the {customer} placed. An "
+                f"order left unplaced takes no {payment}.",
+                "",
+                "**Variants:** None.",
+                "",
+                f"**Postconditions:** The {customer}'s first {order} is settled, and no other "
+                "orders wait.",
+                "",
+                "**Minimal guarantees:** None.",
+                "",
+            ]
+        ),
+        QUICK: "\n".join(
+            [
+                "# REQ-001 · Quality · Settle a payment quickly",
+                "",
+                f"**Verified by:** A timing test pays for an {order}, and fails if the {payment} "
+                "takes over a second.",
+                "",
+                "**Rationale:** None.",
+                "",
+            ]
+        ),
+        ONCE: "\n".join(
+            [
+                "# REQ-002 · Functional · Settle each order once",
+                "",
+                "**Verified by:** None.",
+                "",
+                f"**Rationale:** A {customer} charged twice for one {order} asks for a refund.",
+                "",
+            ]
+        ),
+        NETWORK: "\n".join(
+            [
+                "# REQ-003 · Constraint · Keep each payment method on the card network",
+                "",
+                "**Verified by:** None.",
+                "",
+                f"**Imposed by:** The card network holds each {method}, and no design may copy it.",
+                "",
+            ]
+        ),
+    }
+
+
+BODIES = _bodies(linked=False)
+BODIES_LINKED = _bodies(linked=True)
+
+
+def _kinds(repo: AdopterRepo) -> None:
+    """`_domain`, then an actor, two use cases, a journey through them and a requirement of
+    each kind, their bodies as `BODIES` gives them, and not linked. Built once per session
+    (`installed`)."""
+    _domain(repo)
+    stamped(repo, "actor", "shopper", "--name", "Shopper", "--path", "src/run.py")
+    actor = ("--actor", "ACT-shopper")
+    stamped(repo, "use-case", "place-order", "--title", "Place an order", *actor)
+    stamped(repo, "use-case", "pay-order", "--title", "Pay for an order", *actor)
+    steps = ("--step", "UC-001", "--step", "UC-002")
+    title = ("--title", "Place and pay for a first order")
+    stamped(repo, "journey", "first-order", *title, *actor, *steps)
+    for kind, slug, named in (
+        ("quality-requirement", "settle-quickly", "Settle a payment quickly"),
+        ("functional-requirement", "settle-once", "Settle each order once"),
+        ("constraint", "card-network", "Keep each payment method on the card network"),
+    ):
+        stamped(repo, kind, slug, "--title", named, *actor)
+    fill(repo)
+    for rel, body in BODIES.items():
+        front = _read(repo, rel).split("\n---\n", 1)[0]
+        if rel == ACTOR_FILE:
+            front = re.sub(r"\nsummary: [^\n]*", f'\nsummary: "{SHOPPER_SUMMARY}"', front)
+        repo.write({rel: f"{front}\n---\n\n{body}"})
+
+
+@pytest.fixture
+def kinds(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    return installed(make_adopter_repo, monkeypatch, then=_kinds)
+
+
+def test_the_command_links_each_part_of_an_actor_a_use_case_a_journey_and_a_requirement(
+    kinds: AdopterRepo,
+) -> None:
+    """Each part of the four kinds' bodies is a section: the first mention of each term in
+    it links to the term's entry, by a path from the file. A goal, a journey's step lines
+    and an actor's first sentence, which gives its summary, stay plain, and so does front
+    matter (DEC-004 point 7). The analysis then passes the check, the format rule accepted
+    included, and a second run writes nothing."""
+    fronts = {rel: _read(kinds, rel).split("\n---\n", 1)[0] for rel in BODIES}
+    link(kinds)
+    for rel, body in BODIES_LINKED.items():
+        assert _body(kinds, rel) == body, rel
+        assert _read(kinds, rel).split("\n---\n", 1)[0] == fronts[rel], rel
+    assert _validate(kinds) == []
+    kinds.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
+    assert _validate(kinds) == []
+    assert link(kinds).stdout.strip() == "Every link is as it should be; nothing written."
+
+
+def test_the_check_holds_the_links_of_the_four_kinds_and_a_link_on_a_datum_is_extra(
+    kinds: AdopterRepo,
+) -> None:
+    """Whatever any rule's status, the check reports each first mention left unlinked in
+    the four kinds' parts, and a link written by hand on a goal, a step line or an actor's
+    first sentence is extra. The command takes each such link out (DEC-004 point 7)."""
+    missing = {where for where, m in _validate(kinds) if "is the first mention of" in m}
+    assert missing >= set(BODIES), missing
+    link(kinds)
+    hand = "[order](../../glossary.md#term-order--order)"
+    by_hand = {
+        PLACE: ("**Goal:** Place an order", f"**Goal:** Place an {hand}"),
+        JOURNEY: (
+            "UC-001-place-order.md) — Place an order",
+            f"UC-001-place-order.md) — Place an {hand}",
+        ),
+        ACTOR_FILE: ("an order and pays for it. Each", f"an {hand} and pays for it. Each"),
+    }
+    for rel, (old, new_text) in by_hand.items():
+        kinds.write({rel: _read(kinds, rel).replace(old, new_text, 1)})
+    found = sorted((where, m.split(" — ")[0]) for where, m in _validate(kinds))
+    assert [where for where, _m in found] == sorted(by_hand), found
+    assert all("where no link belongs" in m for _w, m in found), found
+    link(kinds)
+    for rel, body in BODIES_LINKED.items():
+        assert _body(kinds, rel) == body, rel
+    assert _validate(kinds) == []
+
+
+# --- a view's closing section: what is built on its concepts (DEC-004 point 7) -----------------
+
+#: Each artefact of `kinds` the closing sections list, by its id: its line there.
+_ITEM = {
+    "UC-001": "- [UC-001 — Place an order](../use-case-model/use-cases/UC-001-place-order.md)",
+    "UC-002": "- [UC-002 — Pay for an order](../use-case-model/use-cases/UC-002-pay-order.md)",
+    "JRN-001": (
+        "- [JRN-001 — Place and pay for a first order]"
+        "(../use-case-model/journeys/JRN-001-first-order.md)"
+    ),
+    "REQ-001": (
+        "- [REQ-001 · Quality · Settle a payment quickly]"
+        "(../requirements/quality/REQ-001-settle-quickly.md)"
+    ),
+    "REQ-002": (
+        "- [REQ-002 · Functional · Settle each order once]"
+        "(../requirements/functional/REQ-002-settle-once.md)"
+    ),
+}
+
+
+def _under(label: str, *ids: str) -> str:
+    """One concept's part of a closing section: its label, then each artefact's line."""
+    return f"**{label}:**\n\n" + "".join(f"{_ITEM[i]}\n" for i in ids)
+
+
+#: The view's closing section in `kinds`, as the command writes it: under each concept the
+#: view explains, each use case, journey and requirement whose body links its term. The
+#: second requirement links `order` and no `payment`, and the constraint links `payment
+#: method` alone, so it is under neither.
+KINDS_CLOSING = (
+    f"## What is built on these concepts\n\n{CLOSING_OPENING}\n\n"
+    + _under("Order", "UC-001", "UC-002", "JRN-001", "REQ-001", "REQ-002")
+    + "\n"
+    + _under("Payment", "UC-001", "UC-002", "JRN-001", "REQ-001")
+)
+
+#: The heading of a view's closing section, as the command writes it.
+CLOSING_HEADING = "## What is built on these concepts"
+
+
+def _closing_of(repo: AdopterRepo, rel: str = VIEW) -> str:
+    """A view's closing section, from its heading to the file's end."""
+    return CLOSING_HEADING + _read(repo, rel).split(f"\n{CLOSING_HEADING}", 1)[1]
+
+
+def test_a_view_ends_with_where_its_concepts_are_used(kinds: AdopterRepo) -> None:
+    """The command ends the view with its closing section: under each concept it explains,
+    each use case, journey and requirement in force whose body, as the command links it,
+    links the concept's term, the use cases first, each by its id and title, linked by a
+    path from the view's folder in the form the views' places declare. The section is no
+    part of the view's structure, so the check passes with the format rule binding (DEC-004
+    points 2 and 7)."""
+    link(kinds)
+    assert _closing_of(kinds) == KINDS_CLOSING
+    assert _body(kinds, VIEW).endswith("**Always true:** None.\n\n" + KINDS_CLOSING)
+    targets = re.findall(r"\]\(([^)]+)\)", KINDS_CLOSING)
+    assert targets and all(re.fullmatch(links.CLOSING_TARGET, t) for t in targets), targets
+    kinds.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
+    assert _validate(kinds) == []
+
+
+def test_the_check_holds_the_closing_section_and_the_command_mends_it(kinds: AdopterRepo) -> None:
+    """Whatever any rule's status, the check reports a closing section missing, or stale: a
+    use case retitled or withdrawn, a section moved off the view's end, or held twice. The
+    command writes it anew, last, and a second run writes nothing (DEC-004 point 7)."""
+    link(kinds)
+    linked = _read(kinds, VIEW)
+    kinds.write({VIEW: linked.split(f"\n{CLOSING_HEADING}", 1)[0] + "\n"})
+    (missing,) = [m for where, m in _validate(kinds) if where == VIEW]
+    assert missing.startswith(f"the view ends with no section `{CLOSING_HEADING}`")
+    link(kinds)
+    assert _read(kinds, VIEW) == linked
+
+    retitled = _read(kinds, PAY).replace("title: Pay for an order", "title: Pay for it", 1)
+    withdrawn = _read(kinds, ONCE).replace("status: active", "status: withdrawn", 1)
+    kinds.write({PAY: retitled, ONCE: withdrawn})
+    (stale,) = [m for where, m in _validate(kinds) if where == VIEW]
+    heading = linked.split("\n").index(CLOSING_HEADING) + 1
+    assert stale.startswith(
+        f"line {heading} heads the view's section `{CLOSING_HEADING}`, which is stale: "
+    )
+    link(kinds)
+    closing = _closing_of(kinds)
+    assert "[UC-002 — Pay for it]" in closing and "REQ-002" not in closing
+    kinds.write({PAY: retitled.replace("title: Pay for it", "title: Pay for an order", 1)})
+    kinds.write({ONCE: withdrawn.replace("status: withdrawn", "status: active", 1)})
+    link(kinds)
+    assert _read(kinds, VIEW) == linked
+
+    # Off the view's end, or held twice: stale, and written once, last.
+    head, tail = linked.split(f"\n{CLOSING_HEADING}", 1)
+    order, payment = head.split("\n## Payment\n", 1)
+    moved = f"{order}\n{CLOSING_HEADING}{tail}\n## Payment\n{payment}\n"
+    for text in (moved, f"{linked}\n{CLOSING_HEADING}{tail}"):
+        kinds.write({VIEW: text})
+        assert any("which is stale" in m for where, m in _validate(kinds) if where == VIEW)
+        link(kinds)
+        assert _read(kinds, VIEW) == linked
+    assert link(kinds).stdout.strip() == "Every link is as it should be; nothing written."
+
+
+def test_the_stamp_ends_a_new_view_with_where_its_concepts_are_used(
+    kinds: AdopterRepo,
+) -> None:
+    """A new view's closing section lists what links its terms already, as the command
+    would write it, so the command leaves the new view as the stamp wrote it."""
+    link(kinds)
+    stamped(kinds, "view", "customers", "--number", "020", "--explains", "TERM-customer")
+    view = f"{DOMAIN_MODEL}/020-customers.md"
+    assert _closing_of(kinds, view) == (
+        f"{CLOSING_HEADING}\n\n{CLOSING_OPENING}\n\n"
+        + _under("Customer", "UC-001", "UC-002", "JRN-001", "REQ-002")
+    )
+    assert view not in link(kinds).stdout
+
+
+def test_where_a_closing_section_lies_and_what_the_command_makes_of_it() -> None:
+    """A closing section runs from its heading, outside fenced code, to the next heading of
+    its level or the end. A new view ends with one after its last line that is not blank."""
+    lines = ["# V", "", "## Order", "", "x", "", CLOSING_HEADING, "", "y", ""]
+    assert links.closing_spans(lines, 0) == [(6, 10)]
+    fenced = ["# V", "```", CLOSING_HEADING, "```", "## Order", ""]
+    assert links.closing_spans(fenced, 0) == []
+    middle = [CLOSING_HEADING, "", "y", "", "## Order", "", "x", ""]
+    assert links.closing_spans(middle, 0) == [(0, 4)]
+    assert links.closing_lines(middle) == {0, 1, 2, 3}
+    closing = [CLOSING_HEADING, "", "**Order:** None."]
+    assert links.ending_with("# V\n\nx\n\n\n", closing) == (
+        f"# V\n\nx\n\n{CLOSING_HEADING}\n\n**Order:** None.\n"
+    )
+
+
+def test_the_terms_a_body_links_are_read_below_its_front_matter_outside_code() -> None:
+    """An artefact uses a term where its body links the term's entry, by the target the
+    command writes from the artefact's folder; front matter, code and other links are no
+    use."""
+    path = "tech-docs/analysis/use-case-model/use-cases/UC-1.md"
+    text = (
+        "---\nnote: '[payment](../../glossary.md#term-payment--payment)'\n---\n\n"
+        f"An [order]({_to(ORDER)}). `[payment]({_to(PAYMENT)})` and [a payment](#elsewhere).\n"
+    )
+    vocabulary = _vocabulary(ORDER, PAYMENT)
+    assert links.terms_linked(text, path, vocabulary) == frozenset({"TERM-order"})
+
+
+def test_each_concept_lists_its_uses_by_a_path_in_the_declared_form() -> None:
+    """Under each concept, in the order the view explains them, each use listed is linked
+    by a path from the view's folder, an area's folder or a component's included, which
+    the views' places declare: the use cases first, then the requirements. A concept
+    nothing links reads `None.`, and a title's brackets are escaped."""
+    view = "tech-docs/analysis/core/domain-model/010-orders.md"
+    path = "tech-docs/analysis/core/use-case-model/use-cases/010-run/UC-007-run.md"
+    case = model.Artefact(
+        "use-case", "UC-007", path, path, False, {"title": "Run [fast]"}, {}, folder="core"
+    )
+    req = dataclasses.replace(
+        case,
+        kind="constraint",
+        id="REQ-003",
+        path="tech-docs/analysis/core/requirements/constraints/REQ-003-local.md",
+        fields={"title": "Local"},
+    )
+    used = {"UC-007": {"TERM-order"}, "REQ-003": {"TERM-order"}}
+    headings = {"TERM-order": "Order", "TERM-line": "Line"}
+    written = links.closing(
+        view, ["TERM-order", "TERM-line"], headings, [case, req], used, {"constraint": "Constraint"}
+    )
+    assert written == [
+        CLOSING_HEADING,
+        "",
+        CLOSING_OPENING,
+        "",
+        "**Order:**",
+        "",
+        "- [UC-007 — Run \\[fast\\]](../use-case-model/use-cases/010-run/UC-007-run.md)",
+        "- [REQ-003 · Constraint · Local](../requirements/constraints/REQ-003-local.md)",
+        "",
+        "**Line:** None.",
+    ]
+    for target in re.findall(r"\]\(([^)]+)\)", "\n".join(written)):
+        assert re.fullmatch(links.CLOSING_TARGET, target), target
+
+
+model, structure = load_lib("model", "structure")
+
+ORDER = links.Term("TERM-order", "order", "tech-docs/analysis/glossary.md")
+PAYMENT = links.Term("TERM-payment", "payment", "tech-docs/analysis/glossary.md")
+
+
+def _document(kind: Any, text: str, *terms: Any, **fields: Any) -> str:
+    path = "tech-docs/analysis/use-case-model/x/X-1.md"
+    artefact = model.Artefact(kind.name, "X-1", path, path, False, fields, {})
+    return links.document(artefact, text, _vocabulary(*terms), kind).linked
+
+
+def _to(term: Any) -> str:
+    return f"../../glossary.md#{term.anchor}"
+
+
+def test_a_part_opens_at_each_label_the_project_adds_and_a_relabelled_goal_stays_plain(
+    tmp_path: Path,
+) -> None:
+    """The kinds are read as the project's own structures relabel them and add to them,
+    whatever any rule's status: a label a group adds opens a part of its own, and the goal
+    stays plain under the label it is relabelled to, and under its shipped one."""
+    own = tmp_path / SA / "project" / "structures.yaml"
+    own.parent.mkdir(parents=True)
+    own.write_text(
+        "schema_version: 1\nkinds:\n  use-case:\n    relabel: {goal: {label: Aim}}\n"
+        "  actor:\n    tighten:\n      - rule: RS-LOC-001\n        add:\n"
+        "          - {id: setup, label: Setup, after: opening, hint: Its setup.,\n"
+        "             example: A lab.}\n",
+        encoding="utf-8",
+    )
+    kinds = links.parted(tmp_path)
+    assert set(kinds) == set(links.PARTED)
+    case = "# UC-1 — T\n\n**Aim:** An order.\n\n**Goal:** An order.\n\n**Trigger:** An order."
+    assert _document(kinds["use-case"], case, ORDER) == case.replace(
+        "Trigger:** An order", f"Trigger:** An [order]({_to(ORDER)})"
+    )
+    actor = "# ACT-x — X\n\nA payment. An order.\n\n- **Setup:** an order.\n"
+    assert _document(kinds["actor"], actor, ORDER, PAYMENT) == (
+        f"# ACT-x — X\n\nA [payment]({_to(PAYMENT)}). An [order]({_to(ORDER)}).\n\n"
+        f"- **Setup:** an [order]({_to(ORDER)}).\n"
+    )
+    # Its first sentence stays plain only where the actor gives a summary.
+    assert _document(kinds["actor"], actor, ORDER, PAYMENT, summary="A payment.") == (
+        f"# ACT-x — X\n\nA payment. An [order]({_to(ORDER)}).\n\n"
+        f"- **Setup:** an [order]({_to(ORDER)}).\n"
+    )
+
+
+def test_a_journey_s_step_line_stays_plain_to_its_end_and_its_hand_overs_link(
+    tmp_path: Path,
+) -> None:
+    """A step's line runs to a blank line, a nested item or a hand-over. Its title stays
+    plain, and the first mention in a hand-over or a nested item takes the link."""
+    journey = links.parted(tmp_path)["journey"]
+    text = (
+        "# JRN-1 — T\n\n**Steps:**\n\n1. UC-1 — Place an\n   order\n"
+        "   **Needs from step 1 (UC-1):** a payment.\n2. UC-2 — Pay\n   - an order paid\n"
+    )
+    assert _document(journey, text, ORDER, PAYMENT) == text.replace(
+        "a payment.", f"a [payment]({_to(PAYMENT)})."
+    ).replace("an order paid", f"an [order]({_to(ORDER)}) paid")
+
+
+@pytest.mark.parametrize(
+    ("text", "end"),
+    [
+        ("One. Two.", 4),
+        ("  One `a. B` two. Three.", 17),
+        ("One e.g. two.\n\nThree.", 13),
+        ("One\nline. Two.", 9),
+        ("One only", 8),
+    ],
+)
+def test_the_first_sentence_ends_where_the_summary_s_form_ends_it(text: str, end: int) -> None:
+    (forms,) = load_lib("forms")
+    assert forms.first_sentence_end(text) == end
+    assert " ".join(text[:end].split()) == forms.first_sentence(text)

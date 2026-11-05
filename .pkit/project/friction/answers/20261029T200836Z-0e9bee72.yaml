@@ -1,0 +1,35 @@
+answers:
+  - artefact: .pkit/rules/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-29T20:08:36Z
+      outcome: unchanged
+      unchanged-because: The change proposes RS-OPS-024 in OPS, which binds nothing and stays out of core.md until a person accepts it, so the README's account of where OPS and core.md live, how core.md is generated and what each of its sections holds stays true; its 'Before changing files' bullet gains the rule only with the acceptance that regenerates core.md.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-operational-rule
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-29T20:08:50Z
+      outcome: unchanged
+      unchanged-because: The change proposes RS-OPS-024 in OPS, which binds nothing and is not in core.md until a person accepts it; an operational rule is still an instruction every session loads, kept in the backbone's loaded set with its id, origin and status, and the distinctions name the set and its ids as before.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-29T20:08:59Z
+      outcome: unchanged
+      unchanged-because: "The change proposes RS-OPS-024 in OPS, which stays out of core.md until a person accepts it, so sync, the adapter's includes and what a session loads are as the use case says, and variant 4a still holds: core.md is generated from ops.md in the source repository."

@@ -3,7 +3,7 @@
 Focused on the wrapper-specific gates and helpers — the state-transition
 mechanics live in `move-issue.py` and are tested separately.
 
-Regression tests for #61 (optional --milestone, DEC-026 amendment):
+Regression tests for #61 (an optional --milestone, DEC-026 "The seven commands"):
   - milestone-omitted happy path (promote on --reason alone)
   - milestone-given happy path (resolve + attach, unchanged)
   - given-but-unresolvable milestone (still an error, never silently downgraded)
@@ -17,9 +17,18 @@ import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+
+from tests.pm_composed_move_support import (
+    CAPABILITY_ROOT,
+    FakeEngine,
+    MoveIssueInProcess,
+    status_at,
+)
+from tests.pm_ownership_support import FakeGitHub, clone_with, use
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = (
@@ -160,9 +169,10 @@ def test_detect_current_state_reads_a_label_bound_state(pi, monkeypatch) -> None
 
 
 def test_detect_current_state_ignores_a_stale_kit_label_under_a_board(pi, monkeypatch) -> None:
-    """Under a configured board the kit's `state:*` labels are NOT the substrate,
-    so a stale one must not be trusted: a false skip means the promotion silently
-    does not happen. The board field itself is deliberately NOT read here."""
+    """Where the map binds state to the board, the kit's `state:*` labels are NOT
+    the substrate, so a stale one must not be trusted: a false skip means the
+    promotion silently does not happen. The board's Status is read by move-issue,
+    which the caller runs next, not here."""
     called: list = []
 
     def fake_gh_run(args, config, **kwargs):  # pragma: no cover - must not run
@@ -170,7 +180,8 @@ def test_detect_current_state_ignores_a_stale_kit_label_under_a_board(pi, monkey
         raise AssertionError("no gh call may be made for a board-carried state")
 
     monkeypatch.setattr(pi, "gh_run", fake_gh_run)
-    assert pi._detect_current_state(42, {"has_projects_v2_board": True}, None) is None
+    on_board = pi.axis_labels.SubstrateMap(axes={"state": {"board": True}})
+    assert pi._detect_current_state(42, {"has_projects_v2_board": True}, on_board) is None
     assert called == []
 
 
@@ -279,6 +290,8 @@ def _wire_main_mocks(
         return milestone_obj
 
     monkeypatch.setattr(pi, "resolve_milestone", fake_resolve_milestone)
+    # The open milestones carry no `Pool:` line, so no pool asks (DEC-061 point 6).
+    monkeypatch.setattr(pi, "list_open_milestones", lambda _c, gh=None: [])
 
     def fake_attach(issue_number, title, config):
         if attach_called is not None:
@@ -513,3 +526,138 @@ def test_main_reason_required_exits_nonzero(pi, monkeypatch) -> None:
     with pytest.raises(SystemExit) as exc_info:
         pi.main()
     assert exc_info.value.code != 0
+
+
+# --- the clash guard (DEC-035 point 6) ---
+#
+# With an instance id set, promote-issue reads the issue's owner before it moves
+# the issue or attaches a milestone. The in-memory GitHub holds issue #42 with a
+# claim of instance 3, and this clone is instance 2.
+
+ME = SimpleNamespace(github_login="me", email="me@example.com")
+
+
+def _owned_by_instance_3(pi, monkeypatch) -> FakeGitHub:
+    """Issue #42, owned by instance 3, with this clone instance 2 and every
+    ownership call reaching the returned in-memory GitHub."""
+    github = FakeGitHub()
+    github.add(42, assignees=("me",))
+    github.post(42, pi.instance_claims.ownership.format_event_comment(event="claim", instance=3))
+    clone_with(pi.instance_claims, monkeypatch, 2)
+    use(pi.instance_claims, monkeypatch, github)
+    return github
+
+
+def test_the_clash_guard_refuses_before_the_move_and_the_milestone(pi, monkeypatch, capsys) -> None:
+    attached: list = []
+    moved: list = []
+    _wire_main_mocks(
+        pi,
+        monkeypatch,
+        sys_argv=["promote-issue", "42", "--milestone", "Sprint 1", "--reason", "r", "--yes"],
+        milestone_obj=_FakeMilestone(number=7, title="Sprint 1"),
+        attach_called=attached,
+    )
+    monkeypatch.setattr(pi, "resolve_invoker_identity", lambda **_k: ME)
+    monkeypatch.setattr(pi, "_invoke_move_issue", lambda *a, **_k: moved.append(a) or 0)
+    github = _owned_by_instance_3(pi, monkeypatch)
+    assert pi.main() == 1
+    assert attached == []
+    assert moved == []
+    assert github.writes() == []
+    err = capsys.readouterr().err
+    assert (
+        "[refused] promote-issue #42: #42 is owned by instance 3, and this clone is instance 2"
+        in err
+    )
+    assert 'pass --bypass-owner "<reason>"' in err
+
+
+def test_bypass_owner_posts_its_reason_first_and_once(pi, monkeypatch, capsys) -> None:
+    """The composed move-issue, run in process, is handed the reason and posts
+    no second audit comment."""
+    move_issue = pi._invoke_move_issue
+    _wire_main_mocks(
+        pi,
+        monkeypatch,
+        sys_argv=[
+            "promote-issue",
+            "42",
+            "--reason",
+            "PM triage",
+            "--yes",
+            "--bypass-owner",
+            "instance 3's session is gone",
+        ],
+    )
+    # The real move-issue, as a child of the same person under the same
+    # capability, so both guards render one audit comment.
+    monkeypatch.setattr(pi, "_invoke_move_issue", move_issue)
+    monkeypatch.setattr(pi, "resolve_capability_root", lambda _: CAPABILITY_ROOT)
+    monkeypatch.setattr(pi, "resolve_invoker_identity", lambda **_k: ME)
+    github = _owned_by_instance_3(pi, monkeypatch)
+    FakeEngine(status_at("backlog")).install(monkeypatch)
+    at_move = {
+        "title": "[Task] do the thing",
+        "labels": ["type:bug", "state:backlog"],
+        "state": "OPEN",
+        "body": "## What\nx",
+        "milestone": None,
+    }
+    move = MoveIssueInProcess(monkeypatch, at_move)
+    monkeypatch.setattr(pi, "subprocess", SimpleNamespace(run=move.run))
+    assert pi.main() == 0
+    assert move.runs[0][-2:] == ["--bypass-owner", "instance 3's session is gone"]
+    audits = [c["body"] for c in github.issues[42].comments if "pkit-audit-key" in c["body"]]
+    assert len(audits) == 1
+    assert "instance 3's session is gone" in audits[0]
+    captured = capsys.readouterr()
+    assert "--bypass-owner let this clone, instance 2, act on it" in captured.err
+    assert "audit comment already present; idempotent skip" in captured.out
+
+
+# ---- pools of workers (DEC-061 point 6) ----------------------------------------------
+
+
+def _pooled(pi, monkeypatch, argv: list[str]) -> list[tuple]:
+    """Promote #42, a Task in no milestone, into milestone #7 of the pool alpha;
+    return each move-issue run, by its arguments."""
+    moves: list[tuple] = []
+    _wire_main_mocks(
+        pi,
+        monkeypatch,
+        sys_argv=["promote-issue", "42", "--milestone", "7", "--reason", "PM approved", *argv],
+        milestone_obj=_FakeMilestone(number=7, title="Sprint 7"),
+        current_state="todo",
+    )
+    monkeypatch.setattr(pi, "resolve_capability_root", lambda _: CAPABILITY_ROOT)
+    rows = [{"number": 7, "title": "Sprint 7", "description": "Pool: alpha"}]
+    monkeypatch.setattr(pi, "list_open_milestones", lambda _c, gh=None: rows)
+    monkeypatch.setattr(pi.pools, "declared_pools", lambda _r: (("alpha",), None))
+    monkeypatch.setattr(pi.pools.consent, "at_a_terminal", lambda: False)
+    issue = json.dumps({"title": "[Task] do the thing", "milestone": None})
+    monkeypatch.setattr(
+        pi, "gh_run", lambda *_a, **_k: SimpleNamespace(returncode=0, stdout=issue, stderr="")
+    )
+    monkeypatch.setattr(pi, "_invoke_move_issue", lambda *a, **_k: moves.append(a) or 0)
+    return moves
+
+
+def test_a_task_scheduled_into_a_pool_off_a_terminal_without_yes_is_refused(
+    pi, monkeypatch, capsys
+) -> None:
+    moves = _pooled(pi, monkeypatch, [])
+    assert pi.main() == 1
+    assert moves == []
+    assert "Putting #42 into the pool alpha is the person's to authorise" in (
+        capsys.readouterr().err
+    )
+
+
+def test_a_task_scheduled_into_a_pool_with_consent_logs_it_in_the_audit_comment(
+    pi, monkeypatch
+) -> None:
+    moves = _pooled(pi, monkeypatch, ["--yes"])
+    assert pi.main() == 0
+    ((_number, _target, reason, *_rest),) = moves
+    assert reason == ("PM approved; pool none → alpha, with the person's consent (DEC-061 point 6)")

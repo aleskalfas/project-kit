@@ -9,6 +9,12 @@ requirement (#1692), revalidation record. Held here:
 - **it builds an analysis from its concepts up** (#1784) — `build-analysis.md` walks
   the four steps of DEC-001 point 12 in order, each through the kinds'
   sub-procedures and each saying when it is done, and the dispatcher routes to it;
+- **it onboards a brownfield project from its declared surface** (#1930) — before
+  its first step, `build-analysis.md` has the agent find the surface the project
+  declares, and ask the person for one where none is, and it ends onboarding only
+  once the whole-repository check measures that surface covered, with none of the
+  analysis's artefacts unanchored without an accepted reason (DEC-001 point 9). The
+  check's lines it quotes are the check's own;
 - **it matches the command it pairs with** — every `pkit analysis new` form its
   walkthroughs give names a kind the stamp has, with flags that kind takes, so
   the skill cannot drift from the CLI unnoticed;
@@ -20,27 +26,32 @@ requirement (#1692), revalidation record. Held here:
   stamped and filled is checked with `pkit analysis validate --preview`, and a
   part of the project's own, under a proposed rule of its own, is previewed on
   the candidate and written by the stamp once it is stamped again.
+
+The stamp, its help and the check run in the test's own process, their `pkit`
+calls answered there too (`tests/in_process.py`, #2325).
 """
 
 from __future__ import annotations
 
 import json
 import re
-import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
+from click.testing import CliRunner
 
 from project_kit import refs
+from project_kit.cli import main
 from project_kit.friction_validate import validate_friction
+from tests import in_process
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ANALYSIS,
     ANALYSIS_SET,
     ANALYSIS_SET_TEXT,
     CAPABILITY,
+    CONFIG,
     NEW,
     REPO,
     STRUCTURES,
@@ -49,7 +60,7 @@ from tests.analysis_repo import (
     fill,
     installed,
     load,
-    run_script,
+    run_in_process,
     stamped,
 )
 from tests.test_software_analysis_check import check, errors
@@ -94,6 +105,13 @@ BUILD_STEPS = (
     ),
     ("## 4. The journeys, last", "journeys, last", ("journey.md",)),
 )
+#: The build's two sections on a brownfield project (DEC-001 point 9, #1930): before its
+#: first step, the surface the analysis is to cover, and after its last, that surface
+#: covered.
+SURFACE_DECLARED = "## Before step 1, on a brownfield project: the declared surface"
+SURFACE_COVERED = "## After step 4, on a brownfield project: the surface covered"
+#: The lines of the whole-repository check the two sections read, as they quote them.
+CHECK_LINES = ("Uncovered surface", "no surface declared", "Unanchored artefacts")
 DECISION = CAPABILITY / "decisions" / "DEC-001-software-analysis-discipline.md"
 
 
@@ -150,6 +168,49 @@ def test_the_build_walks_dec_001_point_12_s_order_and_says_when_each_step_is_don
     assert "but the order does not ask it." in flat
 
 
+def _flat_sections(text: str) -> dict[str, str]:
+    """Each `## ` section of `text` under its heading, its whitespace folded."""
+    sections = re.split(r"(?m)^(?=## )", text)
+    return {s.splitlines()[0]: " ".join(s.split()) for s in sections if s[:3] == "## "}
+
+
+def test_the_build_onboards_a_brownfield_project_from_its_declared_surface_to_it_covered() -> None:
+    """`build-analysis.md` (#1930): onboarding needs a declared surface, and is complete
+    once that surface is covered (DEC-001 point 9). Before the first step, the agent reads
+    the surface from the whole-repository check, and asks the person for one where none is
+    declared, deriving no candidate before. After the last step, it ends onboarding only
+    once the check counts no path of the surface uncovered and lists none of the
+    analysis's artefacts as unanchored, whatever each step's list says."""
+    text = (SKILL / BUILDING).read_text(encoding="utf-8")
+    headings = [line for line in text.splitlines() if line.startswith("## ")]
+    first_step, last_step = BUILD_STEPS[0][0], BUILD_STEPS[-1][0]
+    assert headings.index(SURFACE_DECLARED) < headings.index(first_step)
+    assert headings.index(last_step) < headings.index(SURFACE_COVERED)
+    sections = _flat_sections(text)
+    intro = " ".join(text.split("\n## ", 1)[0].split())
+    assert "**On a brownfield project,** start from the declared surface" in intro
+
+    declared = sections[SURFACE_DECLARED]
+    assert "Before you derive any candidate" in declared
+    assert "(DEC-001 point 9)" in declared
+    assert "as `surface` in the `friction` key of `.pkit/project/config.yaml`" in declared
+    assert "**Run `pkit friction check --all`,** and read its `Uncovered surface` line" in declared
+    assert "**Where the line reads `no surface declared`,**" in declared
+    assert "Ask the person which paths the analysis ought to cover" in declared
+    assert "Derive no candidate until" in declared
+
+    covered = sections[SURFACE_COVERED]
+    assert "Onboarding ends only once the declared surface is covered (DEC-001 point 9)" in covered
+    assert "run `pkit friction check --all` once more" in covered
+    assert "- **`Uncovered surface`** counts none uncovered" in covered
+    assert "- **`Unanchored artefacts`** lists none of the analysis's artefacts" in covered
+    # A reason for having no anchors is the person's to accept (COR-050 point 1).
+    assert "word for word, and write the reason only once they accept it" in covered
+    assert "Until both hold, onboarding is not done, whatever each step's list says" in covered
+    for line in CHECK_LINES:
+        assert f"`{line}`" in text, line
+
+
 def test_the_dispatcher_routes_to_the_build_and_keeps_no_list_of_its_steps() -> None:
     """The dispatcher routes, and the steps have their one home in the sub-procedure
     (COR-020, COR-006): the actors no longer come before the glossary, and the dispatcher
@@ -191,13 +252,9 @@ def test_the_skill_is_deployed_beside_its_sub_procedures() -> None:
 
 
 def _help(kind: str) -> str:
-    completed = subprocess.run(
-        [sys.executable, str(REPO / NEW), kind, "--help"],
-        cwd=REPO,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    """`pkit analysis new <kind> --help`: the stamp's `main`, in the test's own process."""
+    (stamp,) = in_process.load("software-analysis", NEW.name)
+    completed = in_process.run_main(stamp, kind, "--help", cwd=REPO)
     assert completed.returncode == 0, completed.stderr
     return completed.stdout
 
@@ -235,7 +292,6 @@ def project(
     return installed(make_adopter_repo, monkeypatch)
 
 
-# Slow by design: ten stamps and the check, each a script that starts `pkit` processes.
 def test_what_the_walkthroughs_stamp_passes_the_gate_and_carries_the_friction_block(
     project: AdopterRepo,
 ) -> None:
@@ -266,13 +322,13 @@ def test_what_the_walkthroughs_stamp_passes_the_gate_and_carries_the_friction_bl
         "--confirmed-by",
         "Sam",
     )
-    completed = run_script(project, NEW, *stale)
+    completed = run_in_process(project, NEW, *stale)
     assert completed.returncode == 0, completed.stderr
 
     fill(project)  # the walkthroughs' "Fill it": the check fails a placeholder left
     assert errors(check(project)) == []
     assert validate_friction(project.root).errors == ()
-    listing = subprocess.run(
+    listing = in_process.InProcessPkit()(
         ["pkit", "friction", "artefacts", "--json"],
         cwd=project.root,
         capture_output=True,
@@ -297,6 +353,44 @@ def test_what_the_walkthroughs_stamp_passes_the_gate_and_carries_the_friction_bl
         "UC-002",
     ]
     assert all(a["container"] and a["friction"] for a in artefacts), artefacts
+
+
+def _measures() -> str:
+    """What the whole-repository check prints, run where the test stands."""
+    result = CliRunner().invoke(main, ["friction", "check", "--all"])
+    assert result.exit_code == 0, result.output
+    return result.output
+
+
+# Slow by design: two stamps and three runs of the whole-repository check.
+def test_the_check_the_build_reads_shows_a_brownfield_surface_declared_then_covered(
+    project: AdopterRepo,
+) -> None:
+    """The issue's failing example (#1930), walked as `build-analysis.md`'s brownfield
+    sections read it. With no surface declared, the check says so, and the build asks for
+    one. With `src/**` declared, `src/billing/` stays uncovered while no artefact anchors
+    it, so onboarding is not done. An artefact anchored to it covers the surface. Each
+    line the sections quote is the check's own."""
+    output = _measures()
+    assert "Uncovered surface: no surface declared" in output
+    skill = (SKILL / BUILDING).read_text(encoding="utf-8")
+    for line in CHECK_LINES:
+        assert f"`{line}`" in skill and line in output, line
+
+    config = (project.root / CONFIG).read_text(encoding="utf-8")
+    surface = config + "friction:\n  surface:\n    - src/**\n"
+    project.commit("declare the surface", {CONFIG: surface, "src/billing/charge.py": "pass\n"})
+    stamped(project, "actor", "tester", "--name", "Test author", "--path", "src/run.py")
+    project.commit("the actor")
+    uncovered = "Uncovered surface: 1 of 2 paths in the declared surface\n"
+    assert f"{uncovered}    src/billing/charge.py\n" in _measures()
+
+    stamped(project, "term", "charge", "--name", "Charge", "--path", "src/billing/charge.py")
+    project.commit("the term")
+    output = _measures()
+    assert "Uncovered surface: 0 of 2 paths in the declared surface" in output
+    unanchored = output.split("Unanchored artefacts:", 1)[1].split("Uncovered surface:", 1)[0]
+    assert f"{ANALYSIS}/" not in unanchored, unanchored
 
 
 # --- choosing each kind's templates ------------------------------------------------------------
@@ -324,23 +418,21 @@ STRUCTURES_TEXT = (
 def _previewed(repo: AdopterRepo, rel: str) -> tuple[str, list[tuple[str, str]]]:
     """What `pkit analysis validate --preview` says: its summary of the structure, and
     each finding on one artefact, with its severity."""
-    completed = run_script(repo, VALIDATE, "--json", "--preview")
+    completed = run_in_process(repo, VALIDATE, "--json", "--preview")
     assert completed.returncode == 0, completed.stderr
     document = json.loads(completed.stdout)
     found = [(f["severity"], f["message"]) for f in document["findings"] if f["location"] == rel]
     return document["summary"][1], found
 
 
-# Slow by design: two stamps and three checks, each a script that starts `pkit` processes.
 def test_a_candidate_is_previewed_and_stamped_again_with_the_project_s_own_part(
     project: AdopterRepo,
 ) -> None:
     """`choose-templates.md`: with a set of the project's own that inherits `SAN`, a
-    candidate stamped and filled is checked with the preview while the format rule is
-    proposed. A part the project adds under a proposed rule of its own is previewed on
-    the candidate, which lacks it. Set aside and stamped again, the candidate keeps its id
-    and holds the part, its hint naming the rule, and once filled the preview finds
-    nothing."""
+    candidate stamped and filled is checked with the preview. A part the project adds
+    under a proposed rule of its own is previewed on the candidate, which lacks it. Set
+    aside and stamped again, the candidate keeps its id and holds the part, its hint
+    naming the rule, and once filled the preview finds nothing."""
     project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     candidate = ("actor", "tester", "--name", "Test author", "--path", "src/run.py")
     stamped(project, *candidate)

@@ -19,7 +19,10 @@ writing the storyboard sibling.
 The agent is found wherever agents ship from — `.pkit/agents/{core,project}/`
 or a capability's `agents/` folder — in the deploy's resolution order; a
 namespace (`core`, `project` or a capability name) pins the lookup to one
-location.
+location. An agent whose folder arrives in the project as a synced copy is
+refused before anything is written, its migration to folder form included
+(`agents.refuse_synced_copy`): the next sync would overwrite the storyboard
+(core rule 1).
 """
 
 from __future__ import annotations
@@ -35,6 +38,7 @@ from project_kit.agents import (
     agent_locations,
     agents_dir_for,
     find_agent_file,
+    refuse_synced_copy,
 )
 
 ArtifactKind = Literal["agent"]
@@ -147,7 +151,8 @@ def _stamp_agent_storyboard(
     """Find the agent (in either layout) and stamp a sibling.
 
     If the agent is in flat form, convert to folder form first per COR-015
-    (an agent gaining its first helper migrates to folder layout).
+    (an agent gaining its first helper migrates to folder layout). An agent
+    whose folder arrives as a synced copy is refused first, in a dry run too.
     """
     agents_area = target_root / ".pkit" / "agents"
     if not agents_area.is_dir():
@@ -157,6 +162,13 @@ def _stamp_agent_storyboard(
         )
 
     ns, ns_dir, agent_file = _locate_agent(target_root, agent_name, namespace)
+    refuse_synced_copy(
+        target_root,
+        ns,
+        ns_dir,
+        "Stamp a storyboard beside an agent the project authors, such as one stamped "
+        "with `pkit new agent project <name> --with-storyboard`.",
+    )
 
     # Convert flat → folder form if needed (COR-015 — agent gaining its
     # first sibling helper migrates from atomic to composite layout).

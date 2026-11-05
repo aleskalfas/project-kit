@@ -9,13 +9,14 @@ from pathlib import Path
 
 import click
 import pytest
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 from ruamel.yaml import YAML
 
 from project_kit import project_config as pc
 from project_kit import report_context
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.shipped_rule_sets import own
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -293,6 +294,56 @@ def test_config_set_asks_once_on_a_terminal(
     assert pc.read_config(repo.root)["docs"]["internal"] == "tech-docs"
 
 
+def _ask(**kwargs) -> Result:
+    """Run `confirm_at_terminal` under a command, so its answer comes from the runner's stdin."""
+
+    @click.command()
+    def ask() -> None:
+        answer = pc.confirm_at_terminal("Go on?", refusal="refused: nobody to ask.", **kwargs)
+        click.echo(f"answer={answer}")
+
+    return CliRunner().invoke(ask, input="y\n")
+
+
+def test_confirm_at_terminal_refuses_a_piped_answer() -> None:
+    """Off a terminal the question is never shown and the `y` piped in is never read:
+    the caller's refusal is raised, exit 1 (#2003)."""
+    result = _ask()
+    assert result.exit_code == 1
+    assert isinstance(result.exception, SystemExit)
+    assert "refused: nobody to ask." in result.output
+    assert "Go on?" not in result.output
+    assert "answer=" not in result.output
+
+
+def test_a_stdin_with_no_isatty_is_not_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sys.stdin", object())
+    assert pc.stdin_is_tty() is False
+
+
+def test_confirm_at_terminal_asks_at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(pc, "stdin_is_tty", lambda: True)
+    result = _ask()
+    assert result.exit_code == 0, result.output
+    assert "Go on? [y/N]" in result.output
+    assert "answer=True" in result.output
+
+
+def test_confirm_at_terminal_aborts_on_a_no_when_asked_to(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(pc, "stdin_is_tty", lambda: True)
+
+    @click.command()
+    def ask() -> None:
+        pc.confirm_at_terminal("Go on?", refusal="refused.", abort=True)
+        click.echo("went on")
+
+    result = CliRunner().invoke(ask, input="n\n")
+    assert result.exit_code == 1
+    assert "went on" not in result.output
+
+
 def test_config_set_validates_key_and_value(make_adopter_repo: MakeAdopterRepo) -> None:
     repo = make_adopter_repo()
     unknown = _run("docs.nope", "x", "--yes")
@@ -470,7 +521,7 @@ RULE_SET = "---\nrule-set: CMN\nversion: 1.0.0\nrules: {}\n---\n\n# Rules\n"
 def _project_rule_sets(repo: AdopterRepo) -> list[str]:
     from project_kit import rule_sets
 
-    return [s.path for s in rule_sets.discover_rule_sets(repo.root).rule_sets]
+    return [s.path for s in own(rule_sets.discover_rule_sets(repo.root).rule_sets)]
 
 
 def _places(repo: AdopterRepo) -> list:
@@ -498,6 +549,27 @@ def test_changing_the_internal_root_declares_the_old_rule_set_folder(
         "found here. To move them: move the files under tech-docs/rule-sets, then remove "
         "docs/rule-sets from friction.places.",
     ]
+
+
+def test_changing_the_internal_root_names_the_recorded_locations_it_leaves_behind(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    # A fresh project's overlay records the ADR folder under the default root
+    # (COR-049 point 6, #2084).
+    make_adopter_repo()
+
+    result = _run("docs.internal", "tech-docs", "--yes")
+
+    assert result.exit_code == 0, result.output
+    assert result.output.splitlines()[1:3] == [
+        "kept adr-records = docs/architecture/decisions  (.pkit/agents/project/overlay.yaml)",
+        "  recorded under the internal root before this change, docs; it stays there "
+        "(COR-049 point 6). To move it: move what it holds to tech-docs/architecture/decisions, "
+        "edit that entry, then pkit sync.",
+    ]
+    again = _run("docs.internal", "handbook", "--yes")
+    assert again.exit_code == 0, again.output
+    assert "kept " not in again.output
 
 
 @pytest.mark.parametrize(

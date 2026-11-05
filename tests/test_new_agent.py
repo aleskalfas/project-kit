@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import shutil
 from pathlib import Path
 
 import click
@@ -10,7 +11,10 @@ import pytest
 from click.testing import CliRunner
 
 from project_kit import agents, refs
+from project_kit import capabilities as caps
 from project_kit.cli import main
+from project_kit.manifest import ORIGIN_EXTERNALLY_SOURCED, ORIGIN_INCUBATED_IN_REPO
+from tests.adopter_repo import MakeAdopterRepo
 
 
 @pytest.fixture
@@ -380,3 +384,114 @@ def test_cli_new_agent_stamps_under_capability(kit_target: Path) -> None:
     result = CliRunner().invoke(main, ["new", "agent", "my-cap", "cap-agent"])
     assert result.exit_code == 0, result.output
     assert "Stamped: .pkit/capabilities/my-cap/agents/cap-agent.md" in result.output
+
+
+# --- a folder the project receives as a synced copy (#1953) -----------
+
+
+def _new_agent(*args: str) -> tuple[int, str]:
+    """Run `pkit new agent <args>`; return (exit code, output)."""
+    result = CliRunner().invoke(main, ["--color", "never", "new", "agent", *args])
+    return result.exit_code, result.output
+
+
+def _as_methodology_source(root: Path) -> None:
+    """Give the tree the package source beside its `.pkit/`, which makes it the
+    methodology's source repository (`is_methodology_source` of the lifecycle)."""
+    package = root / "src" / "project_kit" / "__init__.py"
+    package.parent.mkdir(parents=True)
+    package.write_text("", encoding="utf-8")
+
+
+def _tree(root: Path) -> dict[str, bytes | None]:
+    """Every path under `root` outside `.git`, a file's bytes or None for a dir."""
+    return {
+        p.relative_to(root).as_posix(): (p.read_bytes() if p.is_file() else None)
+        for p in sorted(root.rglob("*"))
+        if ".git" not in p.relative_to(root).parts
+    }
+
+
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_new_agent_refuses_the_core_namespace_in_an_adopter_and_writes_nothing(
+    make_adopter_repo: MakeAdopterRepo, dry_run: bool
+) -> None:
+    """In a project that receives the methodology by sync, `.pkit/agents/core/` is a
+    synced copy, and the next sync overwrites an agent written there (core rule 1). A
+    dry run says so too, rather than naming a file the run would lose."""
+    repo = make_adopter_repo()
+    before = _tree(repo.root)
+
+    code, output = _new_agent("core", "ours", *(["--dry-run"] if dry_run else []))
+
+    assert code == 1, output
+    assert _tree(repo.root) == before
+    assert "the core namespace arrives in this project as a synced copy" in output
+    assert ".pkit/agents/core/" in output
+    assert "`pkit new agent project ours`" in output
+
+
+def test_new_agent_refuses_a_kit_shipped_capability_in_an_adopter_and_writes_nothing(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A kit-shipped capability's `agents/` is a synced copy in an adopter. Not even the
+    folder of a capability that ships no agent is created."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    agents_dir = repo.root / ".pkit" / "capabilities" / "evidence" / "agents"
+    if agents_dir.exists():
+        shutil.rmtree(agents_dir)
+    before = _tree(repo.root)
+
+    code, output = _new_agent("evidence", "ours")
+
+    assert code == 1, output
+    assert _tree(repo.root) == before
+    assert "capability 'evidence' arrives in this project as a synced copy" in output
+    assert "`pkit new agent project ours`" in output
+
+
+def test_new_agent_refuses_an_externally_sourced_capability_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """An externally-sourced capability is authored in another repository, so its folder
+    is a copy in the methodology's source too (COR-041)."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    _as_methodology_source(repo.root)
+    caps.set_capability_origin(repo.root, "evidence", ORIGIN_EXTERNALLY_SOURCED)
+    before = _tree(repo.root)
+
+    code, output = _new_agent("evidence", "ours")
+
+    assert code == 1, output
+    assert _tree(repo.root) == before
+    assert "capability 'evidence' arrives in this project as a synced copy" in output
+
+
+@pytest.mark.parametrize("namespace", ["core", "evidence"])
+def test_new_agent_stamps_core_and_a_kit_shipped_capability_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo, namespace: str
+) -> None:
+    """Where the methodology is authored, its trees are the source a sync copies from,
+    never a copy, so the agent stamps as before."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    _as_methodology_source(repo.root)
+
+    code, output = _new_agent(namespace, "ours")
+
+    assert code == 0, output
+    assert "Stamped: " in output
+
+
+def test_new_agent_stamps_the_project_namespace_and_an_incubated_capability_in_an_adopter(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The project's own agents, and a capability it incubates, are never a synced copy
+    (COR-031 D1)."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    caps.set_capability_origin(repo.root, "evidence", ORIGIN_INCUBATED_IN_REPO)
+
+    assert _new_agent("project", "ours")[0] == 0
+    code, output = _new_agent("evidence", "theirs")
+
+    assert code == 0, output
+    assert "Stamped: .pkit/capabilities/evidence/agents/theirs.md" in output

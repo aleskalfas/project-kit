@@ -1,0 +1,87 @@
+answers:
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-candidate
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T073302Z-7332228c.yaml
+    revalidated:
+      at: 2026-10-31T01:14:27Z
+      outcome: unchanged
+      unchanged-because: build-analysis.md changed only in step 4, which now finds paths through triggers and steps as well as preconditions, and reads each edge as journey.md says. A candidate is still what an agent derives on a brownfield project and a person confirms before it is committed, so the term's example and distinctions still hold.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261029T204651Z-6eb49a72.yaml
+    revalidated:
+      at: 2026-10-31T01:14:38Z
+      outcome: unchanged
+      unchanged-because: "build-analysis.md step 4 now reads triggers and steps for a hand-over and reads each edge of a path as journey.md says, and analysis-author.md only adds DEC-007 to what the skill reads. Neither changes who decides: the agent still proposes each candidate, and a person still confirms it before it is committed, so the requirement still holds."
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-074-free-uncited-ids.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T074457Z-1390af7a.yaml
+    revalidated:
+      at: 2026-10-31T01:14:42Z
+      outcome: unchanged
+      unchanged-because: analysis-author.md only adds DEC-007 to the records its skill reads. Nothing about freeing the ids of artefacts nothing cites changed, so the use case's steps still describe what the skill and the numbering setting do.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-071-describe-existing-project.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+    revalidated:
+      at: 2026-10-31T01:14:47Z
+      outcome: unchanged
+      unchanged-because: build-analysis.md changed only in how step 4 finds the paths, now through triggers and steps as well as preconditions, and analysis-author.md only reads DEC-007 too. The use case still goes on to the journeys last, in DEC-001 point 12's order, and a person still confirms each candidate, so its steps still hold.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-014
+    read:
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T073302Z-7332228c.yaml
+    revalidated:
+      at: 2026-10-31T01:15:00Z
+      outcome: updated
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T114612Z-ece11007.yaml
+    revalidated:
+      at: 2026-10-31T01:15:06Z
+      outcome: updated

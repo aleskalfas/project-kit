@@ -1,0 +1,15 @@
+answers:
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-051-id-names-one-artefact.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+    revalidated:
+      at: 2026-10-29T19:36:51Z
+      outcome: unchanged
+      unchanged-because: The number check's and the stamp's tests now run the scripts' main in the test's own process, check-numbers keeping its end-to-end process tests; they assert the same collisions, freed ids and refused entries, so the tests still verify the requirement as its Verified by says.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-052-record-only-with-something-to-say.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+    revalidated:
+      at: 2026-10-29T19:37:03Z
+      outcome: unchanged
+      unchanged-because: The record stamp's tests now run its main in the test's own process, one test keeping its process for the warning beside the stamped line; they assert the same refusals and written records, so the tests still verify the requirement as its Verified by says.

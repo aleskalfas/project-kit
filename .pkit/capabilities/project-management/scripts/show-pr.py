@@ -9,7 +9,8 @@
 """Project-management capability — show-pr (verb-subject per DEC-020).
 
 Read-only diagnostic for a GitHub PR. Surfaces the methodology-relevant
-view: title, Conventional Commits parse, state, base/head branches,
+view: title, Conventional Commits parse, state, whether GitHub can merge it
+(`mergeable`: MERGEABLE, CONFLICTING or UNKNOWN), base/head branches,
 closing issues, reviewers, doc-impact section presence, and the latest
 DEC-028 reviewer verdict(s) — `--field review` renders each reviewer's
 verdict token AND the reasons, read via the same governed `gh` path the
@@ -20,6 +21,23 @@ posting order — earlier rounds a later verdict superseded included (#905).
 A verdict the merge gate would not count is marked stale, with the reason,
 by the gate's own freshness rule (`_lib.verdict_freshness`, #1179); to
 judge it the view resolves the PR's required reviewers as the gate does.
+`--field answers` derives the answers at the PR's head against its base and
+prints what `land-work` tells the person who authorises the merge
+(`_lib.answers_told.at_head`, DEC-065 point 2): the one route to it for anyone
+not at `land-work`. It changes no branch, and fetches the base, and the head
+where this clone lacks it. Answers it cannot derive print why, and nothing else.
+Away from a checkout at the PR's head it starts no program the head holds, since
+anyone may run it on a head they have not read: where an anchor needs its
+resolver, the change check refuses. `land-work` and `review-work` make a temporary
+checkout of the head there, and this view makes none (`from_checkout=False`). It
+says that a checkout at the head can read those answers, and that such a run
+starts the head's own programs under the reader's account.
+
+The PR is named by its number, or by its head branch, as `gh pr view` takes
+it: an open PR from the branch first. A worker knows its Tasks' branches, and
+reads each of its pull requests in Review by its branch (the pm skill's
+work loop, #2184). A reference that starts with `-` is refused, since `gh`
+would read it as a flag.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -28,11 +46,13 @@ Self-contained via PEP 723; runs via
 
 Or via the dispatcher (per COR-021):
   pkit project-management show-pr 99
+  pkit project-management show-pr feat/42-add-dispatcher
 
 Exit codes:
   0  shown
   1  membership refusal
-  2  usage error (PR not found)
+  2  usage error (PR not found, or a reference that is no number or branch), or
+     `--field answers` could not derive the answers at the PR's head
 """
 
 from __future__ import annotations
@@ -48,7 +68,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, friction_answers
+from _lib import answers_told, bootstrap_gate, fixers, friction_answers
 from _lib.agent_verdicts import (
     all_verdicts,
     latest_verdicts_per_reviewer,
@@ -80,14 +100,15 @@ def main() -> int:
             "Show the methodology-relevant view of a GitHub PR: title, "
             "Conventional Commits parse, state, branches, closing issues, "
             "reviewers, doc-impact presence, the latest reviewer verdicts "
-            "(--field review) and every verdict posted, in posting order "
-            "(--field review-history)."
+            "(--field review), every verdict posted, in posting order "
+            "(--field review-history), and what land-work tells the person who "
+            "authorises the merge (--field answers)."
         ),
     )
     parser.add_argument(
-        "pr_number",
-        type=int,
-        help="GitHub PR number.",
+        "pr",
+        metavar="PR",
+        help="GitHub PR number, or the PR's head branch (an open PR from it first).",
     )
     parser.add_argument(
         "--capability-root",
@@ -122,6 +143,13 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
+    ref = _pr_ref(args.pr)
+    if ref is None:
+        print(
+            f"error: {args.pr!r} names no PR: give its number, or its head branch.",
+            file=sys.stderr,
+        )
+        return 2
 
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:
@@ -145,26 +173,97 @@ def main() -> int:
         print(membership.refusal_message, file=sys.stderr)
         return 1
 
-    pr = _gh_get_pr(args.pr_number, config)
+    pr = _gh_get_pr(ref, config)
     if pr is None:
+        return 2
+    number = _pr_number(ref, pr)
+    if number is None:
+        print(f"error: gh pr view {ref} named no PR number.", file=sys.stderr)
         return 2
 
     # Only a view that shows verdicts pays for resolving the required set.
     shows_verdicts = args.field in (None, "review", "review-history")
     freshness = (
-        _resolve_review(args.pr_number, config, capability_root).freshness_rule(pr)
+        _resolve_review(number, config, capability_root).freshness_rule(pr)
         if shows_verdicts
         else None
     )
     summary = _summarise(pr, freshness)
+    # Only the view that shows them pays for a run of the change check.
+    if args.field == "answers":
+        told = _told_at_head(pr, number, capability_root)
+        if told is None:
+            return 2
+        summary["answers"] = told
     if args.field is not None:
         for line in _field_lines_for(summary)[args.field]:
             print(line)
     elif args.json:
         print(json.dumps(summary, indent=2))
     else:
-        _print_summary(args.pr_number, summary)
+        _print_summary(number, summary)
     return 0
+
+
+#: A PR as the command line names it: its number, or a branch. Neither holds
+#: whitespace, and a leading `-` would reach `gh` as a flag.
+_PR_REF = re.compile(r"[^\s-]\S*")
+
+
+def _pr_ref(text: str) -> str | None:
+    """`text` as `gh pr view` is handed it, or None where it names no PR."""
+    return text if _PR_REF.fullmatch(text) else None
+
+
+def _pr_number(ref: str, pr: dict) -> int | None:
+    """The number of the PR `gh` answered for `ref`: the number given, or the
+    one GitHub found for a branch."""
+    number = pr.get("number")
+    if isinstance(number, int):
+        return number
+    return int(ref) if ref.isdigit() else None
+
+
+def _told_at_head(pr: dict, number: int, capability_root: Path) -> list[str] | None:
+    """What `land-work` tells the person who authorises the merge, derived at the
+    PR's head against its base (DEC-065 point 2), or None after saying why it could
+    not be: nothing is told on a guess. No temporary checkout of the head answers a
+    refusal to run an anchor's resolver: that would start the head's own program."""
+    head, base = str(pr.get("headRefOid") or ""), str(pr.get("baseRefName") or "")
+    if not head or not base:
+        print(f"error: GitHub named no head or no base for PR #{number}.", file=sys.stderr)
+        return None
+    source = friction_answers.pull_request_source(
+        str(pr.get("headRefName") or ""),
+        number,
+        cross_repository=bool(pr.get("isCrossRepository")),
+        base=base,
+    )
+    fed = answers_told.at_head(
+        head,
+        base,
+        capability_root,
+        lambda: str(pr.get("body") or ""),
+        source=source,
+        from_checkout=False,
+    )
+    derived = fed.derived
+    if derived.document is None:
+        print(
+            f"error: the answers at PR #{number}'s head could not be derived: {derived.problem}.",
+            file=sys.stderr,
+        )
+        if derived.needs_checkout:
+            short = head[: friction_answers.SHORT]
+            print(HEAD_PROGRAMS_MESSAGE.format(head=short), file=sys.stderr)
+        return None
+    if isinstance(fed.grants, fixers.ChangeUnread):
+        print(
+            f"error: the fixers' grant list could not be read: {fed.grants.why}.",
+            file=sys.stderr,
+        )
+        return None
+    return list(fed.told)
 
 
 def _summarise(pr: dict, freshness: FreshnessRule | None = None) -> dict:
@@ -181,6 +280,7 @@ def _summarise(pr: dict, freshness: FreshnessRule | None = None) -> dict:
     title = str(pr.get("title", ""))
     body = str(pr.get("body") or "")
     state = str(pr.get("state", "")).lower()
+    mergeable = str(pr.get("mergeable") or "").upper()
     head = pr.get("headRefName") or ""
     base = pr.get("baseRefName") or ""
     merged_at = pr.get("mergedAt")
@@ -191,7 +291,7 @@ def _summarise(pr: dict, freshness: FreshnessRule | None = None) -> dict:
     ]
 
     conv = _parse_conventional_commits(title)
-    # The friction answers' section is the artefacts' words, never input (DEC-055).
+    # A list of the answers an earlier run left is never input (DEC-065 point 1).
     authored = friction_answers.strip(body)
     closing_issues = _extract_closing_issues(authored)
     has_doc_impact = "## Doc impact" in authored
@@ -203,6 +303,7 @@ def _summarise(pr: dict, freshness: FreshnessRule | None = None) -> dict:
         "title": title,
         "state": state,
         "is_draft": is_draft,
+        "mergeable": mergeable,
         "head": head,
         "base": base,
         "merged_at": merged_at,
@@ -301,6 +402,7 @@ PR_FIELD_NAMES = (
     "title",
     "state",
     "draft",
+    "mergeable",
     "base",
     "head",
     "merged-at",
@@ -310,6 +412,7 @@ PR_FIELD_NAMES = (
     "reviewers",
     "review",
     "review-history",
+    "answers",
     "doc-impact",
     "body",
     "url",
@@ -318,6 +421,19 @@ PR_FIELD_NAMES = (
 # Shown by `--field review` when no reviewer has posted a DEC-028 verdict
 # comment. A clear message, not an empty result / traceback (issue #544).
 NO_VERDICT_MESSAGE = "no reviewer verdict posted"
+
+# Shown by `--field answers` when land-work would tell the person nothing: no silent
+# empty field, which would read as a run that failed.
+NOTHING_TOLD_MESSAGE = "nothing to tell the person who authorises the merge"
+
+# Said by `--field answers` where an anchor at the head needs its resolver: why this
+# view stops there, where the answers can be read, and what reading them there runs.
+HEAD_PROGRAMS_MESSAGE = (
+    "An anchor at this head needs its resolver, a program the head holds, and this view "
+    "starts none. Running this command from a checkout at {head}, with nothing "
+    "uncommitted, reads the answers. Such a run starts the head's own programs under "
+    "your account, so make it only on a head you trust."
+)
 
 # Appended to a shown verdict the freshness rule holds stale (#1179), naming
 # why — the merge gate will not count such a verdict, so the read surface flags
@@ -441,6 +557,7 @@ def _field_lines_for(s: dict) -> dict[str, list[str]]:
         "title": _scalar(s.get("title")),
         "state": _scalar(s.get("state")),
         "draft": _bool(s.get("is_draft")),
+        "mergeable": _scalar(s.get("mergeable")),
         "base": _scalar(s.get("base")),
         "head": _scalar(s.get("head")),
         "merged-at": _scalar(s.get("merged_at")),
@@ -450,6 +567,7 @@ def _field_lines_for(s: dict) -> dict[str, list[str]]:
         "reviewers": list(s.get("reviewers") or []),
         "review": _review_lines(s.get("review") or []),
         "review-history": _review_history_lines(s.get("review_history") or []),
+        "answers": list(s.get("answers") or [NOTHING_TOLD_MESSAGE]),
         "doc-impact": _bool(s.get("has_doc_impact_section")),
         "body": _scalar(s.get("body")),
         "url": _scalar(s.get("url")),
@@ -462,6 +580,7 @@ def _print_summary(pr_number: int, s: dict) -> None:
         f"  state:        {s.get('state') or '<unknown>'}"
         + ("  (draft)" if s.get("is_draft") else "")
     )
+    print(f"  mergeable:    {s.get('mergeable') or '<unknown>'}")
     print(f"  base:         {s.get('base') or '<unknown>'}")
     print(f"  head:         {s.get('head') or '<unknown>'}")
     conv = s.get("conventional_commits") or {}
@@ -522,22 +641,27 @@ def _extract_closing_issues(pr_body: str) -> list[int]:
     return out
 
 
-def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
+def _gh_get_pr(ref: str, config: dict) -> dict | None:
+    """The PR `ref` names, a number or a head branch, as `gh pr view` reads it,
+    or None after saying why it could not be read."""
     try:
         proc = gh_run(
             [
                 "gh",
                 "pr",
                 "view",
-                str(pr_number),
+                ref,
                 "--json",
                 ",".join(
                     (
+                        "number",
                         "title",
                         "body",
                         "state",
+                        "mergeable",
                         "headRefName",
                         "baseRefName",
+                        "isCrossRepository",
                         "mergedAt",
                         "isDraft",
                         "url",
@@ -554,7 +678,7 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
         return None
     if proc.returncode != 0:
         print(
-            f"error: gh pr view {pr_number} failed.\nstderr: {proc.stderr.strip()}",
+            f"error: gh pr view {ref} failed.\nstderr: {proc.stderr.strip()}",
             file=sys.stderr,
         )
         return None

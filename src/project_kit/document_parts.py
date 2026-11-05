@@ -28,6 +28,11 @@ Artefact discovery cuts a collection entry's section with it
 with it (`rule_sets`). The home of a record's points reads a record's
 Decision with it (`record_points`).
 
+A link followed on a repository host names a heading by the host's anchor, not by
+the slug: `host_anchors` gives it as GitHub writes it, from the heading's text as it
+renders (`rendered_text`). The record lookup gives it for a record's point and a
+rule's heading (`refs.lookup_citations`), which the analysis's links name.
+
 An artefact anchor may name a document's section by its heading's slug, or its
 lead by a bare `#` (COR-050 point 2). The one reading of such an anchor
 (`artefact_parts`) finds the section by `sections_by_slug` and the lead by
@@ -43,15 +48,19 @@ headings and every part's place in the body stay as they were.
 
 from __future__ import annotations
 
+import functools
+import html
 import io
 import re
-from collections.abc import Callable, Iterator, Mapping
+import unicodedata
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, cast
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from project_kit import block_yaml
 from project_kit.backbone_schemas import as_written
 from project_kit.line_breaks import universal_newlines
 
@@ -72,12 +81,15 @@ _ID_CONTINUES = re.compile(r"\w|[-.]\w")
 # no space and no parenthesis.
 _INLINE_LINK = re.compile(r"(?<!!)\[(?P<words>[^\[\]]+)\]\((?P<target>[^()\s]+)\)")
 
-# What hides a run of running text, a line break included: a comment, and a code span.
+# What hides a run of running text, a line break included: a comment, and a code span. A code
+# span never reaches past its paragraph: it crosses a line break only where the next line is
+# not blank, so a lone backtick pairs with none paragraphs later.
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
-_CODE_SPAN = re.compile(r"(?<!`)(`+)(?!`).+?(?<!`)\1(?!`)", re.S)
+_CODE_SPAN = re.compile(r"(?<!`)(`+)(?!`)(?:[^\n]|\n(?![ \t]*\n))+?(?<!`)\1(?!`)")
 
-# ruamel.yaml is untyped; the loaded value is judged where it is read.
-_yaml: Any = YAML(typ="safe")
+# ruamel.yaml is untyped; the loaded value is judged where it is read. The exact reading
+# behind `block_yaml`: ruamel's pure-Python safe loader, never libyaml.
+_yaml: Any = YAML(typ="safe", pure=True)
 
 
 def split_front_matter(text: str) -> tuple[str | None, str]:
@@ -116,7 +128,7 @@ def parse_front_matter(text: str) -> tuple[Mapping[str, Any] | None, str, str | 
     if front_matter is None:
         return None, body, None
     try:
-        data = _yaml.load(io.StringIO(front_matter))
+        data = block_yaml.load(front_matter, lambda: _yaml.load(io.StringIO(front_matter)))
     except YAMLError as exc:
         return None, body, yaml_reason(exc)
     except (TypeError, ValueError, KeyError) as exc:
@@ -218,6 +230,33 @@ def _scan(body: str) -> Iterator[tuple[int, str, bool]]:
         start += len(line) + 1
 
 
+def lines_outside_fences(body: str) -> Iterator[tuple[str, bool]]:
+    """Every line of `body` and whether it lies outside fenced code, as every reader of a
+    body's parts reads it (`_scan`): a line that opens or closes a fence lies inside it."""
+    for _start, line, outside in _scan(body):
+        yield line, outside
+
+
+def running_text(body: str) -> str:
+    """`body` with its fenced code, its code spans and its comments blanked, every other
+    character where it was and every line break kept: the text read as prose.
+
+    Fenced code is what `_scan` finds, and a code span or a comment is what hides a run of
+    running text (`_CODE_SPAN`, `_COMMENT`), so a token in any of them is no token of the
+    prose."""
+    kept = [line if outside else " " * len(line) for _start, line, outside in _scan(body)]
+    text = "\n".join(kept)
+
+    def blank(match: re.Match[str]) -> str:
+        return re.sub(r"[^\n]", " ", match.group(0))
+
+    return _CODE_SPAN.sub(blank, _COMMENT.sub(blank, text))
+
+
+# Keyed on the whole input, as ADR-079 point 1 lets a cache, and bounded: a friction
+# walk cuts many parts from each version of one document, and each cut reads the same
+# body's headings and slugs again.
+@functools.lru_cache(maxsize=512)
 def body_headings(body: str) -> tuple[Heading, ...]:
     """The headings of a Markdown body, in order, fenced code skipped.
 
@@ -242,6 +281,7 @@ def heading_opens_with(title: str, part_id: str) -> bool:
     return title.startswith(part_id) and not _ID_CONTINUES.match(title, len(part_id))
 
 
+@functools.lru_cache(maxsize=8192)
 def heading_slug(title: str) -> str:
     """A heading's slug: its title in lower case, with every character but letters,
     digits, spaces and hyphens dropped, and each space made a hyphen.
@@ -252,6 +292,90 @@ def heading_slug(title: str) -> str:
     """
     kept = (ch for ch in title.lower() if ch.isalpha() or ch.isdigit() or ch in " -")
     return "".join(kept).replace(" ", "-")
+
+
+def host_anchors(headings: Sequence[Heading]) -> tuple[str, ...]:
+    """The anchor a repository host gives each of `headings`, a body's headings in order,
+    as GitHub writes it: the heading's text as it renders (`rendered_text`), in lower
+    case, with every character but letters, marks, digits, underscores, spaces and
+    hyphens dropped, and each space made a hyphen. A heading whose anchor an earlier one
+    already gives takes `-1`, the next `-2`, after it, past any an earlier heading gives
+    as its own, as `foo-1` does.
+
+    It is no slug of a section (`heading_slug`, COR-050 point 2): a link is followed on
+    the host, so it takes the host's anchor, which keeps an underscore and numbers a
+    repeat. An empty anchor is the host's too, and leads to the top of the file.
+    """
+    taken: dict[str, int] = {}
+    found: list[str] = []
+    for heading in headings:
+        base = "".join(
+            ch for ch in rendered_text(heading.title).lower() if ch in " -" or _word_char(ch)
+        ).replace(" ", "-")
+        anchor = base
+        while anchor in taken:
+            taken[base] += 1
+            anchor = f"{base}-{taken[base]}"
+        taken[anchor] = 0
+        found.append(anchor)
+    return tuple(found)
+
+
+def _word_char(ch: str) -> bool:
+    """A letter, a mark, a decimal digit or a connector such as the underscore: what a
+    host keeps of a heading in its anchor."""
+    category = unicodedata.category(ch)
+    return category[0] in "LM" or category in ("Nd", "Pc")
+
+
+# Inline Markdown in a heading's title: a code span, an image, an inline link, an autolink,
+# an HTML tag, and a backslash escape.
+_TITLE_CODE_SPAN = re.compile(r"(`+)(.+?)(?<!`)\1(?!`)")
+_IMAGE = re.compile(r"!\[(?:[^\[\]]|\[[^\[\]]*\])*\](?:\([^()]*\)|\[[^\[\]]*\])")
+_TITLE_LINK = re.compile(r"\[((?:[^\[\]]|\[[^\[\]]*\])*)\](?:\([^()]*\)|\[[^\[\]]*\])")
+_AUTOLINK = re.compile(r"<([A-Za-z][A-Za-z0-9+.-]*:[^<>\s]*)>")
+_HTML_TAG = re.compile(r"</?[A-Za-z][A-Za-z0-9-]*(?:\s[^<>]*)?/?>")
+_ESCAPED = re.compile(r"\\([!-/:-@\[-`{-~])")
+_UNDERSCORES = re.compile(r"_+")
+
+
+def rendered_text(title: str) -> str:
+    """A heading's title as its text renders, the way a host reads it for its anchor: a
+    code span's text kept as written, an image dropped, a link's text kept without its
+    target, an autolink's address kept, an HTML tag dropped, an escape and an entity
+    read, and the underscores that mark emphasis dropped, those inside a word kept.
+    Other emphasis marks are kept, since the anchor drops them anyway."""
+    out: list[str] = []
+    at = 0
+    for span in _TITLE_CODE_SPAN.finditer(title):
+        out.append(_rendered_prose(title[at : span.start()]))
+        code = span.group(2)
+        if len(code) > 1 and code.startswith(" ") and code.endswith(" ") and code.strip():
+            code = code[1:-1]
+        out.append(code)
+        at = span.end()
+    out.append(_rendered_prose(title[at:]))
+    return "".join(out)
+
+
+def _rendered_prose(text: str) -> str:
+    text = _IMAGE.sub("", text)
+    text = _TITLE_LINK.sub(lambda m: _rendered_prose(m.group(1)), text)
+    text = _AUTOLINK.sub(lambda m: m.group(1), text)
+    text = _HTML_TAG.sub("", text)
+    text = _UNDERSCORES.sub(lambda m: _emphasis_or_not(text, m), text)
+    text = _ESCAPED.sub(lambda m: m.group(1), text)
+    return html.unescape(text)
+
+
+def _emphasis_or_not(text: str, run: re.Match[str]) -> str:
+    """A run of underscores as it renders: kept inside a word, where it marks no emphasis,
+    and dropped at a word's edge, where it does. An escaped one is kept."""
+    before = text[run.start() - 1] if run.start() else ""
+    after = text[run.end()] if run.end() < len(text) else ""
+    if before == "\\":
+        return run.group(0)
+    return run.group(0) if before.isalnum() and after.isalnum() else ""
 
 
 @dataclass(frozen=True)
@@ -359,8 +483,10 @@ def links_set_aside(body: str, sets_aside: Callable[[str], bool]) -> str:
     as its words alone (COR-050 point 5).
 
     Running text is the body outside fenced code, as `_scan` reads it, code spans,
-    comments and headings. A link there is `[words](target)`, never an image, its
-    words holding no bracket and its target no space and no parenthesis. Every other
+    comments and headings. A code span never reaches past its paragraph, which a
+    blank line, a heading or fenced code ends. A link there is `[words](target)`,
+    never an image, its words holding no bracket and its target no space and no
+    parenthesis. Every other
     character stays as written, so a word beside a link still counts, as does a link
     of any other form. A link that only begins in running text, inside a code span or
     a comment say, is left as written.

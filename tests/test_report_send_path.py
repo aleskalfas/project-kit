@@ -65,6 +65,7 @@ def _note(target: Path, text: str, name: str = "2026-08-11-send-note.md") -> Pat
 # --- API-primary gated path ------------------------------------------
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_api_post_is_default_and_names_identity_and_target(target: Path, monkeypatch) -> None:
     # gh authenticated, no flags: the confirm-gated API post is the path.
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
@@ -81,6 +82,33 @@ def test_api_post_is_default_and_names_identity_and_target(target: Path, monkeyp
     assert "filed:" in res.output and "700" in res.output
 
 
+@pytest.mark.parametrize("note_text", ["clean note body\n", "path /Users/alice/x leaked\n"])
+def test_api_post_refuses_a_piped_yes_and_posts_nothing(
+    target: Path, monkeypatch, note_text: str
+) -> None:
+    """Off a terminal, the `y` piped in answers neither the send confirmation nor the
+    redaction one: the post is refused, naming `--yes`, which stages (#2003)."""
+    note = _note(target, note_text)
+    posted = {"v": False}
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep,
+        "file_report_via_gh",
+        lambda *a, **k: posted.__setitem__("v", True) or "x",
+    )
+    res = CliRunner().invoke(
+        main,
+        ["report", "bug", "--title", "t", "--body", "b", "--scratchpad", note.name],
+        input="y\ny\n",
+    )
+    assert res.exit_code == 1
+    assert posted["v"] is False
+    assert "refusing to post: stdin is not a terminal" in res.output
+    assert "with --yes to stage it" in res.output
+    assert note.exists()  # nothing posted, so the note is not moved to reported/
+
+
+@pytest.mark.usefixtures("at_a_terminal")
 def test_api_post_decline_does_not_post(target: Path, monkeypatch) -> None:
     posted = {"v": False}
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
@@ -95,6 +123,7 @@ def test_api_post_decline_does_not_post(target: Path, monkeypatch) -> None:
     assert "Not posted" in res.output
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_api_post_scratchpad_note_posts_body_and_stamps(target: Path, monkeypatch) -> None:
     # A real note travels as the issue body via gh — no URL involved — and is
     # stamped reported on the fully-successful post (COR-043).
@@ -121,6 +150,7 @@ def test_api_post_scratchpad_note_posts_body_and_stamps(target: Path, monkeypatc
 # --- kind visibility on the API post (#663) ---------------------------
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_api_post_ensures_then_applies_namespaced_label(target: Path, monkeypatch) -> None:
     ensured: list[tuple[str, str]] = []
     sent: dict = {}
@@ -140,6 +170,7 @@ def test_api_post_ensures_then_applies_namespaced_label(target: Path, monkeypatc
     assert "filed:" in res.output
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_api_post_label_failure_degrades_with_warning_and_posts(target: Path, monkeypatch) -> None:
     sent: dict = {}
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
@@ -410,6 +441,26 @@ def test_submit_refuses_yes(target: Path, monkeypatch) -> None:
     assert rep.load_staged(target, draft_id) is not None  # draft kept
 
 
+def test_submit_refuses_a_piped_yes_and_keeps_the_draft(target: Path, monkeypatch) -> None:
+    """`report submit` is the person's half: off a terminal a `y` piped in posts
+    nothing, and the draft is kept for a person to submit (#2003)."""
+    draft_id = _stage_via_cli(target)
+    posted = {"v": False}
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep,
+        "file_report_via_gh",
+        lambda *a, **k: posted.__setitem__("v", True) or "x",
+    )
+    res = CliRunner().invoke(main, ["report", "submit", draft_id], input="y\n")
+    assert res.exit_code == 1
+    assert posted["v"] is False
+    assert "refusing to post: stdin is not a terminal" in res.output
+    assert f"pkit report submit {draft_id}` at a terminal" in res.output
+    assert rep.load_staged(target, draft_id) is not None
+
+
+@pytest.mark.usefixtures("at_a_terminal")
 def test_submit_confirms_posts_stamps_and_cleans(target: Path, monkeypatch) -> None:
     note = _note(target, "# Note\n\nclean note body\n")
     draft_id = _stage_via_cli(target, "--scratchpad", note.name)
@@ -432,6 +483,7 @@ def test_submit_confirms_posts_stamps_and_cleans(target: Path, monkeypatch) -> N
     assert rep.load_staged(target, draft_id) is None  # stage file removed
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_submit_decline_keeps_draft_and_posts_nothing(target: Path, monkeypatch) -> None:
     draft_id = _stage_via_cli(target)
     posted = {"v": False}
@@ -448,6 +500,7 @@ def test_submit_decline_keeps_draft_and_posts_nothing(target: Path, monkeypatch)
     assert rep.load_staged(target, draft_id) is not None
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_submit_resurfaces_staged_redaction_warnings(target: Path, monkeypatch) -> None:
     note = _note(target, "path /Users/alice/project leaked\n")
     draft_id = _stage_via_cli(target, "--scratchpad", note.name)
@@ -460,6 +513,7 @@ def test_submit_resurfaces_staged_redaction_warnings(target: Path, monkeypatch) 
     assert rep.load_staged(target, draft_id) is not None
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_submit_posts_overflow_comment_of_oversize_draft(target: Path, monkeypatch) -> None:
     note = _note(target, "z" * 70_000)
     draft_id = _stage_via_cli(target, "--scratchpad", note.name)
@@ -482,6 +536,7 @@ def test_submit_posts_overflow_comment_of_oversize_draft(target: Path, monkeypat
     assert rep.load_staged(target, draft_id) is None
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_submit_overflow_failure_fails_closed_and_keeps_draft(target: Path, monkeypatch) -> None:
     note = _note(target, "w" * 70_000)
     draft_id = _stage_via_cli(target, "--scratchpad", note.name)
@@ -573,6 +628,7 @@ def test_url_path_without_note_prints_no_followup(target: Path) -> None:
     assert "scratchpad reported" not in res.output
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_api_decline_url_degrade_ends_with_reported_followup(target: Path, monkeypatch) -> None:
     # Declining the API confirm degrades to the printed URL — a degraded
     # outcome that may still be filed in the browser, so it too must end
@@ -589,6 +645,7 @@ def test_api_decline_url_degrade_ends_with_reported_followup(target: Path, monke
     assert _last_line(res.output) == _FOLLOWUP
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_api_failure_url_degrade_ends_with_reported_followup(target: Path, monkeypatch) -> None:
     note = _note(target, "# Note\n\nclean\n")
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
@@ -611,6 +668,7 @@ def test_api_failure_url_degrade_ends_with_reported_followup(target: Path, monke
 # test_submit_confirms_posts_stamps_and_cleans.
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_interactive_api_path_lints_note_and_gates_on_findings(target: Path, monkeypatch) -> None:
     note = _note(target, "path /Users/alice/project leaked\n")
     posted = {"v": False}

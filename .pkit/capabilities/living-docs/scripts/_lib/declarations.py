@@ -55,6 +55,10 @@ INTERNAL_ROOT = "internal"
 ROOT_LOCATIONS = {"user-root": USER_ROOT, "internal-root": INTERNAL_ROOT}
 DEFINITIONS_LOCATION = "definitions"
 
+#: The folder the capability recommends for the internal root where the two roots
+#: are one folder: outside the user root, which keeps its folder (DEC-001 point 2).
+RECOMMENDED_INTERNAL_ROOT = "tech-docs"
+
 #: Only Markdown files are documents (ADR-056 point 2).
 DOCUMENT_SUFFIX = ".md"
 

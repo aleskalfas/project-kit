@@ -1,0 +1,407 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-scope
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#7
+          reason: "DEC-059 point 7 limits who may take a Task to the seats that serve its pool, where pools are declared. The example of a seat with no scope taking every ready Task then needs that limit. #2256 builds the pools and rewords the entry."
+  - artefact: tech-docs/analysis/project-management/domain-model/060-parallel-work.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059
+          reason: "The view has every seat take from one shared pool. DEC-061 partially supersedes DEC-059: a topology may declare pools, and a seat that builds takes only from the pools it serves. #2256 builds the pools and adds them to the view."
+  - artefact: tech-docs/analysis/project-management/domain-model/010-issues-and-their-hierarchy.md
+    read:
+      - 20261026T145234Z-564794a2.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-016
+          reason: "DEC-016 adds the optional Pool line to a Milestone description, and rolls a pooled Milestone forward within its pool. The view shows a Milestone opening with its close trigger and rolling forward to the next Milestone. #2256 builds both and rewrites the view."
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planning-agent.md
+    read:
+      - 20261026T212744Z-4789db3b.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#7
+          reason: "The actor files work that joins the ready Tasks every seat shares. DEC-059 point 7 limits who may take a Task to the seats that serve its pool, where pools are declared. #2256 builds the pools and rewords the actor."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md
+    read:
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059
+          reason: "DEC-061 partially supersedes DEC-059: a topology may declare pools, and each seat that builds names the pools it serves. Setting up a topology then declares them. #2256 builds the pools and adds them to the steps."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#1
+          reason: "DEC-059 point 1 adds the pools a topology may declare, and refuses authority to code that cannot read the topology in full. #2256 builds both and adds them to setting up the topology."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#2
+          reason: "Point 2 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides. #2256 rewrites this use case for those pools, with the seats point 2 describes."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#3
+          reason: "Point 3 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides. #2256 rewrites this use case for those pools, with the state issues point 3 describes."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#6
+          reason: "Point 6 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides. #2256 rewrites this use case for those pools, with the identity point 6 gives a clone."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#7
+          reason: "DEC-059 point 7 limits who may take a Task to the seats that serve its pool, where pools are declared. #2256 builds the pools, and the check that refuses a seat naming an undeclared pool, and rewrites the steps."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#9
+          reason: "Point 9 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides. #2256 rewrites this use case for those pools, with the claims point 9 safeguards."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T142620Z-f8937159.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#1
+          reason: "DEC-059 point 1 adds the pools a topology may declare. The planning agent reads the topology, and then files into the Milestones of the line the person gives it. #2256 builds the pools and rewrites the steps."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#2
+          reason: "Point 2 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides. #2256 rewrites this use case for those pools, with the seats point 2 describes."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#4
+          reason: "Point 4 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides, whose planners each take a seat as point 4 says. #2256 rewrites this use case for those pools."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#6
+          reason: "Point 6 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides. #2256 rewrites this use case for those pools, with the identity point 6 gives a clone."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#7
+          reason: "DEC-059 point 7 limits who may take a Task to the seats that serve its pool, where pools are declared. A Task the planning agent files then falls only to the seats that serve the pool of its Milestone and whose scope it matches. #2256 builds the pools and rewrites the steps."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#4
+          reason: "Point 4 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides. #2256 rewrites this use case for those pools, with the seat point 4 has a clone take."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#7
+          reason: "DEC-059 point 7 limits who may take a Task to the seats that serve its pool, where pools are declared. next-task then takes only ready Tasks in an open Milestone of the seat pools, and takes nothing where the Milestones cannot be read. #2256 builds it and rewrites the steps."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#8
+          reason: "Point 8 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides. #2256 rewrites this use case for those pools, with the role procedure point 8 runs."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#9
+          reason: "Point 9 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides, whose pools also hold back a Task a seat takes over. #2256 rewrites this use case for those pools."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#7
+          reason: "Variant 4b lets every seat that builds with no scope take the next Task. DEC-059 point 7 limits that to the seats that serve the pool of its Milestone, where pools are declared. #2256 builds the pools and rewrites the variant."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-006
+          reason: "Step 2 reads the state a Task carries, which DEC-006 keeps. DEC-006 adds that, where pools are declared, a Task reaches a worker only through a Milestone in a pool. #2256 rewrites this use case for pools in one change, its listing of seats first."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#3
+          reason: "Step 3 lists the seats. Under the top line DEC-059 gains for the pools of workers DEC-061 decides, the listing also shows the open Milestones of each pool, and warns of stranded work. #2256 builds that listing and rewrites the step."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#4
+          reason: "Point 4 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides. #2256 rewrites this use case for those pools, with the seats point 4 has clones take."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#6
+          reason: "Point 6 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides. #2256 rewrites this use case for those pools, with the seat names point 6 signs listings with."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#1
+          reason: "DEC-059 point 1 has code that cannot read the topology in full refuse to take a seat, and adds the pools a topology may declare. Taking a seat then refuses, or shows the open Milestones of each pool. #2256 builds both and rewrites the steps."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#3
+          reason: "Point 3 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides. #2256 rewrites this use case for those pools, with the state issue point 3 has a clone claim."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#4
+          reason: "Point 4 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides, whose several planners each take a seat as point 4 says. #2256 rewrites this use case for those pools."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#5
+          reason: "Point 5 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides, whose guard also refuses a release by force. #2256 rewrites this use case for those pools."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#6
+          reason: "Point 6 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides. #2256 rewrites this use case for those pools, with the identity point 6 gives the clone that takes a seat."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#8
+          reason: "Point 8 reads as it did, under the top line DEC-059 gains for the pools of workers DEC-061 decides. #2256 rewrites this use case for those pools, with the role procedure point 8 has the agent run."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-016
+          reason: "DEC-016 adds the optional Pool line, written only with the consent of the person, and rolls a pooled Milestone forward within its pool. Defining and rolling a Milestone forward then takes both. #2256 builds them and rewrites the steps."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-006
+          reason: "Step 1 schedules an issue with an optional Milestone. DEC-006 makes putting a Task into a Milestone in a pool, or moving it between pools, the act of the person, which the command then asks for. #2256 builds that consent and adds it to the steps."
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059
+          reason: "DEC-061 partially supersedes DEC-059: a topology may declare pools, and a person moves workers between them by editing the pools of the seats. Adjusting the topology on what is measured then includes it. #2256 builds the pools and rewrites the journey."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#1
+          reason: "DEC-059 point 1 adds the pools a topology may declare, and the guard that refuses authority to code that cannot read it in full. #2256 builds both and rewrites the journey for them."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#7
+          reason: "DEC-059 point 7 limits who may take a Task to the seats that serve its pool, where pools are declared. Taking work in the journey then takes from those pools. #2256 builds them and rewrites the journey."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-authorisation
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+    revalidated:
+      at: 2026-10-28T01:38:30Z
+      outcome: unchanged
+      unchanged-because: DEC-006 adds that, where pools of workers are declared, putting a Task into a Milestone in a pool is the act of the person. The entry tells authorisation apart from consent, approval and bypass, which that leaves as they are.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-cascade
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-28T01:38:36Z
+      outcome: unchanged
+      unchanged-because: DEC-006 adds only who may put a Task into a Milestone in a pool of workers, and that a Task with no Milestone reaches no worker there. The forward and closure cascades the entry tells apart are as they were.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-issue-lifecycle
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-28T01:38:42Z
+      outcome: unchanged
+      unchanged-because: DEC-006 adds only who may put a Task into a Milestone in a pool of workers, and that a Task with no Milestone reaches no worker there. The states, Review as a Task state alone and the board as a projection hold.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-close-trigger
+    revalidated:
+      at: 2026-10-28T01:38:47Z
+      outcome: unchanged
+      unchanged-because: DEC-016 adds a Pool line beside the close trigger, which stays first, and keeps the rollforward of a pooled Milestone in its pool. The example of a housekeeping Milestone in no pool, and the distinctions from the due date and the cascade, hold.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-milestone
+    revalidated:
+      at: 2026-10-28T01:38:54Z
+      outcome: unchanged
+      unchanged-because: DEC-016 adds an optional Pool line that puts a Milestone into a pool of workers, and keeps its rollforward in that pool. The example and the distinctions from an EPIC, a workstream and an Iteration hold as written.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-milestone-category
+    revalidated:
+      at: 2026-10-28T01:38:59Z
+      outcome: unchanged
+      unchanged-because: DEC-016 rolls a pooled Milestone forward to the next open Milestone of its category in the same pool, and adds the Pool line. A category still classes Milestones by their titles, and the close trigger still overrides its default.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-instance
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-28T01:39:05Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 6 reads as it did, under a new top line naming the pools of workers DEC-061 decides. A clone in a seat still takes the name and number of its seat, so the entry holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-owner
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-28T01:39:10Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 9 reads as it did, under a new top line naming the pools of workers DEC-061 decides. Pools decide who may take a Task, not how its owner is marked or released, so the entry holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-seat
+    revalidated:
+      at: 2026-10-28T01:39:16Z
+      outcome: unchanged
+      unchanged-because: DEC-059 points 2 and 4 read as they did, under a new top line naming the pools of workers DEC-061 decides. The entry says what a seat holds of its role and agent definition, and how a clone takes its name, which pools leave as they are.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-topology
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+    revalidated:
+      at: 2026-10-28T01:39:21Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 1 adds the pools a topology may declare, and a guard on code that cannot read it in full, and point 2 reads as it did. The examples declare no pools, which stays valid, and the distinctions from the per-user file, a seat, an instance and a batch plan hold.
+  - artefact: tech-docs/analysis/project-management/domain-model/020-classification-of-issues.md
+    revalidated:
+      at: 2026-10-28T01:39:27Z
+      outcome: unchanged
+      unchanged-because: DEC-016 adds a Pool line to a Milestone description and keeps a pooled rollforward in its pool. A pool is no classification axis, and a Milestone still carries none, so the view holds.
+  - artefact: tech-docs/analysis/project-management/domain-model/030-the-issue-lifecycle.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+    revalidated:
+      at: 2026-10-28T01:39:33Z
+      outcome: unchanged
+      unchanged-because: "DEC-006 adds who builds a Task where pools of workers are declared: one scheduled with a reason and no Milestone reaches no worker. The states, the gates, the bypass that schedules with no Milestone and the cascade the view holds stand as they were."
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planner.md
+    read:
+      - 20261026T123904Z-0482f880.yaml
+    revalidated:
+      at: 2026-10-28T01:39:38Z
+      outcome: unchanged
+      unchanged-because: DEC-016 adds an optional Pool line, which the planner writes with consent, and keeps a pooled rollforward in its pool. The goal of defining Milestones and having a date-based one roll its open work forward still says what the planner wants.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+    revalidated:
+      at: 2026-10-28T01:39:44Z
+      outcome: unchanged
+      unchanged-because: DEC-006 makes putting a Task into a Milestone in a pool of workers the act of the person, a write asked of the person, not a move of the lifecycle. The moves the requirement holds for a person, and how they are authorised, are as they were.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+    revalidated:
+      at: 2026-10-28T01:43:02Z
+      outcome: unchanged
+      unchanged-because: DEC-006 makes putting a Task into a Milestone in a pool of workers the act of the person. Step 9 attaches each issue to its Milestone on the approval of the planner, which is that word, so the steps hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-28T01:43:07Z
+      outcome: unchanged
+      unchanged-because: DEC-059 points 6 and 9 read as they did, under a new top line naming the pools of workers DEC-061 decides. Pools decide who may take a Task, and leave the owner, the clash guard and the takeover these steps follow as they are.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-28T01:43:13Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 7 limits who may take a Task to the seats of its pool, and points 4, 5 and 9 read as they did. The worker resumes or takes over a Task of its own pool, and variant 2c leaves the takeover to UC-084, so the steps hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-28T01:43:18Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 7 limits who may take a Task to the seats of its pool, and points 4 and 6 read as they did. The lead delegates a Task it already holds, and its helper acts as its instance, which pools leave as they are.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+    revalidated:
+      at: 2026-10-28T01:43:34Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 9 reads as it did, under a new top line naming the pools of workers DEC-061 decides. An ownership still names its seat, so the topology and the seat behind each event read as the use case says.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T143058Z-33fd32cd.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+    revalidated:
+      at: 2026-10-28T01:43:54Z
+      outcome: unchanged
+      unchanged-because: "The change proposes DEC-061, pools of workers, and refines DEC-059, DEC-016, DEC-006 and DEC-025 for it, with no command changed. The README describes the commands as built, and #2256 extends it with pools once the records are accepted."
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."

@@ -3,6 +3,7 @@ builds-on:
   - analysis: core
     version: 2.0.0
     terms:
+      - {id: TERM-adapter, name: adapter}
       - {id: TERM-capability, name: capability}
       - {id: TERM-component, name: component}
       - {id: TERM-decision-record, name: decision record}
@@ -24,7 +25,7 @@ TERM-citation:
   name: citation
   noun-forms: [citations]
   status: active
-  definition: "token of the form `[ev:<slug>]` that names an evidence record by that record's `id`, in the text of a document"
+  definition: "token of the form `[ev:<slug>]` in the text of a document, whose slug names an evidence record by that record's `id`"
   pkit:
     friction:
       anchors:
@@ -33,15 +34,11 @@ TERM-citation:
         record:
           - evidence:DEC-001
           - evidence:DEC-003
-      revalidated:
-        at: 2026-10-24T01:22:31Z
-        outcome: unchanged
-        unchanged-because: The check now finds a fence indented in a list item or set in a block quote, and leaves nested scopes out. A citation is still the token that names a record by its id. The check still skips a fenced code block, an HTML comment and the scope's evidence.yaml.
 TERM-evidence-record:
   name: evidence record
   noun-forms: [evidence records]
   status: active
-  definition: "entry of a scope's YAML file keeping a verbatim excerpt of an outside fact's source, where the source lies and when the excerpt was fetched"
+  definition: "entry of a directory's fixed-name YAML file keeping a verbatim excerpt of an outside fact's source, with the source's location and fetch time"
   pkit:
     friction:
       anchors:
@@ -62,10 +59,6 @@ TERM-evidence-scope:
           - .pkit/capabilities/evidence/scripts/validate.py
         record:
           - evidence:DEC-002
-      revalidated:
-        at: 2026-10-24T01:21:55Z
-        outcome: unchanged
-        unchanged-because: The check now leaves out each directory below a scope that holds an evidence.yaml of its own, so a scope ends at the next such file, as the definition already said.
 TERM-outside-fact:
   name: outside fact
   noun-forms: [outside facts]
@@ -80,10 +73,6 @@ TERM-outside-fact:
           - .pkit/capabilities/evidence/skills/evidence/add.md
         record:
           - evidence:DEC-001
-      revalidated:
-        at: 2026-10-24T01:21:57Z
-        outcome: unchanged
-        unchanged-because: The add operation now says that a nested directory with its own evidence.yaml is validated separately. It says nothing new of which facts lie beyond the project.
 ---
 
 # Glossary
@@ -91,6 +80,7 @@ TERM-outside-fact:
 The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
 
 - **From core at 2.0.0:** the areas up to `030-change`. No release holds the core's analysis yet, so the links name the next release, 2.0.0, rather than evidence's floor, 1.26.0.
+  - **Term:** [adapter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-adapter--adapter)
   - **Term:** [capability](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-capability--capability)
   - **Term:** [component](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-component--component)
   - **Term:** [decision record](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-decision-record--decision-record)
@@ -114,8 +104,8 @@ Explained in [VIEW-outside-facts-and-citations](domain-model/010-outside-facts-a
 **Distinctions:**
 
 - **A citation of a decision record:** a reference such as `[evidence:DEC-001-citation-discipline]`, which names a record of a [component](../core/glossary.md#term-component--component). The core's `pkit refs validate` checks it, and evidence never checks it (the [capability](../core/glossary.md#term-capability--capability)'s README).
-- **A link or a footnote:** a citation is written as plain text, and holds no URL. The evidence record it names holds where the source lies (DEC-001).
-- **The same text where the check skips it:** in a fenced code block or an HTML comment of a Markdown file, or in the scope's `evidence.yaml`. An excerpt there may quote such text from its source. There it is no citation (DEC-003).
+- **A link or a footnote:** a citation is written as plain text, and holds no URL. The evidence record it names holds where the source lies ([DEC-001](../../../.pkit/capabilities/evidence/decisions/DEC-001-citation-discipline.md)).
+- **The same text where the check skips it:** in a fenced code block or an HTML comment of a Markdown file, or in the scope's `evidence.yaml`. An excerpt there may quote such text from its source. There it is no citation ([DEC-003](../../../.pkit/capabilities/evidence/decisions/DEC-003-validation-model.md)).
 
 ## TERM-evidence-record — evidence record
 
@@ -125,8 +115,8 @@ Explained in [VIEW-outside-facts-and-citations](domain-model/010-outside-facts-a
 
 **Distinctions:**
 
-- **Citation:** the token that names the record, in a document. The record keeps the excerpt the [citation](#term-citation--citation) points to (DEC-001).
-- **Snapshot:** a durable copy of the source, captured as the excerpt was fetched. The record holds only where the copy lies (DEC-002).
+- **Citation:** the token that names the record, in a document. The record keeps the excerpt the [citation](#term-citation--citation) points to ([DEC-001](../../../.pkit/capabilities/evidence/decisions/DEC-001-citation-discipline.md)).
+- **Snapshot:** a durable copy of the source, captured as the excerpt was fetched. The record holds only where the copy lies ([DEC-002](../../../.pkit/capabilities/evidence/decisions/DEC-002-evidence-record-schema.md)).
 - **The outside fact:** what the excerpt bears out. `fetched_at` says when the excerpt was fetched, never when the fact was true (DEC-002).
 
 ## TERM-evidence-scope — evidence scope
@@ -137,7 +127,7 @@ Explained in [VIEW-outside-facts-and-citations](domain-model/010-outside-facts-a
 
 **Distinctions:**
 
-- **The `evidence.yaml`:** the file that holds the scope's evidence records. The scope is the directory that holds the file, with what lies below it (DEC-002).
+- **The `evidence.yaml`:** the file that holds the scope's evidence records. The scope is the directory that holds the file, with what lies below it ([DEC-002](../../../.pkit/capabilities/evidence/decisions/DEC-002-evidence-record-schema.md)).
 
 ## TERM-outside-fact — outside fact
 

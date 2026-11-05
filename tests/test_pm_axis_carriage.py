@@ -1,21 +1,20 @@
 """The carriage accessor's truth table, purity, and layering.
 
 `_lib/axis_carriage` is the single composition answering *which substrate carries
-this axis* — "ask the map; where it is silent, ask the flag"
-([project-management:DEC-051-axis-carriage-activation], decision points 1-4). It
-exists because the answer used to be derivable from two files that could not see
-each other, so a writer and a reader could each be locally correct and still
-disagree: the filing verb honoured the board flag and wrote no label, nothing
-wrote the board field, and the reviewer resolved through the map and found
-nothing (#708).
+this axis* — "ask the map" ([project-management:DEC-062-axes-chosen-in-the-map]
+point 1, over [project-management:DEC-051-axis-carriage-activation] decision
+points 1 and 4). It exists because the answer used to be derivable from two files
+that could not see each other, so a writer and a reader could each be locally
+correct and still disagree: the filing verb honoured the board flag and wrote no
+label, nothing wrote the board field, and the reviewer resolved through the map
+and found nothing (#708).
 
 Three properties are pinned here, and each has a distinct failure mode.
 
 **The truth table**, because a wrong cell is a silent mis-write rather than a
-crash. The subtle rows are the silent ones: an axis absent from a *present* map
-degrades with no board but is board-carried with one, because the absent-≡-
-unsupported rule governs whether the kit's *own labels* may be demanded and a
-board field is not a label.
+crash. The board flag carries no axis: an axis is on the board only where the
+map binds it there, an axis absent from a present map degrades board or no
+board, and a `kit-label` axis reads as it does with no map.
 
 **Purity**, because the whole carriage rewiring across the verb family is only
 safe if asking "where does this live?" cannot fail. Every verb asks it; only a
@@ -66,17 +65,17 @@ def _map(axes, axis_labels):
 @pytest.mark.parametrize(
     ("case", "axis", "config", "axes", "expected"),
     [
-        # Greenfield: no map at all. The flag is the only speaker.
-        ("greenfield no board", "priority", NO_BOARD, None, "kit-label"),
-        ("greenfield with board", "priority", BOARD, None, "board"),
-        ("greenfield workstream on board", "workstream", BOARD, None, "board"),
-        # `type` is never board-claimed, board or no board: PR-title alignment
-        # reads the type LABEL and a board field is invisible from a PR.
-        ("type is never board-claimed", "type", BOARD, None, "kit-label"),
-        # A binding governs, and the flag is not consulted for that axis. This
-        # row IS the reported failure: board configured, priority label-bound.
+        # No map at all: the kit's own labels carry every axis, board or no
+        # board. The flag says only that a board exists (DEC-062 point 1).
+        ("no map, no board", "priority", NO_BOARD, None, "kit-label"),
+        ("no map, a board carries nothing", "priority", BOARD, None, "kit-label"),
+        ("no map, workstream under a board", "workstream", BOARD, None, "kit-label"),
+        ("no map, state under a board", "state", BOARD, None, "kit-label"),
+        ("type with no map", "type", BOARD, None, "kit-label"),
+        # A binding governs. This row IS the reported failure: board
+        # configured, priority label-bound.
         (
-            "label binding beats the flag",
+            "label binding under a board",
             "priority",
             BOARD,
             {"priority": {"label": {"remap": {"High": "P0"}}}},
@@ -88,6 +87,30 @@ def _map(axes, axis_labels):
             BOARD,
             {"priority": {"board": True}},
             "board",
+        ),
+        (
+            "board binding on state",
+            "state",
+            BOARD,
+            {"state": {"board": True}},
+            "board",
+        ),
+        # The map alone answers: a `board: true` binding under a config with no
+        # board is still `board`. The prerequisite check refuses the pair, and
+        # a consumer reading the board fails on it ([pkit:ADR-053] point 2).
+        (
+            "board binding with no board configured",
+            "workstream",
+            NO_BOARD,
+            {"workstream": {"board": True}},
+            "board",
+        ),
+        (
+            "kit-label binding",
+            "workstream",
+            BOARD,
+            {"workstream": {"kit-label": True}},
+            "kit-label",
         ),
         (
             "title-prefix binding",
@@ -103,21 +126,15 @@ def _map(axes, axis_labels):
             {"state": {"derive": {"states": {"open": "issue is open"}}}},
             "derived",
         ),
-        # `unsupported` names NO substrate, so it cannot GOVERN carriage. The
-        # schema defines it as equivalent to omitting the axis, so it falls
-        # through to the flag exactly as an omitted axis does — under a board,
-        # the board carries it. This is what keeps an adopter holding the old
-        # `unsupported: true` board workaround from losing their board write on
-        # upgrade; the migration nudges them to declare it honestly instead.
+        # `unsupported` names NO substrate: it degrades, as an omitted axis
+        # does, board or no board (DEC-062 point 2).
         (
-            "unsupported falls through to the flag, as if omitted",
+            "unsupported degrades under a board",
             "priority",
             BOARD,
             {"priority": {"unsupported": True}},
-            "board",
+            "degrade",
         ),
-        # With no board there is nothing for the fall-through to find, so it
-        # degrades — which is what `unsupported` has always meant.
         (
             "unsupported with no board degrades",
             "priority",
@@ -125,27 +142,22 @@ def _map(axes, axis_labels):
             {"priority": {"unsupported": True}},
             "degrade",
         ),
-        # The equivalence the schema states, pinned as a property: an explicitly
-        # unsupported axis and an omitted one resolve identically, always.
         (
-            "unsupported on a non-board-claimable axis degrades",
+            "unsupported on a non-board axis degrades",
             "type",
             BOARD,
             {"type": {"unsupported": True}},
             "degrade",
         ),
-        # Absent from a PRESENT map: the flag still governs (nothing changes
-        # from today). The degrade rule guards the kit's own labels, and a board
-        # field is not a label, so it never reached this case.
+        # Absent from a PRESENT map: degrade, board or no board. A board's
+        # existence carries no axis.
         (
-            "absent from present map, board carries it",
+            "absent from present map under a board degrades",
             "workstream",
             BOARD,
             {"priority": {"board": True}},
-            "board",
+            "degrade",
         ),
-        # ... but with no board there is nothing to carry it, and demanding the
-        # kit's label would be the harm the degrade rule exists to prevent.
         (
             "absent from present map, no board, degrades",
             "workstream",
@@ -212,22 +224,43 @@ def test_is_board_carried_scopes_the_raise(mod):
     board was expected ([pkit:ADR-053], decision point 3).
     """
     axis_carriage, axis_labels = mod
-    assert axis_carriage.is_board_carried("priority", BOARD, None) is True
-    assert axis_carriage.is_board_carried("priority", NO_BOARD, None) is False
+    on_board = _map({"priority": {"board": True}}, axis_labels)
+    assert axis_carriage.is_board_carried("priority", BOARD, on_board) is True
+    # The flag alone puts no axis on the board (DEC-062 point 1).
+    assert axis_carriage.is_board_carried("priority", BOARD, None) is False
     assert axis_carriage.is_board_carried("type", BOARD, None) is False
     label_bound = _map({"priority": {"label": {"remap": {"High": "P0"}}}}, axis_labels)
     assert axis_carriage.is_board_carried("priority", BOARD, label_bound) is False
 
 
-def test_expects_kit_labels_only_in_greenfield(mod):
-    """A presence gate may demand `priority:High` only when nothing else carries it."""
+def test_expects_kit_labels_with_no_map_or_a_kit_label_binding(mod):
+    """A presence gate may demand `priority:High` only where the kit's labels
+    carry the axis: no map, or `kit-label: true` (DEC-062 points 3 and 4)."""
     axis_carriage, axis_labels = mod
     assert axis_carriage.expects_kit_labels("priority", NO_BOARD, None) is True
-    # A board claims it, so the kit label is not the thing to look for.
-    assert axis_carriage.expects_kit_labels("priority", BOARD, None) is False
-    # A present map means no axis reads the kit's own labels.
+    assert axis_carriage.expects_kit_labels("priority", BOARD, None) is True
+    kit = _map({"priority": {"kit-label": True}}, axis_labels)
+    assert axis_carriage.expects_kit_labels("priority", BOARD, kit) is True
+    # The map's other axes are absent, and degrade: a map carries nothing beyond
+    # its bindings.
+    assert axis_carriage.expects_kit_labels("workstream", BOARD, kit) is False
     present = _map({"priority": {"label": {"remap": {"High": "P0"}}}}, axis_labels)
     assert axis_carriage.expects_kit_labels("priority", NO_BOARD, present) is False
+
+
+def test_a_map_binding_every_axis_to_the_kit_labels_behaves_as_no_map(mod):
+    """DEC-062 point 4: a map whose every binding is `kit-label` answers as no
+    map, for every axis and every config."""
+    axis_carriage, axis_labels = mod
+    all_kit = _map(
+        {axis: {"kit-label": True} for axis in ("type", "priority", "workstream", "state")},
+        axis_labels,
+    )
+    for axis in ("type", "priority", "workstream", "state"):
+        for config in (BOARD, NO_BOARD, None):
+            assert axis_carriage.carriage(axis, config, all_kit) == axis_carriage.carriage(
+                axis, config, None
+            )
 
 
 # --- purity and layering ----------------------------------------------------
@@ -284,8 +317,7 @@ def test_unsupported_is_equivalent_to_omission(mod):
     `unsupported: true` is defined as "equivalent to omitting the axis from a
     present map". Carriage must honour that for every axis and every config, or
     the map means two different things depending on whether the adopter wrote
-    the key — and the two readings differ precisely where an adopter holding the
-    old board workaround would lose their board write.
+    the key.
     """
     axis_carriage, axis_labels = mod
     other = {"type": {"title-prefix": {"remap": {"task": "[Task]"}}}}

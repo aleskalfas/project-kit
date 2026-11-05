@@ -40,9 +40,12 @@ consumers share:
   * applying the adopter's not-code list (`review.floors.not_code`, `NotCode`,
     #1178) to the diff before the `touches-code` floor reads it, so a changed
     path the list matches satisfies no `touches-code` floor — by both
-    consumers alike. The list narrows no other floor. The freshness rule
-    reads the author's changes through the same list, so the list decides
-    both who is required and whose approval survives a change.
+    consumers alike. The list narrows no other floor. A path in the
+    backbone's folder of friction answers satisfies no `touches-code` floor
+    either, whatever the list says (`NotCode.answers_folder`, DEC-032 D1).
+    The freshness rule reads the author's changes through the same list, so
+    the list decides both who is required and whose approval survives a
+    change.
   * reading the floors one way for every consumer (`reached_floors`):
     `touches-code` from the paths, `touches-ruled-artefact` from the
     backbone's answer on which ruled artefacts the change altered (#1386) or
@@ -325,6 +328,11 @@ NOT_CODE_PATH = "review.floors.not_code"
 DEFAULT_NOT_CODE_PATTERNS = (".changes/**",)
 
 
+# Type of the injected reader of the backbone's folder of friction answers: the
+# folder, repository-relative, or None where the backbone gives none.
+AnswersFolderFn = Callable[[], "str | None"]
+
+
 @dataclass(frozen=True)
 class NotCode:
     """Paths that never count as code for a diff-property floor, or the shape
@@ -337,10 +345,17 @@ class NotCode:
     as before, so the list narrows that floor and nothing else. A consumer gates on `ok`
     first: when the list is malformed nothing is excluded and the caller
     refuses (see the module docstring).
+
+    `answers_folder` reads where the backbone keeps the friction answers, whatever
+    the list says: a path in that folder is never code either (DEC-032 D1, COR-062
+    point 2). It is asked only where the paths the list leaves touch code, and
+    without it, or where it gives no folder, no path is set apart: every path is
+    read as before, which errs toward more review, never less.
     """
 
     patterns: tuple[str, ...] = DEFAULT_NOT_CODE_PATTERNS
     errors: tuple[str, ...] = ()
+    answers_folder: AnswersFolderFn | None = field(default=None, compare=False)
 
     @property
     def ok(self) -> bool:
@@ -352,6 +367,17 @@ class NotCode:
             return list(changed_paths)
         spec = pathspec.PathSpec.from_lines("gitignore", self.patterns)
         return [path for path in changed_paths if not spec.match_file(path)]
+
+    def outside_answers(self, paths: list[str]) -> list[str]:
+        """Those of `paths` outside the backbone's folder of friction answers, at any
+        depth: all of them where the folder cannot be read."""
+        if not paths or self.answers_folder is None:
+            return list(paths)
+        folder = self.answers_folder()
+        if not folder:
+            return list(paths)
+        inside = folder.strip("/") + "/"
+        return [path for path in paths if not path.startswith(inside)]
 
 
 # The shipped list, in force when the adopter sets none.
@@ -707,16 +733,20 @@ def satisfied_floors(
 ) -> set[str]:
     """The floor kinds a set of changed paths satisfies by the paths alone
     (DEC-032 D1): `touches-code`, when the paths the adopter's not-code list
-    (#1178) leaves touch code per `diff_touches_code`.
+    (#1178) leaves, less those in the backbone's folder of friction answers,
+    touch code per `diff_touches_code`.
 
     The not-code list narrows `touches-code` and no other floor: a changed
     path it matches satisfies no `touches-code` floor, and every other path is
-    read unchanged. `touches-ruled-artefact` needs the backbone's answer, and
-    a floor this pm does not know needs nothing; `reached_floors` adds them.
+    read unchanged. An answer file never satisfies it either, whatever the list
+    says (COR-062 point 2). The folder is read only where the paths the list
+    leaves touch code, since it can only take a floor away. `touches-ruled-artefact`
+    needs the backbone's answer, and a floor this pm does not know needs nothing;
+    `reached_floors` adds them.
     """
     floor_paths = not_code.floor_paths(list(changed_paths))
     satisfied: set[str] = set()
-    if diff_touches_code(floor_paths):
+    if diff_touches_code(floor_paths) and diff_touches_code(not_code.outside_answers(floor_paths)):
         satisfied.add(FLOOR_TOUCHES_CODE)
     return satisfied
 

@@ -9,9 +9,10 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 **In plain terms:** the capability's mutating commands offer two families of
 override flag, and which one a command exposes — and why — was never written down,
 so it looked like drift and a new command had no rule to follow. This record states
-the rule and, as the load-bearing part, **amends
+the rule and, as the load-bearing part, **refines
 [project-management:DEC-014-validation-severity-model] to say out loud what the code
-already does: a `hard-reject` can be overridden by the operator with `--force`.**
+does: a `hard-reject` can be overridden by the operator with `--force`** (this record's
+point 4).
 The rule, one question — *is the stop a `bypassable-with-audit` gate?*:
 
 - **`--bypass[-<gate>]`** overrides a gate the severity model *designed* to be
@@ -33,11 +34,11 @@ between them was never stated, so three things looked wrong at once:
   `--force` called itself "the DEC-014 bypassable-with-audit pattern" (the mechanism
   it is *not* using), and `remove-workstream`'s `--force` help used the *bypass* verb
   on the *force* flag. A new command adding an override had no rule to pick by.
-- **A hard-reject can already be `--force`d, but DEC-014 says it can't.** `--force`
-  on the body-validation commands overrides a `hard-reject` and *proceeds*, while
-  DEC-014's schema sets `bypassable: false` and says the operation "never proceeds" —
-  a **machine-consumed field an agent dispatches on that is factually untrue** for
-  those findings.
+- **A hard-reject can be `--force`d, while `bypassable: false` alone says it
+  can't.** `--force` on the body-validation commands overrides a `hard-reject` and
+  *proceeds*, while DEC-014's schema sets `bypassable: false` — a
+  **machine-consumed field an agent dispatches on that, with no other signal, is
+  factually untrue** for those findings.
 - **Not every `--force` stop is a DEC-014 finding.** Some `--force` sites guard a
   *script-level precondition* (a milestone with open children; a workstream label
   still carrying issues) that appears nowhere in the severity model — so "read the
@@ -45,14 +46,14 @@ between them was never stated, so three things looked wrong at once:
 
 Issue #570 chose to **document the rule** rather than unify the two names into one
 (a breaking rename across the command surface plus a COR-010 migration, flattening a
-real distinction). Documenting it honestly requires amending DEC-014, not narrating
+real distinction). Documenting it honestly requires refining DEC-014, not narrating
 around it.
 
 ## Decision
 
 **A mutating command's override flag is chosen by the stop it overrides, per the
-rule below; and DEC-014's `hard-reject` is amended to carry an operator-`--force`
-override.**
+rule below; and DEC-014's `hard-reject` carries an operator-`--force` override
+(this record's point 4).**
 
 ### 1. `--bypass[-<gate>]` — the sanctioned override of a `bypassable-with-audit` gate
 
@@ -83,7 +84,7 @@ accepts the bare `--bypass-reason` as a *deprecated alias* for
 owe a migration ([pkit:COR-010]). It shares one destination with the canonical
 flag, warns, refuses if both are supplied, and retires at the next major — so the
 convention governs everything new, and the exception is a time-boxed compatibility
-debt (see [project-management:DEC-050-per-reviewer-override] Decision 1).
+debt (see [project-management:DEC-050-per-reviewer-override] point 1).
 
 ### 2. `--force` — the operator's override of a `hard-reject` finding or a hard precondition
 
@@ -104,19 +105,18 @@ there is no severity token; it is a firm-stop-by-construction and takes `--force
 this rule. The record does not pretend the precondition branch is a severity read —
 it is the one place the choice is by construction, not by a checkable field.
 
-### 4. Amend DEC-014 — a `hard-reject` is operator-`--force`-overridable (out of band)
+### 4. DEC-014's `hard-reject` is operator-`--force`-overridable, out of band
 
 DEC-014's `hard-reject` keeps **`bypassable: false`** — there is no in-band,
-reason-based `--bypass` for it, and that is correct. What is added, openly, is that a
-hard-reject additionally carries an **out-of-band operator `--force` override**,
-audited where the substrate allows. This lands two ways in the same change-set: a
-reciprocal note on the DEC-014 *record*, and a **`force_overridable: true`** field on
-the `hard-reject` entry in `validation-severity.yaml`, so an agent dispatching on the
-severity token sees an override *does* exist (the prior state — `bypassable: false`
-with no other signal — mislead it into "no override"). Behaviour is unchanged; only
-the model is made honest. This **refines** DEC-014 (its hard-reject definition gains a
-second override layer); it does not supersede it — `bypassable`, `aborts_operation`,
-and the `--bypass` semantics all stand.
+reason-based `--bypass` for it, and that is correct. A hard-reject additionally
+carries an **out-of-band operator `--force` override**, audited where the substrate
+allows. It is stated in two places: DEC-014's `hard-reject` definition, which points
+here, and a **`force_overridable: true`** field on the `hard-reject` entry in
+`validation-severity.yaml`. So an agent dispatching on the severity token sees that an
+override exists, which `bypassable: false` with no other signal would deny. Behaviour
+is unchanged; only the model is made honest. This **refines** DEC-014 (its hard-reject
+definition has a second override layer); `bypassable`, `aborts_operation`, and the
+`--bypass` semantics all stand.
 
 ## Rationale
 
@@ -129,7 +129,7 @@ caveat:** the split was *not* clean-all-along-merely-undocumented — the precon
 sites never had a severity and the help text had drifted. So this record *imposes*
 the rule and *corrects* those sites; it does not transcribe a pre-existing clean one.
 
-**Why amend DEC-014 openly instead of narrating around it.** `--force` over a
+**Why refine DEC-014 openly instead of narrating around it.** `--force` over a
 hard-reject is real and shipping; DEC-014's machine-consumed `bypassable: false`,
 with no other signal, tells an agent no override exists while the CLI offers one. A
 "nothing changed" note would preserve that falsehood. Adding `force_overridable:
@@ -161,16 +161,14 @@ a universal comment would force inventing an annotation surface where none exist
 
 ## Implications
 
-- **DEC-014 is amended in the same change-set** — a reciprocal note on the record and
-  a `force_overridable: true` field on the `hard-reject` entry in
-  `validation-severity.yaml` (+ its companion, additively — an optional field, no
-  `schema_version` bump, so no COR-010 migration). **Because this refines DEC-014's
-  severity model, its acceptance carries maintainer sign-off.**
+- **DEC-014 is refined** — its `hard-reject` definition points here, and the
+  `hard-reject` entry in `validation-severity.yaml` and its companion carry
+  `force_overridable: true` (an optional field, no `schema_version` bump, so no
+  COR-010 migration).
 - **Help text on every override flag must name the stop it overrides and the
   mechanism it uses** — a `--force` flag must not describe itself as the
   bypassable-with-audit pattern, and a `--bypass` flag names the bypassable gate it
-  clears. (The drifted `edit-issue` / `remove-workstream` strings are corrected in
-  this change-set.)
+  clears, `edit-issue`'s and `remove-workstream`'s included.
 - **The per-command roster lives in the capability README**, not this record — the
   DEC holds the discriminator, the README holds the table of which command exposes
   which flag (including the out-of-scope note that a `gh`-passthrough like

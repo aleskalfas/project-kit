@@ -25,6 +25,7 @@ gates:
 reads:
   paths:
     - .pkit/process/README.md
+    - .pkit/process/shape.md
     - .pkit/cli/README.md
     - .pkit/schemas/_defs/process.schema.json
     - .pkit/agents/project/overlay.yaml
@@ -74,7 +75,7 @@ The operations compose in that order for a fresh dependency: `new` (once per pro
 
 ### The shape contract is the source of truth
 
-Every vocabulary these operations offer — cardinalities, relations, modes, wait reasons, gate kinds — is read as data from `.pkit/schemas/_defs/process.schema.json`, and the substrate's own spec for what each field *means* is `.pkit/process/README.md`. Read them; do not recite a vocabulary from memory, and do not offer the author a value the contract does not carry. When the contract grows a value, these operations pick it up with no edit here — that property is the reason the vocabularies are read rather than hardcoded, and the reason this skill has no per-relation sub-procedure.
+Every vocabulary these operations offer — cardinalities, relations, modes, wait reasons, gate kinds — is read as data from `.pkit/schemas/_defs/process.schema.json`, and the substrate's own spec for what each field *means* is `.pkit/process/shape.md`, which `.pkit/process/README.md` leads to. Read them; do not recite a vocabulary from memory, and do not offer the author a value the contract does not carry. When the contract grows a value, these operations pick it up with no edit here — that property is the reason the vocabularies are read rather than hardcoded, and the reason this skill has no per-relation sub-procedure.
 
 The exact command grammar and per-flag behaviour live in `.pkit/cli/README.md`. When this skill and that document disagree about a flag, the CLI document wins and this skill is stale — say so rather than improvising.
 

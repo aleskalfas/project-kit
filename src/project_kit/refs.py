@@ -33,6 +33,13 @@ Body parser convention (per COR-013, documented in `.pkit/agents/README.md`):
   frontmatter either.
 - Hook names: `<topic>.<operation>` or `<topic>.<provider>.<operation>`.
 - Skipped regions: fenced code blocks, HTML comments, strikethrough.
+
+A citation of a record's point (COR-058 point 1) — `COR-058 point 3`, `PRJ-002 D1`,
+`COR-050#14`, `[project-management:DEC-035-instance-ownership] point 6` — is read by
+`point_citations`, and `CitedPoints` holds each to its record as validation reads its
+points. The check warns of a point its record neither holds nor retires, in an agent's
+or a skill's body here, and in a record in `decisions_validate`: the citations are read
+from prose, so the warning never fails a command.
 """
 
 from __future__ import annotations
@@ -42,18 +49,29 @@ import io
 import itertools
 import os
 import re
-from collections.abc import Collection
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import click
 from ruamel.yaml import YAML
 
-from project_kit import agent_policy, agents_overlay, connections, rule_sets
+from project_kit import (
+    agent_policy,
+    agents_overlay,
+    connections,
+    lifecycle_ownership,
+    record_points,
+    rule_sets,
+)
 from project_kit.backbone_schemas import ADDRESS_WORD_PATTERN
+from project_kit.line_breaks import universal_newlines
 from project_kit.package_validate import POINT_SEPARATOR, ROLE_QUALIFIER
 from project_kit.validators import Finding, Outcome, Severity, counts_line, location_of
+
+if TYPE_CHECKING:
+    from project_kit.document_parts import Body
 
 Kind = Literal["agent", "skill"]
 Namespace = Literal["core", "project"]
@@ -140,6 +158,15 @@ STORYBOARD = "storyboard"
 CITATION = "citation"
 COMPOSES = "composes"
 AGENT_POLICY = "agent-policy"
+# A citation of a point its record does not hold (COR-058 point 1): read from prose, so
+# reported and never failed, by the member and by `pkit refs validate` alike.
+POINT_CITATION = "point-citation"
+# A citation of an operational rule that is missing or retired (COR-068 point 6; ADR-075
+# point 8): read from prose too, so a warning.
+OPERATIONAL_CITATION = "operational-rule-citation"
+
+#: The kinds of finding that warn and never fail `pkit refs validate`.
+WARNING_KINDS = frozenset({POINT_CITATION, OPERATIONAL_CITATION})
 
 
 @dataclass(frozen=True)
@@ -244,7 +271,8 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
 
 def validate_corpus(target_root: Path) -> list[Issue]:
     """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner +
-    storyboard + capability-, rule- and address-citation + composes + agent-policy checks."""
+    storyboard + capability-, rule-, address- and point-citation + composes + agent-policy
+    checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
     return check_corpus(artifacts, providers, target_root)
@@ -263,6 +291,8 @@ def check_corpus(
     issues.extend(_kind(_validate_capability_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_rule_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_address_citations(artifacts, target_root), CITATION))
+    issues.extend(_kind(_validate_point_citations(artifacts, target_root), POINT_CITATION))
+    issues.extend(_kind(_validate_operational_citations(target_root), OPERATIONAL_CITATION))
     issues.extend(_kind(_validate_composes(artifacts, target_root), COMPOSES))
     issues.extend(_kind(_validate_agent_policy(artifacts, target_root), AGENT_POLICY))
     return issues
@@ -282,9 +312,10 @@ def outcome(target_root: Path) -> Outcome:
     hook). Every other finding — a path owned twice or by nobody, a hook no
     provider answers, two providers at one tier, a missing storyboard, a
     citation that does not resolve, a sub-procedure that does not exist, a
-    model or effort the harness does not accept — is an **error**. `pkit refs
-    validate`, the focused surface, keeps its stricter exit: it fails on any
-    finding.
+    model or effort the harness does not accept — is an **error**. A citation of
+    a point its record does not hold is a **warning** too, read from prose as
+    drift is. `pkit refs validate`, the focused surface, keeps its stricter exit:
+    it fails on any finding but that last.
     """
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
@@ -292,7 +323,7 @@ def outcome(target_root: Path) -> Outcome:
         Finding(
             issue.location,
             issue.diagnosis,
-            Severity.WARNING if issue.kind == DRIFT else Severity.ERROR,
+            Severity.WARNING if issue.kind in (DRIFT, *WARNING_KINDS) else Severity.ERROR,
         )
         for issue in check_corpus(artifacts, providers, target_root)
     )
@@ -543,6 +574,435 @@ def resolve_hook(providers: list[Provider], hook: str) -> Provider | None:
     return candidates[0]
 
 
+#: The version of the document `pkit refs lookup --json` prints.
+LOOKUP_VERSION = 1
+
+
+@dataclass(frozen=True)
+class Lookup:
+    """What `pkit refs lookup` answers for one id or citation.
+
+    - `paths`: what the command prints for it, one line each, repository-relative: a
+      record's file, a point's file and its heading's anchor, a rule's place in its rule
+      set, or where an installed capability declares a role or a point.
+    - `problem`: why it does not resolve, as the command says it, or `None`. A point
+      its record does not hold has its record's `path`, and a problem.
+    - `path`: the file of a record, or of a rule's set, relative to the root; `None`
+      for an address, and where no file is found.
+    - `anchor`: the anchor a repository host gives the heading of a cited point or rule
+      (`document_parts.host_anchors`); `None` for a record cited whole, an address, a
+      point with no heading, such as one of a record whose points are a list, and a
+      retired point whose record keeps no stub.
+    - `received`: whether `path` arrives in the repository as a synced copy, which the
+      project receives and does not write, as validation tells one
+      (`decisions_validate.synced_record_test`, COR-055 point 1).
+    - `partial_supersession`: with a point that resolves, its record's top line where
+      it reads *Partially superseded by …* (`partial_supersession`), else `None`. A
+      point another record overturns stays as it stood, and only that line says so
+      (COR-058 point 5), so a reader sent to the point would read past it. The line
+      names the overturning record, not whether this point is among what it overturns.
+    """
+
+    id: str
+    paths: tuple[str, ...] = ()
+    problem: str | None = None
+    path: str | None = None
+    anchor: str | None = None
+    received: bool = False
+    partial_supersession: str | None = None
+
+    @property
+    def resolved(self) -> bool:
+        return self.problem is None
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "resolved": self.resolved,
+            "paths": list(self.paths),
+            "problem": self.problem,
+            "path": self.path,
+            "anchor": self.anchor,
+            "received": self.received,
+            "partial_supersession": self.partial_supersession,
+        }
+
+
+#: How a partly superseded record's top line opens, its emphasis aside (the decisions
+#: README, "To supersede").
+_PARTIAL_SUPERSESSION = re.compile(r"^[*_]*Partially superseded by\b")
+
+
+def partial_supersession(body: Body) -> str | None:
+    """A record's top line where it reads *Partially superseded by …*, else `None`.
+
+    The top line is the first paragraph of the record's body before its first section
+    (`Body.lead`), after a first-level heading that titles the body: a quote's marks
+    dropped, and a paragraph wrapped over several lines joined into one line. It is
+    given as the record writes it, emphasis and links kept.
+    """
+    lead = body.lead()
+    start = lead.start
+    if body.headings and body.headings[0].level == 1 and body.headings[0].start == start:
+        start = body.text.find("\n", start) + 1 or lead.end
+    paragraph: list[str] = []
+    for line in body.text[start : max(start, lead.end)].split("\n"):
+        text = line.strip()
+        if text.startswith(">"):
+            text = text[1:].strip()
+        if text:
+            paragraph.append(text)
+        elif paragraph:
+            break
+    line = " ".join(paragraph)
+    return line if _PARTIAL_SUPERSESSION.match(line) else None
+
+
+def lookup(target_root: Path, record_id: str) -> Lookup:
+    """Resolve one id or citation, as `pkit refs lookup` does (`lookup_citations`)."""
+    return lookup_citations(target_root, [record_id])[0]
+
+
+def lookup_document(target_root: Path, record_ids: Collection[str]) -> dict[str, Any]:
+    """The document `pkit refs lookup --json` prints: each id's answer, in the order the
+    ids are given, so a script reads every record it needs from one run."""
+    return {
+        "schema_version": LOOKUP_VERSION,
+        "lookups": [found.as_json() for found in lookup_citations(target_root, record_ids)],
+    }
+
+
+def lookup_citations(target_root: Path, citations: Collection[str]) -> list[Lookup]:
+    """Resolve each of `citations`, in order: a record's id (`COR-005`, `PRJ-002`,
+    `ADR-012`, and whatever `resolve_record` resolves) to its file, a point of one
+    (`COR-050#14`, `PRJ-002#D1`) to its file and its heading's anchor, a rule
+    (`RS-CMN-001`, `[living-docs:RS-LDOC-001]`) to its place and its heading's anchor,
+    and a role or point address to where an installed capability declares it.
+
+    A record's points are read as validation reads them (`record_points`, COR-058
+    point 7): a live point gives its heading's anchor, the first where two share its
+    id; a retired id gives its stub's; a record whose points are a list gives none;
+    and an id the record neither holds nor retires is a problem. A point that resolves
+    comes with its record's partial-supersession line, where the record has one
+    (`Lookup.partial_supersession`). The rule sets are
+    discovered once, and each record read once, however many citations name it. Each
+    file found says whether it arrives as a synced copy (`Lookup.received`).
+    """
+    from project_kit import document_parts, record_points
+    from project_kit.decisions_validate import synced_record_test
+
+    discovery: rule_sets.RuleSetDiscovery | None = None
+    texts: dict[Path, str | None] = {}
+
+    def read(path: Path) -> str | None:
+        if path not in texts:
+            try:
+                texts[path] = universal_newlines(path.read_bytes().decode("utf-8"))
+            except (OSError, UnicodeDecodeError):
+                texts[path] = None
+        return texts[path]
+
+    def anchor_of(start: int, body: document_parts.Body) -> str | None:
+        for heading, anchor in zip(
+            body.headings, document_parts.host_anchors(body.headings), strict=True
+        ):
+            if heading.start == start:
+                return anchor
+        return None
+
+    def relative(path: Path) -> str:
+        try:
+            return path.resolve().relative_to(target_root.resolve()).as_posix()
+        except ValueError:
+            return path.as_posix()
+
+    found: list[Lookup] = []
+    for citation in citations:
+        if is_address_citation(citation):
+            address = resolve_address(target_root, citation)
+            if address.malformed:
+                found.append(Lookup(citation, problem=f"{citation!r} is {address.problem}"))
+            elif not address.resolved:
+                found.append(
+                    Lookup(citation, problem=f"{citation!r} does not resolve: {address.problem}")
+                )
+            else:
+                found.append(Lookup(citation, tuple(address.locations)))
+            continue
+        if rule_sets.is_rule_citation(citation):
+            if discovery is None:
+                discovery = rule_sets.discover_rule_sets(target_root)
+            resolution = rule_sets.resolve_citation(discovery, citation)
+            if not resolution.resolved or resolution.rule is None:
+                found.append(
+                    Lookup(citation, problem=f"{citation!r} does not resolve: {resolution.problem}")
+                )
+                continue
+            rule = resolution.rule
+            anchor = None
+            text = read(target_root / rule.path)
+            if text is not None:
+                _front, body_text = document_parts.split_front_matter(text)
+                body = document_parts.Body.read(body_text)
+                section = body.section_by_id(rule.id)
+                if section is not None and section.heading is not None:
+                    anchor = anchor_of(section.heading.start, body)
+            found.append(Lookup(citation, (rule.location,), path=rule.path, anchor=anchor))
+            continue
+        record, point = record_points.split_anchor(citation)
+        path = resolve_record(target_root, record)
+        if path is None:
+            found.append(Lookup(citation, problem=f"no record matches {record!r}"))
+            continue
+        rel = relative(path)
+        if point is None:
+            found.append(Lookup(citation, (rel,), path=rel))
+            continue
+        text = read(path)
+        if text is None:
+            found.append(Lookup(citation, path=rel, problem=f"{rel} could not be read"))
+            continue
+        points = record_points.read_points(text)
+        anchored = points.anchored(point)
+        state = anchored.state
+        if state is record_points.PointState.MISSING:
+            found.append(Lookup(citation, path=rel, problem=f"{record} holds no point {point}"))
+            continue
+        heading = None
+        if state in (record_points.PointState.LIVE, record_points.PointState.AMBIGUOUS):
+            live = points.point(point)
+            heading = live.extent.heading if live is not None else None
+        elif state is record_points.PointState.RETIRED:
+            stub = points.stub(point)
+            heading = stub.extent.heading if stub is not None else None
+        anchor = anchor_of(heading.start, points.body) if heading is not None else None
+        located = f"{rel}#{anchor}" if anchor else rel
+        found.append(
+            Lookup(
+                citation,
+                (located,),
+                path=rel,
+                anchor=anchor,
+                partial_supersession=partial_supersession(points.body),
+            )
+        )
+    is_synced = synced_record_test(target_root)
+    return [replace(f, received=is_synced(f.path)) if f.path else f for f in found]
+
+
+# ---------------------------------------------------------------- point citations
+
+# A citation of a record's point in prose (COR-058 point 1; the decisions README,
+# "Citing"): the record, then its point. The record bare, `COR-058`; as a link's text,
+# `[COR-058](core/COR-058-record-points.md)`; or in brackets with its component in front,
+# `[project-management:DEC-035-instance-ownership]`, `[pkit:COR-010]`. A possessive's
+# `'s` may follow it. Then the point: an anchor's mark, `COR-050#14`; `point 6` or
+# `points 3, 4 and 16`; or a label alone, `PRJ-002 D1`. White space between the two may
+# break a line, a block quote's included, but never a paragraph.
+_RECORD_ID = r"(?:COR|PRJ|ADR|DEC)-\d+"
+_POINT_ID = r"(?:\d+|[A-Z]+\d+)"
+_GAP = r"(?:[ \t]+(?:\n[ \t]*(?:>[ \t]*)*)?|\n[ \t]*(?:>[ \t]*)*)"
+_JOIN = rf"(?:,{_GAP}|,?{_GAP}(?:and|or|to){_GAP})"
+_POSSESSIVE = "(?:['" + chr(0x2019) + "]s)?"  # an apostrophe of either kind
+POINT_CITATION_RE = re.compile(
+    rf"(?:\[(?P<component>[a-z][a-z0-9-]*[a-z0-9]):(?P<qualified>{_RECORD_ID})(?:-[a-z0-9-]+)?\]"
+    rf"|\[(?P<linked>{_RECORD_ID})\]\((?P<target>[^)\s]*)\)"
+    rf"|(?<![\w/#:-])(?P<bare>{_RECORD_ID})(?![\w-]))"
+    rf"{_POSSESSIVE}"
+    rf"(?:#(?P<anchor>{_POINT_ID})(?![\w-])"
+    rf"|{_GAP}points?{_GAP}(?P<listed>{_POINT_ID}(?:{_JOIN}{_POINT_ID})*)(?![\w-])"
+    rf"|{_GAP}(?P<label>[A-Z]+\d+)(?![\w-]))"
+)
+_LISTED_ID = re.compile(rf"(?<![\w-]){_POINT_ID}(?![\w-])")
+_CAPABILITY_DECISION = re.compile(r"capabilities/([a-z][a-z0-9-]*[a-z0-9])/decisions/(DEC-\d+)")
+_QUALIFIED_DECISION = re.compile(r"\[([a-z][a-z0-9-]*[a-z0-9]):(DEC-\d+)")
+_FENCE = re.compile(r"^\s*(?:>\s*)*(`{3,}|~{3,})")
+_CODE_SPAN = re.compile(r"(`+)(?:(?!\1).)+?\1")
+
+#: The component that cites a core record, a project record or an ADR in brackets.
+BACKBONE_COMPONENT = "pkit"
+
+
+@dataclass(frozen=True)
+class PointCitation:
+    """A citation of one or more points of a record, as `point_citations` finds it.
+
+    - `line`: the line of the text it starts on, counted from 1.
+    - `text`: the citation as written, its white space folded.
+    - `record`: the record it names, as `resolve_record` takes it: `COR-058`, or a
+      capability's decision, `project-management:DEC-035`.
+    - `points`: the ids of the points it names, in written order.
+    """
+
+    line: int
+    text: str
+    record: str
+    points: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class UnheldPoint:
+    """A point a citation names that its record neither holds nor retires.
+
+    `path` is the record's file, relative to the root. A record whose points are a list
+    holds the numbers its list shows (COR-058 point 2), so a citation of another is one.
+    """
+
+    citation: PointCitation
+    point: str
+    path: str
+
+    @property
+    def message(self) -> str:
+        return (
+            f"{self.citation.text!r} names point {self.point}, which {self.citation.record} "
+            "does not hold: a point is cited by the id its heading carries, as "
+            "`pkit refs lookup` resolves it (COR-058 point 1)."
+        )
+
+
+def point_citations(text: str, *, capability: str | None = None) -> list[PointCitation]:
+    """Every citation of a record's point in `text`, in order (`POINT_CITATION_RE`).
+
+    Front matter, fenced code, inline code, HTML comments and strikethrough are quoted,
+    data or withdrawn, not prose, and hold none. A capability's decision cited bare,
+    `DEC-035`, or as a link's text is `capability`'s, the component whose text it is;
+    else, a link into a
+    capability's `decisions` folder names its capability. Outside a capability, a bare
+    `DEC-NNN` is the decision of the one capability the text cites it of in full, in
+    brackets or by a link, and a citation of one cited of none or of several is left
+    out, since the text does not say whose it is.
+    """
+    prose = _prose(text)
+    cited: dict[str, set[str]] = {}
+    for match in (*_QUALIFIED_DECISION.finditer(prose), *_CAPABILITY_DECISION.finditer(prose)):
+        cited.setdefault(match.group(2), set()).add(match.group(1))
+    found: list[PointCitation] = []
+    for match in POINT_CITATION_RE.finditer(prose):
+        record = _cited_record(match, capability, cited)
+        if record is None:
+            continue
+        if match["anchor"]:
+            points: tuple[str, ...] = (match["anchor"],)
+        elif match["label"]:
+            points = (match["label"],)
+        else:
+            points = tuple(_LISTED_ID.findall(match["listed"]))
+        found.append(
+            PointCitation(
+                line=prose.count("\n", 0, match.start()) + 1,
+                text=" ".join(match.group(0).replace(">", " ").split()),
+                record=record,
+                points=points,
+            )
+        )
+    return found
+
+
+def _cited_record(
+    match: re.Match[str], capability: str | None, cited: Mapping[str, set[str]]
+) -> str | None:
+    """The record a citation names, as `resolve_record` takes it, or `None` when the
+    text does not say whose decision a `DEC-NNN` is."""
+    record = match["qualified"] or match["linked"] or match["bare"]
+    if not record.startswith("DEC-"):
+        return record
+    if match["component"] and match["component"] != BACKBONE_COMPONENT:
+        return f"{match['component']}:{record}"
+    if match["component"]:
+        return None
+    linked = _CAPABILITY_DECISION.search(match["target"] or "")
+    if linked is not None:
+        return f"{linked.group(1)}:{record}"
+    if capability is not None:
+        return f"{capability}:{record}"
+    owners = cited.get(record, set())
+    return f"{next(iter(owners))}:{record}" if len(owners) == 1 else None
+
+
+def _prose(text: str) -> str:
+    """`text` with what holds no prose blanked, every line kept where it was: front
+    matter, fenced code, inline code, HTML comments and strikethrough."""
+    text = HTML_COMMENT_RE.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), text)
+    lines = text.split("\n")
+    if lines and lines[0].strip() == "---":
+        closing = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+        if closing is not None:
+            lines[: closing + 1] = [""] * (closing + 1)
+    fence: str | None = None
+    for index, line in enumerate(lines):
+        opened = _FENCE.match(line)
+        if opened is not None:
+            marker = opened.group(1)
+            if fence is None:
+                fence = marker
+            elif marker[0] == fence[0] and len(marker) >= len(fence):
+                fence = None
+            lines[index] = ""
+        elif fence is not None:
+            lines[index] = ""
+        else:
+            blank = _CODE_SPAN.sub(lambda code: " " * len(code.group(0)), line)
+            lines[index] = STRIKETHROUGH_RE.sub(lambda struck: " " * len(struck.group(0)), blank)
+    return "\n".join(lines)
+
+
+class CitedPoints:
+    """The points of the records citations name, each record read once (`record_points`,
+    as validation reads them), for `unheld` to hold each citation to its record."""
+
+    def __init__(self, target_root: Path) -> None:
+        self._root = target_root
+        self._read: dict[str, tuple[str, record_points.RecordPoints] | None] = {}
+
+    def unheld(self, citations: Iterable[PointCitation]) -> list[UnheldPoint]:
+        """Each point a citation names that its record neither holds nor retires, in
+        order. A citation of a record not found is left to what resolves records."""
+        found: list[UnheldPoint] = []
+        for citation in citations:
+            read = self._points(citation.record)
+            if read is None:
+                continue
+            rel, points = read
+            for point in citation.points:
+                if _unheld(points, point):
+                    found.append(UnheldPoint(citation, point, rel))
+        return found
+
+    def _points(self, record: str) -> tuple[str, record_points.RecordPoints] | None:
+        if record not in self._read:
+            path = resolve_record(self._root, record)
+            read: tuple[str, record_points.RecordPoints] | None = None
+            if path is not None:
+                try:
+                    text = universal_newlines(path.read_bytes().decode("utf-8"))
+                except (OSError, UnicodeDecodeError):
+                    text = None
+                if text is not None:
+                    read = (_relative_to(path, self._root), record_points.read_points(text))
+            self._read[record] = read
+        return self._read[record]
+
+
+def _unheld(points: record_points.RecordPoints, point: str) -> bool:
+    """Whether a record's points leave `point` unheld: no point has the id and none is
+    retired under it, or, in a record whose points are a list, its list shows no such
+    number."""
+    state = points.anchored(point).state
+    if state is record_points.PointState.MISSING:
+        return True
+    if state is record_points.PointState.LIST_FORM:
+        return point not in {listed.id for listed in points.list_points}
+    return False
+
+
+def _relative_to(path: Path, root: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def who_references(artifacts: list[Artifact], target: str) -> list[Artifact]:
     """Reverse lookup: which artifacts reference `target`?
 
@@ -577,17 +1037,21 @@ def who_references(artifacts: list[Artifact], target: str) -> list[Artifact]:
 
 
 def find_rot(target_root: Path, artifacts: list[Artifact]) -> list[Issue]:
-    """List references to superseded records, dropped scratchpads, or missing files.
+    """List references to superseded records, dropped scratchpads, or missing files,
+    and accepted records that cite proposed ones.
 
-    Three categories:
+    Four categories:
     - **Superseded records** — an artifact still cites a record whose
-      `status:` is `superseded`. The methodology requires moving to the
-      superseding record.
+      `status:` is `superseded`, a capability's decision among them. The
+      methodology requires moving to the superseding record.
     - **Dropped scratchpads** — an artifact cites a scratchpad note that
       retired to `dropped/` (per COR-012). The thinking was abandoned;
       the reference shouldn't persist.
     - **Missing local paths** — an artifact cites a relative or
       project-rooted path that no longer resolves on disk.
+    - **Proposed grounds** — an accepted record's body cites a record that
+      is still `proposed` (`find_proposed_grounds`), against the acceptance
+      gate of `.pkit/decisions/README.md`.
 
     External URLs and template placeholders are not checked here.
     """
@@ -601,7 +1065,12 @@ def find_rot(target_root: Path, artifacts: list[Artifact]) -> list[Issue]:
             if target_root in art.path.parents
             else str(art.path)
         )
-        all_records = art.declared.reads_records | art.declared.gates | art.body_refs.records
+        all_records = (
+            art.declared.reads_records
+            | art.declared.gates
+            | art.body_refs.records
+            | {_capability_key(cap, stem) for cap, stem in art.body_refs.capability_citations}
+        )
         all_paths = art.declared.reads_paths | art.declared.owns | art.body_refs.paths
 
         for rec in sorted(all_records):
@@ -640,20 +1109,123 @@ def find_rot(target_root: Path, artifacts: list[Artifact]) -> list[Issue]:
                 )
             )
 
+    issues.extend(find_proposed_grounds(target_root, record_status_index))
     return issues
 
 
+def find_proposed_grounds(target_root: Path, statuses: dict[str, str] | None = None) -> list[Issue]:
+    """Each accepted record whose body cites a record that is still proposed.
+
+    The acceptance gate lets a record rest on accepted records only
+    (`.pkit/decisions/README.md`), and a record rests on what its body cites.
+    Every id-space is read: COR, PRJ and ADR records by their bare ids, and a
+    capability's decisions by `[<capability>:DEC-NNN]` from any record, or by a
+    bare `DEC-NNN` inside a capability's own records, which names a decision of
+    that capability unless another capability's name stands just before it.
+    Fenced code blocks, HTML comments and strikethrough are not read. One
+    finding for each record and each proposed record it cites, with the lines.
+    """
+    from project_kit.decisions_validate import discover_decision_records
+
+    if statuses is None:
+        statuses = _index_decision_statuses(target_root)
+    capabilities = frozenset(key.split(":", 1)[0] for key in statuses if ":" in key)
+    issues: list[Issue] = []
+    for record in discover_decision_records(target_root):
+        try:
+            text = universal_newlines(record.path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError):
+            continue
+        front, body = _split_frontmatter(text)
+        if front.get("status") != "accepted":
+            continue
+        own = record.id_space.partition("capability:")[2] or None
+        first_line = text[: len(text) - len(body)].count("\n") + 1
+        cited = record_citations(body, own, capabilities)
+        rel = (
+            record.path.relative_to(target_root).as_posix()
+            if target_root in record.path.parents
+            else str(record.path)
+        )
+        for key in sorted(cited):
+            if statuses.get(key) != "proposed":
+                continue
+            lines = [first_line + line - 1 for line in cited[key]]
+            where = f"line {lines[0]}" if len(lines) == 1 else f"lines {', '.join(map(str, lines))}"
+            issues.append(
+                Issue(
+                    location=rel,
+                    diagnosis=(
+                        f"accepted record cites proposed record {key!r} ({where}); "
+                        "an accepted record rests on accepted records only."
+                    ),
+                )
+            )
+    return issues
+
+
+# A bare capability decision id, and the capability name that may stand before it
+# in prose (`software-analysis DEC-001 point 1`).
+_BARE_DECISION_RE = re.compile(r"(?:\b([a-z][a-z0-9-]*[a-z0-9]) )?\b(DEC-\d+)\b")
+
+
+def record_citations(
+    body: str, capability: str | None, capabilities: Collection[str] = ()
+) -> dict[str, list[int]]:
+    """The records a record's body cites, each with the lines it is cited on,
+    counted from the body's first line.
+
+    Keys are `COR-NNN`, `PRJ-NNN` and `ADR-NNN`, and `<capability>:DEC-NNN` for
+    a capability's decision (`find_proposed_grounds` says how each is read).
+    `capability` is the citing record's own capability, `None` outside one, and
+    `capabilities` the installed capabilities' names.
+    """
+    text = _blank_skip_regions(body)
+    cited: dict[str, set[int]] = {}
+
+    def add(key: str, offset: int) -> None:
+        cited.setdefault(key, set()).add(text.count("\n", 0, offset) + 1)
+
+    for match in CAP_CITATION_RE.finditer(text):
+        add(_capability_key(match.group(1), match.group(2)), match.start())
+    rest = CAP_CITATION_RE.sub(lambda m: " " * len(m.group(0)), text)
+    for match in RECORD_TOKEN_RE.finditer(rest):
+        add(match.group(0), match.start())
+    for match in _BARE_DECISION_RE.finditer(rest):
+        named = match.group(1)
+        owner = named if named in capabilities else capability
+        if owner is not None:
+            add(f"{owner}:{match.group(2)}", match.start(2))
+    return {key: sorted(lines) for key, lines in cited.items()}
+
+
+def _capability_key(capability: str, stem: str) -> str:
+    """`<capability>:DEC-NNN` for a citation of a capability's decision, its slug left out."""
+    return f"{capability}:{'-'.join(stem.split('-')[:2])}"
+
+
+def _blank_skip_regions(body: str) -> str:
+    """`_strip_skip_regions`, with each region's line breaks kept, so lines still count."""
+    for pattern in (FENCED_BLOCK_RE, HTML_COMMENT_RE, STRIKETHROUGH_RE):
+        body = pattern.sub(lambda m: "\n" * m.group(0).count("\n"), body)
+    return body
+
+
 def _index_decision_statuses(target_root: Path) -> dict[str, str]:
-    """Map every decision ID (COR-NNN / PRJ-NNN / ADR-NNN) to its current status."""
+    """Map every decision ID to its current status: `COR-NNN`, `PRJ-NNN` and
+    `ADR-NNN` as they are, and a capability's decision as `<capability>:DEC-NNN`."""
     index: dict[str, str] = {}
-    dirs: list[Path] = [
-        target_root / ".pkit" / "decisions" / "core",
-        target_root / ".pkit" / "decisions" / "project",
+    dirs: list[tuple[Path, str]] = [
+        (target_root / ".pkit" / "decisions" / "core", ""),
+        (target_root / ".pkit" / "decisions" / "project", ""),
     ]
     adr_dir = _adr_records_dir_or_none(target_root)
     if adr_dir is not None:
-        dirs.append(adr_dir)
-    for decisions_dir in dirs:
+        dirs.append((adr_dir, ""))
+    caps_dir = target_root / ".pkit" / "capabilities"
+    if caps_dir.is_dir():
+        dirs.extend((cap / "decisions", f"{cap.name}:") for cap in sorted(caps_dir.iterdir()))
+    for decisions_dir, prefix in dirs:
         if not decisions_dir.is_dir():
             continue
         for record in sorted(decisions_dir.glob("*.md")):
@@ -662,7 +1234,7 @@ def _index_decision_statuses(target_root: Path) -> dict[str, str]:
             rid = fm.get("id")
             status = fm.get("status")
             if isinstance(rid, str) and isinstance(status, str):
-                index[rid] = status
+                index[f"{prefix}{rid}"] = status
     return index
 
 
@@ -1894,7 +2466,7 @@ def _validate_rule_citations(artifacts: list[Artifact], target_root: Path) -> li
     issues: list[Issue] = []
     for art, citation in cited:
         resolution = rule_sets.resolve_citation(discovery, citation)
-        if resolution.resolved:
+        if resolution.resolved or _cites_loaded_set(discovery, resolution):
             continue
         issues.append(
             Issue(
@@ -1903,6 +2475,17 @@ def _validate_rule_citations(artifacts: list[Artifact], target_root: Path) -> li
             )
         )
     return issues
+
+
+def _cites_loaded_set(
+    discovery: rule_sets.RuleSetDiscovery, resolution: rule_sets.CitationResolution
+) -> bool:
+    """Whether a rule citation names a loaded set's rule: that citation is judged by the
+    check of operational-rule citations alone, so none is reported twice (ADR-075 point 8)."""
+    reference = resolution.reference
+    if reference is None:
+        return False
+    return any(s.loaded for s in discovery.sets_named(reference.set_name))
 
 
 def _validate_address_citations(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
@@ -1932,6 +2515,376 @@ def _validate_address_citations(artifacts: list[Artifact], target_root: Path) ->
                 diagnosis = f"cites {what} {token!r}, which does not resolve: {resolution.problem}."
             issues.append(Issue(location=_location(art, target_root), diagnosis=diagnosis))
     return issues
+
+
+def _validate_point_citations(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+    """Every citation of a record's point in a body names a point the record holds or
+    retires (COR-058 point 1), in each form `point_citations` reads.
+
+    Each finding is at `<file>:<line>`, a composite skill's sibling files read with
+    its dispatcher, and each cited record read once.
+    """
+    reader = CitedPoints(target_root)
+    issues: list[Issue] = []
+    for art in artifacts:
+        files = [art.path]
+        if art.path.parent.name == art.path.stem:
+            files += [p for p in sorted(art.path.parent.glob("*.md")) if p != art.path]
+        for path in files:
+            try:
+                text = universal_newlines(path.read_bytes().decode("utf-8"))
+            except (OSError, UnicodeDecodeError):
+                continue
+            where = str(path.relative_to(target_root)) if target_root in path.parents else str(path)
+            issues.extend(
+                Issue(location=f"{where}:{unheld.citation.line}", diagnosis=unheld.message)
+                for unheld in reader.unheld(point_citations(text, capability=art.capability))
+            )
+    return issues
+
+
+# --- citations of operational rules (COR-068 point 6; ADR-075 point 8) ---------------
+#
+# An operational rule of a loaded set is cited by its layer and number, `core rule 19`,
+# or by its id, `backbone:RS-OPS-019` or `RS-OPS-019`. The forms, with any case of the
+# first letter: `core rule N`, `core.md rule N`, `rules/core.md #N` (or `#N` with no
+# space), `rules/core.md N` (and `rules/core.md rule N`), a list after the plural
+# (`core rules 3, 5 and 13`) and a range (`core rules 14-15`); the same with `project`
+# for a project's own loaded set. After the path, the numbers stay on its line. A number
+# that opens a line as a list item (`3. `) is read neither after the plural nor in a
+# list. A bare `rule N` is never read, since it may name an item of any numbered list, a
+# record's points among them.
+
+# White space within a line, and white space that runs onto the next line, past a
+# quote's, a comment's or a list's marker there.
+_OPS_INLINE = r"[ \t]+"
+_OPS_BREAK = r"[ \t]*\n[ \t]*(?:>|#|//|\*)?[ \t]*"
+_OPS_GAP = rf"(?:{_OPS_INLINE}(?:\n[ \t]*(?:>|#|//|\*)?[ \t]*)?|{_OPS_BREAK})"
+# Before a number of a list: white space within the line, or onto the next line where
+# the number does not open that line as a list item (`3. `), which numbers the list's
+# own items, not rules.
+_OPS_TO_NUMBER = rf"(?:{_OPS_INLINE}|{_OPS_BREAK}(?!\d+\.(?:\s|\Z)))"
+_OPS_NUMBER = r"\d+(?![\w])"
+_OPS_RANGE = r"[ \t]*(?:-|\u2013|to)[ \t]*"
+_OPS_JOIN = rf"(?:,{_OPS_TO_NUMBER}|,?{_OPS_GAP}(?:and|or){_OPS_TO_NUMBER}|{_OPS_RANGE})"
+_OPS_LIST = rf"{_OPS_NUMBER}(?:{_OPS_JOIN}{_OPS_NUMBER})*"
+# After the path, the number and the list stay on the path's line.
+_OPS_INLINE_JOIN = rf"(?:,{_OPS_INLINE}|,?{_OPS_INLINE}(?:and|or){_OPS_INLINE}|{_OPS_RANGE})"
+_OPS_INLINE_LIST = rf"{_OPS_NUMBER}(?:{_OPS_INLINE_JOIN}{_OPS_NUMBER})*"
+OPERATIONAL_CITATION_RE = re.compile(
+    rf"(?<![\w/.-])(?P<layer>[Cc]ore|[Pp]roject)(?:\.md`?)?{_OPS_GAP}"
+    rf"(?:rules{_OPS_TO_NUMBER}(?P<listed>{_OPS_LIST})|rule{_OPS_GAP}(?P<one>{_OPS_NUMBER}))"
+    rf"|(?<![\w-])rules/(?P<file>core|project)\.md`?"
+    rf"(?:{_OPS_INLINE}(?:rules?{_OPS_INLINE})?#?|#)(?P<filed>{_OPS_INLINE_LIST})"
+)
+_OPS_LISTED = re.compile(r"(?P<number>\d+)(?:[ \t]*(?:-|\u2013|to)[ \t]*(?P<through>\d+))?")
+_OPS_RULE_ID = re.compile(
+    rf"(?<![\w:-])(?:\[?(?P<component>{rule_sets.COMPONENT_PATTERN}):)?"
+    rf"(?P<rule>RS-(?P<set>{rule_sets.SET_NAME_PATTERN})-{rule_sets.RULE_NUMBER_PATTERN})"
+    rf"(?![\w-])"
+)
+_MARKDOWN_SUFFIXES = (".md", ".markdown")
+#: A path segment that holds a project's tests, which may cite a missing rule on purpose.
+_TESTS_SEGMENTS = frozenset({"tests", "test"})
+
+
+@dataclass(frozen=True)
+class OperationalCitation:
+    """A citation of one operational rule, as `operational_rule_citations` finds it.
+
+    - `line`: the line of the text it starts on, counted from 1.
+    - `text`: the citation as written, its white space folded.
+    - `layer`: `core` or `project`, for a citation by layer and number; `None` for one by
+      id.
+    - `number`: the rule's number, for a citation by layer and number; for a range, its
+      first number.
+    - `through`: for a range, its last number, so a range is one citation, however
+      many rules it spans; `None` otherwise.
+    - `rule`: the rule's id as written, for a citation by id, with `component` written in
+      front of it, if any.
+    """
+
+    line: int
+    text: str
+    layer: str | None = None
+    number: int | None = None
+    through: int | None = None
+    rule: str | None = None
+    component: str | None = None
+
+    @property
+    def numbers(self) -> range:
+        """The numbers the citation names: its number, or its range's."""
+        if self.number is None:
+            return range(0)
+        return range(self.number, (self.through or self.number) + 1)
+
+
+def operational_rule_citations(
+    text: str, *, loaded_sets: Collection[str], markdown: bool
+) -> list[OperationalCitation]:
+    """Every citation of an operational rule in `text`, in order.
+
+    By layer and number, in each form above, a list giving one citation for each number
+    or range it names, a range one citation for all its numbers (`through`); and by id,
+    for a rule of a set named in `loaded_sets`. In Markdown, fenced code is skipped,
+    every line kept where it was. Each number or range of one citation is given once.
+    """
+    if markdown:
+        text = _without_fenced_code(text)
+    found: list[tuple[int, OperationalCitation]] = []
+    for match in OPERATIONAL_CITATION_RE.finditer(text):
+        line = text.count("\n", 0, match.start()) + 1
+        written = " ".join(match.group(0).replace("\n", " ").split())
+        layer = (match["layer"] or match["file"]).lower()
+        listed = (
+            [(int(match["one"]), None)]
+            if match["one"] is not None
+            else _listed(match["listed"] or match["filed"])
+        )
+        found.extend(
+            (
+                match.start(),
+                OperationalCitation(line, written, layer=layer, number=number, through=through),
+            )
+            for number, through in dict.fromkeys(listed)
+        )
+    if loaded_sets:
+        for match in _OPS_RULE_ID.finditer(text):
+            if match["set"] not in loaded_sets:
+                continue
+            line = text.count("\n", 0, match.start()) + 1
+            found.append(
+                (
+                    match.start(),
+                    OperationalCitation(
+                        line,
+                        match.group(0).lstrip("["),
+                        rule=match["rule"],
+                        component=match["component"],
+                    ),
+                )
+            )
+    return [citation for _start, citation in sorted(found, key=lambda pair: pair[0])]
+
+
+def _listed(listed: str) -> list[tuple[int, int | None]]:
+    """What a list names, each a number with no `through`, or a range's first and last
+    numbers: `3, 5 and 13`, `14-15`. A range written backwards names its two numbers."""
+    named: list[tuple[int, int | None]] = []
+    for match in _OPS_LISTED.finditer(listed):
+        first = int(match["number"])
+        last = int(match["through"]) if match["through"] else first
+        if last > first:
+            named.append((first, last))
+        elif last == first:
+            named.append((first, None))
+        else:
+            named.extend([(first, None), (last, None)])
+    return named
+
+
+def _without_fenced_code(text: str) -> str:
+    """`text` with each line of fenced code blanked, every line kept where it was."""
+    lines = text.split("\n")
+    fence: str | None = None
+    for index, line in enumerate(lines):
+        opened = _FENCE.match(line)
+        if opened is not None:
+            marker = opened.group(1)
+            if fence is None:
+                fence = marker
+            elif marker[0] == fence[0] and len(marker) >= len(fence):
+                fence = None
+            lines[index] = ""
+        elif fence is not None:
+            lines[index] = ""
+    return "\n".join(lines)
+
+
+@dataclass(frozen=True)
+class UnheldOperationalRule:
+    """A citation of an operational rule its loaded set lacks, or holds retired."""
+
+    path: str
+    citation: OperationalCitation
+    message: str
+
+
+def unheld_operational_rules(target_root: Path) -> list[UnheldOperationalRule]:
+    """Each citation of an operational rule that is missing, superseded or withdrawn.
+
+    The citations are read from the text files of the working tree's one listing, but the
+    project's tests (a file beneath a `tests` folder, or a `test_*.py`). Left out (COR-068
+    point 6; ADR-075 point 8):
+
+    - a synced copy, by the tree's own predicate (`is_synced_copy`), so where a set
+      arrives by sync only the project's own citations of its rules are read
+    - a superseded decision record, whose body stays as it was written
+    - an answer file (`answer_files.is_answer_file`)
+    - what the project leaves out of anchoring (`friction.exclude`, COR-050 point 7)
+    - in a loaded set's own file, the ids of its own rules: the file defines them, in
+      its front matter and its headings, and cites none of them
+
+    A citation by layer and number names the first loaded set of that layer: the
+    backbone's for `core`, the project's for `project`. A layer with none is not judged,
+    as a project's plain file of rules is not (COR-068 point 7).
+    """
+    from project_kit import answer_files, decisions_validate
+    from project_kit import friction_discovery as fd
+    from project_kit.working_tree import working_tree
+
+    discovery = rule_sets.discover_rule_sets(target_root)
+    loaded = {s.name: s for s in discovery.rule_sets if s.loaded and s.name is not None}
+    if not loaded:
+        return []
+    defines = {s.path: s.name for s in loaded.values()}
+    by_layer: dict[str, rule_sets.RuleSet] = {}
+    for rule_set in discovery.rule_sets:
+        if not rule_set.loaded:
+            continue
+        if rule_set.component == fd.BACKBONE_COMPONENT:
+            by_layer.setdefault("core", rule_set)
+        elif rule_set.component is None:
+            by_layer.setdefault("project", rule_set)
+    settings = fd.read_friction_settings(target_root)
+    superseded = _superseded_records(target_root, decisions_validate)
+    tree = working_tree(target_root)
+    ownership = lifecycle_ownership.load_ownership(target_root)
+    found: list[UnheldOperationalRule] = []
+    for rel in tree.files():
+        path = PurePosixPath(rel)
+        if _TESTS_SEGMENTS & set(path.parts[:-1]) or (
+            path.name.startswith("test_") and path.suffix == ".py"
+        ):
+            continue
+        if rel in superseded or answer_files.is_answer_file(rel) or settings.excluded(rel):
+            continue
+        try:
+            raw = tree.read_file(rel)
+        except OSError:
+            continue
+        if raw is None or b"\0" in raw or (b"rule" not in raw and b"RS-" not in raw):
+            continue
+        try:
+            text = universal_newlines(raw.decode("utf-8"))
+        except UnicodeDecodeError:
+            continue
+        citations = operational_rule_citations(
+            text, loaded_sets=loaded.keys(), markdown=path.suffix in _MARKDOWN_SUFFIXES
+        )
+        if not citations:
+            continue
+        if ownership is not None and ownership.is_synced_copy(target_root, rel):
+            continue
+        own = defines.get(rel)
+        for citation in citations:
+            if own is not None and rule_sets.rule_set_name_of(citation.rule or "") == own:
+                continue
+            found.extend(
+                UnheldOperationalRule(rel, citation, message)
+                for message in _unheld_operational(citation, by_layer, discovery)
+            )
+    return found
+
+
+def _superseded_records(target_root: Path, decisions_validate: Any) -> frozenset[str]:
+    """The paths, relative to the root, of every superseded decision record, its status
+    read from its front matter as YAML, so a quoted `"superseded"` counts too."""
+    from project_kit import document_parts
+
+    found: set[str] = set()
+    for record in decisions_validate.discover_decision_records(target_root):
+        try:
+            text = record.path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        front_matter, _body, _problem = document_parts.parse_front_matter(text)
+        if front_matter is not None and front_matter.get("status") == "superseded":
+            found.add(_relative_to(record.path, target_root))
+    return frozenset(found)
+
+
+def _unheld_operational(
+    citation: OperationalCitation,
+    by_layer: Mapping[str, rule_sets.RuleSet],
+    discovery: rule_sets.RuleSetDiscovery,
+) -> list[str]:
+    """Why a citation names no rule in force, one message for each rule it names that is
+    missing or retired; none when every one is in force, or it names a layer with no
+    loaded set. A range that runs past the set's highest number gives one message for
+    the numbers past it, naming the range, rather than one for each."""
+    if citation.layer is None:
+        reference = rule_sets.RuleReference(rule=citation.rule or "", component=citation.component)
+        rule_set, rule, problem = rule_sets.locate_rule(discovery, reference)
+        if problem is not None or rule_set is None or rule is None:
+            return [
+                f"{citation.text!r} cites a rule that does not resolve: {problem} "
+                f"(COR-068 point 6)."
+            ]
+        retired = _retired_operational(citation, citation.text, rule_set, rule)
+        return [retired] if retired is not None else []
+    rule_set = by_layer.get(citation.layer)
+    if rule_set is None or rule_set.name is None or citation.number is None:
+        return []
+    highest = max((_rule_number(r.id) for r in rule_set.rules), default=0)
+    messages: list[str] = []
+    past = [number for number in citation.numbers if number > highest]
+    for number in citation.numbers:
+        if number > highest and citation.through is not None:
+            continue
+        rule_id = f"RS-{rule_set.name}-{number:03d}"
+        cited = f"{citation.layer} rule {number}"
+        rule = rule_set.rule(rule_id)
+        if rule is None:
+            messages.append(
+                f"{citation.text!r} cites {cited}, which {rule_set.citation} "
+                f"({rule_set.path}) does not hold: a citation by layer and number names the "
+                f"rule of that id, {rule_set.cite(rule_id)} (COR-068 point 6)."
+            )
+            continue
+        retired = _retired_operational(citation, cited, rule_set, rule)
+        if retired is not None:
+            messages.append(retired)
+    if past and citation.through is not None:
+        messages.append(
+            f"{citation.text!r} cites {citation.layer} rules {past[0]} to {past[-1]}, past "
+            f"the highest rule {rule_set.citation} ({rule_set.path}) holds, "
+            f"{citation.layer} rule {highest}: a citation by layer and number names the "
+            f"rule of that id (COR-068 point 6)."
+        )
+    return messages
+
+
+def _rule_number(rule_id: str) -> int:
+    """A rule's number, without its leading zeros: `RS-OPS-019` is 19."""
+    return int(rule_id.rsplit("-", 1)[1])
+
+
+def _retired_operational(
+    citation: OperationalCitation,
+    cited: str,
+    rule_set: rule_sets.RuleSet,
+    rule: rule_sets.Rule,
+) -> str | None:
+    """Why a cited rule binds nothing, or None when it is in force."""
+    if not rule.is_retired:
+        return None
+    successor = rule.successor
+    instead = f"; its successor is {rule_set.cite(successor.rule)}" if successor else ""
+    return (
+        f"{citation.text!r} cites {cited}, {rule_set.cite(rule.id)}, which is {rule.status}"
+        f"{instead}, so it binds nothing (COR-068 point 6)."
+    )
+
+
+def _validate_operational_citations(target_root: Path) -> list[Issue]:
+    """Each citation of a missing or retired operational rule, at `<file>:<line>`
+    (`unheld_operational_rules`). Read from prose, so a warning (ADR-075 point 8)."""
+    return [
+        Issue(location=f"{unheld.path}:{unheld.citation.line}", diagnosis=unheld.message)
+        for unheld in unheld_operational_rules(target_root)
+    ]
 
 
 def _validate_same_tier_collisions(providers: list[Provider]) -> list[Issue]:

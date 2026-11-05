@@ -15,12 +15,20 @@ Additive idempotent: skips state that already exists. Never modifies
 or deletes — that's the migrate script's job. Re-running on a
 fully-bootstrapped project is a clean no-op.
 
-Label-fallback mode: when `has_projects_v2_board` is false (the
-adopter is not using a Projects v2 board), bootstrap also creates the
+Each axis's palette follows its binding: bootstrap creates the kit's own
+labels for an axis only where they carry it — with no substrate map, or
+where the map binds the axis with `kit-label: true` — and a map's presence
+suppresses nothing on its own (project-management DEC-036 point 5, DEC-062
+point 4). The board flag carries no axis. For `state` that palette is the
 five lifecycle state labels (`state:todo`, `state:backlog`,
 `state:in-progress`, `state:review`, `state:done`) derived from
-`workflow.yaml`'s `states[].id` list. These labels are the substrate
-for the `move-issue` state machine on label-fallback adopters.
+`workflow.yaml`'s `states[].id` list, the substrate of the `move-issue`
+state machine where the kit's labels carry the state.
+
+The capability works on a GitHub repository. Where `gh` resolves none for
+the checkout (no remote on GitHub, `gh` not signed in, `gh` missing), bootstrap
+refuses before it plans, a dry run included, naming what is missing and how
+to add it (#2087).
 
 On a clean completion it writes the **bootstrap stamp**
 (`project/bootstrap-stamp.yaml`) that the prerequisite gate every other pm
@@ -38,14 +46,15 @@ Self-contained via PEP 723 inline metadata: run via
 Exit codes:
   0  success (including "everything already exists")
   1  one or more creation operations failed
-  2  usage error (capability not found; config unparseable; no PM
-     authorisation for --with-starter-epic)
+  2  usage error (capability not found; config unparseable; no GitHub
+     repository resolves; no PM authorisation for --with-starter-epic)
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -57,7 +66,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib import axis_carriage, axis_labels, bootstrap_gate, issue_list, session_guard
 from _lib.gh import gh_run
 from _lib.label_contributions import (
     LabelContribution,
@@ -175,7 +184,13 @@ def main() -> int:
         print(f"error: {class_err}", file=sys.stderr)
         return 2
 
-    repo = _resolve_repo_name_with_owner()
+    # The repository the labels go to. With none, there is nothing to plan
+    # against: refuse in plain words, a dry run included (#2087).
+    lookup = _resolve_repo()
+    if lookup.name is None:
+        print(f"error: {_no_repository_message(lookup)}", file=sys.stderr)
+        return 2
+    repo = lookup.name
     _print_context_header(repo, capability_root)
 
     # ---- compute the plan (read-only) ----
@@ -391,11 +406,9 @@ def _compute_plan(
     # is configured, and only when not already cached.
     #
     # Board IDENTITY, not carriage — which is why this one reads the flag directly
-    # while the palette decision above asks the accessor. Routing it through
-    # carriage would lose the board's id for an adopter who bound a single axis to
-    # their own labels, and create-issue needs that id to put the issue on the
-    # board at all ([project-management:DEC-051-axis-carriage-activation]: "board
-    # membership stays with the flag").
+    # while the palette decision above asks the accessor. The flag says only that
+    # a board exists, and governs which board it is and that every issue belongs
+    # on it ([project-management:DEC-062-axes-chosen-in-the-map] point 1).
     board_node_id, board_node_id_note = _plan_project_node_id(
         config, bool(config.get("has_projects_v2_board"))
     )
@@ -622,32 +635,25 @@ def _apply_contributed_label_create(label: LabelContribution) -> Action:
 
 def _starter_epic_already_filed() -> bool:
     """Check whether the starter EPIC has already been filed."""
-    title = "[EPIC] Methodology adoption — initial hierarchy"
-    proc = subprocess.run(
-        [
-            "gh",
-            "issue",
-            "list",
-            "--search",
-            f'in:title "{title}"',
-            "--state",
-            "all",
-            "--json",
-            "number,title,state",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
+    return _filed_starter_epic() is not None
+
+
+def _filed_starter_epic() -> dict[str, Any] | None:
+    """The issue filed as the starter EPIC, by its title, or None.
+
+    The listing runs through the capability's one read of its issues, which
+    leaves state issues out (DEC-058 point 3). It runs `gh` with no adopter
+    `gh:` block, as bootstrap's search for the EPIC always has.
+    """
+    listing = issue_list.list_issues(
+        {},
+        ["--search", f'in:title "{_STARTER_EPIC_TITLE}"', "--state", "all"],
+        fields="number,title,state",
     )
-    if proc.returncode != 0:
-        return False
-    try:
-        for issue in json.loads(proc.stdout):
-            if issue.get("title") == title:
-                return True
-    except (json.JSONDecodeError, KeyError, TypeError):
-        pass
-    return False
+    for issue in listing.rows or ():
+        if isinstance(issue, dict) and issue.get("title") == _STARTER_EPIC_TITLE:
+            return issue
+    return None
 
 
 # ----- projects_v2_node_id cache (#310) ------------------------------
@@ -689,8 +695,8 @@ def _resolve_board_owner(config: dict[str, Any]) -> str | None:
         owner = gh_block.get("default_owner")
         if isinstance(owner, str) and owner:
             return owner
-    repo = _resolve_repo_name_with_owner()
-    if repo != "<unresolved>" and "/" in repo:
+    repo = _resolve_repo().name
+    if repo and "/" in repo:
         return repo.split("/", 1)[0]
     return None
 
@@ -749,37 +755,17 @@ def _file_starter_epic(*, dry_run: bool) -> Action:
     PM-authority filing. The `--with-starter-epic` flag is the PM's
     explicit gesture; the script does not re-prompt.
     """
-    title = "[EPIC] Methodology adoption — initial hierarchy"
+    title = _STARTER_EPIC_TITLE
     body = _STARTER_EPIC_BODY
 
     # Refuse if an EPIC with the same title already exists.
-    proc = subprocess.run(
-        [
-            "gh",
-            "issue",
-            "list",
-            "--search",
-            f'in:title "{title}"',
-            "--state",
-            "all",
-            "--json",
-            "number,title,state",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if proc.returncode == 0:
-        try:
-            for issue in json.loads(proc.stdout):
-                if issue.get("title") == title:
-                    return Action(
-                        "starter EPIC",
-                        "exists",
-                        f"already filed as #{issue['number']} (state: {issue['state']})",
-                    )
-        except (json.JSONDecodeError, KeyError, TypeError):
-            pass
+    filed = _filed_starter_epic()
+    if filed is not None:
+        return Action(
+            "starter EPIC",
+            "exists",
+            f"already filed as #{filed.get('number')} (state: {filed.get('state')})",
+        )
 
     if dry_run:
         return Action("starter EPIC", "created", "(dry-run) would file")
@@ -809,6 +795,8 @@ def _file_starter_epic(*, dry_run: bool) -> Action:
         f"`gh issue create` exit {proc.returncode}: {proc.stderr.strip()}",
     )
 
+
+_STARTER_EPIC_TITLE = "[EPIC] Methodology adoption — initial hierarchy"
 
 _STARTER_EPIC_BODY = """\
 ## Outcome
@@ -853,8 +841,9 @@ def _check_gh_block_and_auth(config: dict[str, Any]) -> str | None:
     absence is equivalent to delegating to ambient state. When `gh.host`
     is configured, this function runs `gh auth status -h <host>` and
     fails fast with a `gh auth login -h <host>` remediation hint if the
-    host isn't authenticated. Returns None on success, or an error
-    message string on failure.
+    host isn't authenticated. `gh` missing from PATH gets the refusal the
+    repository lookup gives for it (#2087). Returns None on success, or an
+    error message string on failure.
     """
     raw = config.get("gh")
     if raw is None:
@@ -888,12 +877,15 @@ def _check_gh_block_and_auth(config: dict[str, Any]) -> str | None:
     if not isinstance(host, str) or not host:
         return None  # no host pinning; nothing further to verify
 
-    proc = subprocess.run(
-        ["gh", "auth", "status", "-h", host],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        proc = subprocess.run(
+            ["gh", "auth", "status", "-h", host],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return _no_repository_message(_GH_MISSING)
     if proc.returncode != 0:
         return (
             f"`gh auth status -h {host}` reports no active authentication. "
@@ -998,25 +990,82 @@ def _print_context_header(repo: str, capability_root: Path) -> None:
     print()
 
 
-def _resolve_repo_name_with_owner() -> str:
-    """Best-effort `<owner>/<repo>` for the current working tree.
+@dataclass(frozen=True)
+class RepoLookup:
+    """The GitHub repository `gh` resolves for this checkout, or why none does.
 
-    Returns `<unresolved>` when `gh repo view` fails — the calling code
-    surfaces that to the user as part of the header so they can abort
-    before any mutation.
+    ``name`` is ``<owner>/<repo>`` when one resolves. When none does it is
+    ``None``, ``why`` says why none resolves and ``fix`` how to add one.
     """
-    proc = subprocess.run(
-        ["gh", "repo", "view", "--json", "nameWithOwner"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if proc.returncode != 0:
-        return "<unresolved>"
+
+    name: str | None
+    why: str = ""
+    fix: str = ""
+
+
+_FIX_REMOTE = (
+    "give this checkout a remote on GitHub (`git remote add origin <url>`) "
+    "and sign `gh` in to its host (`gh auth login`)"
+)
+_FIX_GH = (
+    "install `gh`, GitHub's command-line tool (https://cli.github.com), sign it "
+    "in (`gh auth login`) and give this checkout a remote on GitHub "
+    "(`git remote add origin <url>`)"
+)
+_GH_MISSING = RepoLookup(None, "`gh`, GitHub's command-line tool, is not on PATH", _FIX_GH)
+
+# A terminal control sequence such as a colour change, dropped whole from what
+# `gh` says before it is quoted.
+_CONTROL_SEQUENCE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
+
+def _resolve_repo() -> RepoLookup:
+    """Ask `gh repo view` which GitHub repository this checkout belongs to (#2087).
+
+    A read, never a mutation. `gh` missing from PATH, a failed `gh repo view`
+    (no remote, a remote on no GitHub host, `gh` not signed in) and an answer
+    naming no repository each come back as a lookup with no name, carrying
+    `gh`'s own reason where it gave one.
+    """
     try:
-        return json.loads(proc.stdout).get("nameWithOwner", "<unresolved>")
-    except json.JSONDecodeError:
-        return "<unresolved>"
+        proc = subprocess.run(
+            ["gh", "repo", "view", "--json", "nameWithOwner"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return _GH_MISSING
+    if proc.returncode != 0:
+        # One line, and no control character reaches the terminal.
+        stderr = _CONTROL_SEQUENCE.sub("", proc.stderr or "")
+        printable = "".join(c for c in stderr if c.isprintable() or c.isspace())
+        said = " ".join(printable.split()) or f"it exited {proc.returncode}"
+        return RepoLookup(None, f"`gh repo view` says: {said}", _FIX_REMOTE)
+    try:
+        name = json.loads(proc.stdout).get("nameWithOwner")
+    except (json.JSONDecodeError, AttributeError):
+        name = None
+    if not isinstance(name, str) or not name:
+        return RepoLookup(None, "`gh repo view` named no repository", _FIX_REMOTE)
+    return RepoLookup(name)
+
+
+def _no_repository_message(lookup: RepoLookup) -> str:
+    """The refusal when no GitHub repository resolves: what is missing, why, the fix.
+
+    Printed after `error: `, as every refusal of `main()` is.
+    """
+    return (
+        "project-management needs a GitHub repository, and none resolves "
+        "for this checkout.\n"
+        f"  Why: {lookup.why}\n"
+        "  bootstrap creates the capability's labels in that repository, and the "
+        "other pm commands work on its issues and pull requests, so bootstrap "
+        "stops here, a dry run included. Nothing was created.\n"
+        f"  To fix: {lookup.fix}, then run "
+        f"`pkit {CAPABILITY_NAME} bootstrap --dry-run` again."
+    )
 
 
 def _read_capability_version(capability_root: Path) -> str:

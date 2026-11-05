@@ -10,15 +10,19 @@ realises, over the real repository:
   the status report shows them (acceptance criterion 1);
 - the `.pkit/` READMEs declared are exactly the adopter-facing ones — every
   README under `.pkit/` is either a place or named here with the reason it is
-  not, so a new one cannot land unclassified (criterion 2);
+  not, so a new one cannot land unclassified (criterion 2) — and a page under
+  `.pkit/` that is no README is a place exactly when its folder's README is a
+  place and lists it (ADR-069, Implications);
 - no declared place is a synced copy, which is what living-docs' place rule
   asks (criterion 3), and the friction pass, which enforces it, walks them all;
 - the analysis location derives under the internal root (criterion 4);
 - living-docs' own checks pass over this tree end to end: its validator, the
   shared method `LDOC` and both spaces' definitions inheriting it, and the
-  friction pass over the roots it declares as places (#1003);
+  friction pass over the roots it declares as places (#1003); the user pages'
+  sets `REWORK` and `GUIDE` pin `LDOC` and `WRITE` (ADR-069 point 4);
 - every declared place is a page — its reader, a kind with a template, a
-  friction block anchoring what it describes and a revalidation — and the
+  friction block anchoring what it describes, and a revalidation or, with none
+  yet, nothing it rests on changed since the commit that added it — and the
   code-to-doc mapping keeps no rule a page's anchors now carry (#1010);
 - the declared surface names only what a page should describe: every file
   under the retired rules' trees is in it or left out for a named reason
@@ -27,8 +31,10 @@ realises, over the real repository:
 
 from __future__ import annotations
 
+import functools
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path, PurePosixPath
@@ -38,14 +44,25 @@ from click.testing import CliRunner
 from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
+from project_kit import answer_files, default_branch
 from project_kit import config_validate as cv
 from project_kit import docs_roots as dr
+from project_kit import friction_repository as fr
 from project_kit import rule_sets as rs
 from project_kit.cli import main
 from project_kit.document_parts import split_front_matter
-from project_kit.friction_discovery import pattern_matcher, read_friction_settings
+from project_kit.friction_discovery import (
+    Artefact,
+    Discovery,
+    discover_artefacts,
+    pattern_matcher,
+    read_friction_settings,
+)
+from project_kit.friction_git import BlobReader, CommitTree
 from project_kit.friction_validate import FrictionFindingKind, validate_friction
 from project_kit.working_tree import working_tree
+from tests.adopter_repo import MakeAdopterRepo
+from tests.friction_documents import Timeline, document
 
 REPO = Path(__file__).resolve().parent.parent
 LIVING_DOCS = REPO / ".pkit" / "capabilities" / "living-docs"
@@ -64,6 +81,12 @@ NOT_PLACES: dict[str, str] = {
     ".pkit/migrations/backbone/README.md": "maintainer-facing: the migration scripts",
     ".pkit/capabilities/project-management/migrations/README.md": (
         "maintainer-facing: the capability's migration scripts"
+    ),
+    ".pkit/rule-sets/README.md": (
+        "the folder's signpost; the rules README is the page that describes the set"
+    ),
+    ".pkit/capabilities/visual-communication/libraries/README.md": (
+        "maintainer-facing: the rule a change to a shipped library's version declares"
     ),
 }
 
@@ -91,6 +114,10 @@ NOT_SURFACE: dict[str, str] = {
     ".pkit/capabilities/evidence/agents/.gitkeep": (
         "evidence ships no agent yet; the placeholder holds the folder open in git"
     ),
+    ".pkit/capabilities/*/rule-sets/**": (
+        "a capability's rule sets, anchor targets that anchor the records they rest on"
+    ),
+    ".pkit/capabilities/*/rules.md": "generated from the capability's loaded set",
 }
 
 
@@ -107,6 +134,26 @@ def _project_places() -> list[str]:
     return [p.value for p in read_friction_settings(REPO).places if p.source == "project"]
 
 
+def _user_root_pages() -> list[str]:
+    """The pages inside the user root, `docs/`: the guides (ADR-069 point 1). The
+    root is living-docs' default place, so they are pages without being declared."""
+    return sorted(path.relative_to(REPO).as_posix() for path in (REPO / "docs").rglob("*.md"))
+
+
+def _internal_root_pages() -> list[str]:
+    """The pages inside the internal root, `tech-docs/`: each document there that
+    declares a page kind, which with the root makes it a page (living-docs' pages
+    reference, "A page's fields"), with no place declared for it. The records, the
+    rule sets and the analysis beside them declare no kind."""
+    pages = []
+    for path in (REPO / "tech-docs").rglob("*.md"):
+        front, _body = split_front_matter(path.read_text(encoding="utf-8"))
+        fields = YAML(typ="safe").load(front) if front is not None else None
+        if isinstance(fields, dict) and "kind" in fields:
+            pages.append(path.relative_to(REPO).as_posix())
+    return sorted(pages)
+
+
 def _living_docs_config() -> dict:
     return YAML(typ="safe").load(LIVING_DOCS_CONFIG.read_text(encoding="utf-8"))
 
@@ -120,8 +167,9 @@ def test_the_configuration_declares_both_roots_and_validates() -> None:
     assert (roots.internal, roots.internal_source) == (Path("tech-docs"), dr.Source.EXPLICIT)
     report = cv.run_configuration_pass(REPO)
     assert report.errors == ()
-    # `docs/` holds no user page yet: COR-049 point 7 makes that a warning only.
-    assert [f.path for f in report.findings] in ([], ["/docs/user"])
+    # `docs/` holds the guides (ADR-069 point 1), so the empty-root warning of
+    # COR-049 point 7 no longer shows.
+    assert [f.path for f in report.findings] == []
 
 
 def test_every_declared_place_is_a_file_outside_both_roots() -> None:
@@ -193,8 +241,32 @@ def test_every_pkit_readme_is_a_place_or_named_as_not_one() -> None:
         ".pkit/capabilities/living-docs/project/config.yaml, or maintainer-facing and "
         "named in NOT_PLACES here with the reason."
     )
-    assert declared & NOT_PLACES.keys() == set()
-    assert (declared | NOT_PLACES.keys()) <= on_disk
+    declared_readmes = {p for p in declared if PurePosixPath(p).name == "README.md"}
+    assert declared_readmes & NOT_PLACES.keys() == set()
+    assert (declared_readmes | NOT_PLACES.keys()) <= on_disk
+
+
+def _lists(readme: str, page: str) -> bool:
+    """Whether `readme` links `page`, a file beside it, by its name."""
+    name = re.escape(PurePosixPath(page).name)
+    text = (REPO / readme).read_text(encoding="utf-8")
+    return re.search(rf"\]\(\s*(?:\./)?{name}(?:#[^)\s]*)?\s*\)", text) is not None
+
+
+def test_a_pkit_page_that_is_no_readme_is_listed_by_its_folders_readme() -> None:
+    """A page under `.pkit/` that is not a README is a place exactly when its folder's
+    README is a place and lists it (ADR-069, Implications). Such a page is a lookup page
+    of the reference its README is, and the README is its folder's stable address."""
+    places = set(_project_places())
+    for page in sorted(p for p in places if p.startswith(".pkit/")):
+        if PurePosixPath(page).name == "README.md":
+            continue
+        readme = str(PurePosixPath(page).parent / "README.md")
+        assert readme in places, (
+            f"{page}: a page under .pkit/ that is no README is a place only where its "
+            f"folder's README, {readme}, is one"
+        )
+        assert _lists(readme, page), f"{page}: {readme} lists it by a link to its name"
 
 
 # --- criterion 3: the synced-copy rule ---------------------------------------
@@ -270,16 +342,22 @@ def test_living_docs_validator_passes_over_this_tree(pkit_on_path: Path) -> None
     summary = document["summary"]
     assert summary[1].endswith("definition tech-docs/living-docs/rule-sets/user.md.")
     assert summary[2].endswith("definition tech-docs/living-docs/rule-sets/technical.md.")
-    # Every place is a page (#1010), each reader resolved against the readers point.
-    # software-analysis contributes one reader per actor of pkit's own analysis
-    # (#1001), under the `act-` prefix: the eight core actors (#1344) and the
-    # planner (#1710), beside living-docs' own two.
+    # Every place is a page (#1010), and so is every guide in the user root and every
+    # page in the internal root (#2641), each reader resolved against the readers
+    # point. software-analysis contributes one reader per actor of pkit's own
+    # analysis (#1001), under the `act-` prefix: the eight core actors (#1344), the
+    # planner (#1710) and the three agents of parallel work (#2096), beside
+    # living-docs' own two.
+    assert "docs/permissions/README.md" in _user_root_pages()
+    assert "tech-docs/coding-conventions.md" in _internal_root_pages()
+    pages = len(_project_places()) + len(_user_root_pages()) + len(_internal_root_pages())
     assert summary[4] == (
         "readers (pkit::documentation:readers): act-adopter, act-ai-agent, "
         "act-ci-pipeline, act-component-author, act-developer, "
-        "act-merge-authoriser, act-methodology-maintainer, act-operator, "
-        "act-planner, maintainer, user; "
-        f"{len(_project_places())} page reader(s) checked."
+        "act-lead-agent, act-merge-authoriser, act-methodology-maintainer, "
+        "act-operator, act-planner, act-planning-agent, act-worker-agent, "
+        "maintainer, user; "
+        f"{pages} page reader(s) checked."
     )
 
 
@@ -305,6 +383,29 @@ def test_ldoc_and_both_space_definitions_validate_and_pin_it() -> None:
     assert all(check.problem is None for check in rs.pin_checks(result.discovery))
 
 
+def test_the_rework_and_guide_sets_pin_ldoc_and_write() -> None:
+    """The user pages' rules beside the spaces' definitions (ADR-069 point 4): `REWORK`
+    for every reworked page, and `GUIDE` for the guides and the entry README, a set of
+    its own since a scope belongs to a set (COR-051 point 2). Both inherit the shared
+    method and the writing rules at the majors the space definitions pin."""
+    result = rs.validate_rule_sets(REPO)
+    assert result.errors == ()
+    names = {rule_set.name: rule_set for rule_set in result.discovery.rule_sets}
+    expected_paths = {
+        "REWORK": "tech-docs/living-docs/rule-sets/rework.md",
+        "GUIDE": "tech-docs/living-docs/rule-sets/guide.md",
+    }
+    for name, path in expected_paths.items():
+        rule_set = names[name]
+        assert (rule_set.component, rule_set.path) == (None, path)
+        assert [str(pin) for _index, pin in rule_set.pins] == ["living-docs:LDOC@1", "WRITE@2"]
+    guide = YAML(typ="safe").load(
+        split_front_matter((REPO / expected_paths["GUIDE"]).read_text(encoding="utf-8"))[0]
+    )
+    assert guide["scope"] == {"paths": ["docs/**", "README.md"], "types": ["living-docs:page"]}
+    assert all(check.problem is None for check in rs.pin_checks(result.discovery))
+
+
 def test_the_friction_pass_over_the_declared_roots_has_no_error() -> None:
     """Declaring the roots as places makes every document under them an
     artefact; nothing there may fail the pass."""
@@ -325,25 +426,121 @@ def _friction(front: dict) -> dict:
     return (front.get("pkit") or {}).get("friction") or {}
 
 
+@functools.cache
+def _revalidated() -> frozenset[str]:
+    """The artefacts a revalidation in this tree's answer files names (COR-062 point 1)."""
+    return frozenset(
+        entry.location
+        for found in answer_files.working_tree_files(REPO).values()
+        for entry in found.entries
+        if entry.revalidation is not None
+        and entry.revalidation.at is not None
+        and entry.revalidation.outcome in ("updated", "unchanged")
+    )
+
+
+#: How a page reads that the change's base does not hold yet (`_without_revalidation`).
+NEW = "new"
+
+#: The readings of a page with no revalidation yet under which it owes no answer.
+OWES_NOTHING = frozenset({NEW, fr.ArtefactState.CURRENT.value})
+
+
+def _without_revalidation(root: Path, place: str, base_ref: str | None = None) -> str:
+    """How the friction engine reads `place`, a page that no answer file revalidates yet.
+
+    Such a page is current as of the commit that added it, until something it rests
+    on changes after that commit. On the default branch, that commit is the squash its
+    change landed as (project-management DEC-013). So a page the change's base does not
+    hold reads `NEW`: the change check counts it revalidated (COR-050 point 6). The base
+    is where HEAD left `base_ref`, else the base every reader resolves (COR-054). A page
+    the base holds reads as the whole-repository check reads it, from the commit that
+    first introduced its block (COR-050 point 3): `current` while no anchor changed since.
+    """
+    base = default_branch.base(root, base_ref)
+    assert base.fork is not None, base.problem
+    blobs = BlobReader(root)
+    try:
+        held = discover_artefacts(root, tree=CommitTree(root, base.fork, blobs)).artefacts
+    finally:
+        blobs.close()
+    if all(artefact.location != place for artefact in held):
+        return NEW
+
+    def select(discovery: Discovery) -> Artefact:
+        (artefact,) = [a for a in discovery.artefacts if a.location == place]
+        return artefact
+
+    check = fr.run_artefact_check(root, select)
+    assert check is not None and check.report is not None, place
+    return check.report.state.value
+
+
 # Asserts what this tree's answers hold, so the short check runs it (ADR-067).
 @pytest.mark.answers
 @pytest.mark.parametrize("place", _project_places())
 def test_every_declared_place_is_a_page_anchored_and_revalidated(place: str) -> None:
     """A place's document is a page (living-docs DEC-001 point 4): its reader —
     the one its space serves — and a kind whose template the capability ships
-    (RS-LDOC-004), then a friction block that anchors what the page describes
-    and records its revalidation (COR-050 points 2 and 3)."""
+    (RS-LDOC-004), then a friction block that anchors what the page describes.
+    An answer file records its revalidation (COR-050 points 2 and 3, COR-062
+    point 1), or, with none yet, nothing it rests on changed since the commit
+    that added it (`_without_revalidation`)."""
     front = _front_matter(place)
     schema = json.loads((LIVING_DOCS / "schemas" / "page.schema.json").read_text(encoding="utf-8"))
     assert list(Draft202012Validator(schema).iter_errors(front)) == [], place
     space = _living_docs_config()["places"][place]
-    assert front["reader"] == SPACE_READER[space], place
+    readers = {SPACE_READER[space]}
+    if space == "user" and front["kind"] == "reference":
+        # A reference names the AI agent, its reader in an adopter's project (ADR-069 point 5).
+        readers.add("act-ai-agent")
+    assert front["reader"] in readers, place
     assert (LIVING_DOCS / "templates" / f"{front['kind']}.md").is_file(), place
     friction = _friction(front)
     anchors = friction.get("anchors") or {}
     assert any(anchors.values()), f"{place}: no anchor"
-    revalidated = friction.get("revalidated") or {}
-    assert revalidated.get("at") and revalidated.get("outcome") in ("updated", "unchanged"), place
+    if place not in _revalidated():
+        reading = _without_revalidation(REPO, place)
+        assert reading in OWES_NOTHING, (
+            f"{place}: no revalidation in an answer file, and {reading} since the commit "
+            "that added it"
+        )
+
+
+PAGE = "docs/guide.md"
+CLI_EDIT = {"src/cli/main.py": "print('cli v2')\n"}
+
+
+def _page() -> str:
+    """A page anchored to the CLI's sources, with no revalidation."""
+    return document("guide", anchors={"path": ["src/cli/**"]})
+
+
+def test_a_page_new_in_the_change_owes_nothing_and_is_current_once_landed(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A later commit of the change that adds a page may edit what the page rests on.
+    The page still owes nothing: the change lands as one commit, which adds it."""
+    timeline = Timeline(make_adopter_repo())
+    timeline.start({})
+    timeline.adopter.checkout("topic", create=True)
+    timeline.commit("add the page", {PAGE: _page()})
+    timeline.commit("a fix round edits the CLI", CLI_EDIT)
+    assert _without_revalidation(timeline.adopter.root, PAGE, "main") == NEW
+    timeline.adopter.checkout("main")
+    timeline.squash_merge("topic")
+    assert _without_revalidation(timeline.adopter.root, PAGE, "main") == "current"
+
+
+def test_a_page_whose_anchor_changed_after_it_was_added_with_no_answer_is_stale(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """With no revalidation, the commit that added the page is its revalidation point
+    (COR-050 point 3), so an edit after it with no answer leaves the page owing one."""
+    timeline = Timeline(make_adopter_repo())
+    timeline.start({PAGE: _page()})
+    timeline.commit("edit the CLI", CLI_EDIT)
+    assert _without_revalidation(timeline.adopter.root, PAGE, "main") == "stale"
 
 
 def test_no_page_path_anchors_another_page() -> None:

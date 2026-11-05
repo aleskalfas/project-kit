@@ -1,18 +1,28 @@
 """Tests for project-management's close-issue script's pure logic.
 
 Covers checkbox gate detection (`_unticked_boxes`, and the gate's `all_boxes_ticked`),
-structural-type inference, parent-chain walking, and — per issue #60 — the
-label-reconciliation helper that close-issue shares with move-issue.
+structural-type inference, parent-chain walking, — per issue #60 — the
+label-reconciliation helper that close-issue shares with move-issue, — per
+issue #1936 — the person's authorisation a won't-do close and a container's
+close need, and — per issue #1937 — the closure cascade's report on a parent,
+which reads the engine's fold over the parent's children.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
+
+from tests import pm_lifecycle_world as lw
+from tests.pm_ownership_support import FakeGitHub, clone_with
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
@@ -201,6 +211,29 @@ def test_find_open_children_refuses_a_truncated_corpus(ci, monkeypatch) -> None:
     children = ci._find_open_children(5, {})
     assert children.open == ()
     assert "not enumerated to exhaustion" in children.incomplete
+
+
+def test_a_state_issue_is_never_an_open_child(ci, monkeypatch) -> None:
+    """#2139: the corpus comes through the one read of issues, which leaves a
+    state issue out, so an open state issue whose first line names the parent
+    neither holds the close nor is named (DEC-058 point 3). Stubbed at `gh`."""
+    rows = [
+        {"number": 10, "state": "CLOSED", "body": "Feature: #5\n\n## What"},
+        {
+            "number": 11,
+            "state": "OPEN",
+            "body": "Feature: #5\n<!-- pkit:state-issue v=1 key=seat-planner -->\n",
+        },
+    ]
+
+    def fake_gh(args, config):
+        if args[1] == "api":  # the native sub-issues read: absent here
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows), stderr="")
+
+    monkeypatch.setattr(ci.containment, "_gh_call", fake_gh)
+    children = ci._find_open_children(5, {})
+    assert (children.open, children.unread, children.incomplete) == ((), (), None)
 
 
 # ---- regression #60 — label reconciliation on close --------------------
@@ -538,43 +571,442 @@ def test_reconcile_greenfield_unchanged_with_explicit_none_map() -> None:
 #
 # Fix: added `config: dict` parameter and threaded it from the call site.
 # Tests below cover the eligible and not-eligible branches via a fake
-# _gh_get_issue (monkeypatched on the module) to confirm no NameError.
+# _gh_get_issue, a fake engine fold and a fake read of the open children
+# (monkeypatched on the module) to confirm no NameError.
 
 
-def test_check_parent_eligibility_not_eligible_unticked_boxes(ci, monkeypatch) -> None:
-    """Regression #65 — not-eligible branch completes without NameError.
+#: The engine's fold over a parent's children, as `pkit process cascade --json`
+#: carries it: every child done; held at an open child (#12 here, the second of
+#: two); and stopped on a read before it counted a member.
+FOLD_OPENED = {"opened": True, "indeterminate": False, "reached": 2, "total": 2}
+FOLD_HELD_OPEN = {
+    "opened": False,
+    "indeterminate": True,
+    "reached": 1,
+    "total": 2,
+    "reason": "member '12' of 'project-management:issue-lifecycle' has no resolved outcome yet",
+}
+FOLD_STOPPED_ON_A_READ = {
+    "opened": False,
+    "indeterminate": True,
+    "reached": 0,
+    "total": 0,
+    "reason": "could not read cascade members for parent '59'",
+    "stderr_tail": "gh: HTTP 502",
+}
 
-    Parent is open with unticked checkboxes: eligibility report prints the
-    'not eligible' line and returns without raising.
-    """
-    fake_parent = {
-        "state": "open",
-        "body": "- [ ] unfinished thing\n- [x] done thing\n",
-    }
-    monkeypatch.setattr(ci, "_gh_get_issue", lambda num, cfg: fake_parent)
-    # Must not raise; return value is None (procedure).
-    result = ci._check_parent_eligibility(59, config={})
-    assert result is None
-
-
-def test_check_parent_eligibility_eligible_all_boxes_ticked(ci, monkeypatch) -> None:
-    """Regression #65 — eligible branch completes without NameError.
-
-    Parent is open with all checkboxes ticked: eligibility report prints the
-    'eligible to close' line and returns without raising.
-    """
-    fake_parent = {
-        "state": "open",
-        "body": "- [x] finished thing\n- [x] another done thing\n",
-    }
-    monkeypatch.setattr(ci, "_gh_get_issue", lambda num, cfg: fake_parent)
-    result = ci._check_parent_eligibility(59, config={})
-    assert result is None
+TICKED_PARENT = {"state": "open", "body": "- [x] finished thing\n- [x] another done thing\n"}
+UNTICKED_PARENT = {"state": "open", "body": "- [ ] unfinished thing\n- [x] done thing\n"}
+ELIGIBLE = "eligible to close: run `pkit pm close-issue 59 --mode=cascade-eligibility-close`"
 
 
-def test_check_parent_eligibility_already_closed(ci, monkeypatch) -> None:
-    """Regression #65 — already-closed parent branch completes without NameError."""
-    fake_parent = {"state": "closed", "body": ""}
-    monkeypatch.setattr(ci, "_gh_get_issue", lambda num, cfg: fake_parent)
-    result = ci._check_parent_eligibility(59, config={})
-    assert result is None
+def _parent_report(
+    ci, monkeypatch, capsys, parent: dict, fold: dict | None, open_children=()
+) -> SimpleNamespace:
+    """Report on parent #59 with its record, the engine's fold over its children
+    and the open children the containment seam reads, each faked."""
+    monkeypatch.setattr(ci, "_gh_get_issue", lambda num, cfg: parent)
+    folds: list[int] = []
+
+    def fake_fold(number: int) -> dict | None:
+        folds.append(number)
+        return fold
+
+    monkeypatch.setattr(ci, "_engine_cascade_fold", fake_fold)
+    reads: list[int] = []
+
+    def fake_open_children(number: int, _config: dict):
+        reads.append(number)
+        children = tuple(SimpleNamespace(ref=f"#{n}", repository=None) for n in open_children)
+        return ci._OpenChildren(open=children)
+
+    monkeypatch.setattr(ci, "_find_open_children", fake_open_children)
+    # Regression #65: `config` is threaded through, so the report never raises.
+    assert ci._check_parent_eligibility(59, config={}) is None
+    out, err = capsys.readouterr()
+    return SimpleNamespace(out=out, err=err, folds=folds, reads=reads)
+
+
+def test_check_parent_eligibility_not_eligible_unticked_boxes(ci, monkeypatch, capsys) -> None:
+    """No open child left, but an unticked box: not eligible, and said so."""
+    run = _parent_report(ci, monkeypatch, capsys, UNTICKED_PARENT, FOLD_OPENED)
+    assert run.out == (
+        "  · parent #59 open; no open child left, but not eligible (1 unticked box(es))\n"
+    )
+    assert run.folds == [59]
+
+
+def test_check_parent_eligibility_eligible_all_boxes_ticked(ci, monkeypatch, capsys) -> None:
+    """The fold opened and every box is ticked: eligible, with the close that
+    asks the person to authorise it."""
+    run = _parent_report(ci, monkeypatch, capsys, TICKED_PARENT, FOLD_OPENED)
+    assert run.out == (
+        f"  · parent #59 open; no open child left and checkboxes complete — {ELIGIBLE}\n"
+    )
+    assert run.reads == []
+
+
+def test_check_parent_eligibility_already_closed(ci, monkeypatch, capsys) -> None:
+    """A closed parent is said to be closed, and its children are not folded."""
+    run = _parent_report(ci, monkeypatch, capsys, {"state": "closed", "body": ""}, FOLD_OPENED)
+    assert run.out == "  · parent #59 already closed\n"
+    assert run.folds == []
+
+
+# ---- #1937 — a parent is eligible only once its last open child closes --------
+#
+# DEC-006 makes a parent eligible to close when its last open child closes, and
+# DEC-034 has the eligibility check read the engine's cascade resolution. The
+# report read the parent's checkboxes alone, and said "eligible to close pending
+# sibling check" while a sibling was still open. It now reads the engine's fold
+# first: a parent with an open child is not eligible, and the child is named.
+
+
+def test_a_parent_with_an_open_child_is_not_eligible_and_the_child_is_named(
+    ci, monkeypatch, capsys
+) -> None:
+    run = _parent_report(ci, monkeypatch, capsys, TICKED_PARENT, FOLD_HELD_OPEN, (12,))
+    assert run.out == "  · parent #59 open; not eligible — open child(ren): #12\n"
+    assert "eligible to close" not in run.out
+    assert "pending sibling check" not in run.out
+    assert run.folds == [59]
+    assert run.reads == [59]
+
+
+def test_a_parent_whose_fold_stopped_on_a_read_is_not_said_eligible(
+    ci, monkeypatch, capsys
+) -> None:
+    """The fold stopped before it counted a member, so no read of the children
+    can say what holds it: the engine's reason and what the predicate said."""
+    run = _parent_report(ci, monkeypatch, capsys, TICKED_PARENT, FOLD_STOPPED_ON_A_READ)
+    assert run.out == (
+        "  · parent #59 open; not eligible — whether a child is open is not known: "
+        "could not read cascade members for parent '59'\n"
+        "      the predicate said:\n"
+        "        gh: HTTP 502\n"
+    )
+    assert run.reads == []
+
+
+def test_a_parent_held_with_no_open_child_found_is_not_said_eligible(
+    ci, monkeypatch, capsys
+) -> None:
+    """The fold held, and the children read here show no open one: the
+    engine's reason is said, and the parent is not eligible."""
+    run = _parent_report(ci, monkeypatch, capsys, TICKED_PARENT, FOLD_HELD_OPEN)
+    assert run.out == (
+        "  · parent #59 open; not eligible — whether a child is open is not known: "
+        f"{FOLD_HELD_OPEN['reason']}\n"
+    )
+    assert run.reads == [59]
+
+
+def test_a_parent_whose_children_the_engine_could_not_fold_is_not_said_eligible(
+    ci, monkeypatch, capsys
+) -> None:
+    run = _parent_report(ci, monkeypatch, capsys, TICKED_PARENT, None)
+    assert run.out == (
+        "  · parent #59 open; not eligible — the process engine could not fold its "
+        "children, so whether one is open is not known\n"
+    )
+    assert run.reads == []
+
+
+# ---- #1936 — a won't-do close and a container's close are the person's -------
+#
+# DEC-006 makes Backlog/Todo → Done (won't-do) and In Progress → Done (a
+# container's cascade-eligibility close) moves the user authorises, a hard
+# reject when the authorisation is missing. close-issue used to ask only at a
+# terminal, so with no terminal and no --yes it closed in both modes and nobody
+# was asked. It now refuses there, as move-issue refuses a user-held move, and
+# writes nothing. A leaf's close through a merged PR named with --pr closed with
+# no terminal and no --yes too, and is held the same way since #1968. A Task's
+# close as completed without a pull request (#2282) is held the same way.
+
+CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
+
+#: A merged PR from #42's branch, the one the pr-merge close below names.
+MERGED_FROM_42 = {
+    "number": 1042,
+    "state": "MERGED",
+    "mergedAt": "2026-10-24T10:00:00Z",
+    "url": "u",
+    "headRefName": "fix/42-landed",
+    "body": "## Summary\n",
+}
+
+#: The closes DEC-006 holds for the person: (mode argv, issue, write it makes).
+HELD_CLOSES = [
+    pytest.param(
+        ["--reason", "superseded by #99"],
+        {"title": "[Task] not needed", "labels": [{"name": "state:backlog"}]},
+        ["gh", "issue", "close", "42", "--reason", "not planned"],
+        id="wont-do",
+    ),
+    pytest.param(
+        ["--mode", "cascade-eligibility-close"],
+        {"title": "[EPIC] all done", "labels": [{"name": "state:in-progress"}]},
+        ["gh", "issue", "close", "42", "--reason", "completed"],
+        id="cascade-eligibility-close",
+    ),
+    pytest.param(
+        ["--mode", "pr-merge", "--pr", "1042"],
+        {"title": "[Task] landed", "labels": [{"name": "state:review"}]},
+        ["gh", "issue", "close", "42", "--reason", "completed"],
+        id="pr-merge-through-a-pr",
+    ),
+    pytest.param(
+        ["--mode", "completed", "--result", "the findings are filed as #908"],
+        {"title": "[Chore] audited", "labels": [{"name": "state:in-progress"}]},
+        ["gh", "issue", "close", "42", "--reason", "completed"],
+        id="completed-without-a-pr",
+    ),
+]
+
+
+class _Stdin:
+    """A standard input that is, or is not, a terminal."""
+
+    def __init__(self, tty: bool) -> None:
+        self._tty = tty
+
+    def isatty(self) -> bool:
+        return self._tty
+
+
+def _close(
+    ci,
+    monkeypatch,
+    argv: list[str],
+    issue: dict,
+    *,
+    tty: bool,
+    reply: str | None = None,
+    instance: int | None = None,
+    github: FakeGitHub | None = None,
+) -> SimpleNamespace:
+    """Run close-issue's main() on issue #42 with every other gate passed, and
+    record each `gh` call and each move handed to the engine. `instance` is this
+    clone's instance id (none by default); its ownership calls reach `github`,
+    and each write among them is recorded in `calls` too."""
+    calls: list[list[str]] = []
+    fake = github if github is not None else FakeGitHub()
+
+    def ownership_gh(args: list[str], _config: dict):
+        if args[1:3] != ["issue", "view"]:
+            calls.append(args)
+        return fake(args)
+
+    clone_with(ci.instance_claims, monkeypatch, instance)
+    monkeypatch.setattr(ci.instance_claims, "_gh", ownership_gh)
+    monkeypatch.setattr(sys, "argv", ["close-issue", "42", *argv, "--no-cascade"])
+    monkeypatch.setattr(sys, "stdin", _Stdin(tty))
+    prompts: list[str] = []
+
+    def fake_input(prompt: str = "") -> str:
+        prompts.append(prompt)
+        assert reply is not None, "close-issue asked although no reply was expected"
+        return reply
+
+    monkeypatch.setattr("builtins.input", fake_input)
+    monkeypatch.setattr(ci, "resolve_capability_root", lambda _explicit: CAP_ROOT)
+    monkeypatch.setattr(ci.bootstrap_gate, "enforce", lambda *a, **k: True)
+    monkeypatch.setattr(ci.session_guard, "enforce", lambda **k: True)
+    monkeypatch.setattr(ci, "load_adopter_config", lambda _root: {})
+    monkeypatch.setattr(ci, "_read_members", lambda *a: [])
+    monkeypatch.setattr(
+        ci, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+    )
+    monkeypatch.setattr(ci, "check_membership", lambda *a: SimpleNamespace(allowed=True))
+    monkeypatch.setattr(ci.axis_labels, "load_substrate_map", lambda *_a, **_k: None)
+    monkeypatch.setattr(ci, "fire_hooks", lambda *a, **k: None)
+    monkeypatch.setattr(ci, "_engine_cascade_fold", lambda _n: {"opened": True})
+    journaled: list[tuple] = []
+    monkeypatch.setattr(ci, "journal_move", lambda *a, **k: journaled.append(a))
+    record = {"body": "## What\nx\n", "state": "OPEN", "milestone": None, **issue}
+    monkeypatch.setattr(ci, "_gh_get_issue", lambda n, _config: record if n == 42 else None)
+    monkeypatch.setattr(ci, "_gh_get_pr", lambda n, _config: MERGED_FROM_42 if n == 1042 else None)
+
+    def fake_gh_run(cmd, config, **kwargs):
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(ci, "gh_run", fake_gh_run)
+    rc = ci.main()
+    return SimpleNamespace(rc=rc, calls=calls, journaled=journaled, prompts=prompts)
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), HELD_CLOSES)
+def test_held_close_with_no_terminal_and_no_yes_is_refused(
+    ci, monkeypatch, capsys, argv, issue, close
+) -> None:
+    run = _close(ci, monkeypatch, argv, issue, tty=False)
+    assert run.rc == 1
+    assert run.calls == []
+    assert run.journaled == []
+    err = capsys.readouterr().err
+    assert "[refused]" in err
+    assert "user-authorised" in err
+    assert "Pass --yes to confirm the authorisation" in err
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), HELD_CLOSES)
+def test_held_close_with_yes_closes_without_asking(ci, monkeypatch, argv, issue, close) -> None:
+    run = _close(ci, monkeypatch, [*argv, "--yes"], issue, tty=False)
+    assert run.rc == 0
+    assert close in run.calls
+    assert run.prompts == []
+    assert len(run.journaled) == 1
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), HELD_CLOSES)
+def test_held_close_at_a_terminal_closes_on_a_yes(ci, monkeypatch, argv, issue, close) -> None:
+    run = _close(ci, monkeypatch, argv, issue, tty=True, reply="y")
+    assert run.rc == 0
+    assert len(run.prompts) == 1
+    assert close in run.calls
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), HELD_CLOSES)
+def test_held_close_at_a_terminal_declined_writes_nothing(
+    ci, monkeypatch, capsys, argv, issue, close
+) -> None:
+    run = _close(ci, monkeypatch, argv, issue, tty=True, reply="n")
+    assert run.rc == 0
+    assert run.calls == []
+    assert run.journaled == []
+    assert "aborted." in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), HELD_CLOSES)
+def test_held_close_dry_run_needs_no_authorisation(
+    ci, monkeypatch, capsys, argv, issue, close
+) -> None:
+    """A dry run writes nothing, so it is no close to authorise."""
+    run = _close(ci, monkeypatch, [*argv, "--dry-run"], issue, tty=False)
+    assert run.rc == 0
+    assert run.calls == []
+    assert "[dry-run]" in capsys.readouterr().out
+
+
+# ---- instance ownership: the release on close (DEC-035 point 4) -------------
+#
+# With an instance id set, every close releases the issue's owner once it has
+# closed it. The in-memory GitHub holds #42, claimed by this account's instance 2.
+
+#: A merge closed #42 already: the pr-merge path done-work runs for each issue.
+#: Its write is the label reconcile, so its third member is None.
+CLOSED_BY_A_MERGE = pytest.param(
+    ["--mode", "pr-merge", "--pr", "1042"],
+    {"title": "[Task] landed", "labels": [{"name": "state:review"}], "state": "CLOSED"},
+    None,
+    id="pr-merge-after-a-merge",
+)
+
+
+def _claimed_42(ci) -> FakeGitHub:
+    github = FakeGitHub()
+    github.add(42, assignees=("me",))
+    github.post(42, ci.instance_claims.ownership.format_event_comment(event="claim", instance=2))
+    return github
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), [*HELD_CLOSES, CLOSED_BY_A_MERGE])
+def test_a_close_releases_the_owner_after_closing(
+    ci, monkeypatch, capsys, argv, issue, close
+) -> None:
+    github = _claimed_42(ci)
+    run = _close(ci, monkeypatch, [*argv, "--yes"], issue, tty=False, instance=2, github=github)
+    assert run.rc == 0
+    release = next(i for i, c in enumerate(run.calls) if c[2] == "comment" and "release" in c[-1])
+    reconcile = next(i for i, c in enumerate(run.calls) if "state:done" in c)
+    assert reconcile < release
+    assert close is None or run.calls.index(close) < release
+    events = [c["body"] for c in github.issues[42].comments]
+    assert "event=release instance=2 " in events[-1]
+    assert "_Unclaimed_" in github.issues[42].body
+    out = capsys.readouterr().out
+    assert "  ownership:    released on close (this clone is instance 2" in out
+    assert "[ok] ownership: #42 released (instance 2)." in out
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), [*HELD_CLOSES, CLOSED_BY_A_MERGE])
+def test_with_no_instance_id_a_close_is_unchanged(
+    ci, monkeypatch, capsys, argv, issue, close
+) -> None:
+    github = _claimed_42(ci)
+    run = _close(ci, monkeypatch, [*argv, "--yes"], issue, tty=False, github=github)
+    assert run.rc == 0
+    assert github.calls == []
+    captured = capsys.readouterr()
+    assert "ownership" not in captured.out + captured.err
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), [*HELD_CLOSES, CLOSED_BY_A_MERGE])
+def test_a_dry_run_releases_nothing(ci, monkeypatch, argv, issue, close) -> None:
+    github = _claimed_42(ci)
+    run = _close(ci, monkeypatch, [*argv, "--dry-run"], issue, tty=False, instance=2, github=github)
+    assert run.rc == 0
+    assert github.calls == []
+
+
+def test_a_failed_release_leaves_the_close_standing(ci, monkeypatch, capsys) -> None:
+    github = _claimed_42(ci)
+    github.failing.add("comment")
+    argv, issue, close = cast("tuple[list[str], dict[str, Any], list[str]]", HELD_CLOSES[0].values)
+    run = _close(ci, monkeypatch, [*argv, "--yes"], issue, tty=False, instance=2, github=github)
+    assert run.rc == 0
+    assert close in run.calls
+    assert "[warn] ownership: #42 closed, but its owner could not all be released" in (
+        capsys.readouterr().err
+    )
+
+
+# ---- #1937 end to end — an EPIC's two children close one after the other ------
+#
+# The issue's example, through the real scripts and the real engine fold against
+# an in-memory GitHub (`tests/pm_lifecycle_world.py`): the EPIC has two open
+# children. Closing the first reports the EPIC held by the second; closing the
+# second reports it eligible to close. The fold's members and membership
+# predicates run as every predicate of the world does, through their scripts.
+
+
+@pytest.fixture(scope="module")
+def lifecycle_scripts() -> SimpleNamespace:
+    return SimpleNamespace(
+        ci=lw.load_script("create-issue.py", "pm_create_issue_last_open_child"),
+        pi=lw.load_script("promote-issue.py", "pm_promote_issue_last_open_child"),
+        mi=lw.load_script("move-issue.py", "pm_move_issue_last_open_child"),
+        hist=lw.load_script("history.py", "pm_history_last_open_child"),
+        cl=lw.load_script("close-issue.py", "pm_close_issue_last_open_child"),
+    )
+
+
+@pytest.fixture
+def world(lifecycle_scripts, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> lw.World:
+    s = lifecycle_scripts
+    world = lw.World(lw.Tracker(), lw.make_engine_repo(tmp_path), s.ci, s.pi, s.mi, s.hist, s.cl)
+    lw.wire(world, monkeypatch)
+    return world
+
+
+def test_the_parent_is_eligible_only_once_its_last_open_child_closes(world, capsys) -> None:
+    epic = world.file_issue(title="[EPIC] Two tasks", labels=())
+    first = world.file_issue(body=f"EPIC: #{epic}\n\n{lw.AUTHORED_BODY}")
+    second = world.file_issue(body=f"EPIC: #{epic}\n\n{lw.AUTHORED_BODY}")
+    assert world.promote(first) == 0
+    assert world.promote(second) == 0
+    capsys.readouterr()
+
+    assert world.close(first, "--reason", "superseded by #99") == 0
+    out = capsys.readouterr().out
+    assert f"[cascade] parents to check for eligibility: #{epic}\n" in out
+    assert f"  · parent #{epic} open; not eligible — open child(ren): #{second}\n" in out
+    assert "eligible to close" not in out
+
+    assert world.close(second, "--reason", "superseded by #99") == 0
+    out = capsys.readouterr().out
+    assert (
+        f"  · parent #{epic} open; no open child left and checkboxes complete — eligible to "
+        f"close: run `pkit pm close-issue {epic} --mode=cascade-eligibility-close`\n"
+    ) in out

@@ -616,7 +616,10 @@ def _edges_on_cycle(edges: list[Edge]) -> set[Edge]:
 
 # COR-038 presets, expressed as the atomic filters they expand to. The help
 # text surfaces each expansion so a preset is explainable, never magic. A preset
-# layers ONTO any atomic filters the caller also passed (they AND-combine).
+# layers ONTO any atomic filters the caller also passed (they AND-combine),
+# except `advisory`, `connectors`, `declared` and `derived`: each ADDS its
+# relations, mode or source to the membership set an atomic filter of the same
+# kind (or another of them) fills, so `--connectors --mode pull` keeps both modes.
 PRESET_HELP: dict[str, str] = {
     "enforced": "source:derived ∪ relation:gates-on-readiness (the edges that actually block)",
     "advisory": "relation:informational,triggered-by (no runtime block)",
@@ -649,7 +652,9 @@ def expand_presets(
     intersection of the atomic membership sets, so it carries a dedicated OR
     predicate rather than widening `sources`/`relations` (which AND-combine).
     Every other preset is a pure widening of an atomic membership set or a
-    boolean, so it folds straight in.
+    boolean, so it folds straight in. A widening ADDS to what `base` names for
+    the same set: `connectors` beside `modes={"pull"}` gives `{"pull", "push"}`,
+    and the edge filter then keeps both modes, as the help says.
     """
     relations = set(base.relations)
     modes = set(base.modes)

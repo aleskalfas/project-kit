@@ -5,6 +5,7 @@ status: active
 statement: No command and no agent of living-docs fetches the text a captured source names, or compares it with the version the project recorded.
 measure: "The resolver of a `source` anchor and validation reach no network. For a page stale on a `source` anchor, the agent asks a person what changed in the text, and reads no part of it."
 applies-to: "Every command living-docs registers, and the living-docs agent in each of its intents, wherever a captured source is read or a page rests on one."
+obligation: v1:sha256:b30f95117aecc01dce9461f6f92cdee2d8a27f33657aec45da64915e2fe913ef
 actors:
   - core:ACT-developer
 refines: []
@@ -17,16 +18,23 @@ pkit:
         - .pkit/capabilities/living-docs/agents/living-docs/living-docs.md
         - tests/test_living_docs_sources.py
       record:
+        - living-docs:DEC-001
         - living-docs:DEC-001#4
         - COR-050#2
-    revalidated:
-      at: 2026-10-24T00:21:55Z
-      outcome: unchanged
-      unchanged-because: The agent changed only where a reader-review takes the reader's paths from the readers point. It still fetches no captured source.
+        - COR-009
+        - ADR-061#3
+        - PRJ-002#D1
+        - PRJ-002#D2
+        - COR-050#3
+        - COR-050#6
+        - COR-050#9
+        - COR-051#4
+        - COR-066#1
+        - COR-066#2
 ---
 
 # REQ-025 · Constraint · Nothing in living-docs fetches the text a captured source names
 
-**Verified by:** A test runs the resolver offline, from an empty cache and apart from the project, and finds its answer. Nothing checks the agent, whose definition grants it a shell: its text alone says it fetches no source.
+**Verified by:** A test runs the resolver offline, from an empty cache and apart from the [project](../../../core/glossary.md#term-project--project), and finds its result. Nothing checks the agent, whose definition grants it a shell: its text alone says it fetches no source.
 
-**Imposed by:** The friction checks read the repository alone and reach no network (COR-050 point 2). A check that gives the same answer wherever it runs cannot ask a source whether it changed. A fetched copy of the text also changes with every timestamp on it (living-docs DEC-001).
+**Imposed by:** The [friction](../../../core/glossary.md#term-friction--friction) checks read the repository alone and reach no network ([COR-050 point 2](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#2-anchors)). A check that gives the same result wherever it runs cannot ask a source whether it changed. A fetched copy of the text also changes with every timestamp on it ([living-docs DEC-001](../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)).

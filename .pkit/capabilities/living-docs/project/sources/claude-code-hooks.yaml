@@ -1,0 +1,4 @@
+# yaml-language-server: $schema=../../schemas/source.schema.json
+title: Claude Code hooks reference
+url: https://code.claude.com/docs/en/hooks
+version: "2026-10-24"

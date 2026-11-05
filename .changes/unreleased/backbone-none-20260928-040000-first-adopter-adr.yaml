@@ -1,5 +1,0 @@
-component: backbone
-kind: none
-body: >
-  ADR-055 (accepted) records how project-kit itself adopts software-analysis and
-  living-docs as their first adopter; project-internal, no adopter-observable change.

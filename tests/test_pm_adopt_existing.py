@@ -167,6 +167,45 @@ def test_inventory_read_ok_false_when_both_reads_fail(ae, monkeypatch) -> None:
     assert inv.read_ok is False
 
 
+_STATE_ISSUE = {
+    "number": 5,
+    "title": "[Task] seat planner",
+    "state": "OPEN",
+    "labels": [{"name": "P0"}, {"name": "Blocked"}],
+    "milestone": {"title": "Sprint 9"},
+    "body": "<!-- pkit:state-issue v=1 key=seat-planner -->\n## Current state\n",
+}
+
+
+def _serve_with_a_state_issue(args, config=None, **kw):
+    if args[:3] == ["gh", "issue", "list"]:
+        return subprocess.CompletedProcess(args, 0, json.dumps([*AUJ_ISSUES, _STATE_ISSUE]), "")
+    return _serve_auj_reads(args, config, **kw)
+
+
+def test_a_state_issue_is_no_evidence_for_a_binding(ae, monkeypatch) -> None:
+    """#2139: the sample is read through the one read of issues, which leaves a
+    state issue out (DEC-058 point 3). Its labels, prefix, state and milestone
+    count toward nothing."""
+    monkeypatch.setattr(ae, "gh_run", _serve_with_a_state_issue)
+    inv = ae.take_inventory(_config(), sample_limit=200)
+    assert inv.sampled_issue_count == 4
+    assert {o.prefix: o.count for o in inv.title_prefixes} == {"Task": 2, "Epic": 1}
+    assert {o.name: o.issue_usage for o in inv.labels}["P0"] == 1
+    assert (inv.open_count, inv.closed_count) == (2, 2)
+    assert inv.milestones_in_use == ["Sprint 1"]
+    assert inv.sample_truncated is False
+
+
+def test_a_sample_filled_with_a_state_issue_is_still_truncated(ae, monkeypatch) -> None:
+    """Five issues at a limit of five filled the sample, though one is a state
+    issue: the issues past it were never read."""
+    monkeypatch.setattr(ae, "gh_run", _serve_with_a_state_issue)
+    inv = ae.take_inventory(_config(), sample_limit=5)
+    assert inv.sampled_issue_count == 4
+    assert inv.sample_truncated is True
+
+
 def test_inventory_board_fields_read_when_board_configured(ae, monkeypatch) -> None:
     def serve(args, config=None, **kw):
         if args[:3] == ["gh", "label", "list"]:
@@ -637,8 +676,10 @@ def test_labels_win_over_a_board_field_but_the_overlap_is_reported(ae, monkeypat
 
 
 def test_board_declarable_axes_match_the_schema(ae) -> None:
-    """`type` and `state` refuse the arm in the schema, so the ceremony must never
-    draft it for them — a draft it emits has to validate."""
+    """`type` refuses the arm in the schema, so the ceremony must never draft it
+    for it — a draft it emits has to validate. `state` admits the arm, and the
+    ceremony leaves it to the project, which binds its state to its board only by
+    its own choice (DEC-062 point 5)."""
     schema = json.loads(SUBSTRATE_MAP_SCHEMA.read_text(encoding="utf-8"))
     axis_props = schema["properties"]["axes"]["properties"]
     admitted = {
@@ -646,7 +687,9 @@ def test_board_declarable_axes_match_the_schema(ae) -> None:
         for axis, spec in axis_props.items()
         if spec.get("not", {}).get("required") != ["board"]
     }
-    assert set(ae.BOARD_DECLARABLE_AXES) == admitted == {"priority", "workstream"}
+    assert admitted == {"priority", "workstream", "state"}
+    assert set(ae.BOARD_DRAFTED_AXES) == {"priority", "workstream"}
+    assert set(ae.BOARD_DRAFTED_AXES) <= admitted
 
 
 def test_detection_is_scoped_to_the_declarable_axes(ae, monkeypatch) -> None:

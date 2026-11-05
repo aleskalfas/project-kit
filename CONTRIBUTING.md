@@ -9,7 +9,10 @@ pkit:
         - scripts/pyright_ratchet.py
         - scripts/prose_lint.py
         - scripts/prose-lint.yaml
+        - tech-docs/rule-sets/writing.md
         - scripts/check_deployed_agents.py
+        - .pkit/capabilities/doc-examples/project/config.yaml
+        - scripts/page_contents.py
         - scripts/short_check.py
         - .githooks/pre-push
         - .github/workflows/checks.yml
@@ -19,32 +22,16 @@ pkit:
         - mise.toml
         - tests/README.md
         - src/project_kit/router.py
-      record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, "project-management:DEC-053"]
+        - .pkit/rules/project.md
+      record: [COR-003, COR-004, COR-013, COR-014, COR-050, "COR-062#1", "COR-062#4", "COR-062#7", "COR-062#10", "COR-066#1", "COR-066#5", PRJ-001, PRJ-009, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, ADR-068, ADR-078, "project-management:DEC-053", "project-management:DEC-065", "software-engineering:DEC-002#1", "living-docs:DEC-002", "doc-examples:DEC-001"]
       artefact:
+        - RS-OPS-020
+        - .pkit/capabilities/project-management/README.md#the-answers-a-change-wrote-in-its-pull-request-project-managementdec-055-pr-lists-answers
+        - .pkit/capabilities/doc-examples/README.md
         - .pkit/decisions/README.md
         - .pkit/decisions/README.md#checking-a-changes-numbering
+        - .pkit/decisions/README.md#writing-a-record
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
-    revalidated:
-      at: 2026-10-23T08:13:45Z
-      outcome: unchanged
-      unchanged-because: COR-050 adds derived links, which friction reads as their words alone. The friction gate and its escape hatch work as the guide says.
-      deferred:
-        - anchor:
-            kind: record
-            value: ADR-055
-          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the paragraph on landing through the queue does not say. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: ADR-067
-          reason: "ADR-067's summary now says only answers changed when changes lie in the change's answers, and CONTRIBUTING still names the blocks. #1779 builds it and rewrites the short check's account."
-        - anchor:
-            kind: record
-            value: COR-050
-          reason: "It says only answers changed when changes lie in revalidated blocks and revisited lists, which COR-062 moves to answer files. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: project-management:DEC-053
-          reason: "DEC-053 now meets a page's obligation by its answers in answer files, and asks none for a page answered apart. #1779 builds it and rewrites the documentation check's account."
 ---
 
 # Contributing to project-kit
@@ -57,7 +44,7 @@ If you have a project that has *adopted* project-kit and you want to record deci
 
 ## Running checks
 
-There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the numbering check of decision records (`pkit decisions check-diff` — a point renumbered, reused or dropped without being retired, or a point or record id the base took first: [the decisions README, "Checking a change's numbering"](.pkit/decisions/README.md#checking-a-changes-numbering)), the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first, or a use case's step or variant renumbered or removed), software-analysis' pointer check (`pkit analysis check-pointers` — a commit the default branch does not hold, named by a planned revalidation record the change adds), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Between `pkit validate` and the diff-scoped checks, it runs the deployed agents' check (`uv run python scripts/check_deployed_agents.py`, "The deployed agents' check" below). Run it any time:
+There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the numbering check of decision records (`pkit decisions check-diff` — a point renumbered, reused or dropped without being retired, or a point or record id the base took first: [the decisions README, "Checking a change's numbering"](.pkit/decisions/README.md#checking-a-changes-numbering)), the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first, or a use case's step or variant renumbered or removed), software-analysis' pointer check (`pkit analysis check-pointers` — a commit the default branch does not hold, named by a planned revalidation record the change adds), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Between `pkit validate` and the diff-scoped checks, it runs the deployed agents' check, the pages' console fences and the pages' contents lists, each described below. Run it any time:
 
 ```
 ./scripts/check.sh
@@ -68,15 +55,34 @@ There is one source of truth for "what must pass before this lands": **`scripts/
 The same aggregator runs in two places, so the gate can't drift:
 
 - **Pre-push hook** (`.githooks/pre-push`) — runs it before every push for fast local feedback. Opt in once per clone: `git config core.hooksPath .githooks` (bypass in a pinch with `git push --no-verify`).
-- **CI** (`.github/workflows/checks.yml`) — runs `pkit sync`, then the same aggregator, on a clean Linux runner for every PR, every merge the merge queue is about to make, and every push to `main`: the unbypassable backstop plus the platform / clean-install / post-merge coverage a local hook can't give.
+- **CI** (`.github/workflows/checks.yml`) — runs `pkit sync`, then the same aggregator, on clean Linux runners for every PR, every merge the merge queue is about to make, and every push to `main`: the unbypassable backstop plus the platform / clean-install / post-merge coverage a local hook can't give.
 
-**When CI runs the short check.** On a pull request, CI runs `scripts/check.sh --short` instead of the whole aggregator in one case ([ADR-067](tech-docs/architecture/decisions/ADR-067-answers-only-short-check.md)):
+**How CI splits a full run** ([ADR-078](tech-docs/architecture/decisions/ADR-078-ci-suite-parallel-jobs.md)). CI runs the aggregator as three parts side by side, each a job on a runner of its own, and the aggregator defines them:
+- **two slices,** `./scripts/check.sh --shard 1/2` and `--shard 2/2`. Each runs its share of the suite's parallel pass, cut where a committed table of measured test times balances the two.
+- **the remainder,** `./scripts/check.sh --rest`: every other line, with the tests marked `serial`.
+
+A job before them decides the form and pins the base every part reads. One job named `checks`, the status `main` requires, runs last and passes only when every part said that it passed. Its summary lists each part, with how it ended and how long it took.
+
+Each part names its own failures in its job's summary, and a slice names each failing test and how to run the slice again. Run any part by hand with the same argument. The hook runs the aggregator whole, so it runs what the parts run. [`tests/README.md`](tests/README.md), "Running the suite", says how the suite is cut and how the table of times is kept.
+
+**When CI runs the short check.** On a pull request, CI runs `scripts/check.sh --short` in the remainder's job, and no slice, instead of the full run's parts in one case ([ADR-067](tech-docs/architecture/decisions/ADR-067-answers-only-short-check.md)):
 - **The most recent full run on the pull request passed.** CI reads that from GitHub's own record of the workflow's runs.
-- **Only answers changed since.** `pkit friction since` says every change from that run's head lies inside `revalidated` blocks and `revisited` lists. A merge of the base counts only for what differs from git's merge of it.
+- **Only answers changed since.** `pkit friction since` says every change from that run's head lies in the answer files the change adds, where its answers to friction live (COR-062 point 1). A merge of the base counts only for what differs from git's merge of it.
 
-The short check runs every line of the aggregator but the test suite, and of the suite only the tests marked `answers` ([`tests/README.md`](tests/README.md), "Running the suite"). The base's copy of the decider, `scripts/short_check.py`, decides, so a pull request that changes it is decided by the copy on `main`. Every other run is full, and so is every doubt, such as a re-run or a pull request whose base was changed. A merge-queue run and a push to `main` are always full. The job's summary says which form ran and why. The pre-push hook always runs the whole aggregator. The same predicate decides whether `uv run pkit pm land-work` lands a later head, with only answers changed, under the person's earlier authorisation ([project-management:DEC-055](.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md) point 3). So such a head has usually passed only the short check, and the full run on `main` after the landing is the first to run the suite on it.
+The short check runs every line of the aggregator but the test suite, and of the suite only the tests marked `answers` ([`tests/README.md`](tests/README.md), "Running the suite"). The base's copy of the decider, `scripts/short_check.py`, decides, so a pull request that changes it is decided by the copy on `main`. Every other run is full, and so is every doubt, such as a re-run or a pull request whose base was changed. A merge-queue run and a push to `main` are always full. The deciding job's summary says which form ran and why. The pre-push hook always runs the whole aggregator. The same predicate decides whether `uv run pkit pm land-work` lands a later head, with only answers changed, under the person's earlier authorisation ([project-management:DEC-055](.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md) point 3). So such a head has usually passed only the short check, and the full run on `main` after the landing is the first to run the suite on it.
 
-**The full suite is the hook's and CI's, not a builder's.** The aggregator's test step runs the suite in parallel workers, then the tests marked `serial` on their own, and lets at most two full suites run on a machine at once — a third waits and says whose runs it waits for. While you build, run the test modules for the files you changed and the fast gates instead (`.pkit/rules/project.md`); [`tests/README.md`](tests/README.md) "Running the suite" has the details.
+**The full suite is the hook's and CI's, not a builder's.** The aggregator's test step runs the suite in parallel workers, then the tests marked `serial` on their own, and lets at most two full suites run on a machine at once — a third waits and says whose runs it waits for. While you build, run the test modules for the files you changed and the fast gates below instead (project rule 2, in `.pkit/rules/project.md`); [`tests/README.md`](tests/README.md) "Running the suite" has the details.
+
+**The fast gates.** CI runs them again, `pkit release check` in a step of its own.
+
+- `uv run pkit validate`
+- `uv run pkit friction check`
+- `uv run pkit migrations check-diff --include-working-tree`
+- `uv run pkit decisions check-diff`
+- `uv run pkit release check`
+- `uv run ruff check` and `uv run ruff format --check`, on the files you changed
+- `uv run python scripts/pyright_ratchet.py`
+- `uv run python scripts/prose_lint.py`
 
 **Writing tests.** Test-authoring guidance lives in [`tests/README.md`](tests/README.md) — in particular the shared adopter-repository fixture (`make_adopter_repo` / `adopter_repo`) to use instead of hand-rolling `git init` + `install_kit` in each test module. It hands each test a copy of a repository the session built once; a module whose tests start with the same slow setting-up hands that to it as `prepare`, and a test of the install itself asks for `fresh=True` ("Built once, copied for each test").
 
@@ -92,7 +98,7 @@ Add a check by editing `scripts/check.sh` once; both the hook and CI pick it up.
 - **Slack is not yours to spend.** An entry above the package's count is an improvement nobody has recorded yet. A change that adds findings under it passes the step but still writes findings — fix them. Lowering slack another change left is welcome, not owed.
 - **Suppressions.** The package carries none: no `# type: ignore`, which pyright is told to honour nowhere, and no `# pyright: ignore` — an annotation, a `cast` to the type the code knows, or a typed wrapper around an untyped library answers the finding instead. Outside the package a suppression names its rules and gives its reason on the same line, for code that is ill-typed on purpose ([`tests/README.md`](tests/README.md), "Type checking"). Nowhere may a file comment set the mode or a rule's severity (`# pyright: basic`); a rule is relaxed for the tests in the pyright table, with its reason beside it. The step also fails when the table narrows what the package is checked for — an `include`, `exclude` or `ignore` entry that leaves part of `src/` out, a strict list that stops covering it, `enableTypeIgnoreComments` other than false, or `reportMissingModuleSource` below a warning — and it counts warnings with errors.
 
-**The friction gate, in enforcing mode** ([ADR-055](tech-docs/architecture/decisions/ADR-055-first-adopter-analysis-and-living-docs.md) point 5). The aggregator runs the change check of the anchors-and-friction record ([COR-050](.pkit/decisions/core/COR-050-anchors-and-friction.md)) against the same base as the migration check, and project-kit sets `friction.mode: enforcing` in `.pkit/project/config.yaml`. A pull request then fails on **friction** — an anchored surface changed and the artefact anchored to it carries no answer — on a **dead anchor** or an **anchor of an unresolved kind** it introduced, on a kept **anchor whose resolver it took away**, on an **anchor whose resolver gave no answer** — a kind a capability registers, which the check could then not judge — and on a **marker bump with nothing behind it**; an outdated base is reported, never failed. It also fails on a **target not revisited**: a capability declared a link, the pull request changed a trigger field of the link's source, and the target neither changed nor carries an answer with a new reason on the source (COR-050 point 16). Answer it with `uv run pkit friction revisit`. Answer friction in the same pull request: revalidate the artefact (`outcome: updated` with the content change, or `outcome: unchanged` with a new `unchanged-because`), or defer the anchor with a reason — by hand, or with `uv run pkit friction revalidate` / `uv run pkit friction defer`, which write the block for you. `uv run pkit friction check` shows the same findings locally, uncommitted work included; the CLI reference's "Friction checks" section has the rules. When merging `origin/main` into your branch conflicts on a page's `revalidated` block — `main` revalidated it too — `uv run pkit friction resolve` takes `main`'s answer, keeps both sides' deferrals, writes the file (staged with `--yes` or at the prompt) and prints the revalidation you still owe once the merge is committed; it leaves the file to you when the conflict reaches beyond the block, or when what you merged is not the check's base. The aggregator — CI's `checks` job — is a required status on `main`, through the repository's "main protection" ruleset, so the gate binds every merge: the check becomes binding only when the project makes it a required status (COR-050 point 12). That is a repository setting the operator holds, not something a script or this guide can change. `tests/test_friction_gate.py` meets the gate as a pull request does: a stale page fails it, and the page revalidated passes. A reviewer other than the agent that wrote your change's answers checks every `unchanged` and `deferred` reason against the change, as `uv run pkit friction check` lists them under "Answers written in this change", and blocks the merge when one does not hold. Each deferral you write names an open follow-up in its reason. Say in the pull request what changed in each document you revalidated as `updated`, in one sentence, under `## What changed in each updated document` (the project-management README, "Where the sentences live"). The reviewer checks it against the diff, and blocks the merge when a document has no sentence or its sentence does not match what changed. The person who authorises the merge is told those sentences and the deferrals. That is information, not a gate: COR-050 point 3 has a change with answers merge under the same authorisation as any other. In project-kit that reviewer is the software-engineering capability's docs reviewer. `uv run pkit pm open-pr` writes the list of answers into the description, in plain words, in its own `## Documentation this change affects` section, each updated document with your sentence beside it. `uv run pkit pm land-work` writes it again for the head it lands, prints it, and tells what changed and what is left out of date above its `ready:` line ([project-management:DEC-055](.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md)).
+**The friction gate, in enforcing mode** ([ADR-055](tech-docs/architecture/decisions/ADR-055-first-adopter-analysis-and-living-docs.md) point 5). The aggregator runs the change check of the anchors-and-friction record ([COR-050](.pkit/decisions/core/COR-050-anchors-and-friction.md)) against the same base as the migration check, and project-kit sets `friction.mode: enforcing` in `.pkit/project/config.yaml`. A pull request then fails on **friction** — an anchored surface changed and the artefact anchored to it carries no answer — on a **dead anchor** or an **anchor of an unresolved kind** it introduced, on a kept **anchor whose resolver it took away**, on an **anchor whose resolver gave no answer** — a kind a capability registers, which the check could then not judge — and on a **marker bump with nothing behind it**; an outdated base is reported, never failed. It also fails on a **target not revisited**: a capability declared a link, the pull request changed a trigger field of the link's source, and the target neither changed nor carries an answer with a new reason on the source (COR-050 point 16). Answer it with `uv run pkit friction revisit`. Answer friction in the same pull request, as core rule 20 has a change answer what the check asks of it (`backbone:RS-OPS-020`): revalidate the artefact (`outcome: updated` with the content change, or `outcome: unchanged` with a new `unchanged-because`), or defer the anchor with a reason. Write the answer file by hand, or with `uv run pkit friction revalidate` / `uv run pkit friction defer`, which write it for you. `uv run pkit friction check` shows the same findings locally, uncommitted work included; the CLI reference's "Friction checks" section has the rules. Answers in answer files never conflict. When you merge `origin/main` into your branch and `main` answered on a document your change answered on too, each of your answers on that document must name `main`'s answer file in its `read`, or the check fails it (`read-incomplete`, COR-062 point 4): add the name to `read`. Two revalidations of one document that land apart, neither reading the other, are debt, never a failure, until the next revalidation that reads both judges the combined state (COR-062 point 7). The aggregator is a required status on `main`, through the repository's "main protection" ruleset, so the gate binds every merge ("How CI splits a full run" above names the job that reports it). The check becomes binding only when the project makes it a required status (COR-050 point 12). That is a repository setting the operator holds, not something a script or this guide can change. `tests/test_friction_gate.py` meets the gate as a pull request does: a stale page fails it, and the page revalidated passes. A reviewer other than you checks your change's answers, and you say in one sentence what changed in each document you revalidated as `updated`, as core rule 20 has it (`backbone:RS-OPS-020`). In project-kit that reviewer is the software-engineering capability's docs reviewer ([PRJ-009](.pkit/decisions/project/PRJ-009-self-adopt-code-review-panel.md); [software-engineering:DEC-002](.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md) point 1). Your sentences go under `## What changed in each updated document` in the description ([the project-management README, "The answers a change wrote, in its pull request"](.pkit/capabilities/project-management/README.md#the-answers-a-change-wrote-in-its-pull-request-project-managementdec-055-pr-lists-answers), its bullet "Where the sentences live"). No command writes a list of the answers into the description: each reader takes them from the change check at the pull request's head. `uv run pkit pm review-work` refuses an updated document with no sentence, and `uv run pkit pm land-work` tells what changed and what is left out of date above its `ready:` line ([project-management:DEC-065](.pkit/capabilities/project-management/decisions/DEC-065-answers-read-from-check.md)).
 
 **Landing a pull request through the merge queue** (#1011; ADR-055 point 5). Pull requests land with `uv run pkit pm done-work <N>`. When `main` merges through a GitHub merge queue, `done-work` does not merge: after its gates it enqueues the pull request, and the queue runs `checks` — the required status — on the merge it is about to make, on top of `main` and of every pull request queued ahead. The workflow runs on the queue's `merge_group` event for that, and its diff-scoped checks compare with the commit the queued merge is built on (`merge_group.base_sha`), so the friction and migration results are computed against the base the merge actually lands on: two pull requests landing back to back no longer let a stale page through, and nobody rebases to refresh a check. `done-work` prints the pull request's place in the queue and waits for the merge — as long as the queue estimates, plus a margin, at most 30 minutes — then moves the issue to Done, closes and cascades, and cleans up the branch. Pass `--no-wait` to return as soon as the pull request is queued; that run, or one whose wait ran out, exits 4 with the issue still in Review, and `done-work <N>` run again once the queue has merged it — from any clone — completes it. A pull request the queue drops (its checks failed on the queued merge) is fixed, pushed and landed again with `done-work`. The queue is the only path into `main` then: `--admin` and `--bypass-ci` are refused, and `merge-pr` goes through the queue as `done-work` does. The queue itself is a repository setting the operator applies — the default squash-commit title and message set to the pull request title and body, and a "Require merge queue" rule, merge method squash, in the ruleset that protects `main` — not something a script or this guide can do; until it is on, `done-work` merges directly and the outdated-base caveat of ADR-055 point 5 holds.
 
@@ -100,27 +106,34 @@ Add a check by editing `scripts/check.sh` once; both the hook and CI pick it up.
 
 The findings go to **one tracking issue**, its body rewritten in place when they change, with no comment per run. `scripts/friction_report_body.py` renders the body and counts the findings that need an answer; `scripts/friction_tracking_issue.py` keeps the issue. The run's step summary carries the same body.
 
-The issue is open exactly while a finding needs an answer (ADR-055 point 5). Every finding needs one except a deferral and a `left-out` finding, which owes nothing. The body lists the deferrals with their reasons and holds the two measures, unanchored artefacts and uncovered surface; none of these holds the issue open. With nothing to answer the issue is closed, and none is opened where none exists. A finding that needs an answer reopens it.
+The issue is open exactly while a finding needs an answer (ADR-055 point 5). Every finding needs one except four kinds, which the body lists without holding the issue open:
+
+- a deferral, which is itself an answer, listed with its reason
+- a `left-out` finding, which owes nothing
+- two revalidations of one artefact answered apart, debt that no change owes, counted in the headline apart from what needs an answer (COR-062 point 7, ADR-068 point 6)
+- an over-broad anchor, listed in a section of its own: its count moves as the window of commits slides with no anchor changed, and nothing records a person's judgement that an anchor is fine, so it would hold the issue open for good (ADR-055 point 5)
+
+The body also holds the two measures, unanchored artefacts and uncovered surface, and neither holds the issue open. With nothing to answer the issue is closed, and none is opened where none exists. A finding that needs an answer reopens it.
 
 The tracking issue is the one the workflow's token opened that carries either sign: the hidden marker `<!-- pkit-friction-report -->` in its body, or the `friction-report` label. A person's issue with those signs is never taken for it. A run puts back whichever sign is missing. The body says that edits to it are lost: the next run rewrites it.
 
 The workflow gates nothing, and never fails on what the check finds. It fails when the check cannot run, a shallow clone included, and when the issue cannot be written: `gh` refuses, or the listing of the token's issues may be incomplete, so the run cannot tell whether a tracking issue exists. It also fails when it finds more than one tracking issue. It then keeps the oldest in step, changes nothing on the others, and names them all in its log and step summary; close the others and remove their marker and label.
 
-Answer what it reports in a pull request like any friction (the friction gate, above): revalidate, or defer with a reason. The next run closes the issue once nothing needs an answer; a deferral stays listed in its body.
+Answer what it reports in a pull request like any friction (the friction gate, above): revalidate, or defer with a reason. The next run closes the issue once nothing needs an answer, and a deferral stays listed in its body. Revalidations answered apart stay listed until the next revalidation of their artefact judges them together and replaces them.
 
 `uv run pkit friction check --all` gives the same report locally from HEAD (uncommitted work is not read), and `--json` the machine form. `uv run pkit friction check --all --json | uv run python scripts/friction_report_body.py -` prints the rendering the issue's body is made from, without the marker and the notice line the publisher sets above it. The publisher runs only in the workflow; run by hand, outside GitHub Actions, it refuses and writes nothing, since an issue a person's token opened is never taken for the tracking issue and would stay open beside it.
 
 **The documentation check, with the pages' friction enforced** ([project-management:DEC-053](.pkit/capabilities/project-management/decisions/DEC-053-doc-check-slot.md) point 3). Beside the core check, project-management's documentation check holds a pull request to the obligations of the documentation-check point, `pkit::work-tracking:doc-check`, and each source of obligations has its own setting in `.pkit/capabilities/project-management/project/config.yaml`. project-kit **enforces the `friction` source**, the one living-docs contributes, read at the branch's head: a **stale page** (`page-stale`), and a **path of the declared surface no page anchors** (`code-undocumented`). The code-to-doc **mapping** stays advisory, with no rules — they became page anchors. A `## Doc impact` line meets neither friction obligation. The aggregator runs it as its `doc check` line, against the same base as the friction change check, so it binds every merge as the friction gate does. Run it alone with `uv run pkit pm check-doc-mapping` (against the default branch); `uv run pkit living-docs fill-doc-check` lists what the head owes. When it refuses:
 
-- **`<page> → no answer in the diff (page-stale)`** — something the page anchors changed. `uv run pkit friction explain <page>` names what changed and the command that clears it; answer on the page in this pull request by revalidating it — `uv run pkit friction revalidate <page> --outcome updated` with the content change, or `--outcome unchanged --because "<why>"`, or defer the anchor with its reason (`uv run pkit friction defer`). A deferral answers both checks and owes nothing afterwards: a deferred page gives no obligation, and `uv run pkit friction debt` lists it as debt until someone revalidates it.
+- **`<page> → no answer in the diff (page-stale)`** — something the page anchors changed. `uv run pkit friction explain <page>` names what changed and the command that clears it; answer for the page in this pull request, as the friction gate above says, by revalidating it — `uv run pkit friction revalidate <page> --outcome updated` with the content change, or `--outcome unchanged --because "<why>"`, or defer the anchor with its reason (`uv run pkit friction defer`). A deferral answers both checks and owes nothing afterwards: a deferred page gives no obligation, and `uv run pkit friction debt` lists it as debt until someone revalidates it. A page whose revalidations were answered apart is no friction either, so it gives no obligation; it stays debt until a revalidation reads both (DEC-053 point 4, COR-062 point 7).
 - **`<path> → no page anchors it (code-undocumented)`** — new code in the declared surface that no page describes. Anchor it from the page that describes it: add the path to the page's `pkit.friction.anchors.path`, describe it there, and revalidate the page (`--outcome updated`). If no page should ever describe it, narrow the declared surface instead — `friction.surface` in `.pkit/project/config.yaml` — and give the reason in that file's comment and in `NOT_SURFACE` of `tests/test_self_host_documentation.py`, which fails on a file under the surface's trees that is neither.
 
-**The escape hatch.** Enforcing mode must never fail on a defect of the tool (ADR-055 point 5). When the check fails for any other reason than those findings — it crashes, or anchor resolution or the configuration is wrong — the hatch is one line: `uv run pkit config set friction.mode warning --yes`, which changes `mode: enforcing` to `mode: warning` under `friction` in `.pkit/project/config.yaml` and no other line of the file. Make the flip in the pull request it unblocks, file the defect, and disclose the flip in the pull request description among its judgment calls — what failed, the defect filed, and that the flip goes back with the fix; then revert it in the pull request that fixes the defect. Never flip it silently: the anchors-and-friction record sees to it that enforcement is never switched off silently (COR-050 point 12), and the disclosure is how a deliberate flip keeps to that. Friction a pull request cannot answer in time is no defect and no reason for the hatch: defer the anchor with its reason (`uv run pkit friction defer`) — a deferral answers the check, and the debt listing keeps it in sight (COR-050 point 4). The documentation check takes the same hatch, disclosed and reverted the same way: set `doc_check.sources.friction: advisory` in project-management's project configuration. Validation findings — a malformed block, a dangling deferral, a cycle between artefacts — are outside the hatch: they fail `pkit validate` in either mode and are fixed, not waived.
+**The escape hatch.** Enforcing mode must never fail on a defect of the tool (ADR-055 point 5). When the check fails for any other reason than those findings — it crashes, or anchor resolution or the configuration is wrong — the hatch is one line: `uv run pkit config set friction.mode warning --yes`, which changes `mode: enforcing` to `mode: warning` under `friction` in `.pkit/project/config.yaml` and no other line of the file. Make the flip in the pull request it unblocks, file the defect, and disclose the flip in the pull request description among its judgment calls — what failed, the defect filed, and that the flip goes back with the fix; then revert it in the pull request that fixes the defect. Never flip it silently: the anchors-and-friction record sees to it that enforcement is never switched off silently (COR-050 point 12), and the disclosure is how a deliberate flip keeps to that. Friction a pull request cannot answer in time is no defect and no reason for the hatch: defer the anchor with its reason (`uv run pkit friction defer`) — a deferral answers the check, and the debt listing keeps it in sight (COR-050 point 4). The documentation check takes the same hatch, disclosed and reverted the same way: set `doc_check.sources.friction: advisory` in project-management's project configuration. Validation findings — a malformed block or answer file, an answer left in an artefact's block, a cycle between artefacts — are outside the hatch: they fail `pkit validate` in either mode and are fixed, not waived.
 
 **The prose lint** (#1415). The aggregator's `prose lint` line, `uv run python scripts/prose_lint.py`, checks the mechanical parts of the writing rules in the text a change adds or moves. It exits 0 when it finds nothing, 1 on a finding, and 2 when it cannot run. A finding names the file, the line, the rule's id and, for a collection entry, the entry. It shows each control or format character as `<U+XXXX>`, so the report shows what the file holds.
 
 - **Where it looks:** in each artefact the change altered, where an accepted rule binds that declares the lint. It reads those artefacts, their rules and the base from `pkit rule-sets altered` (the CLI reference, "Rule-set commands"), and keeps no list of paths. Its base is the friction check's, and `--base REF` compares with another.
-- **What is the change's:** for a count, a sentence or a paragraph that holds text the change adds or moves. For a nesting entry, a list item that holds such text in any of its blocks. An item is the change's too when the change alters its marker's line, as an indent alone does. For the other types, the match itself. A break the change only sits beside is left alone, so a page not yet rewritten does not fail the gate.
+- **What is the change's:** for a count, a sentence or a paragraph that holds text the change adds or moves, in any of the paragraph's blocks. For a nesting entry, a list item that holds such text in any of its blocks. A nesting entry's item is the change's too when the change alters its marker's line, as an indent alone does. For the other types, the match itself. A break the change only sits beside is left alone, so a page not yet rewritten does not fail the gate.
   - **Moved text:** text the diff deletes in one place and inserts in another is the change's where it is inserted. Where two blocks of a file swap places, the diff keeps one in place, and only the other is the change's.
   - **A moved file:** a file moved with its content alters nothing in `pkit rule-sets altered`, so the lint does not read it. A file moved with edits is compared with its old self, so only the edits are the change's.
   - **An entry:** the span `pkit rule-sets altered` gives holds the entry's section only. The lint also reads the entry's values from its file's front matter. An entry that reads the whole file reads the lines of the entry's data there.
@@ -132,12 +145,17 @@ Answer what it reports in a pull request like any friction (the friction gate, a
   - A code span's own spaces split no token. So the text joined to a code span up to a space is part of its word, as in `` `pkit`'s ``.
   - Each block ends a sentence: a paragraph, a list item, a table cell and a front-matter value.
   - A line inside a block's text that opens with a number other than 1, as `2026.` does, goes on from the block. In CommonMark, such a list cannot interrupt a paragraph.
-  - A bold label is bold text that opens a block and ends in a colon. A block that is only a label holds no sentence.
+  - A bold label is bold text that opens a block and ends in a colon or a full stop, such as `**2a.**`. RS-WRITE-005's *How* counts no bold label, so a label holds no sentence, and a block that is only a label holds none at all.
   - A quoted example of a broken rule runs from the first quotation mark to the last, in a block labelled "Breaks the rule".
   - Every text value of the front matter is read, except inside the methodology's `pkit` container. Its answers are never rewritten for style (RS-WRITE-013).
   - Only fenced code is a code block. A fence closes on a bare fence of its own character, at least as long as the one that opened it. A fence opened in a block quote closes there, or where the quote ends.
   - A block quote's words count, and its text is quoted, so RS-WRITE-008 exempts its semicolons.
   - An HTML comment is not read, and a setext heading is a heading. For a count, a bare URL and an HTML entity are tokens like any other. A link's target is part of its link's last token. No pattern searches them, so a URL holds no semicolon.
+- **How it counts a paragraph:** RS-WRITE-007's at most four sentences, in a paragraph as that rule's *How* reads one. That *How* counts a list item as one paragraph, and exempts table cells. Where the *How* is silent, the lint reads as follows:
+  - A list item is one paragraph with every block indented to its text.
+  - A nested item is a paragraph of its own, and so is each paragraph of a block quote, inside an item too.
+  - Any other block is one paragraph alone, a front-matter value included.
+  - A paragraph's finding names the line of its first word.
 - **How it counts levels:** a list's levels as RS-WRITE-017's *How* counts them. Where the *How* is silent, it counts as follows:
   - An item is inside another while it is indented to that item's text. The text starts after the marker and the spaces that follow it. Where more than four columns follow, or nothing else on the line, it starts one column after the marker. A tab reaches the next multiple of four columns.
   - A line that starts a block closes each item it is not indented to. So a paragraph, a heading, a table or a fence at the margin closes every item. A line that goes on from the line before it closes none, even at the margin.
@@ -163,6 +181,28 @@ Each mechanical part of a rule is an entry in `scripts/prose-lint.yaml`, of one 
 - the deploy skips the agent, for the reason it prints.
 
 To fix a copy, run `.pkit/adapters/claude-code/deploy-agents.sh` and commit what it changes in `.claude/agents/`. A rerun skips a skipped agent again, so its finding carries the remediation the deploy prints. Follow it, then run the deploy and commit what it changes. The check exits 0 when it finds nothing, 1 on a finding, and 2 when it cannot run.
+
+**The pages' console fences** (#1807, #2098). A page shows a command and its output in a `console` fence, each command after the prompt `$ ` ([living-docs:DEC-002](.pkit/capabilities/living-docs/decisions/DEC-002-visual-elements.md) point 6). The aggregator's `console fences` line runs each such fence as a test, with the doc-examples capability's run: `uv run python .pkit/capabilities/doc-examples/scripts/run-examples.py`. The contract a page is written against is in [the capability's README](.pkit/capabilities/doc-examples/README.md). The run reads the documents of living-docs' page type, `living-docs:page`, its default.
+
+- **project-kit's scratch project:** the setup step in `.pkit/capabilities/doc-examples/project/config.yaml` builds it. It is a repository with project-kit installed from your checkout by `pkit init`, and committed. Git there reads only the scratch home's configuration, which signs nothing and allows no SSH.
+- **Its environment:** `pkit` is your checkout's, since `uv run` puts the checkout's environment first on your `PATH`. uv gets a cache of its own in the run's scratch area, which fills from the network once for each run. No Python run writes bytecode, so nothing a command imports from your checkout writes in the repository.
+- **The version:** `<VERSION>` stands for your checkout's version, the one `.pkit/VERSION` holds and project-kit's commands print.
+- **New output:** `uv run python .pkit/capabilities/doc-examples/scripts/run-examples.py --update` writes each command's new output into its page. Review the new output as any change to the page.
+
+Name pages to run only those, such as `uv run python .pkit/capabilities/doc-examples/scripts/run-examples.py README.md`. The run exits 0 when every fence matches, 1 when one fails, and 2 when it cannot start ([the capability's README, "The run"](.pkit/capabilities/doc-examples/README.md#the-run)).
+
+**The pages' contents lists** (#2053). A page a reader moves around in, such as a long guide or a reference, holds a contents list of its second-level sections near its top. The aggregator's `contents lists` line, `uv run python scripts/page_contents.py`, fails on a list that is stale. The line reads the same pages as the console fences' line.
+
+- **How a page opts in:** the page holds two markers, each alone on its line outside fenced code. They are `<!-- pkit:contents -->` and, below it, `<!-- /pkit:contents -->`. A host renders both as nothing, since each is an HTML comment.
+- **Where the markers go:** put them under a second-level heading of their own, such as `## Contents`, after the page's opening paragraph. A rename then changes only the Contents section, not the page's lead. Markers in the lead work too, and their list names every second-level section.
+- **What the list holds:** one item for each second-level heading, in the page's order, linked to the heading's address. The section that holds the markers is left out. A heading is an ATX heading outside fenced code, as the backbone reads one. The item shows the heading's text, with a link in it read as its words.
+- **The address:** the one GitHub renders for the heading. The heading's text loses its markup, and keeps a code span's text and a link's words. That text takes the backbone's slug, with its underscores kept. A second heading of any level with the same address takes `-1`, and a third takes `-2`.
+- **A section anchor's slug:** drops underscores and numbers no repeated heading (COR-050 point 2). So a section anchor's slug and the list's address for one heading can differ.
+- **An explicit anchor:** a page may keep an anchor for a section's old address, such as `<a id="old-address"></a>` on the line before the heading. Such an anchor changes no item: the item links the heading's own address.
+- **A refresh:** `uv run python scripts/page_contents.py --update` writes each stale list between its markers, and changes nothing else in the page. Commit the list with the change that adds, renames or moves a section.
+- **What fails:** a stale list, and markers that make no one pair. Examples are a marker alone, a closing marker above its opening one, and a second pair. `--update` writes no list in a page whose markers fail.
+
+Name pages to check only those, such as `uv run python scripts/page_contents.py README.md`. The script exits 0 when every list is fresh, when no page holds one, or when `--update` wrote every stale list. It exits 1 on any other finding, and 2 when it cannot start.
 
 **Optional task runner.** A [`mise.toml`](mise.toml) provides convenience aliases over the underlying `uv run ...` commands — `mise tasks` lists them, `mise run check` runs the lint/format/typecheck/test bundle. After cloning, run `mise trust` once to enable the task runner: mise gates untrusted config by design, so a fresh clone prints a "not trusted" error on every shell until you do. Not using mise? Run the `uv run ...` commands (or `./scripts/check.sh`) directly — mise is sugar, not a requirement.
 
@@ -197,32 +237,16 @@ Core records are kit-owned. They sync into every adopting project. Adding one me
 
 1. **Pick the next COR number** in `.pkit/decisions/core/`. Numbering is independent of `project/`.
 2. **Create `COR-NNN-slug.md`** with the schema and four sections described in `.pkit/decisions/README.md`.
-3. **Open as `proposed`** if discussion is still open; promote to `accepted` once agreed.
-4. **Respect the discipline below** — both axiom and project-neutrality.
+3. **Open as `proposed`** while it is discussed in its change; the maintainer accepts it there, its named edits follow, and it reaches the default branch accepted (COR-066 points 1 and 5).
+4. **Respect the disciplines a core record follows.** They live in the decisions README, ["Writing a record"](.pkit/decisions/README.md#writing-a-record), which ships to every adopter, so an adopter's agent finds them there too. Every record leads with meaning, holds principles, not inventory, and names the role rather than its current holder. A core record also follows the axiom discipline and project-neutrality, the methodology maintainers' case. The sections below keep only what is project-kit's own.
 
 ### Axiom discipline
 
-The `core/` corpus is treated as an axiom system. A record may use only:
-
-- terms defined in an earlier record in the same corpus, or
-- generic English / filesystem / Markdown vocabulary, or
-- references to external tools or specifications named explicitly (e.g. Claude Code, Yeoman).
-
-It must not lean on tooling, commands, or conventions that the kit itself has not yet recorded a decision about. Concretely: do not use `pkit sync`, `pkit init`, `pkit` or any other kit-internal command name inside core records until that name is decided in its own record. Use generic phrasing instead — "the kit's sync operation", "first-time install", "the kit's CLI" — or defer the discussion to a future record.
-
-When a record needs to reach for something not yet defined, the right move is either to introduce that concept in its own earlier record or to defer the topic to a future one. Forward-pointer "see also" references are fine for navigation, but no record should *depend* on a later one. One exception: a record refined in place may cite a later accepted record, if the citation states what the refinement adds and the record's original decision still reads without the later records.
-
-This keeps the corpus self-supporting: any reader can start at COR-001 and follow forward without needing to know what the kit's CLI eventually looks like, what its sync mechanism is named, or what its distribution channel will be.
+Stated in the decisions README, ["Writing a record"](.pkit/decisions/README.md#writing-a-record). In project-kit's core records it means no `pkit sync`, `pkit init` or other command name of the CLI until a record decides that name. Write "the sync operation", "first-time install" or "the CLI" instead, or defer the topic to a later record.
 
 ### Project-neutrality
 
-A core record must be **project-neutral**: written from the perspective of any project that adopts the kit. It describes rules, contracts, and conventions that every adopter follows.
-
-Project-kit-specific decisions — how project-kit-the-project itself is built, the fact that it self-hosts, the choice of CLI binary name `pkit`, the choice of templating engine, the distribution channel — belong in `.pkit/decisions/project/` as PRJ records (project-kit's own project-side decisions), not in `core/`.
-
-The test: would this record make sense, and feel applicable, when read in an arbitrary adopting project's repo? If yes → COR. If it leaks project-kit's internals → PRJ.
-
-The same test applies to every artifact kind that has a core / project split, not just decision records. **Rules** in `.pkit/rules/{core,project}.md`, **skills** in `.pkit/skills/{core,project}/`, **agents** in `.pkit/agents/{core,project}/`, **hook providers** (with the `project > bundle > adapter > core` precedence in COR-013) — for all of them, an artifact ships in the core layer if and only if it would be useful to an arbitrary adopter. If it relies on a specific project's tooling, structure, or conventions, it lives in the project namespace instead. Bundle-specific content moves to that bundle's documentation; harness-specific content goes to the adapter's. When extending the methodology with a new artifact kind, apply the same question. (Codified as COR-014; see that record for the principle named explicitly.)
+Stated in the decisions README, ["Writing a record"](.pkit/decisions/README.md#writing-a-record), with COR-014 extending its test to every artifact kind that has a core / project split. project-kit's own choices, such as the CLI binary's name `pkit`, the templating engine, the distribution channel and self-hosting, are PRJ records in `.pkit/decisions/project/`.
 
 Adopter-relevance heuristic for the open questions:
 
@@ -236,35 +260,16 @@ Adopter-relevance heuristic for the open questions:
 
 ### Principles, not inventory
 
-A COR captures **durable principles** — rules among viable alternatives, with the rationale that distinguishes them. It does not enumerate operational state: path mappings, command lists, file lists, the current set of bundles, the current set of artifact types.
-
-Operational state belongs in reference docs: per-area READMEs (`.pkit/cli/README.md`, `.pkit/lifecycle/README.md`, …), the install/sync manifest, area-specific spec files. The COR cross-references the reference doc; the doc owns the listing.
-
-Inventory pinned inside a COR has two costs:
-
-- **Brittleness** — every content addition forces a COR edit. The record turns into a tracking doc rather than a decision.
-- **Conflation** — the decision (the rule that governs membership) gets mixed with its application (the current members). Future readers can't tell which sentences are load-bearing rules and which are just state.
-
-Examples in the corpus to read for shape:
+Stated in the decisions README, ["Writing a record"](.pkit/decisions/README.md#writing-a-record). Two core records to read for its shape:
 
 - **COR-003** — captures the *principles* for assigning a mechanism + delivery to any artifact type. It does not list which paths use which mechanism. The actual path-to-mechanism map lives in each area's README plus the install/sync manifest.
 - **COR-004** — captures the *design rules* for the CLI command surface (one operation per command, merge as a command of its own, init is one-shot, etc.). It does not list the current commands. The command list lives in `.pkit/cli/README.md`.
 
-**Pre-draft check.** Before writing a COR, list every piece of content that might land in it and tag each as either a *rule among alternatives* (decision-worthy, with rationale) or *current state* (inventory, will change as content lands). Inventory gets one cross-reference line in the COR, not enumeration. If an item sits ambiguously between the two, default to inventory unless the *why* is non-obvious and contested.
-
-When the boundary blurs and a single area's specifics outgrow a general COR, that area earns its own focused record — not by stuffing more state into the existing one. Workflow bundles is the most likely first such split.
+When the boundary blurs and a single area's specifics outgrow a general COR, that area earns its own focused record — not by stuffing more state into the existing one.
 
 ### Lead with meaning
 
-A record earns its keep only if a reader can grasp what it decides. Correctness is necessary but not sufficient — a record that is accurate yet unreadable has failed, because the reader can't extract the decision without reverse-engineering it.
-
-So every record **leads with meaning**:
-
-- **A short, declarative title.** State the decision, not a clause-stacked description of its mechanism. "Capabilities contribute permission grants through a model-composed fragment" — not a twenty-five-word run-on naming every layer.
-- **A plain-language summary first.** Open with what the record decides and why it matters, in prose a reader grasps in under a minute, *before* the rigor. The detailed decision, the layering, the citations, and the rejected alternatives come **after** the summary — not instead of it.
-- **Cross-references serve the sentence.** Cite what a point actually needs — roughly one reference per point. A sentence carrying five bracketed citations buries its own meaning; the reader chases links instead of learning the substance. Reference by meaning first, then the identifier (the authoring twin of `.pkit/rules/core.md`'s reference-by-meaning rule).
-
-This is a principle, not a style sheet: don't pad records with mandated boilerplate, and don't strip the rigor — keep the depth, but put a readable on-ramp in front of it. The failure mode it guards against is the wall-of-jargon record whose decision is unrecoverable on a first read.
+Stated in the decisions README, ["Writing a record"](.pkit/decisions/README.md#writing-a-record).
 
 ---
 

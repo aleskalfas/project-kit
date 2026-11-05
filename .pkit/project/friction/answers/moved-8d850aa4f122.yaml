@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-007
+    revalidated:
+      at: 2026-10-24T10:40:00Z
+      outcome: unchanged
+      unchanged-because: DEC-004's refinement changes point 7, the record's summary and its Rationale, on the term links. Points 4 and 6 read as they did, so a view's number holds as this rule says.

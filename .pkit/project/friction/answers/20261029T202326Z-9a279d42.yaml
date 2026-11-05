@@ -1,0 +1,86 @@
+answers:
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-005-reading-writes-nothing.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T152404Z-888b608a.yaml
+    revalidated:
+      at: 2026-10-29T20:25:02Z
+      outcome: unchanged
+      unchanged-because: "Two changes answered it apart: one took the backbone's rule-set folder out of the report tests that need a dormant or exact measure, one ran process health's predicates in the test's own process. Judged together with this change, which lays the report tests' history on an install committed once per session, it holds. The read-only test still runs debt and explain over a tree with uncommitted edits and finds every file's bytes and mode as they were, .git included. Process health's test still finds that it writes nothing."
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-019-reading-document-versioned.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+    revalidated:
+      at: 2026-10-29T20:23:43Z
+      outcome: unchanged
+      unchanged-because: The tests of the whole-repository check, the debt, the explanation and the report body now lay their history on an install committed once per session, and the report body's script runs its main in the test's own process. They still find schema_version in each document, and the script still refuses a document of schema version 2, naming it.
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-018-same-json-same-state.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+    revalidated:
+      at: 2026-10-29T20:23:55Z
+      outcome: unchanged
+      unchanged-because: The tests of the whole-repository check, the debt and the explanation now lay their history on an install committed once per session, and a resolver runs in the test's own process. What they check of one state giving the same document twice is as it was.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-020-dead-anchor-error.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+    revalidated:
+      at: 2026-10-29T20:24:11Z
+      outcome: unchanged
+      unchanged-because: The tests of the whole-repository check now lay their history on an install committed once per session. What they check of a dead anchor, every one reported and the artefact judged on its other anchors, is as it was.
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T013912Z-adb73078.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113029Z-9dec9cb8.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T145906Z-a3781d7a.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T152404Z-888b608a.yaml
+      - 20261029T155317Z-2d90650e.yaml
+      - 20261029T155559Z-74f6b0d1.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T160608Z-f0e5731a.yaml
+      - 20261029T190551Z-85ee9700.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+    revalidated:
+      at: 2026-10-29T20:45:30Z
+      outcome: unchanged
+      unchanged-because: This change adds to tests/README.md the times of friction's repository, report and derived-link modules, measured before and after their conversion. CONTRIBUTING points at that README for writing tests and running the suite, and states nothing the paragraph changes, so it holds as main words it.
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-055
+          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the paragraph on landing through the queue does not say. #1779 builds it and rewrites it."

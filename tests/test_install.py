@@ -11,6 +11,7 @@ file layout — they're invoked separately and need a real
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -20,7 +21,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from project_kit import agents_overlay, install
+from project_kit import agents_overlay, install, router
 from project_kit.cli import main
 
 
@@ -676,72 +677,111 @@ def _install_the_readme_recommends() -> str:
     return _first_code_block_after(section, "Then install `pkit`")
 
 
-def _next_steps_lines(capsys: pytest.CaptureFixture[str]) -> list[str]:
-    install._print_next_steps()
+def _next_steps_lines(
+    capsys: pytest.CaptureFixture[str],
+    *,
+    pkit_found: bool = False,
+    settings_backed_up: bool = False,
+) -> list[str]:
+    """The next steps `init` closes with, each line stripped. By default no
+    `pkit` is on the PATH, so the install step is among them."""
+    ctx = install.InstallContext(
+        target_root=Path("."), source_kit=install.find_source_kit(), dry_run=False
+    )
+    install._print_next_steps(ctx, settings_backed_up=settings_backed_up, pkit_found=pkit_found)
     return [line.strip() for line in capsys.readouterr().out.splitlines()]
+
+
+def _install_of_a_release_the_cli_reference_gives() -> str:
+    """The command in the first code block after "**A given release" in the CLI
+    reference's section "Installing pkit on PATH", its placeholder as written."""
+    reference = (install.find_source_kit() / "cli" / "README.md").read_text(encoding="utf-8")
+    section = reference.split("\n## Installing pkit on PATH\n", 1)[1].split("\n## ", 1)[0]
+    return _first_code_block_after(section, "**A given release")
 
 
 def test_init_recommends_the_install_the_cli_reference_recommends(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """`init`'s closing next steps and the CLI reference recommend one install
-    (PRJ-004), so following either gives the same pkit. The reference writes the
-    release as a placeholder, and init fills in its own version."""
+    (PRJ-004), so following either gives the same pkit: the highest release,
+    through the tag `latest`."""
     recommended = _install_the_cli_reference_recommends()
-    assert _VERSION_PLACEHOLDER in recommended
+    assert recommended == f"uv tool install {install.DISTRIBUTION_GIT_URL}@latest"
 
+    assert recommended in _next_steps_lines(capsys)
+
+
+def test_init_prints_the_install_of_the_latest_tag_not_its_own_version(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The printed install names `@latest`, the tag the release-tag workflow keeps
+    on the highest release's commit (PRJ-004, #2052), not the running pkit's
+    version, which ages."""
     lines = _next_steps_lines(capsys)
 
-    assert recommended.replace(_VERSION_PLACEHOLDER, install.running_version()) in lines
+    assert f"uv tool install {install.DISTRIBUTION_GIT_URL}@latest" in lines
+    assert not any(line.endswith(f"@v{router.running_version()}") for line in lines)
 
 
-def test_init_prints_the_install_tagged_with_its_own_version(
-    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+def test_init_says_a_clone_holding_an_old_latest_must_force_fetch_it(
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """The printed install names `@v<the running pkit's version>`, so the version
-    a project records names the content it holds (PRJ-004, ADR-065 point 12)."""
-    monkeypatch.setattr(install, "running_version", lambda: "9.8.7")
+    """git moves no tag a clone already holds, while `uv tool install` fetches
+    the ref afresh: the hint says so in one sentence."""
+    text = " ".join(_next_steps_lines(capsys))
 
-    lines = _next_steps_lines(capsys)
+    assert (
+        "uv fetches `latest` afresh, while a git clone that holds an old `latest` "
+        "must force-fetch it." in text
+    )
 
-    assert f"uv tool install {install.DISTRIBUTION_GIT_URL}@v9.8.7" in lines
 
-
-def test_init_does_not_print_the_untagged_install(
-    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_init_does_not_print_the_untagged_install(capsys: pytest.CaptureFixture[str]) -> None:
     """The install from main is the development install, which no version vouches
-    for, so init never recommends it."""
-    monkeypatch.setattr(install, "running_version", lambda: "9.8.7")
+    for, so init never recommends it: every install it prints names a ref."""
+    installs = [line for line in _next_steps_lines(capsys) if line.startswith("uv tool install")]
 
-    lines = _next_steps_lines(capsys)
+    assert installs
+    assert all(line.rpartition(".git")[2].startswith("@") for line in installs)
 
-    assert not any(line.startswith("uv tool install") and "@v" not in line for line in lines)
+
+def test_recommended_install_command_names_the_latest_tag() -> None:
+    assert (
+        install.recommended_install_command()
+        == f"uv tool install {install.DISTRIBUTION_GIT_URL}@latest"
+    )
 
 
-@pytest.mark.parametrize(
-    ("version", "command"),
-    [
-        ("1.149.0", f"uv tool install {install.DISTRIBUTION_GIT_URL}@v1.149.0"),
-        ("2.0.0", f"uv tool install {install.DISTRIBUTION_GIT_URL}@v2.0.0"),
-    ],
-)
-def test_recommended_install_command_names_the_release_tag(version: str, command: str) -> None:
-    assert install.recommended_install_command(version) == command
+def test_the_cli_reference_gives_the_install_of_a_given_release() -> None:
+    """Beside the recommended `@latest`, the reference names the release tag
+    form, `@v<version>`, for a project that needs another release."""
+    assert _install_of_a_release_the_cli_reference_gives() == (
+        f"uv tool install {install.DISTRIBUTION_GIT_URL}@v{_VERSION_PLACEHOLDER}"
+    )
+
+
+def test_the_cli_reference_says_a_clone_holding_an_old_latest_must_force_fetch_it() -> None:
+    reference = (install.find_source_kit() / "cli" / "README.md").read_text(encoding="utf-8")
+    section = reference.split("\n## Installing pkit on PATH\n", 1)[1].split("\n## ", 1)[0]
+
+    assert "force-fetch" in section
+    assert "git fetch --force origin tag latest" in section
 
 
 def test_the_readme_recommends_the_install_the_cli_reference_recommends() -> None:
-    """The README's install line names the tag too, as the CLI reference does."""
+    """The README's install line names the tag `latest`, as the CLI reference does."""
     assert _install_the_readme_recommends() == _install_the_cli_reference_recommends()
 
 
-def test_the_dispatchers_install_advice_names_the_release_tag() -> None:
-    """`.pkit/cli/pkit` advises installing pkit in two errors. Each names the tag."""
+def test_the_dispatchers_install_advice_names_the_latest_tag() -> None:
+    """`.pkit/cli/pkit` advises installing pkit in two errors. Each gives the
+    install `init` prints, of the tag `latest`."""
     dispatcher = (install.find_source_kit() / "cli" / "pkit").read_text(encoding="utf-8")
-    advised = re.findall(r"^\s*uv tool install (\S+)$", dispatcher, re.MULTILINE)
+    advised = re.findall(r"^\s*(uv tool install \S+)$", dispatcher, re.MULTILINE)
 
     assert len(advised) == 2
-    assert all(url == f"{install.DISTRIBUTION_GIT_URL}@v{_VERSION_PLACEHOLDER}" for url in advised)
+    assert all(command == install.recommended_install_command() for command in advised)
 
 
 def test_the_cli_reference_names_the_install_from_main_the_development_install() -> None:
@@ -749,3 +789,182 @@ def test_the_cli_reference_names_the_install_from_main_the_development_install()
     section = reference.split("\n## Installing pkit on PATH\n", 1)[1].split("\n## ", 1)[0]
 
     assert _first_code_block_after(section, "**The development install") == _UNTAGGED_INSTALL
+
+
+# ── each next step holds for the project init set up (#2083) ──────────────
+
+_STEP = re.compile(r"^(\d+)\. ")
+
+
+def _step_numbers(lines: list[str]) -> list[int]:
+    return [int(m.group(1)) for line in lines if (m := _STEP.match(line))]
+
+
+def test_init_leaves_out_the_install_step_where_pkit_is_on_the_path(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A pkit on the PATH already serves the machine, so init names no install."""
+    lines = _next_steps_lines(capsys, pkit_found=True)
+
+    assert not any("Install pkit on PATH" in line for line in lines)
+    assert not any(line.startswith("uv tool install") for line in lines)
+    assert _step_numbers(lines)[0] == 1
+
+
+def test_init_names_the_install_step_where_no_pkit_is_on_the_path(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    lines = _next_steps_lines(capsys, pkit_found=False)
+
+    assert "1. (Once per machine) Install pkit on PATH:" in lines
+    assert install.recommended_install_command() in lines
+
+
+@pytest.mark.parametrize("pkit_found", [True, False])
+def test_init_numbers_its_steps_in_order_and_names_the_private_step(
+    capsys: pytest.CaptureFixture[str], pkit_found: bool
+) -> None:
+    """With the install step in or out, the steps run 1, 2, 3 … and the
+    `.gitignore` step points at the step that keeps pkit private."""
+    lines = _next_steps_lines(capsys, pkit_found=pkit_found)
+    numbers = _step_numbers(lines)
+
+    assert numbers == list(range(1, len(numbers) + 1))
+    private = next(
+        m for line in lines if "To keep pkit private" in line and (m := _STEP.match(line))
+    )
+    assert f"(step {private.group(1)})" in " ".join(lines)
+
+
+def _folder_with_pkit(folder: Path) -> Path:
+    folder.mkdir()
+    pkit = folder / "pkit"
+    pkit.write_text("#!/bin/sh\n", encoding="utf-8")
+    pkit.chmod(0o755)
+    return folder
+
+
+def test_pkit_on_path_finds_a_pkit_installed_on_the_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    installed = _folder_with_pkit(tmp_path / "bin")
+
+    monkeypatch.setenv("PATH", str(empty))
+    assert install.pkit_on_path() is False
+    monkeypatch.setenv("PATH", os.pathsep.join([str(empty), str(installed)]))
+    assert install.pkit_on_path() is True
+
+
+def test_pkit_on_path_does_not_count_the_running_environments_own_pkit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`uv run`, which the source dispatcher's bootstrap uses, and `uvx` put the
+    running environment's scripts first on the PATH for one run. That `pkit` is
+    gone in the next shell, so init still names the install."""
+    own = _folder_with_pkit(tmp_path / "env-bin")
+    monkeypatch.setattr(install, "_running_scripts_folder", lambda: own)
+
+    monkeypatch.setenv("PATH", str(own))
+    assert install.pkit_on_path() is False
+
+    installed = _folder_with_pkit(tmp_path / "local-bin")
+    monkeypatch.setenv("PATH", os.pathsep.join([str(own), str(installed)]))
+    assert install.pkit_on_path() is True
+
+
+def test_pkit_on_path_skips_the_scripts_of_the_environment_running_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unpatched: a PATH of the running environment's scripts alone, as `uv run`
+    gives the bootstrap, finds no installed pkit, whether or not that folder
+    holds one."""
+    monkeypatch.setenv("PATH", str(install._running_scripts_folder()))
+
+    assert install.pkit_on_path() is False
+
+
+def test_pkit_on_path_finds_a_link_into_another_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`uv tool install` links `pkit` from a folder of its own into the tool's
+    environment. Folders are compared, not where the link resolves, so running
+    from that environment still finds the install."""
+    own = _folder_with_pkit(tmp_path / "tool-env-bin")
+    linked = tmp_path / "local-bin"
+    linked.mkdir()
+    (linked / "pkit").symlink_to(own / "pkit")
+    monkeypatch.setattr(install, "_running_scripts_folder", lambda: own)
+    monkeypatch.setenv("PATH", str(linked))
+
+    assert install.pkit_on_path() is True
+
+
+def test_init_names_no_capability_configuration(capsys: pytest.CaptureFixture[str]) -> None:
+    """First install installs no capability, so no step names a capability's
+    configuration."""
+    lines = _next_steps_lines(capsys)
+
+    assert not any(".pkit/capabilities/" in line for line in lines)
+    assert ".pkit/adapters/claude-code/settings/project/settings.json" in lines
+
+
+@pytest.mark.parametrize("backed_up", [True, False])
+def test_init_names_the_settings_backup_only_where_it_made_one(
+    capsys: pytest.CaptureFixture[str], backed_up: bool
+) -> None:
+    text = " ".join(_next_steps_lines(capsys, settings_backed_up=backed_up))
+
+    assert ("settings.json.pre-pkit" in text) is backed_up
+    assert "Review .claude/settings.json" in text
+
+
+def test_init_says_why_it_leaves_the_gitignore_lines_to_the_project(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """pkit never writes the project's `.gitignore` (ADR-009), and the step says so."""
+    text = " ".join(_next_steps_lines(capsys))
+
+    assert "your .gitignore is your project's own file, which pkit never writes (ADR-009)" in text
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_install_kit_names_no_backup_where_no_settings_predate_it(
+    tmp_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    install.install_kit(tmp_target)
+
+    out = capsys.readouterr().out
+    assert not (tmp_target / ".claude" / "settings.json.pre-pkit").exists()
+    assert "pre-pkit" not in out
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_install_kit_backs_up_settings_that_predate_it_and_names_the_backup(
+    tmp_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    settings = tmp_target / ".claude" / "settings.json"
+    settings.parent.mkdir()
+    settings.write_text("{}\n", encoding="utf-8")
+
+    install.install_kit(tmp_target)
+
+    out = capsys.readouterr().out
+    assert (tmp_target / ".claude" / "settings.json.pre-pkit").read_text(encoding="utf-8") == "{}\n"
+    assert "Backup at .claude/settings.json.pre-pkit" in out
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+@pytest.mark.parametrize("found", [True, False])
+def test_install_kit_asks_the_path_for_pkit_before_naming_its_install(
+    tmp_target: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    found: bool,
+) -> None:
+    monkeypatch.setattr(install, "pkit_on_path", lambda: found)
+
+    install.install_kit(tmp_target)
+
+    assert ("Install pkit on PATH" in capsys.readouterr().out) is not found

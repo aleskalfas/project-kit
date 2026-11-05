@@ -1,0 +1,266 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-authorisation
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T173643Z-b8011dea.yaml
+    revalidated:
+      at: 2026-10-28T20:56:54Z
+      outcome: unchanged
+      unchanged-because: DEC-006 gains a line naming the passages DEC-062 overturns, where a project's map puts state on its board or a present map leaves state out, and implications on the board's Status a move writes. Its authorisation gates stand as they were, the move back among them, so an authorisation still covers each move a person holds as the term defines it.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-cascade
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+    revalidated:
+      at: 2026-10-28T20:56:57Z
+      outcome: unchanged
+      unchanged-because: "DEC-006 adds that the forward cascade writes each parent's Status where the substrate map puts state on the board. The cascade's moves stand as the term defines them: forward only, each issue above brought level where it is behind, a parent offered for closing and never closed."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-classification-axis
+    revalidated:
+      at: 2026-10-28T20:57:00Z
+      outcome: unchanged
+      unchanged-because: DEC-012 gains a line naming DEC-062, which puts priority and workstream on a board field only where the substrate map binds them there, rather than wherever a board exists. An axis is still carried as a label or a board field, and a label still always carries type.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-workstream
+    read:
+      - moved-fa8beb8be8cb.yaml
+    revalidated:
+      at: 2026-10-28T20:57:02Z
+      outcome: unchanged
+      unchanged-because: DEC-012 gains a line naming DEC-062, which puts the workstream on a board field only where the substrate map binds it there, rather than wherever a board exists. The workstreams file, the values it declares and the label of the example stand as they were.
+  - artefact: tech-docs/analysis/project-management/domain-model/020-classification-of-issues.md
+    read:
+      - 20261028T013353Z-b3364ebc.yaml
+    revalidated:
+      at: 2026-10-28T20:57:05Z
+      outcome: unchanged
+      unchanged-because: The view says an axis is carried on a label, or on a field of a board where the project keeps one. That holds with the substrate map, rather than a board's existence, putting an axis on the board, since such a binding needs a board.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T184858Z-f36698cb.yaml
+    revalidated:
+      at: 2026-10-28T20:57:08Z
+      outcome: unchanged
+      unchanged-because: DEC-006 gains a line naming the passages DEC-062 overturns, where a project's map puts state on its board or a present map leaves state out, and implications on the board's Status a move writes. The moves a person holds and their gates stand as they were, the move back among them, so the statement and its measure hold as written.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+    revalidated:
+      at: 2026-10-28T20:57:14Z
+      outcome: unchanged
+      unchanged-because: The agent gives each Task its workstream and its kind of work. DEC-012 gains a line naming DEC-062, under which the substrate map rather than a board's existence puts an axis on the board. That leaves the values a Task takes as they were, and no step here reads where an axis is carried.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+    revalidated:
+      at: 2026-10-28T20:57:16Z
+      outcome: unchanged
+      unchanged-because: The use case needs only that a filed Task carries its workstream. DEC-012 gains a line naming DEC-062, under which the substrate map rather than a board's existence puts the axis on the board, and every Task still carries a value on it.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+    revalidated:
+      at: 2026-10-28T20:57:19Z
+      outcome: unchanged
+      unchanged-because: A seat's scope matches a Task's kind of work and workstream, values DEC-012 leaves as they stood. It gains only a line naming DEC-062, under which the substrate map rather than a board's existence puts an axis on the board.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+    revalidated:
+      at: 2026-10-28T20:57:22Z
+      outcome: unchanged
+      unchanged-because: The use case needs only that the Task is filed in the lead's scope, by its classification values. DEC-012 gains a line naming DEC-062, under which the substrate map rather than a board's existence puts an axis on the board, and those values stand as they were.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T020848Z-91131abb.yaml
+      - 20261028T040414Z-bea9746a.yaml
+      - 20261028T173643Z-b8011dea.yaml
+    revalidated:
+      at: 2026-10-28T20:57:25Z
+      outcome: unchanged
+      unchanged-because: The plan gives each issue a value on each axis and schedules it with promote-issue. DEC-006 and DEC-012 gain lines naming DEC-062, which changes where an open issue's state and an axis are kept, and DEC-006 gains implications on the Status a move writes. None of it changes the values a plan gives or the scheduling gate.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+    revalidated:
+      at: 2026-10-28T20:57:28Z
+      outcome: unchanged
+      unchanged-because: Step 7 and its variants write the workstream's label, or the board's field where the board carries the axis. DEC-012 and DEC-051 gain lines naming DEC-062, under which the substrate map rather than a board's existence puts the axis on the board, and DEC-051 adds the read of a board-carried state. Neither changes that those steps write the substrate that carries the axis.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-060-file-task.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+    revalidated:
+      at: 2026-10-28T20:57:30Z
+      outcome: unchanged
+      unchanged-because: The Task takes a value on each axis, and variant 6d files it under an advisory hierarchy. DEC-036 gains an arm for the kit's own labels and keys its rule against an unmanaged label on the bindings, and DEC-012 gains a line naming DEC-062, which moves board carriage into the substrate map. Neither changes a step of the filing.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T143058Z-33fd32cd.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+    revalidated:
+      at: 2026-10-28T20:57:44Z
+      outcome: unchanged
+      unchanged-because: "This change refines and adds records and changes no command, so each section still describes the commands as they behave, the board flag's carriage of the axes among them. #2271 builds DEC-051 point 6 and DEC-062, and rewrites the board mode and lifecycle sections with them."
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-issue-lifecycle
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T184858Z-f36698cb.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-006
+          reason: "DEC-062 overturns DEC-006's projection sentence in two cases. Where a project's map puts state on its board, the board's Status is the source of an open issue's position, and where a present map leaves state out, the agent keeps no projection on the board. So the entry's line that a board's Status column is a projection of the state, which the state the issue carries wins over, holds only by default. #2271 builds that read and rewords the distinction."
+  - artefact: tech-docs/analysis/project-management/domain-model/030-the-issue-lifecycle.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T173643Z-b8011dea.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-006
+          reason: "DEC-062 overturns DEC-006's projection sentence where a project's map puts state on its board, so the view's line that the state the issue carries wins over a board's Status column holds only by default. #2271 builds that read and rewords the line."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-006
+          reason: "Step 2 says the Task itself carries its state, citing DEC-006. DEC-062 overturns DEC-006's projection sentence where a project's map puts state on its board, making the board's Status the source of an open Task's position there. #2271 builds that read and rewords the step."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-006
+          reason: "DEC-006 has a move, and the forward cascade, write the board's Status where the substrate map puts state on the board, with the read of that state or after it, and no variant here does yet. Its top line has the agent write no Status where a present map leaves state out or marks it unsupported, so variant 4a, which sets the card's Status wherever the board does not carry the state, no longer holds there. #2271 turns those writes off and rewords variant 4a, and step 3 of #2243 adds the writes for a board-carried state once built."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-012
+          reason: "DEC-012 gains a line naming DEC-062, which overturns the scope note that has the board carry state where the map is silent. Under DEC-062 the board's Status is the source of an open Task's position where the map binds state there, and DEC-051 point 6 has a seat skip, with a warning, a Task whose position there is undetermined, and take nothing where that board cannot be read. This use case has a variant for neither. #2271 builds that read and adds them."

@@ -34,7 +34,7 @@ The agent **self-checks mechanical conformance** to the corpus (it is the only a
 
 ### 5. Empty-tolerance
 
-An absent or empty corpus is a normal early state, not an error. The agent announces "no project conventions found" and proceeds with ordinary good engineering judgment; it never invents project conventions to fill the gap.
+An absent or empty corpus is a normal early state, not an error. The agent announces "no project conventions found" and proceeds with ordinary good engineering judgment; it never invents project conventions to fill the gap (refinement per [software-engineering:DEC-004-skeleton-conventions-in-corpus], for the conventions a walking skeleton sets).
 
 ## Rationale
 
@@ -49,4 +49,4 @@ An absent or empty corpus is a normal early state, not an error. The agent annou
 - **Opt-in.** Adopters who write code install this capability; those who don't, don't. The agent's project-level definition shadows the harness's generic same-named agent (Claude Code subagent precedence).
 - **Adopter setup.** The adopter defines a `project-conventions` category in `.pkit/agents/project/overlay.yaml` pointing at where they keep conventions; `pkit agents reconcile` surfaces it when the agent references it and the overlay does not yet define it. No capability-specific category is seeded into the core overlay.
 - **Documentation currency.** The agents README's core/project split previously classified `software-engineer` as a project-layer example; it is now shipped by this capability. Reconciled in the same change-set.
-- **Deferred** (each pending real evidence, per [COR-007](../../../decisions/core/COR-007-pattern-extraction.md)): the conventions *content* (accretes via an empirical capture loop), cross-capability convention *aggregation* (a consumer reading the union across many installed capabilities), and capability `depends_on`. The seam is designed so these land without changing the consumer.
+- **Deferred** (each pending real evidence, per [COR-007](../../../decisions/core/COR-007-pattern-extraction.md)): the conventions *content* (accretes via an empirical capture loop, and from a walking skeleton's conventions, refinement per [software-engineering:DEC-004-skeleton-conventions-in-corpus]), cross-capability convention *aggregation* (a consumer reading the union across many installed capabilities), and capability `depends_on`. The seam is designed so these land without changing the consumer.

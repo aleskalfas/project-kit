@@ -1,0 +1,41 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: parts
+    layout: slide
+    title: An aside holds a head, a command and a text, each where given
+    visual:
+      use: starter/list
+      item: {use: starter/aside}
+      items:
+        - id: all
+          head: Want it out of your repository?
+          command: "$ pkit visibility private"
+          text: It stays only in your clone, and nothing of it is committed.
+        - id: head-text
+          head: An empty slot
+          text: It does no harm, and the check still passes.
+        - id: command-text
+          command: "$ pkit status"
+          text: It shows what is set up, and what could fill each slot.
+
+  - id: families
+    layout: slide
+    title: It takes its colour from its family
+    visual:
+      use: starter/list
+      item: {use: starter/aside}
+      items:
+        - id: service
+          concept: test-notation/service
+          head: A service
+          command: "$ pkit validate"
+          text: On its family's fill, its bar in the family's line.
+        - id: store
+          concept: test-notation/store
+          head: A store
+          command: "$ pkit visual check"
+          text: Its code block keeps a family of its own.
+        - id: text
+          text: A text alone, with nothing above it.

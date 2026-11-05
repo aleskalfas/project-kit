@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-base
+    revalidated:
+      at: 2026-10-22T22:12:25Z
+      outcome: unchanged
+      unchanged-because: The change check now reads the change's own head from PKIT_CHECK_HEAD, which a pipeline names beside the base. What a base is stays as the definition says.

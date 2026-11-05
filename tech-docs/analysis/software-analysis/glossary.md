@@ -19,7 +19,9 @@ builds-on:
       - {id: TERM-component, name: component}
       - {id: TERM-debt, name: debt}
       - {id: TERM-decision-record, name: decision record}
+      - {id: TERM-declared-surface, name: declared surface}
       - {id: TERM-default-branch, name: default branch}
+      - {id: TERM-deferral, name: deferral}
       - {id: TERM-documentation-root, name: documentation root}
       - {id: TERM-friction, name: friction}
       - {id: TERM-head, name: head}
@@ -41,7 +43,7 @@ builds-on:
         name: Developer
         needs:
           - Revise the analysis before a proposed change is built, naming the design I reviewed and pinning the text I read.
-          - Revalidate the analysis after a change, from an agent's proposed outcome for each flagged artefact, and never rewrite the analysis to match broken code.
+          - Revalidate the analysis after a change, from an agent's proposed revalidation outcome for each flagged artefact, and never rewrite the analysis to match broken code.
           - Describe my existing project from its code, documents and decisions, with an agent deriving candidates that I confirm.
           - Free the ids of artefacts nothing cites, such as an abandoned pilot, so new artefacts may take those ids again.
       - id: ACT-adopter
@@ -55,7 +57,7 @@ builds-on:
 TERM-analysis:
   name: analysis
   status: active
-  definition: "account of what one component must do and for whom, kept as anchored artefacts under the project's internal documentation root"
+  definition: "account of what one separately developed and versioned software unit must do and for whom, kept as anchored artefacts under the project's internal documentation root"
   pkit:
     friction:
       anchors:
@@ -64,6 +66,8 @@ TERM-analysis:
           - .pkit/capabilities/software-analysis/scripts/_lib/analyses.py
         record:
           - software-analysis:DEC-001#2
+          - COR-049#1
+          - COR-050#1
 TERM-artefact-kind:
   name: artefact kind
   noun-forms: [artefact kinds]
@@ -76,6 +80,8 @@ TERM-artefact-kind:
           - .pkit/capabilities/software-analysis/schemas/artefact-kinds.yaml
         record:
           - software-analysis:DEC-001#1
+          - COR-050#2
+          - COR-050#14
 TERM-candidate:
   name: candidate
   noun-forms: [candidates]
@@ -90,6 +96,7 @@ TERM-candidate:
         record:
           - software-analysis:DEC-001#1
           - software-analysis:DEC-001#9
+          - COR-050#1
 TERM-declared-structure:
   name: declared structure
   noun-forms: [declared structures]
@@ -117,6 +124,7 @@ TERM-design-source:
           - .pkit/capabilities/software-analysis/scripts/_lib/pointers.py
         record:
           - software-analysis:DEC-001#6
+          - COR-009#1
 TERM-freed-id:
   name: freed id
   noun-forms: [freed ids]
@@ -129,6 +137,7 @@ TERM-freed-id:
           - .pkit/capabilities/software-analysis/scripts/_lib/numbering.py
         record:
           - software-analysis:DEC-001#3
+          - COR-005
 TERM-hint:
   name: hint
   status: active
@@ -141,6 +150,7 @@ TERM-hint:
           - .pkit/capabilities/software-analysis/scripts/_lib/placeholder.py
         record:
           - software-analysis:DEC-001#1
+          - COR-005
 TERM-revalidation:
   name: revalidation
   noun-forms: [revalidations]
@@ -152,6 +162,7 @@ TERM-revalidation:
         record:
           - software-analysis:DEC-001#4
           - software-analysis:DEC-001#5
+          - COR-050#1
 TERM-revalidation-outcome:
   name: revalidation outcome
   noun-forms: [revalidation outcomes]
@@ -165,6 +176,7 @@ TERM-revalidation-outcome:
           - .pkit/capabilities/software-analysis/scripts/_lib/answers.py
         record:
           - software-analysis:DEC-001#5
+          - COR-050#1
 TERM-revalidation-proposal:
   name: revalidation proposal
   noun-forms: [revalidation proposals]
@@ -177,6 +189,7 @@ TERM-revalidation-proposal:
           - .pkit/capabilities/software-analysis/agents/analysis-resolver/analysis-resolver.md
         record:
           - software-analysis:DEC-001#5
+          - COR-050#1
 TERM-revalidation-record:
   name: revalidation record
   status: active
@@ -189,6 +202,7 @@ TERM-revalidation-record:
           - .pkit/capabilities/software-analysis/scripts/_lib/revalidation.py
         record:
           - software-analysis:DEC-001#6
+          - COR-050#1
 TERM-shortfall:
   name: shortfall
   noun-forms: [shortfalls]
@@ -215,6 +229,7 @@ TERM-tightening:
           - .pkit/capabilities/software-analysis/scripts/_lib/project_structure.py
         record:
           - software-analysis:DEC-001#1
+          - COR-051#1
 TERM-use-case:
   name: use case
   noun-forms: [use cases]
@@ -251,7 +266,9 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [component](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-component--component)
   - **Term:** [debt](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-debt--debt)
   - **Term:** [decision record](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-decision-record--decision-record)
+  - **Term:** [declared surface](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-declared-surface--declared-surface)
   - **Term:** [default branch](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-default-branch--default-branch)
+  - **Term:** [deferral](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-deferral--deferral)
   - **Term:** [documentation root](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-documentation-root--documentation-root)
   - **Term:** [friction](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-friction--friction)
   - **Term:** [head](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-head--head)
@@ -270,7 +287,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [whole-repository check](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-whole-repository-check--whole-repository-check)
   - **Actor:** [Developer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-developer.md)
     - Revise the analysis before a proposed change is built, naming the design I reviewed and pinning the text I read.
-    - Revalidate the analysis after a change, from an agent's proposed outcome for each flagged artefact, and never rewrite the analysis to match broken code.
+    - Revalidate the analysis after a change, from an agent's proposed revalidation outcome for each flagged artefact, and never rewrite the analysis to match broken code.
     - Describe my existing project from its code, documents and decisions, with an agent deriving candidates that I confirm.
     - Free the ids of artefacts nothing cites, such as an abandoned pilot, so new artefacts may take those ids again.
   - **Actor:** [Adopter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-adopter.md)
@@ -286,9 +303,9 @@ Explained in [VIEW-analyses-and-use-cases](domain-model/010-analyses-and-use-cas
 
 **Distinctions:**
 
-- **Documentation for users:** what the [system](../core/glossary.md#term-system--system) does and how to use it, for whoever receives a [component](../core/glossary.md#term-component--component). An analysis is internal documentation for those who develop its component, and never ships with it (DEC-001 point 2).
-- **Decisions and architecture:** how the system is built to do what it must, and why. An analysis states what the system must do, and points at them by anchors, never the reverse (DEC-001 point 11).
-- **Testing:** running the software to see whether it does what a description says. An analysis is judged by reading, and runs nothing (DEC-001 point 7).
+- **Documentation for users:** what the [system](../core/glossary.md#term-system--system) does and how to use it, for whoever receives a unit of software. An analysis is internal documentation for those who develop the unit it describes, and never ships with that unit ([DEC-001 point 2](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them)).
+- **Decisions and architecture:** how the system is built to do what it must, and why. An analysis states what the system must do, and points at them by anchors, never the reverse ([DEC-001 point 11](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#11-scope-boundary-and-how-the-analysis-meets-the-solution)).
+- **Testing:** running the software to see whether it does what a description says. An analysis is judged by reading, and runs nothing ([DEC-001 point 7](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#7-revalidation-is-not-testing)).
 
 ## TERM-artefact-kind — artefact kind
 
@@ -298,18 +315,18 @@ Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.m
 
 **Distinctions:**
 
-- **Artefact type:** the name a place gives each [artefact](../core/glossary.md#term-artefact--artefact) in it, such as `software-analysis:use-case`, for a [rule set](../core/glossary.md#term-rule-set--rule-set)'s scope to select. Each artefact kind lies in a place of its own, which gives one type (DEC-001 point 2).
-- **The revalidation record's kind:** declared beside the artefact kinds, though a [revalidation record](#term-revalidation-record--revalidation-record) is no artefact. It has a [declared structure](#term-declared-structure--declared-structure), but no place, no type and no [tightening](#term-tightening--tightening), and the [capability](../core/glossary.md#term-capability--capability) checks its structure always (DEC-001 point 1).
+- **Artefact type:** the name a place gives each [artefact](../core/glossary.md#term-artefact--artefact) in it, such as `software-analysis:use-case`, for a [rule set](../core/glossary.md#term-rule-set--rule-set)'s scope to select. Each artefact kind lies in a place of its own, which gives one type ([DEC-001 point 2](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them)).
+- **The revalidation record's kind:** declared beside the artefact kinds, though a [revalidation record](#term-revalidation-record--revalidation-record) is no artefact. It has a [declared structure](#term-declared-structure--declared-structure), but no place, no type and no [tightening](#term-tightening--tightening), and the [capability](../core/glossary.md#term-capability--capability) checks its structure always ([DEC-001 point 1](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)).
 
 ## TERM-candidate — candidate
 
 Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.md#candidate).
 
-**Example:** on a brownfield [project](../core/glossary.md#term-project--project), an agent derives the term `invoice` from the billing code and a record, and stamps it. The developer confirms it before it is committed. On adoption, the adopter fills a [use case](#term-use-case--use-case) with a real case of the project, to judge the parts of that [artefact kind](#term-artefact-kind--artefact-kind).
+**Example:** on a [project](../core/glossary.md#term-project--project) that has code and decisions already, an agent derives the term `invoice` from the billing code and a record, and stamps it. The developer confirms it before it is committed. On adoption, the adopter fills a [use case](#term-use-case--use-case) with a real case of the project, to judge the parts of that [artefact kind](#term-artefact-kind--artefact-kind).
 
 **Distinctions:**
 
-- **An artefact in force:** one committed to the [analysis](#term-analysis--analysis), whose id is taken for good. A candidate takes no id until it is committed (DEC-001 point 3).
+- **An artefact in force:** one committed to the [analysis](#term-analysis--analysis), whose id is taken for good. A candidate takes no id until it is committed ([DEC-001 point 3](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers)).
 - **A proposed decision record:** a record whose status is `proposed`, which binds nothing yet. A candidate is an [artefact](../core/glossary.md#term-artefact--artefact) or a [revalidation record](#term-revalidation-record--revalidation-record) of the analysis, never a [decision record](../core/glossary.md#term-decision-record--decision-record).
 
 ## TERM-declared-structure — declared structure
@@ -320,7 +337,7 @@ Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.m
 
 **Distinctions:**
 
-- **Template:** the file a writer may read. It is rendered from the declared structure, and shows that structure exactly. Nothing reads a declared structure out of a template (DEC-001 point 1).
+- **Template:** the file a writer may read. It is rendered from the declared structure, and shows that structure exactly. Nothing reads a declared structure out of a template ([DEC-001 point 1](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)).
 - **Schema:** the check of a member's front matter, which holds whatever any [rule](../core/glossary.md#term-rule--rule)'s status. A declared structure binds an [artefact](../core/glossary.md#term-artefact--artefact)'s body only where the format rule binds (DEC-001 point 1).
 
 ## TERM-design-source — design source
@@ -331,7 +348,7 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#design-sourc
 
 **Distinctions:**
 
-- **A version number:** a version a document's author declares. The [analysis](#term-analysis--analysis)'s [artefacts](../core/glossary.md#term-artefact--artefact) and records carry none, so a design source is pinned by a pointer to its text (DEC-001 point 6).
+- **A version number:** a version a document's author declares. The [analysis](#term-analysis--analysis)'s [artefacts](../core/glossary.md#term-artefact--artefact) and records carry none, so a design source is pinned by a pointer to its text ([DEC-001 point 6](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
 - **A pull request's head:** never a pointer, since a rebase loses a [head](../core/glossary.md#term-head--head) reviewed mid-way. Nor is any other commit the [default branch](../core/glossary.md#term-default-branch--default-branch) does not hold (DEC-001 point 6).
 
 ## TERM-freed-id — freed id
@@ -342,7 +359,7 @@ Explained in [VIEW-analyses-and-use-cases](domain-model/010-analyses-and-use-cas
 
 **Distinctions:**
 
-- **A withdrawn artefact's id:** the id of an [artefact](../core/glossary.md#term-artefact--artefact) withdrawn, never deleted. Its file keeps it, and the [stamp](../core/glossary.md#term-stamp--stamp) never gives it again (DEC-001 point 3).
+- **A withdrawn artefact's id:** the id of an [artefact](../core/glossary.md#term-artefact--artefact) withdrawn, never deleted. Its file keeps it, and the [stamp](../core/glossary.md#term-stamp--stamp) never gives it again ([DEC-001 point 3](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers)).
 - **The id of an artefact deleted with no declaration:** taken still, since nothing frees an id but the [project](../core/glossary.md#term-project--project)'s declaration. The stamp numbers past it (DEC-001 point 3).
 
 ## TERM-hint — hint
@@ -353,7 +370,7 @@ Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.m
 
 **Distinctions:**
 
-- **Placeholder:** the text a writer replaces. A hint is a part's placeholder, and [validation](../core/glossary.md#term-validation--validation) refuses one left in, whatever any [rule](../core/glossary.md#term-rule--rule)'s status (DEC-001 point 1).
+- **Placeholder:** the text a writer replaces. A hint is a part's placeholder, and [validation](../core/glossary.md#term-validation--validation) refuses one left in, whatever any [rule](../core/glossary.md#term-rule--rule)'s status ([DEC-001 point 1](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)).
 - **Rule:** what binds a part. A hint is advice and binds nothing, so a [project](../core/glossary.md#term-project--project) replaces one without a rule (DEC-001 point 1).
 
 ## TERM-revalidation — revalidation
@@ -364,9 +381,9 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 **Distinctions:**
 
-- **The core's answer:** the statement on one [artefact](../core/glossary.md#term-artefact--artefact), `updated` or `unchanged`, that records a revalidation's result there and clears its [friction](../core/glossary.md#term-friction--friction) (COR-050 point 3).
-- **Testing:** running the software to see whether it still does what a description says. A revalidation reads, and usually mends the description (DEC-001 point 7).
-- **A deferral:** friction put off with a reason, which is no result of a revalidation (DEC-001 point 5).
+- **The core's answer:** the statement on one [artefact](../core/glossary.md#term-artefact--artefact), `updated` or `unchanged`, that records a revalidation's result there and clears its [friction](../core/glossary.md#term-friction--friction) ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
+- **Testing:** running the software to see whether it still does what a description says. A revalidation reads, and usually mends the description ([DEC-001 point 7](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#7-revalidation-is-not-testing)).
+- **A deferral:** friction put off with a reason, which is no result of a revalidation ([DEC-001 point 5](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)).
 
 ## TERM-revalidation-outcome — revalidation outcome
 
@@ -376,7 +393,7 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 **Distinctions:**
 
-- **The core's two answers:** `unchanged` and `updated`, which record a revalidation outcome on its [artefact](../core/glossary.md#term-artefact--artefact). `holds` and a regression map to `unchanged`, and a stale [analysis](#term-analysis--analysis) maps to `updated` (DEC-001 point 5).
+- **The core's two answers:** `unchanged` and `updated`, which record a revalidation outcome on its [artefact](../core/glossary.md#term-artefact--artefact). `holds` and a regression map to `unchanged`, and a stale [analysis](#term-analysis--analysis) maps to `updated` ([DEC-001 point 5](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)).
 - **A regression whose step an accepted record decides:** the step takes a box, which changes the use case, so it maps to `updated` (DEC-001 point 5).
 - **Ambiguous:** no revalidation outcome yet. Only a person knows whether the [change](../core/glossary.md#term-change--change) was meant, so nothing is recorded until they say (DEC-001 point 5).
 
@@ -388,8 +405,8 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 **Distinctions:**
 
-- **Revalidation:** the review itself. The proposal drafts a [revalidation](#term-revalidation--revalidation)'s results, and a person records each (DEC-001 point 5).
-- **A run a command starts:** project-management's run of the agent with nobody watching. There the agent writes each [answer](../core/glossary.md#term-answer--answer) as fields, never as a command (project-management DEC-056 point 6).
+- **Revalidation:** the review itself. The proposal drafts a [revalidation](#term-revalidation--revalidation)'s [revalidation outcomes](#term-revalidation-outcome--revalidation-outcome), and a person records each ([DEC-001 point 5](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)).
+- **A run a command starts:** project-management's run of the agent with nobody watching. There the agent writes each [answer](../core/glossary.md#term-answer--answer) as fields, never as a command ([project-management DEC-056 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)).
 
 ## TERM-revalidation-record — revalidation record
 
@@ -399,21 +416,21 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 **Distinctions:**
 
-- **An artefact's own answer:** the only record of a routine revalidation that finds everything still holds (DEC-001 point 6).
+- **An artefact's own answer:** the only record of a routine revalidation that finds everything still holds ([DEC-001 point 6](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
 - **Decision record:** a choice and why it was made. A revalidation record logs what one revalidation found, and decides nothing.
-- **Artefact:** a revalidation record is none. It carries no anchors and lies in no [place](../core/glossary.md#term-place--place), and no [rule](../core/glossary.md#term-rule--rule) binds on it (DEC-001 points 1 and 2).
+- **Artefact:** a revalidation record is none. It carries no anchors and lies in no [place](../core/glossary.md#term-place--place), and no [rule](../core/glossary.md#term-rule--rule) binds on it (DEC-001 points [1](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape) and [2](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#2-where-it-keeps-them)).
 
 ## TERM-shortfall — shortfall
 
 Explained in [VIEW-revalidations](domain-model/020-revalidations.md#shortfall).
 
-**Example:** step 2 of an export's [use case](#term-use-case--use-case) signs each file, as an accepted architecture record decides. The box below it says the file is written unsigned, and names the issue that tracks the signing, as its entry in `shortfalls` does.
+**Example:** step 2 of an export's [use case](#term-use-case--use-case) signs each file, as an accepted architecture record decides. The box below it says the file is written unsigned, and names the work item that tracks the signing, as its entry in `shortfalls` does.
 
 **Distinctions:**
 
-- **A regression no record decides:** a step the [system](../core/glossary.md#term-system--system) no longer carries out, with no accepted record behind it. It keeps its words and takes no box, and its [revalidation](#term-revalidation--revalidation) names the defect (DEC-001 point 5).
-- **A step the code alone gives:** a step no accepted record decides. It follows the code, and never takes a box (DEC-001 point 1).
-- **The issue:** the work item that tracks building the step. The [change](../core/glossary.md#term-change--change) that builds the step removes the box, in the [pull request](../core/glossary.md#term-pull-request--pull-request) that closes the issue (DEC-001 point 1).
+- **A regression no record decides:** a step the [system](../core/glossary.md#term-system--system) no longer carries out, with no accepted record behind it. It keeps its words and takes no box, and its [revalidation](#term-revalidation--revalidation) names the defect ([DEC-001 point 5](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)).
+- **A step the code alone gives:** a step no accepted record decides. It follows the code, and never takes a box ([DEC-001 point 1](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)).
+- **Its work item:** what a tracker keeps for building the step. The [change](../core/glossary.md#term-change--change) that builds the step removes the box, in the [pull request](../core/glossary.md#term-pull-request--pull-request) that closes the work item (DEC-001 point 1).
 
 ## TERM-tightening — tightening
 
@@ -423,8 +440,8 @@ Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.m
 
 **Distinctions:**
 
-- **A relabel:** a new label, [hint](#term-hint--hint) or example for a shipped part. It tightens nothing, so it needs no rule (DEC-001 point 1).
-- **A change to a shipped part:** dropping, loosening or reordering it. No project makes one, and a part it finds wrong is a [change](../core/glossary.md#term-change--change) it proposes to the [capability](../core/glossary.md#term-capability--capability) (DEC-001 point 1).
+- **A relabel:** a new label, [hint](#term-hint--hint) or example for a shipped part. It tightens nothing, so it needs no rule ([DEC-001 point 1](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)).
+- **A change to a shipped part:** dropping, loosening or reordering it. No project makes one, and a part it finds wrong is an edit it proposes to the [capability](../core/glossary.md#term-capability--capability) (DEC-001 point 1).
 
 ## TERM-use-case — use case
 
@@ -434,6 +451,6 @@ Explained in [VIEW-analyses-and-use-cases](domain-model/010-analyses-and-use-cas
 
 **Distinctions:**
 
-- **Journey:** one actor's path across several use cases, with the seams between them where the path can break (DEC-001 point 1).
+- **Journey:** one actor's path across several use cases, with the seams between them where the path can break ([DEC-001 point 1](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)).
 - **User story:** a need in one sentence. It is an actor's need and a use case's goal, never an [artefact](../core/glossary.md#term-artefact--artefact) of its own (DEC-001 point 1).
-- **Step and variant:** a numbered part of a use case's main path, and a lettered branch from one step. Neither is ever renumbered or removed (DEC-001 point 3).
+- **Step and variant:** a numbered part of a use case's main path, and a lettered branch from one step. Neither is ever renumbered or removed ([DEC-001 point 3](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers)).

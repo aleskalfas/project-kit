@@ -2,14 +2,16 @@
 
 A fixture capability, `deriver`, declares on its place `notes` the form of the links
 a command of its own would write there: a link to a glossary entry. Each test stands
-up a real adopter repository, commits a base on `main`, branches `feature` off it and
-makes real commits before running a check. They cover:
+up a real adopter repository, its install committed once per session
+(`committed_adopter`), commits a base on `main`, branches `feature` off it and makes
+real commits before running a check. They cover:
 
 - **the reading** — `document_parts.links_set_aside` reads a link of the form in
   running text as its words alone, and leaves code, comments, headings, images and
   links of any other form as written;
 - **the declaration** — read from a capability place, a target that does not compile
-  declaring nothing and failing the package check;
+  declaring nothing and failing the package check, and each form matched on its own, so
+  forms that would clash when joined pass the check and set their links aside (#1912);
 - **the change check** — a change that only adds, removes or retargets such links
   asks nothing of what rests on the document, through an anchor on it whole, on a
   section, on its file or on a record; a word beside a link, or a link of another
@@ -19,15 +21,17 @@ makes real commits before running a check. They cover:
 - **the whole-repository check** — the same, measured from a revalidation point, and
   the cost the record states: a declaration withdrawn sets nothing aside;
 - **what is not friction's** — `pkit rule-sets altered` still lists an artefact
-  changed only in such links, and `pkit friction resolve` advises the outcome the
-  change check bears out;
-- **software-analysis** — the forms its places declare are the link command's own,
-  and what `pkit analysis link` writes asks nothing of what rests on the linked
-  documents.
+  changed only in such links;
+- **software-analysis** — the forms its places declare are the link command's own, a
+  term's link and a citation's (#2064), and what `pkit analysis link` writes, in the
+  glossary, the views, the actors, the use cases, the journeys and the requirements,
+  asks nothing of what rests on the linked documents; a citation's link re-pointed
+  asks nothing either, while a word beside it still asks.
 """
 
 from __future__ import annotations
 
+import posixpath
 import re
 from pathlib import Path
 from typing import Any
@@ -37,7 +41,6 @@ import pytest
 from project_kit import friction_check as fc
 from project_kit import friction_discovery as fd
 from project_kit import friction_repository as fr
-from project_kit import friction_resolve as fres
 from project_kit import package_validate as pv
 from project_kit.document_parts import links_set_aside
 from project_kit.manifest import (
@@ -60,7 +63,19 @@ from tests.friction_documents import (
     pointed_record,
 )
 from tests.test_answer_files import answer_path, answers, entry
-from tests.test_software_analysis_term_links import VIEW, _domain
+from tests.test_software_analysis_record_links import FROM, LOOKUPS, PRJ_001
+from tests.test_software_analysis_term_links import (
+    BODIES,
+    JOURNEY,
+    PLACE,
+    VIEW,
+    _domain,
+    _kinds,
+)
+
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
 
 DERIVER = "deriver"
 NOTE = "notes/source.md"
@@ -181,10 +196,9 @@ LINKS_MOVED = {
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    adopter = make_adopter_repo()
-    declare_deriver(adopter.root)
-    return adopter
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    declare_deriver(committed_adopter.root)
+    return committed_adopter
 
 
 def _start(adopter: AdopterRepo, files: dict[str, str] | None = None) -> None:
@@ -283,6 +297,61 @@ def test_a_target_that_does_not_compile_fails_the_package_check_and_declares_not
     assert [form.target for form in place.derived_links] == ["kept"]
 
 
+@pytest.mark.parametrize(
+    ("forms", "aside", "kept"),
+    [
+        pytest.param(
+            (r"glossary\.md#(?P<slug>term-[a-z-]+)", r"#(?P<slug>term-[a-z-]+)"),
+            ("glossary.md#term-order", "#term-payment"),
+            "notes.md#term-order",
+            id="one group name in two forms",
+        ),
+        pytest.param(
+            (r"(a+)-\1", r"(b+)-\1"),
+            ("aa-aa", "b-b"),
+            "a-b",
+            id="a numbered back-reference in each form",
+        ),
+        pytest.param(
+            (r"(?i)glossary\.md#term-[a-z-]+", r"#term-[a-z-]+"),
+            ("GLOSSARY.md#term-order", "#term-payment"),
+            "#TERM-payment",
+            id="a flag set for one whole form",
+        ),
+    ],
+)
+def test_each_form_is_matched_on_its_own(
+    forms: tuple[str, str], aside: tuple[str, str], kept: str
+) -> None:
+    """Forms that each compile may clash when joined into one pattern (#1912): each is
+    matched on its own, so a group, a back-reference or a flag means what it means alone."""
+    assert all(fd.compiles(form) is None for form in forms)
+    text = f"[one]({aside[0]}), [two]({aside[1]}) and [three]({kept})."
+    assert fd.SetAside(forms).body(text) == f"one, two and [three]({kept})."
+
+
+def test_forms_that_clash_when_joined_pass_the_package_check_and_set_links_aside(
+    repo: AdopterRepo,
+) -> None:
+    """Two forms on one place that name the same group: the package check passes them, and
+    the change check reads a links-only edit as before, asking nothing."""
+    clashing = (
+        "      derived-links:\n"
+        r"        - target: '(?:[^()\s:#]*/)?glossary\.md#(?P<slug>term-[^()\s]*)'" + "\n"
+        r"        - target: '#(?P<slug>term-[^()\s]*)'" + "\n"
+    )
+    declare_deriver(repo.root, clashing)
+    _start(repo)
+    assert [
+        finding.path
+        for report in pv.validate_installed_packages(repo.root).reports
+        for finding in report.findings
+        if finding.severity is pv.Severity.ERROR
+    ] == []
+    repo.commit("move the links", LINKS_MOVED)
+    assert _friction(_run(repo)) == []
+
+
 # --- the change check ---------------------------------------------------------------------
 
 
@@ -374,10 +443,9 @@ def test_an_updated_answer_file_on_links_alone_is_a_bump_too(repo: AdopterRepo) 
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    adopter = make_adopter_repo()
-    declare_deriver(adopter.root)
-    return Timeline(adopter)
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    declare_deriver(committed_adopter.root)
+    return Timeline(committed_adopter)
 
 
 def _states(result: fr.RepositoryCheck) -> dict[str, str]:
@@ -429,20 +497,6 @@ def test_a_links_only_edit_still_alters_the_artefact_for_its_rules(repo: Adopter
     assert {NOTE, RECORD} <= altered
 
 
-def test_the_resolver_advises_unchanged_where_only_links_differ(repo: AdopterRepo) -> None:
-    """`pkit friction resolve` names the outcome the change check bears out (COR-050 point
-    5): links moved alone change no content, so it advises `unchanged`."""
-    repo.write({CONFIG: friction_config(places=("docs",)), NOTE: note()})
-    (found,) = [f for f in fd.discover_artefacts(repo.root).files if f.path == NOTE]
-    parse = fres._parsed  # pyright: ignore[reportPrivateUsage] -- the reading under test
-    owe = fres._owed  # pyright: ignore[reportPrivateUsage] -- the advice under test
-    (base,), _ = parse(NOTE, found, note())
-    (resolved,), _ = parse(NOTE, found, LINKS_MOVED[NOTE])
-    assert owe(resolved, base).outcome == fres.UNCHANGED
-    (reworded,), _ = parse(NOTE, found, note(body=note_body(lead="An order awaits.")))
-    assert owe(reworded, base).outcome == fres.UPDATED
-
-
 # --- software-analysis --------------------------------------------------------------------
 
 
@@ -455,17 +509,143 @@ def _declared(place: str) -> list[str]:
 
 
 def test_software_analysis_declares_the_link_commands_own_form() -> None:
-    """The glossary's form is the command's target; a view's, its branch by a path, since
-    only the glossary links an entry by its anchor alone."""
-    (links,) = load_lib("links")
+    """The glossary's form is the command's target; every other place's, its branch by a
+    path, since only the glossary links an entry by its anchor alone: the views, the actors,
+    the use cases, the journeys and the three kinds of requirement. Beside it, every place
+    declares the target the command writes for a citation (DEC-001 point 13). The views'
+    places also declare the form of their closing section's links (#2104). Every place
+    declares the form of the links of ids last (#2109)."""
+    links, citations, id_links = load_lib("links", "citations", "id_links")
     entry_form: str = links._ENTRY
+    cited: str = citations.TARGET
+    ids: str = id_links.TARGET
     for place in ("glossary.md", "*/glossary.md"):
-        assert _declared(place) == [entry_form]
+        assert _declared(place) == [entry_form, cited, ids]
     by_path = entry_form.split("|", 1)[0]
     for place in ("domain-model", "*/domain-model/**"):
-        assert _declared(place) == [by_path]
-    for place in ("use-case-model/actors", "requirements/quality"):
-        assert _declared(place) == []
+        assert _declared(place) == [by_path, cited, links.CLOSING_TARGET, ids]
+    for folder in (
+        "use-case-model/actors",
+        "use-case-model/use-cases",
+        "use-case-model/journeys",
+        "requirements/quality",
+        "requirements/functional",
+        "requirements/constraints",
+    ):
+        assert _declared(folder) == [by_path, cited, ids], folder
+        assert _declared(f"*/{folder}/**") == [by_path, cited, ids], folder
+
+
+#: Files at several depths a citation's link may lead from: the glossary two folders down,
+#: a use case in an area, and a file at the root.
+STARTS = (FROM, "tech-docs/analysis/use-case-model/use-cases/010-run/UC-001-run.md", "a.md")
+
+
+def test_each_target_of_a_citation_s_link_is_of_the_declared_form() -> None:
+    """Every target the lookup gives a citation's link, a record's file whole or at a point
+    and a rule's heading in its rule set, from a file at any depth, is of the form. A link
+    to another artefact, to a glossary entry, to a web address or to a rule set whole is
+    not."""
+    (citations,) = load_lib("citations")
+    form = re.compile(citations.TARGET)
+    targets = {
+        found.target(start, whole=whole)
+        for key, found in LOOKUPS.items()
+        if found.path is not None
+        for start in STARTS
+        for whole in ((False,) if "RS-" in key else (False, True))
+    }
+    assert len(targets) > len(LOOKUPS)
+    assert [t for t in targets if form.fullmatch(t) is None] == []
+    for other in (
+        "UC-002-pay-order.md",
+        "../use-cases/UC-002-pay-order.md",
+        "../../glossary.md#term-order--order",
+        "https://example.org/PRJ-001-exports.md",
+        "../rule-sets/writing.md",
+        "../../README.md#linking-citations",
+    ):
+        assert form.fullmatch(other) is None, other
+
+
+def test_a_bracketed_citation_s_link_stays_content() -> None:
+    """The core reads no link whose words hold a bracket, so the link of a citation in
+    brackets is read as written, a cost DEC-001 point 13 states; a bare one is set aside."""
+    (citations,) = load_lib("citations")
+    aside = fd.SetAside((citations.TARGET,))
+    target = "../../.pkit/capabilities/software-analysis/decisions/DEC-001-x.md#2-where"
+    bracketed = f"Per [[software-analysis:DEC-001] point 2]({target})."
+    assert aside.body(bracketed) == bracketed
+    bare = f"Per [software-analysis DEC-001 point 2]({target})."
+    assert aside.body(bare) == "Per software-analysis DEC-001 point 2."
+
+
+#: The sentence a use case's step ends with, citing a project record's point.
+SIGNED = "signed as PRJ-001 point 1 asks"
+CITED = ".pkit/decisions/project/PRJ-001-exports.md"
+
+
+def _cite(repo: AdopterRepo) -> None:
+    """A project record, and the first step of the use case to place an order citing one of
+    its points. Written on a copy of `_kinds`' template, which the term links' tests share,
+    so no template of its own stamps the analysis again."""
+    text = (repo.root / PLACE).read_text(encoding="utf-8")
+    step = "and the system opens an order."
+    assert step in text
+    repo.write({CITED: PRJ_001, PLACE: text.replace(step, f"{step[:-1]}, {SIGNED}.", 1)})
+
+
+@pytest.fixture
+def cited(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    """The analysis linked on `main`, its terms and its citation, and `feature` off it."""
+    repo = installed(make_adopter_repo, monkeypatch, then=_kinds)
+    _cite(repo)
+    link(repo)
+    repo.commit("the analysis, linked")
+    repo.checkout("feature", create=True)
+    return repo
+
+
+def _reworded_heading(repo: AdopterRepo) -> tuple[str, str]:
+    """The cited point's heading reworded and the links mended: the use case before and
+    after, its link to the point re-pointed and nothing else changed."""
+    before = (repo.root / PLACE).read_text(encoding="utf-8")
+    to_record = posixpath.relpath(CITED, posixpath.dirname(PLACE))
+    assert f"[PRJ-001 point 1]({to_record}#1-sign-each-export) asks" in before
+    repo.write({CITED: PRJ_001.replace("### 1. Sign each export", "### 1. Sign every export")})
+    link(repo)
+    after = (repo.root / PLACE).read_text(encoding="utf-8")
+    assert after == before.replace("#1-sign-each-export)", "#1-sign-every-export)")
+    return before, after
+
+
+def test_a_citation_s_link_re_pointed_asks_nothing_and_a_word_beside_it_still_asks(
+    cited: AdopterRepo,
+) -> None:
+    """The cited point's heading reworded, `pkit analysis link` re-points the use case's
+    link to it: the use case changed in a link alone, so nothing asks the journey that
+    rests on it (DEC-001 point 13). A word changed beside the link still asks it."""
+    _before, after = _reworded_heading(cited)
+    assert _friction(fc.run_change_check(cited.root, "main")) == []
+    cited.write({PLACE: after.replace("signed as", "sealed as", 1)})
+    assert _friction(fc.run_change_check(cited.root, "main")) == [JOURNEY]
+
+
+def test_without_the_citation_form_the_same_re_pointing_asks_the_journey(
+    cited: AdopterRepo,
+) -> None:
+    """The form of a term's link alone declared, the citation's link moved is content."""
+    (citations,) = load_lib("citations")
+    package = cited.root / ".pkit/capabilities/software-analysis/package.yaml"
+    lines = package.read_text(encoding="utf-8").split("\n")
+    form = f"        - target: '{citations.TARGET}'"
+    assert form in lines
+    kept = [line for i, line in enumerate(lines) if form not in (line, lines[i - 1])]
+    cited.write({package.relative_to(cited.root).as_posix(): "\n".join(kept)})
+    _reworded_heading(cited)
+    assert _friction(fc.run_change_check(cited.root, "main")) == [JOURNEY]
 
 
 @pytest.fixture
@@ -487,6 +667,36 @@ def test_what_the_link_command_writes_asks_nothing_of_what_rests_on_it(
     link(project)
     assert all((project.root / rel).read_text(encoding="utf-8") != before[rel] for rel in before)
     assert _friction(fc.run_change_check(project.root, "main")) == []
+
+
+@pytest.fixture
+def parted(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    repo = installed(make_adopter_repo, monkeypatch, then=_kinds)
+    repo.commit("the analysis, unlinked")
+    repo.checkout("feature", create=True)
+    return repo
+
+
+def test_links_written_in_the_four_kinds_ask_nothing_of_what_rests_on_them(
+    parted: AdopterRepo,
+) -> None:
+    """`pkit analysis link` adds links in an actor, the use cases, a journey and the
+    requirements, which rest on one another: nothing asks an answer, the links of the
+    journey's steps to its use cases included (#2109). A word changed beside a link in a
+    use case still asks the journey through it."""
+    before = {rel: (parted.root / rel).read_text(encoding="utf-8") for rel in BODIES}
+    link(parted)
+    assert all((parted.root / rel).read_text(encoding="utf-8") != before[rel] for rel in before)
+    journey = (parted.root / JOURNEY).read_text(encoding="utf-8")
+    assert "1. [UC-001](../use-cases/UC-001-place-order.md) — Place an order" in journey
+    assert _friction(fc.run_change_check(parted.root, "main")) == []
+    text = (parted.root / PLACE).read_text(encoding="utf-8")
+    reworded = text.replace("chooses goods", "picks goods", 1)
+    assert reworded != text
+    parted.write({PLACE: reworded})
+    assert _friction(fc.run_change_check(parted.root, "main")) == [JOURNEY]
 
 
 def test_a_word_changed_in_a_linked_entry_still_asks_the_view(project: AdopterRepo) -> None:

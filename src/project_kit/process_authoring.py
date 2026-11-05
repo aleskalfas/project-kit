@@ -33,14 +33,18 @@ the disciplines and the walkthrough, this module owns the stamp):
 Version semantics (COR-044 point 3): a `couple` or `hand-off` edit is additive
 and inert or report-only, so the definition `version` field is NEVER bumped
 here — state/transition evolution is the deferred `amend` operation's
-territory, and only it carries the bump.
+territory, and only it carries the bump. Neither edits a definition whose
+capability the project receives as a synced copy, which the next sync
+overwrites (`_refuse_synced_capability`).
 
 All three stamps require an owning capability that is REGISTERED as a manifest
 component — the same set contract discovery walks — so a stamp can never write
 a definition nothing watches (#713); see `_require_owned_address`. No routing
 logic lives here beyond that refusal (COR-044: walking a capability-less
 adopter through the capability-authoring path, or through `pkit capabilities
-register`, is the skill's judgment, never the stamp's).
+register`, is the skill's judgment, never the stamp's). `stamp_new_process` also
+refuses a capability whose tree the project receives as a synced copy, which the
+next sync overwrites (`_refuse_synced_capability`).
 
 Mutations round-trip through `ruamel.yaml` (comments, key order, and quoting
 preserved — the same discipline as `schemas_authoring`) and lint the result
@@ -65,7 +69,7 @@ from typing import Any, cast
 from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
-from project_kit import process_dependencies
+from project_kit import lifecycle_ownership, process_dependencies
 from project_kit.process import (
     PREDICATE_STUB_MARKER,
     ProcessDefinition,
@@ -635,6 +639,47 @@ def _require_owned_address(repo_root: Path, address: str) -> tuple[str, str, Pat
     return capability, process_id, capability_dir
 
 
+# Where the project's own process goes, as `_refuse_synced_capability` names it:
+# for `process new`, formatted with the process id, and for `process couple` and
+# `process hand-off`, with the address of the definition they would edit. The
+# project's own process may name a synced one as its upstream, since a coupling
+# and its hand-off contract live in the downstream definition (COR-038).
+_SYNCED_NEW_REMEDY = (
+    "Stamp the project's own process in a capability the project incubates, with "
+    "`pkit process new <capability>:{process_id}`. A capability's own processes "
+    "are authored where the capability is authored."
+)
+_SYNCED_EDIT_REMEDY = (
+    "Stamp the project's own process in a capability the project incubates, with "
+    "`pkit process new <capability>:<process-id>`. It may name {address} as its "
+    "upstream, since a coupling and its hand-off live in the downstream definition. "
+    "A capability's own processes are coupled where the capability is authored."
+)
+
+
+def _refuse_synced_capability(
+    repo_root: Path, capability: str, capability_dir: Path, remedy: str
+) -> None:
+    """Refuse to write into *capability_dir* where the capability's tree arrives in
+    this project as a synced copy, naming *remedy* as where the project's own
+    process goes.
+
+    The question is the tree's own predicate, asked through
+    `lifecycle_ownership.synced_copy_refusal`: a kit-shipped capability in a
+    project that is not the methodology's source, and an externally-sourced one
+    in any project. `process new` writes a definition, its stubs and their
+    registrations across the capability's tree. `process couple` rewrites a
+    definition, and `process hand-off` a definition, its seam stubs and their
+    registrations. The next sync overwrites all of them (core rule 1). The
+    project's own process goes in a capability it incubates.
+    """
+    refusal = lifecycle_ownership.synced_copy_refusal(
+        repo_root, capability_dir, f"capability {capability!r}", remedy
+    )
+    if refusal is not None:
+        raise ProcessAuthoringError(refusal)
+
+
 def _locate_definition_file(repo_root: Path, definition: ProcessDefinition) -> Path:
     """The file a loaded definition came from, mirroring `load_definition`'s
     resolution order (convention path first, then the scan). The ambiguity
@@ -809,6 +854,9 @@ def stamp_new_process(
     transitions = transitions or []
     invariants = invariants or []
     capability, process_id, capability_dir = _require_owned_address(repo_root, address)
+    _refuse_synced_capability(
+        repo_root, capability, capability_dir, _SYNCED_NEW_REMEDY.format(process_id=process_id)
+    )
 
     if not _KEBAB_CASE.match(process_id):
         raise ProcessAuthoringError(
@@ -1175,8 +1223,13 @@ def couple_process(
     the result names the command that regenerates it (`refresh_command`).
 
     `dry_run` runs every check and reports what would change, writing nothing.
+    Before anything else, a dry run included, it refuses a definition whose
+    capability the project receives as a synced copy (`_refuse_synced_capability`).
     """
     capability, _process_id, capability_dir = _require_owned_address(repo_root, address)
+    _refuse_synced_capability(
+        repo_root, capability, capability_dir, _SYNCED_EDIT_REMEDY.format(address=address)
+    )
     try:
         definition = load_definition(repo_root, address)
     except ProcessError as exc:
@@ -1490,9 +1543,14 @@ def handoff_process(
     is additive and report-only, COR-044).
 
     `dry_run` runs every check and reports the contract and seam stubs it would
-    write, writing nothing.
+    write, writing nothing. Before anything else, a dry run included, it refuses
+    a definition whose capability the project receives as a synced copy
+    (`_refuse_synced_capability`).
     """
-    _require_owned_address(repo_root, address)
+    capability, _process_id, owned_dir = _require_owned_address(repo_root, address)
+    _refuse_synced_capability(
+        repo_root, capability, owned_dir, _SYNCED_EDIT_REMEDY.format(address=address)
+    )
     try:
         definition = load_definition(repo_root, address)
     except ProcessError as exc:

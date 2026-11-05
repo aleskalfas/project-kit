@@ -1,0 +1,193 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-operational-rule
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T194318Z-acf93b7b.yaml
+      - 20261029T200836Z-0e9bee72.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-11-01T12:35:06Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/domain-model/010-the-system-and-its-methodology.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-11-01T12:35:09Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/domain-model/030-capabilities-areas-and-connection-points.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+    revalidated:
+      at: 2026-11-01T12:35:13Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-11-01T12:35:16Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-11-01T12:35:20Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T161257Z-5352f58f.yaml
+    revalidated:
+      at: 2026-11-01T12:35:35Z
+      outcome: unchanged
+      unchanged-because: UC-049 step 8 now says the instruction file includes the capabilities' rules index, as the postcondition cites it, and UC-023's new steps 17 to 19 leave each step and variant the journey cites as it was.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-002-upgrade-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T164749Z-013dd8e9.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+    revalidated:
+      at: 2026-11-01T12:35:38Z
+      outcome: unchanged
+      unchanged-because: The journey needs only that UC-049 installed the system with its manifest and that UC-023's install created a rule set, and the steps added for the capabilities' rules index change neither.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261031T022026Z-006436af.yaml
+    revalidated:
+      at: 2026-11-01T12:35:42Z
+      outcome: unchanged
+      unchanged-because: The journey needs from UC-049 only the system installed and committed for the team, which the steps added for the capabilities' rules index leave as they were.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-005-package-and-share-capability.md
+    revalidated:
+      at: 2026-11-01T12:35:45Z
+      outcome: unchanged
+      unchanged-because: The journey needs from UC-049 only the manifest's backbone version and an adapter that deploys skills and agent definitions, which the rules index's render and include leave as they were.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-006-start-on-new-machine.md
+    revalidated:
+      at: 2026-11-01T12:35:49Z
+      outcome: unchanged
+      unchanged-because: The journey needs from UC-049 only the system committed for the team, which the steps added for the capabilities' rules index leave as they were.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-007-upgrade-one-capability.md
+    revalidated:
+      at: 2026-11-01T12:35:53Z
+      outcome: unchanged
+      unchanged-because: The journey needs from UC-023 only the capability recorded in the manifest and the rule set its install may create, which the steps added for the capability's operational rules leave as they were.

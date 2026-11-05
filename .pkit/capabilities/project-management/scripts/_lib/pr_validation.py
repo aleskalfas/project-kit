@@ -92,7 +92,7 @@ def validate_pr(
     already derived the correct title from the issue, e.g. ``open-pr``).
     """
     findings: list[Finding] = []
-    # The friction answers' section is the artefacts' words, never input (DEC-055):
+    # A list of the answers an earlier run left is never input (DEC-065 point 1):
     # no closing reference, Doc impact heading or template prose is read from it.
     pr_body = friction_answers.strip(pr_body)
 
@@ -201,7 +201,8 @@ def pr_body_format() -> dict:
 
 def extract_closing_issues(pr_body: str) -> list[int]:
     """The issue numbers a PR body closes (Closes/Fixes/Resolves #N), de-duped —
-    outside its friction answers' section, which closes nothing (DEC-055)."""
+    outside a list of the answers an earlier run left, which closes nothing
+    (DEC-065 point 1)."""
     out: list[int] = []
     for m in CLOSING_KEYWORD_RE.finditer(friction_answers.strip(pr_body or "")):
         n = int(m.group(1))

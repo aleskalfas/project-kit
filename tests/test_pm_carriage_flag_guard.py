@@ -1,35 +1,30 @@
-"""The carriage-flag guard — exactly one site derives CARRIAGE from the board flag.
+"""The carriage-flag guard — no site derives CARRIAGE from the board flag.
 
-[project-management:DEC-051-axis-carriage-activation] settles which substrate
-carries a classification axis: the adopter's substrate-map governs the axes it
-binds, and ``has_projects_v2_board`` governs only where the map is silent. Decision
-point 4 makes that ONE composition — ``_lib/axis_carriage`` — "asked by every
+[project-management:DEC-062-axes-chosen-in-the-map] point 1 settles which
+substrate carries a classification axis: the adopter's substrate-map, alone. An
+axis lives on the board only where the map binds it there with `board: true`, and
+``has_projects_v2_board`` says only that a board exists. DEC-051 decision point 4
+makes the answer ONE composition — ``_lib/axis_carriage`` — "asked by every
 writer, reader, prerequisite check and mutator, so no two consumers can form
-different beliefs about where an axis lives". The record is explicit that without a
-guard "point 4 is an assertion, not an invariant": the failure it exists to end is
-DRIFT, and drift returns the moment a second consumer reads the flag and decides
-for itself.
+different beliefs about where an axis lives". DEC-062's Implications hold it with
+a guard test: no site reads the flag for carriage.
 
 Why this is an allow-list and not a prohibition
 -----------------------------------------------
-A blanket "no script may read the flag" would be wrong twice over, and the record
-says so. The flag keeps THREE legitimate jobs that have nothing to do with
-carriage:
+A blanket "no script may read the flag" would be wrong: the flag keeps two
+legitimate jobs that have nothing to do with carriage:
 
-  * **Identity** — is a board configured, and what is its node id
+  * **Identity** — is a board configured, and which one
     (``_lib/board_fields.board_number``, bootstrap's node-id cache).
   * **Membership** — every issue belongs on the configured board (DEC-019).
-    Routing THAT through carriage "would silently drop the membership requirement
-    for any board adopter who wrote a single label binding".
-  * **Carriage where the map is silent** — retained deliberately to avoid a silent
-    behaviour change, which is why the accessor itself reads the flag. A blanket
-    prohibition would either fail on the accessor or be weakened to uselessness.
+    Routing THAT through carriage would drop the membership requirement for any
+    board adopter whose map binds no axis to the board.
 
-So the invariant is countable rather than absolute: **exactly one carriage site**,
-and every other read named with the job it does. A new read of the flag fails this
-test until its author adds it here with a reason — which is the point. If that
-reason is "to decide which substrate carries an axis", the answer is no: call
-``axis_carriage.carriage(axis, config, substrate_map)``.
+So every read is named with the job it does, and none may say "carriage". A new
+read of the flag fails this test until its author adds it here with a reason —
+which is the point. If that reason is "to decide which substrate carries an
+axis", the answer is no: call ``axis_carriage.carriage(axis, config,
+substrate_map)``, which reads the map.
 
 The two halves
 --------------
@@ -61,7 +56,7 @@ SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts
 # on the module it polices being importable.
 FLAG = "has_projects_v2_board"
 
-# The one site that may read the flag to answer WHERE AN AXIS LIVES.
+# The carriage accessor, which reads the map alone and never the flag.
 CARRIAGE_ACCESSOR = "_lib/axis_carriage.py"
 
 # Every file permitted to read the flag, with the count of reads and the job each
@@ -69,17 +64,11 @@ CARRIAGE_ACCESSOR = "_lib/axis_carriage.py"
 # failures mean the same thing: someone added a read of the board flag, and it has
 # to be named before it can stay.
 ALLOWED_READS: dict[str, tuple[int, str]] = {
-    CARRIAGE_ACCESSOR: (
-        1,
-        "CARRIAGE — the single composition (DEC-051 decision point 4). The flag "
-        "still governs where the map is silent, which is why the accessor reads "
-        "it. This is the one entry that may say 'carriage'.",
-    ),
     "_lib/board_fields.py": (
         1,
         "IDENTITY — `board_number` answers 'is a board configured, and which one', "
         "the read seam's own job. Routing it through carriage would make the board "
-        "unreachable for an adopter with one label binding.",
+        "unreachable for an adopter whose map binds no axis to it.",
     ),
     "bootstrap.py": (
         1,
@@ -89,26 +78,23 @@ ALLOWED_READS: dict[str, tuple[int, str]] = {
     "create-issue.py": (
         1,
         "MEMBERSHIP — the DEC-019 auto-add to the configured board, plus its "
-        "pre-flight display line. Explicitly NOT carriage (DEC-051: 'board "
-        "membership stays with the flag').",
+        "pre-flight display line. Explicitly NOT carriage (DEC-062 point 1: the "
+        "flag governs which board it is and that every issue belongs on it).",
     ),
     "pre-check.py": (
-        4,
-        "IDENTITY + SUBJECT, all four: board-id resolution (identity), and the "
-        "cross-substrate conflict finding, the `board:` arm's satisfiability and "
-        "the absent-axis nudge — three diagnostics whose SUBJECT is the flag "
-        "itself ('you set this, and here is what it costs you'), not a carriage "
-        "decision taken from it. The carriage branches it used to thread into "
-        "`_check_labels` / `_check_state_labels` are gone: both now ask "
-        "`axis_carriage.expects_kit_labels` per axis.",
+        2,
+        "IDENTITY + SUBJECT: board-id resolution (identity), and the `board:` "
+        "arm's satisfiability, a diagnostic whose SUBJECT is the flag itself "
+        "('your map binds an axis to a board your config does not declare'), not "
+        "a carriage decision taken from it.",
     ),
     "validate-issue.py": (
         1,
         "MEMBERSHIP — the DEC-019 board-membership drift finding. 'Is this issue "
         "ON the board' is not 'which substrate carries this axis', and routing it "
-        "through carriage would drop the requirement for any board adopter with "
-        "one label binding. The classification presence gate beside it no longer "
-        "reads the flag: it asks `axis_carriage.carriage` per axis.",
+        "through carriage would drop the requirement for any board adopter whose "
+        "map binds no axis to the board. The classification presence gate beside "
+        "it asks `axis_carriage.carriage` per axis.",
     ),
 }
 
@@ -163,9 +149,9 @@ def test_board_flag_reads_are_allow_listed(path: Path) -> None:
         f"{rel}:{found[0]}: reads `{FLAG}`, which is not allow-listed. If this "
         f"read decides WHICH SUBSTRATE CARRIES AN AXIS, it must not exist — call "
         f"`axis_carriage.carriage(axis, config, substrate_map)` instead "
-        f"([project-management:DEC-051-axis-carriage-activation] decision point "
-        f"4). If it is board IDENTITY or MEMBERSHIP, add it to ALLOWED_READS with "
-        f"the job it does."
+        f"([project-management:DEC-062-axes-chosen-in-the-map] point 1). If it is "
+        f"board IDENTITY or MEMBERSHIP, add it to ALLOWED_READS with the job it "
+        f"does."
     )
     assert len(found) == expected, (
         f"{rel}: {len(found)} read(s) of `{FLAG}` at lines {found}, "
@@ -175,11 +161,14 @@ def test_board_flag_reads_are_allow_listed(path: Path) -> None:
     )
 
 
-def test_exactly_one_site_derives_carriage_from_the_flag() -> None:
-    """The countable form of DEC-051 decision point 4, as a single assertion."""
+def test_no_site_derives_carriage_from_the_flag() -> None:
+    """DEC-062's guard, as a single assertion: no read of the flag is a carriage
+    read, and the accessor reads it not at all."""
     carriage_entries = [rel for rel, (_n, reason) in ALLOWED_READS.items() if "CARRIAGE" in reason]
-    assert carriage_entries == [CARRIAGE_ACCESSOR]
-    assert ALLOWED_READS[CARRIAGE_ACCESSOR][0] == 1
+    assert carriage_entries == []
+    assert CARRIAGE_ACCESSOR not in ALLOWED_READS
+    source = (SCRIPTS / CARRIAGE_ACCESSOR).read_text(encoding="utf-8")
+    assert _flag_read_lines(source) == []
 
 
 def test_guard_detects_a_reintroduced_flag_read() -> None:
@@ -301,10 +290,27 @@ def test_move_issue_writes_the_bound_state_label_under_a_board(scripts, label_bo
 
 def test_self_test_seeds_no_label_for_a_board_carried_axis(scripts, tmp_path) -> None:
     """The live bug: `priority` was resolved unconditionally, outside the guard
-    that wrapped `state`. On a greenfield board adopter that produced the kit's
-    `priority:Low` — a label bootstrap deliberately did not create — so
-    `gh issue create` failed on a label that does not exist."""
-    assert scripts["self_test"]._seed_labels(tmp_path, BOARD_CONFIG) == []
+    that wrapped `state`. On an adopter whose board carries it, that produced the
+    kit's `priority:Low` — a label bootstrap deliberately did not create — so
+    `gh issue create` failed on a label that does not exist. The axis is on the
+    board because the map binds it there (DEC-062 point 1)."""
+    (tmp_path / "project").mkdir()
+    (tmp_path / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\naxes:\n  priority:\n    board: true\n  state:\n    kit-label: true\n",
+        encoding="utf-8",
+    )
+    assert scripts["self_test"]._seed_labels(tmp_path, BOARD_CONFIG) == ["state:todo"]
+
+
+def test_self_test_seeds_the_kit_labels_under_a_board_the_map_binds_nothing_to(
+    scripts, tmp_path
+) -> None:
+    """The board flag says only that a board exists (DEC-062 point 1): with no
+    map, the kit's labels carry both axes, board or no board."""
+    assert scripts["self_test"]._seed_labels(tmp_path, BOARD_CONFIG) == [
+        "priority:Low",
+        "state:todo",
+    ]
 
 
 def test_self_test_seeds_the_kit_labels_in_greenfield(scripts, tmp_path) -> None:

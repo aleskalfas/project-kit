@@ -47,3 +47,34 @@ requirements:
       (ADR-066 points 2 to 6). Those facts rest on Claude Code's documentation
       and its 2.1.302 release. The probe, `probe-confined-run.py`, has passed on
       no version yet, so the runner refuses every confined run.
+  session-loads-rules:
+    grade: at-cost
+    cost: >-
+      Core's loaded file and every capability's reach a session by one route,
+      CLAUDE.md and the files it imports (the capabilities' rules index among
+      them), so they load in the same sessions and miss the same ones. They
+      load in a session a person starts at the project's root, in a subagent
+      dispatched from one with a definition of the project's, and again after
+      compaction. By the harness's own behaviour no layer's rules load, core's
+      included, in the built-in Explore and Plan agents or a definition that
+      sets `omitClaudeMd`; in a run with `--bare` or `--safe-mode`; for a file
+      that `claudeMdExcludes` or `managed-only` drops; or in a session started
+      below the project's root whose person declined the external imports.
+      Unobserved: whether a session in a worktree under `.claude/worktrees/`
+      also loads the main checkout's files beside its own. The adopter keeps
+      CLAUDE.md and the index out of `claudeMdExcludes`, dispatches the
+      methodology's work to definitions that do not set `omitClaudeMd`, and
+      approves the external imports where sessions start below the root.
+    # Empty until a session is observed holding an imported capability file:
+    # only whoever observes it widens the range (COR-047 point 2).
+    harness_versions: []
+    evidence: >-
+      Claude Code's documentation of memory files, subagents, settings and the
+      Agent SDK, read on 29 October 2026. No session has been observed holding
+      an imported capability file yet, so the answer vouches for no version.
+      Apart from the cost, a known gap of the adapter's own runner: it passes
+      `--setting-sources ""`, so a confined run holds no layer's rules, core's
+      included, and neither does a builder's working run, which loads no
+      settings file either. The gap comes from how the adapter starts a run,
+      not from the harness, so nothing an adopter keeps closes it; #2352 takes
+      it up.

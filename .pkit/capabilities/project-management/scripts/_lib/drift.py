@@ -53,7 +53,7 @@ from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from _lib import agent_runs, default_branch, fixers
+from _lib import agent_runs, backbone, default_branch, fixers
 
 #: The command, and the run whose rules confine each fixer (ADR-066 point 5).
 VERB = "fix-drift"
@@ -235,7 +235,7 @@ class Reading:
     setups: Mapping[str, str] = field(default_factory=dict)  # agent → fingerprint
 
 
-def pin_commit(repo_root: Path, run: Runner = subprocess.run) -> str:
+def pin_commit(repo_root: Path, run: Runner = backbone.run) -> str:
     """The default branch's commit, as the backbone resolves it (COR-054
     point 2), read where pm reads it (`_lib/default_branch.py`). Raises Stop
     when the backbone cannot say."""
@@ -314,7 +314,7 @@ def _json(argv: Sequence[str], cwd: Path, run: Runner) -> Mapping[str, Any]:
 
 
 def read_at(
-    copy: Path, commit: str, run: Runner = subprocess.run, *, checkout: Path | None = None
+    copy: Path, commit: str, run: Runner = backbone.run, *, checkout: Path | None = None
 ) -> Reading:
     """Everything that decides a dispatch, read in the working copy of
     `commit`. Raises Stop when a reading has no document, or the fixers point
@@ -369,12 +369,12 @@ def read_at(
     return Reading(commit, point, checked, answers, check, artefacts, forms, setups)
 
 
-def explain(copy: Path, name: str, run: Runner = subprocess.run) -> Mapping[str, Any]:
+def explain(copy: Path, name: str, run: Runner = backbone.run) -> Mapping[str, Any]:
     """`pkit friction explain <name> --json` at the working copy."""
     return _json(["pkit", "friction", "explain", name, "--json"], copy, run)
 
 
-def upstreams_at(copy: Path, run: Runner = subprocess.run) -> dict[str, list[str]]:
+def upstreams_at(copy: Path, run: Runner = backbone.run) -> dict[str, list[str]]:
     """Each artefact at the working copy, by location, with the locations of the
     artefacts it anchors on, read from `pkit friction artefacts --json`. Applying
     accepted proposals follows it, upstream first (DEC-056 point 6)."""

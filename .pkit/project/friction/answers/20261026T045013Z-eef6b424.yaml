@@ -1,0 +1,286 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-anchor
+    read:
+      - moved-b05e58ea05a5.yaml
+    revalidated:
+      at: 2026-10-26T04:50:13Z
+      outcome: unchanged
+      unchanged-because: The change only adds path_anchors to the artefacts document, the files each path anchor stands on, matched as the friction checks match it. What an anchor is and what it names hold as the term says.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-artefact
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-3933dda7eeb0.yaml
+    revalidated:
+      at: 2026-10-26T04:50:20Z
+      outcome: unchanged
+      unchanged-because: The change only adds path_anchors to the artefacts document, the files each path anchor stands on. What an artefact is, and how discovery finds it, hold as the term says.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-artefact-type
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-78df703a1a01.yaml
+    revalidated:
+      at: 2026-10-26T04:50:24Z
+      outcome: unchanged
+      unchanged-because: The change only adds path_anchors to the artefacts document, the files each path anchor stands on. How an artefact takes its type holds as the term says.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-link-target
+    revalidated:
+      at: 2026-10-26T04:50:28Z
+      outcome: unchanged
+      unchanged-because: The change only adds path_anchors to the artefacts document, the files each path anchor stands on. What a link's target is holds as the term says.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-place
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-0ae594146a73.yaml
+    revalidated:
+      at: 2026-10-26T04:50:32Z
+      outcome: unchanged
+      unchanged-because: The change only adds path_anchors to the artefacts document, the files each path anchor stands on. What a place is, and which files it matches, hold as the term says.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-revisit-link
+    revalidated:
+      at: 2026-10-26T04:50:36Z
+      outcome: unchanged
+      unchanged-because: The change only adds path_anchors to the artefacts document, the files each path anchor stands on. What a revisit of a link is holds as the term says.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-019-reading-document-versioned.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - moved-78477704a6e4.yaml
+    revalidated:
+      at: 2026-10-26T04:50:43Z
+      outcome: unchanged
+      unchanged-because: The tests add path_anchors, a key added within version 1 of the artefacts document, so the reading document stays versioned as the requirement says.
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-018-same-json-same-state.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - moved-83533106223a.yaml
+    revalidated:
+      at: 2026-10-26T04:50:48Z
+      outcome: unchanged
+      unchanged-because: The new path_anchors key lists sorted files from one state's listing, so the same state still prints the same bytes, as the requirement says.
+  - artefact: tech-docs/analysis/living-docs/glossary.md#TERM-documentation-space
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - moved-69f08683870f.yaml
+    revalidated:
+      at: 2026-10-26T04:50:53Z
+      outcome: unchanged
+      unchanged-because: spaces.py gains the report of what a page mentions and does not anchor, and nothing of what a documentation space is changes.
+  - artefact: tech-docs/analysis/living-docs/glossary.md#TERM-reader-review
+    read:
+      - moved-b0efe958d1c4.yaml
+    revalidated:
+      at: 2026-10-26T04:50:58Z
+      outcome: unchanged
+      unchanged-because: Point 6 adds a report of a page's mentions that settles no part of a rule and leaves the judgment to the reader-review, so the term holds.
+  - artefact: tech-docs/analysis/living-docs/glossary.md#TERM-unclassified-document
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+    revalidated:
+      at: 2026-10-26T04:51:01Z
+      outcome: unchanged
+      unchanged-because: spaces.py gains the report of a page's mentions, and what an unclassified document is, and how it is counted, do not change.
+  - artefact: tech-docs/analysis/living-docs/domain-model/020-proposals-and-reviews.md
+    read:
+      - 20261025T044039Z-a489cf5d.yaml
+      - 20261026T013021Z-befdc31c.yaml
+    revalidated:
+      at: 2026-10-26T04:51:05Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 6 adds a report of a page's mentions, and a mark an agent proposes as it proposes any change to a page, so proposals and reviews hold as the view shows them.
+  - artefact: tech-docs/analysis/living-docs/domain-model/010-spaces-and-pages.md
+    read:
+      - 20261025T044039Z-a489cf5d.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013021Z-befdc31c.yaml
+    revalidated:
+      at: 2026-10-26T04:51:10Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 6 adds a report and a mark in a page's text, and no field of a page, so spaces, pages, page kinds, readers and captured sources hold as the view shows them.
+  - artefact: tech-docs/analysis/living-docs/requirements/functional/REQ-022-agent-proposes-only.md
+    read:
+      - moved-0b574f2ce051.yaml
+    revalidated:
+      at: 2026-10-26T04:51:14Z
+      outcome: unchanged
+      unchanged-because: Point 6 says an agent proposes a mark as it proposes any change to a page, which keeps the agent to proposing only.
+  - artefact: tech-docs/analysis/living-docs/requirements/functional/REQ-024-checks-where-rule-binds.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+    revalidated:
+      at: 2026-10-26T04:51:18Z
+      outcome: unchanged
+      unchanged-because: The mention report is no part of a rule and enforces nothing, and it too reads only the pages where RS-LDOC-001 binds, so validation still checks each part only where its rule binds, as the tests named show.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-046-review-page-as-reader.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - moved-3e8ec6164660.yaml
+    revalidated:
+      at: 2026-10-26T04:51:23Z
+      outcome: unchanged
+      unchanged-because: Point 6's report settles no part of a rule, so the reader-review still judges whether the anchors ground each statement, as the steps say.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-047-onboard-documents.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-60786988cb3d.yaml
+    revalidated:
+      at: 2026-10-26T04:51:29Z
+      outcome: unchanged
+      unchanged-because: Validation now also lists the mentions a page's anchors do not cover. No step names that list, and each step's statements still hold, since the agent's onboarding plan does not read it.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-043-set-up-space.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-d45e53f4f973.yaml
+    revalidated:
+      at: 2026-10-26T04:51:37Z
+      outcome: unchanged
+      unchanged-because: Setting up a space runs the same check, which now also reports a page's mentions and never fails on one, so the steps and their refusals hold.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-044-write-page.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-953310b098f2.yaml
+    revalidated:
+      at: 2026-10-26T04:51:42Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-005-anchor-document.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-b82457b5436c.yaml
+    revalidated:
+      at: 2026-10-26T04:51:47Z
+      outcome: unchanged
+      unchanged-because: "Discovery only gains path_anchors in the artefacts document. Judged with the two revalidations answered apart, which read no answer from before an artefact was last added and read front matter as data in either home: anchoring a document, step 3's new document counted as revalidated, and variant 2a hold."
+  - artefact: .pkit/lifecycle/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T205437Z-a3b903e8.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001046Z-b1bfc4dd.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-e20d8eb259bb.yaml
+    revalidated:
+      at: 2026-10-26T04:51:52Z
+      outcome: unchanged
+      unchanged-because: Discovery only gains path_anchors in the artefacts document, which this README does not describe, so it holds.
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-65d082fdefb8.yaml
+    revalidated:
+      at: 2026-10-26T04:51:56Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, one home for every artefact's answers. #1779 builds it and rewrites the reference's account of the friction commands."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its friction commands write and read answers in the artefact's block, and friction resolve merges them, which COR-062 moves to answer files. #1779 builds it and rewrites the reference."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the reference keeps in the block. #1779 builds it and rewrites it."
+  - artefact: .pkit/capabilities/doc-examples/README.md
+    read:
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T024311Z-b91cff99.yaml
+    revalidated:
+      at: 2026-10-26T04:52:01Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 6 adds the report of a page's mentions, which this page does not describe, and the console examples and reading evidence it rests on hold.
+  - artefact: .pkit/schemas/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-b1ddbb959267.yaml
+    revalidated:
+      at: 2026-10-26T04:52:06Z
+      outcome: unchanged
+      unchanged-because: "The artefacts document gains path_anchors, which this README does not describe, so it holds. Judged with the two revalidations answered apart, no answer read from before an artefact was last added and pointers to COR-063: they change no key or shape it gives, and what it still models in the block stays deferred to #1779."
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/schemas/backbone/**
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/backbone_schemas.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/data_validate.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_discovery.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_validate.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: record
+            value: ADR-056
+          reason: "ADR-056 point 2 gains a location rule for answer files, which the README's binding order does not list. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, whose files' schema is a backbone file schema. #1779 builds it and rewrites the README with it."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It models the friction block with its answers, which COR-062 moves to answer files with a schema of their own. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the README models in the block. #1779 builds it and rewrites it."
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T012015Z-9d5dca86.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T013953Z-63c51796.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-96e1f9e9c108.yaml
+    revalidated:
+      at: 2026-10-26T04:52:12Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It says two branches revalidating one page conflict in its block and friction resolve takes the base side's answer, which COR-062 replaces. #1779 builds it and rewrites the passage."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the README keeps in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passage #1779 rewrites, since a revalidation would claim the whole README holds."

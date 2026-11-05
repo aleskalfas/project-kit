@@ -9,7 +9,9 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from project_kit import capabilities as caps
 from project_kit.cli import main
+from project_kit.manifest import ORIGIN_EXTERNALLY_SOURCED, ORIGIN_INCUBATED_IN_REPO
 from project_kit.schemas_authoring import (
     RenameResult,
     SchemaAuthoringError,
@@ -19,6 +21,7 @@ from project_kit.schemas_authoring import (
     rename_entry,
     stamp_new_schema,
 )
+from tests.adopter_repo import MakeAdopterRepo
 
 # Fixtures --------------------------------------------------------------
 
@@ -522,6 +525,94 @@ def test_stamp_namespace_owner_path_unchanged(tmp_path: Path) -> None:
     assert companion["x-pkit-id-collection"] == "/types"
     assert "patternProperties" in companion["properties"]["types"]
     assert "entry" in companion["$defs"]
+
+
+# A schemas folder the project receives as a synced copy (#1953) ---------
+
+
+def _as_methodology_source(root: Path) -> None:
+    """Give the tree the package source beside its `.pkit/`, which makes it the
+    methodology's source repository (`is_methodology_source` of the lifecycle)."""
+    package = root / "src" / "project_kit" / "__init__.py"
+    package.parent.mkdir(parents=True)
+    package.write_text("", encoding="utf-8")
+
+
+def _tree(root: Path) -> dict[str, bytes | None]:
+    """Every path under `root` outside `.git`, a file's bytes or None for a dir."""
+    return {
+        p.relative_to(root).as_posix(): (p.read_bytes() if p.is_file() else None)
+        for p in sorted(root.rglob("*"))
+        if ".git" not in p.relative_to(root).parts
+    }
+
+
+def _new_schema(owner: str, name: str = "ours") -> tuple[int, str]:
+    result = CliRunner().invoke(main, ["--color", "never", "new", "schema", owner, name])
+    return result.exit_code, result.output
+
+
+@pytest.mark.parametrize(
+    ("owner", "subject"),
+    [("core", "the core schemas area"), ("evidence", "capability 'evidence'")],
+)
+def test_new_schema_refuses_a_synced_copy_in_an_adopter_and_writes_nothing(
+    make_adopter_repo: MakeAdopterRepo, owner: str, subject: str
+) -> None:
+    """In a project that receives the methodology by sync, the core schemas area and a
+    kit-shipped capability's `schemas/` are synced copies, and the next sync overwrites a
+    schema written there (core rule 1). The command writes nothing and names where the
+    project's own schema goes."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    before = _tree(repo.root)
+
+    code, output = _new_schema(owner)
+
+    assert code == 1, output
+    assert _tree(repo.root) == before
+    assert f"{subject} arrives in this project as a synced copy" in output
+    assert "`pkit new schema <capability> ours`" in output
+
+
+def test_new_schema_refuses_an_externally_sourced_capability_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo(capabilities=("evidence",))
+    _as_methodology_source(repo.root)
+    caps.set_capability_origin(repo.root, "evidence", ORIGIN_EXTERNALLY_SOURCED)
+    before = _tree(repo.root)
+
+    code, output = _new_schema("evidence")
+
+    assert code == 1, output
+    assert _tree(repo.root) == before
+
+
+@pytest.mark.parametrize("owner", ["core", "evidence"])
+def test_new_schema_stamps_core_and_a_kit_shipped_capability_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo, owner: str
+) -> None:
+    """Where the methodology is authored, its trees are the source, never a copy."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    _as_methodology_source(repo.root)
+
+    code, output = _new_schema(owner)
+
+    assert code == 0, output
+    assert "Stamped: " in output
+
+
+def test_new_schema_stamps_an_incubated_capability_in_an_adopter(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A capability the project incubates is its own (COR-031 D1)."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    caps.set_capability_origin(repo.root, "evidence", ORIGIN_INCUBATED_IN_REPO)
+
+    code, output = _new_schema("evidence")
+
+    assert code == 0, output
+    assert "Stamped: .pkit/capabilities/evidence/schemas/ours.yaml" in output
 
 
 # CLI: pkit new schema --------------------------------------------------

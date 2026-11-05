@@ -1,0 +1,62 @@
+[
+  {
+    "id": "sa-explain-any-version-read",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/backbone.py",
+    "find": "    if version != EXPLAIN_VERSION:\n",
+    "replace": "    if version != EXPLAIN_VERSION and False:\n"
+  },
+  {
+    "id": "sa-propose-unread-state-read",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/reading.py",
+    "find": "    if state not in _READ_STATES:\n",
+    "replace": "    if state not in _READ_STATES and False:\n"
+  },
+  {
+    "id": "sa-propose-lone-quote-accepted",
+    "file": ".pkit/capabilities/software-analysis/scripts/propose.py",
+    "find": "        if (quote is None) != (source is None):\n",
+    "replace": "        if (quote is None) != (source is None) and False:\n"
+  },
+  {
+    "id": "sa-stamp-reads-the-base-twice",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/stamp.py",
+    "find": "    try:\n        reading = backbone.settled(root, base)\n    except Unreadable as exc:\n        raise Refused(f\"what the default branch holds",
+    "replace": "    try:\n        backbone.settled(root, None)\n        reading = backbone.settled(root, base)\n    except Unreadable as exc:\n        raise Refused(f\"what the default branch holds"
+  },
+  {
+    "id": "sa-stamp-failed-recording-keeps-the-file",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/stamp.py",
+    "find": "    except Unreadable as exc:\n        _put_back(target, before, made)\n",
+    "replace": "    except Unreadable as exc:\n"
+  },
+  {
+    "id": "sa-record-placeholder-accepted",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/revalidation.py",
+    "find": "        if placeholder is not None:\n            raise Refused(\n                f\"{flag} still holds",
+    "replace": "        if placeholder is not None and False:\n            raise Refused(\n                f\"{flag} still holds"
+  },
+  {
+    "id": "sa-readers-any-id-a-reader",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/readers.py",
+    "find": "        if not actor.withdrawn and actor.id is not None and pattern.match(actor.id)\n",
+    "replace": "        if actor.id is not None\n"
+  },
+  {
+    "id": "sa-evidence-at-odds-silent",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/check.py",
+    "find": "    if not isinstance(outcome, str) or AT_ODDS.get(outcome) != result:\n",
+    "replace": "    if True:\n"
+  },
+  {
+    "id": "sa-validate-preview-ignored",
+    "file": ".pkit/capabilities/software-analysis/scripts/validate.py",
+    "find": "    outcome = check.check(backbone.project_root(), preview=args.preview)\n",
+    "replace": "    outcome = check.check(backbone.project_root(), preview=False)\n"
+  },
+  {
+    "id": "pm-fixer-holding-edit-passes",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/fixers.py",
+    "find": "CHANGING_TOOLS = frozenset({\"Edit\", \"MultiEdit\", \"NotebookEdit\"})\n",
+    "replace": "CHANGING_TOOLS = frozenset({\"MultiEdit\", \"NotebookEdit\"})\n"
+  }
+]

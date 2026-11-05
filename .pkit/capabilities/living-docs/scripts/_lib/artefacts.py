@@ -27,6 +27,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from _lib import backbone
+
 #: The document version this reading understands (the CLI reference, "friction
 #: artefacts"); a later backbone that changes its meaning raises it.
 SCHEMA_VERSION = 1
@@ -119,6 +121,19 @@ class Document:
 
 
 @dataclass(frozen=True)
+class Part:
+    """One anchor of an artefact that names a part of a file, as the backbone
+    resolves it: an entry's section, a document's section or its lead, or a
+    record's point (COR-050 point 2). `span` is the lines the part spans,
+    `(first, last)` counted from 1, or `None` where it spans none."""
+
+    kind: str
+    value: str
+    path: str
+    span: tuple[int, int] | None
+
+
+@dataclass(frozen=True)
 class Artefact:
     """One artefact the places hold, as the backbone reads it: its file, its id,
     whether it is an entry of a collection file or a rule of a rule set rather
@@ -131,7 +146,12 @@ class Artefact:
     Its type, as the backbone resolves it (COR-056 point 6): `type`, or every
     type it counts as while a tie stands (`conflict`), the places matching its
     file in the core's order with each one's rank (`ranked`), and the paths of
-    the rule-set files whose scope covers it (`in_scope_of`)."""
+    the rule-set files whose scope covers it (`in_scope_of`).
+
+    What its anchors resolve to, as the backbone resolves them: each anchor that
+    names a part of a file, with the lines it spans (`parts`), and each path
+    anchor with the files it stands on (`standing`), `None` when the backbone
+    answered without them, added within the document's version."""
 
     path: str
     id: str
@@ -144,6 +164,8 @@ class Artefact:
     conflict: tuple[str, ...] = ()
     ranked: tuple[tuple[int, int], ...] = ()
     in_scope_of: tuple[str, ...] = ()
+    parts: tuple[Part, ...] = ()
+    standing: Mapping[str, tuple[str, ...]] | None = None
 
     @property
     def types(self) -> tuple[str, ...]:
@@ -169,7 +191,7 @@ class Reading:
     artefacts: tuple[Artefact, ...] = ()
 
 
-def read_artefacts(root: Path, run: Runner = subprocess.run) -> Reading:
+def read_artefacts(root: Path, run: Runner = backbone.run) -> Reading:
     """The declared places and their documents in the project at `root`, through
     `pkit friction artefacts --json`. Raises Unreadable when there is no document
     to read: `pkit` absent, a backbone without the command, a configuration it
@@ -285,7 +307,38 @@ def _artefact(entry: Mapping[str, Any]) -> Artefact:
             if isinstance(ranked.get("place"), int) and isinstance(ranked.get("rank"), int)
         ),
         in_scope_of=tuple(path for path in entry.get("in_scope_of") or [] if isinstance(path, str)),
+        parts=tuple(
+            part for listed in _mappings(entry.get("part_anchors")) if (part := _part(listed))
+        ),
+        standing=_standing(entry.get("path_anchors")),
     )
+
+
+def _part(entry: Mapping[str, Any]) -> Part | None:
+    kind, value, path = (_text(entry.get(key)) for key in ("kind", "value", "path"))
+    if kind is None or value is None or path is None:
+        return None
+    span = entry.get("span")
+    lines = (
+        (span["first_line"], span["last_line"])
+        if isinstance(span, Mapping)
+        and isinstance(span.get("first_line"), int)
+        and isinstance(span.get("last_line"), int)
+        else None
+    )
+    return Part(kind, value, path, lines)
+
+
+def _standing(value: Any) -> Mapping[str, tuple[str, ...]] | None:
+    """Each path anchor's files, by the anchor as written; `None` when the backbone
+    answered without them."""
+    if not isinstance(value, list):
+        return None
+    return {
+        str(entry.get("value")): tuple(f for f in entry.get("files") or [] if isinstance(f, str))
+        for entry in _mappings(value)
+        if isinstance(entry.get("value"), str)
+    }
 
 
 def capability_of(source: str) -> str | None:

@@ -1,0 +1,6 @@
+answers:
+  - artefact: .pkit/capabilities/living-docs/rule-sets/ldoc.md#RS-LDOC-004
+    revalidated:
+      at: 2026-10-19T16:10:34Z
+      outcome: unchanged
+      unchanged-because: living-docs DEC-001 point 3 names the two rules a later major of LDOC brings, a successor of the rule on one home and a rule on text alternatives, and adds diagrams' text alternatives to what validation checks where its rule binds. Its bullet that pages of a kind follow one format, with a template per kind, and its paragraph on a kind's structure are as they were, so this rule holds.

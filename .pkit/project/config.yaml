@@ -30,6 +30,14 @@ process:
     enabled: true
     committed: false
 
+# `rule-sets.plain-file-budget` — the budget, in words, of project-kit's own
+# rules, `.pkit/rules/project.md`, kept as a plain file (COR-069 point 3):
+# `pkit validate` fails the file past it. Lowered by the trim (#2261) to the
+# trimmed file's 290 words with room for about 50 more (COR-069 point 4); a
+# growth past it is a raise a person authorises.
+rule-sets:
+  plain-file-budget: 340
+
 # `friction` — anchors and friction (COR-050 point 14). `enforcing` from the
 # day the check exists (ADR-055 point 5).
 friction:
@@ -39,7 +47,8 @@ friction:
   # and are never declared here (living-docs DEC-001 point 1). The principle
   # is ADR-055 point 3's — a document is a place of the space matching its
   # audience; a README an adopter reads to use an area, capability or adapter
-  # is a page, a maintainer-facing sub-README is not. This explicit list is the
+  # is a page, and so is each page beside it that the README lists (ADR-069,
+  # Implications); a maintainer-facing sub-README is not. This explicit list is the
   # source of truth; each place's space is assigned in
   # `.pkit/capabilities/living-docs/project/config.yaml`. Each place gives
   # living-docs' page type (COR-056 point 2): the spaces' definitions, TECH and
@@ -62,18 +71,35 @@ friction:
     - {path: .pkit/adapters/claude-code/README.md, type: living-docs:page}
     - {path: .pkit/agents/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/demo-recording/README.md, type: living-docs:page}
+    - {path: .pkit/capabilities/doc-examples/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/evidence/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/living-docs/README.md, type: living-docs:page}
+    - {path: .pkit/capabilities/living-docs/pages.md, type: living-docs:page}
+    - {path: .pkit/capabilities/living-docs/spaces.md, type: living-docs:page}
+    - {path: .pkit/capabilities/living-docs/validation.md, type: living-docs:page}
+    - {path: .pkit/capabilities/living-docs/agent.md, type: living-docs:page}
     - {path: .pkit/capabilities/project-management/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/software-analysis/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/software-engineering/README.md, type: living-docs:page}
+    - {path: .pkit/capabilities/visual-communication/README.md, type: living-docs:page}
+    - {path: .pkit/capabilities/visual-communication/files.md, type: living-docs:page}
+    - {path: .pkit/capabilities/visual-communication/components.md, type: living-docs:page}
+    - {path: .pkit/capabilities/visual-communication/outputs.md, type: living-docs:page}
+    - {path: .pkit/capabilities/visual-communication/checks.md, type: living-docs:page}
+    - {path: .pkit/capabilities/visual-communication/libraries/starter/README.md, type: living-docs:page}
     - {path: .pkit/cli/README.md, type: living-docs:page}
     - {path: .pkit/decisions/README.md, type: living-docs:page}
     - {path: .pkit/lifecycle/README.md, type: living-docs:page}
     - {path: .pkit/permissions/README.md, type: living-docs:page}
     - {path: .pkit/process/README.md, type: living-docs:page}
+    - {path: .pkit/process/shape.md, type: living-docs:page}
+    - {path: .pkit/process/engine.md, type: living-docs:page}
+    - {path: .pkit/process/connections.md, type: living-docs:page}
     - {path: .pkit/rules/README.md, type: living-docs:page}
     - {path: .pkit/schemas/README.md, type: living-docs:page}
+    - {path: .pkit/schemas/backbone-files.md, type: living-docs:page}
+    - {path: .pkit/schemas/shape-patterns.md, type: living-docs:page}
+    - {path: .pkit/schemas/data-binding.md, type: living-docs:page}
     - {path: .pkit/scratchpad/README.md, type: living-docs:page}
     - {path: .pkit/skills/README.md, type: living-docs:page}
   # The declared surface (COR-050 point 8): the code project-kit says ought to
@@ -98,6 +124,9 @@ friction:
   #     a page describes.
   #   - evidence's `agents/` — it holds only the `.gitkeep` that keeps the
   #     folder in git until an agent lands; name it here then.
+  #   - each capability's `rule-sets/` — rule sets are anchor targets, which
+  #     anchor the records they rest on, not code a page describes; and its
+  #     `rules.md`, generated from its loaded set (COR-070).
   # `tests/test_self_host_documentation.py` holds every file under these trees
   # to the surface or one of these reasons, so a new one cannot land unsorted.
   surface:
@@ -137,3 +166,9 @@ friction:
     - .claude/
     - CHANGELOG.md
     - uv.lock
+    # derivable: the capabilities' rules index the lifecycle renders (ADR-076 point 2)
+    - .pkit/rules/capabilities.md
+    # history once released: the changesets a release consumes, read as written, so
+    # no citation in one is judged against today's rules (ADR-075 point 8)
+    - .changes/
+  delegate: project-manager

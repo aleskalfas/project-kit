@@ -1,7 +1,7 @@
 # Project-side adopter config for the project-management capability.
 # Dogfooded in project-kit itself — single-repo, label-fallback mode.
 
-schema_version: 1
+schema_version: 2
 
 # Self-describing binding tag (COR-023) — resolves this file to its schema for
 # `pkit data validate`. The `binds_to` glob on schemas/config.yaml also resolves
@@ -21,9 +21,9 @@ pkit_schema: project-management:config
 gh:
   host: github.com
 
-# project-kit doesn't use a Projects v2 board today — Priority and
-# Workstream fall back to `priority:*` / `workstream:*` labels per
-# [project-management:DEC-012-classification-axes].
+# project-kit doesn't use a Projects v2 board today, and has no substrate map:
+# every axis reads the kit's own labels. The flag says only whether a board
+# exists ([project-management:DEC-062-axes-chosen-in-the-map] point 1).
 has_projects_v2_board: false
 
 # Pre-close triage lead-time in days (per
@@ -64,9 +64,11 @@ code_path_to_doc_mapping:
 # `pkit::work-tracking:doc-check` point, one obligation per rule, and `enforce`
 # above stays the mapping's enforcement setting (DEC-053). Obligations another
 # source contributes are never met by a `## Doc impact` line: a documentation
-# capability's friction on an anchored page is met only by the page changed in
-# the diff, and code nothing documents only once a page anchors it. Each source
-# has its own setting here: advisory (the default) or enforcing. living-docs
+# capability's friction on an anchored page is met only by the page's answer in
+# the diff: the page changed, or an answer the change adds on it that the change
+# check lists as standing. Code nothing documents is met only once a page anchors
+# it. Each source has its own setting here: advisory (the default) or enforcing.
+# living-docs
 # contributes the `friction` source — a stale page (a deferred one carries its
 # answer and owes nothing), and each declared-surface path no page anchors —
 # and project-kit enforces it (#1012):
@@ -129,3 +131,21 @@ review:
 # `pkit pm history <N> [--check-drift]` reads the journal + governance boundary.
 audit:
   projection: audit
+
+# Fixers: each agent you were asked about, and the types you granted or refused it
+# (project-management DEC-056 point 2). Written by `pkit pm ask-fixers`,
+# `pkit pm grant-fixer` and `pkit pm revoke-fixer`.
+fixers:
+  living-docs:
+    granted:
+      - living-docs:page
+  analysis-resolver:
+    granted:
+      - software-analysis:actor
+      - software-analysis:constraint
+      - software-analysis:domain-model-view
+      - software-analysis:functional-requirement
+      - software-analysis:journey
+      - software-analysis:quality-requirement
+      - software-analysis:term
+      - software-analysis:use-case

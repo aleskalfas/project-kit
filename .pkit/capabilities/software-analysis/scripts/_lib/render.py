@@ -18,7 +18,10 @@ template shows exactly its kind's structure.
 - **A part a writer fills** holds its hint as the placeholder: one line, a
   marked comment, `<!-- pkit:hint <hint> Example: <example> -->`. It follows a
   label on the label's line. Below a heading, and as an opening, it is a line of
-  its own.
+  its own. So is it below the label of a list a writer writes, a part of the
+  form `numbered-steps` or `variants`, after a blank line, where the list goes
+  (`LISTS`). Its example is the list's first item, so written in the hint's
+  place it opens the list (#2088).
 - **What the stamp writes besides** follows the part's first line, after a
   blank line, such as a journey's step lines under *Steps*.
 - **A front-matter field a writer fills** holds its hint the same way, as the
@@ -51,10 +54,16 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from _lib import forms
 from _lib.structure import HEADING, LABEL, OPENING, RECORD, REPEATED, Element, Field, Kind
 
 #: The mark that makes an HTML comment a hint, after `<!--` and a space.
 HINT = "pkit:hint"
+
+#: The forms of a part that is a list a writer writes, item by item: its hint stands on a
+#: line of its own below the label, where the list goes (#2088). A journey's *Steps* is no
+#: such part, since the stamp writes its items.
+LISTS = frozenset({forms.NUMBERED_STEPS, forms.VARIANTS})
 
 #: What closes a comment, which no hint or example may hold.
 _CLOSE = "-->"
@@ -192,6 +201,8 @@ def _block(element: Element, title: str, written: str | None, hints: bool) -> st
         return "\n\n".join(text for text in (heading, lead, below) if text)
     if element.type == LABEL:
         label = f"**{element.text}:**"
+        if lead is not None and element.form in LISTS:
+            return "\n\n".join(text for text in (label, lead, below) if text)
         if lead is not None:
             label = f"{label} {lead}"
         elif below is not None and "\n" not in below:

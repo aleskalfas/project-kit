@@ -1,8 +1,9 @@
 ---
 rule-set: ANA
-version: 4.1.1
-inherits: [WRITE@2, software-analysis:SAN@1]
+version: 5.0.0
+inherits: [WRITE@2, software-analysis:SAN@2]
 scope:
+  exclude: [tech-docs/analysis/visual-communication/**]
   types:
     - software-analysis:actor
     - software-analysis:term
@@ -20,10 +21,6 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
-        revalidated:
-          at: 2026-10-22T16:24:46Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, a sentence that says who the actor is. The actor's voice in needs and goals, which this rule asks for, is untouched.
   RS-ANA-002:
     status: proposed
     origin: {why: "A kind's labels already have one home, which the check reads: its declared structure, with project-kit's additions to it as data (software-analysis DEC-001 point 1). A copy of the list here would drift from them."}
@@ -39,10 +36,6 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#2", "software-analysis:DEC-001#12"]
-        revalidated:
-          at: 2026-10-20T22:11:43Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 2 changes only how it names the overview's folder. An area's folder name and its number are untouched, and an area's goal sits beside that name in the configuration.
   RS-ANA-007:
     status: proposed
     origin: {why: "A file listing shows the order in which the views build on each other only where their names carry it. Steps of 10 leave room for a new view between two, so no file is renamed. software-analysis leaves the number's form to each project (software-analysis DEC-004 point 4). The maintainer chose this form for project-kit's views on 19 October, with the areas' (the design note on analysis concepts and order, PR #1808)."}
@@ -50,10 +43,6 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-004#4", "software-analysis:DEC-004#6"]
-        revalidated:
-          at: 2026-10-20T21:11:19Z
-          outcome: unchanged
-          unchanged-because: The change adds a flow to a view's opening. The number a view's file opens with, and what it means, are as before.
   RS-ANA-004:
     status: proposed
     origin: {why: "Each component owns its analysis, as it owns its decision records. A capability may move to a repository of its own (software-analysis DEC-001 point 2). On 19 October the maintainer decided that project-kit keeps one analysis for its core and one for each capability. The maintainer's delegate decided that an adapter keeps one once it needs one. The design note on analysis concepts and order records both (PR #1808)."}
@@ -61,21 +50,13 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#2"]
-        revalidated:
-          at: 2026-10-20T22:11:45Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 2 calls the overview the reader's entry point. Each analysis keeps its own overview in its own folder, so where an artefact lies is untouched.
   RS-ANA-005:
     status: proposed
-    origin: {why: "On 19 October, a map of project-kit's chain of use cases on main found five stages, each building on the ones before it. The maintainer took them as the core's areas (the design note on analysis concepts and order, PR #1808)."}
+    origin: {why: "On 19 October, a map of project-kit's chain of use cases on main found five stages, each building on the ones before it. The maintainer took them as the core's areas (the design note on analysis concepts and order, PR #1808). software-analysis cuts an area by the one function its use cases serve (software-analysis DEC-005 point 1). Each stage is such a function, whose goal software-analysis's settings state, so the five stand as functions, in the order the stages give. On 2 November, the maintainer added two areas after `050-adopt`, for reporting a problem and for working within the system's limits (reading 5 on #1727)."}
     pkit:
       friction:
         anchors:
-          record: ["software-analysis:DEC-001#2", "software-analysis:DEC-001#12"]
-        revalidated:
-          at: 2026-10-20T22:11:47Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 2's change names the overview's folder as the reader's entry point. The core's five areas, and where its use cases lie, are untouched.
+          record: ["software-analysis:DEC-001#2", "software-analysis:DEC-001#12", "software-analysis:DEC-005#1"]
   RS-ANA-006:
     status: proposed
     origin: {why: "A link at the version a capability requires of another component names the definitions the capability was written against. software-analysis leaves the links' version to each project (software-analysis DEC-001 point 2). A floor is project-kit's mechanism, raised only when a change declares it (PRJ-002 D4). The maintainer's delegate chose the floor on 19 October, under the maintainer's standing delegation (the design note on analysis concepts and order, PR #1808)."}
@@ -83,24 +64,24 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#2", "PRJ-002#D4"]
-        revalidated:
-          at: 2026-10-20T22:11:48Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 2 changes only its line on the overview's folder. The version a glossary head's links to another analysis name is untouched.
 ---
 
 # ANA — project-kit's rules for its analysis
 
 These are the rules project-kit's analysis follows: seven rules of its own, and the rules of the two sets it inherits.
 
-- **What it selects:** every actor, glossary term, domain-model view, use case, journey and requirement, by the eight types software-analysis declares (software-analysis DEC-001 point 2, DEC-002 point 3, DEC-004 point 4). The scope names no paths, so it selects the analysis wherever software-analysis places it.
+- **What it selects:** every actor, glossary term, domain-model view, use case, journey and requirement, by the eight types software-analysis declares (software-analysis DEC-001 point 2, DEC-002 point 3, DEC-004 point 4). The scope names no `paths`, so it selects the analysis wherever software-analysis places it. Its `exclude` leaves one analysis out for now.
+- **What it leaves out for now:** the visual-communication analysis, under `tech-docs/analysis/visual-communication/`, until its owner mends it (#2462).
+  - **Why.** Once this set re-pins to the major of `SAN` that accepts its judgement rules, every artefact it selects comes under them (#1727). An audit of 2 November found many breaks of them in that analysis, which its owner mends in a change of its own.
+  - **The way out.** A set may leave a file out of its scope until the file is mended (COR-060 point 2). The analysis is then out of `WRITE` and `SAN` alike, since both bind on it only through this set.
+  - **When it ends.** The change that mends the analysis brings it back into the scope (#2462).
 - **What it does not select:** a revalidation record. A revalidation record is a held document, never an artefact, so no scope selects it. Whoever writes one still follows `WRITE`, through project-kit's operational rules (`.pkit/rules/project.md`).
 - **What it inherits:** the accepted rules of both sets bind on the analysis through this set (COR-051 point 7).
   - `WRITE`, project-kit's general writing rules, pinned at `WRITE@2`.
-  - `software-analysis:SAN`, the software-analysis method, pinned at `SAN@1`. `SAN` takes no scope, so its rules bind on project-kit's analysis only through this set (software-analysis DEC-001 point 1).
+  - `software-analysis:SAN`, the software-analysis method, pinned at `SAN@2`. `SAN` takes no scope, so its rules bind on project-kit's analysis only through this set (software-analysis DEC-001 point 1).
   - **The pins:** a rule accepted in an inherited set gives that set a new major. The same change re-pins this set, which gives it a new major too (COR-051 point 7).
 - **The set's own rules:** the actor's voice in needs and goals (RS-ANA-001), and each kind's list of labels (RS-ANA-002), which fills `RS-WRITE-002#labels`. Then the analyses project-kit keeps, their areas and the numbers of its domain-model views (RS-ANA-003, RS-ANA-007, RS-ANA-004 and RS-ANA-005), and the version a capability's links to the analyses it builds on name (RS-ANA-006).
-  - RS-ANA-003 to RS-ANA-007 are project-kit's choices where software-analysis leaves them to each project (software-analysis DEC-001 points 2 and 12, DEC-004 point 4). They are the form of an area's number and of a view's, which analyses it keeps, the core's five areas, and which version its links name.
+  - RS-ANA-003 to RS-ANA-007 are project-kit's choices where software-analysis leaves them to each project (software-analysis DEC-001 points 2 and 12, DEC-004 point 4). They are the form of an area's number and of a view's, which analyses it keeps, the core's seven areas, and which version its links name.
   - The maintainer decided the design on 19 October. The maintainer's delegate answered its open questions the same day, under the maintainer's standing delegation. Among them are the adapters and the links' version (the design note on analysis concepts and order, PR #1808).
   - That a need or a goal is one sentence is the method's, through the `sentence` form of RS-SAN-001. So RS-ANA-001 leaves it out.
   - software-analysis asks for the actor's voice only in its hints, and a hint binds nothing (software-analysis DEC-001 point 1). A project that wants the voice to bind adds a rule of its own, as the maintainer decided on 9 October (PR #1391). RS-ANA-001 is that rule.
@@ -178,15 +159,15 @@ Keep each artefact in the analysis of the component it describes, in a folder of
 - **Breaks the rule:** "`tech-docs/analysis/use-case-model/actors/ACT-developer.md`", the core's actor at the analysis's root (main, 19 October)
 - **Keeps the rule:** "`tech-docs/analysis/core/use-case-model/actors/`" (the design note on analysis concepts and order)
 
-### RS-ANA-005 — The core's use cases lie in its five areas
+### RS-ANA-005 — The core's use cases lie in its seven areas
 
-Keep each use case of the core's analysis in one of its five areas: `010-develop`, `020-set-up`, `030-change`, `040-release` and `050-adopt`.
+Keep each use case of the core's analysis in one of its seven areas: `010-develop`, `020-set-up`, `030-change`, `040-release`, `050-adopt`, `060-report` and `070-work-within-limits`.
 
 - **How:**
-  - **The stages.** The areas are the five stages of the chain of use cases, in the order in which they build on each other.
-  - **A new area** needs a change to this rule, since the five are the maintainer's choice.
+  - **The functions.** Each area is one function of the core, the summary goal its use cases are steps toward, as software-analysis's settings state it (software-analysis DEC-005 point 1). The areas' numbers give the order in which they build on each other, the stages of the chain of use cases.
+  - **A new area** needs a change to this rule, since the seven are the maintainer's choice.
 - **Breaks the rule:** "`change/` and `release/`", the core's two areas (`tech-docs/analysis/use-case-model/use-cases/` on main, 19 October)
-- **Keeps the rule:** "`010-develop`, `020-set-up`, `030-change`, `040-release` and `050-adopt`" (the design note on analysis concepts and order)
+- **Keeps the rule:** "`070-work-within-limits/UC-028-keep-intermediate-files.md`" (the core's analysis, 2 November)
 
 ### RS-ANA-006 — A capability's links to another analysis name the floor it requires
 

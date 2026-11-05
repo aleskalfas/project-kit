@@ -78,6 +78,18 @@ What is checked, each against the record's words:
   binds nothing, and the summary says why. A page whose body cannot be read is
   one error, unless the format check already gave it. `formats` says what a
   diagram is.
+- **What a page mentions and does not anchor** (DEC-001 point 6; RS-LDOC-001).
+  Where RS-LDOC-001 binds on a page, each mention of a file, a record, a rule or
+  a command that the page's anchors do not cover is reported, one finding per
+  page, never failed; a passage the page marks is passed over, and a mark that
+  passes nothing over is reported. No answer from the backbone's resolver of
+  records is one report, and then no mention is read. `mentions` says what a
+  mention is and what covers it.
+- **A link to a section, and a citation** (DEC-001 points 3 and 6). On the same
+  pages, a link to another page's section that the page does not anchor at that
+  section, where the rule on one home binds on the page too, and a record's
+  citation the page's anchors do not stand on are each a warning, never failed.
+  `mentions` says what each is.
 - **Readers** (points 3, 4 and 7). Where RS-LDOC-003 binds on a page, the page
   names its reader in `reader`, and the reader resolves against the readers
   point, `pkit::documentation:readers`, read as it resolves (`readers`) — only
@@ -137,7 +149,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-from _lib import formats, sources
+from _lib import formats, mentions, sources
 from _lib.artefacts import Document, Unreadable, read_artefacts
 from _lib.binding import Binding, read_binding
 from _lib.binding import Unreadable as Unbound
@@ -148,6 +160,7 @@ from _lib.declarations import (
     INTERNAL_ROOT,
     LDOC_FILE,
     LIVING_DOCS_CONFIG,
+    RECOMMENDED_INTERNAL_ROOT,
     USER_ROOT,
     Declarations,
     ProjectPlace,
@@ -197,7 +210,7 @@ RECORD_ID = re.compile(r"^(?:COR|PRJ|ADR|DEC)-[0-9]{3,}$")
 #: the backbone reads them as project rule sets (COR-051 point 2).
 RULE_SETS = "rule-sets"
 
-ERROR, REPORT = "error", "report"
+ERROR, WARNING, REPORT = "error", "warning", "report"
 
 #: What a place of rule sets passed over is, as each message about one words it
 #: (DEC-001 point 1; `_set_apart`).
@@ -226,15 +239,17 @@ class Finding:
 
 @dataclass
 class Outcome:
-    """What the check answers: summary lines, findings, the unclassified documents, and
-    the pages left unanchored — without an accepted reason, and apart from them those
-    accepted with one, each with its reason (DEC-001 point 8)."""
+    """What the check answers: summary lines, findings, the unclassified documents, the
+    pages left unanchored — without an accepted reason, and apart from them those
+    accepted with one, each with its reason (DEC-001 point 8) — and each mention a page
+    does not anchor, with the anchor that would ground it (DEC-001 point 6)."""
 
     summary: list[str] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
     unclassified: list[str] = field(default_factory=list)
     unanchored: list[str] = field(default_factory=list)
     accepted_unanchored: list[tuple[str, str]] = field(default_factory=list)
+    unanchored_mentions: list[mentions.Unanchored] = field(default_factory=list)
 
     @property
     def errors(self) -> list[Finding]:
@@ -488,19 +503,22 @@ def check(
     root: Path,
     read: Callable[[], Readers] = read_readers,
     reach: Callable[[Path], Binding] = read_binding,
+    look: Callable[[Path], mentions.Lookup] = mentions.look_up,
 ) -> Outcome:
     """Every check of this module over the project at `root`; `read` answers the
     readers point, asked only when some page names a well-formed reader where
-    RS-LDOC-003 binds, and `reach` where the rules bind, asked only when there is
-    a page. When the backbone gives no reading of the places, that is the one
-    finding."""
-    return checked(root, read, reach).outcome
+    RS-LDOC-003 binds, `reach` where the rules bind, asked only when there is
+    a page, and `look` resolves the records a page mentions or anchors, asked only
+    where RS-LDOC-001 binds on some page. When the backbone gives no reading of
+    the places, that is the one finding."""
+    return checked(root, read, reach, look).outcome
 
 
 def checked(
     root: Path,
     read: Callable[[], Readers] = read_readers,
     reach: Callable[[Path], Binding] = read_binding,
+    look: Callable[[Path], mentions.Lookup] = mentions.look_up,
 ) -> Checked:
     """The check, as `check` runs it, with the declarations and the walk it read."""
     try:
@@ -520,6 +538,7 @@ def checked(
     reader_note = _reader_findings(decl, walk, binding, read, outcome)
     format_note = _format_findings(root, decl, walk, binding, outcome)
     diagram_note = _diagram_findings(root, decl, walk, binding, outcome)
+    mention_notes = _mention_findings(root, decl, walk, binding, look, outcome)
     captured = sources.check(root, decl.artefacts)
     outcome.findings.extend(
         Finding(
@@ -532,7 +551,7 @@ def checked(
         walk,
         entry_notes,
         definition_notes,
-        (reader_note, format_note, diagram_note, captured.summary, scope_note),
+        (reader_note, format_note, diagram_note, *mention_notes, captured.summary, scope_note),
         outcome,
     )
     return Checked(outcome, decl, walk)
@@ -1091,6 +1110,161 @@ def _diagram_findings(
         + (f"; {unreadable} page(s) that cannot be read" if unreadable else "")
         + (f"; {unbound} page(s) {rule} does not bind on, not checked" if unbound else "")
         + "."
+    )
+
+
+def _mention_findings(
+    root: Path,
+    decl: Declarations,
+    walk: _Walk,
+    binding: Binding | None,
+    look: Callable[[Path], mentions.Lookup],
+    outcome: Outcome,
+) -> tuple[str, ...]:
+    """Each mention of a file, a record, a rule or a command that a page's anchors do
+    not cover, where the rule on grounding (RS-LDOC-001) binds on the page, as the
+    backbone's answer gives it (DEC-001 point 6; COR-051 point 7). Reported, one
+    finding per page with each mention in the human view, and never failed. A
+    mention the page marks in its text is passed over, and a mark that passes over
+    nothing is reported. Nothing here settles a part of the rule.
+
+    On the same pages, a warning for each link to another page's section that the
+    page does not anchor at that section, where the rule on one home binds too, and
+    for each citation of a record its anchors do not stand on (`mentions`). Never
+    failed, and no part of a rule is settled by either. Returns the summary's lines
+    about them."""
+    rule = mentions.GROUNDING_RULE
+    if binding is None:
+        return (f"mentions: not read — where {rule} binds cannot be read.",)
+    bound = sorted(rel for rel in walk.pages if binding.binds(rel, cited(rule)))
+    unbound = len(walk.pages) - len(bound)
+    if not bound:
+        why = _unaccepted(rule, decl)
+        if why is not None:
+            return (f"mentions: not read — {why}.",)
+        if walk.pages:
+            return (
+                f"mentions: not read — {rule} binds on none of the {unbound} page(s) "
+                f"(COR-051 point 7): {LDOC} binds only through a set of the project's own whose "
+                f"scope selects a page, such as a space's definition (DEC-001 point 2).",
+            )
+        return ("mentions: no page to read.",)
+    whole = {a.path: a for a in decl.artefacts if not a.entry}
+    if any(whole.get(rel) is not None and whole[rel].standing is None for rel in bound):
+        return (
+            "mentions: not read — the backbone's `pkit friction artefacts --json` answered "
+            "without the files each path anchor stands on, so no mention can be told covered "
+            "(upgrade the backbone).",
+        )
+    one_home = frozenset(
+        rel
+        for rel in bound
+        if any(binding.binds(rel, cited(home)) for home in mentions.ONE_HOME_RULES)
+    )
+    try:
+        report = mentions.read(
+            root,
+            {rel: whole.get(rel) for rel in bound},
+            mentions.Documents.of(decl.artefacts),
+            look(root),
+            walk.pages,
+            one_home,
+        )
+    except mentions.Unreadable as exc:
+        outcome.findings.append(
+            Finding(
+                REPORT,
+                BACKBONE_CONFIG,
+                f"the records the pages mention cannot be resolved — "
+                f"{str(exc).rstrip('.')}. No mention is read until they can: {CAPABILITY} "
+                f"resolves them through the backbone's `pkit refs lookup --json` (DEC-001 "
+                f"point 6).",
+                check="mentions-unread",
+            )
+        )
+        return ("mentions: not read — the records cannot be resolved.",)
+    outcome.unanchored_mentions.extend(report.unanchored)
+    by_page: dict[str, list[mentions.Unanchored]] = {}
+    for found in report.unanchored:
+        by_page.setdefault(found.page, []).append(found)
+    outcome.findings.extend(
+        Finding(REPORT, rel, _unanchored_message(rel, found), check="mention")
+        for rel, found in sorted(by_page.items())
+    )
+    outcome.findings.extend(
+        Finding(
+            REPORT,
+            f"{idle.page}:{idle.line}",
+            f"{idle.page}: the mark `<!-- {mentions.MARK_WORD}: … -->` at line {idle.line} passes "
+            f"nothing over, since {idle.why}. A mark is written right after the mention it "
+            f"passes over, on its line, with the reason — move it there, give the reason, or "
+            f"remove it (DEC-001 point 6).",
+            check="mention-mark",
+        )
+        for idle in report.idle
+    )
+    outcome.findings.extend(
+        Finding(WARNING, f"{gap.page}:{gap.line}", _gap_message(gap), check=gap.kind)
+        for gap in report.gaps
+    )
+    beyond = f"; {unbound} page(s) {rule} does not bind on, not read" if unbound else ""
+    links = sum(1 for gap in report.gaps if gap.kind == mentions.SECTION_LINK)
+    unhomed = len(bound) - len(one_home)
+    no_home = (
+        f"; {unhomed} page(s) the rule on one home does not bind on, whose links are not read"
+        if unhomed
+        else ""
+    )
+    return (
+        f"mentions ({rule}): {report.mentions} mention(s) of a file, a record, a rule or a "
+        f"command in {report.pages} page(s), {len(report.unanchored)} the page's anchors do not "
+        f"cover, {report.marked} passage(s) marked unanchored on purpose{beyond}.",
+        f"links and citations: {report.links} link(s) to a section of another page and "
+        f"{report.citations} citation(s) of a record read; warned of {links} section(s) linked "
+        f"and not anchored, and {len(report.gaps) - links} citation(s) the anchors do not stand "
+        f"on{no_home} (DEC-001 points 3 and 6).",
+    )
+
+
+def _gap_message(gap: mentions.Gap) -> str:
+    """A warning's message: the passage, what the rule it falls short of says, and the
+    anchor to add or the mark to write (DEC-001 points 3 and 6)."""
+    mark = f"`<!-- {mentions.MARK_WORD}: <reason> -->`"
+    if gap.kind == mentions.SECTION_LINK:
+        return (
+            f"{gap.page}: the link at line {gap.line} to `{gap.written}` leads to a section of "
+            f"another page that the page does not anchor. A page that sums up a fact whose home "
+            f"is another page links to the home and anchors the home's section that states the "
+            f"fact, and an anchor on the whole home is not that anchor (DEC-001 point 3). Add "
+            f"`{gap.anchor}` to the page's anchors, or mark a link that only names the section "
+            f"with {mark} (DEC-001 point 6)."
+        )
+    return (
+        f"{gap.page}: the citation at line {gap.line} of `{gap.written}` is one the page's "
+        f"anchors do not stand on. Only what a page anchors grounds a statement, so an inline "
+        f"citation grounds its sentence only where the page anchors what it cites (DEC-001 "
+        f"point 3). Add `{gap.anchor}` to the page's anchors, or mark a passage that only names "
+        f"the record with {mark} (DEC-001 point 6)."
+    )
+
+
+def _unanchored_message(rel: str, found: Sequence[mentions.Unanchored]) -> str:
+    nouns = {
+        mentions.PATH: "file(s)",
+        mentions.RECORD: "record(s)",
+        mentions.RULE: "rule(s)",
+        mentions.COMMAND: "command(s)",
+    }
+    named = ", ".join(
+        f"{count} {noun}"
+        for kind, noun in nouns.items()
+        if (count := sum(1 for each in found if each.kind == kind))
+    )
+    return (
+        f"{rel} mentions {named} that its anchors do not cover. `pkit living-docs validate` "
+        f"lists each with an anchor that would cover it: anchor what the page rests on, or mark "
+        f"a passage that only names a thing with `<!-- {mentions.MARK_WORD}: <reason> -->` "
+        f"({mentions.GROUNDING_RULE}; DEC-001 point 6)."
     )
 
 
@@ -1779,8 +1953,14 @@ def _separation_findings(decl: Declarations, outcome: Outcome) -> None:
     user, internal = decl.user_root, decl.internal_root
     if user == internal:
         state = f"both documentation roots are {user!r}"
+        fix = (
+            f"`pkit {CAPABILITY} new space {USER_SPACE}` offers to set the internal root apart, "
+            f"at {RECOMMENDED_INTERNAL_ROOT!r}, before it creates the space, or set it with `pkit "
+            f"config set docs.internal <path>` (DEC-001 points 1 and 2)"
+        )
     elif is_within(user, internal) or is_within(internal, user):
         state = f"the documentation roots {user!r} and {internal!r} nest"
+        fix = "onboarding separates them (DEC-001 points 1 and 8)"
     else:
         return
     outcome.findings.append(
@@ -1789,7 +1969,7 @@ def _separation_findings(decl: Declarations, outcome: Outcome) -> None:
             f"{BACKBONE_CONFIG}:/docs",
             f"{state}, so the user and technical spaces are not separate yet: user-facing "
             f"navigation must never lead into technical material, and neither root lies inside "
-            f"the other — onboarding separates them (DEC-001 points 1 and 8).",
+            f"the other — {fix}.",
             check="separation",
         )
     )
@@ -1838,5 +2018,8 @@ def _summary(
         f"onboarding leaves none without (DEC-001 point 8)."
     )
     errors = len(outcome.errors)
-    lines.append(f"{errors} error(s), {len(outcome.findings) - errors} report(s).")
+    warnings = sum(1 for finding in outcome.findings if finding.severity == WARNING)
+    reports = len(outcome.findings) - errors - warnings
+    warned = f"{warnings} warning(s), " if warnings else ""
+    lines.append(f"{errors} error(s), {warned}{reports} report(s).")
     return lines

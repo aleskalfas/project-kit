@@ -40,8 +40,9 @@ SEAM_MODULE = LIB / "containment.py"
 @pytest.fixture(scope="module")
 def containment():
     """Load the containment module via importlib (sibling _lib import)."""
-    if str(LIB) not in sys.path:
-        sys.path.insert(0, str(LIB))
+    for path in (SCRIPTS, LIB):
+        if str(path) not in sys.path:
+            sys.path.insert(0, str(path))
     spec = importlib.util.spec_from_file_location("pm_containment_read_under_test", SEAM_MODULE)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -374,6 +375,57 @@ def test_a_supplied_corpus_without_a_completeness_claim_is_not_vouched_for(
     res = containment.resolve_children({}, parent_number=5, corpus={9: "EPIC: #5\n"})
     assert res.numbers == [9]
     assert res.complete is False
+
+
+# --- state issues: the corpus is the issues of work alone (#2139) -------------
+#
+# DEC-058 point 3: the capability's one read of its issues leaves state issues
+# out by their marker, and the seam acquires its corpus through it.
+
+_STATE_MARKER = "<!-- pkit:state-issue v=1 key=seat-planner -->"
+
+
+def _stub_corpus_with_a_state_issue(containment, monkeypatch):
+    """Stub `gh issue list` with a child of #5, and a state issue whose first line
+    names #5 too. The native read is absent (410), so the textual side decides."""
+
+    def fake_gh(args, config):
+        if args[1] == "api":
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
+        assert "body" in args[args.index("--json") + 1].split(",")
+        rows = [
+            {"number": 7, "state": "open", "body": "EPIC: #5\n## What\n"},
+            {"number": 8, "state": "open", "body": f"EPIC: #5\n{_STATE_MARKER}\n"},
+        ]
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows), stderr="")
+
+    monkeypatch.setattr(containment, "_gh_call", fake_gh)
+
+
+def test_the_corpus_leaves_a_state_issue_out(containment, monkeypatch) -> None:
+    _stub_corpus_with_a_state_issue(containment, monkeypatch)
+    corpus = containment.fetch_issue_corpus({}, fields="number,state")
+    assert corpus is not None
+    assert [row["number"] for row in corpus.rows] == [7]
+    assert corpus.rows[0] == {"number": 7, "state": "open"}
+    assert corpus.complete is True
+
+
+def test_a_page_full_with_a_state_issue_still_reached_its_limit(containment, monkeypatch) -> None:
+    """The ceiling is measured on what `gh` returned: two rows at a limit of two
+    reached the limit, though only one of them is work."""
+    _stub_corpus_with_a_state_issue(containment, monkeypatch)
+    corpus = containment.fetch_issue_corpus({}, limit=2)
+    assert corpus is not None
+    assert len(corpus.rows) == 1
+    assert corpus.complete is False
+
+
+def test_a_state_issue_is_never_a_child(containment, monkeypatch) -> None:
+    _stub_corpus_with_a_state_issue(containment, monkeypatch)
+    res = containment.resolve_children({}, parent_number=5)
+    assert res.numbers == [7]
+    assert res.complete is True
 
 
 # --- the ambiguous 404 (#869) ------------------------------------------------

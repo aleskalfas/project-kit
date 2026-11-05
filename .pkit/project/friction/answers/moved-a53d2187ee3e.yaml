@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-stamp
+    revalidated:
+      at: 2026-10-24T04:34:17Z
+      outcome: unchanged
+      unchanged-because: The migration stamp now refuses a backbone or capability folder the project receives as synced copies. A stamp is still a command writing a new file, paired with a skill, so the definition holds.

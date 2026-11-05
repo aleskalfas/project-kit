@@ -1,0 +1,28 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    revalidated:
+      at: 2026-11-02T23:50:03Z
+      outcome: unchanged
+      unchanged-because: "Only its anchors changed: it now anchors _lib/records.py, where a render now writes the lock into piece.yaml as text, every other byte kept, and where the list is read. The change moves each record's reading and writing there, names the foundations once in libraries.py and adds a test helper, and every command writes, reads and refuses as before, so what the page says of the lock, the list, the location and the foundations still holds."
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    revalidated:
+      at: 2026-11-02T23:50:14Z
+      outcome: unchanged
+      unchanged-because: pipeline.py now hands the lock's text to _lib/records.py and takes the foundations' name from libraries.py; how a piece's components are found, read, laid out and drawn is as it was, so every statement of the page still holds.
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    revalidated:
+      at: 2026-11-02T23:50:19Z
+      outcome: unchanged
+      unchanged-because: The findings record, the record of exports, a produced output's record and the record beside written code are now written through _lib/records.py with the same comment, YAML and quoted time, byte for byte, and exports.yaml is read and refused as before; what each output and record holds, where it lies and what refuses an export are unchanged.
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    revalidated:
+      at: 2026-11-02T23:50:23Z
+      outcome: unchanged
+      unchanged-because: The commands write the records the check reads byte for byte as before, the list is read and refused with the same message, which list-unreadable reports, and the foundations keep their one name; no finding, level, message or fix the page lists changes.
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T105732Z-50026bac.yaml
+    revalidated:
+      at: 2026-11-02T23:50:27Z
+      outcome: unchanged
+      unchanged-because: pkit visual render still writes the lock into piece.yaml, every other byte kept, and the findings record as it did, now through _lib/records.py; no command, option, output, message or exit code the README describes changes.

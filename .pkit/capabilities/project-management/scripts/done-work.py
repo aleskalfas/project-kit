@@ -12,8 +12,19 @@ Transitions Review → Done by squash-merging the PR (an issue still In Progress
 goes through Review first, #1162). Per DEC-026:
 
     done-work <N> [--bypass "<reason>"] [--bypass-ci "<reason>"]
-                  [--skip-checkbox-gate]
+                  [--skip-checkbox-gate] [--bypass-owner "<reason>"]
                   [--bypass-reviewer <name> ... --bypass-reviewer-reason "<r>"]
+
+The clash guard (DEC-035 point 6) runs first, where this clone set an instance
+id or holds a seat of a topology: landing an issue another instance owns is
+refused at bypassable-with-audit (DEC-014), through `_lib/instance_claims`.
+`--bypass-owner "<reason>"` posts the reason on the issue as an audit comment
+before anything else, and hands it to the moves this run composes, whose own
+guard finds the comment posted. In a project with a topology, a claim whose
+clone no longer holds its seat is no claim, and one that cannot be judged
+refuses (DEC-059 point 9). Before the guard, a clone that took a seat confirms
+it on the seat's state issue, and the landing refuses where it cannot (DEC-059
+point 6).
 
 Authorisation (#1760): the merge is the person's to authorise
 ([project-management:DEC-006-state-machine-and-cascade],
@@ -184,6 +195,9 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     default one, where GitHub does not auto-close), its state label is
     reconciled to done, and its closure cascade runs (DEC-006). A failure is
     a warning naming the re-run, and the run exits with it after cleanup.
+    Where this clone set an instance id, that close-issue also releases each
+    issue's instance ownership (DEC-035 point 4): done-work releases through
+    it and writes no ownership marker itself.
   - Best-effort branch cleanup, after the transition and the closes: the
     head branch deleted on GitHub by the backbone (`pkit pull-request
     delete-branch <PR> --expect <the head that merged>`), only while its tip
@@ -214,8 +228,9 @@ more than one open, or when gh does not say, it refuses before anything else.
 
 Exit codes:
   0  merged + done
-  1  membership refusal / approval, checkbox or CI gate fails; a queue the
-     run may not go around or through
+  1  membership refusal / approval, checkbox or CI gate fails / the clash
+     guard refused an issue another instance owns; a queue the run may not go
+     around or through
   2  usage error / gh failure, the PR's checks that could not be read among
      them; a run with no `--yes` and no terminal to ask at, which merges
      nothing
@@ -253,6 +268,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import (
     axis_labels,
     bootstrap_gate,
+    instance_claims,
     issue_branch,
     merge_queue,
     pr_merge,
@@ -560,6 +576,17 @@ def run(
         ),
     )
     parser.add_argument(
+        "--bypass-owner",
+        default=None,
+        metavar="REASON",
+        help=(
+            "Bypass the clash guard, which refuses to land an issue another "
+            "instance owns (bypassable-with-audit per DEC-014, DEC-035 point 6): "
+            "the reason is posted on the issue as an audit comment before anything "
+            "else. Independent of --bypass and --bypass-ci."
+        ),
+    )
+    parser.add_argument(
         "--skip-checkbox-gate",
         action="store_true",
         help=(
@@ -679,6 +706,33 @@ def run(
     if not guard:
         return _ended(REFUSED, 1, reason="the foreign-repository guard refused (see above)")
     confirmed = session_guard.confirmed(guard)
+
+    # The clash guard (DEC-035 point 6), before anything is posted or merged:
+    # landing an issue another instance owns is refused, unless a bypass posts
+    # its reason. The moves this run composes are handed the same reason. A seat
+    # is confirmed on its state issue first (DEC-059 point 6).
+    try:
+        clone = instance_claims.this_clone(
+            capability_root, invoker.github_login, config, dry_run=args.dry_run
+        )
+    except instance_claims.Unconfirmed as exc:
+        return _ended(
+            REFUSED, 1, f"[refused] done-work #{args.issue_number}: {exc} Nothing was written."
+        )
+    if clone is not None:
+        owner_guard = instance_claims.guard(
+            args.issue_number,
+            clone,
+            config,
+            verb="done-work",
+            flag="--bypass-owner",
+            bypass=args.bypass_owner,
+            invoker=invoker,
+            dry_run=args.dry_run,
+        )
+        if owner_guard.refused:
+            return _ended(REFUSED, 1, owner_guard.line)
+        instance_claims.say_guard(owner_guard)
 
     # The issue's local branch (#1608): of several, the one with its open PR. A
     # composing verb hands its reading on. With several and none open, the run
@@ -927,6 +981,7 @@ def run(
             mode_resolution.source,
             capability_root,
             override_reviewers=override_reviewers,
+            issue_number=args.issue_number,
         )
 
     for warning in gate_result.warnings:
@@ -1178,6 +1233,7 @@ def run(
             lead_in.to_state,
             args.capability_root,
             confirmed=confirmed,
+            **_owner_bypass(args),
         )
         if lead_in_rc != 0:
             return _ended(
@@ -1260,7 +1316,12 @@ def _after_merge(
     # PR is named, so the move is journaled with the reason close-issue gives the
     # other issues it closed (#1296).
     move_rc = _invoke_move_issue(
-        args.issue_number, "done", args.capability_root, confirmed=confirmed, merged_pr=pr_number
+        args.issue_number,
+        "done",
+        args.capability_root,
+        confirmed=confirmed,
+        merged_pr=pr_number,
+        **_owner_bypass(args),
     )
     if move_rc != 0:
         owed = (
@@ -1297,9 +1358,10 @@ def _after_merge(
 
     # Branch cleanup — never fatal, after the steps above. The head branch on
     # GitHub is the backbone's to delete, only while its tip is the head that
-    # merged; the local steps warn and continue when the working tree cannot
-    # switch to the default branch (detached HEAD, the default branch held by
-    # another worktree).
+    # merged. The local steps switch only a clone on the head branch with a
+    # clean working tree, fast-forward a clean one on the default branch, and
+    # leave any other where it is (#2183). They warn and continue when the
+    # switch fails (the default branch held by another worktree).
     remote = pr_merge.delete_branch(pr_number, merged_head, config, allow_foreign_repo=confirmed)
     pr_merge.cleanup_local(
         branch, config, cross_repository=cross, merged_head=merged_head, remote=remote
@@ -1634,7 +1696,11 @@ def _complete_merged_pr(
             return _ended(DECLINED, 0, "aborted.")
     if lead_in is not None:
         lead_in_rc = _invoke_move_issue(
-            issue_number, lead_in.to_state, args.capability_root, confirmed=confirmed
+            issue_number,
+            lead_in.to_state,
+            args.capability_root,
+            confirmed=confirmed,
+            **_owner_bypass(args),
         )
         if lead_in_rc != 0:
             return _ended(
@@ -2011,6 +2077,7 @@ def _check_agent_gate(
     capability_root: Path,
     *,
     override_reviewers: tuple[str, ...] = (),
+    issue_number: int | None = None,
 ) -> _GateResult:
     """DEC-028's gate-checker, generalised by DEC-032 to a per-PR resolved set.
 
@@ -2041,6 +2108,13 @@ def _check_agent_gate(
     across-set-AND rule coincides with DEC-028's cross-path OR when the
     resolved set has one reviewer).
 
+    The set is worked out before the gate judges whether any reviewer is
+    required (#1979), so a contributed reviewer satisfies the gate in a
+    project that registers no remote or local reviewer of its own. A set
+    that holds no reviewer refuses, never passes: either nothing is
+    registered, or the entries under `review.agents.*` name no reviewer, and
+    the refusal says which.
+
     Per-reviewer override (DEC-050): `override_reviewers` names reviewers the
     operator waived this invocation with `--bypass-reviewer`. Each named
     reviewer's conjunct is ALSO satisfied by the override — a first-class
@@ -2062,32 +2136,11 @@ def _check_agent_gate(
     fresh APPROVED on a reviewer also named in `--bypass-reviewer` read APPROVED
     on the pass path and `satisfied-by-override` on the refusal path. A redundant
     override now reads as APPROVED on all three.
+
+    `issue_number` is the issue `done-work` was run for. The refusal names
+    `review-pr` with it, since that command reads its argument as an issue's
+    number (DEC-028's refusal template, #1935).
     """
-    review = config.get("review") if isinstance(config, dict) else None
-    agents_block = review.get("agents") if isinstance(review, dict) else None
-    if not isinstance(agents_block, dict):
-        agents_block = {}
-    remote_registered = agents_block.get("remote_registered") or []
-    local_registered = agents_block.get("local_registered") or []
-
-    if not remote_registered and not local_registered:
-        return _GateResult(
-            passed=False,
-            refusal_message=(
-                f"[refused] agent-mode approval gate cannot be satisfied — "
-                f"no agents configured.\n"
-                f"            → resolved mode: agent (source: {mode_source})\n"
-                f"            → review.agents.remote_registered: (none)\n"
-                f"            → review.agents.local_registered: (none)\n"
-                "            Remediation:\n"
-                "              a) Configure a registered agent in "
-                "`project/config.yaml` under `review.agents.*`.\n"
-                "              b) Set `review.mode: human` if you want "
-                "human review instead.\n"
-                '              c) Merge with `done-work --bypass "<reason>"`.'
-            ),
-        )
-
     if pr_number is None:
         return _GateResult(
             passed=False,
@@ -2120,13 +2173,28 @@ def _check_agent_gate(
     # Provenance for the refusal message: reviewer name → contributing
     # capability (baseline reviewers have no contributing capability).
     contributed_by = dict(resolution.contributed_by)
+    slot_labels = _required_slot_labels(remote_baseline, required_local, contributed_by)
+
+    # The gate never passes with no reviewer (#1979). The set is worked out
+    # above before this refusal, so a reviewer a capability contributes
+    # satisfies the gate though the project registers none of its own
+    # (DEC-032 D3). An empty set has no slot to check, and would pass.
+    if not slot_labels:
+        return _GateResult(
+            passed=False,
+            refusal_message=_no_reviewer_refusal(
+                config,
+                mode_source=mode_source,
+                opted_out=resolution.opted_out,
+                override_requested=bool(override_reviewers),
+            ),
+        )
 
     # --- DEC-050: validate the per-reviewer override against the freshly-
     # resolved required set. A name not in the set is a HARD ERROR naming the
     # set (a typo, or a name dropped by reclassification/uninstall) — never a
     # silent no-op. The set spans the remote baseline plus the resolved local
     # set (a baseline reviewer may be remote).
-    slot_labels = _required_slot_labels(remote_baseline, required_local, contributed_by)
     override_set = set(override_reviewers)
     required_set_all = {name for name, _label in slot_labels}
     unknown_overrides = [n for n in override_reviewers if n not in required_set_all]
@@ -2270,7 +2338,7 @@ def _check_agent_gate(
         return refuse(
             head_oid=head_sha(data),
             message=_agent_gate_refusal(
-                pr_number=pr_number,
+                issue_number=issue_number,
                 mode_source=mode_source,
                 slots=slots,
                 opted_out=resolution.opted_out,
@@ -2550,6 +2618,87 @@ def _contribution_error_refusal(collection) -> str:
     return "\n".join(lines)
 
 
+def _no_reviewer_refusal(
+    config: dict,
+    *,
+    mode_source: str,
+    opted_out: tuple = (),
+    override_requested: bool = False,
+) -> str:
+    """Refusal text when the PR's required set holds no reviewer (#1979).
+
+    The gate never passes with no reviewer: an empty set has no slot to
+    check. The cause is one of two, and the text names which. Either the
+    project registers no reviewer, or its entries under `review.agents.*`
+    name none, such as a `local_registered:` entry without a `name`. In both,
+    no installed capability contributes a reviewer this PR requires, and each
+    contribution the project opts out of is named with its reason.
+    """
+    review = config.get("review") if isinstance(config, dict) else None
+    agents = review.get("agents") if isinstance(review, dict) else None
+    if not isinstance(agents, dict):
+        agents = {}
+    remote = agents.get("remote_registered")
+    local = agents.get("local_registered")
+    configured = bool(remote) or bool(local)
+    if configured:
+        cause = "the entries under `review.agents.*` name no reviewer"
+    else:
+        cause = "no agents configured"
+    lines = [
+        f"[refused] agent-mode approval gate cannot be satisfied — {cause}, and "
+        "no installed capability contributes a reviewer this PR requires.",
+        f"            → resolved mode: agent (source: {mode_source})",
+        "            → review.agents.remote_registered: "
+        f"{_registered_entries(remote, 'github_login')}",
+        f"            → review.agents.local_registered: {_registered_entries(local, 'name')}",
+    ]
+    lines.extend(
+        f"            → opted out ({OPT_OUT_PATH}): {opt_out.reviewer} "
+        f"(capability `{opt_out.capability}`) — {opt_out.reason}"
+        for opt_out in opted_out
+    )
+    lines.append(
+        "            The gate never passes with no reviewer, so it refuses rather "
+        "than merge unreviewed (DEC-032 D3)."
+    )
+    lines.append("            Remediation:")
+    if configured:
+        lines.append(
+            "              a) Give each local entry its `name` and each remote one its "
+            "`github_login`: `pkit project-management pre-check` names each "
+            "malformed entry, or"
+        )
+    else:
+        lines.append(
+            "              a) Configure a registered agent in `project/config.yaml` "
+            "under `review.agents.*`, or"
+        )
+    lines.append("              b) Set `review.mode: human` if you want human review instead, or")
+    lines.append('              c) Merge with `done-work --bypass "<reason>"`.')
+    if override_requested:
+        lines.append(
+            "            Note: --bypass-reviewer cannot help here — a per-reviewer "
+            "override waives one reviewer of the required set, and this PR's set "
+            'holds none. Use the whole-gate --bypass "<reason>" (DEC-050).'
+        )
+    return "\n".join(lines)
+
+
+def _registered_entries(entries: object, key: str) -> str:
+    """What one `review.agents.*` list holds, for `_no_reviewer_refusal`.
+
+    Reached only when the required set is empty, so no entry of a list
+    names a reviewer under `key`.
+    """
+    if not entries:
+        return "(none)"
+    if not isinstance(entries, list):
+        return "not a list, so it names no reviewer"
+    count = len(entries)
+    return f"{count} {'entry' if count == 1 else 'entries'}, none with a `{key}`"
+
+
 def _opt_out_invalid_refusal(details: tuple[str, ...]) -> str:
     """Refusal text when the contribution opt-out list is invalid (#148).
 
@@ -2743,7 +2892,7 @@ def _changed_files_unresolvable_refusal(reason: str, *, too_many: bool) -> str:
 
 def _agent_gate_refusal(
     *,
-    pr_number: int | None = None,
+    issue_number: int | None = None,
     mode_source: str,
     slots: list[_Slot],
     opted_out: tuple = (),
@@ -2759,11 +2908,13 @@ def _agent_gate_refusal(
     the head it reviewed and what changed since (#1179). A local reviewer whose
     CHANGES_REQUESTED is still fresh is one `review-pr` skips, so the refusal
     names `review-pr <N> --force` as the way to have it re-review the PR as it
-    stands. Contributions the project opts out of (#148) are named after the
-    set with their reasons, so a reviewer missing from it reads as withdrawn,
-    not forgotten. `remote_uncounted` names the unsatisfied reviewers whose
-    remote verdict does not count because the PR's author could not be read
-    (#1485), so a remote approval the gate passed over is not a mystery.
+    stands. `<N>` is `issue_number`, the issue's number that `review-pr` takes,
+    never the PR's (DEC-028, #1935). Contributions the project opts out of
+    (#148) are named after the set with their reasons, so a reviewer missing
+    from it reads as withdrawn, not forgotten. `remote_uncounted` names the
+    unsatisfied reviewers whose remote verdict does not count because the PR's
+    author could not be read (#1485), so a remote approval the gate passed over
+    is not a mystery.
 
     It reads the same `_Slot` records the pass path's `passed_via` reads, which
     is what keeps the two honest with each other: a reviewer with a genuine fresh
@@ -2798,7 +2949,7 @@ def _agent_gate_refusal(
         )
     missing = ", ".join(slot.label for slot in slots if not slot.satisfied)
     lines.append(f"            → still missing a fresh APPROVED: {missing}")
-    number = pr_number if pr_number is not None else "<N>"
+    number = issue_number if issue_number is not None else "<N>"
     lines.append("            Remediation:")
     lines.append("              a) Wait for / trigger each remote agent to post APPROVED.")
     lines.append(f"              b) Run `review-pr {number}` to re-invoke the local agent(s).")
@@ -3341,6 +3492,9 @@ def _check_pr_placeholder(
 # The state the merge moves the issue done-work runs for into.
 DONE_STATE = "done"
 
+# The command whose declared transition is the merge's move to done.
+MERGE_COMMAND = "done-work"
+
 
 @dataclass(frozen=True)
 class _LeadIn:
@@ -3352,8 +3506,9 @@ class _LeadIn:
     def describe(self) -> str:
         return (
             f"{self.from_state} → {self.to_state} before the merge, "
-            f"{self.to_state} → {DONE_STATE} after it (workflow.yaml declares "
-            f"no {self.from_state} → {DONE_STATE} for this issue's type)"
+            f"{self.to_state} → {DONE_STATE} after it (workflow.yaml declares the "
+            f"merge's move to {DONE_STATE} from {self.to_state}, not from "
+            f"{self.from_state}, for this issue's type)"
         )
 
 
@@ -3365,21 +3520,23 @@ def _lead_in_to_done(
     """The move the issue must make before the merge's move to done, or None.
 
     After the merge done-work runs `move-issue --to done`, and workflow.yaml
-    says which states may make that move. For a Task, In Progress is not one
-    of them: the merge's move is Review → Done. A Task whose PR was opened
+    says which states may make that move: the merge's move is the transition
+    to done that done-work makes (:func:`_merge_moves_to_done`). For a Task it
+    is Review → Done; its In Progress → Done is close-issue's, the close of a
+    Task completed without a pull request (DEC-006). A Task whose PR was opened
     without `review-work` (from a worktree, say) is still In Progress when
     done-work runs. So done-work first makes the declared move that leads to
-    done, In Progress → Review, and the merge then makes the declared Review →
-    Done. The PR is open and ready by then (a draft is refused earlier), which
-    is what Review means, so the move holds even if the merge that follows
-    fails.
+    the merge's move, In Progress → Review, and the merge then makes the
+    declared Review → Done. The PR is open and ready by then (a draft is refused
+    earlier), which is what Review means, so the move holds even if the merge
+    that follows fails.
 
     Where the issue is, what type it is and what it may move to are read with
     the readers move-issue and start-work use, so this cannot disagree with the
     move it precedes. None when the issue needs no lead-in (it is done already,
-    or done is a declared move from where it is), when no single declared move
-    leads to done, or when the issue or its type cannot be read. The move to
-    done then runs as it always has and reports what it finds.
+    or the merge's move is declared from where it is), when no single declared
+    move leads to the merge's move, or when the issue or its type cannot be
+    read. The move to done then runs as it always has and reports what it finds.
     """
     if issue is None:
         return None
@@ -3405,17 +3562,29 @@ def _lead_in_to_done(
     if current == DONE_STATE:
         return None
     workflow = _read_schema(capability_root, "workflow.yaml", yaml_loader)
-    targets = infer.legal_targets(workflow, current, structural_type)
-    if DONE_STATE in targets:
+    if _merge_moves_to_done(workflow, current, structural_type):
         return None
-    for target in targets:
-        if target != current and DONE_STATE in infer.legal_targets(
-            workflow,
-            target,
-            structural_type,
-        ):
+    for target in infer.legal_targets(workflow, current, structural_type):
+        if target != current and _merge_moves_to_done(workflow, target, structural_type):
             return _LeadIn(from_state=current, to_state=target)
     return None
+
+
+def _merge_moves_to_done(workflow: dict, state: str, structural_type: str) -> bool:
+    """Whether workflow.yaml declares the merge's move to done — a transition
+    done-work makes — from ``state`` for ``structural_type``.
+
+    Another move to done from the same state, such as close-issue's close of a
+    Task completed without a pull request, is not the merge's (DEC-006)."""
+    type_token = f"[issue-types:{structural_type}]"
+    return any(
+        isinstance(t, dict)
+        and t.get("from") == state
+        and t.get("to") == DONE_STATE
+        and t.get("command") == MERGE_COMMAND
+        and type_token in (t.get("applies_to") or [])
+        for t in infer.workflow_process(workflow).get("transitions") or []
+    )
 
 
 # ---- helpers -----------------------------------------------------------
@@ -3486,6 +3655,13 @@ def _issue_list(numbers) -> str:
     return ", ".join(f"#{n}" for n in numbers)
 
 
+def _owner_bypass(args: argparse.Namespace) -> dict[str, str]:
+    """The reason this run's clash guard was bypassed with, for a move it
+    composes, where one was given (DEC-035 point 6)."""
+    reason = getattr(args, "bypass_owner", None)
+    return {"bypass_owner": reason} if reason else {}
+
+
 def _invoke_move_issue(
     issue_number: int,
     target: str,
@@ -3493,13 +3669,18 @@ def _invoke_move_issue(
     *,
     confirmed: bool,
     merged_pr: int | None = None,
+    bypass_owner: str | None = None,
 ) -> int:
     """Move the issue to `target` through move-issue. `merged_pr` names the
     merged PR a move to done follows, so its journal entry carries the reason
-    close-issue gives every other issue that PR closed."""
+    close-issue gives every other issue that PR closed. `bypass_owner` is the
+    reason this run's clash guard was bypassed with: move-issue's guard finds
+    its audit comment posted, and posts none of its own."""
     argv = [str(issue_number), "--to", target]
     if merged_pr is not None:
         argv += ["--merged-pr", str(merged_pr)]
+    if bypass_owner:
+        argv += ["--bypass-owner", bypass_owner]
     return _run_sibling("move-issue.py", argv, capability_root_arg, confirmed=confirmed)
 
 

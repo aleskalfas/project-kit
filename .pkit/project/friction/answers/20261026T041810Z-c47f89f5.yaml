@@ -1,0 +1,31 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-a96d5bbf8b57.yaml
+    revalidated:
+      at: 2026-10-26T04:18:10Z
+      outcome: unchanged
+      unchanged-because: This change moves it into the area 010-plan and mends its term links, and ACT-planner gains a need and an occasion for parallel work. Judged with main's answer on COR-053 point 10, planning still reads the use-case data point the backbone resolves, so the steps hold.
+  - artefact: tech-docs/analysis/project-management/requirements/constraints/REQ-040-github-and-gh.md
+    read:
+      - moved-3d3c5cb615ab.yaml
+    revalidated:
+      at: 2026-10-26T04:18:20Z
+      outcome: unchanged
+      unchanged-because: ACT-planner gains a need, seeing which agent works on which issue, and an occasion, while several AI agents work at once. project-management still reads and changes the planner's work on GitHub alone, through gh, so the constraint holds.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-041-gates-before-writing.md
+    read:
+      - moved-b269fb7e2f43.yaml
+    revalidated:
+      at: 2026-10-26T04:18:30Z
+      outcome: unchanged
+      unchanged-because: ACT-planner gains a need, seeing which agent works on which issue, and an occasion, while several AI agents work at once. Seeing the work writes nothing, and each command that writes still checks the prerequisites and membership first, so the requirement holds.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - moved-c1c76fd062d5.yaml
+    revalidated:
+      at: 2026-10-26T04:18:39Z
+      outcome: unchanged
+      unchanged-because: ACT-planner gains a need, seeing which agent works on which issue, and an occasion, while several AI agents work at once. Seeing the work makes no move, and a held move still waits on that person's authorisation, so the requirement holds.

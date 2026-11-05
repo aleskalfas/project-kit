@@ -29,18 +29,22 @@ pkit:
 
 **Goal:** <!-- pkit:hint What the actor wants from this use case, in one sentence in their own voice. Start with the verb, or with *Never* and the verb, with *I* and *my* where they refer to themselves. Example: Export my report as a file. -->
 
-**Other actors:** <!-- pkit:hint Each other actor who takes part, and what this use case must protect for them. Write `None.` when there is none. Example: **Auditor** (`ACT-auditor`): each export is logged with who made it. -->
+**Other actors:** <!-- pkit:hint Each other actor who takes part, and what this use case must protect for them. Write `None.` when there is none. Example: **Auditor** (ACT-auditor): each export is logged with who made it. -->
 
 **Preconditions:** <!-- pkit:hint What the system, or an earlier use case, has already made true before the use case starts. Each is a state, not an event, and no step checks it. Write `None.` when there is none. Example: The analyst is signed in. -->
 
-**Assumptions:** <!-- pkit:hint What must also be true for the use case to work, but nothing in the system secures. Name the record that admits each. Write `None.` when there is none. Example: The disk keeps the file as the system wrote it (DEC-003). -->
+**Assumptions:** <!-- pkit:hint What must also be true for the use case to work, but nothing in the system secures. Name the record that admits each. Write `None.` when there is none. Example: The disk keeps the file as the system wrote it (PRJ-003). -->
 
 **Trigger:** <!-- pkit:hint The event that starts the use case, and who or what causes it. Example: The analyst asks to export the report on screen. -->
 
-**Main path:** <!-- pkit:hint Numbered steps from the start to the goal, each saying who does what. Example: 1. The analyst chooses `Export`. 2. The system writes the report to a file. -->
+**Main path:**
 
-**Variants:** <!-- pkit:hint One for each condition, lettered after the step it branches from. Say what happens instead, and where the path rejoins or ends. Write `None.` when there is none. Example: 2a. The disk is full. The system says so and writes nothing, and the use case ends. -->
+<!-- pkit:hint Numbered steps from the start to the goal, each saying who does what. Write each as an item of a numbered list, one step to a line. Example: 1. The analyst chooses `Export`. -->
+
+**Variants:**
+
+<!-- pkit:hint One for each condition, lettered after the step it branches from. Write each as a list item that opens with that number and letter in bold. Say what happens instead, and where the path rejoins or ends. Write `None.` when there is none. Example: - **1a.** The disk is full. The system says so and writes nothing, and the use case ends. -->
 
 **Postconditions:** <!-- pkit:hint The state that shows the goal is met. Example: The file holds the whole report. -->
 
-**Minimal guarantees:** <!-- pkit:hint What the system still guarantees when the use case ends early or fails. Name the record or code each rests on. Write `None.` when there is none. Example: A failed export leaves no partial file (DEC-003). -->
+**Minimal guarantees:** <!-- pkit:hint What the system still guarantees when the use case ends early or fails. Name the record or code each rests on. Write `None.` when there is none. Example: A failed export leaves no partial file (PRJ-003). -->

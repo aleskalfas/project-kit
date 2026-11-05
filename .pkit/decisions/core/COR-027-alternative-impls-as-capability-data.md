@@ -69,8 +69,6 @@ The capability's scripts and agent read the configured variant's schema at runti
 
 **Data-driven variation is simpler than filesystem-driven.** A capability with multiple variants of some aspect (e.g., a future `release-management` capability supporting python-uv / npm / cargo ecosystem variants) needs the variants to be reachable by the capability's scripts at runtime. Two ways to do this: (a) variants as YAML files in `schemas/<aspect>/` the script reads — one filesystem location, one install flow, one config field selects; (b) variants as separate bundles the adopter installs separately — multiple filesystem locations, separate install flows, no clear selection mechanism. (a) is strictly simpler and matches how COR-018's capability-schema mechanism is already used.
 
-**Pre-1.0 tolerates breaking CLI changes.** Per [PRJ-002](../project/PRJ-002-version-bump-policy.md)'s pre-1.0 policy, breaking surface changes are acceptable in minor bumps. Removing the `pkit bundle` family + `pkit new bundle` + `bundle-author` skill is a breaking change tolerated by the policy.
-
 ### Alternatives considered
 
 - **Leave COR-005 as-is; refine in place to note n=0 instances.** Rejected — investigation surfaced that the bundle pattern's conceptual space is fully absorbed by capabilities. Keeping COR-005 as a "pattern that may earn its keep someday" leaves dead CLI commands, dead area-variant handling, dead hook namespace, and dead skill in the kit. The honest move is supersession.
@@ -90,7 +88,7 @@ The capability's scripts and agent read the configured variant's schema at runti
 
 ### Code
 
-- **CLI commands removed**: `pkit bundle install`, `pkit bundle list`, `pkit bundle remove`, `pkit new bundle`. Breaking change in the next backbone minor bump.
+- **CLI commands removed**: `pkit bundle install`, `pkit bundle list`, `pkit bundle remove`, `pkit new bundle`. Their removal is an adopter-breaking surface change, so its change-set ships a migration script at the backbone tier ([COR-010](COR-010-resource-lifecycle.md)). That script, under Migration below, removes the bundle directories under `.pkit/workflow/project/` and the `bundles:` registry entries an installed project holds.
 - **Python module retired**: `src/project_kit/bundles.py` and `stamp_bundle` from `scaffolds.py`.
 - **CLI command group `bundle`** removed from `cli.py`.
 

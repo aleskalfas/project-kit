@@ -1,0 +1,160 @@
+answers:
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T220801Z-d7fabd5e.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - 20261025T231337Z-53180504.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T082834Z-c7589ca5.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - 20261026T094058Z-3fc2f464.yaml
+      - 20261026T095314Z-f64018af.yaml
+      - 20261026T095828Z-f467a572.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T114729Z-f148365c.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T125321Z-c79100d7.yaml
+      - 20261026T135447Z-827d6480.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T141439Z-0ec32467.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T145332Z-136a7129.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T155116Z-437c4f24.yaml
+      - 20261026T161512Z-bb142951.yaml
+      - 20261026T162345Z-546e92b5.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T174848Z-c4211455.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261026T221544Z-4570798b.yaml
+      - 20261026T223507Z-b0cc1cc6.yaml
+      - 20261026T224120Z-47cea1c1.yaml
+      - 20261026T234220Z-40dc2662.yaml
+      - 20261027T002733Z-bfea56ce.yaml
+      - 20261027T003455Z-b3aa7ce8.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - moved-d6149a5e477e.yaml
+    revalidated:
+      at: 2026-10-27T16:18:24Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T224120Z-47cea1c1.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-27T16:18:29Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-27T16:18:33Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-authorisation
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+    revalidated:
+      at: 2026-10-27T16:18:39Z
+      outcome: unchanged
+      unchanged-because: DEC-055 gains point 6, a check of the merge with the base before the landing merges, and point 3 only points to it. What an authorisation to merge is, and that it stays the person's, stand as the term says.
+  - artefact: tech-docs/analysis/project-management/domain-model/030-the-issue-lifecycle.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+    revalidated:
+      at: 2026-10-27T16:18:42Z
+      outcome: unchanged
+      unchanged-because: DEC-055 gains point 6, a check of the merge with the base before the landing merges, and point 3 only points to it. Who authorises a merge, and for which head, stand as this view says.
+  - artefact: tech-docs/analysis/project-management/domain-model/040-reviews-and-the-merge.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+    revalidated:
+      at: 2026-10-27T16:18:46Z
+      outcome: unchanged
+      unchanged-because: DEC-055 gains point 6, a check of the merge with the base before the landing merges, and point 3 only points to it. The findings shown to the person, the merge gate and the authorisation stand as this view says.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261025T231337Z-53180504.yaml
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T155116Z-437c4f24.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T224120Z-47cea1c1.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - moved-c1c76fd062d5.yaml
+    revalidated:
+      at: 2026-10-27T16:18:49Z
+      outcome: unchanged
+      unchanged-because: DEC-055 gains point 6, a check of the merge with the base before the landing merges, and point 3 only points to it. A held move still waits for the person's authorisation, as the requirement says.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-080-check-answers.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-27T16:18:52Z
+      outcome: unchanged
+      unchanged-because: DEC-055 gains point 6, the landing command's check of the merge with the base, and points 3 and 5 only point to it or name its limits. What the reviewer checks of a change's answers, and what goes unchecked, stand as this use case says.
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - moved-e5885d842901.yaml
+    revalidated:
+      at: 2026-10-27T16:18:56Z
+      outcome: unchanged
+      unchanged-because: DEC-055 gains point 6, the landing command's check of the merge with the base, which project-management's README describes. What the docs-reviewer checks, and what the person who authorises the merge is told of the answers, stand as this page says.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T161512Z-bb142951.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T174848Z-c4211455.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261026T221544Z-4570798b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-27T16:18:59Z
+      outcome: unchanged
+      unchanged-because: UC-089 gains a variant in which the landing refuses a merge the change check fails on with the default branch as it stands. The journey still needs each Task's pull request merged, as its stage on UC-089 says.

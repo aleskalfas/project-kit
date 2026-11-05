@@ -6,11 +6,15 @@ A space's definition holds the rules its pages follow: `LDOC`, inherited, and th
 
 The user and technical spaces get their definitions when the project adopts the method. Add a space only for an audience neither serves, such as the readers of an interface reference (DEC-001 point 1).
 
+Name the space's audience in words, as its `audience` in the space's entry under `spaces` in `.pkit/capabilities/living-docs/project/config.yaml`. Naming the audience edits the configuration, so an agent asks the person first.
+
+Until the readers point resolves, the living-docs agent reads the space's pages as that audience. Without an audience, it reads user pages as users and technical pages as maintainers (DEC-001). It reads no page of a space the project adds.
+
 ## 2. Meet the prerequisites
 
 The scope is written from where the space's pages lie, so declare that first.
 
-- **The roots are separate.** Two roots that are one folder give no space.
+- **The roots are separate.** Two roots that are one folder give no space. The stamp offers to set them apart, as the shared framing's "Roots that are one folder" says.
 - **The places are declared.** Each place that holds the space's pages outside its root is declared under `places` in the friction key of `.pkit/project/config.yaml`. A place outside every root gives the page type, `{path: <place>, type: living-docs:page}`, since the definition selects by type.
 - **Each place is assigned** to its space under `places` in `.pkit/capabilities/living-docs/project/config.yaml`.
 

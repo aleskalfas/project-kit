@@ -11,6 +11,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -171,3 +172,115 @@ def test_resolve_capability_root_returns_none_outside_pkit_tree(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     assert mship.resolve_capability_root(None) is None
+
+
+# --- add-member / remove-member: the change is the person's (#2015) ---------
+#
+# members.yaml is the project's own configuration. At a terminal the change is
+# asked, `--yes` authorises it, and off a terminal without `--yes` it is
+# refused before the file is written; an answer piped in is never read.
+
+SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
+ROSTER = "members:\n  - github_login: me\n  - github_login: someone\n"
+
+
+def _load_script(name: str):
+    module_name = f"pm_{name.replace('-', '_')}_under_test"
+    spec = importlib.util.spec_from_file_location(module_name, SCRIPTS_DIR / f"{name}.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture(scope="module")
+def add_member():
+    return _load_script("add-member")
+
+
+@pytest.fixture(scope="module")
+def remove_member():
+    return _load_script("remove-member")
+
+
+class _Stdin:
+    """A standard input that is a terminal or, as `echo y | …` gives, a pipe."""
+
+    def __init__(self, terminal: bool) -> None:
+        self.terminal = terminal
+
+    def isatty(self) -> bool:
+        return self.terminal
+
+
+def _never_asked(question: str) -> str:
+    raise AssertionError(f"asked off a terminal: {question!r}")
+
+
+def _roster(module, tmp_path: Path, monkeypatch, roster: str | None) -> Path:
+    """A capability root whose gates pass, holding `roster` as members.yaml."""
+    cap = tmp_path / ".pkit" / "capabilities" / "project-management"
+    (cap / "project").mkdir(parents=True)
+    members = module.members_path(cap)
+    if roster is not None:
+        members.write_text(roster, encoding="utf-8")
+    monkeypatch.setattr(module, "resolve_capability_root", lambda explicit: cap)
+    monkeypatch.setattr(module.bootstrap_gate, "enforce", lambda *a, **k: True)
+    monkeypatch.setattr(module.session_guard, "enforce", lambda override=False: True)
+    monkeypatch.setattr(module, "load_adopter_config", lambda root: {})
+    invoker = SimpleNamespace(github_login="me", email=None, label=lambda: "me")
+    monkeypatch.setattr(module, "resolve_invoker_identity", lambda config=None: invoker)
+    return members
+
+
+# (fixture, argv, the roster it starts from)
+_MEMBER_CHANGES = [
+    pytest.param("add_member", ["add-member.py", "--github-login", "new"], None, id="add"),
+    pytest.param("remove_member", ["remove-member.py", "someone"], ROSTER, id="remove"),
+]
+
+
+@pytest.mark.parametrize(("fixture", "argv", "roster"), _MEMBER_CHANGES)
+def test_off_a_terminal_without_yes_the_roster_is_not_written(
+    request, tmp_path, monkeypatch, capsys, fixture, argv, roster
+) -> None:
+    module = request.getfixturevalue(fixture)
+    members = _roster(module, tmp_path, monkeypatch, roster)
+    monkeypatch.setattr(sys, "argv", argv)
+    monkeypatch.setattr(sys, "stdin", _Stdin(terminal=False))
+    monkeypatch.setattr("builtins.input", _never_asked)
+    assert module.main() == 1
+    assert (members.read_text(encoding="utf-8") if members.exists() else None) == roster
+    err = capsys.readouterr().err
+    assert "is the person's to authorise" in err
+    assert f"pkit pm {argv[0].removesuffix('.py')} {argv[1]}" in err
+    assert err.rstrip().endswith("--yes")
+
+
+@pytest.mark.parametrize(("fixture", "argv", "roster"), _MEMBER_CHANGES)
+@pytest.mark.parametrize(("reply", "written"), [("y", True), ("n", False)])
+def test_at_a_terminal_the_roster_change_is_asked(
+    request, tmp_path, monkeypatch, fixture, argv, roster, reply, written
+) -> None:
+    module = request.getfixturevalue(fixture)
+    members = _roster(module, tmp_path, monkeypatch, roster)
+    monkeypatch.setattr(sys, "argv", argv)
+    monkeypatch.setattr(sys, "stdin", _Stdin(terminal=True))
+    monkeypatch.setattr("builtins.input", lambda q: reply)
+    assert module.main() == 0
+    after = members.read_text(encoding="utf-8") if members.exists() else None
+    assert (after != roster) is written
+
+
+@pytest.mark.parametrize(("fixture", "argv", "roster"), _MEMBER_CHANGES)
+def test_yes_changes_the_roster_off_a_terminal_without_asking(
+    request, tmp_path, monkeypatch, fixture, argv, roster
+) -> None:
+    module = request.getfixturevalue(fixture)
+    members = _roster(module, tmp_path, monkeypatch, roster)
+    monkeypatch.setattr(sys, "argv", [*argv, "--yes"])
+    monkeypatch.setattr(sys, "stdin", _Stdin(terminal=False))
+    monkeypatch.setattr("builtins.input", _never_asked)
+    assert module.main() == 0
+    assert members.read_text(encoding="utf-8") != roster

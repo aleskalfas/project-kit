@@ -1,0 +1,1501 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "component.schema.json",
+  "title": "A component — visual-communication capability",
+  "description": "Formal shape of a component of a library (DEC-001 points 4 and 6, DEC-005 points 1 to 3): its status and what it is about, the fields of content it takes, its options, states, colour, values, the size it prefers, its parts, the fields of each list it repeats over, the parts it exposes, whether it takes ends, and the layouts of a top component, which may be its pages' forms. `fields` is a fixed subset of JSON Schema 2020-12. Each part is exactly one kind, with the keys that kind takes; a value is a formula or a switch on an option of words. What crosses keys, such as a formula's references and dimensions, a switch naming every word of its option, or a field a part names, or a list's fields naming a list a part of its own repeats over, the engine checks when it reads the component. Document-shaped schema. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "status",
+    "about"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:component`.",
+      "const": "visual-communication:component"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "status": {
+      "description": "What its library promises of it (DEC-003 point 7).",
+      "enum": [
+        "experimental",
+        "stable",
+        "deprecated"
+      ]
+    },
+    "about": {
+      "description": "What the component is for, in words.",
+      "$ref": "defs.schema.json#/$defs/text"
+    },
+    "fields": {
+      "description": "The content it takes.",
+      "$ref": "#/$defs/field-schema"
+    },
+    "options": {
+      "description": "Its options, by name: words, or an item (and its point) of a list it declares.",
+      "type": "object",
+      "propertyNames": {
+        "allOf": [
+          {
+            "$ref": "defs.schema.json#/$defs/name"
+          },
+          {
+            "not": {
+              "enum": [
+                "id",
+                "use",
+                "concept",
+                "state",
+                "override",
+                "pkit"
+              ]
+            }
+          }
+        ]
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/option"
+      }
+    },
+    "states": {
+      "description": "Its states, by name, each with the colour family it paints with.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/state"
+      }
+    },
+    "colour": {
+      "description": "Its default colour family.",
+      "$ref": "defs.schema.json#/$defs/name"
+    },
+    "values": {
+      "description": "Its named values, by name, each a formula or a switch of them.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/number-value"
+      }
+    },
+    "preferred": {
+      "description": "The size it asks for.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "$ref": "#/$defs/number-value"
+        },
+        "height": {
+          "$ref": "#/$defs/number-value"
+        }
+      }
+    },
+    "parts": {
+      "description": "Its parts, by name, drawn in order.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/part"
+      }
+    },
+    "lists": {
+      "description": "The fields of each list a `repeat` part of its own repeats over, by the list field (DEC-010 points 1 to 4, DEC-011 point 1): the field of an item that names the component drawing it, the item's arrangement fields, and, for a list of ties, its two end fields. The list of a top's pages takes none.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/list-fields"
+      }
+    },
+    "exposes": {
+      "description": "The parts a component that places it may read; an exposed image exposes its picture's points too.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "defs.schema.json#/$defs/name"
+      }
+    },
+    "ends": {
+      "description": "Whether it takes ends (DEC-011 point 1): drawn as a tie, its pattern gives it two, which its formulas read as `{start}` and `{end}`, and a line with `connect` joins.",
+      "const": true
+    },
+    "layouts": {
+      "description": "A top component's layouts, by name: one, whose slots name the top's fields; or, where the layouts are the forms its pages take, one or more, each drawing a page with its own parts.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/layout"
+      },
+      "anyOf": [
+        {
+          "maxProperties": 1
+        },
+        {
+          "additionalProperties": {
+            "required": [
+              "parts"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "field-schema": {
+      "description": "The subset of JSON Schema 2020-12 a component's `fields` takes in format 1 (v3 of the walking skeleton's design): `type`, `properties`, `required`, `items`, `minItems`, `maxItems`, `enum`, `const`, `description`, `x-pkit-prose`, `x-pkit-pages`, `x-pkit-runs`, a local `$ref`, and `additionalProperties` only as `false`, which its absence means too. No property takes a reserved key's name.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "oneOf": [
+            {
+              "enum": [
+                "string",
+                "number",
+                "integer",
+                "boolean",
+                "object",
+                "array",
+                "null"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "string",
+                  "number",
+                  "integer",
+                  "boolean",
+                  "object",
+                  "array",
+                  "null"
+                ]
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          ]
+        },
+        "properties": {
+          "type": "object",
+          "propertyNames": {
+            "allOf": [
+              {
+                "$ref": "defs.schema.json#/$defs/name"
+              },
+              {
+                "not": {
+                  "enum": [
+                    "id",
+                    "use",
+                    "concept",
+                    "state",
+                    "override",
+                    "pkit"
+                  ]
+                }
+              }
+            ]
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/field-schema"
+          }
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "defs.schema.json#/$defs/name"
+              },
+              {
+                "not": {
+                  "enum": [
+                    "id",
+                    "use",
+                    "concept",
+                    "state",
+                    "override",
+                    "pkit"
+                  ]
+                }
+              }
+            ]
+          },
+          "uniqueItems": true
+        },
+        "items": {
+          "$ref": "#/$defs/field-schema"
+        },
+        "minItems": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxItems": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "enum": {
+          "type": "array",
+          "minItems": 1
+        },
+        "const": {},
+        "description": {
+          "type": "string"
+        },
+        "x-pkit-prose": {
+          "type": "boolean"
+        },
+        "x-pkit-pages": {
+          "description": "The field holds a top component's pages, each in one of its layouts. Only a list field of the top's own fields takes it.",
+          "const": true
+        },
+        "x-pkit-runs": {
+          "description": "The field is a field of runs: content gives it text, read as one run in its first style, or a list of runs, each text or `{text, style?, concept?}` (visual-communication DEC-012 points 1 and 2). The words of its run styles, the first the default; `by` is none of them. Only one of the component's own fields, or a slot of a layout that draws a page, takes it, and only where its `type` is `string` alone and it holds no `enum`, `const` or `$ref`.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "allOf": [
+              {
+                "$ref": "defs.schema.json#/$defs/name"
+              },
+              {
+                "not": {
+                  "const": "by"
+                }
+              }
+            ]
+          }
+        },
+        "$ref": {
+          "type": "string",
+          "pattern": "^#/"
+        },
+        "additionalProperties": {
+          "const": false
+        }
+      }
+    },
+    "formula": {
+      "description": "A formula: text that starts with `=` and computes one number from numbers, `+ - * /`, parentheses, `min max round`, roles (`@<token path>`), the engine's names (`:width :height :index :count`), the component's values and the frames it may reach (DEC-005 points 1 and 3). The engine checks what it reads and its dimensions.",
+      "type": "string",
+      "pattern": "^="
+    },
+    "number-value": {
+      "description": "A number the component computes: a formula, or a switch on an option of words, each word a number-value.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/formula"
+        },
+        {
+          "$ref": "#/$defs/number-switch"
+        }
+      ]
+    },
+    "number-switch": {
+      "description": "A switch: `by` names an option of words, and every word of it a value.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words the value switches on.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/number-value"
+      }
+    },
+    "paint": {
+      "description": "A paint: a colour role's token path, or `:colour.<member>`, a member of the instance's colour family; or a switch on an option of words, whose branch may be null to paint nothing.",
+      "anyOf": [
+        {
+          "$ref": "defs.schema.json#/$defs/token-path"
+        },
+        {
+          "type": "string",
+          "pattern": "^:colour\\.[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        {
+          "$ref": "#/$defs/paint-switch"
+        }
+      ]
+    },
+    "paint-switch": {
+      "description": "A switch of paints: `by` names an option of words, or, for a text's `fill`, the field of runs the text shows, whose paint each run then takes by its style (DEC-012 point 2); a word's paint may be null.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words, or the field of runs, the value switches on.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/paint"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "role-value": {
+      "description": "A role by its token path, such as a text's typography; or a switch of them on an option of words.",
+      "anyOf": [
+        {
+          "$ref": "defs.schema.json#/$defs/token-path"
+        },
+        {
+          "$ref": "#/$defs/role-switch"
+        }
+      ]
+    },
+    "role-switch": {
+      "description": "A switch of roles on an option of words, or, for a text's `style`, on the field of runs the text shows, whose typography role each run then takes by its style (DEC-012 point 2).",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words, or the field of runs, the value switches on.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/role-value"
+      }
+    },
+    "word-value": {
+      "description": "A word of an option a placed component declares; or a switch of words on an option of words of this component.",
+      "anyOf": [
+        {
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        {
+          "$ref": "#/$defs/word-switch"
+        }
+      ]
+    },
+    "word-switch": {
+      "description": "A switch of words on an option of words.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words the value switches on.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/word-value"
+      }
+    },
+    "text-anchor-value": {
+      "description": "`text-anchor`: one of start, middle, end, the first the default; or a switch of them on an option of words.",
+      "anyOf": [
+        {
+          "enum": [
+            "start",
+            "middle",
+            "end"
+          ]
+        },
+        {
+          "$ref": "#/$defs/text-anchor-switch"
+        }
+      ]
+    },
+    "text-anchor-switch": {
+      "description": "A switch of `text-anchor` words on an option of words.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words the value switches on.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/text-anchor-value"
+      }
+    },
+    "align-items-value": {
+      "description": "`align-items`: one of stretch, start, center, end, the first the default; or a switch of them on an option of words.",
+      "anyOf": [
+        {
+          "enum": [
+            "stretch",
+            "start",
+            "center",
+            "end"
+          ]
+        },
+        {
+          "$ref": "#/$defs/align-items-switch"
+        }
+      ]
+    },
+    "align-items-switch": {
+      "description": "A switch of `align-items` words on an option of words.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words the value switches on.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/align-items-value"
+      }
+    },
+    "justify-content-value": {
+      "description": "`justify-content`: one of start, center, end, space-between, the first the default; or a switch of them on an option of words.",
+      "anyOf": [
+        {
+          "enum": [
+            "start",
+            "center",
+            "end",
+            "space-between"
+          ]
+        },
+        {
+          "$ref": "#/$defs/justify-content-switch"
+        }
+      ]
+    },
+    "justify-content-switch": {
+      "description": "A switch of `justify-content` words on an option of words.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words the value switches on.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/justify-content-value"
+      }
+    },
+    "sizes-value": {
+      "description": "`sizes`: one of own, equal, shares, the first the default; or a switch of them on an option of words. `shares` shares the line among the items by their list's weight.",
+      "anyOf": [
+        {
+          "enum": [
+            "own",
+            "equal",
+            "shares"
+          ]
+        },
+        {
+          "$ref": "#/$defs/sizes-switch"
+        }
+      ]
+    },
+    "sizes-switch": {
+      "description": "A switch of `sizes` words on an option of words.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words the value switches on.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/sizes-value"
+      }
+    },
+    "marker-value": {
+      "description": "`marker-start`, `marker-end`: the arrowhead at that end of a line, one of none, arrow, the first the default; or a switch of them on an option of words.",
+      "anyOf": [
+        {
+          "enum": [
+            "none",
+            "arrow"
+          ]
+        },
+        {
+          "$ref": "#/$defs/marker-switch"
+        }
+      ]
+    },
+    "marker-switch": {
+      "description": "A switch of `marker` words on an option of words.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words the value switches on.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/marker-value"
+      }
+    },
+    "connect-value": {
+      "description": "`connect`: how a connector runs between its component's two ends, straight or with corners; or a switch of them on an option of words.",
+      "anyOf": [
+        {
+          "enum": [
+            "straight",
+            "corners"
+          ]
+        },
+        {
+          "$ref": "#/$defs/connect-switch"
+        }
+      ]
+    },
+    "connect-switch": {
+      "description": "A switch of `connect` words on an option of words.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words the value switches on.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/connect-value"
+      }
+    },
+    "when": {
+      "description": "When a part is drawn: while a field of the content is filled, or while an option of words takes one of the words named.",
+      "anyOf": [
+        {
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 1,
+          "propertyNames": {
+            "$ref": "defs.schema.json#/$defs/name"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "defs.schema.json#/$defs/name"
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "$ref": "defs.schema.json#/$defs/name"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "option": {
+      "description": "An option: a list of words, the first the default; or `{item: <list field>}`, naming an item of that list by its id; or `{item: <list field>, point: true}`, naming an item and one of its exposed points.",
+      "anyOf": [
+        {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "allOf": [
+              {
+                "$ref": "defs.schema.json#/$defs/name"
+              },
+              {
+                "not": {
+                  "const": "by"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "item"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "item": {
+              "$ref": "defs.schema.json#/$defs/name"
+            },
+            "point": {
+              "const": true
+            }
+          }
+        }
+      ]
+    },
+    "list-fields": {
+      "description": "The fields of a list's items (DEC-010 points 1 to 4, DEC-011 point 1): `component`, a field of the component's own, holding no list and placed by no part, whose value names the component of each item that names none of its own; `arrangement`, the item's arrangement fields by name, each an option of words that the list's component sets, which a component that draws an item declares under no key of its own; and `ends`, a list of ties' two end fields, where each tie starts and where it ends. The list takes one weight at most.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "component": {
+          "description": "The field whose value names the component that draws each item of the list naming none of its own.",
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        "arrangement": {
+          "description": "The item's arrangement fields, by name.",
+          "type": "object",
+          "propertyNames": {
+            "allOf": [
+              {
+                "$ref": "defs.schema.json#/$defs/name"
+              },
+              {
+                "not": {
+                  "enum": [
+                    "id",
+                    "use",
+                    "concept",
+                    "state",
+                    "override",
+                    "pkit"
+                  ]
+                }
+              }
+            ]
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/arrangement-field"
+          }
+        },
+        "ends": {
+          "description": "The list's two end fields, in order: the field of each tie that names the item it starts at, and the one it ends at. Each is a name, no reserved key's, and no arrangement field of the list.",
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "allOf": [
+              {
+                "$ref": "defs.schema.json#/$defs/name"
+              },
+              {
+                "not": {
+                  "enum": [
+                    "id",
+                    "use",
+                    "concept",
+                    "state",
+                    "override",
+                    "pkit"
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "arrangement-field": {
+      "description": "An arrangement field: the words it takes, the first the default; and, for the list's weight, the share of its line that each word gives an item.",
+      "type": "object",
+      "required": [
+        "words"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "words": {
+          "description": "The words it takes, the first the default.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "allOf": [
+              {
+                "$ref": "defs.schema.json#/$defs/name"
+              },
+              {
+                "not": {
+                  "const": "by"
+                }
+              }
+            ]
+          }
+        },
+        "shares": {
+          "description": "The weight's share for each of its words, a number above zero; it names every word and no other.",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "$ref": "defs.schema.json#/$defs/name"
+          },
+          "additionalProperties": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      }
+    },
+    "state": {
+      "description": "A state: the colour family it paints with, or `{}` to keep the instance's.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "colour": {
+          "description": "The colour family the state paints with.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      }
+    },
+    "layout": {
+      "description": "A layout of a top component. In format 1 its slots name the top's fields. In a layout that is a page's form, each slot is the schema of a field the page fills, which `x-pkit-runs` may mark as a field of runs, `required` names the slots a page must fill, `lists` declares the fields of each list among its slots that its parts repeat over, as a pattern does, and `parts` draw the page.",
+      "type": "object",
+      "required": [
+        "slots"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "slots": {
+          "description": "The slots of the layout, each a field the content fills.",
+          "type": "object",
+          "propertyNames": {
+            "$ref": "defs.schema.json#/$defs/name"
+          }
+        },
+        "required": {
+          "description": "The slots a page in this layout must fill.",
+          "type": "array",
+          "items": {
+            "$ref": "defs.schema.json#/$defs/name"
+          },
+          "uniqueItems": true
+        },
+        "lists": {
+          "description": "The fields of each list among the slots that a part of the layout repeats over, by the slot (DEC-010 point 5, DEC-011 point 5).",
+          "type": "object",
+          "propertyNames": {
+            "$ref": "defs.schema.json#/$defs/name"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/list-fields"
+          }
+        },
+        "parts": {
+          "description": "The parts that draw a page in this layout, by name, drawn in order.",
+          "type": "object",
+          "propertyNames": {
+            "$ref": "defs.schema.json#/$defs/name"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/part"
+          }
+        }
+      },
+      "if": {
+        "required": [
+          "parts"
+        ]
+      },
+      "then": {
+        "properties": {
+          "slots": {
+            "propertyNames": {
+              "not": {
+                "enum": [
+                  "layout",
+                  "id",
+                  "use",
+                  "concept",
+                  "state",
+                  "override",
+                  "pkit"
+                ]
+              }
+            },
+            "additionalProperties": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/field-schema"
+                },
+                {
+                  "not": {
+                    "required": [
+                      "x-pkit-pages"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "required"
+              ]
+            },
+            {
+              "required": [
+                "lists"
+              ]
+            }
+          ]
+        },
+        "properties": {
+          "slots": {
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "pages": {
+                  "description": "The slot's items are pages.",
+                  "const": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "box": {
+      "description": "A box's properties, by SVG's names.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fill": {
+          "$ref": "#/$defs/paint"
+        },
+        "stroke": {
+          "$ref": "#/$defs/paint"
+        },
+        "stroke-width": {
+          "$ref": "#/$defs/number-value"
+        },
+        "rx": {
+          "$ref": "#/$defs/number-value"
+        }
+      }
+    },
+    "ellipse": {
+      "description": "An ellipse's properties, by SVG's names.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fill": {
+          "$ref": "#/$defs/paint"
+        },
+        "stroke": {
+          "$ref": "#/$defs/paint"
+        },
+        "stroke-width": {
+          "$ref": "#/$defs/number-value"
+        }
+      }
+    },
+    "text": {
+      "description": "A text's properties: the field it shows, its typography role, and SVG's names. Where the field it shows is a field of runs, its `style` and `fill` may switch on the field's run styles, and each run takes the role and paint its style chooses.",
+      "type": "object",
+      "required": [
+        "content",
+        "style"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "description": "The field of text it shows, a field of runs included.",
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        "style": {
+          "$ref": "#/$defs/role-value"
+        },
+        "fill": {
+          "$ref": "#/$defs/paint"
+        },
+        "text-anchor": {
+          "$ref": "#/$defs/text-anchor-value"
+        }
+      }
+    },
+    "line": {
+      "description": "A line's properties, by SVG's names.",
+      "type": "object",
+      "required": [
+        "stroke"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "stroke": {
+          "$ref": "#/$defs/paint"
+        },
+        "stroke-width": {
+          "$ref": "#/$defs/number-value"
+        },
+        "marker-start": {
+          "$ref": "#/$defs/marker-value"
+        },
+        "marker-end": {
+          "$ref": "#/$defs/marker-value"
+        }
+      }
+    },
+    "image": {
+      "description": "An image's properties: the produced output it shows.",
+      "type": "object",
+      "required": [
+        "produced"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "produced": {
+          "description": "The field naming a produced output of the piece.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      }
+    },
+    "operator": {
+      "description": "How a list's items are arranged along a row or a column, by CSS flexible layout's names.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gap": {
+          "$ref": "#/$defs/number-value"
+        },
+        "align-items": {
+          "$ref": "#/$defs/align-items-value"
+        },
+        "justify-content": {
+          "$ref": "#/$defs/justify-content-value"
+        },
+        "sizes": {
+          "$ref": "#/$defs/sizes-value"
+        }
+      }
+    },
+    "box-part": {
+      "description": "A box.",
+      "type": "object",
+      "required": [
+        "box",
+        "width",
+        "height"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "box": {
+          "$ref": "#/$defs/box"
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        },
+        "x": {
+          "$ref": "#/$defs/number-value"
+        },
+        "y": {
+          "$ref": "#/$defs/number-value"
+        },
+        "width": {
+          "$ref": "#/$defs/number-value"
+        },
+        "height": {
+          "$ref": "#/$defs/number-value"
+        }
+      }
+    },
+    "ellipse-part": {
+      "description": "An ellipse.",
+      "type": "object",
+      "required": [
+        "ellipse",
+        "width",
+        "height"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ellipse": {
+          "$ref": "#/$defs/ellipse"
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        },
+        "x": {
+          "$ref": "#/$defs/number-value"
+        },
+        "y": {
+          "$ref": "#/$defs/number-value"
+        },
+        "width": {
+          "$ref": "#/$defs/number-value"
+        },
+        "height": {
+          "$ref": "#/$defs/number-value"
+        }
+      }
+    },
+    "text-part": {
+      "description": "A text: its height is its measured text's, so it gives none.",
+      "type": "object",
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "$ref": "#/$defs/text"
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        },
+        "x": {
+          "$ref": "#/$defs/number-value"
+        },
+        "y": {
+          "$ref": "#/$defs/number-value"
+        },
+        "width": {
+          "$ref": "#/$defs/number-value"
+        }
+      }
+    },
+    "line-part": {
+      "description": "A line, from `x1 y1` to `x2 y2`; or, in a component that takes ends, a connector between them, `connect`, which sets its ends.",
+      "type": "object",
+      "required": [
+        "line"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "line": {
+          "$ref": "#/$defs/line"
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        },
+        "x1": {
+          "$ref": "#/$defs/number-value"
+        },
+        "y1": {
+          "$ref": "#/$defs/number-value"
+        },
+        "x2": {
+          "$ref": "#/$defs/number-value"
+        },
+        "y2": {
+          "$ref": "#/$defs/number-value"
+        },
+        "connect": {
+          "$ref": "#/$defs/connect-value"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "x1",
+            "y1",
+            "x2",
+            "y2"
+          ],
+          "not": {
+            "required": [
+              "connect"
+            ]
+          }
+        },
+        {
+          "required": [
+            "connect"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "x1"
+                ]
+              },
+              {
+                "required": [
+                  "y1"
+                ]
+              },
+              {
+                "required": [
+                  "x2"
+                ]
+              },
+              {
+                "required": [
+                  "y2"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "image-part": {
+      "description": "An image of a produced output: its height keeps the picture's proportions where none is given.",
+      "type": "object",
+      "required": [
+        "image",
+        "width"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "$ref": "#/$defs/image"
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        },
+        "x": {
+          "$ref": "#/$defs/number-value"
+        },
+        "y": {
+          "$ref": "#/$defs/number-value"
+        },
+        "width": {
+          "$ref": "#/$defs/number-value"
+        },
+        "height": {
+          "$ref": "#/$defs/number-value"
+        }
+      }
+    },
+    "use-part": {
+      "description": "A component this one places.",
+      "type": "object",
+      "required": [
+        "use"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "use": {
+          "$ref": "defs.schema.json#/$defs/use"
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        },
+        "x": {
+          "$ref": "#/$defs/number-value"
+        },
+        "y": {
+          "$ref": "#/$defs/number-value"
+        },
+        "width": {
+          "$ref": "#/$defs/number-value"
+        },
+        "height": {
+          "$ref": "#/$defs/number-value"
+        },
+        "fields": {
+          "description": "The placed component's fields, each given a field of this component.",
+          "type": "object",
+          "propertyNames": {
+            "$ref": "defs.schema.json#/$defs/name"
+          },
+          "additionalProperties": {
+            "$ref": "defs.schema.json#/$defs/name"
+          }
+        },
+        "options": {
+          "description": "The placed component's options, each given a word.",
+          "type": "object",
+          "propertyNames": {
+            "$ref": "defs.schema.json#/$defs/name"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/word-value"
+          }
+        }
+      }
+    },
+    "slot-part": {
+      "description": "The component the content places in a field.",
+      "type": "object",
+      "required": [
+        "slot"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "slot": {
+          "description": "The field whose component the content places here.",
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        },
+        "x": {
+          "$ref": "#/$defs/number-value"
+        },
+        "y": {
+          "$ref": "#/$defs/number-value"
+        },
+        "width": {
+          "$ref": "#/$defs/number-value"
+        },
+        "height": {
+          "$ref": "#/$defs/number-value"
+        }
+      }
+    },
+    "repeat-part": {
+      "description": "A component drawn for each item of a list, arranged in a row or a column; or, over a list of ties, each tie drawn in the part's whole frame, with neither.",
+      "type": "object",
+      "required": [
+        "repeat",
+        "draw"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "repeat": {
+          "description": "The list field whose items it draws.",
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        "draw": {
+          "description": "The component that draws an item that names none of its own, where the list declares no component field or the field is not filled.",
+          "$ref": "defs.schema.json#/$defs/use"
+        },
+        "colour": {
+          "description": "The items' default colour family.",
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        "row": {
+          "$ref": "#/$defs/operator"
+        },
+        "column": {
+          "$ref": "#/$defs/operator"
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        },
+        "x": {
+          "$ref": "#/$defs/number-value"
+        },
+        "y": {
+          "$ref": "#/$defs/number-value"
+        },
+        "width": {
+          "$ref": "#/$defs/number-value"
+        },
+        "height": {
+          "$ref": "#/$defs/number-value"
+        }
+      },
+      "not": {
+        "required": [
+          "row",
+          "column"
+        ]
+      }
+    },
+    "part": {
+      "description": "A part: exactly one of a primitive (`box ellipse text line image`) or a placing (`use slot repeat`), with its place, its size and `when`.",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "box"
+          ]
+        },
+        {
+          "required": [
+            "ellipse"
+          ]
+        },
+        {
+          "required": [
+            "text"
+          ]
+        },
+        {
+          "required": [
+            "line"
+          ]
+        },
+        {
+          "required": [
+            "image"
+          ]
+        },
+        {
+          "required": [
+            "use"
+          ]
+        },
+        {
+          "required": [
+            "slot"
+          ]
+        },
+        {
+          "required": [
+            "repeat"
+          ]
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "box"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/box-part"
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "ellipse"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/ellipse-part"
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "text"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/text-part"
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "line"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/line-part"
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "image"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/image-part"
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "use"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/use-part"
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "slot"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/slot-part"
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "repeat"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/repeat-part"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -9,10 +9,15 @@ matter and anchors, prose, revalidation records, and another analysis's mention
 written with its qualifier. It refuses an artefact the default branch holds, a
 number the working tree holds or one not past the default branch's, and shows its
 plan before it writes (COR-004).
+
+The renumbering, the stamp, the check and the number check run in the test's own
+process, their `pkit` calls answered there too (`tests/in_process.py`, #2324). One
+test keeps the renumbering's process: the command end to end, off a terminal.
 """
 
 from __future__ import annotations
 
+import io
 import json
 import subprocess
 import sys
@@ -45,19 +50,21 @@ from tests.analysis_repo import (
     fill,
     front,
     installed,
+    link,
     load,
     load_lib,
     prepare,
     requirement,
-    run_script,
+    run_in_process,
     stamped,
 )
 
 RENUMBER = SA / "scripts" / "renumber.py"
 
 
-def renumber(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
-    """`pkit analysis renumber …`, run as the dispatcher runs it, off a terminal."""
+def renumber_as_a_process(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
+    """`pkit analysis renumber …`, run as the dispatcher runs it, off a terminal: a
+    process, its standard input no terminal."""
     return subprocess.run(
         [sys.executable, str(repo.root / RENUMBER), *args],
         cwd=repo.root,
@@ -66,6 +73,14 @@ def renumber(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
         check=False,
         stdin=subprocess.DEVNULL,
     )
+
+
+def renumber(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
+    """`pkit analysis renumber …`, as `renumber_as_a_process` runs it, but in the test's
+    own process (`run_in_process`): its standard input an empty one, no terminal."""
+    with pytest.MonkeyPatch.context() as patched:
+        patched.setattr(sys, "stdin", io.StringIO())
+        return run_in_process(repo, RENUMBER, *args)
 
 
 def refused(completed: subprocess.CompletedProcess[str]) -> str:
@@ -77,8 +92,8 @@ def refused(completed: subprocess.CompletedProcess[str]) -> str:
 
 
 def errors(repo: AdopterRepo) -> list[str]:
-    """The check's errors on the working tree."""
-    checked = json.loads(run_script(repo, VALIDATE, "--json").stdout)
+    """The check's errors on the working tree, the validator run in the test's own process."""
+    checked = json.loads(run_in_process(repo, VALIDATE, "--json").stdout)
     return [
         f"{f['location']}: {f['message']}" for f in checked["findings"] if f["severity"] == "error"
     ]
@@ -92,7 +107,7 @@ def _today() -> str:
     return datetime.now(UTC).date().isoformat()
 
 
-# Slow: two stamps, built once per session; the first test to ask pays it in its setup.
+# Two stamps, built once per session; the first test to ask pays them in its setup.
 def _leave_main(repo: AdopterRepo) -> None:
     """`prepare`, then an actor and UC-001 on main, and the branch `topic` leaving main
     there."""
@@ -154,21 +169,27 @@ def test_a_mention_is_the_id_whole_in_any_spelling_of_its_number() -> None:
 # --- a use case, with every reference (DEC-001 point 3) ---------------------------------------
 
 
-# Slow by design: a dozen `pkit` processes — stamps, the plan, the write and the checks.
+@pytest.mark.process(
+    "`pkit analysis renumber` end to end, off a terminal: its plan on standard output, its "
+    "refusal without --yes when standard input is no terminal, and its write"
+)
 def test_a_use_case_main_numbered_too_takes_the_next_free_number_with_every_reference(
     branched: AdopterRepo,
 ) -> None:
     """`topic` numbers UC-002, steps a journey through it, names it in a record and in
     main's UC-001; main numbers UC-002 meanwhile. Renumbered, `topic`'s takes UC-003, and
-    every mention follows: the check and the number comparison pass, and so does the
-    check once main is merged in."""
+    every mention follows, the links of its id to its file included (DEC-001 point 14):
+    the check and the number comparison pass, and so does the check once main is merged
+    in."""
     assert stamped(branched, "use-case", "mine", "--actor", "ACT-tester") == "UC-002"
     steps = ("--step", "UC-001", "--step", "UC-002")
     assert stamped(branched, "journey", "both", "--actor", "ACT-tester", *steps) == "JRN-001"
     fill(branched)
     one = f"{USE_CASES}/UC-001-one.md"
     branched.write({one: text(branched, one) + "\nIt hands over to UC-002.\n"})
-    recorded = run_script(
+    link(branched)
+    assert text(branched, one).endswith("\nIt hands over to [UC-002](UC-002-mine.md).\n")
+    recorded = run_in_process(
         branched,
         NEW,
         "revalidation",
@@ -192,28 +213,28 @@ def test_a_use_case_main_numbered_too_takes_the_next_free_number_with_every_refe
     fill(branched)
     branched.commit("UC-002 on main")
     branched.checkout("topic")
-    assert run_script(branched, NUMBERS, "--base", MAIN).returncode == 1
+    assert run_in_process(branched, NUMBERS, "--base", MAIN).returncode == 1
 
     ours, renamed = f"{USE_CASES}/UC-002-mine.md", f"{USE_CASES}/UC-003-mine.md"
     journey = f"{JOURNEYS}/JRN-001-both.md"
-    dry = renumber(branched, "UC-002", "--dry-run")
+    dry = renumber_as_a_process(branched, "UC-002", "--dry-run")
     assert dry.returncode == 0, dry.stderr
     assert dry.stdout.splitlines()[:5] == [
         "renumber UC-002 as UC-003 (DEC-001 point 3):",
         f"  rename    {ours} → {renamed}, 2 mentions",
         f"  rewrite   {record}, 4 mentions",
-        f"  rewrite   {journey}, 3 mentions",
-        f"  rewrite   {one}, 1 mention",
+        f"  rewrite   {journey}, 4 mentions",
+        f"  rewrite   {one}, 2 mentions",
     ]
     assert dry.stdout.endswith("dry run: nothing is written.\n")
     assert branched.git("status", "--porcelain").stdout == ""
 
     # Off a terminal, without --yes, nothing is written.
-    asked = refused(renumber(branched, "UC-002"))
+    asked = refused(renumber_as_a_process(branched, "UC-002"))
     assert "`pkit analysis renumber UC-002 --to UC-003 --yes`" in asked
     assert branched.git("status", "--porcelain").stdout == ""
 
-    done = renumber(branched, "UC-002", "--yes")
+    done = renumber_as_a_process(branched, "UC-002", "--yes")
     assert done.returncode == 0, done.stderr
     assert not (branched.root / ours).exists()
     assert front(branched, renamed)["id"] == "UC-003"
@@ -221,15 +242,15 @@ def test_a_use_case_main_numbered_too_takes_the_next_free_number_with_every_refe
     walked = front(branched, journey)
     assert walked["steps"] == ["UC-001", "UC-003"]
     assert "UC-003" in walked["pkit"]["friction"]["anchors"]["artefact"]
-    assert "2. UC-003 — Mine" in text(branched, journey)
+    assert "2. [UC-003](../use-cases/UC-003-mine.md) — Mine" in text(branched, journey)
     assert front(branched, record)["outcomes"] == {"UC-003": "gap-found"}
     assert "- **UC-003:** The export was undescribed. **Resolution:** UC-003 written." in text(
         branched, record
     )
-    assert text(branched, one).endswith("\nIt hands over to UC-003.\n")
+    assert text(branched, one).endswith("\nIt hands over to [UC-003](UC-003-mine.md).\n")
     assert "UC-002" not in "".join(text(branched, rel) for rel in (renamed, journey, record, one))
     assert errors(branched) == []
-    assert run_script(branched, NUMBERS, "--base", MAIN).returncode == 0
+    assert run_in_process(branched, NUMBERS, "--base", MAIN).returncode == 0
 
     branched.commit("UC-002 renumbered as UC-003")
     branched.git("merge", "-q", "--no-edit", MAIN)
@@ -280,7 +301,7 @@ def test_a_requirement_takes_the_number_named_and_what_refines_it_follows(
     assert refines["refines"] == ["REQ-005"]
     assert refines["pkit"]["friction"]["anchors"]["artefact"] == ["REQ-005"]
     assert errors(project) == []
-    assert run_script(project, NUMBERS, "--base", MAIN).returncode == 0
+    assert run_in_process(project, NUMBERS, "--base", MAIN).returncode == 0
 
 
 # --- across analyses ----------------------------------------------------------------------------
@@ -288,7 +309,8 @@ def test_a_requirement_takes_the_number_named_and_what_refines_it_follows(
 
 def test_another_analysis_s_qualified_mention_follows(project: AdopterRepo) -> None:
     """Ids are unique across a repository's analyses (DEC-001 point 3), so billing's
-    mention of the core's use case, `core:UC-003`, names it, and follows it."""
+    mention of the core's use case, `core:UC-003`, names it, and follows it, its link to the
+    core's file included (DEC-001 point 14)."""
     listed = (
         SETTINGS_TEXT + "analyses:\n  - {component: core, folder: core}\n"
         "  - component: billing\n    folder: billing\n    builds-on:\n      - {analysis: core}\n"
@@ -309,6 +331,9 @@ def test_another_analysis_s_qualified_mention_follows(project: AdopterRepo) -> N
     project.write(
         {invoice: text(project, invoice) + "\nThe clerk exports it, as core:UC-003 does.\n"}
     )
+    link(project)
+    to_core = "../../../core/use-case-model/use-cases"
+    assert text(project, invoice).endswith(f"as [core:UC-003]({to_core}/UC-003-export.md) does.\n")
     project.commit("UC-003 on topic")
     project.checkout(MAIN)
     stamped(project, "use-case", "theirs", "--actor", "ACT-tester", "--analysis", "core")
@@ -322,9 +347,9 @@ def test_another_analysis_s_qualified_mention_follows(project: AdopterRepo) -> N
     assert done.stdout.splitlines()[:3] == [
         "renumber UC-003 as UC-004 (DEC-001 point 3):",
         f"  rename    {core}/UC-003-export.md → {core}/UC-004-export.md, 2 mentions",
-        f"  rewrite   {invoice}, 1 mention",
+        f"  rewrite   {invoice}, 2 mentions",
     ]
-    assert text(project, invoice).endswith("\nThe clerk exports it, as core:UC-004 does.\n")
+    assert text(project, invoice).endswith(f"as [core:UC-004]({to_core}/UC-004-export.md) does.\n")
     assert errors(project) == []
 
 

@@ -1,0 +1,814 @@
+answers:
+  - artefact: .pkit/rules/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-eceee50c8cfd.yaml
+    revalidated:
+      at: 2026-10-26T04:30:15Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-reviewer
+    read:
+      - moved-18c7a9f493b4.yaml
+    revalidated:
+      at: 2026-10-26T04:30:32Z
+      outcome: updated
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-e5885d842901.yaml
+    revalidated:
+      at: 2026-10-26T04:30:35Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its account of the answers its reviewers check keeps them in the artefact, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "DEC-032 D1 now leaves the answer folder out of the touches-code floor, which the README's account of that floor does not say. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-055
+          reason: "DEC-055 now covers a later head by the answer files the change adds and prints answers made apart. #1779 builds it and rewrites the README's account of the landing."
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-080-check-answers.md
+    revalidated:
+      at: 2026-10-26T04:30:39Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-081-decide-unasked-answers.md
+    read:
+      - 20261025T003621Z-53316d8f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+    revalidated:
+      at: 2026-10-26T04:30:42Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-005-anchor-document.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-b82457b5436c.yaml
+    revalidated:
+      at: 2026-10-26T04:30:45Z
+      outcome: updated
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T220801Z-d7fabd5e.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-d6149a5e477e.yaml
+    revalidated:
+      at: 2026-10-26T04:30:52Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
+  - artefact: .pkit/agents/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-fcb206299a38.yaml
+    revalidated:
+      at: 2026-10-26T04:30:56Z
+      outcome: updated
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-65d082fdefb8.yaml
+    revalidated:
+      at: 2026-10-26T04:30:59Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, one home for every artefact's answers. #1779 builds it and rewrites the reference's account of the friction commands."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its friction commands write and read answers in the artefact's block, and friction resolve merges them, which COR-062 moves to answer files. #1779 builds it and rewrites the reference."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the reference keeps in the block. #1779 builds it and rewrites it."
+  - artefact: .pkit/schemas/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-b1ddbb959267.yaml
+    revalidated:
+      at: 2026-10-26T04:31:02Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/schemas/backbone/**
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/backbone_schemas.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/data_validate.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_discovery.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_validate.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: record
+            value: ADR-056
+          reason: "ADR-056 point 2 gains a location rule for answer files, which the README's binding order does not list. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, whose files' schema is a backbone file schema. #1779 builds it and rewrites the README with it."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It models the friction block with its answers, which COR-062 moves to answer files with a schema of their own. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the README models in the block. #1779 builds it and rewrites it."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-7a369d906fdb.yaml
+    revalidated:
+      at: 2026-10-26T04:31:05Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-a164d961d8b1.yaml
+    revalidated:
+      at: 2026-10-26T04:31:09Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-answer
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-32025a10d403.yaml
+    revalidated:
+      at: 2026-10-26T04:31:38Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 3 now lets a delegate a person named decide an answer no change owes, and has a reviewer check each such answer. The entry names the kinds of answer and the list a reviewer works from, which stay as they were.
+      deferred:
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_write.py
+          reason: "The writers now write an answer into an answer file of the change's own where the block holds none, and the definition still puts every answer in the block. #1779 rewrites the term once the move lands."
+        - anchor:
+            kind: record
+            value: COR-050#3
+          reason: "It defines an answer as a statement in the artefact's friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the definition."
+        - anchor:
+            kind: record
+            value: COR-050#4
+          reason: "A deferral moves from the block to an answer file under COR-062, so the definition's block is out of date. #1779 builds it and rewrites the definition."
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-artefact
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-3933dda7eeb0.yaml
+    revalidated:
+      at: 2026-10-26T04:31:41Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 now says a reason for having no anchors is decided by a person or by a delegate a person named. The entry defines what an artefact is, which that leaves as it was.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-backbone-configuration
+    read:
+      - moved-4a78864cb5ac.yaml
+    revalidated:
+      at: 2026-10-26T04:31:47Z
+      outcome: unchanged
+      unchanged-because: Validation gains its check of friction.delegate, one more key it checks. The entry says what the configuration holds and who adds keys to it, which stays true.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-change
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-33f1dff90c56.yaml
+    revalidated:
+      at: 2026-10-26T04:31:53Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 3 adds the delegate and the reviewer's check of answers no change owes. The entry defines a change by its base and its head, which that refinement does not touch.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-friction
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-fcf368d3df19.yaml
+    revalidated:
+      at: 2026-10-26T04:31:59Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1's refinement concerns who decides a reason for having no anchors. The entry defines friction as an anchor changed since the last revalidation, which stays as it was.
+      deferred:
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_check.py
+          reason: "The checks now read an artefact's answers from answer files where its block holds none, and the term's section still says the block holds them. #1779 builds the move and rewrites the section."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_repository.py
+          reason: "The checks now read an artefact's answers from answer files where its block holds none, and the term's section still says the block holds them. #1779 builds the move and rewrites the section."
+        - anchor:
+            kind: record
+            value: COR-050#1
+          reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+        - anchor:
+            kind: record
+            value: COR-050#5
+          reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+        - anchor:
+            kind: record
+            value: COR-050#6
+          reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+        - anchor:
+            kind: record
+            value: COR-050#9
+          reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-link-target
+    revalidated:
+      at: 2026-10-26T04:32:06Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 16 now has an entry the change check does not ask for decided and checked as point 3 sets out. The entry defines a link's target, which that leaves as it was.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-operational-rule
+    read:
+      - moved-ed9b7bd1a76e.yaml
+    revalidated:
+      at: 2026-10-26T04:32:12Z
+      outcome: unchanged
+      unchanged-because: Only rule 20 changed, to name the delegate. The entry defines what an operational rule is, which no rule's wording changes.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-place
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-0ae594146a73.yaml
+    revalidated:
+      at: 2026-10-26T04:32:18Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 changes who decides a reason for having no anchors, and point 14's key also names the delegate. The entry defines a place as where the checks look for artefacts, which neither touches.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-revisit
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+    revalidated:
+      at: 2026-10-26T04:32:27Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 16 now hands an entry the change check does not ask for to point 3's decision and check. The entry defines a revisit, which stays as it was.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-revisit-link
+    revalidated:
+      at: 2026-10-26T04:32:33Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 16's refinement concerns who decides an entry the change check does not ask for. The entry defines a link that asks for a revisit of its targets, which is unchanged.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-synced-copy
+    read:
+      - moved-7cb10c138832.yaml
+    revalidated:
+      at: 2026-10-26T04:32:38Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 14's key now also names the delegate. The entry rests on the point's rule that a synced tree is never a place, which is unchanged.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-trigger-field
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+    revalidated:
+      at: 2026-10-26T04:32:43Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 16's refinement concerns who decides an entry the change check does not ask for. The entry defines a trigger field, which is unchanged.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-source-repository
+    read:
+      - moved-419803f288a9.yaml
+    revalidated:
+      at: 2026-10-26T04:32:49Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 14 adds the delegate to its key. The entry rests on the point's rule that a tree is a place where it is authored, which is unchanged.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-agent-workspace
+    read:
+      - moved-0101adbcf4c4.yaml
+    revalidated:
+      at: 2026-10-26T04:32:55Z
+      outcome: unchanged
+      unchanged-because: Only rule 20 changed, to name the delegate. The entry rests on rule 16, the workspace rule, which is unchanged.
+  - artefact: tech-docs/analysis/core/domain-model/070-artefacts-and-friction.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-cd4ddc4f6d5e.yaml
+    revalidated:
+      at: 2026-10-26T04:33:01Z
+      outcome: unchanged
+      unchanged-because: COR-050 changed in points 1, 3, 14 and 16 and its Rationale, adding the delegate and the reviewer's check of answers no change owes. The view's account of anchors, answers and the checks names no one who decides an answer, so it still holds.
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "The view has an artefact carry its answers, which COR-062 moves to answer files, and names no debt answered apart. #1779 builds it and rewrites the view."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the view shows them carried by the artefact. #1779 builds it and rewrites the view."
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-015-missing-root-warns.md
+    read:
+      - moved-117b85398083.yaml
+    revalidated:
+      at: 2026-10-26T04:33:06Z
+      outcome: unchanged
+      unchanged-because: The test module gains the delegate's tests. The requirement, that a missing documentation root warns and fails nothing, is tested as before.
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-017-backbone-migration-safe.md
+    read:
+      - moved-3d8663c5b43a.yaml
+    revalidated:
+      at: 2026-10-26T04:33:16Z
+      outcome: unchanged
+      unchanged-because: Only rule 20 changed, to name the delegate. The requirement rests on rule 5, on migrations, which is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-ci-pipeline.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-e1d3065e2944.yaml
+    revalidated:
+      at: 2026-10-26T04:33:22Z
+      outcome: unchanged
+      unchanged-because: COR-050's changes concern who decides an answer no change owes and who checks it. The pipeline runs the checks, which read an answer whoever decided it, so its part is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-merge-authoriser.md
+    read:
+      - moved-485c671b6da3.yaml
+    revalidated:
+      at: 2026-10-26T04:33:28Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 3 adds a delegate a person may name and a reviewer's check of answers no change owes. The actor still leaves the answers' check to a reviewer and authorises each merge, as its needs say.
+  - artefact: tech-docs/analysis/living-docs/requirements/functional/REQ-022-agent-proposes-only.md
+    read:
+      - moved-0b574f2ce051.yaml
+    revalidated:
+      at: 2026-10-26T04:33:35Z
+      outcome: unchanged
+      unchanged-because: "COR-050 point 3 now lets a delegate decide answers no change owes, but living-docs DEC-001 keeps its agent's proposals for a person, which COR-064 point 1 respects until #2123 hands them on. The agent still proposes only."
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-045-propose-page-fix.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-ee7b915ffa8a.yaml
+    revalidated:
+      at: 2026-10-26T04:33:41Z
+      outcome: unchanged
+      unchanged-because: "DEC-056 points 3 and 6 and COR-050 point 3 let a delegate decide a fixer's proposal, but living-docs DEC-001 keeps its pages' answers for a person until #2123 hands them on. The developer still reviews and accepts each proposal."
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-047-onboard-documents.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-60786988cb3d.yaml
+    revalidated:
+      at: 2026-10-26T04:33:47Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 lets a delegate decide a reason for having no anchors, and point 14's key names it. living-docs DEC-001 keeps a page's reason a person's decision, so a person still accepts each reason in onboarding.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-authorisation
+    revalidated:
+      at: 2026-10-26T04:33:55Z
+      outcome: unchanged
+      unchanged-because: DEC-055 point 3 adds that an unasked entry needed a person's or the delegate's decision, which a reviewer checks. The entry's point, that an approval is no authorisation to merge, is unchanged.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-batch-plan
+    revalidated:
+      at: 2026-10-26T04:34:02Z
+      outcome: unchanged
+      unchanged-because: The project manager's definition gains a section on deciding as the delegate. Its batch-planning flow, which the entry defines, is unchanged.
+  - artefact: tech-docs/analysis/project-management/domain-model/030-the-issue-lifecycle.md
+    revalidated:
+      at: 2026-10-26T04:34:11Z
+      outcome: unchanged
+      unchanged-because: DEC-055 point 3 adds that an unasked entry needed a person's or the delegate's decision, which a reviewer checks. The view's account of the issue's states and who authorises each move is unchanged.
+  - artefact: tech-docs/analysis/project-management/domain-model/040-reviews-and-the-merge.md
+    revalidated:
+      at: 2026-10-26T04:34:19Z
+      outcome: unchanged
+      unchanged-because: DEC-055 point 3 adds that the reviewer checks each unasked entry, decided by a person or the delegate. The view describes verdicts, findings and the merge's authorisation, which say nothing of who decides such an entry.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - moved-c1c76fd062d5.yaml
+    revalidated:
+      at: 2026-10-26T04:34:25Z
+      outcome: unchanged
+      unchanged-because: DEC-055 point 3 adds the delegate's decision and the reviewer's check of unasked entries. The requirement, that a held move needs a person's authorisation, is unchanged.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - moved-61845b86011c.yaml
+    revalidated:
+      at: 2026-10-26T04:34:32Z
+      outcome: unchanged
+      unchanged-because: "COR-050 point 3 lets a delegate decide answers no change owes, but software-analysis DEC-001 point 5 keeps its agent's proposals for a person, which COR-064 point 1 respects until #2123 hands them on. The agent still proposes only."
+  - artefact: tech-docs/analysis/software-engineering/glossary.md#TERM-code-review-panel
+    revalidated:
+      at: 2026-10-26T04:34:39Z
+      outcome: unchanged
+      unchanged-because: The docs reviewer now checks every answer no change owes, and DEC-002 point 1 says so. The entry says which reviewers the panel holds and when they are required, which is unchanged.
+  - artefact: tech-docs/analysis/software-engineering/glossary.md#TERM-hand-off
+    read:
+      - 20261025T003621Z-53316d8f.yaml
+    revalidated:
+      at: 2026-10-26T04:34:46Z
+      outcome: unchanged
+      unchanged-because: The software engineer now names an unasked answer for the person, or the delegate a person named, to decide. The entry's example, a hand-off naming such an answer for the developer, still holds where no delegate is named.
+  - artefact: tech-docs/analysis/software-engineering/requirements/quality/REQ-060-secret-off-command-line.md
+    revalidated:
+      at: 2026-10-26T04:34:51Z
+      outcome: unchanged
+      unchanged-because: DEC-002 point 1 changed only in what the docs reviewer checks of a change's answers. The requirement, that the panel blocks a secret passed on a command line, rests on the security reviewer's remit, which is unchanged.
+  - artefact: tech-docs/analysis/software-engineering/glossary.md#TERM-conventions-corpus
+    read:
+      - moved-2a0b2e49d5a9.yaml
+    revalidated:
+      at: 2026-10-26T04:34:59Z
+      outcome: unchanged
+      unchanged-because: The software engineer's definition changed only in who decides an unasked answer. The entry's account of the corpus it reads is unchanged.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-043-set-up-space.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-d45e53f4f973.yaml
+    revalidated:
+      at: 2026-10-26T04:35:17Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 changes who decides a reason for having no anchors. Setting up a space declares its definition and places, and asks for no such reason, so the use case is unchanged.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-044-write-page.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-953310b098f2.yaml
+    revalidated:
+      at: 2026-10-26T04:35:30Z
+      outcome: unchanged
+      unchanged-because: "COR-050 point 1 lets a delegate a person named decide a reason for having no anchors. living-docs DEC-001 keeps a page's reason a person's decision until #2123, so variant 3b still holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-063-plan-intent.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-a96d5bbf8b57.yaml
+    revalidated:
+      at: 2026-10-26T04:35:41Z
+      outcome: unchanged
+      unchanged-because: The project manager's definition gains a section on deciding as the delegate. Planning from intent, behind one approval gate, is unchanged.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-071-describe-existing-project.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-a7d5eb0e91b3.yaml
+    revalidated:
+      at: 2026-10-26T04:35:51Z
+      outcome: unchanged
+      unchanged-because: "COR-050 point 1 lets a delegate decide a reason for having no anchors, and point 14's key names it. software-analysis keeps that reason for a person by its own rules until #2123, so the developer still accepts each one."
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-072-revise-before-change.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+    revalidated:
+      at: 2026-10-26T04:35:58Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 3 adds the delegate for answers no change owes. Revising the analysis before a change records answers that change owes, written as UC-002 describes, so the use case is unchanged.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-073-revalidate-after-change.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-2ac1be36d925.yaml
+    revalidated:
+      at: 2026-10-26T04:36:06Z
+      outcome: unchanged
+      unchanged-because: "DEC-056 and COR-050 point 3 let a delegate decide a fixer's proposal, but software-analysis DEC-001 point 5 keeps its agent's proposals for a person until #2123. The developer still decides each answer."
+  - artefact: tech-docs/analysis/core/domain-model/060-changes-review-and-releases.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-fb33f94647c6.yaml
+    revalidated:
+      at: 2026-10-26T04:36:16Z
+      outcome: unchanged
+      unchanged-because: COR-050 adds the delegate, and the reviewer entry now says it also checks each answer no change owes. The view's account of changes, reviews and releases still holds, since it names the reviewer without listing what it checks.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-001-build-under-conventions.md
+    read:
+      - moved-8a82930f46b2.yaml
+    revalidated:
+      at: 2026-10-26T04:36:22Z
+      outcome: unchanged
+      unchanged-because: The software engineer, rule 20 and COR-050 point 3 now name the delegate for answers no change owes. Building a change under the conventions writes the answers it owes, which is unchanged, and UC-081 covers the rest.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-developer.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-4b4237b8c57c.yaml
+    revalidated:
+      at: 2026-10-26T04:36:33Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 3 adds a delegate for answers no change owes. The actor's need, an agent writing the answers its change owes and a reviewer checking them, is unchanged.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md
+    read:
+      - moved-d9114a7441f5.yaml
+    revalidated:
+      at: 2026-10-26T04:36:42Z
+      outcome: unchanged
+      unchanged-because: The agents README's Friction writers gains the delegate, which it says is no reviewer. The README's account of a reviewer, read-only on what it judges, is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-e4c6c09d69df.yaml
+    revalidated:
+      at: 2026-10-26T04:36:46Z
+      outcome: unchanged
+      unchanged-because: Only rule 20 changed, to name the delegate, and COR-064 point 6 keeps a record's acceptance a person's. The use case rests on rule 2, the acceptance gate, which is unchanged.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-062-review-and-land.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-a808f0db0388.yaml
+    revalidated:
+      at: 2026-10-26T04:36:52Z
+      outcome: unchanged
+      unchanged-because: "DEC-055 point 3 adds the delegate's decision and the reviewer's check of unasked entries, and COR-050 and COR-062 name the delegate. The landing's steps, its list of answers and its stop at a later head are unchanged. Showing a change to the delegate's name waits on #2122."
+  - artefact: tech-docs/analysis/core/domain-model/040-versions-and-copies.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-e4acc05dec63.yaml
+    revalidated:
+      at: 2026-10-26T04:36:57Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 14's key now also names the delegate. The view rests on the point's rule that a synced tree is never a place, which is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-da785d36ef16.yaml
+    revalidated:
+      at: 2026-10-26T04:37:02Z
+      outcome: unchanged
+      unchanged-because: The schemas README changed only in who accepts a reason for having no anchors. Its account of rule-set files, which the use case rests on, is unchanged.
+  - artefact: .pkit/lifecycle/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T205437Z-a3b903e8.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001046Z-b1bfc4dd.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-e20d8eb259bb.yaml
+    revalidated:
+      at: 2026-10-26T04:37:07Z
+      outcome: unchanged
+      unchanged-because: COR-050 points 1, 3 and 16 add the delegate, and point 14's key names it. The lifecycle README's accounts of places, synced trees and links say nothing of who decides an answer, so they still hold.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-005
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-cf1897716e93.yaml
+    revalidated:
+      at: 2026-10-26T04:37:13Z
+      outcome: unchanged
+      unchanged-because: "COR-050 point 1 lets a delegate decide a reason for having no anchors. The rule keeps that reason a person's decision for the analysis, which COR-064 point 1 respects until #2123, so it still holds."
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-2dccacfe6269.yaml
+    revalidated:
+      at: 2026-10-26T04:37:26Z
+      outcome: unchanged
+      unchanged-because: "COR-050 and DEC-056 now let a delegate decide a fixer's proposal, and the grant section of the project-management README is as it was. software-analysis keeps its agent's proposals for a person until #2123, so the README's account of proposing and deciding still holds."
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It keeps an artefact's revalidation in the core friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the README keeps them in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passages #1779 rewrites, since a revalidation would claim the whole README holds."
+  - artefact: .pkit/capabilities/doc-examples/README.md
+    read:
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T024311Z-b91cff99.yaml
+    revalidated:
+      at: 2026-10-26T04:37:32Z
+      outcome: unchanged
+      unchanged-because: COR-050 adds the delegate for answers no change owes and the reviewer's check of them. The README's account of a page's console examples and their anchors says nothing of who decides an answer.
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T174422Z-ea676633.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T202350Z-6a1bd668.yaml
+      - 20261025T221052Z-9302b480.yaml
+      - 20261025T234102Z-0231f155.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-69dea4023970.yaml
+    revalidated:
+      at: 2026-10-26T04:37:40Z
+      outcome: unchanged
+      unchanged-because: COR-050 adds the delegate for answers no change owes and the reviewer's check of them. The guide's account of the friction gate, its enforcing mode and its escape hatch, is unchanged.
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-055
+          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the paragraph on landing through the queue does not say. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: ADR-067
+          reason: "ADR-067's summary now says only answers changed when changes lie in the change's answers, and CONTRIBUTING still names the blocks. #1779 builds it and rewrites the short check's account."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It says only answers changed when changes lie in revalidated blocks and revisited lists, which COR-062 moves to answer files. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-053
+          reason: "DEC-053 now meets a page's obligation by its answers in answer files, and asks none for a page answered apart. #1779 builds it and rewrites the documentation check's account."
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T012015Z-9d5dca86.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T013953Z-63c51796.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-96e1f9e9c108.yaml
+    revalidated:
+      at: 2026-10-26T04:37:45Z
+      outcome: unchanged
+      unchanged-because: "COR-050 and DEC-056 now let a delegate decide a fixer's proposal, and the schemas README's friction block names who accepts a reason for no anchors. living-docs keeps its pages' answers for a person until #2123, so the README's account still holds."
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It says two branches revalidating one page conflict in its block and friction resolve takes the base side's answer, which COR-062 replaces. #1779 builds it and rewrites the passage."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the README keeps in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passage #1779 rewrites, since a revalidation would claim the whole README holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - moved-50d19a823f20.yaml
+    revalidated:
+      at: 2026-10-26T04:37:51Z
+      outcome: unchanged
+      unchanged-because: The schema and validation gain friction.delegate, a single-value key set and checked as steps 1 and 9 describe, and point 14's key names it. The goal lists what an adopter declares at set-up, and naming a delegate is a later, optional choice.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-a4cb7bc0b417.yaml
+    revalidated:
+      at: 2026-10-26T04:37:55Z
+      outcome: unchanged
+      unchanged-because: Rule 20 and the rules README's summary of it now name the delegate. The use case, refreshing the operational rules and having the harness include them, is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - moved-f6d0acdf7905.yaml
+    revalidated:
+      at: 2026-10-26T04:38:00Z
+      outcome: unchanged
+      unchanged-because: The agents README's Friction writers gains the delegate. Its account of how an agent definition is deployed, which the use case rests on, is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-808bb37fbee5.yaml
+    revalidated:
+      at: 2026-10-26T04:38:05Z
+      outcome: unchanged
+      unchanged-because: Only rule 20 changed, to name the delegate. The use case rests on rule 16, the workspace rule, which is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - moved-718f3fc69ca5.yaml
+    revalidated:
+      at: 2026-10-26T04:38:13Z
+      outcome: unchanged
+      unchanged-because: Only rule 20 changed, to name the delegate. The use case rests on rule 19, on mutating another repository, which is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - moved-59a2bc69643a.yaml
+    revalidated:
+      at: 2026-10-26T04:38:17Z
+      outcome: unchanged
+      unchanged-because: Rule 20 and COR-050 point 3 add the delegate and the reviewer's check of answers no change owes. Landing a change, its reviewer's check and the person told of the answers, as the use case describes, is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-6a06cb9b0a21.yaml
+    revalidated:
+      at: 2026-10-26T04:38:22Z
+      outcome: unchanged
+      unchanged-because: Only rule 20 changed, to name the delegate. Recording a decision rests on rule 2, the acceptance gate, and on rule 3, the paired skill, which are unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-40743155218d.yaml
+    revalidated:
+      at: 2026-10-26T04:38:27Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 changes who decides a reason for having no anchors, and point 14's key names the delegate. Adopting the system, as the journey's steps describe, asks for neither, so it is unchanged.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-ae8fedaca13d.yaml
+    revalidated:
+      at: 2026-10-26T04:38:33Z
+      outcome: unchanged
+      unchanged-because: Rule 20, COR-050 points 1 and 3, UC-002 and UC-007 now name the delegate for answers no change owes. The journey's steps and its seams hand on the list of answers and the debt, which is unchanged.
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T220735Z-8e67b306.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261025T233736Z-b867ef8a.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-26T04:38:37Z
+      outcome: unchanged
+      unchanged-because: Rule 20 and COR-050 now name the delegate for answers no change owes. The README's account, that a change answers each document it touches and a reviewer checks each reason, still holds.

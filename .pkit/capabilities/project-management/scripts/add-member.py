@@ -11,14 +11,17 @@ Stamps a new entry into `members.yaml`. The script writes to the file
 on the working branch — committing + PR review by an existing member
 (when in closed mode) is the actual landing step. In open mode (no
 prior members), the first add is self-authored without prior review;
-the moment it lands, closed mode applies.
+the moment it lands, closed mode applies. The addition is asked at a
+terminal, `--yes` authorises it, and off a terminal without `--yes` it is
+refused before the file is written (#2015).
 
 Per DEC-021. Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/add-member.py
 
 Exit codes:
   0  entry added
-  1  membership refusal (closed mode, invoker not a member)
+  1  membership refusal (closed mode, invoker not a member) / off a terminal
+     without --yes
   2  usage error (bad args; capability not installed)
   3  duplicate entry (github_login already present)
 """
@@ -35,7 +38,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, session_guard
+from _lib import bootstrap_gate, consent, session_guard
 from _lib.gh import load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -174,11 +177,14 @@ def main() -> int:
     print(f"about to add to {file_path}:")
     for k, v in new_entry.items():
         print(f"  {k}: {v}")
-    if not args.yes and sys.stdin.isatty():
-        reply = input("Proceed? [y/N] ").strip().lower()
-        if reply not in ("y", "yes"):
-            print("aborted.", file=sys.stderr)
-            return 0
+    stop = consent.authorise(
+        "Proceed? [y/N] ",
+        yes=args.yes,
+        step=f"Adding {github_login!r} to the members",
+        verb="add-member",
+    )
+    if stop is not None:
+        return stop
 
     # Write.
     _write_members(file_path, [*members, new_entry], yaml_loader)

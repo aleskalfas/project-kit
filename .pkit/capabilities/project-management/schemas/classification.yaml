@@ -1,11 +1,13 @@
 # Classification axes (type, priority, workstream) + PR-type mapping.
 #
 # Three classification axes the methodology mandates on every issue.
-# Type is always a label (drives PR-title alignment); Priority and
-# Workstream prefer Projects v2 single-select fields when a board
-# exists, falling back to `<axis>:*` labels when no board is
-# configured. Values are methodology-fixed for Type and Priority, open
-# and project-defined for Workstream.
+# Type is always a label (drives PR-title alignment). Priority and
+# Workstream are `<axis>:*` labels, or a Projects v2 single-select
+# field where the project's substrate map binds the axis to its board:
+# the board flag says only that a board exists, and carries no axis
+# ([project-management:DEC-062-axes-chosen-in-the-map]). Values are
+# methodology-fixed for Type and Priority, open and project-defined for
+# Workstream.
 #
 # Top-level `pr_type_mapping` bridges the closing issue's `type:*`
 # label to the PR's Conventional Commits `<type>` (per MET-010 +
@@ -27,7 +29,7 @@ axes:
       Commits `<type>` AND the Task's title prefix at the issue level
       (per [project-management:DEC-011-title-formats]). The kind label
       and Task title prefix stay aligned through `title_prefix_by_value`.
-    substrate_with_board: "label (`type:*`) — always a label regardless of board presence"
+    substrate_with_board: "label (`type:*`), board or no board: no substrate map puts type on a board"
     substrate_without_board: "label (`type:*`)"
     values:
       - feature
@@ -72,7 +74,7 @@ axes:
   priority:
     description: |
       Triage signal — how soon this should be worked on.
-    substrate_with_board: "Projects v2 single-select field (`Priority`)"
+    substrate_with_board: "label (`priority:*`), or the board's single-select field (`Priority`) where the substrate map binds priority to the board"
     substrate_without_board: "label (`priority:*`)"
     values:
       - High
@@ -90,7 +92,7 @@ axes:
       Which workstream this issue belongs to. Cross-repo workstreams
       typically share values at the org level so the same value means
       the same thing across repos.
-    substrate_with_board: "Projects v2 single-select field (`Workstream`), org-level so values are shared across repos"
+    substrate_with_board: "label (`workstream:*`), or the board's single-select field (`Workstream`), org-level so values are shared across repos, where the substrate map binds workstream to the board"
     substrate_without_board: "label (`workstream:*`)"
     values_project_specific: true
     mutually_exclusive: true
@@ -110,7 +112,7 @@ axes:
       flag). When set, forces this issue's PR to be reviewed in the
       named mode regardless of project default. Optional — most issues
       don't need this; the project default applies.
-    substrate_with_board: "label (`review:*`) — board substrate is unused for this axis"
+    substrate_with_board: "label (`review:*`), board or no board"
     substrate_without_board: "label (`review:*`)"
     values:
       - human

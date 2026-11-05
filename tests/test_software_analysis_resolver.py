@@ -37,16 +37,20 @@ analysis never rewritten to match broken code:
   consent flag (#1148); its storyboard's three scenarios; the references; and
   the deployed copy. That those commands write nothing without a person is
   `test_handed_over_writers.py`'s.
+
+`propose` and the check run in the test's own process, their `pkit` calls
+answered there too (`tests/in_process.py`, #2325). One test keeps a process:
+the stop, `propose`'s end-to-end test.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import re
 import shlex
 import subprocess
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -65,14 +69,17 @@ from tests.analysis_repo import (
     REPO,
     SA,
     USE_CASES,
+    VALIDATE,
     actor_at,
     installed,
     load,
     load_lib,
     prepare,
+    run_in_process,
     run_script,
     seed,
 )
+from tests.in_process import InProcessPkit, Runner
 
 PROPOSE = SA / "scripts" / "propose.py"
 AGENT_DIR = CAPABILITY / "agents" / "analysis-resolver"
@@ -91,8 +98,9 @@ GENERATED = "src/generated/stub.py"
 #: The hint the stamp leaves as an actor's opening, its first part (#1366).
 WHO = re.compile(r"^<!-- pkit:hint What this role is.*? -->$", re.MULTILINE)
 
-#: The hint the stamp leaves after a use case's `**Main path:**` label (#1366).
-MAIN_PATH = re.compile(r"\*\*Main path:\*\* <!-- pkit:hint .*? -->")
+#: The hint the stamp leaves below a use case's `**Main path:**` label, where its list goes
+#: (#1366, #2088).
+MAIN_PATH = re.compile(r"\*\*Main path:\*\*\n\n<!-- pkit:hint .*? -->")
 
 
 # --- the rules, on their own ---------------------------------------------------------------
@@ -280,6 +288,65 @@ def test_the_answer_emits_the_person_s_commands_word_for_word() -> None:
         assert all("--yes" not in c and "--dry-run" not in c for c in answer.commands)
 
 
+def test_a_regression_takes_its_box_where_an_accepted_record_decides_the_step() -> None:
+    """DEC-001 points 1 and 5 (#1929): where an accepted record the use case anchors
+    decides the regressed step, the step keeps its words and takes its box and its entry,
+    naming the record and the defect's issue, and the answer is `updated`. Where no record
+    decides it, the answer is `unchanged`, naming the defect. Which it is, is the agent's
+    reading: until it says, a use case anchoring an accepted record gets no command, so
+    `unchanged` is never its only answer."""
+    location = "tech-docs/analysis/use-case-model/use-cases/UC-001-run-suite.md"
+    verdict = R.propose("UC-001", "stale", [GONE], R.Intent(**UNINTENDED))
+    deciders = ("ADR-006#2", "software-analysis:DEC-001#5")
+
+    boxed: Any = A.answer(location, verdict, [GONE], deciders, A.Box("2", "ADR-006#2"))
+    assert boxed.outcome == "code-regressed" and boxed.which is None
+    assert boxed.commands == (f"pkit friction revalidate {location} --outcome updated",)
+    report, box = boxed.first
+    assert report.startswith("report the defect, and write its reference in place of")
+    assert box.startswith(
+        "add below step 2 its `Not built yet` box, which names ADR-006 and the defect "
+        "<the defect reference>, and its entry in `shortfalls`: at `2`, issue "
+        "<the defect reference>, record `ADR-006#2`. The step 2 keeps its words"
+    )
+    variant: Any = A.answer(
+        location, verdict, [GONE], deciders, A.Box("2a", "software-analysis:DEC-001#5")
+    )
+    assert "below variant 2a its `Not built yet` box, which names DEC-001 and" in variant.first[1]
+
+    waiting: Any = A.answer(location, verdict, [GONE], deciders)
+    assert (waiting.outcome, waiting.commands) == ("code-regressed", ())
+    assert waiting.first[0].startswith("report the defect")
+    assert "ADR-006#2, software-analysis:DEC-001#5" in waiting.which
+    assert "`--box <step> --decided-by <record>`" in waiting.which
+    assert "`--no-box` where none does" in waiting.which
+
+    # No record decides it, by the agent's reading or because none can.
+    unboxed: Any = A.answer(location, verdict, [GONE], deciders, no_box=True)
+    assert unboxed == A.answer(location, verdict, [GONE])
+    (command,) = unboxed.commands
+    assert "--outcome unchanged --because 'The description stands: " in command
+    assert unboxed.which is None
+
+    # The box bears on a regression alone.
+    stale = R.propose("UC-001", "stale", [GONE], R.Intent(**INTENDED))
+    assert A.answer(location, stale, [GONE], deciders, A.Box("2", "ADR-006#2")) == A.answer(
+        location, stale, [GONE]
+    )
+
+
+def test_a_box_stands_only_on_a_use_case_and_an_accepted_record_it_anchors() -> None:
+    box = A.Box("2", "ADR-006#2")
+    assert A.box_refused("UC-001", True, ("ADR-006#2",), box) is None
+    assert A.box_refused("JRN-001", False, (), box).startswith(
+        "JRN-001 is no use case: only a use case's step or variant takes a box"
+    )
+    refused = A.box_refused("UC-001", True, ("ADR-006",), box)
+    assert refused.startswith("ADR-006#2 is no accepted record UC-001 anchors")
+    assert "(accepted: ADR-006)" in refused
+    assert "(accepted: none)" in A.box_refused("UC-001", True, (), box)
+
+
 # --- the stop, in a repository ---------------------------------------------------------------
 
 
@@ -305,8 +372,12 @@ def flagged(
     return installed(make_adopter_repo, monkeypatch, then=_flag)
 
 
-def _propose(repo: AdopterRepo, artefact: str, *args: str) -> dict[str, Any]:
-    completed = run_script(repo, PROPOSE, artefact, *args, "--json")
+def _propose(
+    repo: AdopterRepo, artefact: str, *args: str, pkit: Runner | None = None
+) -> dict[str, Any]:
+    """`pkit analysis propose <artefact> … --json`, in the test's own process
+    (`run_in_process`): its `pkit` calls answered by `pkit` where given."""
+    completed = run_in_process(repo, PROPOSE, artefact, *args, "--json", pkit=pkit)
     assert completed.returncode == 0, completed.stderr
     return json.loads(completed.stdout)
 
@@ -323,6 +394,10 @@ def _explained_state(repo: AdopterRepo, artefact: str) -> str:
     return json.loads(result.output)["state"]
 
 
+@pytest.mark.process(
+    "propose's end-to-end test: the agent's helper as the dispatcher starts it, its document "
+    "and the lines a person reads, read through the `pkit` it starts"
+)
 def test_the_stop_ambiguous_writes_nothing_and_asks_a_person(flagged: AdopterRepo) -> None:
     """Code the use case quotes is gone, and nothing says whether that was meant: the
     agent's helper answers ambiguous with the question, and nothing is written."""
@@ -332,7 +407,9 @@ def test_the_stop_ambiguous_writes_nothing_and_asks_a_person(flagged: AdopterRep
     before = _analysis(flagged)
     assert _explained_state(flagged, "UC-001") == "stale"
 
-    document = _propose(flagged, "UC-001")
+    completed = run_script(flagged, PROPOSE, "UC-001", "--json")
+    assert completed.returncode == 0, completed.stderr
+    document = json.loads(completed.stdout)
     assert document["verdict"] == "ambiguous"
     assert document["rule"] == "ground-gone"
     (anchor,) = document["anchors"]
@@ -387,7 +464,7 @@ def test_a_quote_is_given_with_its_source_and_a_commit_s_is_checked(flagged: Ado
         f"refactor: tidy the runner\n\n{said}",
         {RUN: "def execute(fast=False):\n    print('run')\n"},
     )
-    lone = run_script(flagged, PROPOSE, "UC-001", "--intended", said, "--json")
+    lone = run_in_process(flagged, PROPOSE, "UC-001", "--intended", said, "--json")
     assert lone.returncode == 2 and "--intended and --intended-from go together" in lone.stderr
 
     def checked(quote: str, source: str) -> Any:
@@ -402,7 +479,7 @@ def test_a_quote_is_given_with_its_source_and_a_commit_s_is_checked(flagged: Ado
     assert checked(said, "https://example.org/pr/212")["read"]["intended"]["verified"] is None
     # Shown, never enforced: an unchecked or failed quote decides as any quote does.
     assert checked("run_suite is dropped on purpose.", sha)["verdict"] == "analysis-stale"
-    human = run_script(
+    human = run_in_process(
         flagged, PROPOSE, "UC-001", "--intended", "Dropped.", "--intended-from", sha[:12]
     )
     assert f"intended: 'Dropped.' — {sha[:12]}, NOT found in its message" in human.stdout
@@ -432,6 +509,119 @@ def test_a_regression_s_command_waits_for_the_person_s_defect(flagged: AdopterRe
     assert recorded.exit_code == 0, recorded.output
     flagged.commit("docs(analysis): UC-001 stands; the defect is #231")
     assert _explained_state(flagged, "UC-001") == "current"
+
+
+#: The project records UC-001 may rest on: one accepted, one proposed.
+ACCEPTED_RECORD = ".pkit/decisions/project/PRJ-001-run-each-suite.md"
+PROPOSED_RECORD = ".pkit/decisions/project/PRJ-002-run-in-parallel.md"
+
+
+def _record(number: str, title: str, status: str) -> str:
+    return (
+        f"---\nid: PRJ-{number}\ntitle: {title}\nstatus: {status}\ndate: 2026-10-24\n"
+        f"author: Someone <someone@example.com>\n---\n\n## Context\n\nWhy.\n\n## Decision\n\n"
+        f"1. **{title}.**\n"
+    )
+
+
+def _resting_on_records(repo: AdopterRepo) -> None:
+    """UC-001 anchors an accepted record and a proposed one, then a commit drops the code
+    its first step quotes."""
+    repo.write(
+        {
+            ACCEPTED_RECORD: _record("001", "Run each suite through run_suite", "accepted"),
+            PROPOSED_RECORD: _record("002", "Run the suites in parallel", "proposed"),
+        }
+    )
+    text = (repo.root / RUN_SUITE).read_text(encoding="utf-8")
+    anchors = "    anchors:\n"
+    assert anchors in text
+    records = f"{anchors}      record:\n        - PRJ-001#1\n        - PRJ-002\n"
+    repo.write({RUN_SUITE: text.replace(anchors, records, 1)})
+    repo.commit("docs(analysis): UC-001 rests on PRJ-001")
+    repo.commit("refactor: tidy the runner", {RUN: "def execute(fast=False):\n    print('run')\n"})
+
+
+def test_a_regressed_step_a_record_decides_takes_its_box(flagged: AdopterRepo) -> None:
+    """#1929's failing example: UC-001 anchors an accepted record that decides its first
+    step, and a commit breaks the step. `propose` gives no command until the agent says
+    which regression it is. Named with the record, the step takes its box and the answer
+    is `updated`, and the box and entry it describes pass the check. Said to be no
+    record's, the answer is `unchanged`."""
+    _resting_on_records(flagged)
+    bug = ("--unintended", "A bug.", "--unintended-from", "Sam")
+
+    waiting = _propose(flagged, "UC-001", *bug)
+    assert waiting["verdict"] == "code-regressed"
+    assert waiting["answer"]["commands"] == []
+    which = waiting["answer"]["which"]
+    assert "PRJ-001#1" in which and "PRJ-002" not in which  # proposed: no ground for a box
+    human = run_in_process(flagged, PROPOSE, "UC-001", *bug)
+    assert "  no command yet: the use case anchors accepted records" in human.stdout
+
+    boxed = _propose(flagged, "UC-001", *bug, "--box", "1", "--decided-by", "PRJ-001#1")
+    location = boxed["location"]
+    assert boxed["answer"]["commands"] == [f"pkit friction revalidate {location} --outcome updated"]
+    assert boxed["answer"]["which"] is None
+    assert any(
+        "below step 1" in step and "names PRJ-001 and" in step and "record `PRJ-001#1`" in step
+        for step in boxed["answer"]["first"]
+    )
+
+    unboxed = _propose(flagged, "UC-001", *bug, "--no-box")
+    (command,) = unboxed["answer"]["commands"]
+    assert "--outcome unchanged --because 'The description stands: " in command
+
+    # The person does what comes first, then records the answer: the box and its entry
+    # pass the check, which fails the entry alone, and the friction is answered.
+    def shortfall_findings() -> list[Any]:
+        completed = run_in_process(flagged, VALIDATE, "--json")
+        return [
+            f
+            for f in json.loads(completed.stdout)["findings"]
+            if "shortfalls" in f["location"] or "Not built yet" in f["message"]
+        ]
+
+    entry = 'status: active\nshortfalls:\n  - at: 1\n    issue: "#231"\n    record: PRJ-001#1\n'
+    text = (flagged.root / RUN_SUITE).read_text(encoding="utf-8")
+    text = text.replace("status: active\n", entry, 1)
+    flagged.write({RUN_SUITE: text})
+    assert shortfall_findings() != []
+    step = "1. The tester starts `run_suite`, passing `fast` for a quick pass.\n"
+    box = (
+        "\n> [!WARNING]\n"
+        "> **Not built yet:** `run_suite` is gone. PRJ-001 decides it, and #231 tracks it.\n"
+    )
+    flagged.write({RUN_SUITE: text.replace(step, step + box, 1)})
+    assert shortfall_findings() == []
+    recorded = CliRunner().invoke(main, [*shlex.split(boxed["answer"]["commands"][0])[1:], "--yes"])
+    assert recorded.exit_code == 0, recorded.output
+    flagged.commit("docs(analysis): UC-001's first step regressed; #231 tracks it")
+    assert _explained_state(flagged, "UC-001") == "current"
+
+
+@pytest.mark.parametrize(
+    ("artefact", "args", "said"),
+    [
+        ("UC-001", ("--box", "1", "--decided-by", "PRJ-002"), "PRJ-002 is no accepted record"),
+        ("UC-001", ("--box", "1", "--decided-by", "PRJ-001"), "PRJ-001 is no accepted record"),
+        ("ACT-tester", ("--box", "1", "--decided-by", "PRJ-001#1"), "ACT-tester is no use case"),
+        ("UC-001", ("--box", "1"), "--box and --decided-by go together"),
+        ("UC-001", ("--box", "x", "--decided-by", "PRJ-001#1"), "--box takes a step's number"),
+        ("UC-001", ("--box", "1", "--decided-by", "PRJ-001#1", "--no-box"), "exclude each other"),
+    ],
+)
+def test_a_box_that_cannot_stand_is_a_usage_error(
+    flagged: AdopterRepo, artefact: str, args: tuple[str, ...], said: str
+) -> None:
+    """A box stands on a use case's step, on an accepted record it anchors as written."""
+    _resting_on_records(flagged)
+    refused = run_in_process(
+        flagged, PROPOSE, artefact, "--unintended", "A bug.", "--unintended-from", "Sam", *args
+    )
+    assert refused.returncode == 2, refused.stdout
+    assert said in refused.stderr
+    assert flagged.git("status", "--porcelain").stdout == ""
 
 
 def test_quoted_code_is_matched_as_a_whole_word(flagged: AdopterRepo) -> None:
@@ -603,49 +793,33 @@ def test_an_upstream_artefact_changed_is_read_never_regressed(flagged: AdopterRe
 
 
 def test_an_artefact_that_cannot_be_explained_is_refused(flagged: AdopterRepo) -> None:
-    completed = run_script(flagged, PROPOSE, "UC-404", "--json")
+    completed = run_in_process(flagged, PROPOSE, "UC-404", "--json")
     assert completed.returncode == 1
     assert completed.stdout == ""
     assert completed.stderr.startswith("cannot propose: ")
 
 
-#: A `pkit` answering `friction explain` as another backbone would: the real answer
-#: with its `schema_version` set to `$EXPLAIN_VERSION` (JSON), or taken out when that
-#: is empty — a backbone from before the key — and its `state` set to `$EXPLAIN_STATE`
-#: when that is given.
-_ANOTHER_PKIT = """#!{python}
-import json, os, subprocess, sys
-done = subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]],
-                      capture_output=True, text=True)
-out = done.stdout
-if sys.argv[1:3] == ["friction", "explain"] and done.returncode == 0:
-    document = json.loads(out)
-    version = os.environ["EXPLAIN_VERSION"]
-    if version:
-        document["schema_version"] = json.loads(version)
-    else:
-        del document["schema_version"]
-    if os.environ.get("EXPLAIN_STATE"):
-        document["state"] = os.environ["EXPLAIN_STATE"]
-    out = json.dumps(document)
-sys.stdout.write(out)
-sys.stderr.write(done.stderr)
-sys.exit(done.returncode)
-"""
+def _another_backbone(version: str, state: str = "") -> Runner:
+    """A `pkit` answering `friction explain` as another backbone would: the in-process
+    `pkit`'s answer with its `schema_version` set to `version` (JSON), or taken out when
+    that is empty — a backbone from before the key — and its `state` set to `state` when
+    that is given."""
+    pkit = InProcessPkit()
 
+    def another(args: Sequence[str], **options: Any) -> subprocess.CompletedProcess[Any]:
+        done = pkit(args, **options)
+        if list(args[1:3]) != ["friction", "explain"] or done.returncode != 0:
+            return done
+        document = json.loads(done.stdout)
+        if version:
+            document["schema_version"] = json.loads(version)
+        else:
+            del document["schema_version"]
+        if state:
+            document["state"] = state
+        return subprocess.CompletedProcess(done.args, 0, json.dumps(document), done.stderr)
 
-def _another_backbone(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, version: str, state: str = ""
-) -> None:
-    """Put `_ANOTHER_PKIT` first on PATH, answering `explain` at `version`, in `state`
-    when one is given."""
-    other = tmp_path / "another-backbone"
-    other.mkdir()
-    (other / "pkit").write_text(_ANOTHER_PKIT.format(python=sys.executable), encoding="utf-8")
-    (other / "pkit").chmod(0o755)
-    monkeypatch.setenv("PATH", f"{other}{os.pathsep}{os.environ['PATH']}")
-    monkeypatch.setenv("EXPLAIN_VERSION", version)
-    monkeypatch.setenv("EXPLAIN_STATE", state)
+    return another
 
 
 @pytest.mark.parametrize(
@@ -656,15 +830,15 @@ def _another_backbone(
     ],
 )
 def test_an_artefact_the_checks_did_not_judge_is_refused(
-    flagged: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, state: str, said: str
+    flagged: AdopterRepo, state: str, said: str
 ) -> None:
     """As an `unreachable` one is: an `unresolved` artefact, or one in a state this
     capability does not read, is never proposed for — not even `holds` for code its
     other anchors show moved, which would answer for the anchor nobody read."""
     flagged.rename(RUN, "src/runner.py", "refactor: name the runner module for what it does")
     assert _propose(flagged, "UC-001")["verdict"] == "holds"
-    _another_backbone(tmp_path, monkeypatch, "1", state)
-    completed = run_script(flagged, PROPOSE, "UC-001", "--json")
+    other = _another_backbone("1", state)
+    completed = run_in_process(flagged, PROPOSE, "UC-001", "--json", pkit=other)
     assert completed.returncode == 1
     assert completed.stdout == ""
     assert completed.stderr.startswith("cannot propose: ")
@@ -673,12 +847,10 @@ def test_an_artefact_the_checks_did_not_judge_is_refused(
 
 
 @pytest.mark.parametrize("version", ["2", "null", '"1"'])
-def test_an_explanation_of_another_version_is_refused(
-    flagged: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, version: str
-) -> None:
+def test_an_explanation_of_another_version_is_refused(flagged: AdopterRepo, version: str) -> None:
     """A version this capability does not read is refused, never read as the one it knows."""
-    _another_backbone(tmp_path, monkeypatch, version)
-    completed = run_script(flagged, PROPOSE, "UC-001", "--json")
+    other = _another_backbone(version)
+    completed = run_in_process(flagged, PROPOSE, "UC-001", "--json", pkit=other)
     assert completed.returncode == 1
     assert completed.stdout == ""
     shown = repr(json.loads(version))
@@ -688,13 +860,10 @@ def test_an_explanation_of_another_version_is_refused(
     )
 
 
-def test_an_explanation_without_a_version_reads_as_the_first(
-    flagged: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_an_explanation_without_a_version_reads_as_the_first(flagged: AdopterRepo) -> None:
     """A backbone from before the key answers version 1: the same proposal."""
     expected = _propose(flagged, "UC-001")
-    _another_backbone(tmp_path, monkeypatch, "")
-    assert _propose(flagged, "UC-001") == expected
+    assert _propose(flagged, "UC-001", pkit=_another_backbone("")) == expected
 
 
 @pytest.mark.parametrize("namespace", ["analysis", "software-analysis"])
@@ -872,6 +1041,15 @@ def test_the_storyboard_scripts_the_four_scenarios_and_hands_over_commands() -> 
     assert [c for c in _command_lines(commands) if CONSENT.search(c)] == []
     # The stop hands over no command for what it asks about.
     assert WRITES.findall(_commands_for_the_person(stop)[0]) == []
+    # The regression scripts both of its answers (DEC-001 points 1 and 5, #1929): the step
+    # an accepted record decides takes its box and ends `updated`, and the one no record
+    # decides stays as it is, `unchanged`.
+    regression = sections[2]
+    handed = _commands_for_the_person(regression)[0]
+    uc_007 = "use-cases/UC-007-export-report.md"
+    assert f"{uc_007} --outcome updated\n" in handed
+    assert f'{uc_007} --outcome unchanged --because "The description stands: ' in handed
+    assert "--box 2 --decided-by ADR-006#2 --json" in regression and "`--no-box`" in regression
 
 
 def test_refs_find_nothing_in_the_agent_folder() -> None:

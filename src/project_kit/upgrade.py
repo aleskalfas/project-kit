@@ -105,6 +105,7 @@ from project_kit.sync import (
     ORPHAN,
     UNVERSIONED,
     CapabilityPlan,
+    delivered_by_copy,
     fallback_remedies,
     plan_capabilities,
     propagate,
@@ -286,6 +287,11 @@ def run_upgrade(
     # or refuses.
     refuse_components_bundled_older(moves)
     refuse_area_name_clash(target_root, source_kit, command="upgrade")
+    # Beside the clash of area names, a file at the index's path that is no index
+    # (ADR-076 point 2).
+    from project_kit import loaded_rules
+
+    loaded_rules.refuse_index_clash(target_root, command="upgrade")
     _resolve_compatibility(components, target_root, source_kit, target_version)
     _check_capability_dep_conflicts_for_upgrade(target_root, plans, force=force)
     answers = _settle_new_collisions(target_root, plans, dry_run=dry_run)
@@ -305,6 +311,9 @@ def run_upgrade(
     # never the sync command, so sync's guard never stops an upgrade. Then an
     # adapter the target adds is registered, and `.pkit/.gitignore` is
     # rendered, so a migration reads the target's render.
+    # Each loaded set the step delivers is read before it copies the new version, and
+    # what the step newly binds is said after (ADR-076 point 6).
+    bound_before = loaded_rules.read_delivered(target_root)
     if dry_run:
         click.echo(
             f"  {'would record':<12} .pkit/manifest.yaml backbone_version -> {target_version} "
@@ -329,6 +338,10 @@ def run_upgrade(
         reread = read_backbone_manifest(target_root)
         components = reread.components if reread is not None else []
         _render_runtime_ignore(target_root)
+    loaded_rules.echo_bound(
+        target_root,
+        loaded_rules.bound_by(bound_before, delivered_by_copy(source_kit, moving)),
+    )
 
     # Step 4: the backbone's migrations, from the last completion.
     _run_backbone_migrations(target_root, source_kit, completed, target_version, dry_run)
@@ -1043,7 +1056,7 @@ def reconcile_pin(target_root: Path, version: str, *, force: bool = False) -> No
       code (via the router bypass), then flip the pin last, atomically;
     - **older** → HARD REFUSE — pkit migrations are forward-only (COR-010), so
       there is no safe downgrade path; nothing is written and no content is
-      touched (`git checkout` is the rollback route).
+      touched (reverting each upgrade's commit is the rollback route).
 
     A version-only token is required: branch names, commit shas, and pre-release /
     build-metadata forms are refused at the boundary, because the router's route-2
@@ -1179,20 +1192,22 @@ def _downgrade_refusal(target: str, current: str) -> str:
     """The refusal message for a downgrade pin (ADR-049 + COR-010).
 
     pkit migrations are forward-only, so there is no safe content path back to an
-    earlier version; rolling back is a git operation, which restores kit-owned
-    *and* project-owned state together — something a forward-only sync cannot."""
+    earlier version; rolling back reverts each upgrade's commit, which restores
+    kit-owned *and* project-owned state together, the files a migration edited
+    outside `.pkit/` included — something a forward-only sync cannot."""
     return (
         f"refusing to pin {target}: it is OLDER than this project's current content "
         f"({current}), and pkit cannot safely downgrade — its migrations are "
         "forward-only (COR-010), so there is no reconcile path back to an earlier "
         "version. Nothing was written and no content was touched.\n"
-        "To roll this project back, `git checkout` the `.pkit/` tree at a commit "
-        "that carried the earlier version:\n"
-        "    git checkout <ref> -- .pkit/\n"
-        "git restores kit-owned and project-owned state together, atomically — "
-        "which a forward-only content sync cannot do. Note this also reverts "
-        f"`.pkit/version-pin` itself (the file you are setting), and it only "
-        "restores a state that already exists in history."
+        "To roll this project back, revert the commit of each upgrade since the "
+        "earlier version:\n"
+        "    git revert <commit>\n"
+        "The reverts restore every file those upgrades changed, kit-owned and "
+        "project-owned, inside `.pkit/` and outside — which a forward-only content "
+        "sync cannot do. Note this also reverts `.pkit/version-pin` itself (the file "
+        "you are setting) where an upgrade wrote it, and it only restores a state "
+        "that already exists in history."
     )
 
 

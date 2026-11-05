@@ -19,16 +19,43 @@ sub-issue parent (DEC-005), subject to the substrate-map's `containment`
 selector (DEC-039). `--parent` and a first line naming a different issue are
 refused before anything is filed.
 
+Before anything is written, `--dry-run` included, the body is checked against
+`body-format.yaml` (DEC-010) by the reader validate-issue shares
+(`_lib/body_rules`): a body that lacks a section its type requires, or holds a
+heading of the first level, is refused, and a rule that only warns is reported.
+
 A Feature or Task body given with `--body-file` that cites use cases in its
 `## Use cases` section is read against the use-case point (DEC-054): a cited
 use case the point does not hold is reported, and so is a point that could not
 be read; neither refuses the filing nor changes the exit code.
+
+The decision ids any body cites are asked of the backbone, through `pkit refs
+lookup` (DEC-010): one that no record holds is reported, and so are ids that
+could not be checked. Neither refuses the filing nor changes the exit code.
 
 For board-substrate adopters (per DEC-019 +
 `schemas/mandatory-issue-state.yaml`), the new issue is also added to
 the configured Projects v2 board as the final step of filing. The
 default assignee is the resolved invoker identity per DEC-019's
 default_at_filing: filer.
+
+With an instance id set (`set-instance`, DEC-035 point 1), the new issue is
+claimed for this clone right after it is filed, so the clone owns the arc it
+files from birth (DEC-035 point 3), through `_lib/instance_claims`. An issue
+filed for another person (`--assignee`) is not claimed (DEC-035 point 5). A
+claim that fails is a warning, and the issue stays filed. With no id set,
+nothing of this runs. In a project with a topology of seats, a clone in a
+planner's seat files with no owner, so the issue enters the shared pool, and a
+clone in any other seat claims what it files for its seat (DEC-059 point 7). A
+clone that took a seat confirms it on the seat's state issue before anything is
+written, and the command refuses where it cannot (DEC-059 point 6).
+
+A Task filed with `--milestone` into a Milestone of a pool of workers enters
+that pool, which is the person's act (DEC-061 point 6): asked at a terminal,
+or `--yes` on their word, and off a terminal without it the filing is refused
+before anything is written. The consent is recorded in an audit comment on the
+Task. An `after_create_issue` hook that assigns a Milestone is handed this
+run's `--yes`, and asks the same way.
 
 Membership predicate per DEC-021 runs at startup; closed mode refuses
 non-members with the standard structured refusal.
@@ -50,7 +77,8 @@ loudly with the exact remediation command and exits 4.
 
 Exit codes:
   0  issue created
-  1  membership refusal
+  1  membership refusal, or this clone's seat could not be confirmed, or a
+     Task filed into a pool off a terminal without --yes
   2  usage error / validation refusal
   3  gh failure (auth, network, repo not found, ...)
   4  issue created, but --from-report link failed (issue NOT rolled back;
@@ -75,15 +103,23 @@ sys.path.insert(0, str(_HERE))
 from _lib import (
     axis_carriage,
     axis_labels,
+    board_status,
     body_parent_ref,
+    body_rules,
     bootstrap_gate,
     classification_rules,
     containment,
+    decision_ids,
+    instance_claims,
+    pools,
     provenance,
     session_guard,
     title_rules,
     use_case_citations,
+    workstreams,
 )
+from _lib import lifecycle_inference as infer
+from _lib.comment import post_comment
 from _lib.containment import LinkOutcome, link_sub_issue
 from _lib.gh import gh_project_run, gh_run, load_adopter_config
 from _lib.hooks import fire_hooks
@@ -93,7 +129,7 @@ from _lib.membership import (
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.milestone import resolve_milestone
+from _lib.milestone import list_open_milestones, resolve_milestone
 from _lib.placeholder_detection import (
     PHASE_CREATE,
     detect_placeholder_residuals,
@@ -148,7 +184,7 @@ def main() -> int:
         "--workstream",
         default=None,
         help=(
-            "Workstream slug per the adopter's workstreams list. Required "
+            "Workstream slug, one project/workstreams.yaml holds as active. Required "
             "whenever a LABEL carries the workstream axis — greenfield, or a "
             "`label:` binding in substrate-map.yaml — and no `default:` covers it."
         ),
@@ -424,6 +460,17 @@ def main() -> int:
         args.milestone = resolved.number
         milestone_title = resolved.title
 
+    # A Task filed into a Milestone of a pool enters that pool, which is the
+    # person's act (DEC-061 point 6): judged here, asked before the write.
+    pool_move = pools.Move(False)
+    if args.type == "task" and args.milestone is not None:
+        pool_move = pools.move(
+            None,
+            args.milestone,
+            rows=list_open_milestones(config, gh=lambda argv: gh_run(argv, config, check=False)),
+            capability_root=capability_root,
+        )
+
     # Workstream requirement when a LABEL carries the axis.
     #
     # The gate MIRRORS the writer's (`_build_labels`) write/no-write decision for
@@ -479,26 +526,27 @@ def main() -> int:
         )
         return 2
 
-    # Workstream value validation against adopter config.
+    # Workstream value validation against the project's workstreams file.
+    #
+    # DEC-012 refuses a value outside the allowed set, and DEC-018 makes
+    # `project/workstreams.yaml` that set: the value must be one the file holds
+    # as active (#1933). The legacy `workstreams:` key of config.yaml is read
+    # only where the file is absent (`_lib/workstreams.read_declared`).
     #
     # Skipped when the substrate-map declares `workstream` unsupported (or absent
     # — absent ≡ unsupported, the load-bearing rule): the writer discards the
-    # value (`resolve_write` DEGRADEs, no label written), so validating it against
-    # config.yaml's list would false-refuse a filing for a value that will never
-    # be written (#559). Kept for greenfield / served — a typo-catch on a value
-    # that WILL be written.
+    # value (`resolve_write` DEGRADEs, no label written), so validating it
+    # would false-refuse a filing for a value that will never be written (#559).
+    # Kept for greenfield / served — a typo-catch on a value that WILL be written.
     workstream_unsupported = (
         axis_labels.axis_disposition("workstream", substrate_map) == "unsupported"
     )
     if args.workstream is not None and not workstream_unsupported:
-        adopter_workstreams = _adopter_workstreams(config)
-        if adopter_workstreams and args.workstream not in adopter_workstreams:
-            print(
-                f"error: workstream {args.workstream!r} is not in the "
-                "adopter's declared workstreams list "
-                f"({', '.join(sorted(adopter_workstreams))}).",
-                file=sys.stderr,
-            )
+        refusal = workstreams.filing_refusal(
+            args.workstream, workstreams.read_declared(capability_root)
+        )
+        if refusal is not None:
+            print(f"error: {refusal}", file=sys.stderr)
             return 2
 
     # Compose the body. Two paths per #218:
@@ -622,6 +670,23 @@ def main() -> int:
         return 2
     parent_number = args.parent if args.parent is not None else first_line_parent
 
+    # The body rules (DEC-010), read from body-format.yaml by the reader
+    # validate-issue and edit-issue share: each section the type requires, and
+    # the universal rules. A blocking finding refuses before anything is
+    # written, `--dry-run` included; a warning is shown and filing goes on. A
+    # template-stamped body is checked as a body file is: the schema, not the
+    # template, is the contract.
+    body_findings = body_rules.check(body, args.type, body_format)
+    body_refusals = body_rules.blocking(body_findings)
+    for severity, label, detail in body_findings:
+        if (severity, label, detail) not in body_refusals:
+            print(f"[{severity}] {label}: {detail}", file=sys.stderr)
+    if body_refusals:
+        for severity, label, detail in body_refusals:
+            print(f"error: body refused [{severity}] {label}: {detail}", file=sys.stderr)
+        print("error: nothing was filed.", file=sys.stderr)
+        return 2
+
     # Residual-placeholder check at create-phase (DEC-031).
     # Emits warnings when the composed body is still the raw skeleton so
     # the author sees the unfinished state from the first moment.  Does
@@ -633,6 +698,10 @@ def main() -> int:
     # never refused. The point is read only for a body that cites one.
     if args.body_file is not None:
         _warn_use_case_citations(body, args.type, body_format)
+
+    # The decision ids the body cites that no record holds (DEC-010): reported,
+    # never refused. The backbone is asked only for a body that cites one.
+    _warn_decision_ids(body, body_format)
 
     # Resolve assignee.
     assignee = args.assignee or invoker.github_login
@@ -688,8 +757,21 @@ def main() -> int:
             print("  containment: native   (native sub-issue link + textual ref)")
     if args.milestone:
         print(f"  milestone:  #{args.milestone}")
+    if pool_move.asks:
+        print(f"  pool:       {pool_move.said()}  (the person's consent, DEC-061 point 6)")
     print(f"  assignee:   {assignee}")
     print(f"  labels:     {', '.join(labels)}")
+    # Instance ownership (DEC-035): None unless this clone set an instance id,
+    # or holds a seat of a topology (DEC-059), and then nothing below changes.
+    # A seat is confirmed on its state issue before anything is written.
+    try:
+        clone = instance_claims.this_clone(
+            capability_root, invoker.github_login, config, dry_run=args.dry_run
+        )
+    except instance_claims.Unconfirmed as exc:
+        return instance_claims.say_unconfirmed("create-issue", None, exc)
+    if clone is not None:
+        print(f"  ownership:  {instance_claims.claim_plan(clone, assignee, filing=True)}")
     if args.from_report is not None:
         print(
             f"  from-report: #{args.from_report}  "
@@ -706,12 +788,24 @@ def main() -> int:
     board_id = args.board if args.board is not None else config.get("projects_v2_board_id")
     if has_board:
         print(f"  board:      v2/{board_id}  (auto-add per DEC-019)")
+        role = board_status.role(dict(config, projects_v2_board_id=board_id), substrate_map)
+        if role == "projection":
+            print("  status:     the card's Status set to the issue's state (DEC-006)")
+        elif role == "source":
+            print(
+                "  status:     the card's Status set to the state the issue is filed into, "
+                "the state's source (DEC-062 point 5)"
+            )
 
     if args.dry_run:
         print("\n[dry-run] gh would be invoked; nothing written.")
         return 0
 
-    if not args.yes and sys.stdin.isatty():
+    if pool_move.asks:
+        stop = pools.authorise(pool_move, subject="the new Task", yes=args.yes, verb="create-issue")
+        if stop is not None:
+            return stop
+    elif not args.yes and sys.stdin.isatty():
         reply = input("Proceed? [y/N] ").strip().lower()
         if reply not in ("y", "yes"):
             print("aborted.", file=sys.stderr)
@@ -757,6 +851,25 @@ def main() -> int:
         # One-time immutable filing-version comment (DEC-041): the
         # load-bearing record of the version this issue was born under.
         print(provenance.post_filing_comment(new_issue_number, capability_root, config))
+        # The person's consent to the Task's pool, in its own audit comment
+        # (DEC-061 point 6). A failed post is a warning: the Task stays filed.
+        if pool_move.asks and not post_comment(
+            "issue",
+            new_issue_number,
+            pools.consent_comment("create-issue", pool_move, args.milestone),
+            config,
+            run=gh_run,
+        ):
+            print(
+                f"[warn] #{new_issue_number} was filed into {pool_move.said()}, and the audit "
+                "comment recording the person's consent could not be posted.",
+                file=sys.stderr,
+            )
+        # Claim the filed issue for this clone (DEC-035 point 3). An issue
+        # filed for another person is not this clone's (DEC-035 point 5), and
+        # a planner's seat files with no owner (DEC-059 point 7).
+        if clone is not None and instance_claims.claims_at_filing(clone, assignee):
+            instance_claims.say(instance_claims.claim(new_issue_number, clone, config))
     containment = axis_labels.containment_mode(substrate_map)
     if (
         parent_number is not None
@@ -829,16 +942,45 @@ def main() -> int:
                 f"[warn] issue created but failed to add to board v2/{board_id}.",
                 file=sys.stderr,
             )
+            if board_status.role(config, substrate_map) == "source":
+                print(
+                    "  The board carries the state, so the issue's position cannot be read "
+                    "until it has a card and a Status: add it to the board and set its "
+                    "Status (DEC-051 point 6).",
+                    file=sys.stderr,
+                )
         else:
             owner = _owner_from_issue_url(issue_url)
             project_node_id = _resolve_project_node_id(board_id, owner, config)
+            if new_issue_number is not None:
+                _set_first_status(
+                    new_issue_number,
+                    board_item_id,
+                    owner=owner,
+                    board_config=dict(config, projects_v2_board_id=board_id),
+                    substrate_map=substrate_map,
+                    workflow=_read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader),
+                    milestone_title=milestone_title,
+                    labels=labels,
+                )
 
     # Fire lifecycle hooks per DEC-024. Report-and-continue contract:
     # hook failures don't propagate to this script's exit code. The board-item
     # / project node ids let the `set-board-field` hook target the new item;
     # both stay absent in label-fallback mode (no board), where that hook is a
     # no-op skip by design.
-    issue_context: dict[str, Any] = {"number": new_issue_number, "title": full_title}
+    # The issue's milestone, as this run filed it, lets an `assign-milestone`
+    # hook tell where a Task moves from (DEC-061 point 6), and `--yes` is the
+    # person's consent it may need.
+    issue_context: dict[str, Any] = {
+        "number": new_issue_number,
+        "title": full_title,
+        "milestone": (
+            {"number": args.milestone, "title": milestone_title}
+            if args.milestone is not None
+            else None
+        ),
+    }
     if board_item_id is not None:
         issue_context["board_item_id"] = board_item_id
     fire_hooks(
@@ -850,6 +992,7 @@ def main() -> int:
         },
         config=config,
         capability_root=capability_root,
+        yes=args.yes,
     )
 
     # --from-report: link the new issue into the report's `## Tracked by` by
@@ -946,6 +1089,14 @@ def _warn_use_case_citations(body: str, structural_type: str, body_format: dict)
         print(f"[{severity}] {label}: {detail}", file=sys.stderr)
 
 
+def _warn_decision_ids(body: str, body_format: dict) -> None:
+    """Report on stderr the decision ids *body* cites that no record holds, or that
+    they could not be checked (DEC-010), at the severity the body-format schema
+    gives the rule. Filing is not blocked: the rule is a report."""
+    for severity, label, detail in decision_ids.findings(body, body_format, decision_ids.lookup):
+        print(f"[{severity}] {label}: {detail}", file=sys.stderr)
+
+
 def _build_labels(
     *,
     kind: str,
@@ -982,8 +1133,9 @@ def _build_labels(
     **Carriage is resolved first, per axis, for every axis.** Which substrate
     carries an axis is asked of :func:`axis_carriage.carriage`
     ([project-management:DEC-051-axis-carriage-activation] decision point 4): a
-    map binding governs the axis it names, and the board flag governs only where
-    the map is silent. ``priority`` and ``workstream`` used to be appended to the
+    map binding governs the axis it names, and the board flag carries no axis
+    ([project-management:DEC-062-axes-chosen-in-the-map] point 1). ``priority``
+    and ``workstream`` used to be appended to the
     resolution list only ``if not has_board`` — a board-versus-label decision taken
     BEFORE the seam was consulted, so under a configured board a label-bound
     priority never reached the seam and no label was written for an axis whose map
@@ -1302,25 +1454,6 @@ def _parent_ref_form_matchers(parent_ref_form: str) -> list[re.Pattern[str]]:
     return body_parent_ref.form_matchers(parent_ref_form)
 
 
-def _adopter_workstreams(config: dict) -> set[str]:
-    """Extract the adopter's declared workstream slugs.
-
-    Supports both the v0.2.0 shape (`workstreams:` as a bare list in
-    config.yaml) and the v0.5.0 shape (mapping form per DEC-018) as a
-    forward-compatible read.
-    """
-    ws = config.get("workstreams")
-    if isinstance(ws, list):
-        out: set[str] = set()
-        for entry in ws:
-            if isinstance(entry, str):
-                out.add(entry)
-        return out
-    if isinstance(ws, dict):
-        return set(ws.keys())
-    return set()
-
-
 def _parent_ref_line(
     type_entry: dict,
     parent_num: int | None,
@@ -1502,6 +1635,53 @@ def _gh_add_to_board(board_id: int, issue_url: str, config: dict) -> str | None:
         return None
     item_id = payload.get("id") if isinstance(payload, dict) else None
     return item_id if isinstance(item_id, str) and item_id else None
+
+
+def _set_first_status(
+    number: int,
+    item_id: str,
+    *,
+    owner: str | None,
+    board_config: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
+    workflow: dict,
+    milestone_title: str | None,
+    labels: list[str],
+) -> None:
+    """Set the new card's Status to the state the issue was filed in (DEC-006).
+
+    Where the board's Status is a projection this project keeps — a board, and
+    the state carried off it (`_lib/board_status`) — the state is read as
+    `_lib/lifecycle_inference` reads an open issue's: Todo, or Backlog with a
+    milestone. Where the map binds the state to the board, the Status is its
+    source (DEC-062 point 5), and the issue is filed into Backlog with a
+    milestone, Todo otherwise, as the lifecycle reads a new issue's state with no
+    label: the write puts it there. Where a present map leaves the state out,
+    nothing is written. ``board_config`` names the board the card was added to,
+    `--board` included, and ``owner`` is the repository's owner, read from the
+    issue's url, by which the board is found where `gh.default_owner` is unset. A
+    write that fails is one line, and the issue stays filed."""
+    role = board_status.role(board_config, substrate_map)
+    if role is None:
+        return
+    milestone = {"title": milestone_title} if milestone_title else None
+    if role == "source":
+        state = infer.filing_state(milestone)
+    else:
+        state = infer.infer_current_state(
+            state="open", milestone=milestone, labels=labels, substrate_map=substrate_map
+        )
+    status = board_status.StatusBoard(board_config, workflow, repository_owner=owner)
+    written = status.write(number, state, item_id=item_id)
+    if role == "projection" or written.ok:
+        board_status.report(written, stands="the issue is filed")
+        return
+    print(
+        f"{written.line()}; the issue is filed, and the board carries its state, so its "
+        "position cannot be read until its card has a Status: set it on the board "
+        "(DEC-051 point 6)",
+        file=sys.stderr,
+    )
 
 
 def _resolve_project_node_id(board_id: int, owner: str | None, config: dict) -> str | None:

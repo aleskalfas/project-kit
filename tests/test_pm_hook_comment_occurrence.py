@@ -162,8 +162,14 @@ def _stamps(world: World, number: int, says: str) -> list[str]:
 
 
 def _reads(world: World, number: int, field: str) -> int:
-    """How many times the issue was read for `field` alone."""
-    return world.tracker.calls.count(["gh", "issue", "view", str(number), "--json", field])
+    """How many times the issue was read for `field` alone, beside the body the
+    read of a single issue adds to tell a state issue (DEC-058 point 3)."""
+    return sum(
+        1
+        for argv in world.tracker.calls
+        if argv[:5] == ["gh", "issue", "view", str(number), "--json"]
+        and set(argv[5].split(",")) - {"body"} == {field}
+    )
 
 
 def _started(world: World) -> int:

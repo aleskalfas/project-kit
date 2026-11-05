@@ -31,14 +31,29 @@ that would move it — scheduling a Todo issue, unscheduling a Backlog one — i
 refused and the verb that owns that transition is named. A milestone change
 takes `--reason` and posts an audit comment (from, to, why) before it writes,
 and the issue's type must be one `issue-types.yaml` lets sit under a
-milestone (#1016).
+milestone (#1016). Where the move brings a Task into a pool of workers, or
+moves it from one pool to another, it is the person's act (DEC-061 point 6):
+asked at a terminal, or `--yes` on their word, refused off a terminal without
+it, and recorded in that audit comment. A move out of a pool, or within one,
+asks nothing.
 
-Refuses on hard-reject validation findings; warns on warning-level
-findings. The `--force` flag is the operator override of a hard-reject
-finding (the `--force` layer per DEC-046 — distinct from the reason-based
-`--bypass` mechanism), recording an audit comment.
+Refuses on hard-reject validation findings, and on any a schema declares
+bypassable-with-audit (no rule it checks is today); warns on warning-level
+findings. The `--force` flag is the operator override of either refusal
+(the `--force` layer per DEC-046 — distinct from the reason-based `--bypass`
+mechanism), recording an audit comment.
 
 Membership gate per DEC-021 runs at startup.
+
+The clash guard (DEC-035 point 6) runs before anything is written, where this
+clone set an instance id or holds a seat of a topology: an edit of an issue
+another instance owns is refused at bypassable-with-audit (DEC-014), through
+`_lib/instance_claims`. `--bypass-owner "<reason>"` posts the reason on the
+issue as an audit comment first. In a project with a topology, a claim whose
+clone no longer holds its seat is no claim, and one that cannot be judged
+refuses (DEC-059 point 9). Before the guard, a clone that took a seat confirms
+it on the seat's state issue, and the edit refuses where it cannot (DEC-059
+point 6).
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/edit-issue.py 42 --body-file new-body.md
@@ -49,7 +64,9 @@ Or via the dispatcher (per COR-021):
 Exit codes:
   0  edited (or dry-run reported, or nothing to change)
   1  membership refusal / validation refusal / a milestone edit that would
-     move the issue in the lifecycle or orphan its parent-ref
+     move the issue in the lifecycle or orphan its parent-ref / the clash
+     guard refused an issue another instance owns / this clone's seat could
+     not be confirmed / a move into a pool off a terminal without --yes
   2  usage error (issue not found; no mode specified; milestone matches no
      open milestone)
   3  gh failure
@@ -76,7 +93,11 @@ import contextlib
 from _lib import (
     axis_labels,
     body_parent_ref,
+    body_rules,
     bootstrap_gate,
+    decision_ids,
+    instance_claims,
+    pools,
     provenance,
     session_guard,
     title_rules,
@@ -92,7 +113,7 @@ from _lib.membership import (
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.milestone import Milestone, resolve_milestone
+from _lib.milestone import Milestone, list_open_milestones, resolve_milestone
 from _lib.structural_type import infer_structural_type
 from _lib.substrate_writes import clear_milestone, write_milestone
 
@@ -201,10 +222,24 @@ def main() -> int:
         "--force",
         action="store_true",
         help=(
-            "Operator override of hard-reject validation findings, with an "
-            "audit comment (the `--force` layer per DEC-046 — a hard-reject "
-            "is force-overridable out of band, distinct from the "
-            "`--bypass` mechanism). Default: refuse on hard-reject."
+            "Operator override of the validation findings that refuse an edit, "
+            "hard-reject or bypassable-with-audit, with an audit comment (the "
+            "`--force` layer per DEC-046 — a hard-reject is force-overridable "
+            "out of band, distinct from the `--bypass` mechanism). Default: "
+            "refuse on either."
+        ),
+    )
+    parser.add_argument(
+        "--bypass-owner",
+        default=None,
+        metavar="REASON",
+        help=(
+            "Bypass the clash guard, which refuses an edit of an issue another "
+            "instance owns (bypassable-with-audit per DEC-014, DEC-035 point 6): "
+            "the reason is posted on the issue as an audit comment before the edit. "
+            "Qualified per DEC-046, since the validation stop is a second gate: it "
+            "refuses a finding declared bypassable-with-audit as it refuses a "
+            "hard-reject one, and --force writes past both."
         ),
     )
     parser.add_argument(
@@ -348,6 +383,21 @@ def main() -> int:
     writes_issue = title_changed or body_changed or first_line_moved
     writes_milestone = milestone_edit is not None and milestone_edit.changed
 
+    # A Task brought into a pool, or moved between pools, is the person's act
+    # (DEC-061 point 6); one taken out of a pool asks nothing.
+    pool_move = pools.Move(False)
+    if (
+        writes_milestone
+        and milestone_edit is not None
+        and _is_task(new_title, issue_types, classification)
+    ):
+        pool_move = pools.move(
+            _milestone_number(milestone_edit.current),
+            _milestone_number(milestone_edit.target),
+            rows=list_open_milestones(config, gh=lambda argv: gh_run(argv, config, check=False)),
+            capability_root=capability_root,
+        )
+
     print(f"edit-issue: #{args.issue_number}")
     print(f"  current title: {current_title}")
     if args.title is not None:
@@ -356,6 +406,8 @@ def main() -> int:
         print(f"  body change:   {len(current_body)} → {len(new_body)} chars")
     if milestone_edit is not None:
         print(f"  milestone:     {milestone_edit.describe()}")
+    if pool_move.asks:
+        print(f"  pool:          {pool_move.said()}  (the person's consent, DEC-061 point 6)")
     if first_line_moved:
         target_number = _milestone_number(milestone_edit.target) if milestone_edit else None
         print(
@@ -391,6 +443,9 @@ def main() -> int:
             # The use-case point (DEC-054): read only for a body edit whose
             # Feature or Task body cites a use case.
             use_cases=use_case_citations.read_point if body_changed else None,
+            # The records (DEC-010): asked of the backbone only for a body
+            # edit whose body cites a decision id.
+            records=decision_ids.lookup if body_changed else None,
         )
         _print_findings(findings)
 
@@ -406,10 +461,40 @@ def main() -> int:
         )
         return 1
 
+    # The clash guard (DEC-035 point 6), before anything is written: an edit of
+    # an issue another instance owns is refused, unless a bypass posts its reason.
+    # A seat is confirmed on its state issue first (DEC-059 point 6).
+    try:
+        clone = instance_claims.this_clone(
+            capability_root, invoker.github_login, config, dry_run=args.dry_run
+        )
+    except instance_claims.Unconfirmed as exc:
+        return instance_claims.say_unconfirmed("edit-issue", args.issue_number, exc)
+    if clone is not None:
+        decision = instance_claims.guard(
+            args.issue_number,
+            clone,
+            config,
+            verb="edit-issue",
+            flag="--bypass-owner",
+            bypass=args.bypass_owner,
+            invoker=invoker,
+            dry_run=args.dry_run,
+        )
+        instance_claims.say_guard(decision)
+        if decision.refused:
+            return 1
+
     if args.dry_run:
         print("\n[dry-run] gh would be invoked; nothing written.")
         return 0
-    if not args.yes and sys.stdin.isatty():
+    if pool_move.asks:
+        stop = pools.authorise(
+            pool_move, subject=f"#{args.issue_number}", yes=args.yes, verb="edit-issue"
+        )
+        if stop is not None:
+            return stop
+    elif not args.yes and sys.stdin.isatty():
         reply = input("Write the edit? [y/N] ").strip().lower()
         if reply not in ("y", "yes"):
             print("aborted.", file=sys.stderr)
@@ -432,7 +517,9 @@ def main() -> int:
     # between leaves a state a re-run completes, since an already-set milestone
     # is not written again and the posted comment is not posted twice.
     if writes_milestone:
-        if not _post_milestone_audit(args.issue_number, milestone_edit, reason, config):
+        if not _post_milestone_audit(
+            args.issue_number, milestone_edit, reason, config, pool=pool_move
+        ):
             return 3
         if not _write_milestone(args.issue_number, milestone_edit, config):
             return 3
@@ -571,6 +658,11 @@ def _follow_milestone_in_first_line(
     return None
 
 
+def _is_task(title: str, issue_types: dict, classification: dict) -> bool:
+    """Whether the issue is a Task, the only issue a pool holds (DEC-061 point 4)."""
+    return infer_structural_type(title, issue_types, classification=classification) == "task"
+
+
 def _parent_ref_optional(title: str, issue_types: dict, classification: dict) -> bool:
     """Whether the issue's type may go without a parent-ref (an EPIC). An
     unrecognised type is treated as requiring one — the cautious reading."""
@@ -593,18 +685,27 @@ def _type_may_carry_milestone(structural_type: str | None, issue_types: dict) ->
 
 
 def _post_milestone_audit(
-    issue_number: int, edit: MilestoneEdit, reason: str, config: dict
+    issue_number: int,
+    edit: MilestoneEdit,
+    reason: str,
+    config: dict,
+    *,
+    pool: pools.Move | None = None,
 ) -> bool:
     """Post the milestone-change audit comment unless it is already there.
 
     The record of who moved the issue and why (#1016): a milestone change is a
     scheduling decision, which the workflow gives to the user, so it carries its
-    reason the way `promote-issue`'s milestone attach does. Posted through the
-    shared `post_audit_once`: a retry of a failed attempt finds its own comment
-    and does not post it again.
+    reason the way `promote-issue`'s milestone attach does. Where the change
+    brought a Task into a pool or moved it between pools, the comment records
+    the person's consent too (DEC-061 point 6). Posted through the shared
+    `post_audit_once`: a retry of a failed attempt finds its own comment and
+    does not post it again.
     """
     key = _milestone_audit_key(edit, reason)
     body = _milestone_audit_body(edit, reason, dt.date.today().isoformat(), key)
+    if pool is not None and pool.asks:
+        body = body.replace(f"\n\n{key}", f"\n\n{pool.logged()}\n\n{key}")
     return post_audit_once(
         "issue",
         issue_number,
@@ -724,6 +825,7 @@ def _validate(
     check_title: bool = True,
     check_body: bool = True,
     use_cases: use_case_citations.Reader | None = None,
+    records: decision_ids.Reader | None = None,
 ) -> list[Finding]:
     """Apply the body + title validators used by validate-issue.py.
 
@@ -754,23 +856,11 @@ def _validate(
         ):
             findings.append(Finding(severity, label, detail))
 
-    # Per-type required body sections.
+    # Per-type required body sections, read by the reader validate-issue and
+    # create-issue share (DEC-010).
     if structural_type is not None:
-        bodies = body_format.get("bodies") or {}
-        type_body = bodies.get(structural_type) or {}
-        for section in type_body.get("required_sections") or []:
-            if not isinstance(section, dict):
-                continue
-            heading = str(section.get("heading", ""))
-            if heading and heading not in body:
-                severity = _severity_from_token(section.get("severity"))
-                findings.append(
-                    Finding(
-                        severity,
-                        "body.required-section",
-                        f"missing required section {heading!r}.",
-                    )
-                )
+        for sev, label, detail in body_rules.required_sections(body, structural_type, body_format):
+            findings.append(Finding(sev, label, detail))
 
         # DEC-013 marker form (#763 AC3), parity with validate-issue. A first line
         # that attempts an integration marker but is malformed hard-rejects here
@@ -837,23 +927,10 @@ def _validate(
                         )
                     )
 
-    # Universal body rules.
-    if re.search(r"^# [^#]", body, flags=re.MULTILINE):
-        findings.append(
-            Finding(
-                SEVERITY_HARD_REJECT,
-                "body.h1",
-                "body contains an h1 (`# ...`) heading; use `## Title`.",
-            )
-        )
-    if re.search(r"[A-Za-z0-9_/\.\-]+\.[a-z]+:\d+\b", body):
-        findings.append(
-            Finding(
-                SEVERITY_WARNING,
-                "body.file-line-refs",
-                "body contains file:line references; line numbers go stale.",
-            )
-        )
+    # The universal body rules the shared reader checks (DEC-010), each at the
+    # severity body-format.yaml gives it.
+    for sev, label, detail in body_rules.universal(body, body_format):
+        findings.append(Finding(sev, label, detail))
     # The use cases a Feature or Task body cites (DEC-054), as validate-issue
     # reads them, at the severity the body-format schema gives the rule.
     # `use_cases` reads the point, and only for a body that cites; None reads
@@ -861,6 +938,11 @@ def _validate(
     for sev, label, detail in use_case_citations.findings(
         body, structural_type, body_format, use_cases
     ):
+        findings.append(Finding(sev, label, detail))
+    # The decision ids the body cites that no record holds (DEC-010), as
+    # validate-issue reads them. `records` asks the backbone, and only for a
+    # body that cites one; None asks nothing.
+    for sev, label, detail in decision_ids.findings(body, body_format, records):
         findings.append(Finding(sev, label, detail))
 
     # Scope to the fields being changed (#583). Findings are labelled

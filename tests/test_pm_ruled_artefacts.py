@@ -9,6 +9,10 @@ change to the declared places alone, which alters the pages it brings in. The
 failures that fail the resolution — a commit origin cannot provide, a shallow
 checkout, a failing command, an unreadable answer, a backbone without the
 command — are each named with their reason.
+
+The command is answered by the backbone's CLI in the test's own process, the
+argument list unchanged (`tests/in_process.py`). Two tests keep a real process,
+each marked with why: the reader's end-to-end test and the gate's.
 """
 
 from __future__ import annotations
@@ -26,6 +30,7 @@ import pytest
 
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, T2, friction_config, guide
+from tests.test_pm_backbone import route_every_backbone
 from tests.test_rule_sets import rule_set_text, rules
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -91,9 +96,23 @@ def repo(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRepo:
     return make_adopter_repo()
 
 
+@pytest.fixture(autouse=True)
+def in_process(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each test but one marked `process` has every `pkit` call of the capability
+    answered in this process, once the modules it reads are imported."""
+    if request.node.get_closest_marker("process") is None:
+        request.getfixturevalue("ra")
+        request.getfixturevalue("pm")
+        route_every_backbone(monkeypatch)
+
+
 # --- the answer ---------------------------------------------------------------
 
 
+@pytest.mark.process(
+    "the reader's end-to-end test: ruled_altered through the real `pkit rule-sets altered "
+    "--json`, the script-to-backbone contract"
+)
 def test_a_change_inside_a_scope_alters_a_ruled_artefact(ra: ModuleType, repo: AdopterRepo) -> None:
     base = _start(repo)
     head = repo.commit("change b", {B: page("B", "A new body.")})
@@ -484,6 +503,50 @@ def _resolve(pm: tuple, repo: AdopterRepo, changed: list[str], base: str, head: 
     )
 
 
+def test_the_wiring_leaves_the_backbone_s_answer_folder_out_of_the_code_floor(
+    pm: tuple, tmp_path: Path
+) -> None:
+    """`resolve_pr_review` hands the code floor the folder of friction answers as the
+    backbone gives it at the repository root, so a change that only answers requires no
+    code review, and one with code beside its answers does (DEC-032 D1)."""
+    pr_review, rc, ad, _av = pm
+    rule = rc.ContributionRule(
+        capability="software-engineering",
+        predicate={},
+        reviewer="code-reviewer",
+        floor=rc.FLOOR_TOUCHES_CODE,
+    )
+    asked: list[Path] = []
+
+    def folder_of(root: Path) -> str:
+        asked.append(root)
+        return ".pkit/project/friction/answers"
+
+    def required(changed: list[str]) -> tuple[str, ...]:
+        review = pr_review.resolve_pr_review(
+            7,
+            {"review": {"agents": {"local_registered": [{"name": "pm-reviewer"}]}}},
+            tmp_path,
+            gh_run=_gh(changed, "a" * 40, "b" * 40),
+            gh_get_issue=lambda *_a, **_k: None,
+            collect_contributions=lambda _root: rc.ContributionCollection(rules=(rule,)),
+            author_delta=ad.author_delta,
+            base_kept=ad.base_kept,
+            folder_of=folder_of,
+        )
+        assert review.resolution.ok, review.resolution.error
+        return review.resolution.required_local
+
+    answer = ".pkit/project/friction/answers/20261022T090000Z-1a2b3c4d.yaml"
+    assert required([answer]) == ("pm-reviewer",)
+    assert required([answer, "src/app.py"]) == ("pm-reviewer", "code-reviewer")
+    assert asked == [tmp_path, tmp_path]
+
+
+@pytest.mark.process(
+    "the gate's end-to-end test: resolve_pr_review reads the ruled artefacts through the "
+    "real `pkit rule-sets altered --json`"
+)
 def test_the_gate_requires_the_reviewer_exactly_when_a_ruled_artefact_is_altered(
     pm: tuple, repo: AdopterRepo
 ) -> None:

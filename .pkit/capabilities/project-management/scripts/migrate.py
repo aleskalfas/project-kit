@@ -43,7 +43,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, session_guard
+from _lib import bootstrap_gate, issue_list, session_guard
 
 CAPABILITY_NAME = "project-management"
 MIGRATIONS_SUBDIR = "migrations"
@@ -51,6 +51,9 @@ APPLIED_STATE_PATH = "project/migrations-applied.yaml"
 PRE_CHECK_SCRIPT = "scripts/pre-check.py"
 
 RECOGNISED_KINDS = frozenset({"label-rename", "label-delete", "label-create"})
+
+# How many issues the check that a label is unused reads (`_label_used`).
+_LABEL_USE_PAGE = 100
 
 
 @dataclass
@@ -393,34 +396,14 @@ def _execute_label_delete(change: dict[str, Any]) -> ChangeResult:
         )
     refuse_if_used = change.get("refuse_if_used", True)
 
-    if refuse_if_used:
-        # Check whether any issues use the label.
-        proc = subprocess.run(
-            [
-                "gh",
-                "issue",
-                "list",
-                "--label",
-                label,
-                "--state",
-                "all",
-                "--json",
-                "number",
-                "--limit",
-                "1",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
+    if refuse_if_used and _label_used(label):
+        return ChangeResult(
+            _describe_change(change),
+            "failed",
+            f"label `{label}` still used by at least one issue; "
+            f"refuse_if_used=true; un-label the issues first or set "
+            f"refuse_if_used=false in the manifest.",
         )
-        if proc.returncode == 0 and proc.stdout.strip() not in ("", "[]"):
-            return ChangeResult(
-                _describe_change(change),
-                "failed",
-                f"label `{label}` still used by at least one issue; "
-                f"refuse_if_used=true; un-label the issues first or set "
-                f"refuse_if_used=false in the manifest.",
-            )
 
     proc = subprocess.run(
         ["gh", "label", "delete", label, "--yes"],
@@ -435,6 +418,31 @@ def _execute_label_delete(change: dict[str, Any]) -> ChangeResult:
             f"`gh label delete` exit {proc.returncode}: {proc.stderr.strip()}",
         )
     return ChangeResult(_describe_change(change), "applied")
+
+
+def _label_used(label: str) -> bool:
+    """Whether an issue of work carries `label`, as far as one page shows.
+
+    The listing runs through the capability's one read of its issues, which
+    leaves state issues out (DEC-058 point 3), so a label that only state
+    issues carry is not in use. The page holds more than one issue, so that a
+    state issue on it does not hide an issue of work. A full page counts as in
+    use, since the issues past it were not read.
+
+    A listing that fails counts as unused, and an answer that is not a JSON
+    list as used, as both always have. Like the rest of `migrate`, it runs
+    `gh` with no adopter `gh:` block.
+    """
+    listing = issue_list.list_issues(
+        {},
+        ["--label", label, "--state", "all", "--limit", str(_LABEL_USE_PAGE)],
+        fields="number",
+    )
+    if listing.returncode != 0:
+        return False
+    if listing.rows is None:
+        return True
+    return bool(listing.rows) or listing.returned >= _LABEL_USE_PAGE
 
 
 def _execute_label_create(change: dict[str, Any]) -> ChangeResult:

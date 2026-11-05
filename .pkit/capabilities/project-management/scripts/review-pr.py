@@ -33,13 +33,18 @@ no divergence (DEC-032 D4).
 Gates:
   - Membership (closed-mode refuses non-members).
   - PR must exist for the issue's branch.
-  - The resolved required-local set must be non-empty.
   - Resolution must succeed: a not-ok contribution collection (malformed
     declaration / undeployed contributed agent), an invalid opt-out or
     not-code list, an unresolvable closing-issue lookup, or changed files
     that cannot be read surfaces as an error and aborts — a required reviewer
     is never silently skipped (fail-closed, DEC-032 D5), consistent with the
     gate's posture.
+
+No local reviewer of the project's own is needed (#1934): the set is worked
+out first, so each reviewer an installed capability contributes runs whether
+or not `local_registered:` names any. A PR whose set is empty, registered and
+contributed alike, runs nothing: the run says so and exits 0, and the gate
+reads any remote reviewer's verdict.
 
 Side-effects:
   - Read the PR's head commit and its base branch's head once, then start
@@ -87,11 +92,12 @@ Agent invocation:
   own agent under `.claude/agents/`, or replace the default entirely.
 
 Exit codes:
-  0  every required reviewer invoked + comment posted, or skipped as fresh
+  0  every required reviewer invoked + comment posted, or skipped as fresh;
+     or the PR requires no local reviewer
   1  membership refusal
-  2  usage error / no agents configured / gh failure / required set
-     unresolvable (fail-closed); or, called with a pinned head, the PR's head
-     could not be read before the reviews, and no reviewer ran
+  2  usage error / gh failure / required set unresolvable (fail-closed); or,
+     called with a pinned head, the PR's head could not be read before the
+     reviews, and no reviewer ran
   3  one or more agent invocations failed (verdicts not posted); or, called
      with a pinned head (`review(argv, pinned_head=…)`, as `land-work` calls
      it), the PR was found at another head — where its verdicts were read or
@@ -313,6 +319,9 @@ class ReviewRun:
 
     exit_code: int
     pr_number: int | None = None
+    #: The PR's required local reviewers, as the run worked them out; empty
+    #: when it stopped before that, and when the PR requires none.
+    required: tuple[str, ...] = ()
     #: Reviewers whose fresh verdict was left standing: name → token.
     kept: dict[str, str] = field(default_factory=dict)
     #: The comment body of each kept verdict.
@@ -370,8 +379,8 @@ def review(
     """
     parser = argparse.ArgumentParser(
         description=(
-            "Invoke every locally-registered review agent against the PR's "
-            "diff; post each verdict as a comment. Per DEC-028."
+            "Invoke every local reviewer the PR requires, registered or contributed, "
+            "against its diff; post each verdict as a comment. Per DEC-028 and DEC-032."
         ),
     )
     parser.add_argument("issue_number", type=int)
@@ -465,15 +474,6 @@ def review(
     if not session_guard.enforce(override=args.allow_foreign_repo):
         return _stopped(1, reason="the foreign-repository guard refused (see above)")
 
-    # Resolve registered local agents.
-    local_agents = _get_local_registered(config)
-    if not local_agents:
-        return _stopped(
-            2,
-            "error: no agents configured in `review.agents.local_registered:`. "
-            "Add an entry pointing at a deployed agent in .claude/agents/.",
-        )
-
     # Find the issue's branch + PR. Of several local branches, the one with the
     # issue's open PR (#1608); a composing verb hands its reading on.
     reading = (
@@ -503,7 +503,9 @@ def review(
     # DEC-032 D4: resolve the PR's required-local set — baseline ∪ contributed
     # reviewers matched against the closing issues' classification — via the
     # SAME shared wiring `done-work`'s gate checks. Invoking exactly this set
-    # is what makes invoke-set == gate-set (no divergence).
+    # is what makes invoke-set == gate-set (no divergence). An empty baseline
+    # is no reason to stop before it: a contributed reviewer is required all
+    # the same (#1934).
     review = _resolve_review(pr_number, config, repo_root)
     resolution = review.resolution
     if not resolution.ok:
@@ -527,12 +529,16 @@ def review(
         return _stopped(2, _resolution_error_message(resolution), pr_number=pr_number)
     required_local = list(resolution.required_local)
     contributed_by = dict(resolution.contributed_by)
-    print(f"  agents: {', '.join(required_local)}")
+    print(f"  agents: {', '.join(required_local) or 'none — this PR requires no local reviewer'}")
     for opt_out in resolution.opted_out:
         print(
             f"  opted out: {opt_out.reviewer} (capability "
             f"`{opt_out.capability}`) — {opt_out.reason}"
         )
+    if not required_local:
+        # Nothing to run, so no verdict to read either: the gate reads any
+        # remote reviewer's verdict.
+        return ReviewRun(0, pr_number=pr_number)
     print(f"  timeout: {agent_timeout}s per agent")
     print(f"  parallel: {_parallel_line(parallel)}")
     if agent_effort is None:
@@ -556,7 +562,7 @@ def review(
 
     # With a pinned head, a verdict is kept only as fresh for that head: the
     # freshness was judged against the head the verdicts were read with.
-    run = ReviewRun(0, pr_number=pr_number)
+    run = ReviewRun(0, pr_number=pr_number, required=tuple(required_local))
     if pinned_head and not args.force and read is not None and states.head != pinned_head:
         if not states.head:
             return _stopped(
@@ -1298,15 +1304,6 @@ def _resolution_error_message(resolution: Resolution) -> str:
 
 
 # ---- helpers ---------------------------------------------------------
-
-
-def _get_local_registered(config: dict) -> list[dict]:
-    review = config.get("review") if isinstance(config, dict) else None
-    agents = review.get("agents") if isinstance(review, dict) else None
-    if not isinstance(agents, dict):
-        return []
-    local = agents.get("local_registered") or []
-    return [e for e in local if isinstance(e, dict) and e.get("name")]
 
 
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:

@@ -15,8 +15,8 @@ reads:
     - COR-011
     - COR-031
     - COR-059
-    - PRJ-002
   paths:
+    - .pkit/rules/core.md
     - .pkit/cli/README.md
     - .pkit/lifecycle/README.md
     - .pkit/permissions/README.md
@@ -24,7 +24,6 @@ reads:
     - .pkit/decisions/core/COR-017-capability-pattern.md
     - .pkit/decisions/core/COR-005-bundle-pattern.md
     - .pkit/decisions/core/COR-007-pattern-extraction.md
-    - CONTRIBUTING.md
 ---
 
 # Authoring a capability
@@ -123,9 +122,9 @@ Open `.pkit/capabilities/<name>/README.md` and replace the placeholders with:
 
 ### 5. Author the decisions
 
-Capability decisions live in `decisions/` with filenames `DEC-NNN-<slug>.md`. The numbering is scoped to *this* capability — every capability has its own `DEC-001`. Author by hand for now: there is no `pkit new decision` extension for capability namespaces yet (per COR-007, that pattern lands when capability authoring recurs enough to justify the tooling).
+Capability decisions live in `decisions/` with filenames `DEC-NNN-<slug>.md`. The numbering is scoped to *this* capability — every capability has its own `DEC-001`. Stamp each with `pkit new decision <name> <slug>` through the `decision-author` skill, which numbers it within the capability.
 
-Each decision has the same shape as a PRJ decision (axiom + principles-not-inventory disciplines apply; project-neutrality does not — capabilities are explicitly discipline-specific):
+Each decision has the same shape as a PRJ decision, and follows the disciplines every record follows (`.pkit/decisions/README.md`, "Writing a record"). Project-neutrality does not apply — capabilities are explicitly discipline-specific:
 
 ```markdown
 ---
@@ -149,10 +148,11 @@ Cite other capability decisions in the same capability using the form `[<this-ca
 
 ### 6. Author the skills, agents, scripts, and schemas
 
-Skills, agents, scripts, and schemas in a capability follow the same shapes as their area-shipped counterparts (per COR-006). Two notes specific to capabilities:
+Skills, agents, scripts, and schemas in a capability follow the same shapes as their area-shipped counterparts (per COR-006). Three notes specific to capabilities:
 
 - Skills and agents may cite *this capability's* decisions in body prose via the `[<name>:DEC-NNN-slug]` form. The validator (`pkit refs validate`) walks capability subtrees and resolves these citations.
 - Scripts can be Python with PEP 723 inline metadata (so adopters can run them via `uv run` without a host project) or shell. If a script needs Python dependencies, declare them inline so the script is self-installing.
+- If the capability keeps lasting state in the agent workspace — files that must outlast the session that wrote them, such as a queue that waits for a person — keep it under a direct child named after the capability, `.agent-workspace/<name>/`. Every agent working in the checkout shares that folder, and `pkit workspace remove` refuses any path at or under a child named after a registered capability, so an agent clearing its own files never removes the capability's (core rule 16, and `.pkit/cli/README.md`, "Workspace commands").
 
 ### 6b. (Optional) Ship a permission fragment
 
@@ -215,7 +215,7 @@ formalises, what it ships, and what motivated bundling it as an opt-in
 capability rather than core content>
 ```
 
-The capability lands at `version: 0.1.0`. Subsequent bumps follow the same surface-change rule the methodology uses for its own backbone (per PRJ-002 in project-kit's own repo; adopter-shipped capabilities use whatever bump policy that project adopts).
+The capability lands at `version: 0.1.0`. It moves from there under the version-bump policy the project records for itself, which says when, how far and who writes the new number (the core rules, `.pkit/rules/core.md`, rule 10). "Moving a capability's version" below says what moves it.
 
 ## Variations
 

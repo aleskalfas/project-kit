@@ -21,6 +21,7 @@ import ast
 import dataclasses
 import inspect
 import json
+import re
 import subprocess
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -29,6 +30,7 @@ from typing import Any
 import click
 import pytest
 from click.testing import CliRunner
+from ruamel.yaml import YAML
 
 from project_kit import cli, release, session_guard
 from tests import hosting_fake as fake
@@ -254,14 +256,86 @@ def test_evaluate_refuses_non_release_head_branch() -> None:
         release.parse_release_pr(_raw(headRefName="fix/123-a-bug"))
     )
     assert decision.action == "refuse"
-    # Points at the issue-PR gate rather than silently bypassing it.
-    assert "merge-pr" in decision.message
+    # Points at the backbone's own landing, never at a capability's command
+    # (#1918): a project need not have installed the capability (COR-014).
+    assert "`pkit pull-request land 42 --head <sha> --subject <title>`" in decision.message
+    assert "merge-pr" not in decision.message
+    assert "project-management" not in decision.message
 
 
 def test_evaluate_refuses_non_release_title() -> None:
     decision = release.evaluate_release_pr(release.parse_release_pr(_raw(title="feat: something")))
     assert decision.action == "refuse"
     assert "not a release title" in decision.message
+
+
+# --- no message names a capability's command (#1918) -----------------
+
+#: The repository whose capabilities the backbone's messages must not name.
+_REPO = Path(__file__).resolve().parents[1]
+
+
+def _capability_command() -> re.Pattern[str]:
+    """`pkit <name>` for each capability the repository ships and each of its
+    aliases: the forms a message names a capability's command by."""
+    yaml = YAML(typ="safe")
+    names: set[str] = set()
+    for package in sorted((_REPO / ".pkit" / "capabilities").glob("*/package.yaml")):
+        data = yaml.load(package.read_text(encoding="utf-8"))
+        names.add(data["component"]["name"])
+        names.update(data.get("aliases") or ())
+    assert "project-management" in names and "pm" in names
+    return re.compile(rf"\bpkit ({'|'.join(map(re.escape, sorted(names)))})\b")
+
+
+def _messages(source: str) -> list[str]:
+    """The text of each string the code builds, its constants and the text of
+    its f-strings, leaving out docstrings, which no message carries."""
+    tree = ast.parse(source)
+    docstrings = {
+        id(node.body[0].value)
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        and node.body
+        and isinstance(node.body[0], ast.Expr)
+        and isinstance(node.body[0].value, ast.Constant)
+    }
+    return [
+        node.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and id(node) not in docstrings
+    ]
+
+
+def test_the_scan_finds_a_capability_command_in_a_message_and_not_in_a_docstring() -> None:
+    pattern = _capability_command()
+    source = (
+        "def refuse(n):\n"
+        '    """Points at `pkit project-management merge-pr`, in a docstring."""\n'
+        '    return f"use `pkit project-management merge-pr {n}` for an issue PR"\n'
+    )
+    assert [m for m in _messages(source) if pattern.search(m)] == [
+        "use `pkit project-management merge-pr "
+    ]
+    assert not [m for m in _messages('def f():\n    """`pkit pm x`."""\n') if pattern.search(m)]
+
+
+def test_no_message_of_release_names_a_capability_command() -> None:
+    """A core message holds in a project that installed no capability
+    (COR-014): `release.py` names the backbone's commands only (#1918)."""
+    pattern = _capability_command()
+    named = [m for m in _messages(inspect.getsource(release)) if pattern.search(m)]
+    assert named == []
+
+
+def test_release_merge_help_names_the_landing_and_no_capability_command() -> None:
+    result = CliRunner().invoke(cli.main, ["release", "merge", "--help"])
+    assert result.exit_code == 0, result.output
+    text = " ".join(result.output.split())
+    assert "`pkit pull-request land`" in text
+    assert not _capability_command().search(text)
 
 
 def test_evaluate_reports_already_merged() -> None:
@@ -317,15 +391,27 @@ def _fake_run(
     branch_d_stderr: str = "",
     local_branch_exists: bool = True,
     unmerged: str = "0",
+    current: str | None = "release/v1.141.0",
+    changes: str = "",
+    status_stderr: str = "",
 ) -> list[list[str]]:
     """Stub `subprocess.run` for the local clean-up; a non-empty stderr makes
-    that step fail. The local head, when it exists, is at `HEAD`, and holds
-    `unmerged` commits past the merged head ("" — this clone cannot tell).
-    Returns the argvs seen."""
+    that step fail. The clone is on `current` (None: a detached HEAD), the
+    release PR's head branch unless told otherwise, and its working tree holds
+    `changes` (`git status --porcelain`'s lines; empty: it is clean). The
+    local head, when it exists, is at `HEAD`, and holds `unmerged` commits
+    past the merged head ("" — this clone cannot tell). Returns the argvs
+    seen."""
     seen: list[list[str]] = []
 
     def fake(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         seen.append(list(argv))
+        if argv[:2] == ["git", "symbolic-ref"]:
+            code = 0 if current else 1
+            return subprocess.CompletedProcess(argv, code, stdout=f"{current or ''}\n", stderr="")
+        if argv[:2] == ["git", "status"]:
+            code = 128 if status_stderr else 0
+            return subprocess.CompletedProcess(argv, code, stdout=changes, stderr=status_stderr)
         failing = (
             (argv[:2] == ["git", "checkout"] and checkout_stderr)
             or (argv[:2] == ["git", "pull"] and pull_stderr)
@@ -613,7 +699,8 @@ def test_merge_release_pr_refuses_non_release(monkeypatch: pytest.MonkeyPatch) -
     host = _Host(queue=False)
     with pytest.raises(click.ClickException) as exc:
         _land(monkeypatch, host, headRefName="fix/1-x")
-    assert "merge-pr" in str(exc.value)
+    assert "`pkit pull-request land 42 " in str(exc.value)
+    assert "merge-pr" not in str(exc.value)
     assert host.commands == []
 
 
@@ -670,7 +757,7 @@ def test_with_a_queue_the_pr_is_enqueued_and_its_head_deleted_once_merged(
     assert report.exit_code == 0
     assert report.text.startswith("Merged release PR #42 (https://github.com/owner/repo/pull/42) ")
     assert host.deletions == _DELETED_AT_THE_HEAD
-    assert seen[0] == ["git", "checkout", "main"]
+    assert seen[2] == ["git", "checkout", "main"]
     out = capsys.readouterr().out
     assert "  enqueued PR #42 in the merge queue for main" in out
     assert "  queue:   PR #42 position 2 in the queue, awaiting checks, about 5 min" in out
@@ -1087,7 +1174,7 @@ def test_a_merge_gh_only_enqueued_is_waited_for_not_taken_for_a_merge(
         "once it has merged, the commit it made on main."
     ) in said.err
     assert host.deletions == _DELETED_AT_THE_HEAD
-    assert seen[0] == ["git", "checkout", "main"]
+    assert seen[2] == ["git", "checkout", "main"]
 
 
 def test_the_cli_returns_the_reports_exit_and_takes_the_queue_flags(
@@ -1224,6 +1311,8 @@ def test_merge_deletes_the_remote_head_at_the_merged_head_then_cleans_up_locally
     assert host.deletions == _DELETED_AT_THE_HEAD
     assert host.branch_tip() is None
     assert seen == [
+        ["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
+        ["git", "status", "--porcelain"],
         ["git", "checkout", "develop"],  # the PR's own base, not a hardcoded main
         ["git", "pull", "--ff-only"],
         ["git", "rev-parse", "--verify", "--quiet", "refs/heads/release/v1.141.0"],
@@ -1239,41 +1328,48 @@ def test_merge_when_base_checkout_fails_completes_with_a_warning(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """When the base branch cannot be checked out here (it is checked out in
-    another worktree), the merge and
-    the remote delete still report success, the pull is skipped, and the local
-    delete is still attempted."""
-    err_text = "fatal: 'main' is already checked out at '/repo'"
+    another worktree), the merge and the remote delete still report success,
+    the pull is skipped, and the clone stays on the head branch, which is
+    kept rather than asked to be deleted (#2189)."""
+    err_text = "fatal: 'main' is already used by worktree at '/repo/wt-main'"
     seen = _fake_run(monkeypatch, checkout_stderr=err_text)
     message = _merge_green(monkeypatch)
     assert "Merged release PR #42" in message
     assert "deleted remote branch" in message
     assert ["git", "pull", "--ff-only"] not in seen
-    assert ["git", "branch", "-D", "release/v1.141.0"] in seen
-    assert f"[warn] git checkout main failed: {err_text}" in capsys.readouterr().err
+    assert not any(argv[:2] in (["git", "branch"], ["git", "rev-list"]) for argv in seen)
+    assert (
+        f"[warn] git checkout main failed: {err_text}. This clone stays on release/v1.141.0, "
+        "and local branch release/v1.141.0 is kept."
+    ) in capsys.readouterr().err
 
 
-def test_merge_with_base_branch_held_by_another_worktree_completes(
+def test_a_local_delete_git_refuses_is_a_warning_and_the_merge_completes(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The base branch checked out elsewhere, and the head held here: both
-    local steps warn, and the run still returns the merged report."""
-    checkout_err = "fatal: 'main' is already used by worktree at '/repo/wt-main'"
+    """The local head cannot be deleted, as where another worktree holds it:
+    the step warns with git's reason, and the run still returns the merged
+    report."""
     branch_err = "error: cannot delete branch 'release/v1.141.0' used by worktree at '/repo/wt'"
-    _fake_run(monkeypatch, checkout_stderr=checkout_err, branch_d_stderr=branch_err)
+    _fake_run(monkeypatch, branch_d_stderr=branch_err)
     message = _merge_green(monkeypatch)
     assert "Merged release PR #42" in message
-    err = capsys.readouterr().err
-    assert f"[warn] git checkout main failed: {checkout_err}" in err
-    assert f"[warn] git branch -D release/v1.141.0 failed: {branch_err}" in err
+    assert f"[warn] git branch -D release/v1.141.0 failed: {branch_err}" in capsys.readouterr().err
 
 
 def test_merge_without_a_local_head_copy_skips_the_local_delete_quietly(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """A release PR opened by CI has no local branch; that is not a warning."""
-    seen = _fake_run(monkeypatch, local_branch_exists=False)
-    _merge_green(monkeypatch)
+    """A release PR opened by CI has no local branch, and the clone sits on
+    the base: it is fast-forwarded, and no local branch is named or warned
+    about."""
+    seen = _fake_run(monkeypatch, local_branch_exists=False, current="main")
+    message = _merge_green(monkeypatch)
     assert ["git", "branch", "-D", "release/v1.141.0"] not in seen
+    assert (
+        "  brought 'main' up to date in this clone, which is on it, not on 'release/v1.141.0', "
+        "the branch that merged.\n"
+    ) in message
     assert "[warn]" not in capsys.readouterr().err
 
 
@@ -1412,7 +1508,7 @@ def test_fork_release_pr_never_deletes_a_base_repo_or_local_branch(
     message = _merge_green(monkeypatch, host, isCrossRepository=True)
     assert host.deletions == []
     assert not any(argv[:3] == ["git", "branch", "-D"] for argv in seen)
-    assert seen[0] == ["git", "checkout", "main"]
+    assert seen[2] == ["git", "checkout", "main"]
     assert "  remote branch 'release/v1.141.0' not deleted: PR #42's head is in another" in message
 
 
@@ -1453,6 +1549,148 @@ def test_cross_repository_is_a_required_keyword() -> None:
     p = inspect.signature(release._git_cleanup_local).parameters["cross_repository"]
     assert p.kind is inspect.Parameter.KEYWORD_ONLY
     assert p.default is inspect.Parameter.empty
+
+
+# --- the clone a release merges from (#2189) -----------------------------
+#
+# Landing's rule (#2183): the clean-up moves the clone only when it is on the
+# branch that merged with a clean working tree; a clean clone on the base is
+# fast-forwarded, and any other clone is left where it is, said in one line.
+
+_LOCAL_STEPS = (["git", "checkout"], ["git", "pull"], ["git", "branch"], ["git", "rev-list"])
+
+
+def _moved_nothing(seen: list[list[str]]) -> bool:
+    """No checkout, pull, delete or comparison of the local head ran."""
+    return not any(argv[:2] in _LOCAL_STEPS for argv in seen)
+
+
+@pytest.mark.parametrize(
+    ("current", "changes", "where"),
+    [
+        ("feat/7-next", "", "'feat/7-next'"),
+        ("feat/7-next", " M src/next.py\n", "'feat/7-next'"),
+        (None, "", "a detached HEAD"),
+    ],
+    ids=["clean", "uncommitted-changes", "detached-head"],
+)
+def test_a_clone_on_another_branch_is_left_where_it_is(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    current: str | None,
+    changes: str,
+    where: str,
+) -> None:
+    """A clone not on the branch that merged holds someone's work in progress,
+    such as a worker's next Task: no checkout, no pull, and the merged
+    branch's local copy is kept, said in one line."""
+    seen = _fake_run(monkeypatch, current=current, changes=changes)
+    message = _merge_green(monkeypatch)
+    assert _moved_nothing(seen)
+    assert (
+        f"  left this clone where it is: it is on {where}, not on 'release/v1.141.0', the branch "
+        "that merged. Local branch 'release/v1.141.0' is kept.\n"
+    ) in message
+    assert "[warn]" not in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [" M src/fix.py\n", "A  src/new.py\n", "?? notes.txt\n"],
+    ids=["modified", "staged", "untracked"],
+)
+@pytest.mark.parametrize("current", ["release/v1.141.0", "main"], ids=["merged-branch", "base"])
+def test_a_clone_with_uncommitted_changes_is_left_where_it_is(
+    monkeypatch: pytest.MonkeyPatch, changes: str, current: str
+) -> None:
+    """On the branch that merged or on the base, but with changes not
+    committed, untracked files among them: a checkout would carry them onto
+    the base for the next commit to land there, and a pull would update the
+    files around them. The clone stays, and so does its branch."""
+    seen = _fake_run(monkeypatch, current=current, changes=changes)
+    message = _merge_green(monkeypatch)
+    assert _moved_nothing(seen)
+    assert (
+        "  left this clone where it is: its working tree has uncommitted changes. "
+        "Local branch 'release/v1.141.0' is kept.\n"
+    ) in message
+
+
+def test_a_working_tree_git_cannot_read_leaves_the_clone_where_it_is(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Whether the tree is clean cannot be told: the clone is not moved on a guess."""
+    seen = _fake_run(monkeypatch, status_stderr="fatal: index file corrupt")
+    message = _merge_green(monkeypatch)
+    assert _moved_nothing(seen)
+    assert (
+        "  left this clone where it is: git cannot tell whether its working tree is clean "
+        "(fatal: index file corrupt). Local branch 'release/v1.141.0' is kept.\n"
+    ) in message
+
+
+def test_a_clean_clone_on_the_base_is_fast_forwarded_and_stays_on_it(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The clone a release is merged from sits on the base. With a clean
+    working tree it is fast-forwarded, never switched, and the merged
+    branch's local copy is kept, said in one line. The base is the PR's own."""
+    seen = _fake_run(monkeypatch, current="develop")
+    message = _merge_green(monkeypatch, baseRefName="develop")
+    assert seen == [
+        ["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
+        ["git", "status", "--porcelain"],
+        ["git", "pull", "--ff-only"],
+        ["git", "rev-parse", "--verify", "--quiet", "refs/heads/release/v1.141.0"],
+    ]
+    assert (
+        "  brought 'develop' up to date in this clone, which is on it, not on "
+        "'release/v1.141.0', the branch that merged. Local branch 'release/v1.141.0' is kept.\n"
+    ) in message
+    assert "[warn]" not in capsys.readouterr().err
+
+
+def test_a_failed_fast_forward_of_the_base_warns_and_changes_nothing(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A fast-forward git refuses leaves the clone as it was: a warning with
+    git's reason, no switch, and nothing deleted."""
+    seen = _fake_run(monkeypatch, current="main", pull_stderr="fatal: Not possible to fast-forward")
+    message = _merge_green(monkeypatch)
+    assert "Merged release PR #42" in message
+    assert not any(argv[:2] in (["git", "checkout"], ["git", "branch"]) for argv in seen)
+    assert "this clone" not in message and "local branch" not in message
+    assert (
+        "[warn] git pull failed: fatal: Not possible to fast-forward. This clone stays on main "
+        "as it was. Local branch release/v1.141.0 is kept.\n"
+    ) in capsys.readouterr().err
+
+
+def test_a_clone_on_a_branch_other_than_the_prs_base_is_left(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The base is the PR's own, not a hardcoded main: a clone on main, for a
+    release PR into develop, is not pulled."""
+    seen = _fake_run(monkeypatch, current="main")
+    message = _merge_green(monkeypatch, baseRefName="develop")
+    assert _moved_nothing(seen)
+    assert (
+        "  left this clone where it is: it is on 'main', not on 'release/v1.141.0', the branch "
+        "that merged. Local branch 'release/v1.141.0' is kept.\n"
+    ) in message
+
+
+def test_a_clean_clone_on_the_branch_that_merged_switches_and_pulls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The one case the clean-up moves the clone: on the branch that merged,
+    nothing uncommitted. It says nothing of leaving the clone."""
+    seen = _fake_run(monkeypatch)
+    message = _merge_green(monkeypatch)
+    assert seen[2:4] == [["git", "checkout", "main"], ["git", "pull", "--ff-only"]]
+    assert ["git", "branch", "-D", "release/v1.141.0"] in seen
+    assert "  updated local 'main'.\n" in message
+    assert "this clone" not in message
 
 
 def test_release_keeps_no_copy_of_the_remote_deletion() -> None:

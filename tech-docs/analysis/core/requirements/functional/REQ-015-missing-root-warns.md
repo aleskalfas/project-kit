@@ -5,6 +5,7 @@ status: active
 statement: A declared documentation root whose folder does not exist yet draws a warning from validation, never a failure.
 measure: "With the root declared and its folder missing, validation reports `documentation root '<root>' does not exist yet; the default applies to readers until it is created (COR-049 point 7).` as a warning. Where nothing else fails, `pkit validate` exits 0."
 applies-to: Validation of the documentation roots the backbone configuration declares, wherever validation runs, a CI pipeline included.
+obligation: v1:sha256:21e8d033ba2ec8358a0ecbf04f1f61c3bba715953287c33a3c1e14b09ceef4e5
 actors:
   - ACT-adopter
 refines: []
@@ -12,6 +13,7 @@ pkit:
   friction:
     anchors:
       path:
+        - src/project_kit/config_validate.py
         - tests/test_config_validate.py
       record:
         - COR-049#7
@@ -23,4 +25,4 @@ pkit:
 
 **Verified by:** A test declares a root whose folder is missing, and finds a warning and no error. Another pins the warning's words. A third finds that `pkit validate` exits 0 with the warning, and exits 1 once the configuration holds an error.
 
-**Rationale:** The adopter may declare the roots before the project holds any document. COR-049 point 7 decides that such a root "produces a warning, not a failure, since a fresh project may have no documentation folder".
+**Rationale:** The adopter may declare the roots before the [project](../../glossary.md#term-project--project) holds any document. [COR-049 point 7](../../../../../.pkit/decisions/core/COR-049-documentation-roots.md#7-visible-and-checked) decides that such a root "produces a warning, not a failure, since a fresh project may have no documentation folder".

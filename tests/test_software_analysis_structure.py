@@ -19,6 +19,9 @@
 
 The reader and the gate are tested on their own first, then end to end in an
 adopter, where the backbone's reading gives the rule's status and each entry's span.
+There the stamp and the check run in the test's own process, their `pkit` calls
+answered there too, and so does the validator `pkit validate` starts
+(`tests/in_process.py`, #2325).
 """
 
 from __future__ import annotations
@@ -45,15 +48,16 @@ from tests.analysis_repo import (
     SA,
     SAN_REL,
     VALIDATE,
-    accepting_san,
     actor_at,
     field_hint,
     installed,
+    link,
     load_lib,
     proposing_san,
-    run_script,
+    run_in_process,
     stamped,
 )
+from tests.in_process import start_in_process
 
 _CHECK, _MODEL, _STRUCTURE, _FORMS = load_lib("check", "model", "structure", "forms")
 C: Any = _CHECK
@@ -393,6 +397,31 @@ def test_code_and_comments_hide_marks_and_a_hint_left_alone_is_no_content() -> N
         "**Goal:** <!-- pkit:hint What the actor wants. -->",
     )
     assert _found(hinted) == [("goal", "empty", 3)]
+    # Where the caller's placeholder check reports each hint left in, as an artefact's
+    # does, the part is left to it and reported once (#2088).
+    assert _found(hinted, hints_checked=True) == []
+
+
+def test_a_part_still_holding_its_hint_is_left_to_the_placeholder_check() -> None:
+    """Where the placeholder check reports each hint left in, a part that still holds one
+    is not judged here, so it is reported once (#2088): a label's part with only its hint,
+    on the label's line or below it, an opening with only its hint, and a part whose
+    text beside the hint breaks its form. A part beside it is still judged."""
+    hint = "<!-- pkit:hint Numbered steps. Example: 1. The analyst chooses `Export`. -->"
+    steps = "1. The analyst chooses `Export`.\n2. The system writes the report to a file."
+    below = USE_CASE.replace(steps, hint)
+    assert _found(below) == [("main-path", "empty", 13)]
+    assert _found(below, hints_checked=True) == []
+    beside = USE_CASE.replace(steps, f"{hint}\n\nThe analyst chooses `Export`.")
+    assert _found(beside) == [("main-path", "breaks-its-form", 13)]
+    assert _found(beside, hints_checked=True) == []
+    trigger = "**Trigger:** The analyst asks to export the report on screen."
+    both = below.replace(trigger, "**Trigger:** None.")
+    assert _found(both, hints_checked=True) == [("trigger", "none-refused", 11)]
+    opening = "Whoever writes and runs the project's tests."
+    actor = ACTOR_BODY.replace(opening, "<!-- pkit:hint What this role is. -->")
+    assert _found(actor, "actor") == [("opening", "missing", None)]
+    assert _found(actor, "actor", hints_checked=True) == []
 
 
 def test_a_hint_left_in_is_found_outside_code_and_other_comments() -> None:
@@ -493,6 +522,26 @@ def test_the_declaration_is_read_whole_or_not_at_all(tmp_path: Path) -> None:
     broken.write_text("schema_version: 1\nkinds: {}\nextra: true\n", encoding="utf-8")
     with pytest.raises(S.Unreadable, match=r"does not fit artefact-kinds\.schema\.json"):
         S.read_kinds(broken)
+
+
+def test_the_declaration_is_parsed_once_for_each_text_of_it(tmp_path: Path) -> None:
+    """Asked again, the kinds come from the parse of the same texts, each caller with its
+    own mapping. A changed declaration is parsed again, and a schema that cannot be read
+    is said every time it is asked (#2025)."""
+    first, again = S.read_kinds(), S.read_kinds()
+    assert first is not again and first["use-case"] is again["use-case"]
+    first.clear()
+    assert S.read_kinds() == KINDS
+    own = tmp_path / "kinds.yaml"
+    own.write_text(S.KINDS_FILE.read_text(encoding="utf-8"), encoding="utf-8")
+    assert S.read_kinds(own) == KINDS
+    own.write_text("kinds: [\n", encoding="utf-8")
+    with pytest.raises(S.Unreadable, match="it is not YAML"):
+        S.read_kinds(own)
+    missing = tmp_path / "absent.schema.json"
+    for _ in range(2):
+        with pytest.raises(S.Unreadable, match=r"its schema, absent\.schema\.json, cannot be read"):
+            S.read_kinds(schema=missing)
 
 
 # --- the gate and the preview, on the check's own ------------------------------------------
@@ -822,7 +871,7 @@ def project(make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch)
 
 
 def _validate(repo: AdopterRepo, *args: str) -> tuple[int, Any]:
-    completed = run_script(repo, VALIDATE, *args)
+    completed = run_in_process(repo, VALIDATE, *args)
     return completed.returncode, (
         json.loads(completed.stdout) if "--json" in args else completed.stdout
     )
@@ -840,7 +889,7 @@ ACTOR_FRONT = (
 
 
 def test_proposed_the_check_reports_nothing_and_the_preview_never_changes_the_exit(
-    project: AdopterRepo, pkit_on_path: Path
+    project: AdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     project.write(
         {
@@ -870,7 +919,9 @@ def test_proposed_the_check_reports_nothing_and_the_preview_never_changes_the_ex
     code, output = _validate(project, "--preview")
     assert code == 0
     assert "preview: `**Context:**` is missing" in output
-    # `pkit validate` runs the normal check, so the proposed rule shows nothing there.
+    # `pkit validate` runs the normal check, so the proposed rule shows nothing there. Its
+    # runner starts the validator in the test's own process.
+    start_in_process(monkeypatch)
     result = CliRunner().invoke(
         main, ["--color", "never", "validate", "--only", "software-analysis:artefacts"]
     )
@@ -895,7 +946,7 @@ def test_accepted_a_departure_fails_and_an_entry_is_read_within_its_span(
     )
     project.write(
         {
-            **accepting_san(project),
+            ANALYSIS_SET: ANALYSIS_SET_TEXT,
             actor_at("ACT-tester"): ACTOR_FRONT + ACTOR_BODY + "\n\n## Notes\n\n**Seen:** daily.\n",
             GLOSSARY: glossary,
         }
@@ -915,7 +966,7 @@ def test_accepted_a_departure_fails_and_an_entry_is_read_within_its_span(
 
 
 def test_pkit_validate_reports_where_san_binds_on_none_and_warns_once_a_rule_is_accepted(
-    project: AdopterRepo, pkit_on_path: Path
+    project: AdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Never silent, end to end (DEC-001 point 1): `pkit validate` reports that no rule of
     `SAN` binds on the analysis while none is accepted. Once one is, and no set of the
@@ -923,17 +974,18 @@ def test_pkit_validate_reports_where_san_binds_on_none_and_warns_once_a_rule_is_
     analysis by its types makes the rule bind, and the check holds the actor to its
     structure. Neither the report nor the warning fails validation. `SAN` ships its rules
     accepted, so a proposed copy stands for the time before."""
+    shipped = (project.root / SAN_REL).read_text(encoding="utf-8")
     project.write(
         {actor_at("ACT-tester"): ACTOR_FRONT + WITHOUT_CONTEXT + "\n", **proposing_san(project)}
     )
     only = ["--color", "never", "validate", "--only", "software-analysis:artefacts"]
+    start_in_process(monkeypatch)  # the validator `pkit validate` starts, in this process
     result = CliRunner().invoke(main, only)
     assert result.exit_code == 0, result.output
     assert "0 error(s), 0 warning(s), 0 info(s), 1 report(s)." in result.output
     unbound = "no rule of software-analysis:SAN binds on any of the analysis's 1 artefact(s)"
     assert f"{unbound}: none is accepted" in result.output
-    accepted = accepting_san(project)
-    project.write({SAN_REL: accepted[SAN_REL]})  # accepted, with no set of the project's own
+    project.write({SAN_REL: shipped})  # accepted, with no set of the project's own
     result = CliRunner().invoke(main, only)
     assert result.exit_code == 0, result.output
     assert "0 error(s), 1 warning(s), 0 info(s), 0 report(s)." in result.output
@@ -954,7 +1006,7 @@ def test_a_record_is_held_to_its_structure_while_the_format_rule_is_proposed(
     `SAN` ships the rule accepted, so a proposed copy is the fixture."""
     project.write(proposing_san(project))
     stamped(project, "actor", "tester", "--unanchored-because", "No code embodies it.")
-    record = run_script(
+    record = run_in_process(
         project,
         NEW,
         "revalidation",
@@ -1005,7 +1057,7 @@ def test_the_stamp_refuses_a_declaration_whose_hint_is_no_one_line_comment(
     broken = text.replace("hint: The event that starts", "hint: The event --> that starts", 1)
     assert broken != text
     project.write({declaration: broken})
-    completed = run_script(project, NEW, "use-case", "run-suite", "--actor", "ACT-tester")
+    completed = run_in_process(project, NEW, "use-case", "run-suite", "--actor", "ACT-tester")
     assert completed.returncode == 1, completed.stdout
     assert "\nrefused: the kinds' structures cannot be read: " in f"\n{completed.stderr}"
     assert "restore it as the capability ships it" in completed.stderr
@@ -1040,7 +1092,9 @@ FIELDS = {
     field_hint("term", "definition"): "set of tests run together",
 }
 
-_HINTED = re.compile(r"(?:\*\*(?P<label>[^*\n]+):\*\* )?<!-- pkit:hint .*? -->")
+#: A hint, and the label it follows: on the label's line, or below it where a list goes
+#: (#2088).
+_HINTED = re.compile(r"(?:\*\*(?P<label>[^*\n]+):\*\*(?: |\n\n))?<!-- pkit:hint .*? -->")
 
 
 def _written(text: str) -> str:
@@ -1079,7 +1133,7 @@ def test_every_kind_stamped_and_filled_carries_its_structure(
         "--step",
         "UC-002",
     )
-    record = run_script(
+    record = run_in_process(
         project,
         NEW,
         "revalidation",
@@ -1099,7 +1153,10 @@ def test_every_kind_stamped_and_filled_carries_its_structure(
     for path in sorted((project.root / ANALYSIS).rglob("*.md")):
         if (project.root / RECORDS) not in path.parents:
             path.write_text(_written(path.read_text(encoding="utf-8")), encoding="utf-8")
-    project.write(accepting_san(project))
+    # The journey's step lines name their use cases by id, which link to them, as the
+    # authoring skill has `pkit analysis link` write (DEC-001 point 14).
+    link(project)
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     code, document = _validate(project, "--json")
     assert (code, _said(document)) == (0, [])
     assert any(

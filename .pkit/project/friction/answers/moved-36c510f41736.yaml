@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/demo-recording/glossary.md#TERM-demo-bundle
+    revalidated:
+      at: 2026-10-24T01:18:37Z
+      outcome: unchanged
+      unchanged-because: The change to record.sh rewords a comment on when after-record hooks run, and the code is the same. What a demo bundle holds has not changed, so the term holds.

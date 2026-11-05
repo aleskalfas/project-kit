@@ -1,0 +1,5 @@
+answers:
+  - artefact: .pkit/capabilities/demo-recording/README.md
+    revalidated:
+      at: 2026-10-24T01:18:27Z
+      outcome: updated

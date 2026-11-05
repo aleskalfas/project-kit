@@ -14,11 +14,15 @@ read when needed. In this order:
   analyses it builds on;
 - **the areas,** in the order of their numbers: each area a use case or a requirement in
   force lies in, and each the settings give a goal. Each shows its goal, what it builds
-  on, its requirements and its use cases, each linked and marked where an open shortfall
-  names one of its steps or variants. An area none of whose use cases writes `after`
-  shows no line of what it builds on, and one that holds no use case in force reads "Not
-  written yet." An analysis whose use cases lie in no area lists them under its use
-  cases, which tell its story;
+  on, its concepts, its requirements, its use cases, each linked and marked where an
+  open shortfall names one of its steps or variants, and its journeys. Its concepts are
+  the views in force that explain a term one of its use cases links, shown where the
+  analysis has a view in force. Its journeys are those in force with a step among its
+  use cases, linked, or a line that says it has none; a journey whose steps cross
+  several areas is listed under each, and its flow stays in reference (DEC-005 point 2).
+  An area none of whose use cases writes `after` shows no line of what it builds on, and
+  one that holds no use case in force reads "Not written yet." An analysis whose use
+  cases lie in no area lists them under its use cases, which tell its story;
 - **reference,** under a heading of its own, each part a section below it:
   - **who takes part:** one table, a row for each actor in force, linked, with its
     `summary` and the areas of the use cases in force it is the main actor of, its
@@ -40,12 +44,14 @@ read when needed. In this order:
 Each part lies in a section of its own, so two branches that each change what one part
 shows conflict on that section alone.
 
-**Front matter only.** The overview reads the front matter of the analysis it shows, and
-the paths of its files, never a body (DEC-001 point 1). A requirement's area is the folder
-of its kind's folder that holds it (`Analysis.area`). It reads no file of another
-analysis: an actor of one is shown as this analysis's glossary's head names it. Beyond
-the analysis, it reads only the front matter of the record its `purpose` names, where
-the backbone finds it (`pkit refs lookup`).
+**Front matter, and the links to the terms.** The overview reads the front matter of the
+analysis it shows, and the paths of its files (DEC-001 point 1). Of a body, it reads only
+the links to the glossary's entries a use case in force holds, which
+`pkit analysis link` writes and the check holds, to lead each area to its concepts. A
+requirement's area is the folder of its kind's folder that holds it (`Analysis.area`). It
+reads no file of another analysis: an actor of one is shown as this analysis's
+glossary's head names it. Beyond the analysis, it reads only the front matter of the
+record its `purpose` names, where the backbone finds it (`pkit refs lookup`).
 
 **What an area builds on** is computed from `after` (`_lib/chain.py`): each other area
 that holds a producer in force its use cases name, save one in a later area, an
@@ -64,8 +70,10 @@ shows no title of such a record, and says what is wrong with the pointer instead
 **Fresh by fingerprint.** The overview carries a fingerprint of what it draws: the data
 it reads, never its text (`fingerprint`), with the version of what it reads (`VERSION`).
 That is each artefact in force of the kinds it shows, with its id, its path and the
-fields it reads, each actor of another analysis it shows with its name, the goal of
-each area it shows, and the id, title, status and path of its purpose's record.
+fields it reads, each actor of another analysis it shows with its name, the views each
+use case leads to, the goal of each area it shows, and the id, title,
+status and path of its purpose's record. Each area's journeys follow from each journey's
+`steps` and each use case's path, which it reads, so it holds them too.
 Validation compares it with the analysis in the working tree, and fails a stale
 overview, naming the command. A release that only
 prints the overview differently changes no fingerprint, so it fails no project. One that
@@ -100,7 +108,18 @@ from pathlib import Path
 
 from ruamel.yaml.error import YAMLError
 
-from _lib import analyses, backbone, chain, diagrams, markdown, shortfalls, stamp, structure
+from _lib import (
+    analyses,
+    backbone,
+    chain,
+    diagrams,
+    links,
+    markdown,
+    shortfalls,
+    stamp,
+    structure,
+    views,
+)
 from _lib.findings import ERROR, REPORT, WARNING, Finding
 from _lib.model import (
     ACTOR,
@@ -116,6 +135,7 @@ from _lib.model import (
     Analysis,
     Artefact,
     Unreadable,
+    identity,
     number_in,
     qualified,
     under_place,
@@ -138,7 +158,7 @@ NEW_RECORD = "pkit new decision"
 #: The version of what the fingerprint reads. A release that changes what it reads, or how
 #: it is computed, raises it. An overview written under another version is a warning,
 #: never a failure, until its command rewrites it, so such a release fails no project.
-VERSION = 4
+VERSION = 5
 
 #: The status a record's front matter gives once it decides (the acceptance gate).
 ACCEPTED = "accepted"
@@ -208,7 +228,9 @@ class Read:
     analysis's folder, its glossary's path, `None` where it keeps none, each actor of
     another analysis it shows, by its id with that analysis, such as
     `core:ACT-developer`, with the name the glossary's head gives it, `None` where the
-    head lists it not, and the record its purpose names, `None` where it names none."""
+    head lists it not, the record its purpose names, `None` where it names none, and the
+    views in force each use case in force leads to, by its id, the views'
+    ids in their order, where it links a term one of them explains (`_concepts`)."""
 
     artefacts: tuple[Artefact, ...]
     areas: Mapping[str, str | None]
@@ -216,6 +238,7 @@ class Read:
     glossary: str | None = None
     foreign: Mapping[str, str | None] = field(default_factory=dict)
     purpose: Purpose | None = None
+    concepts: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
     def of(self, *kinds: str) -> list[Artefact]:
         return [a for a in self.artefacts if a.kind in kinds]
@@ -234,13 +257,18 @@ def _top(analysis: Analysis, folder: str | None) -> str:
 
 
 def read(
-    analysis: Analysis, listing: analyses.Listing, folder: str | None, root: Path | None = None
+    analysis: Analysis,
+    listing: analyses.Listing,
+    folder: str | None,
+    root: Path | None = None,
+    record_files: backbone.RecordFiles | None = None,
 ) -> Read:
-    """What the overview of the analysis in `folder` reads: front matter and paths alone,
-    and the front matter of its purpose's record, found from the repository at `root`.
-    Raises diagrams.NoAnswer where a file of the kinds it reads cannot be read in full, as
-    the query would find it for any of its diagrams, or where whether the repository
-    holds the purpose's record cannot be read."""
+    """What the overview of the analysis in `folder` reads: front matter and paths, the
+    links to the terms each use case holds, and the front matter of its
+    purpose's record, found from the repository at `root`, through `record_files` where a
+    reader gives it. Raises diagrams.NoAnswer where a file of the kinds it reads cannot be
+    read in full, as the query would find it for any of its diagrams, or where whether
+    the repository holds the purpose's record cannot be read."""
     diagrams.diagrams(analysis, None, {}, folder)
     artefacts = tuple(
         sorted(
@@ -264,15 +292,56 @@ def read(
         _top(analysis, folder),
         analyses.glossary_of(analysis, folder),
         _foreign(analysis, folder, [a for a in artefacts if a.kind == USE_CASE]),
-        _purpose(root, named) if named is not None else None,
+        _purpose(root, named, record_files) if named is not None else None,
+        _concepts(analysis, listing, folder, artefacts, root),
     )
 
 
-def record(root: Path, record_id: str) -> Record | None:
-    """The decision record `record_id` names, as `pkit refs lookup` finds it: its file and
-    what its front matter gives; `None` where it names no record the repository holds, or
-    one whose file cannot be read. Raises Unreadable where `pkit` cannot be run."""
-    rel = backbone.record_file(root, record_id)
+def _concepts(
+    analysis: Analysis,
+    listing: analyses.Listing,
+    folder: str | None,
+    artefacts: Sequence[Artefact],
+    root: Path | None,
+) -> dict[str, tuple[str, ...]]:
+    """The views in force of `artefacts` each use case among them leads to, by its id, the
+    views in their order: those that explain a term its body links, as `pkit analysis link`
+    writes the links and the check holds them (DEC-004 point 7, DEC-005 point 3). None
+    where the analysis shows no view, or where no repository is read. Of a body, only its
+    links to the glossary's entries are read. Raises diagrams.NoAnswer where such a body
+    cannot be read."""
+    shown = [v for v in artefacts if v.kind == VIEW]
+    if not shown or root is None:
+        return {}
+    explaining: dict[str, str] = {}
+    for view in shown:
+        for term in views.explained(view):
+            explaining.setdefault(term, str(view.id))
+    order = [str(v.id) for v in shown]
+    words = links.vocabulary(analysis, listing, folder)
+    found: dict[str, tuple[str, ...]] = {}
+    for artefact in artefacts:
+        if artefact.kind != USE_CASE:
+            continue
+        try:
+            text = (root / artefact.path).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            raise diagrams.NoAnswer(f"{artefact.path} cannot be read: {exc}") from exc
+        terms = links.terms_linked(text.replace("\r\n", "\n"), artefact.path, words)
+        reached = {explaining[t] for t in terms if t in explaining}
+        if reached:
+            found[str(artefact.id)] = tuple(v for v in order if v in reached)
+    return found
+
+
+def record(
+    root: Path, record_id: str, record_files: backbone.RecordFiles | None = None
+) -> Record | None:
+    """The decision record `record_id` names, as `pkit refs lookup` finds it, through
+    `record_files` where a reader gives it: its file and what its front matter gives;
+    `None` where it names no record the repository holds, or one whose file cannot be
+    read. Raises Unreadable where `pkit` gives no answer."""
+    rel = (record_files or backbone.RecordFiles(root)).file(record_id)
     if rel is None:
         return None
     try:
@@ -293,7 +362,9 @@ def record(root: Path, record_id: str) -> Record | None:
     )
 
 
-def _purpose(root: Path | None, record_id: str) -> Purpose:
+def _purpose(
+    root: Path | None, record_id: str, record_files: backbone.RecordFiles | None = None
+) -> Purpose:
     """The record the analysis names as what its component is for, as the repository
     holds it, or not. A record that is not accepted, or none, is said on the page, and
     its check fails the pointer (`_purpose_findings`). Raises diagrams.NoAnswer where
@@ -302,7 +373,7 @@ def _purpose(root: Path | None, record_id: str) -> Purpose:
     if root is None:
         raise diagrams.NoAnswer(f"{said}, is not read here")
     try:
-        found = record(root, record_id)
+        found = record(root, record_id, record_files)
     except Unreadable as exc:
         raise diagrams.NoAnswer(f"{said}, cannot be read: {exc}") from exc
     if found is None:
@@ -313,10 +384,10 @@ def _purpose(root: Path | None, record_id: str) -> Purpose:
 def fingerprint(analysis: Analysis, read_: Read, component: str | None) -> str:
     """The fingerprint of what the overview draws: each artefact it reads, by its kind, its
     id, its path within the analysis and the fields it reads, each actor of another
-    analysis it shows, with its name, each area's goal, the glossary's path, the
-    analysis's component, and its purpose's record, by its id, its title and its path.
-    Never the overview's text, so a release that only prints it differently changes
-    none."""
+    analysis it shows, with its name, the views each use case leads to,
+    each area's goal, the glossary's path, the analysis's component, and its purpose's
+    record, by its id, its title and its path. Never the overview's text, so a release
+    that only prints it differently changes none."""
     purpose = read_.purpose
     data = {
         "version": VERSION,
@@ -332,6 +403,7 @@ def fingerprint(analysis: Analysis, read_: Read, component: str | None) -> str:
             for a in read_.artefacts
         ],
         "foreign": dict(read_.foreign),
+        "concepts": {k: list(v) for k, v in read_.concepts.items()},
         "areas": dict(read_.areas),
         "glossary": (posixpath.relpath(read_.glossary, read_.location) if read_.glossary else None),
         "purpose": (
@@ -479,9 +551,10 @@ def _what_it_is(listed: analyses.Listed | None) -> str:
 
 
 def _areas_part(page: _Page) -> list[str]:
-    """The areas in the order of their numbers, each with its goal, what it builds on,
-    its requirements and its use cases, then the use cases outside any area; or, where no
-    area is shown, the use cases."""
+    """The areas in the order of their numbers, each with its goal, what it builds on, its
+    concepts where the analysis shows a view, its requirements, its use cases and its
+    journeys, then the use cases outside any area; or, where no area is shown, the use
+    cases."""
     read_ = page.read
     use_cases = read_.of(USE_CASE)
     if not read_.areas:
@@ -490,6 +563,8 @@ def _areas_part(page: _Page) -> list[str]:
         return ["", f"## {_USE_CASES}", "", *(_use_case_line(page, u) for u in use_cases)]
     out = ["", "## Areas"]
     requirements = read_.of(*REQUIREMENTS)
+    views_shown = read_.of(VIEW)
+    journeys = read_.of(JOURNEY)
     for name, goal in read_.areas.items():
         out += ["", f"### {name}", ""]
         out.append(goal if goal else "No goal is written for this area yet.")
@@ -498,11 +573,19 @@ def _areas_part(page: _Page) -> list[str]:
         if any(chain.writes_after(u) for u in own):
             built = _builds_on(page, own, name)
             out += ["", f"**Builds on:** {_joined(built) if built else 'no other area'}."]
+        if views_shown and (bound or own):
+            reached = {v for a in own for v in read_.concepts.get(str(a.id), ())}
+            shown = [v for v in views_shown if str(v.id) in reached]
+            out += ["", "**Its concepts:**" + ("" if shown else " none.")]
+            out += ["", *(f"- {page.link(v)}" for v in shown)] if shown else []
         if bound or own:
             out += ["", "**Its requirements:**" + ("" if bound else " none.")]
             out += ["", *(f"- {page.link(r)}" for r in bound)] if bound else []
         if own:
             out += ["", "**Its use cases:**", "", *(_use_case_line(page, u) for u in own)]
+            passing = _journeys_through(own, journeys)
+            out += ["", "**Its journeys:**" + ("" if passing else " none.")]
+            out += ["", *(f"- {page.link(j)}" for j in passing)] if passing else []
         else:
             out += ["", "Not written yet."]
     outside = [u for u in use_cases if page.area[u.path] is None]
@@ -518,6 +601,21 @@ def _use_case_line(page: _Page, use_case: Artefact) -> str:
     if not places:
         return f"- {page.link(use_case)}"
     return f"- {page.link(use_case)} ([not built yet](#{_anchor(_NOT_BUILT)}): {', '.join(places)})"
+
+
+def _journeys_through(own: Sequence[Artefact], journeys: Sequence[Artefact]) -> list[Artefact]:
+    """Each journey of `journeys` with a step among the use cases `own`, in the journeys'
+    order. A step names its use case by its id, as `identity` spells it, as the journey's
+    flow reads it. So a journey whose steps cross several areas is each one's (DEC-005
+    point 2)."""
+    held = {identity(str(u.id)) for u in own}
+    return [j for j in journeys if any(identity(step) in held for step in _steps(j))]
+
+
+def _steps(journey: Artefact) -> list[str]:
+    """The use cases a journey's `steps` name, each as written; none where it lists none."""
+    steps = journey.fields.get(diagrams.STEPS)
+    return [s for s in steps if isinstance(s, str)] if isinstance(steps, list) else []
 
 
 def _builds_on(page: _Page, own: Sequence[Artefact], area: str) -> list[str]:
@@ -813,16 +911,23 @@ def refresh(root: Path, named: str | None) -> tuple[str | None, str | None]:
 # --- what the check holds ----------------------------------------------------------------------
 
 
-def findings(root: Path, analysis: Analysis, listing: analyses.Listing) -> list[Finding]:
+def findings(
+    root: Path,
+    analysis: Analysis,
+    listing: analyses.Listing,
+    record_files: backbone.RecordFiles | None = None,
+) -> list[Finding]:
     """What the check reports of the overviews, the areas' goals and the purposes: for
     each analysis the project keeps, an area without a goal, a purpose that names no
     accepted record, and an overview missing, stale, or left in place where the project
-    keeps none (DEC-003 point 8)."""
+    keeps none (DEC-003 point 8). Each purpose's record is found through `record_files`,
+    so a run asks the backbone once for each."""
+    files = record_files or backbone.RecordFiles(root)
     found: list[Finding] = []
     for folder in listing.kept():
         found += _goals(analysis, listing, folder)
-        found += _purpose_findings(root, listing, folder)
-        found += _freshness(root, analysis, listing, folder)
+        found += _purpose_findings(root, listing, folder, files)
+        found += _freshness(root, analysis, listing, folder, files)
     return found
 
 
@@ -859,7 +964,12 @@ def _goals(analysis: Analysis, listing: analyses.Listing, folder: str | None) ->
     ]
 
 
-def _purpose_findings(root: Path, listing: analyses.Listing, folder: str | None) -> list[Finding]:
+def _purpose_findings(
+    root: Path,
+    listing: analyses.Listing,
+    folder: str | None,
+    record_files: backbone.RecordFiles,
+) -> list[Finding]:
     """A purpose that names no record the repository holds, or a record that is not
     accepted, an error, whatever the setting `overview` (DEC-003 point 8)."""
     named = listing.purpose_of(folder)
@@ -880,7 +990,7 @@ def _purpose_findings(root: Path, listing: analyses.Listing, folder: str | None)
             )
         ]
     try:
-        found = record(root, named)
+        found = record(root, named, record_files)
     except Unreadable as exc:
         return [
             Finding(ERROR, where, f"whether {named} is an accepted record cannot be read: {exc}")
@@ -920,7 +1030,11 @@ def _area_folder(analysis: Analysis, artefact: Artefact, area: str) -> str:
 
 
 def _freshness(
-    root: Path, analysis: Analysis, listing: analyses.Listing, folder: str | None
+    root: Path,
+    analysis: Analysis,
+    listing: analyses.Listing,
+    folder: str | None,
+    record_files: backbone.RecordFiles,
 ) -> list[Finding]:
     rel = path_of(analysis, folder)
     target = root / rel
@@ -968,7 +1082,7 @@ def _freshness(
     try:
         now = fingerprint(
             analysis,
-            read(analysis, listing, folder, root),
+            read(analysis, listing, folder, root, record_files),
             listed.component if listed is not None else None,
         )
     except diagrams.NoAnswer as exc:

@@ -98,6 +98,10 @@ UNANCHORED = "unanchored"
 #: point 7), has this state here, whatever it declares.
 EXCLUDED = "excluded"
 
+#: An artefact the project receives by sync, which owes it no answer and is never judged
+#: stale or deferred there (COR-062 point 9), has this state here, whatever it declares.
+RECEIVED = "received"
+
 
 class FrictionReportError(click.ClickException):
     """A reading command could not answer: the artefact is not named, or not at HEAD."""
@@ -440,6 +444,8 @@ class ExplainedFinding:
             "anchor": _anchor_json(self.finding.anchor),
             "origin": None if self.finding.origin is None else self.finding.origin.as_json(),
             "message": self.finding.message,
+            "bar": self.finding.bar,
+            "share": self.finding.share,
             "commits": [commit.as_json() for commit in self.commits],
             "clears": self.clears,
             "answers": [answer.as_json() for answer in self.answers],
@@ -492,21 +498,24 @@ class Explanation:
     report: fr.ArtefactReport | None  # `None`: nothing judged — no anchors, no deferrals, excluded
     anchors: tuple[ExplainedAnchor, ...]  # in written order
     findings: tuple[ExplainedFinding, ...]  # in the check's order
-    # Its answers at HEAD, from its block or its answer files (`answer_files`).
+    # Its answers at HEAD, from the answer files (`answer_files`); `None` where none can
+    # be live: no anchors and no answer file, or no `friction` block.
     answers: Answers | None = None
 
     @property
     def state(self) -> str:
         if self.artefact.excluded:
             return EXCLUDED
+        if self.artefact.received:
+            return RECEIVED
         return UNANCHORED if self.report is None else self.report.state.value
 
     @property
     def deferred(self) -> tuple[Anchor, ...]:
-        """The anchors the artefact defers: its live deferrals, from its block or its
-        answer files, each anchor once."""
+        """The anchors the artefact defers: its live deferrals in the answer files, each
+        anchor once."""
         if self.answers is None:
-            return tuple(d.anchor for d in self.artefact.deferrals)
+            return ()
         return tuple(dict.fromkeys(d.anchor for d in self.answers.deferrals))
 
 
@@ -536,6 +545,8 @@ def run_explain(
     unjudged: str | None = None  # what an anchor with no finding shows, when not judged
     if check.artefact.excluded:
         unjudged = EXCLUDED
+    elif check.artefact.received:
+        unjudged = RECEIVED
     elif check.report is not None and check.report.state is fr.ArtefactState.UNREACHABLE:
         unjudged = fr.ArtefactState.UNREACHABLE.value
     anchors = tuple(
@@ -666,8 +677,9 @@ def _explained(
         )
     elif kind is _Kind.OVER_BROAD and anchor is not None:
         clears = (
-            f"narrow {_label(anchor)} in the block, then revalidate (a changed anchor list "
-            f"needs a revalidation)"
+            f"replace {_label(anchor)} in the block by the kind of narrower anchor its finding "
+            f"suggests, where one names less, then revalidate (a changed anchor list needs a "
+            f"revalidation)"
         )
     elif kind is _Kind.SHARED_ID and anchor is not None:
         clears = (
@@ -785,6 +797,7 @@ _STATE_GLOSS = {
     "unresolved": "not judged: an anchor cannot be resolved; its other anchors' findings stand",
     UNANCHORED: "no anchors and no deferrals: nothing to judge",
     EXCLUDED: "under an excluded path: left out of the measures and the debt",
+    RECEIVED: "arrives by sync: it owes this project no answer, and is left out of the debt",
 }
 
 # What the commits under a finding are, by its kind.
@@ -795,11 +808,21 @@ _COMMITS_LABEL = {
     _Kind.DEAD_ANCHOR: "where its files went, oldest first",
 }
 
+#: What clears the second bar's one finding on the artefact (ADR-080 point 3): the
+#: advice for the artefact as a whole, and the revalidation a changed anchor list needs.
+_ASKED_CLEARS = f"{fr.ASKED_ADVICE}; then revalidate (a changed anchor list needs a revalidation)"
+
+
+def _finding_of(explained: ExplainedFinding) -> fr.RepositoryFinding:
+    return explained.finding
+
+
 _ANCHOR_GLOSS = {
     "current": "unchanged since the revalidation point",
     "deferred": "deferred; nothing after its deferral point",
     "unreachable": "not judged: a point lies beyond this shallow clone",
     EXCLUDED: "not judged: the artefact is under an excluded path",
+    RECEIVED: "not judged: the artefact arrives by sync",
 }
 
 
@@ -920,8 +943,15 @@ def _finding_lines(explanation: Explanation, now: datetime) -> list[str]:
         return lines
     kind_width = max(len(f.finding.kind.value) for f in explanation.findings)
     diffs: dict[Anchor, tuple[str, ...]] = {a.anchor: a.diff for a in explanation.anchors if a.diff}
-    for explained in explanation.findings:
+    for run in fr.over_broad_runs(explanation.findings, _finding_of):
+        explained = run[0]
         finding = explained.finding
+        if finding.asked:  # the second bar's findings, one for the artefact (ADR-080 point 3)
+            message, under = fr.asked_lines([e.finding for e in run])
+            lines.append(f"  {finding.kind.value:{kind_width}}  {_cell(None)}  {message}")
+            lines.extend(f"      {line}" for line in under)
+            lines.append(f"    clears it — {_ASKED_CLEARS}")
+            continue
         message = finding.message
         if finding.kind is _Kind.DEFERRED and finding.origin is not None:
             message += f", {_age(now, finding.origin.date)}"
@@ -966,6 +996,7 @@ __all__ = [
     "EXCLUDED",
     "EXPLAIN_SCHEMA_VERSION",
     "REASON",
+    "RECEIVED",
     "UNANCHORED",
     "Answer",
     "DebtEntry",

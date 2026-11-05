@@ -21,8 +21,8 @@ from project_kit import friction_report as frep
 from project_kit import friction_repository as fr
 from project_kit import friction_validate as fv
 from project_kit.cli import main
-from project_kit.friction_discovery import Anchor
-from tests.adopter_repo import MakeAdopterRepo
+from project_kit.friction_discovery import Anchor, discover_artefacts
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import (
     CONFIG,
     T1,
@@ -30,7 +30,9 @@ from tests.friction_documents import (
     Timeline,
     document,
     friction_config,
+    without_over_broad,
 )
+from tests.shipped_rule_sets import without_shipped_rule_sets
 
 GUIDE = "docs/guide.md"
 CLI = Anchor("path", "src/cli/**")
@@ -90,8 +92,10 @@ def answers(*entries: dict[str, Any]) -> str:
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    """Dated commits on an adopter whose install the template committed, so a test's base
+    commits only its own files."""
+    return Timeline(committed_adopter)
 
 
 def _check(timeline: Timeline) -> fr.RepositoryCheck:
@@ -115,7 +119,11 @@ def _answers(result: fr.RepositoryCheck, location: str = GUIDE) -> Mapping[str, 
 
 
 def _kinds(result: fr.RepositoryCheck) -> list[tuple[str, str | None]]:
-    return [(f.kind.value, None if f.anchor is None else f.anchor.value) for f in result.findings]
+    """(kind, anchor) per finding, the over-broad anchors left out (`without_over_broad`)."""
+    return [
+        (f.kind.value, None if f.anchor is None else f.anchor.value)
+        for f in without_over_broad(result.findings)
+    ]
 
 
 # --- the folder ---------------------------------------------------------------------
@@ -322,23 +330,23 @@ def test_an_artefact_whose_block_holds_no_answer_is_read_from_its_answer_file(
 
     changed = timeline.commit("change the CLI", {"src/cli/main.py": "print('v2')\n"})
     result = _check(timeline)
-    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in result.findings] == [
+    found = without_over_broad(result.findings)
+    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in found] == [
         ("stale", changed)
     ]
 
 
-def test_an_artefact_whose_block_holds_an_answer_is_read_from_its_block(
-    timeline: Timeline,
-) -> None:
-    base = timeline.start(
-        {GUIDE: bare_guide(at=T1, outcome="unchanged", because="the block answers")}
-    )
-    timeline.commit("an answer file beside", {answer_path("one"): answers(entry(at=T2))})
+def test_an_answer_left_in_a_block_is_read_only_in_history(timeline: Timeline) -> None:
+    """At HEAD an artefact's answers are read from the answer files alone, whatever its
+    block still holds, which validation fails (COR-062 points 1 and 10): the file's value
+    is new where the file first carried it."""
+    timeline.start({GUIDE: bare_guide(at=T1, outcome="unchanged", because="the block answers")})
+    filed = timeline.commit("an answer file beside", {answer_path("one"): answers(entry(at=T2))})
     result = _check(timeline)
-    assert _points(result) == [base]
+    assert _points(result) == [filed]
     report = _report(result)
-    assert report.answers is not None and report.answers["home"] == "block"
-    assert [r["file"] for r in report.answers["revalidations"]] == [None]
+    assert report.answers is not None and report.answers["home"] == "files"
+    assert [r["file"] for r in report.answers["revalidations"]] == ["one.yaml"]
 
 
 def test_a_value_moved_from_the_block_to_a_file_keeps_its_point(timeline: Timeline) -> None:
@@ -373,7 +381,8 @@ def test_a_value_written_back_keeps_its_first_point(timeline: Timeline) -> None:
     )
     result = _check(timeline)
     assert _points(result) == [first]
-    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in result.findings] == [
+    found = without_over_broad(result.findings)
+    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in found] == [
         ("stale", changed)
     ]
 
@@ -397,6 +406,33 @@ def test_an_answer_follows_the_renames_of_its_artefacts_file(timeline: Timeline)
     assert answered in _points(result)
 
 
+def test_the_working_tree_follows_a_move_committed_or_not(timeline: Timeline) -> None:
+    """An answer in the working tree may name an artefact under every path its file had: the
+    renames HEAD's history holds, and one the working tree makes and has not committed, as
+    the change check reads a working tree (COR-062 point 10; #2108)."""
+    root = timeline.adopter.root
+    timeline.start({"docs/old.md": bare_guide(), "docs/a.md": _collection("n1")})
+    timeline.rename("docs/old.md", "docs/mid.md")
+    (root / "docs" / "area").mkdir()
+    timeline.adopter.git("mv", "docs/mid.md", GUIDE)
+    timeline.adopter.git("mv", "docs/a.md", "docs/area/a.md")
+    assert af.working_renames(root) == {GUIDE: "docs/mid.md", "docs/area/a.md": "docs/a.md"}
+    found = {a.location: a for a in discover_artefacts(root).artefacts}
+    locations = af.working_locations(root)
+    assert locations(found[GUIDE]) == (GUIDE, "docs/mid.md", "docs/old.md")
+    assert locations(found["docs/area/a.md#n1"]) == ("docs/area/a.md#n1", "docs/a.md#n1")
+
+
+def test_before_the_first_commit_an_artefact_has_its_own_location_alone(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo()
+    adopter.write({CONFIG: friction_config(), GUIDE: bare_guide()})
+    (guide,) = [a for a in discover_artefacts(adopter.root).artefacts if a.location == GUIDE]
+    assert af.working_renames(adopter.root) == {}
+    assert af.working_locations(adopter.root)(guide) == (GUIDE,)
+
+
 def _collection(*ids: str) -> str:
     """A collection file whose entries, each anchored to the CLI, are `ids`."""
     entries = {
@@ -418,6 +454,61 @@ def test_an_entry_moved_between_collection_files_is_not_followed(timeline: Timel
     report = _report(result, "docs/b.md#n1")
     assert report.answers is not None and report.answers["revalidations"] == []
     assert result.prunable == ("one.yaml",)
+
+
+def test_an_entry_removed_and_added_back_starts_its_answers_again(timeline: Timeline) -> None:
+    """An entry's history starts again where it was last added to its file (COR-050 point 3,
+    COR-062 point 6): the answer file that answered it before its removal answers it no more.
+    It has no live answer, its point is where it was added back, and a change to its anchor
+    after that is asked of it from there."""
+    timeline.start({"docs/a.md": _collection("n1", "n2")})
+    timeline.commit(
+        "answer",
+        {answer_path("one"): answers(entry("docs/a.md#n1", at=T1, deferred=((CLI, "until #12"),)))},
+    )
+    timeline.commit("change the CLI", {"src/cli/main.py": "print('v2')\n"})
+    timeline.commit("remove the entry", {"docs/a.md": _collection("n2")})
+    added = timeline.commit("add it back", {"docs/a.md": _collection("n1", "n2")})
+    result = _check(timeline)
+    report = _report(result, "docs/a.md#n1")
+    assert report.answers is not None
+    assert (report.answers["revalidations"], report.answers["deferrals"]) == ([], [])
+    assert _points(result, "docs/a.md#n1") == [added]
+    assert report.state is fr.ArtefactState.CURRENT
+    assert result.prunable == ("one.yaml",)
+
+    changed = timeline.commit("change the CLI again", {"src/cli/main.py": "print('v3')\n"})
+    result = _check(timeline)
+    assert [
+        (f.kind.value, f.origin.sha if f.origin else None)
+        for f in result.findings
+        if f.location == "docs/a.md#n1"
+    ] == [("stale", changed)]
+
+
+def test_an_entry_its_file_kept_keeps_its_answers(timeline: Timeline) -> None:
+    """Only an entry removed and added back starts again. One its file held throughout keeps
+    its answer and its point, whatever else the file lost and got back, and so does one a
+    line of work removed where the merge kept it."""
+    repo = timeline.adopter
+    timeline.start({"docs/a.md": _collection("n1", "n2")})
+    answered = timeline.commit(
+        "answer", {answer_path("one"): answers(entry("docs/a.md#n1", at=T1))}
+    )
+    timeline.commit("remove the other entry", {"docs/a.md": _collection("n1")})
+    timeline.commit("add the other back", {"docs/a.md": _collection("n1", "n2")})
+    repo.checkout("side", create=True)
+    timeline.commit("side: remove the entry", {"docs/a.md": _collection("n2")})
+    repo.checkout("main")
+    merging = repo.git("merge", "-q", "--no-ff", "--no-commit", "side", check=False)
+    assert merging.returncode == 0, merging.stdout + merging.stderr
+    timeline.commit("merge side, keeping the entry", {"docs/a.md": _collection("n1", "n2")})
+    result = _check(timeline)
+    report = _report(result, "docs/a.md#n1")
+    assert report.answers is not None
+    assert [r["file"] for r in report.answers["revalidations"]] == ["one.yaml"]
+    assert _points(result, "docs/a.md#n1") == [answered]
+    assert result.prunable == ()
 
 
 # --- answered apart --------------------------------------------------------------------
@@ -471,6 +562,28 @@ def test_a_revalidation_that_reads_both_clears_the_debt(timeline: Timeline) -> N
     assert _kinds(result) == []
     assert _points(result) == [cleared]
     assert result.prunable == ("one.yaml", "two.yaml")
+
+
+def test_the_check_parses_each_version_of_an_answer_file_once(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The names history agrees with are read from the versions the points are read from
+    (COR-062 points 5 and 6), so each version is parsed once for both (#2405)."""
+    _apart(timeline)
+    timeline.commit(
+        "judge the combined state",
+        {answer_path("three"): answers(entry(at=T3, read=("one", "two")))},
+    )
+    parsed: list[bytes | None] = []
+    read = af.read_answer_file
+
+    def reading(name: str, raw: bytes | None) -> af.AnswerFile:
+        parsed.append(raw)
+        return read(name, raw)
+
+    monkeypatch.setattr(af, "read_answer_file", reading)
+    assert _kinds(_check(timeline)) == []
+    assert len(parsed) == len(set(parsed)) == 3
 
 
 def test_an_anchor_changed_since_only_one_of_two_apart_is_no_friction(
@@ -543,7 +656,8 @@ def test_a_deferral_in_an_answer_file_covers_its_anchor_until_it_changes_again(
 
     again = timeline.commit("change the CLI again", {"src/cli/main.py": "print('v3')\n"})
     result = _check(timeline)
-    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in result.findings] == [
+    found = without_over_broad(result.findings)
+    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in found] == [
         ("stale", again),
         ("deferred", deferred),
     ]
@@ -573,7 +687,8 @@ def test_a_deferral_moved_out_of_the_block_keeps_its_point(timeline: Timeline) -
         },
     )
     result = _check(timeline)
-    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in result.findings] == [
+    found = without_over_broad(result.findings)
+    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in found] == [
         ("deferred", deferred)
     ]
 
@@ -631,6 +746,7 @@ def test_no_anchor_stands_on_an_answer_file(timeline: Timeline) -> None:
 
 
 def test_no_place_reads_a_file_in_the_answer_folder(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start(
         {f"{FOLDER}/notes.md": document("notes", anchors={"path": ["src/**"]})},
         friction_config(places=("docs", ".pkit/project")),
@@ -753,6 +869,39 @@ def test_validation_says_nothing_without_answer_files(timeline: Timeline) -> Non
     assert _validate(timeline) == []
 
 
+@pytest.mark.parametrize(
+    ("block", "pointer"),
+    [
+        ({"at": T1, "outcome": "unchanged", "because": "the block answers"}, "revalidated"),
+        ({}, None),
+    ],
+    ids=["revalidated", "none"],
+)
+def test_validation_fails_each_answer_left_in_a_block_once_answer_files_exist(
+    timeline: Timeline, block: dict[str, str], pointer: str | None
+) -> None:
+    """Answers live in answer files: one left in an artefact's block fails, naming the
+    move that takes it out (COR-062 points 1, 10 and 11). A block holding none passes."""
+    timeline.start({GUIDE: bare_guide(**block), "docs/plain.md": document("plain")})
+    timeline.adopter.write({answer_path("one"): answers(entry(at=T2))})
+    found = [
+        f
+        for f in fv.validate_friction(timeline.adopter.root).findings
+        if f.kind
+        in (fv.FrictionFindingKind.ANSWER_IN_BLOCK, fv.FrictionFindingKind.ANSWERS_NOT_MOVED)
+    ]
+    if pointer is None:
+        assert found == []
+        return
+    (finding,) = found
+    assert (finding.location, finding.pointer, finding.severity) == (
+        GUIDE,
+        f"/pkit/friction/{pointer}",
+        fv.Severity.ERROR,
+    )
+    assert f"`{pointer}`" in finding.message and af.MOVE_COMMAND in finding.message
+
+
 # --- the machine-readable outputs --------------------------------------------------------
 
 
@@ -784,6 +933,94 @@ def test_the_check_counts_the_files_a_prune_would_remove(timeline: Timeline) -> 
         "files": 2,
         "prunable": ["one.yaml"],
     }
+
+
+# --- what a prune removes (COR-062 point 8) ------------------------------------------------
+
+
+def _prune(timeline: Timeline) -> tuple[tuple[str, ...], dict[str, str]]:
+    """What a prune removes at HEAD, by name, and what it keeps, by name to why — as the
+    whole-repository check counts it, and as `pkit friction prune` plans it."""
+    from project_kit import friction_prune
+
+    plan = friction_prune.plan_prune(timeline.adopter.root)
+    removes = tuple(af.name_of(rel) for rel in plan.remove)
+    assert _check(timeline).prunable == removes
+    return removes, {af.name_of(k.path): k.why for k in plan.kept}
+
+
+def test_a_prune_keeps_a_file_whose_removal_brings_back_an_answer_it_replaced(
+    timeline: Timeline,
+) -> None:
+    """`one` answers the guide and `other`, `two` read it and `three` read only `two`. `one`
+    stays for its live answer on `other`, so removing `two` would bring its answer on the
+    guide back beside `three` (COR-062 point 8, "What stays replaced"): `two` is kept."""
+    other = document("other", anchors={"path": ["src/core/**"]})
+    timeline.start({GUIDE: bare_guide(), "docs/other.md": other})
+    timeline.commit(
+        "answer both",
+        {answer_path("one"): answers(entry(at=T1), entry("docs/other.md", at=T1))},
+    )
+    timeline.commit(
+        "answer the guide",
+        {answer_path("two"): answers(entry(at=T2, because="the CLI moved", read=("one",)))},
+    )
+    timeline.commit(
+        "answer it again, reading two alone",
+        {answer_path("three"): answers(entry(at=T3, because="moved again", read=("two",)))},
+    )
+    removes, kept = _prune(timeline)
+    assert removes == ()
+    assert list(kept) == ["two.yaml"]
+    assert "brings back the answer on docs/guide.md in one.yaml" in kept["two.yaml"]
+
+    # Once an answer that read `one` replaces them, `two` goes, and `three` with it.
+    timeline.commit(
+        "answer, reading all",
+        {
+            answer_path("four"): answers(
+                entry(at="2026-10-04T10:00:00Z", because="all read", read=("one", "two", "three"))
+            )
+        },
+    )
+    assert _prune(timeline) == (("three.yaml", "two.yaml"), {})
+
+
+def test_files_a_prune_removes_together_bring_nothing_back(timeline: Timeline) -> None:
+    """`two` read `one`, and `three` read only `two`: removed together, neither comes back."""
+    timeline.start({GUIDE: bare_guide()})
+    timeline.commit("answer", {answer_path("one"): answers(entry(at=T1))})
+    timeline.commit(
+        "answer again",
+        {answer_path("two"): answers(entry(at=T2, because="the CLI moved", read=("one",)))},
+    )
+    timeline.commit(
+        "and again",
+        {answer_path("three"): answers(entry(at=T3, because="moved again", read=("two",)))},
+    )
+    assert _prune(timeline) == (("one.yaml", "two.yaml"), {})
+
+
+def test_a_prune_keeps_a_file_a_live_deferral_keeps_its_point_from(timeline: Timeline) -> None:
+    """`two`'s deferral replaces `one`'s and keeps its point (COR-062 point 6). Without
+    `one`, it would start a point of its own, covering the CLI's change between them, so
+    `one` is kept and the change stays friction."""
+    timeline.start({GUIDE: bare_guide()})
+    timeline.commit("defer", {answer_path("one"): answers(entry(deferred=((CLI, "until #1"),)))})
+    changed = timeline.commit("change the CLI", {"src/cli/main.py": "print('v2')\n"})
+    timeline.commit(
+        "reword",
+        {answer_path("two"): answers(entry(read=("one",), deferred=((CLI, "until #2"),)))},
+    )
+    removes, kept = _prune(timeline)
+    assert removes == ()
+    assert list(kept) == ["one.yaml"] and "keeps its point from it" in kept["one.yaml"]
+    stale = [
+        f.origin.sha if f.origin else None
+        for f in _check(timeline).findings
+        if f.location == GUIDE and f.kind is fr.RepositoryFindingKind.STALE
+    ]
+    assert stale == [changed]
 
 
 def test_the_data_binding_never_claims_an_answer_file(timeline: Timeline) -> None:

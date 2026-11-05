@@ -78,6 +78,79 @@ privileges:
     recognize:
       bash:
         - cmd: pkit
+  text-filter:
+    description: >-
+      The read-only part of the text-processing shell tier: programs whose only
+      effect is their standard output, which write no file, reach no network,
+      run no other program and change no shell state, so a pipe or chain of
+      them with other granted programs needs no prompt. Each is recognized by a
+      pattern that names it, which the projection does not render as a native
+      rule, so only the hook realizes it (ADR-005 point 5). It carries no path
+      scope, since a scope on a shell read confines nothing (ADR-004). `sort`,
+      `uniq` and `diff` are recognized only in a form that writes no file and
+      runs no other program, holding no pathname pattern that could expand to
+      such a form.
+    recognize:
+      bash:
+        - pattern: '^cat(\s|$)'
+        - pattern: '^head(\s|$)'
+        - pattern: '^tail(\s|$)'
+        - pattern: '^wc(\s|$)'
+        - pattern: '^cut(\s|$)'
+        - pattern: '^tr(\s|$)'
+        - pattern: '^grep(\s|$)'
+        - pattern: '^egrep(\s|$)'
+        - pattern: '^fgrep(\s|$)'
+        - pattern: '^ls(\s|$)'
+        - pattern: '^cmp(\s|$)'
+        - pattern: '^comm(\s|$)'
+        - pattern: '^paste(\s|$)'
+        - pattern: '^basename(\s|$)'
+        - pattern: '^dirname(\s|$)'
+        - pattern: '^realpath(\s|$)'
+        - pattern: '^pwd(\s|$)'
+        - pattern: '^true(\s|$)'
+        - pattern: '^false(\s|$)'
+        - pattern: '^seq(\s|$)'
+        - pattern: '^sleep(\s|$)'
+        - pattern: '^stat(\s|$)'
+        - pattern: '^du(\s|$)'
+        - pattern: '^which(\s|$)'
+        # A word holding a pathname pattern or a brace, which the shell may
+        # expand to a form these three exclude (`-*` to a file named `-ofile`,
+        # or `{-}o` to `-o` under zsh's BRACE_CCL), keeps each of them out.
+        #
+        # `sort` with no word that opens an output file or a compress program,
+        # in any form GNU or BSD sort reads: `-o` or a short bundle holding it
+        # (`-ro`, `-oout`), and a long option cut to a prefix of `--output` or
+        # `--compress-program` (`--o`, `--co`), with or without `=`. `-T` and
+        # `--temporary-directory` (`--t`), which say where its temporary files
+        # go, stay out too. It errs narrow: `-to` and `--check` stay out.
+        - pattern: '^sort(\s|$)(?!(?:.*\s)?(?:-[^-\s]*[oT]|--[cot]))(?!.*[*?\[^#~{])'
+        # `uniq` with its options first, then at most one operand, the input,
+        # and nothing after it: a second operand is the output file. `-` and
+        # `--` are no options here, and a word the shell may expand to two
+        # operands matches no part, so a form whose operands the regex cannot
+        # count stays out.
+        - pattern: '^uniq(?:\s(?:-[^-\s*?\[^#~{][^\s*?\[^#~{]*|--[^\s*?\[^#~{]+))*(?:\s[^-\s*?\[^#~{][^\s*?\[^#~{]*)?$'
+        # `diff` with no word that pipes its output through `pr`: `-l` or a
+        # short bundle holding it, and a long option cut to a prefix of
+        # `--paginate` (`--p`). It errs narrow: `--palette` and a label holding
+        # an `l` stay out too.
+        - pattern: '^diff(\s|$)(?!(?:.*\s)?(?:-[^-\s]*l|--p))(?!.*[*?\[^#~{])'
+  uv-run:
+    description: >-
+      Run a program in the project's Python environment through `uv run`, such
+      as `uv run pytest`. `uv run` runs any program it is given and confines
+      nothing, so a grant allows whatever that program does. A deny reads the
+      command as the wrapper, `uv`, never as the program behind it (ADR-025
+      point 5), so no guardrail reaches `uv run rm -rf ~` (#1990). No shipped
+      profile grants it (ADR-005 point 5): a project may grant it in its
+      `grants.yaml`.
+    recognize:
+      bash:
+        - cmd: uv
+          subcommand: [run]
   docker:
     description: Run docker / docker-compose.
     recognize:
@@ -129,17 +202,28 @@ privileges:
     guardrail: true
     recognize:
       bash:
-        # Recursive rm in ANY form: -r, -R, --recursive[=...], or a short bundle
-        # containing r/R (-rf, -fr, -fR, -Rf, -rfv, ...). A flag_any token list
-        # can't express bundles or `--recursive=`, so this uses the regex escape
-        # hatch. Bare `rm` / `rm -f <file>` (single-file, non-recursive) is
-        # intentionally NOT a guardrail — that is fs-cleanup territory.
-        - pattern: '^rm(?=\s).*(\s-[a-zA-Z]*[rR][a-zA-Z]*(\s|$)|\s--recursive)'
+        # Recursive rm in ANY form: -r, -R, --recursive[=...] or a prefix of it
+        # down to --r, which GNU rm reads as --recursive, or a short bundle
+        # containing r/R (-rf, -fr, -fR, -Rf, -rfv, ...). The regex escape
+        # hatch spells these forms itself: the decision core reads a regex's
+        # flags as written. Bare `rm` / `rm -f <file>` (single-file,
+        # non-recursive) is intentionally NOT a guardrail — that is fs-cleanup
+        # territory.
+        - pattern: '^rm(?=\s).*(\s-[a-zA-Z]*[rR][a-zA-Z]*(\s|$)|\s--r(e|ec|ecu|ecur|ecurs|ecursi|ecursiv|ecursive)?(=|\s|$))'
   vcs-history-rewrite:
     description: Rewriting published git history (force-push).
     guardrail: true
     recognize:
       bash:
+        # For a deny, the decision core reads these flags in the forms git
+        # reads them: inside a bundle (-uf), cut to a prefix (--force-w), and
+        # with a value after `=` (--force-with-lease=main). --mirror
+        # force-updates every ref the remote holds.
         - cmd: git
           subcommand: [push]
-          flag_any: ["--force", "-f", "--force-with-lease"]
+          flag_any: ["--force", "-f", "--force-with-lease", "--mirror"]
+        # A refspec opening with `+` forces the update of its ref, as
+        # `git push origin +main` does without --force.
+        - cmd: git
+          subcommand: [push]
+          word_prefix_any: ["+"]

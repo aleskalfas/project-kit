@@ -34,14 +34,21 @@ a `commands:` leaf:
   file entering the answer, a repointed mapping whose file the answer names —
   and what it cannot, pinned as a stated limit: a file leaving the answer;
 - a resolver's script is provisioned as a validator's is.
+
+The repository's install is committed once per session (`committed_adopter`). Each
+resolver the runner starts runs in the test's own process, its script still found
+through the runner's one lookup (`tests/in_process.py`, `start_in_process`). A test
+marked `process` starts it as a process: the resolver's end-to-end tests, and those
+whose point is what only a process meets, a bound or a value the system cannot pass.
 """
 
 from __future__ import annotations
 
 import json
-import re
 import shutil
-from collections.abc import Callable
+import sys
+import textwrap
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -57,9 +64,29 @@ from project_kit import friction_validate as fv
 from project_kit import friction_write as fw
 from project_kit.cli import main
 from project_kit.manifest import read_backbone_manifest, write_backbone_manifest
-from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo
 from tests.anchor_kind_capabilities import ASKED, HANGING, RESOLVER, RESOLVING, register_kinds
-from tests.friction_documents import CONFIG, SOURCE, T1, T2, document, friction_config, guide
+from tests.friction_documents import (
+    CONFIG,
+    SOURCE,
+    T1,
+    T2,
+    blocks_in_history,
+    document,
+    friction_config,
+    guide,
+    own_entry,
+    without_over_broad,
+)
+from tests.in_process import MARK, start_in_process
+from tests.shipped_rule_sets import own
+
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
+
+#: Why a test whose point is the bound keeps the resolver's process.
+BOUNDED = "a resolver stopped at its bound: only a process is bounded"
 
 # One whose source may be kept in two files: `sources/<value>.md` and an annex.
 SEVERAL = (
@@ -94,8 +121,31 @@ CAPTURED = {"sources/iso-8601.md": "ISO 8601, as captured.\n"}
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    return make_adopter_repo()
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    return committed_adopter
+
+
+@pytest.fixture(autouse=True)
+def resolvers_started(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> list[Path]:
+    """The resolver scripts the backbone's runner starts, each run in this process
+    (`start_in_process`), but in a test that keeps its process. No bytecode is written,
+    so no cache folder lands beside a script in the repository a check lists."""
+    monkeypatch.setattr(sys, "dont_write_bytecode", True)
+    if request.node.get_closest_marker(MARK) is not None:
+        return []
+    return start_in_process(monkeypatch)
+
+
+def _main(body: str) -> str:
+    """A resolver's script `body` as a `main`, which the runner's start calls in this
+    process (`start_in_process`), and which a process of the script runs too."""
+    return (
+        "def main():\n"
+        + textwrap.indent(body, "    ")
+        + '\n\nif __name__ == "__main__":\n    main()\n'
+    )
 
 
 @pytest.fixture
@@ -107,16 +157,19 @@ def asked(monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFact
 
 
 def _start(adopter: AdopterRepo, files: dict[str, str], config: str | None = None) -> None:
-    """Commit the base state on `main` (the install and the fixture capability
-    included) and branch `feature` off it."""
+    """Commit the base state on `main`, the fixture capability included, on the install
+    the template committed (`commit_install`), and branch `feature` off it."""
     adopter.write({CONFIG: config or friction_config(), **SOURCE, **files})
     adopter.commit("base", files=None)
     adopter.checkout("feature", create=True)
 
 
 def _sources(adopter: AdopterRepo, script_body: str = RESOLVING) -> None:
-    """The fixture capability `sources`, registering the kind `source` with its resolver."""
-    register_kinds(adopter.root, "sources", kinds={"source": "resolve"}, script_body=script_body)
+    """The fixture capability `sources`, registering the kind `source` with its resolver,
+    whose script is `script_body` as a `main` (`_main`)."""
+    register_kinds(
+        adopter.root, "sources", kinds={"source": "resolve"}, script_body=_main(script_body)
+    )
 
 
 def _of_anchor(findings: tuple[fc.Finding, ...], anchor: fd.Anchor) -> list[fc.Finding]:
@@ -189,7 +242,7 @@ def test_the_packages_member_reports_a_resolver_without_the_declaration(
 
 
 def test_the_change_check_refuses_an_undeclared_resolver_it_reads_from_the_package(
-    repo: AdopterRepo,
+    repo: AdopterRepo, resolvers_started: list[Path]
 ) -> None:
     """The registry is read from package metadata, not handed in: the engine's
     refusal of a resolver without the declaration is reached from the key."""
@@ -198,7 +251,7 @@ def test_the_change_check_refuses_an_undeclared_resolver_it_reads_from_the_packa
         "sources",
         kinds={"source": "resolve"},
         contract=False,
-        script_body="raise SystemExit('a refused resolver is never started')\n",
+        script_body=_main("raise SystemExit('a refused resolver is never started')\n"),
     )
     _start(repo, {"docs/guide.md": guide()})
     repo.commit(
@@ -213,12 +266,16 @@ def test_the_change_check_refuses_an_undeclared_resolver_it_reads_from_the_packa
         "contract" in refused.message
     )
     assert "never started" not in refused.message
-    assert result.failing
+    assert result.failing and resolvers_started == []
 
 
 # --- a registered resolver, run under the query policy ------------------------------------
 
 
+@pytest.mark.process(
+    "the resolver's end-to-end test through the change check: a process the runner starts "
+    "under the query policy, the base override removed from its environment"
+)
 def test_the_change_check_asks_when_a_file_the_resolver_answers_changed(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -240,6 +297,10 @@ def test_the_change_check_asks_when_a_file_the_resolver_answers_changed(
     assert result.failing
 
 
+@pytest.mark.process(
+    "the resolver's end-to-end test through the whole-repository check: a process the "
+    "runner starts, its answer read against HEAD's files"
+)
 def test_the_whole_repository_check_finds_the_anchor_stale_after_its_file_changed(
     repo: AdopterRepo,
 ) -> None:
@@ -247,12 +308,12 @@ def test_the_whole_repository_check_finds_the_anchor_stale_after_its_file_change
     _start(repo, {"docs/guide.md": guide(anchors=SOURCE_ANCHORS), **CAPTURED})
     current = fr.run_repository_check(repo.root)
     assert [r.state for r in current.artefact_reports] == [fr.ArtefactState.CURRENT]
-    assert [f for f in current.findings if f.anchor == SOURCE_ANCHOR] == []
+    assert [f for f in without_over_broad(current.findings) if f.anchor == SOURCE_ANCHOR] == []
 
     changed = repo.commit("the standard is captured anew", {"sources/iso-8601.md": "2019.\n"})
     stale = fr.run_repository_check(repo.root)
     assert [r.state for r in stale.artefact_reports] == [fr.ArtefactState.STALE]
-    [finding] = [f for f in stale.findings if f.anchor == SOURCE_ANCHOR]
+    [finding] = [f for f in without_over_broad(stale.findings) if f.anchor == SOURCE_ANCHOR]
     assert finding.kind is fr.RepositoryFindingKind.STALE
     assert finding.origin is not None and finding.origin.sha == changed
 
@@ -272,6 +333,60 @@ def test_a_resolver_runs_once_per_anchor_value_for_a_run(repo: AdopterRepo, aske
     )
     fr.run_repository_check(repo.root)
     assert sorted(asked.read_text(encoding="utf-8").split()) == ["iso-8601", "rfc-3339"]
+
+
+def test_a_slow_reading_of_history_leaves_no_registered_anchor_without_an_answer(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A filler reads the whole-repository check inside a run of its own, so the check's
+    resolvers have only the time that run has left (ADR-057 point 3; #2405). The check
+    and the explanation ask them before reading history, so a reading that takes all of
+    that time leaves the anchor answered and its artefact judged."""
+    _sources(repo)
+    _start(repo, {"docs/guide.md": guide(anchors=SOURCE_ANCHORS), **CAPTURED})
+    spent = _no_time_left_once_history_is_read(monkeypatch)
+
+    whole = fr.run_repository_check(repo.root)
+    assert spent, "the check read history"
+    assert [f for f in without_over_broad(whole.findings) if f.anchor == SOURCE_ANCHOR] == []
+    assert [r.state for r in whole.artefact_reports] == [fr.ArtefactState.CURRENT]
+
+    spent.clear()
+    explained = CliRunner().invoke(main, ["friction", "explain", "docs/guide.md", "--json"])
+    assert explained.exit_code == 0, explained.output
+    assert spent, "the explanation read history"
+    explanation = json.loads(explained.output)
+    assert explanation["state"] == "current"
+    assert {a["kind"]: a["state"] for a in explanation["anchors"]} == {
+        "path": "current",
+        "source": "current",
+    }
+
+
+def _no_time_left_once_history_is_read(monkeypatch: pytest.MonkeyPatch) -> list[bool]:
+    """Make reading history take all the time a run has left, as a slow reading on a busy
+    machine does: a command the runner starts after it is not started, as `run_command`
+    answers inside a run with no time left. Returns the flag that says the time is spent,
+    for a test to clear before another run."""
+    spent: list[bool] = []
+    read_history = fr.read_history
+    start = command_runner.run_command
+
+    def reading(*args: Any, **kwargs: Any) -> Any:
+        history = read_history(*args, **kwargs)
+        spent.append(True)
+        return history
+
+    def starting(script: Path, args: Sequence[str], **options: Any) -> command_runner.CommandRun:
+        if spent:
+            return command_runner.CommandRun(
+                command_runner.Ending.NOT_STARTED, 0, detail=command_runner.NO_TIME_LEFT
+            )
+        return start(script, args, **options)
+
+    monkeypatch.setattr(fr, "read_history", reading)
+    monkeypatch.setattr(command_runner, "run_command", starting)
+    return spent
 
 
 def test_an_answer_naming_no_file_makes_the_anchor_dead_for_the_whole_repository_check(
@@ -294,14 +409,16 @@ def test_a_dead_registered_anchor_leaves_the_artefact_judged_on_its_other_anchor
     _sources(repo)
     _start(repo, {"docs/guide.md": guide(anchors={"path": ["src/cli/**"], "source": ["iso-9999"]})})
     current = fr.run_repository_check(repo.root)
-    assert [(f.kind, f.anchor) for f in current.findings if f.anchor is not None] == [
+    found = without_over_broad(current.findings)
+    assert [(f.kind, f.anchor) for f in found if f.anchor is not None] == [
         (fr.RepositoryFindingKind.DEAD_ANCHOR, DEAD_SOURCE)
     ]
     assert [r.state for r in current.artefact_reports] == [fr.ArtefactState.CURRENT]
 
     repo.commit("the CLI changes", {"src/cli/main.py": "print('cli, changed')\n"})
     stale = fr.run_repository_check(repo.root)
-    assert {(f.kind, f.anchor) for f in stale.findings if f.anchor is not None} == {
+    found = without_over_broad(stale.findings)
+    assert {(f.kind, f.anchor) for f in found if f.anchor is not None} == {
         (fr.RepositoryFindingKind.DEAD_ANCHOR, DEAD_SOURCE),
         (fr.RepositoryFindingKind.STALE, fd.Anchor("path", "src/cli/**")),
     }
@@ -378,6 +495,7 @@ def test_a_change_that_adds_a_dead_anchor_fails(repo: AdopterRepo) -> None:
 
 # Serial: the bound is one second, which a machine busy with other test workers misses.
 @pytest.mark.serial
+@pytest.mark.process(BOUNDED)
 @pytest.mark.parametrize(("mode", "exit_code"), [("enforcing", 1), ("warning", 0)])
 def test_a_resolver_that_gives_no_answer_fails_the_change_check_in_enforcing_mode_alone(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch, mode: str, exit_code: int
@@ -524,7 +642,7 @@ def test_a_registered_anchor_on_a_placed_file_stands_on_its_content(repo: Adopte
     repo.commit("edit the notes", {notes: noted(at=T2, body="Edited.")})
     [asked] = _of_anchor(fc.run_change_check(repo.root, "main").findings, SOURCE_ANCHOR)
     assert asked.message.startswith(f"changed in this diff ({notes})")
-    whole = fr.run_repository_check(repo.root).findings
+    whole = without_over_broad(fr.run_repository_check(repo.root).findings)
     [stale] = [f for f in whole if f.anchor == SOURCE_ANCHOR]
     assert stale.kind is fr.RepositoryFindingKind.STALE
 
@@ -551,12 +669,13 @@ def test_a_registered_file_moved_out_of_a_place_is_read_one_way_since_the_point(
     held = noted(at=T2, outcome="unchanged", because="the engine is still one module")
     contained = repo.commit("the notes revalidated, their content as it was", {"notes/x.md": held})
     edited = repo.commit("edit the notes", {"notes/x.md": noted(at=T2, body="Edited.")})
-    [stale] = [f for f in fr.run_repository_check(repo.root).findings if f.anchor == SOURCE_ANCHOR]
+    found = without_over_broad(fr.run_repository_check(repo.root).findings)
+    [stale] = [f for f in found if f.anchor == SOURCE_ANCHOR]
     assert stale.origin is not None and stale.origin.sha == edited
 
     deferring = guide(anchors=anchors, deferred=[("source", "iso-8601", "rewrite after #1")])
     repo.commit("defer the guide's source", {"docs/guide.md": deferring})
-    explained = frep.run_explain(repo.root, "docs/guide.md").findings
+    explained = without_over_broad(frep.run_explain(repo.root, "docs/guide.md").findings)
     [behind] = [f for f in explained if f.finding.anchor == SOURCE_ANCHOR]
     listed = [c.commit.sha for c in behind.commits]
     assert edited in listed and contained not in listed
@@ -589,6 +708,9 @@ def test_a_value_is_never_read_as_an_option(repo: AdopterRepo, asked: Path, valu
     assert asked.read_text(encoding="utf-8").splitlines() == [value]
 
 
+@pytest.mark.process(
+    "a value holding a NUL byte, which the system refuses to pass to a process it starts"
+)
 def test_a_value_the_system_cannot_pass_is_no_answer(repo: AdopterRepo, asked: Path) -> None:
     _sources(repo)
     resolution = _kinds(repo).resolve(fd.Anchor("source", "iso\x008601"))
@@ -614,6 +736,7 @@ def test_a_command_naming_no_leaf_says_so_before_the_declaration_is_looked_for(
 
 # Serial: the bound is one second, which a machine busy with other test workers misses.
 @pytest.mark.serial
+@pytest.mark.process(BOUNDED)
 def test_a_resolver_that_overran_its_bound_is_not_started_again_in_the_run(
     repo: AdopterRepo, asked: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -668,7 +791,7 @@ def test_the_whole_repository_readers_read_head_s_registrations_never_the_workin
 
     whole = fr.run_repository_check(repo.root)
     assert [r.state for r in whole.artefact_reports] == [fr.ArtefactState.CURRENT]
-    assert [f for f in whole.findings if f.anchor == SOURCE_ANCHOR] == []
+    assert [f for f in without_over_broad(whole.findings) if f.anchor == SOURCE_ANCHOR] == []
     explained = CliRunner().invoke(main, ["friction", "explain", "docs/guide.md", "--json"])
     assert explained.exit_code == 0, explained.output
     assert json.loads(explained.output)["state"] == "current"
@@ -683,7 +806,7 @@ def test_a_link_the_repository_holds_is_a_file_of_the_answer(repo: AdopterRepo) 
     _start(repo, {})
     assert _kinds(repo).resolve(SOURCE_ANCHOR).paths == ("sources/iso-8601.md",)
     whole = fr.run_repository_check(repo.root)
-    assert [f for f in whole.findings if f.anchor == SOURCE_ANCHOR] == []
+    assert [f for f in without_over_broad(whole.findings) if f.anchor == SOURCE_ANCHOR] == []
 
 
 # --- no answer: the anchor is unresolved, the page flagged, never passed ------------------
@@ -698,6 +821,10 @@ ANSWERING = "import json\nprint(json.dumps({!r}))\n"
             "import sys\nsys.stderr.write('the capture index is missing\\n')\nsys.exit(3)\n",
             "command 'resolve' exited 3: the capture index is missing",
             id="non-zero-exit",
+            marks=pytest.mark.process(
+                "the no-answer end to end: a resolver's exit status and standard error, read "
+                "from its process, carried through both checks and `explain`"
+            ),
         ),
         pytest.param(
             "print('sources/iso-8601.md')\n",
@@ -759,6 +886,7 @@ def test_a_resolver_that_gives_no_answer_leaves_the_anchor_unresolved(
 
 # Serial: the bound is one second, which a machine busy with other test workers misses.
 @pytest.mark.serial
+@pytest.mark.process(BOUNDED)
 def test_a_resolver_that_overruns_its_bound_gives_no_answer(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -786,7 +914,7 @@ def _assert_unresolved(repo: AdopterRepo, said: str) -> None:
     assert unresolved in result.failing
 
     whole = fr.run_repository_check(repo.root)
-    [reported] = [f for f in whole.findings if f.anchor == SOURCE_ANCHOR]
+    [reported] = [f for f in without_over_broad(whole.findings) if f.anchor == SOURCE_ANCHOR]
     assert reported.kind is fr.RepositoryFindingKind.NO_ANSWER
     assert said in reported.message
     # The artefact is not judged: its state says so, and is never current.
@@ -842,7 +970,7 @@ def test_an_artefact_with_an_unresolved_anchor_is_counted_unresolved_never_curre
     assert states == {"docs/guide.md": "unresolved", "docs/other.md": "current"}
     # Unresolved wins over stale, and what its other anchors owe is still listed.
     found = [(f["kind"], f["anchor"]["kind"]) for f in report["findings"]]
-    assert found == [("stale", "path"), (kind, "source")]
+    assert [f for f in found if f[0] != "over-broad"] == [("stale", "path"), (kind, "source")]
     assert report["counts"][kind] == 1
     assert report["findings"][0]["origin"]["commit"] == changed
 
@@ -906,7 +1034,7 @@ def test_the_file_a_resolver_names_is_followed_through_a_rename(repo: AdopterRep
     changed = repo.commit("redraft the standard", {"drafts/iso-8601.md": "Redrafted.\n"})
     repo.rename("drafts/iso-8601.md", "sources/iso-8601.md")
     stale = fr.run_repository_check(repo.root)
-    [finding] = [f for f in stale.findings if f.anchor == SOURCE_ANCHOR]
+    [finding] = [f for f in without_over_broad(stale.findings) if f.anchor == SOURCE_ANCHOR]
     assert finding.kind is fr.RepositoryFindingKind.STALE
     assert finding.origin is not None and finding.origin.sha == changed
 
@@ -921,7 +1049,7 @@ def test_a_file_that_enters_the_answer_asks_the_artefact(repo: AdopterRepo) -> N
     assert asked.kind is fc.FindingKind.FRICTION
     assert asked.message.startswith("changed in this diff (sources/iso-8601-annex.md)")
     whole = fr.run_repository_check(repo.root)
-    [stale] = [f for f in whole.findings if f.anchor == SOURCE_ANCHOR]
+    [stale] = [f for f in without_over_broad(whole.findings) if f.anchor == SOURCE_ANCHOR]
     assert stale.kind is fr.RepositoryFindingKind.STALE
     assert stale.origin is not None and stale.origin.sha == added
 
@@ -939,7 +1067,7 @@ def test_a_file_that_leaves_the_answer_is_not_seen(repo: AdopterRepo) -> None:
 
     assert _of_anchor(fc.run_change_check(repo.root, "main").findings, SOURCE_ANCHOR) == []
     whole = fr.run_repository_check(repo.root)
-    assert [f for f in whole.findings if f.anchor == SOURCE_ANCHOR] == []
+    assert [f for f in without_over_broad(whole.findings) if f.anchor == SOURCE_ANCHOR] == []
     assert [r.state for r in whole.artefact_reports] == [fr.ArtefactState.CURRENT]
 
 
@@ -967,39 +1095,78 @@ def test_a_repointed_mapping_asks_the_artefact_when_the_answer_names_the_mapping
     assert asked.kind is fc.FindingKind.FRICTION
     assert asked.message.startswith("changed in this diff (sources/index.json)")
     whole = fr.run_repository_check(repo.root)
-    [stale] = [f for f in whole.findings if f.anchor == SOURCE_ANCHOR]
+    [stale] = [f for f in without_over_broad(whole.findings) if f.anchor == SOURCE_ANCHOR]
     assert stale.kind is fr.RepositoryFindingKind.STALE
     assert stale.origin is not None and stale.origin.sha == repointed
 
 
-def test_an_anchor_whose_resolver_names_most_of_the_tracked_files_is_over_broad(
-    repo: AdopterRepo,
+def test_an_anchor_whose_resolver_names_a_file_most_changes_edit_is_over_broad(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The over-broad rule is not a kind's (COR-050 point 7)."""
-    _sources(repo, EVERYTHING)
-    _start(repo, {"docs/guide.md": guide(anchors=SOURCE_ANCHORS)})
+    """The over-broad rule is not a kind's (COR-050 point 7; ADR-080 point 1): over a window
+    as long as the line, the file the resolver names flagged the guide in the base and in
+    each of two edits, 3 of 3 commits, more than half."""
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 3)
+    _sources(repo)
+    _start(repo, {"docs/guide.md": guide(anchors=SOURCE_ANCHORS), **CAPTURED})
+    for edit in (1, 2):
+        repo.commit(f"recapture {edit}", {"sources/iso-8601.md": f"ISO 8601, edit {edit}.\n"})
     result = fr.run_repository_check(repo.root)
     [broad] = [f for f in result.findings if f.kind is fr.RepositoryFindingKind.OVER_BROAD]
     assert broad.anchor == SOURCE_ANCHOR
-    assert broad.message.startswith("stands on ") and "tracked files (100%)" in broad.message
-    assert broad.message.endswith("have its resolver name less, or anchor to a narrower value")
+    assert broad.message.startswith(
+        "flagged its artefact in 3 of the last 3 commits on the first-parent line, more than"
+    )
+    assert broad.message.endswith(
+        "anchor a narrower value of its kind, one its resolver names less for"
+    )
 
 
-def test_the_over_broad_share_counts_the_named_files_exclusions_leave_in(
-    repo: AdopterRepo,
+def test_a_single_file_where_a_kind_is_registered_is_offered_a_kind_or_a_split(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The share's whole is the tracked files `friction.exclude` leaves in, and the files a
-    resolver names are counted among them: one naming every file stands on all of them,
-    100%, never more."""
-    _sources(repo, EVERYTHING)
-    vendored = {f"vendor/lib{n}.py": f"N = {n}\n" for n in range(3)}
-    files = {"docs/guide.md": guide(anchors=SOURCE_ANCHORS), **vendored}
-    _start(repo, files, friction_config(exclude=["vendor"]))
+    """A path anchor on one code file, over-broad where a kind is registered: the message
+    suggests a narrower value of a registered kind, and, where none names a part of the
+    file, removing the anchor or splitting the file or the artefact (ADR-080 point 3)."""
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 2)  # as long as the line
+    _sources(repo)
+    _start(repo, {"docs/guide.md": guide(anchors={"path": ["src/cli/main.py"]}), **CAPTURED})
+    repo.commit("change the CLI", {"src/cli/main.py": "print('cli v2')\n"})
     result = fr.run_repository_check(repo.root)
     [broad] = [f for f in result.findings if f.kind is fr.RepositoryFindingKind.OVER_BROAD]
-    counted = re.match(r"stands on (\d+) of (\d+) tracked files \(100%\)", broad.message)
-    assert counted is not None, broad.message
-    assert counted[1] == counted[2]
+    assert broad.message.endswith(
+        "anchor a narrower value of a registered kind, where one names a part of the file the "
+        "artefact rests on; where none does, remove it unless the artefact rests on all of it, "
+        "or split what it stands on into parts an anchor can name, or the artefact into parts "
+        "that each rest on less"
+    )
+
+
+def test_the_count_leaves_out_the_artefact_s_own_file_among_those_the_resolver_names(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A resolver naming every tracked file names the guide's own: its edits flag nothing,
+    as a change under an artefact's own names is never an anchor's. A bar of nothing
+    names every anchor that flagged its artefact at all, with its count."""
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 4)  # as long as the line
+    monkeypatch.setattr(fr, "OVER_BROAD_SHARE", 0.0)
+    _sources(repo, EVERYTHING)
+    _start(repo, {"docs/guide.md": guide(anchors=SOURCE_ANCHORS)})
+    for edit in (1, 2):
+        repo.commit(
+            f"edit the guide {edit}",
+            {"docs/guide.md": guide(anchors=SOURCE_ANCHORS, body=f"Edit {edit}.")},
+        )
+    repo.commit("change the CLI", {"src/cli/main.py": "print('cli v2')\n"})
+    result = fr.run_repository_check(repo.root)
+    [broad] = [
+        f
+        for f in result.findings
+        if f.kind is fr.RepositoryFindingKind.OVER_BROAD and f.anchor == SOURCE_ANCHOR
+    ]
+    assert broad.message.startswith(
+        "flagged its artefact in 2 of the last 4 commits on the first-parent line"
+    )
 
 
 # --- validation and the writers admit an anchor of any kind a word names ---------------------
@@ -1098,14 +1265,17 @@ def test_a_deferral_of_a_registered_kind_validates_and_one_naming_no_anchor_dang
     _start(repo, {"docs/guide.md": deferred, **CAPTURED})
     assert fv.validate_friction(repo.root).findings == ()
 
+    # Left in a block, as history before the move holds it, the dangling deferral is judged
+    # there, beside the block's own failure (COR-062 point 10).
     dangling = guide(anchors=SOURCE_ANCHORS, deferred=[("source", "iso-9999", "no such anchor")])
-    repo.write({"docs/guide.md": dangling})
-    [error] = fv.validate_friction(repo.root).errors
-    assert error.kind is fv.FrictionFindingKind.DANGLING_DEFERRAL
+    with blocks_in_history():
+        repo.write({"docs/guide.md": dangling})
+    errors = fv.validate_friction(repo.root).errors
+    [error] = [e for e in errors if e.kind is fv.FrictionFindingKind.DANGLING_DEFERRAL]
     assert "deferral names source anchor 'iso-9999'" in error.message
 
 
-def test_the_writers_write_a_block_carrying_an_anchor_of_a_registered_kind(
+def test_the_writers_answer_an_artefact_carrying_an_anchor_of_a_registered_kind(
     repo: AdopterRepo,
 ) -> None:
     _sources(repo)
@@ -1117,15 +1287,18 @@ def test_the_writers_write_a_block_carrying_an_anchor_of_a_registered_kind(
         return result.output
 
     def block() -> dict[str, Any]:
-        [artefact] = fd.discover_artefacts(repo.root).artefacts
+        [artefact] = own(fd.discover_artefacts(repo.root).artefacts)
         return artefact.friction
 
+    def answers() -> dict[str, Any]:
+        return own_entry(repo.root, "docs/guide.md")
+
     friction("revalidate", "docs/guide.md", "--outcome", "unchanged", "--because", "still ISO 8601")
-    assert block()["revalidated"]["unchanged-because"] == "still ISO 8601"
+    assert answers()["revalidated"]["unchanged-because"] == "still ISO 8601"
     friction(
         "defer", "docs/guide.md", "--anchor", "source:iso-8601", "--reason", "the 2019 edition"
     )
-    assert block()["revalidated"]["deferred"] == [
+    assert answers()["revalidated"]["deferred"] == [
         {"anchor": {"kind": "source", "value": "iso-8601"}, "reason": "the 2019 edition"}
     ]
     head = repo.commit("revalidate and defer", files=None)
@@ -1134,14 +1307,13 @@ def test_the_writers_write_a_block_carrying_an_anchor_of_a_registered_kind(
     assert fv.validate_friction(repo.root).findings == ()
 
 
-def test_a_writer_writes_a_block_whose_kind_nothing_resolves(repo: AdopterRepo) -> None:
+def test_a_writer_answers_an_artefact_whose_kind_nothing_resolves(repo: AdopterRepo) -> None:
     """The report is no refusal: with the capability uninstalled the artefact can still
     be revalidated — to drop the anchor, say."""
     _start(repo, {"docs/guide.md": guide(anchors=SOURCE_ANCHORS), **CAPTURED})
     fw.write(fw.plan_revalidate(repo.root, "guide", outcome="unchanged", because="as before"))
-    [artefact] = fd.discover_artefacts(repo.root).artefacts
-    assert artefact.revalidated is not None
-    assert artefact.revalidated["unchanged-because"] == "as before"
+    revalidated = own_entry(repo.root, "docs/guide.md")["revalidated"]
+    assert revalidated["unchanged-because"] == "as before"
 
 
 # --- provisioning ---------------------------------------------------------------------------

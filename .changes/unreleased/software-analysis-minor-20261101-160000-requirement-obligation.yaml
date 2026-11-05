@@ -1,0 +1,28 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  Each requirement carries `obligation`, a fingerprint of its statement, its
+  measure and where it holds, as software-analysis DEC-006 points 6 and 7
+  decide (#2068). It reads `v1:sha256:<digest>`, the version of the form its
+  texts are read in, the hash, then the digest. The form sets aside comments,
+  the marks of emphasis Markdown finds, wrapping and each derived link the
+  requirement's place declares, and counts every word, its case and its
+  punctuation, and every other mark. A text reads the same in front matter and
+  in the body, so moving the texts later changes no fingerprint. The new
+  command `pkit analysis obligation [<REQ-id>...] [--dry-run] [--json]` writes
+  it where a requirement holds none or one that no longer matches its texts,
+  and the stamp writes it on each requirement it stamps. Whatever any rule's
+  status, `pkit analysis validate` fails a requirement, withdrawn or not,
+  whose field is missing, is no fingerprint, names a version this release does
+  not read, or no longer matches its texts, and names the command. So each
+  edit of a requirement's texts runs the command, as an edit that names a
+  term runs `pkit analysis link`. The upgrade's migration writes the field on
+  each requirement your analysis holds, from the command's `--dry-run --json`
+  plan; where it cannot read the plan, it warns, and the check names the
+  command. Adding the field changes each requirement's content, so the
+  change that commits the upgrade flags what anchors each requirement, such
+  as the use cases and journeys that list it: answer each, as `pkit friction
+  check` lists them. A requirement's revisits still fire on its statement,
+  its measure and where it holds; a later release moves them to the field.

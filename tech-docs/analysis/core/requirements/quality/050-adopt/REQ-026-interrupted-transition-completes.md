@@ -3,8 +3,9 @@ id: REQ-026
 title: An interrupted version transition never reads as finished, and the next one completes it
 status: active
 statement: A version transition that stops before its end never reads as finished, and the next transition completes it.
-measure: A transition of the backbone that stops at any step leaves `completed_version` missing, or unequal to `backbone_version`, and status shows the transition incomplete. A transition of one capability that stops leaves the capability's manifest at the version it held. The next transition runs each migration from the recorded completion or version. Where no completion is recorded, it runs every backbone migration once.
+measure: A version transition of the backbone that stops at any step leaves `completed_version` missing, or unequal to `backbone_version`, and status shows the transition incomplete. A transition of one capability that stops leaves the capability's manifest at the version it held. The next transition runs each migration from the recorded completion or version. Where no completion is recorded, it runs every backbone migration once.
 applies-to: "Every version transition: of the backbone, by `pkit upgrade` and by `pkit pin` to a newer release, and of one capability, by `pkit capabilities upgrade`. First install records the backbone's two states in the same order (COR-059 point 6)."
+obligation: v1:sha256:ffe1422ed38890749e970e0c9c8b3d7ea306329c9881cdc162a5a4c1a8413790
 actors:
   - ACT-adopter
 refines: []
@@ -13,12 +14,17 @@ pkit:
     anchors:
       path:
         - src/project_kit/manifest.py
+        - src/project_kit/upgrade.py
+        - src/project_kit/install.py
+        - src/project_kit/status.py
+        - src/project_kit/capabilities.py
         - tests/test_upgrade.py
         - tests/test_install.py
         - tests/test_status.py
         - tests/test_capabilities.py
         - tests/test_backbone_migration_replay.py
       record:
+        - COR-059
         - COR-059#6
         - ADR-065#3
         - ADR-065#4
@@ -28,10 +34,10 @@ pkit:
 
 # REQ-026 · Quality · An interrupted version transition never reads as finished, and the next one completes it
 
-**Verified by:** A test stops an upgrade on a failing migration, and finds the completion behind and no version pin written. It then finds that the next upgrade runs the migrations again and records the completion last. Tests find that an upgrade records the target before its copy, and records the completion before the version pin. A test finds that first install records the target first, and records the completion last.
+**Verified by:** A test stops an upgrade on a failing [migration](../../../glossary.md#term-migration--migration), and finds the [completion](../../../glossary.md#term-completion--completion) behind and no [version pin](../../../glossary.md#term-version-pin--version-pin) written. It then finds that the next upgrade runs the migrations again and records the completion last. Tests find that an upgrade records the target before its copy, and records the completion before the version pin. A test finds that first [install](../../../glossary.md#term-install--install) records the target first, and records the completion last.
 
-Tests find that a missing completion runs every backbone migration once, and that a completion ahead of the target reads as incomplete. A test of status finds that it shows an incomplete transition beside the backbone's line. Tests of `pkit capabilities upgrade` find that a failing migration stops it, and that the capability's manifest moves before the copy.
+Tests find that a missing completion runs every [backbone](../../../glossary.md#term-backbone--backbone) migration once, and that a completion ahead of the target reads as incomplete. A test of status finds that it shows an incomplete [version transition](../../../glossary.md#term-version-transition--version-transition) beside the backbone's line. Tests of `pkit capabilities upgrade` find that a failing migration stops it, and that the [capability](../../../glossary.md#term-capability--capability)'s [manifest](../../../glossary.md#term-manifest--manifest) moves before the copy.
 
-**Rationale:** The adopter upgrades the system like a dependency, with its migrations run. A transition cut short in its migrations would otherwise read as done, so the next upgrade would find nothing to do. Those migrations would then never run (COR-059's context).
+**Rationale:** The adopter upgrades the [system](../../../glossary.md#term-system--system) like a dependency, with its [migrations](../../../glossary.md#term-migration--migration) run. A [version transition](../../../glossary.md#term-version-transition--version-transition) cut short in its migrations would otherwise read as done, so the next upgrade would find nothing to do. Those migrations would then never run ([COR-059](../../../../../../.pkit/decisions/core/COR-059-version-transition.md)'s context).
 
-So COR-059 point 6 records the target before anything else, and records the completion last. A project is at a version only when both name it. The next transition finishes an incomplete one, and runs every backbone migration once where no completion is recorded.
+So [COR-059 point 6](../../../../../../.pkit/decisions/core/COR-059-version-transition.md#6-a-transition-of-the-backbone-records-its-target-first-and-its-completion-last) records the target before anything else, and records the [completion](../../../glossary.md#term-completion--completion) last. A [project](../../../glossary.md#term-project--project) is at a [version](../../../glossary.md#term-version--version) only when both name it. The next transition finishes an incomplete one, and runs every [backbone](../../../glossary.md#term-backbone--backbone) migration once where no completion is recorded.

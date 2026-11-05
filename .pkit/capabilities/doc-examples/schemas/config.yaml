@@ -1,0 +1,48 @@
+# The doc-examples project configuration: how the run of a project's console
+# examples is set up (doc-examples DEC-001 points 3 to 5).
+#
+# - `types` — the types whose documents are the pages the run reads (point 3).
+#   Without it, the pages are the documents of living-docs' page type, where
+#   living-docs is installed.
+# - `setup` — the commands that build the scratch project, run once for each
+#   run, in order, in one shell, in an empty folder with a home of its own
+#   (point 4). Each is given the repository's path in
+#   `DOC_EXAMPLES_REPOSITORY`.
+# - `path` — the folders put before the caller's `PATH` (point 4).
+# - `environment` — the variables every command is given (point 4): a value,
+#   which may name the run's folders by their placeholders, such as
+#   `<scratch>/cache`, or nothing for the caller's value of that name.
+# - `placeholders` — the project's own placeholders (point 5), each an
+#   upper-case name and the command that prints the one line it stands for.
+#
+# Which types are declared, and whether two placeholders of the project's
+# form share a name, is the capability's validator's (`pkit doc-examples
+# validate`), not this schema's.
+#
+# Document-shaped: the file IS the resource. The body below is the minimal
+# reference instance: valid, the schema's self-test, and the starting point a
+# project edits. Adopter-owned: it lives in the capability's `project/` tier,
+# which sync never touches.
+
+schema_version: 1
+
+# Adopter-data binding (COR-023). The glob carries the distinguishing segments:
+# a bare `**/config.yaml` would claim the backbone configuration and every
+# other capability's `config.yaml`.
+binds_to:
+  - "**/doc-examples/project/config.yaml"
+
+pkit_schema: doc-examples:config
+
+# --- reference instance -------------------------------------------------
+
+types: [living-docs:page]
+
+setup:
+  - git init -q
+
+environment:
+  GIT_CONFIG_GLOBAL: <home>/.gitconfig
+
+placeholders:
+  VERSION: cat VERSION

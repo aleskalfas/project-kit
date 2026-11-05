@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from project_kit import changesets, release
+from project_kit import answer_files, changesets, release
 from project_kit.cli import main
 from tests.adopter_repo import sign_nothing
 
@@ -621,6 +621,85 @@ def test_docs_only_diff_is_not_a_release(tmp_path: Path) -> None:
     assert result.ok  # not surface at all
 
 
+# --- A release may carry the answers its writes need (#2381) ------------------
+
+_ANSWER = f"{answer_files.FOLDER}/20261030T120000Z-1a2b3c4d.yaml"
+_ANSWER_TEXT = "answers: []\n"
+
+
+def _land_on_main(source_kit: Path, files: dict[str, str]) -> None:
+    """Commit `files` on `main` with a pending backbone changeset for the release
+    to consume, then restart `feature` from it."""
+    repo = source_kit.parent
+    _git(repo, "checkout", "-q", "main")
+    _write_files(repo, files)
+    _add_changeset(source_kit, "backbone", "minor")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "an earlier pull request")
+    _git(repo, "checkout", "-q", "-B", "feature")
+
+
+def test_a_release_with_the_answers_its_writes_need_is_a_release(tmp_path: Path) -> None:
+    """An answer file the release PR adds is no surface, so the diff is still the
+    release and passes the surface check with no label."""
+    source_kit = _make_repo(tmp_path)
+    _land_on_main(source_kit, {})
+    _apply_release_footprint(source_kit, extra_files={_ANSWER: _ANSWER_TEXT})
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert release.is_release_diff(source_kit, "main")
+    assert result.release_exempt
+    assert result.ok
+
+
+@pytest.mark.parametrize(
+    ("base", "beside"),
+    [
+        # A document beside the answers the release adds.
+        ({}, {_ANSWER: _ANSWER_TEXT, "docs/notes.md": "a note\n"}),
+        # An answer file the diff edits, or removes (`None`).
+        ({_ANSWER: _ANSWER_TEXT}, {_ANSWER: "answers: [{}]\n"}),
+        ({_ANSWER: _ANSWER_TEXT}, {_ANSWER: None}),
+        # A file the diff adds in the folder that is no answer file.
+        ({}, {f"{answer_files.FOLDER}/nested/x.yaml": _ANSWER_TEXT}),
+        ({}, {f"{answer_files.FOLDER}/notes.md": "a note\n"}),
+    ],
+    ids=["document", "edited-answers", "removed-answers", "nested-file", "not-yaml"],
+)
+def test_anything_but_added_answers_beside_a_releases_writes_is_no_release(
+    tmp_path: Path, base: dict[str, str], beside: dict[str, str | None]
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    _land_on_main(source_kit, base)
+    for relpath, content in beside.items():
+        if content is None:
+            (source_kit.parent / relpath).unlink()
+    _apply_release_footprint(
+        source_kit, extra_files={p: c for p, c in beside.items() if c is not None}
+    )
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert not release.is_release_diff(source_kit, "main")
+    assert not result.release_exempt
+    assert not result.ok
+
+
+@pytest.mark.parametrize("consumes", [False, True], ids=["answers-alone", "with-changesets"])
+def test_answers_alone_or_with_consumed_changesets_are_no_release(
+    tmp_path: Path, consumes: bool
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    _land_on_main(source_kit, {})
+    if consumes:
+        for cs in changesets.unreleased_dir(source_kit.parent).glob("*.yaml"):
+            cs.unlink()
+    _commit_change(source_kit, _ANSWER, _ANSWER_TEXT)
+
+    assert not release.is_release_diff(source_kit, "main")
+
+
 # --- A release is recognised by what it writes (#1161) -----------------------
 
 _SELF_HOST_MANIFEST = (
@@ -854,10 +933,13 @@ def test_what_release_apply_writes_is_a_release_diff(
     assert release.is_release_diff(source_kit, "main")
 
 
-def test_a_release_that_raises_a_capability_floor_is_a_release_diff(tmp_path: Path) -> None:
+@pytest.mark.parametrize("answers", [{}, {_ANSWER: _ANSWER_TEXT}], ids=["bare", "answered"])
+def test_a_release_that_raises_a_capability_floor_is_a_release_diff(
+    tmp_path: Path, answers: dict[str, str]
+) -> None:
     """The floor raise on another capability rewrites one `version:` line of the
     dependent's `requires_capabilities` entry, which the guard admits as a release
-    write (`release_writes`)."""
+    write (`release_writes`) — with or without the answers its writes need (#2381)."""
     source_kit = _make_repo(tmp_path)
     repo = source_kit.parent
     _git(repo, "checkout", "-q", "main")
@@ -887,6 +969,7 @@ def test_a_release_that_raises_a_capability_floor_is_a_release_diff(tmp_path: Pa
     _git(repo, "checkout", "-q", "-B", "feature")
 
     release.apply_release(source_kit, release.compute_release(source_kit), today=date(2026, 9, 30))
+    _write_files(repo, answers)
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", "chore(release)")
 

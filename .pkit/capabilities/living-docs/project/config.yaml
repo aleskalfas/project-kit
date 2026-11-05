@@ -3,18 +3,20 @@
 #
 # The places are declared in the backbone configuration's `friction.places`
 # (.pkit/project/config.yaml), which holds the reasons for the list; this file
-# names each space's entry point and definition, and assigns each place to its
-# space. Every place here lies outside both documentation roots, so each must
-# be assigned. `pkit living-docs validate` checks all of it.
+# names each space's audience, entry point and definition, and assigns each
+# place to its space. Every place here lies outside both documentation roots,
+# so each must be assigned. `pkit living-docs validate` checks all of it.
 
 pkit_schema: living-docs:config
 schema_version: 1
 
 spaces:
   user:
+    audience: users
     entry-point: README.md
     definition: tech-docs/living-docs/rule-sets/user.md
   technical:
+    audience: maintainers
     # until tech-docs/README.md exists (ADR-055 point 3)
     entry-point: CONTRIBUTING.md
     definition: tech-docs/living-docs/rule-sets/technical.md
@@ -28,17 +30,34 @@ places:
   .pkit/adapters/claude-code/README.md: user
   .pkit/agents/README.md: user
   .pkit/capabilities/demo-recording/README.md: user
+  .pkit/capabilities/doc-examples/README.md: user
   .pkit/capabilities/evidence/README.md: user
   .pkit/capabilities/living-docs/README.md: user
+  .pkit/capabilities/living-docs/pages.md: user
+  .pkit/capabilities/living-docs/spaces.md: user
+  .pkit/capabilities/living-docs/validation.md: user
+  .pkit/capabilities/living-docs/agent.md: user
   .pkit/capabilities/project-management/README.md: user
   .pkit/capabilities/software-analysis/README.md: user
   .pkit/capabilities/software-engineering/README.md: user
+  .pkit/capabilities/visual-communication/README.md: user
+  .pkit/capabilities/visual-communication/files.md: user
+  .pkit/capabilities/visual-communication/components.md: user
+  .pkit/capabilities/visual-communication/outputs.md: user
+  .pkit/capabilities/visual-communication/checks.md: user
+  .pkit/capabilities/visual-communication/libraries/starter/README.md: user
   .pkit/cli/README.md: user
   .pkit/decisions/README.md: user
   .pkit/lifecycle/README.md: user
   .pkit/permissions/README.md: user
   .pkit/process/README.md: user
+  .pkit/process/shape.md: user
+  .pkit/process/engine.md: user
+  .pkit/process/connections.md: user
   .pkit/rules/README.md: user
   .pkit/schemas/README.md: user
+  .pkit/schemas/backbone-files.md: user
+  .pkit/schemas/shape-patterns.md: user
+  .pkit/schemas/data-binding.md: user
   .pkit/scratchpad/README.md: user
   .pkit/skills/README.md: user

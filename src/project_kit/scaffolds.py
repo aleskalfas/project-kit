@@ -14,6 +14,11 @@ for any user-facing precondition failure (invalid slug, missing
 prerequisite, name collision). All writes are synchronous; no dry-run
 mode (one-shot scaffolds are not destructive — a stray run leaves a
 fresh directory the author can `rm -rf` if they didn't mean to).
+
+A migration of the backbone, or of a capability, is refused where its folder
+arrives in the project as a synced copy (`_refuse_synced_migrations`). The
+area, adapter and capability scaffolds make a tree no sync writes, so they ask
+nothing.
 """
 
 from __future__ import annotations
@@ -27,7 +32,7 @@ from typing import Literal
 
 import click
 
-from project_kit import default_branch
+from project_kit import default_branch, lifecycle_ownership
 from project_kit.capabilities import (
     refuse_name_held_by_other_kind,
     refuse_reserved_capability_name,
@@ -511,6 +516,10 @@ def stamp_migration(
     and judges against the working tree alone (point 4). A default branch read
     from the local branch, and a declaration read as the default, are said there
     too (`DefaultBranch.warnings`).
+
+    A backbone or capability migrations folder that arrives in the project as a
+    synced copy is refused before anything is read or written
+    (`_refuse_synced_migrations`).
     """
     pkit_dir = _require_pkit_dir(target_root)
 
@@ -526,6 +535,7 @@ def stamp_migration(
         if not component_dir.is_dir():
             raise click.ClickException(f"{tier} '{component}' not found in this project tree.")
         migrations_root = component_dir / "migrations"
+    _refuse_synced_migrations(target_root, tier, component, migrations_root)
 
     if version is not None:
         _validate_minor_version(version)
@@ -825,6 +835,39 @@ def _read_area_variant(readme: Path) -> str | None:
     text = readme.read_text(encoding="utf-8")
     match = _AREA_VARIANT_RE.search(text)
     return match.group(1) if match else None
+
+
+def _refuse_synced_migrations(
+    target_root: Path, tier: MigrationTier, component: str | None, migrations_root: Path
+) -> None:
+    """Refuse a backbone or capability migration whose folder is a synced copy.
+
+    The question is the tree's own predicate, asked through
+    `lifecycle_ownership.synced_copy_refusal`: the backbone's migrations in a
+    project that is not the methodology's source, a kit-shipped capability's
+    there too, and an externally-sourced capability's in any project. The next
+    sync overwrites what is written there (core rule 1). The adapter tier is not
+    asked: a sync copies no adapter's `migrations/` folder, and an adapter a
+    project authors is its own (COR-005).
+    """
+    if tier == "backbone":
+        subject = "the backbone's migrations"
+        authored = "Backbone migrations are authored in the methodology's source repository."
+    elif tier == "capability":
+        subject = f"capability {component!r}"
+        authored = "A capability's own migrations are authored where the capability is authored."
+    else:
+        return
+    refusal = lifecycle_ownership.synced_copy_refusal(
+        target_root,
+        migrations_root,
+        subject,
+        "Stamp a migration of the project's own in a capability the project incubates, "
+        "with `pkit new migration --tier capability --component <capability>`. "
+        f"{authored}",
+    )
+    if refusal is not None:
+        raise click.ClickException(refusal)
 
 
 def _resolve_component_dir(pkit_dir: Path, tier: MigrationTier, component: str) -> Path:

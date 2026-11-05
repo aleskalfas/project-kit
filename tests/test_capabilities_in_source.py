@@ -127,6 +127,7 @@ def test_the_subtree_is_the_source_only_where_the_running_code_resolves_it(
 # --- uninstall: never deletes the source ---------------------------------------
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_uninstall_says_what_it_would_have_deleted_and_unregisters_only(
     source_repo: Path,
 ) -> None:
@@ -151,6 +152,7 @@ def test_uninstall_says_what_it_would_have_deleted_and_unregisters_only(
     assert _snapshot(_cap_dir(source_repo)) == before
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_declining_the_unregister_writes_nothing(source_repo: Path) -> None:
     before = _registered(source_repo)
     manifest = (source_repo / ".pkit" / "manifest.yaml").read_bytes()
@@ -158,6 +160,23 @@ def test_declining_the_unregister_writes_nothing(source_repo: Path) -> None:
     result = CliRunner().invoke(main, ["capabilities", "uninstall", _NAME], input="n\n")
 
     assert result.exit_code == 1, result.output
+    assert caps.is_installed(source_repo, _NAME)
+    assert (source_repo / ".pkit" / "manifest.yaml").read_bytes() == manifest
+    assert _snapshot(_cap_dir(source_repo)) == before
+
+
+def test_a_piped_yes_does_not_unregister(source_repo: Path) -> None:
+    """Off a terminal a `y` piped in is no person's answer: the unregister is refused,
+    naming `--yes`, and nothing is written (#2003)."""
+    before = _registered(source_repo)
+    manifest = (source_repo / ".pkit" / "manifest.yaml").read_bytes()
+
+    result = CliRunner().invoke(main, ["capabilities", "uninstall", _NAME], input="y\n")
+
+    assert result.exit_code == 1, result.output
+    said = _output(result)
+    assert f"refusing to unregister '{_NAME}': stdin is not a terminal" in said
+    assert f"pkit capabilities uninstall {_NAME} --yes" in said
     assert caps.is_installed(source_repo, _NAME)
     assert (source_repo / ".pkit" / "manifest.yaml").read_bytes() == manifest
     assert _snapshot(_cap_dir(source_repo)) == before

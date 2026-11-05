@@ -5,6 +5,12 @@
 # AND by CI (.github/workflows/checks.yml), so the gate can't drift between the
 # two. Add a check here once and both pick it up.
 #
+# The hook runs it whole, on one machine. CI runs a full run as three parts side
+# by side, which this script defines (ADR-078): two slices of the suite's
+# parallel pass, `--shard 1/2` and `--shard 2/2`, and the remainder, `--rest`.
+# A job before them decides the form and pins the base, and one job named
+# `checks` passes only when every part said that it passed.
+#
 # The code's own checks come first: ruff's lint (`ruff check`) and layout
 # (`ruff format --check`) under the house style `pyproject.toml` settles
 # (#840), then the type check, then the test suite.
@@ -44,11 +50,22 @@
 #     not the tree. They are not validators and stay their own lines; a
 #     capability's line is here because that capability is installed here.
 #
-# One more line is project-kit's own and neither kind: the deployed agents'
-# check (`scripts/check_deployed_agents.py`, #1559). Each tracked copy under
-# `.claude/agents/` must be what `deploy-agents.sh` writes from its source. It
-# reads git's index, not the working tree, because CI's `pkit sync` redeploys
-# the working tree's copies before this aggregator runs.
+# Three more lines are project-kit's own and neither kind:
+#
+#   - the deployed agents' check (`scripts/check_deployed_agents.py`, #1559).
+#     Each tracked copy under `.claude/agents/` must be what `deploy-agents.sh`
+#     writes from its source. It reads git's index, not the working tree,
+#     because CI's `pkit sync` redeploys the working tree's copies before this
+#     aggregator runs.
+#   - the pages' console fences, run by the doc-examples capability's run
+#     (`.pkit/capabilities/doc-examples/scripts/run-examples.py`, #2098). Each
+#     `console` fence of a living-docs page is run as a test, in a scratch
+#     project outside the repository that project-kit's setup step builds, and
+#     its output compared with the page's (doc-examples DEC-001). The run is a
+#     program started by its path, never a `pkit` command (DEC-001 point 9).
+#   - the pages' contents lists (`scripts/page_contents.py`, #2053). A page that
+#     holds the contents markers lists its second-level sections between them,
+#     and a stale list fails; `--update` writes it.
 #
 # Runs every check (does not stop at the first failure) and reports a summary,
 # so one run surfaces all problems. Exits non-zero if any check failed.
@@ -58,18 +75,45 @@
 # answers. CI runs it on a pull request whose only changes since its most recent
 # full run, which passed, are answers (`scripts/short_check.py` decides). The
 # pre-push hook passes no argument, so it always runs the whole aggregator.
+#
+# The parts of a full run (ADR-078 point 1). Together they are the whole run:
+#
+#   - `--shard i/N`, a slice, runs only the i-th of N shares of the suite's
+#     parallel pass, in parallel workers, as the whole run does. The shares are
+#     runs of consecutive tests, in the order pytest collects them after the
+#     `serial` mark's filter, cut where the times in `tests/test_times.json`
+#     balance them (`tests/slices.py`). A slice whose share holds no test fails.
+#     It ends by printing its report: the digest of the tests collected, how
+#     many they are, and how many its share held.
+#   - `--rest`, the remainder, runs every other line, with the tests marked
+#     `serial` in one process in the test step's place.
+#
+# Where $PKIT_TEST_REPORTS names a folder, each pass of pytest writes there what
+# it ran: each test's time and the tests that failed, and a slice's cut. CI reads
+# them, and keeps a slice's times for the table (tests/README.md, "Running the
+# suite").
 
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-short=0
-case "$*" in
-  "") ;;
-  --short) short=1 ;;
-  *)
-    echo "usage: scripts/check.sh [--short]" >&2
-    exit 2
+usage() {
+  echo "usage: scripts/check.sh [--short | --rest | --shard i/N]" >&2
+  exit 2
+}
+
+form=whole
+shard=""
+case "$#:${1:-}" in
+  0:) ;;
+  1:--short) form=short ;;
+  1:--rest) form=rest ;;
+  2:--shard)
+    shard="$2"
+    [[ "${shard}" =~ ^([1-9][0-9]*)/([1-9][0-9]*)$ ]] || usage
+    [ "${BASH_REMATCH[1]}" -le "${BASH_REMATCH[2]}" ] || usage
+    form=shard
     ;;
+  *) usage ;;
 esac
 
 # The diff-scoped checks (migration coverage, record numbering, friction, the
@@ -82,20 +126,23 @@ esac
 fail=0
 run() {
   local label="$1"; shift
+  local started=$SECONDS
   echo
   echo "== ${label} =="
   if "$@"; then
-    echo "-- ${label}: ok"
+    echo "-- ${label}: ok ($((SECONDS - started)) s)"
   else
-    echo "-- ${label}: FAILED"
+    echo "-- ${label}: FAILED ($((SECONDS - started)) s)"
     fail=1
   fi
 }
 
 # The test step (#1182). The suite runs in parallel workers (pytest-xdist):
 # `-n auto`, or as many as $PKIT_TEST_WORKERS names (`0` runs it in this one
-# process). The tests marked `serial` cannot share the machine with other
-# workers; they run after the parallel pass, in one process, in the same step.
+# process). The parallel pass ends by printing its 30 slowest tests
+# (`--durations=30`), in every run. The tests marked `serial` cannot share the
+# machine with other workers; they run after the parallel pass, in one process,
+# in the same step.
 #
 # At most two full suites run at once on a machine. The step first takes one of
 # two slots under the user's cache directory, and a run that finds both taken
@@ -164,55 +211,92 @@ free_test_slot() {
   exec 8>&- 9>&-
 }
 
+# The parallel pass, with what a caller adds to it. Any exit but 0 fails it.
+parallel_pass() {
+  uv run pytest -q -n "${PKIT_TEST_WORKERS:-auto}" --durations=30 -m "not serial" "$@"
+}
+
+# The tests marked serial, in one process. Exit 5 is pytest's "no tests
+# collected": no test is marked serial, which passes.
+serial_pass() {
+  uv run pytest -q -m serial ${PKIT_TEST_REPORTS:+"--test-report=${PKIT_TEST_REPORTS}/serial"}
+  case $? in 0 | 5) return 0 ;; *) return 1 ;; esac
+}
+
 run_tests() {
   local failed=0
   take_test_slot
-  uv run pytest -q -n "${PKIT_TEST_WORKERS:-auto}" -m "not serial" || failed=1
+  parallel_pass ${PKIT_TEST_REPORTS:+"--test-report=${PKIT_TEST_REPORTS}/parallel"} || failed=1
   echo
   echo "-- the tests marked serial, in one process"
-  # Exit 5 is pytest's "no tests collected": no test is marked serial.
-  uv run pytest -q -m serial
-  case $? in 0 | 5) ;; *) failed=1 ;; esac
+  serial_pass || failed=1
   free_test_slot
+  return "${failed}"
+}
+
+# A slice's test step: its share of the parallel pass, and nothing else. Exit 5 is
+# pytest's "no tests collected", and fails here: an empty share means the filter
+# or the cut went wrong (ADR-078 point 5). The slice always reports its cut, into
+# a scratch folder where $PKIT_TEST_REPORTS names none.
+run_slice() {
+  local failed=0 scratch="" reports="${PKIT_TEST_REPORTS:-}"
+  if [ -z "${reports}" ]; then
+    scratch="$(mktemp -d)"
+    reports="${scratch}"
+  fi
+  take_test_slot
+  # One token each: pytest reads its own options before the suite's conftest adds
+  # these, and would take a value apart from its option for a path to collect.
+  parallel_pass "--shard=${shard}" "--test-report=${reports}/parallel" || failed=1
+  free_test_slot
+  if [ -n "${scratch}" ]; then rm -rf "${scratch}"; fi
   return "${failed}"
 }
 
 # The short check's test step: the tests marked `answers` alone, in one process.
 # Exit 5 is pytest's "no tests collected": no test is marked `answers`.
 run_answer_tests() {
-  uv run pytest -q -m answers
+  uv run pytest -q -m answers ${PKIT_TEST_REPORTS:+"--test-report=${PKIT_TEST_REPORTS}/answers"}
   case $? in 0 | 5) return 0 ;; *) return 1 ;; esac
 }
 
 # The query commands `pkit validate` runs offline are provisioned by `pkit sync`
 # (the lifecycle README, "How dependencies are provisioned before an offline
 # run") — which CI runs on checkout, and a clone runs once — not by this gate.
-run "lint"               uv run ruff check .
-run "format"             uv run ruff format --check .
-run "types"              uv run python scripts/pyright_ratchet.py
-if [ "${short}" -eq 1 ]; then
-  run "tests (the short check: only those marked answers)" run_answer_tests
+# A slice runs its test step alone; every other form runs every line.
+if [ "${form}" = shard ]; then
+  run "tests (slice ${shard} of the parallel pass)" run_slice
 else
-  run "tests"            run_tests
+  run "lint"               uv run ruff check .
+  run "format"             uv run ruff format --check .
+  run "types"              uv run python scripts/pyright_ratchet.py
+  case "${form}" in
+    short) run "tests (the short check: only those marked answers)" run_answer_tests ;;
+    rest)  run "tests (the remainder: only those marked serial)" serial_pass ;;
+    *)     run "tests"     run_tests ;;
+  esac
+  run "validate"           uv run pkit validate
+  run "deployed agents"    uv run python scripts/check_deployed_agents.py
+  run "console fences"     uv run python .pkit/capabilities/doc-examples/scripts/run-examples.py
+  run "contents lists"     uv run python scripts/page_contents.py
+  run "migrations check"   uv run pkit migrations check-diff
+  run "record numbering"   uv run pkit decisions check-diff
+  run "friction check"     uv run pkit friction check
+  run "prose lint"         uv run python scripts/prose_lint.py
+  run "analysis numbers"   uv run pkit analysis check-numbers
+  run "analysis pointers"  uv run pkit analysis check-pointers
+  run "doc check"          uv run pkit pm check-doc-mapping
+  run "changelog lint"     uv run pkit release lint
 fi
-run "validate"           uv run pkit validate
-run "deployed agents"    uv run python scripts/check_deployed_agents.py
-run "migrations check"   uv run pkit migrations check-diff
-run "record numbering"   uv run pkit decisions check-diff
-run "friction check"     uv run pkit friction check
-run "prose lint"         uv run python scripts/prose_lint.py
-run "analysis numbers"   uv run pkit analysis check-numbers
-run "analysis pointers"  uv run pkit analysis check-pointers
-run "doc check"          uv run pkit pm check-doc-mapping
-run "changelog lint"     uv run pkit release lint
 
 echo
 if [ "${fail}" -ne 0 ]; then
   echo "✗ checks FAILED"
   exit 1
 fi
-if [ "${short}" -eq 1 ]; then
-  echo "✓ all checks passed (the short check: the test suite was skipped, ADR-067)"
-else
-  echo "✓ all checks passed"
-fi
+case "${form}" in
+  short) echo "✓ all checks passed (the short check: the test suite was skipped, ADR-067)" ;;
+  rest)  echo "✓ all checks passed (the remainder: every line but the suite's parallel pass)" ;;
+  shard) echo "✓ all checks passed (slice ${shard} of the suite's parallel pass)" ;;
+  *)     echo "✓ all checks passed" ;;
+esac

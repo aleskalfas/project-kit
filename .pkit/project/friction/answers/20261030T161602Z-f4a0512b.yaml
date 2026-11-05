@@ -1,0 +1,25 @@
+answers:
+  - artefact: docs/permissions/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T134448Z-e94c9244.yaml
+    revalidated:
+      at: 2026-10-30T16:16:02Z
+      outcome: unchanged
+      unchanged-because: UC-027 now names first install beside UC-022 as what fills the agents' overlay, and gains a variant in which pkit init deploys the agent definitions. The guide states each agent's grants and the hook that enforces them, which this change leaves as they were, so it still holds.

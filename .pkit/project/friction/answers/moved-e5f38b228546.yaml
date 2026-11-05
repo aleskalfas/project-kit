@@ -1,0 +1,6 @@
+answers:
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-006
+    revalidated:
+      at: 2026-10-19T14:38:33Z
+      outcome: unchanged
+      unchanged-because: DEC-002 point 6 lets a requirement's actors name another analysis's actor, anchoring the records behind it, and keeps refines within its own analysis. The statement, measure and applies-to this rule compares with the records a requirement rests on read as before, so the rule holds as written.

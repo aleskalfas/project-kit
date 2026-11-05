@@ -5,6 +5,7 @@ status: active
 statement: A reviewer agent never changes the work it judges.
 measure: "After a review, the work under review holds what it held before, and nothing was staged, committed or pushed for the review. Each working file of the review lies in the agent workspace."
 applies-to: "Every reviewer agent that judges a draft or a change, the core's and a component's. The architect's edits of the architecture documents and decision records it keeps, which COR-024 grants it, fall outside it."
+obligation: v1:sha256:9b07fd49d056d7070450db38c7d8c05428974b90d9534777fb22ab83c73caf6f
 actors:
   - ACT-developer
   - ACT-merge-authoriser
@@ -25,6 +26,8 @@ pkit:
 
 # REQ-021 · Functional · A reviewer agent never changes the work it judges
 
-**Verified by:** Tests find that every reviewer agent that can run commands states the same section on what its read-only covers. Its source and its deployed copy both state it, and name the workspace for its working files. Nothing checks at run time what a reviewer changed.
+**Verified by:** Tests find that every [reviewer](../../../glossary.md#term-reviewer--reviewer) agent that can run commands states the same section on what its read-only covers. Its source and its deployed copy both state it, and name the workspace for its working files. Nothing checks at run time what a reviewer changed.
 
-**Rationale:** A reviewer's verdict is worth only its independence, as the agents README says of the role. COR-024 keeps the critic read-only to preserve that independence, and COR-057 point 1 says the rule-set reviewer changes nothing it reviews.
+**Rationale:** A [reviewer](../../../glossary.md#term-reviewer--reviewer)'s verdict is worth only its independence, as the agents README says of reviewers. [COR-024](../../../../../../.pkit/decisions/core/COR-024-critic-and-architect-agents.md) keeps the critic read-only to preserve that independence, and [COR-057 point 1](../../../../../../.pkit/decisions/core/COR-057-rule-set-reviewer.md#1-what-it-judges) says the rule-set reviewer changes nothing it reviews.
+
+A reviewer that can run commands may need working files to review well, as the agents README says, and each goes in the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace). Left loose in the repository, such a file is swept into a commit by the author's `git add`, as the README says too.
