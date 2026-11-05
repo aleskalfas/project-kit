@@ -133,7 +133,7 @@ def _print(folder: str, report: Mapping[str, Any]) -> None:
         families = ", ".join(each["families"])
         print(
             f"drawn otherwise: {_at(each)}: `{each['element']}` is measured in {families}, and "
-            f"the tool may set the whole line in one of them"
+            f"the tool may set the whole run on a line in one of them"
         )
     print(f"report: {folder}{viewing.REPORT}")
 

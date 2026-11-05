@@ -13,6 +13,12 @@ step works today, not what the step is, so nothing else of the step reads an SVG
   it looks up, so a brand's `&` or `"` would otherwise match no face, and its text would
   drop in silence. A rule and a text write one family as the same CSS string, so the
   names are joined on that string, undecoded.
+- **Spans.** The tool shapes a chunk of text whole in each span's font, and keeps that
+  span's part. Where the font lacks a character of the chunk, in any span, it turns to a
+  face that holds it, and a face that holds the whole chunk replaces all of it. A page's
+  faces hold only what they draw, so a strong span would mostly take the weight of the plain
+  span beside it, or the reverse, and nothing says so. Each span is made a chunk of its own,
+  so the tool shapes it alone, as the engine measured it (DEC-012 point 4).
 - **What it dropped.** The tool returns only the image. It logs a family it could not
   match to the process's output, which names no run, and a text over a picture defeats a
   look for its ink in the image. So each span is drawn again alone: its line as the page
@@ -34,7 +40,7 @@ import math
 import re
 import struct
 import xml.etree.ElementTree as ET
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -80,6 +86,9 @@ MOVE = re.compile(r"translate\(([^,]+),([^)]+)\)")
 #: The name records of a font that could name it otherwise than the family given it.
 FONT_NAMES = (1, 2, 3, 4, 6, 16, 17, 21, 22)
 
+#: How much of a line's width lies before the place an anchor holds it at.
+ANCHORED = {"middle": 0.5, "end": 1.0}
+
 ET.register_namespace("", SVG_NAMESPACE)
 
 
@@ -107,25 +116,28 @@ class Drawing:
     dropped: tuple[Dropped, ...]
 
 
-def draw(svg: str, long_edge: int, folder: Path) -> Drawing:
+def draw(svg: str, long_edge: int, folder: Path, widths: Mapping[str, Sequence[float]]) -> Drawing:
     """The SVG page `svg` as an image `long_edge` pixels on its long edge, on the ground.
+    `widths` gives the width the engine measured of each line of each text, by its trace id.
     Writes the page's faces in `folder`, which the caller removes. Raises ToolFailed."""
-    page = _Page(svg, folder)
+    page = _Page(svg, folder, widths)
     image = page.image(long_edge)
     width, height = struct.unpack(">II", image[PNG_SIZE])
     return Drawing(image, width, height, tuple(page.dropped(width / page.width)))
 
 
 class _Page:
-    """A page as the tool is given it: its faces in files, and its fonts named for them."""
+    """A page as the tool is given it: its faces in files, its fonts named for them, and each
+    span of a line an element and a chunk of its own."""
 
-    def __init__(self, svg: str, folder: Path) -> None:
+    def __init__(self, svg: str, folder: Path, widths: Mapping[str, Sequence[float]]) -> None:
         self.root = ET.fromstring(svg)
         self.width = float(self.root.attrib["width"])
         self.height = float(self.root.attrib["height"])
         self.fonts: list[str] = []
         self._blanks: dict[tuple[int, int], bytes] = {}
         self._hand_over_faces(folder)
+        self._set_spans_apart(widths)
 
     def _hand_over_faces(self, folder: Path) -> None:
         """Write each face of the page's rules as a file, and name the page's fonts for
@@ -143,6 +155,21 @@ class _Page:
             if family:
                 named = re.sub(CSS_STRING, lambda found: names.get(found[0], found[0]), family)
                 element.set("font-family", named)
+
+    def _set_spans_apart(self, widths: Mapping[str, Sequence[float]]) -> None:
+        """Make each span of a line a chunk of its own. An absolute `y` starts one, and leaves
+        the pen where the span before it stopped. The tool anchors each chunk alone, so a line
+        of spans anchored at its middle or its end starts where its width puts it."""
+        for text in self.root.iter(TEXT):
+            before = ANCHORED.get(text.get("text-anchor", ""), 0.0)
+            for place, line in enumerate(text.findall(SPAN)):
+                spans = _spans(line)
+                for span in spans[1:]:
+                    span.set("y", line.attrib["y"])
+                if before and len(spans) > 1:
+                    width = widths[text.attrib["data-id"]][place]
+                    line.set("x", str(float(line.attrib["x"]) - before * width))
+                    line.set("text-anchor", "start")
 
     def image(self, long_edge: int) -> bytes:
         longest = max(self.width, self.height)
@@ -164,7 +191,7 @@ class _Page:
             shown = False
             lines = text.findall(SPAN)
             for line in lines:
-                for index, span in enumerate(_spans(copy.deepcopy(line))):
+                for index, span in enumerate(line):
                     if (span.text or "").strip():
                         if self._drew(text, line, index, (x, y), scale):
                             shown = True
@@ -216,7 +243,7 @@ class _Page:
         )
         alone = ET.SubElement(band, TEXT, text.attrib)
         drawn = copy.deepcopy(line)
-        for place, span in enumerate(_spans(drawn)):
+        for place, span in enumerate(drawn):
             if place != index:
                 span.set("fill", "none")
                 span.attrib.pop("fill-opacity", None)
@@ -245,9 +272,9 @@ class _Page:
 
 
 def _spans(line: ET.Element) -> list[ET.Element]:
-    """The spans of `line`, a copy of a page's line, in order, each an element of its own:
-    a span the renderer wrote bare, as the text's own, takes a `<tspan>` of no attributes, so
-    it can be unpainted alone."""
+    """The spans of `line`, in order, each made an element of its own: a span the renderer
+    wrote bare, as the text's own, takes a `<tspan>` of no attributes, so it can be set apart
+    and unpainted alone."""
     spans: list[ET.Element] = []
     bare = line.text
     line.text = None
