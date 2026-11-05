@@ -253,9 +253,10 @@ class Change:
         its path within the folder: a copy of the file a path names, or the bytes given."""
         self._steps.append(_Folder(target, sources))
 
-    def replace_folder(self, target: Path, sources: Mapping[str, Path]) -> None:
-        """Replace the folder `target`, which exists, whole, by a folder holding a copy of
-        each file of `sources` at its path within the folder."""
+    def replace_folder(self, target: Path, sources: Mapping[str, Path | bytes]) -> None:
+        """Replace the folder `target`, which exists, whole, by a folder holding each file of
+        `sources` at its path within the folder: a copy of the file a path names, or the
+        bytes given."""
         self._steps.append(_Replacement(target, sources))
 
     def remove(self, target: Path) -> None:
@@ -404,7 +405,7 @@ class _Replacement(_Folder):
 
     done = "replaced"
 
-    def __init__(self, target: Path, sources: Mapping[str, Path]) -> None:
+    def __init__(self, target: Path, sources: Mapping[str, Path | bytes]) -> None:
         super().__init__(target, sources)
         self.aside: Path | None = None
 
