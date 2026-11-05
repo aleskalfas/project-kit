@@ -723,12 +723,14 @@ def _sentence_findings(
 
     The answers are derived at the PR's head on every move (`_unsaid_at_head`); the
     description carries none. None, with what failed printed, where they cannot be
-    derived there: nothing is refused on answers nobody read. Under ``force``
-    nothing is refused then either, with a warning saying so, and the stop it passed
-    is the one finding, for its audit comment to name (`PRECONDITION`)."""
+    derived there: nothing is refused on answers nobody read. Under ``force`` no
+    missing sentence is refused then either, with a warning saying so, and the stop
+    it passed joins the findings, for its audit comment to name (`PRECONDITION`). A
+    closing reference is refused still, since the description alone shows one."""
     unsaid, underived = _unsaid_at_head(description)
-    if underived:
-        return _underived_findings(underived, force)
+    stop = _underived_findings(underived, force) if underived else []
+    if stop is None:
+        return None
     refused = [
         pr_validation.Finding(
             pr_validation.SEVERITY_HARD_REJECT,
@@ -753,7 +755,7 @@ def _sentence_findings(
         )
         for item in (friction_answers.unread(description.body) if unsaid else ())
     ]
-    return refused + unread
+    return stop + refused + unread
 
 
 def _unsaid_at_head(description: _Description) -> tuple[list[str], str]:

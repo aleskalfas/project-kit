@@ -1075,6 +1075,8 @@ def test_the_refusal_joins_the_body_validator_s_findings(rw, monkeypatch, capsys
 HEADLINE = "Bypassed by me: `review-work --force` passed each refusal below"
 #: A finding of the body validator, as a line of the audit comment names it.
 NO_DOC_IMPACT = "- `[hard-reject] body.doc-impact: no Doc impact`"
+#: A change check that could not be run at the head, as that comment names it.
+STOP = f"- `[precondition] body.sentences: {UNDERIVED}`"
 
 
 def _no_doc_impact(rw):
@@ -1088,11 +1090,16 @@ def _audits(gh_calls: list[list[str]]) -> list[str]:
     return [c[c.index("--body") + 1] for c in gh_calls if c[:3] == ["gh", "pr", "comment"]]
 
 
-def _named(location: str) -> str:
-    """How the audit comment names a document with no sentence: the refusal's own
-    line in a code span, its backticks written as quotes."""
-    line = _refusal(location).removeprefix("  - ").replace("`", "'")
+def _audited_line(refusal: str) -> str:
+    """How the audit comment names a refusal: its own line in a code span, its
+    backticks written as quotes."""
+    line = refusal.removeprefix("  - ").replace("`", "'")
     return f"- `{line}`"
+
+
+def _named(location: str) -> str:
+    """How the audit comment names a document with no sentence."""
+    return _audited_line(_refusal(location))
 
 
 def _audited_refusals(audit: str) -> list[str]:
@@ -1169,8 +1176,30 @@ def test_the_comment_names_a_change_check_that_could_not_be_run(run_main, rw, dr
     )
     assert rc == 0 and moves == ["review"]
     (audit,) = _audits(gh_calls)
-    stop = f"- `[precondition] body.sentences: {UNDERIVED}`"
-    assert _audited_refusals(audit) == ([NO_DOC_IMPACT, stop] if draft else [stop])
+    assert _audited_refusals(audit) == ([NO_DOC_IMPACT, STOP] if draft else [STOP])
+
+
+@pytest.mark.parametrize("draft", [True, False], ids=["draft-pr", "ready-pr"])
+def test_a_check_that_cannot_be_run_hides_no_closing_reference_from_force(
+    run_main, rw, capsys, draft
+) -> None:
+    """A closing reference is read from the description alone, so a change check that
+    could not be run leaves it standing: --force passes both, the run prints the
+    refusal, and its one comment names both."""
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=draft),
+        body=_described(CLOSING),
+        head=MOVED,
+        derived=rw.friction_answers.Derivation(MOVED, problem="no answers were stood in"),
+        extra=("--force",),
+    )
+    assert rc == 0 and moves == ["review"]
+    err = capsys.readouterr().err
+    assert _refusals(err) == [CLOSING_REFUSAL]
+    assert err.splitlines()[-1] == "  → proceeding under --force."
+    (audit,) = _audits(gh_calls)
+    assert _audited_refusals(audit) == [STOP, _audited_line(CLOSING_REFUSAL)]
 
 
 def test_a_warning_is_no_refusal_and_the_comment_leaves_it_out(run_main, rw, capsys) -> None:
@@ -1291,14 +1320,18 @@ def test_what_the_check_said_at_a_head_stays_inert(run_main, rw, capsys, force) 
         _assert_inert(audit)
 
 
-def test_a_refusal_quoting_a_description_stays_inert(run_main, rw, capsys) -> None:
+@pytest.mark.parametrize("check_ran", [True, False], ids=["check-ran", "check-could-not-run"])
+def test_a_refusal_quoting_a_description_stays_inert(run_main, rw, capsys, check_ran) -> None:
     """A closing reference's refusal names the sentence's document as the description
-    writes it, the one finding that reaches the refusal and the comment unescaped."""
+    writes it, the one finding that reaches the refusal and the comment unescaped. It
+    stands whether or not the change check could be run."""
     said = f"{SENTENCES}\n\n- `docs/\x1b[2Jevil<!-- x -->.md`: This fixed #77 in the guide.\n"
+    not_run = rw.friction_answers.Derivation(LISTED, problem="no answers were stood in")
     rc, gh_calls, _moves = run_main(
         _task(["state:in-progress"]),
         pr=_open_pr(draft=True),
         body=_described(said),
+        derived=None if check_ran else not_run,
         extra=("--force",),
     )
     assert rc == 0
