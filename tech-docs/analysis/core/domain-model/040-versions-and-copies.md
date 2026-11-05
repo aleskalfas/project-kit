@@ -252,8 +252,6 @@ A migration is a script that carries a project's state across a version of the [
 
 Defined in [TERM-version-transition](../glossary.md#term-version-transition--version-transition).
 
-Defined in TERM-version-version transition.
-
 **Why:** If two operations could move a [version](../glossary.md#term-version--version) and only one ran [migrations](../glossary.md#term-migration--migration), the other would strand them, and none would run later ([COR-059](../../../../.pkit/decisions/core/COR-059-version-transition.md)). One operation that moves versions and runs every migration between leaves no path that skips one (COR-059). It records its [completion](../glossary.md#term-completion--completion) last, so an interrupted version transition is never mistaken for a finished one (COR-059).
 
 A version transition moves a [project](../glossary.md#term-project--project)'s [recorded versions](../glossary.md#term-recorded-version--recorded-version) to a target. It runs every migration that is pending, and records its completion only after they have run. `pkit upgrade` runs a transition of the [backbone](../glossary.md#term-backbone--backbone).
@@ -293,7 +291,7 @@ Defined in [TERM-completion](../glossary.md#term-completion--completion).
 
 **Why:** A [version transition](../glossary.md#term-version-transition--version-transition) cut short must never read as a finished one, or the [migrations](../glossary.md#term-migration--migration) it did not run would never run ([COR-059](../../../../.pkit/decisions/core/COR-059-version-transition.md)). So the [backbone](../glossary.md#term-backbone--backbone)'s transition records a second state, last, once its work is done (COR-059).
 
-The completion is the state that first [install](../glossary.md#term-install--install) or a transition of the backbone records last, after all else it writes. It names the [version](../glossary.md#term-version--version) reached. Where it equals the target recorded first, the [project](../glossary.md#term-project--project) is at that version.
+The completion is the state that first [install](../glossary.md#term-install--install) or a version transition of the backbone records last, after all else it writes. It names the [version](../glossary.md#term-version--version) reached. Where it equals the target recorded first, the [project](../glossary.md#term-project--project) is at that version.
 
 **Attributes:**
 
