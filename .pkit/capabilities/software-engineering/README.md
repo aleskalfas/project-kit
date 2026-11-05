@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/software-engineering/package.yaml
         - .pkit/lifecycle/ownership.py
         - .pkit/capabilities/project-management/scripts/_lib/required_reviewers.py
-      record: ["software-engineering:DEC-003", COR-070, ADR-076, COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, "COR-062#1", "COR-062#7", "COR-064#1", "COR-064#2", "COR-064#4", ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-027", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-050", "project-management:DEC-055", "project-management:DEC-060"]
+      record: ["software-engineering:DEC-003", COR-070, ADR-076, COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, "COR-062#1", "COR-062#7", "COR-064#1", "COR-064#2", "COR-064#4", ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-027", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-050", "project-management:DEC-055", "project-management:DEC-060", "project-management:DEC-065"]
       artefact:
         - RS-SWE-001
         - .pkit/agents/README.md#adopter-overlay
@@ -203,7 +203,7 @@ A reviewer other than their writer checks the answers a change wrote, and `docs-
 - **A check it cannot run.** It cannot run the change check, so the answers would go unchecked.
 - **Itself as the delegate.** The base's configuration names `docs-reviewer` as the delegate, so it would check answers it may have decided (COR-064 point 4).
 
-**How a sentence is read.** `docs-reviewer` reads the section of sentences as the commands that write the list of answers read it. They read a sentence only from an item that opens with the document in a code span, as ``- `path`: sentence``. An item they cannot read, such as one naming the document in bold, gives no sentence, and the finding gives the form it needs.
+**How a sentence is read.** `docs-reviewer` reads the section of sentences as the project-management commands read it. The description carries no list of the answers ([project-management:DEC-065] point 1). The commands read a sentence only from an item that opens with the document in a code span, as ``- `path`: sentence``. An item they cannot read, such as one naming the document in bold, gives no sentence, and the finding gives the form it needs.
 
 **What it does not block on.**
 
@@ -224,14 +224,14 @@ A reviewer other than their writer checks the answers a change wrote, and `docs-
 
 - **A project that opts out of `docs-reviewer`,** and chooses no other reviewer of the answers. COR-050 point 3 accepts that limit.
 - **A pull request that changes only documents, and closes no issue with a `type`** ("The accepted gap" above). COR-050 point 3 names no such case. So where the change wrote answers, have the pull request close an issue that has a `type`.
-- **A pull request in `human` review mode.** `docs-reviewer`'s verdict only advises there, and a person who approves checks the answers only by reading them ("When each reviewer is required" above).
+- **A pull request in `human` review mode.** `docs-reviewer`'s verdict only advises there, and a person who approves checks the answers only by reading them ("When each reviewer is required" above). `pkit pm show-pr <PR> --field answers` prints what the landing command tells, and `pkit friction check` at the head gives every answer. Away from a checkout at the head, the view may print nothing, so read the answer files in the pull request's diff.
 - **A bypass on record.** A person merges past `docs-reviewer` with `done-work --bypass` or `--bypass-reviewer docs-reviewer`, giving a reason ([project-management:DEC-028], [project-management:DEC-050]).
 - **A sentence edited in the description after the verdict.** An edit of the description makes no verdict stale, so nothing checks the sentence again ([project-management:DEC-055] point 5).
 - **A change committed straight to the default branch.** `docs-reviewer` starts from a pull request's number, and requests changes where it cannot fetch one. So it cannot yet check such a change's answers before the commit, as COR-050 point 3 asks.
 
-**What the person who authorises the merge is told** ([project-management:DEC-055] point 3):
+**What the person who authorises the merge is told** ([project-management:DEC-055] point 3, [project-management:DEC-065] point 4):
 
-- **The answers.** The landing command shows them the change's answers, and each revalidation the merge would leave answered apart from one of the change's own. The whole-repository check reports each such pair as debt until a revalidation reads both.
+- **The answers.** The landing command tells them what changed in each updated document and what is left out of date. It also tells them each answer the change check did not ask for. It shows them each revalidation the merge would leave answered apart from one of the change's own. The whole-repository check reports each such pair as debt until a revalidation reads both.
 - **As information.** What they are shown stops nothing.
 - **A later head.** Their authorisation covers a later head whose only changes since lie in the answer files the change adds, a clean merge of the base aside. `docs-reviewer`'s verdict goes stale on such a head, as on any change.
 
