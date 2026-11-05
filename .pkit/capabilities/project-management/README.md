@@ -283,7 +283,7 @@ The project-manager walks the methodology end-to-end: picks a title matching the
 **How review findings become work.** Four rules keep a review from multiplying the work it reviews; each is stated in the procedure where it applies:
 
 - whether a follow-up a reviewer produced gets a Milestone — [create-issue](skills/pm/create-issue.md), intent recognition;
-- the order of Tasks that change the same files — [batch-plan](skills/pm/batch-plan.md), the slicing step;
+- the order of Tasks that share a file, and when they are planned as one Task — [batch-plan](skills/pm/batch-plan.md), the slicing step;
 - when `review-pr` runs, on its own or inside `land-work` — [transition-state](skills/pm/transition-state.md), the review step;
 - what a fix round carries — the same review step, and for the builder's side the builder agent, where the project deploys one.
 
