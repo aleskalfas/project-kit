@@ -1,0 +1,80 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: fill
+    layout: slide
+    title: Eine Karte liegt auf der Oberfläche oder auf der Füllung ihrer Farbfamilie
+    visual:
+      use: starter/list
+      items:
+        - id: plain
+          head: Schlicht
+          text: Auf der Oberfläche, Überschrift und Text in den gemeinsamen Textfarben.
+        - id: tint
+          fill: tint
+          concept: test-notation/service
+          head: Getönt
+          text: Auf der Füllung ihrer Familie, Überschrift und Text in deren Textfarbe.
+
+  - id: bar
+    layout: slide
+    title: Ein Balken markiert eine Seite, oder keiner
+    visual:
+      use: starter/list
+      item: {use: starter/card, fill: tint}
+      items:
+        - id: none
+          concept: test-notation/store
+          head: Ohne Balken
+          text: Nur der Rand der Karte.
+        - id: top
+          bar: top
+          concept: test-notation/store
+          head: Balken oben
+          text: Entlang der Oberkante, in der Linienfarbe der Familie.
+        - id: left
+          bar: left
+          concept: test-notation/store
+          head: Balken links
+          text: Entlang der linken Kante, in der Linienfarbe der Familie.
+
+  - id: parts
+    layout: slide
+    title: Sie enthält Überschrift, Etikett und Text, jeweils wo angegeben
+    visual:
+      use: starter/list
+      items:
+        - id: head
+          head: Nur Überschrift
+        - id: all
+          head: Alle drei
+          tag: Dokumentation
+          text: Das Etikett steht unter der Überschrift, der Text unter beiden.
+        - id: tag-text
+          tag: Anforderungsanalyse
+          text: Etikett und Text, ohne Überschrift darüber.
+        - id: text
+          text: Nur ein Text, über dem nichts steht.
+
+  - id: runs
+    layout: slide
+    title: Ihr Text läuft schlicht oder hervorgehoben
+    visual:
+      use: starter/list
+      items:
+        - id: surface
+          head: Auf der Fläche
+          text:
+            - {text: Hervorgehoben, style: strong}
+            - " wo es zählt, schlicht für den Rest."
+        - id: family
+          fill: tint
+          concept: test-notation/person
+          bar: top
+          head: Auf der Füllung
+          tag: Person
+          text:
+            - "Zunächst schlicht, dann "
+            - {text: hervorgehoben, style: strong}
+            - ", beides in der Textfarbe der Familie."

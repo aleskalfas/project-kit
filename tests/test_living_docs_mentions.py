@@ -17,24 +17,34 @@ never fails on one:
 - **the mark**: an HTML comment `<!-- unanchored: <reason> -->` right after a
   mention passes that one passage over, and a mark that passes over nothing is
   reported;
-- **where it binds**: a page RS-LDOC-001 does not bind on is not read.
+- **where it binds**: a page RS-LDOC-001 does not bind on is not read;
+- **the warnings** (#2642): on the same pages, a link to a section of another page
+  that the page does not anchor at that section, where the rule on one home binds,
+  and a record's citation the page's anchors do not stand on are each a warning,
+  never failed, naming the page, the line, the link or the citation and the anchor
+  to add, and the rule by what it says.
 
-The findings document holds one report per page, and the human view lists each
-mention. The validator's `main` runs in the test's own process, with `--json`
-for the document and without it for the human view, and every `pkit` it reads
-through is answered in this process too (`tests/in_process.py`). The listing's
-process test is the spaces' tests' own.
+The findings document holds one report per page and one warning per passage
+warned of, and the human view lists each mention. The validator's `main` runs in
+the test's own process, with `--json` for the document and without it for the
+human view, and every `pkit` it reads through is answered in this process too
+(`tests/in_process.py`). The listing's process test is the spaces' tests' own.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import json
+import subprocess
+from collections.abc import Callable, Mapping
 from typing import Any
 
 import pytest
+from ruamel.yaml import YAML
 
+from project_kit import document_parts
 from tests import test_living_docs_spaces as spaces
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.in_process import load
 from tests.test_living_docs_spaces import errors, listing, outside_every_space, run
 
 GUIDE = "docs/guide.md"
@@ -342,3 +352,261 @@ def test_a_page_rs_ldoc_001_does_not_bind_on_is_not_read(project: AdopterRepo) -
     assert errors(document) == []
     assert [loc for loc, _m in _reports(document) if loc.startswith("docs/drafts")] == []
     assert "1 page(s) RS-LDOC-001 does not bind on, not read" in _mention_line(document)
+
+
+# --- the warnings (#2642) -------------------------------------------------------------
+
+REF = "docs/ref.md"
+
+#: What a warning of a link to a section says of the rule on one home, by what it says.
+ONE_HOME = (
+    "A page that sums up a fact whose home is another page links to the home and anchors the "
+    "home's section that states the fact, and an anchor on the whole home is not that anchor "
+    "(DEC-001 point 3)."
+)
+
+#: What a warning of a citation says of the rule on grounding, by what it says.
+GROUNDING = (
+    "Only what a page anchors grounds a statement, so an inline citation grounds its sentence "
+    "only where the page anchors what it cites (DEC-001 point 3)."
+)
+
+MARK = "`<!-- unanchored: <reason> -->`"
+
+
+def _warnings(document: Mapping[str, Any]) -> list[tuple[str, str]]:
+    return [
+        (f["location"], f["message"]) for f in document["findings"] if f["severity"] == "warning"
+    ]
+
+
+def _warned(document: Mapping[str, Any]) -> list[str]:
+    """Each warning's location and the anchor it says to add."""
+    return [
+        f"{location} {message.split('Add `', 1)[1].split('`', 1)[0]}"
+        for location, message in _warnings(document)
+    ]
+
+
+def _warning_line(document: Mapping[str, Any]) -> str:
+    (line,) = [line for line in document["summary"] if line.startswith("links and citations")]
+    return line
+
+
+def _reference(project: AdopterRepo, body: str = "## Use it\n\nHow.\n\n## Other\n\nMore.") -> None:
+    project.write({REF: _page(body)})
+
+
+def test_a_link_to_another_page_s_section_anchored_only_whole_is_a_warning(
+    project: AdopterRepo,
+) -> None:
+    _reference(project)
+    body = "It runs as [the reference says](ref.md#use-it)."
+    document = _guide(project, _anchored(body, f"{{artefact: [{REF}]}}"))
+    assert errors(document) == []
+    # The whole page grounds the mention, so it is no report.
+    assert _reports(document) == []
+    assert _warnings(document) == [
+        (
+            f"{GUIDE}:11",
+            f"{GUIDE}: the link at line 11 to `ref.md#use-it` leads to a section of another page "
+            f"that the page does not anchor. {ONE_HOME} Add `artefact: [docs/ref.md#use-it]` to "
+            f"the page's anchors, or mark a link that only names the section with {MARK} "
+            f"(DEC-001 point 6).",
+        )
+    ]
+    assert "RS-LDOC" not in _warnings(document)[0][1]
+    assert document["summary"][-1] == "0 error(s), 1 warning(s), 0 report(s)."
+    assert _warning_line(document) == (
+        "links and citations: 1 link(s) to a section of another page and 0 citation(s) of a "
+        "record read; warned of 1 section(s) linked and not anchored, and 0 citation(s) the "
+        "anchors do not stand on (DEC-001 points 3 and 6)."
+    )
+    assert f"  warning {GUIDE}:11" in listing(project)
+
+
+def test_a_link_to_a_page_it_anchors_nothing_of_is_a_warning_and_a_report(
+    project: AdopterRepo,
+) -> None:
+    _reference(project)
+    document = _guide(project, _page("It runs as [the reference says](ref.md#use-it)."))
+    assert _warned(document) == [f"{GUIDE}:8 artefact: [docs/ref.md#use-it]"]
+    assert _listed(project) == ["8: path `docs/ref.md` → artefact: [docs/ref.md#use-it]"]
+
+
+def test_an_anchor_on_the_section_or_on_one_that_holds_it_stands_on_the_link(
+    project: AdopterRepo,
+) -> None:
+    _reference(project, "## Use it\n\nHow.\n\n### In detail\n\nMore.\n\n## Other\n\nLess.")
+    body = "It runs as [the reference says](ref.md#in-detail)."
+    for anchor in (f"{REF}#in-detail", f"{REF}#use-it"):
+        document = _guide(project, _anchored(body, f"{{artefact: ['{anchor}']}}"))
+        assert _warnings(document) == [], anchor
+    document = _guide(project, _anchored(body, f"{{artefact: ['{REF}#other']}}"))
+    assert _warned(document) == [f"{GUIDE}:11 artefact: [docs/ref.md#in-detail]"]
+
+
+def test_a_fragment_is_read_as_the_slug_an_anchor_names_the_section_by(
+    project: AdopterRepo,
+) -> None:
+    """A host keeps an underscore in a heading's anchor, and an artefact anchor's slug
+    drops it (COR-050 point 2): the link and the anchor are compared as slugs."""
+    _reference(project, "## The `max_items` field\n\nHow many.")
+    body = "At most [so many](ref.md#the-max_items-field)."
+    document = _guide(project, _page(body))
+    assert _warned(document) == [f"{GUIDE}:8 artefact: [docs/ref.md#the-maxitems-field]"]
+    assert _listed(project) == [
+        "8: path `docs/ref.md` → artefact: [docs/ref.md#the-maxitems-field]"
+    ]
+    document = _guide(project, _anchored(body, f"{{artefact: ['{REF}#the-maxitems-field']}}"))
+    assert _warnings(document) == []
+    assert _reports(document) == []
+
+
+@pytest.mark.parametrize(
+    "title", ["Use it", "The `max_items` field", "Ordnung & Zahlung", "état payé", "#!?", ""]
+)
+def test_the_capability_s_slug_is_the_backbone_s(title: str) -> None:
+    (formats,) = load("living-docs", "formats")
+    assert formats.heading_slug(title) == document_parts.heading_slug(title)
+
+
+def test_no_warning_where_the_link_leads_to_no_one_section_of_another_page(
+    project: AdopterRepo,
+) -> None:
+    """A link within the page, to a file that is no page, to a fragment no heading has or
+    two share, and a path a code span names are not warned of."""
+    _reference(project, "## Use it\n\nHow.\n\n## Twice\n\nOne.\n\n## Twice\n\nTwo.")
+    body = (
+        "[Here](#guide), [notes](../src/notes.md#use-it), [gone](ref.md#gone), "
+        "[twice](ref.md#twice) and `docs/ref.md#use-it`."
+    )
+    document = _guide(
+        project, _anchored(body, f"{{artefact: [{REF}]}}"), **{"src/notes.md": "## Use it\n"}
+    )
+    assert _warnings(document) == []
+    assert errors(document) == []
+
+
+def test_a_page_is_warned_once_of_each_section_at_its_first_link(project: AdopterRepo) -> None:
+    _reference(project)
+    body = "See [it](ref.md#use-it).\n\nAgain [it](ref.md#use-it), and [more](ref.md#other)."
+    document = _guide(project, _anchored(body, f"{{artefact: [{REF}]}}"))
+    assert _warned(document) == [
+        f"{GUIDE}:11 artefact: [docs/ref.md#use-it]",
+        f"{GUIDE}:13 artefact: [docs/ref.md#other]",
+    ]
+
+
+def test_a_mark_passes_over_a_link_it_follows(project: AdopterRepo) -> None:
+    _reference(project)
+    body = "Read on in [the reference](ref.md#use-it) <!-- unanchored: names where to read on -->."
+    document = _guide(project, _anchored(body, f"{{artefact: [{REF}]}}"))
+    assert _warnings(document) == []
+    assert _reports(document) == []
+    assert "1 passage(s) marked unanchored on purpose" in _mention_line(document)
+
+
+def _without(rule: str) -> Callable[..., subprocess.CompletedProcess[Any]]:
+    """An answer of where the rules bind, as the backbone gives it, without `rule`."""
+
+    def answer(argv: Any, own: Callable[[], subprocess.CompletedProcess[Any]]) -> Any:
+        given = own()
+        document = json.loads(given.stdout)
+        for entry in document["artefacts"]:
+            entry["rules"] = [r for r in entry.get("rules") or [] if r.get("rule") != rule]
+        return subprocess.CompletedProcess(argv, 0, json.dumps(document), given.stderr)
+
+    return answer
+
+
+def test_a_link_is_not_read_where_the_rule_on_one_home_does_not_bind(
+    project: AdopterRepo,
+) -> None:
+    _reference(project)
+    project.write({GUIDE: _anchored("See [it](ref.md#use-it).", f"{{artefact: [{REF}]}}")})
+    pkit = spaces._answering("rule-sets", _without("living-docs:RS-LDOC-002"))
+    document = run(project, pkit=pkit)
+    assert _warnings(document) == []
+    assert _warning_line(document).startswith("links and citations: 0 link(s)")
+    assert "page(s) the rule on one home does not bind on, whose links are not read" in (
+        _warning_line(document)
+    )
+
+
+def test_a_citation_the_page_does_not_anchor_is_a_warning(project: AdopterRepo) -> None:
+    document = _guide(project, _page("A page rests on its anchors (COR-050 point 5)."))
+    assert errors(document) == []
+    assert _warnings(document) == [
+        (
+            f"{GUIDE}:8",
+            f"{GUIDE}: the citation at line 8 of `COR-050 point 5` is one the page's anchors do "
+            f"not stand on. {GROUNDING} Add `record: [COR-050#5]` to the page's anchors, or mark "
+            f"a passage that only names the record with {MARK} (DEC-001 point 6).",
+        )
+    ]
+    assert "RS-LDOC" not in _warnings(document)[0][1]
+    # The mention stays in the report too: the report lists what a change would not flag.
+    assert _listed(project) == ["8: record `COR-050#5` → record: [COR-050#5]"]
+
+
+def test_a_citation_is_read_in_each_of_its_forms(project: AdopterRepo) -> None:
+    body = (
+        "One (per COR-050 point 2). Two (COR-051, COR-050 point 5; COR-056 points 3 and 4). "
+        "Three ([living-docs:DEC-001-living-docs-discipline] point 3). Four "
+        "([COR-058](../.pkit/decisions/core/COR-058-record-points.md) point 1, "
+        "see living-docs:DEC-002)."
+    )
+    document = _guide(project, _page(body))
+    assert _warned(document) == [
+        f"{GUIDE}:8 record: [COR-050#2]",
+        f"{GUIDE}:8 record: [COR-051]",
+        f"{GUIDE}:8 record: [COR-050#5]",
+        f"{GUIDE}:8 record: [COR-056#3, COR-056#4]",
+        f"{GUIDE}:8 record: [living-docs:DEC-001#3]",
+        f"{GUIDE}:8 record: [COR-058#1]",
+        f"{GUIDE}:8 record: [living-docs:DEC-002]",
+    ]
+
+
+def test_a_callout_s_citation_is_read_and_a_quotation_s_is_not(project: AdopterRepo) -> None:
+    body = "> [!NOTE]\n> It rests on its anchors (COR-050 point 5).\n\n> As one said (COR-051)."
+    document = _guide(project, _page(body))
+    assert _warned(document) == [f"{GUIDE}:9 record: [COR-050#5]"]
+
+
+def test_an_id_the_running_text_names_is_no_citation(project: AdopterRepo) -> None:
+    """A name outside a parenthesis, in one that opens with something else, after a
+    word of its own within one, or in a code span is no citation; it stays a mention."""
+    body = (
+        "COR-050 point 5 says so, (the rule of COR-051), (per COR-023, superseding COR-022) "
+        "and (`COR-056`)."
+    )
+    document = _guide(project, _anchored(body, "{record: [COR-023]}"))
+    assert _warnings(document) == []
+    assert len(_listed(project)) == 4
+
+
+def test_an_anchor_on_the_record_or_the_point_it_cites_stands_on_a_citation(
+    project: AdopterRepo,
+) -> None:
+    body = "A page rests on its anchors (COR-050 point 5), and so on (COR-051)."
+    for anchors in ("{record: [COR-050, COR-051]}", "{record: ['COR-050#5', 'COR-051#2']}"):
+        assert _warnings(_guide(project, _anchored(body, anchors))) == [], anchors
+    document = _guide(project, _anchored(body, "{record: ['COR-050#2', COR-051]}"))
+    assert _warned(document) == [f"{GUIDE}:11 record: [COR-050#5]"]
+
+
+def test_a_mark_passes_over_a_citation_it_follows(project: AdopterRepo) -> None:
+    body = "It holds (COR-050 point 5) <!-- unanchored: named as the record to read -->."
+    document = _guide(project, _page(body))
+    assert _warnings(document) == []
+    assert "1 passage(s) marked unanchored on purpose" in _mention_line(document)
+
+
+def test_neither_warning_is_a_check_the_shared_rule_set_declares() -> None:
+    """The rule-set reviewer leaves a part a declared check enforces to the check
+    (COR-057), so a declared warning would stand in for a judgment that blocks."""
+    text = (spaces.CAPABILITY / "rule-sets" / "ldoc.md").read_text(encoding="utf-8")
+    front = YAML(typ="safe").load(text.split("---\n", 2)[1])
+    assert not {"RS-LDOC-001", "RS-LDOC-002", "RS-LDOC-007"} & set(front["checks"])

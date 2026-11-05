@@ -2677,11 +2677,14 @@ def land(
         _stub_gates(monkeypatch, lw.done_work, cap)
         _stub_done_work(monkeypatch, lw.done_work, run)
         _the_change_wrote_no_answers(monkeypatch, lw.friction_answers)
+        # A fork's head is fetched from the base's remote, which the backbone
+        # resolves (#2637): `origin`, the remote the fake host stands for.
+        monkeypatch.setattr(lw.friction_answers, "base_remote", lambda base: "origin")
         # Nor does it alter an accepted decision record (#2161).
         accepted = lw.accepted_records
         monkeypatch.setattr(accepted, "derive", lambda head, base: accepted.Derivation())
         # The stub's change writes no answer and changes no grant list.
-        monkeypatch.setattr(lw, "_grants_between", lambda *args: ())
+        monkeypatch.setattr(lw.fixers, "change_between", lambda *args: ())
         monkeypatch.setattr(lw, "_sleep", clock.sleep)
         monkeypatch.setattr(lw, "_monotonic", clock)
 
@@ -2718,13 +2721,15 @@ def land(
 
 
 def _the_change_wrote_no_answers(monkeypatch: pytest.MonkeyPatch, answers: ModuleType) -> None:
-    """land-work's step that lists the answers (`documents this change affects:`),
+    """land-work's step that reads the answers (`documents this change affects:`),
     answered as for a change that wrote none: the landings these rows walk are the
     ones a change with no answers takes, which the step leaves as they were
-    (project-management DEC-055). The merge as it would land passes the change check
+    (project-management DEC-065). The merge as it would land passes the change check
     too: the head holds the base its own check read (DEC-055 point 6)."""
 
-    def derive(head: str, base: str | None) -> Any:
+    def derive(
+        head: str, base: str | None, *, source: Any = None, from_checkout: bool = True
+    ) -> Any:
         document = {"schema_version": 1, "base": {"commit": "", "outdated": False}}
         return answers.Derivation(head, document={**document, "answers": [], "unreadable": []})
 

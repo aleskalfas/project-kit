@@ -20,14 +20,15 @@ from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree
 
+import pytest
 from fontTools.ttLib import TTFont
 
 from tests.in_process import load
 from tests.visual_communication_producer import png
 from tests.visual_communication_project import TEST_BRAND
 
-svg, svg_declaration, seam = load(
-    "visual-communication", "plugins.svg", "plugins.svg_declaration", "plugins.seam"
+svg, svg_declaration, seam, env, text = load(
+    "visual-communication", "plugins.svg", "plugins.svg_declaration", "plugins.seam", "env", "text"
 )
 
 FONT = TEST_BRAND / "fonts" / "SourceSansPro-Regular.otf"
@@ -300,6 +301,22 @@ def test_the_embedded_font_holds_the_characters_the_page_draws_and_no_other() ->
     assert cmap is not None
     held = {chr(code) for code in cmap}
     assert held == set("Plan & <do>it")
+
+
+def test_a_font_that_measures_and_cannot_be_subset_is_refused_naming_its_file(
+    tmp_path: Path,
+) -> None:
+    whole = FONT.read_bytes()
+    cut = tmp_path / "Cut.otf"
+    cut.write_bytes(whole[: len(whole) * 3 // 4])
+    assert text.Face("Cut", cut).upem
+
+    with pytest.raises(env.UnreadableFont) as raised:
+        svg.render(
+            scene(TITLE), key="default", colours=COLOURS, font_file=lambda _: cut, pictures={}
+        )
+
+    assert str(raised.value).startswith(f"the font file {cut} cannot be read: ")
 
 
 def test_the_same_scene_and_values_give_the_same_bytes() -> None:

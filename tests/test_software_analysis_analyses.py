@@ -40,12 +40,13 @@ from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ANALYSIS,
+    ANALYSIS_SET,
+    ANALYSIS_SET_TEXT,
     GLOSSARY,
     MAIN,
     SA,
     SETTINGS_TEXT,
     VALIDATE,
-    accepting_san,
     fill,
     front,
     installed,
@@ -488,7 +489,7 @@ def test_an_analysis_names_only_those_it_builds_on(two: AdopterRepo) -> None:
 def test_the_head_s_data_has_its_shape_and_its_text_shows_it(two: AdopterRepo) -> None:
     """The head's data is held to its shape always; its text to its data where the format
     rule binds (DEC-001 points 1 and 2)."""
-    two.write(accepting_san(two))
+    two.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     rel = _with_head(two, _head(), _head_text())
     assert [f for f in findings(check(two)) if f[0].startswith(rel)] == []
 

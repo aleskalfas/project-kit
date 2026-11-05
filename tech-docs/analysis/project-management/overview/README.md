@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=5 fingerprint=sha256:f200bb94c04cccf26254a3721c2f0656d169328c86a60e408d499ef93a1479d0 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:09da4b7668de77ef5d611f70ba9bca8c5162987ff07fe4c06f1012a71dc65627 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -106,7 +106,7 @@ Run several AI agents on one project at once, each on its own scope and never on
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md) ([not built yet](#not-built-yet): step 2, variant 2a, variant 2b, variant 2c)
 - [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md) ([not built yet](#not-built-yet): variant 1a, variant 4a)
 - [UC-088 — Delegate a Task of my scope to a helper agent](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md)
-- [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md) ([not built yet](#not-built-yet): variant 4a)
+- [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md) ([not built yet](#not-built-yet): variant 4a, variant 5b, variant 6a)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md) ([not built yet](#not-built-yet): step 1)
 - [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md) ([not built yet](#not-built-yet): variant 3b)
@@ -250,6 +250,8 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md): variant 1a, decided by `project-management:DEC-035#4`, tracked in `#521`
 - [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md): variant 4a, decided by `project-management:DEC-035#4`, tracked in `#521`
 - [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md): variant 4a, decided by `project-management:DEC-063#1`, tracked in `#2287`
+- [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md): variant 5b, decided by `project-management:DEC-063#1`, tracked in `#2287`
+- [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md): variant 6a, decided by `project-management:DEC-063#1`, tracked in `#2287`
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md): step 1, decided by `project-management:DEC-035#7`, tracked in `#521`
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): variant 3b, decided by `project-management:DEC-059#8`, tracked in `#2136`
 

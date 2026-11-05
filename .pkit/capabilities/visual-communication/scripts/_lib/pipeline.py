@@ -410,10 +410,10 @@ class Project:
         (DEC-005 point 7)."""
         return values.document(self.brand, self.combinations, self.lock)
 
-    def scenes(self) -> list[tuple[str, SceneResult]]:
-        """One scene for each language, at the key over the size axes, in the piece's order
-        of languages. Raises `env.MissingFont` (and so `text.MissingGlyph`) before anything
-        is laid out."""
+    def scenes(self, languages: Sequence[str] | None = None) -> list[tuple[str, SceneResult]]:
+        """One scene for each language, or each of `languages`, at the key over the size
+        axes, in the piece's order of languages. Raises `env.MissingFont` (and so
+        `text.MissingGlyph`) before anything is laid out."""
         return [
             (
                 language,
@@ -429,6 +429,7 @@ class Project:
                 ),
             )
             for language in self.piece.languages
+            if languages is None or language in languages
         ]
 
 
@@ -884,16 +885,19 @@ def colours_at(document: Mapping[str, Any], key: str) -> dict[str, Any]:
 
 
 def drawn(
-    project: Project, results: Sequence[tuple[str, SceneResult]], renderer: str
+    project: Project,
+    results: Sequence[tuple[str, SceneResult]],
+    renderer: str,
+    keys: Sequence[str] | None = None,
 ) -> Iterator[tuple[str, str, Any]]:
-    """Each scene drawn by the renderer `renderer` in each combination the piece names, in
-    the order of the piece's languages and of the keys: the language, the key, and what the
-    renderer gives (`render`, the renderers' entry of the seam)."""
+    """Each scene drawn by the renderer `renderer` in each combination the piece names, or
+    each of `keys`, in the order of the piece's languages and of the keys: the language, the
+    key, and what the renderer gives (`render`, the renderers' entry of the seam)."""
     implementation = seam.implementation(renderer)
     document = project.values()
     for language, result in results:
         scene = result.scene.to_dict()
-        for key in project.keys:
+        for key in project.keys if keys is None else keys:
             yield (
                 language,
                 key,
@@ -905,6 +909,15 @@ def drawn(
                     pictures=project.env.pictures_at(key),
                 ),
             )
+
+
+def preview_files(
+    piece: str, language: str, key: str, pages: Sequence[Any]
+) -> Iterator[tuple[str, str]]:
+    """Each page a renderer drew of a scene, as the name of its preview and its text."""
+    for index, page in enumerate(pages, start=1):
+        number = f".{index}" if len(pages) > 1 else ""
+        yield f"{piece}.{language}.{key}{number}.svg", page.svg
 
 
 # --- the inputs of a fingerprint, worked out from the current files -----------------------------

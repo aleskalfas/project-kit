@@ -1,7 +1,7 @@
 """The library folder, the list of the project's libraries, versions, the libraries the
 capability ships, a piece's lock, and the versions a library is checked alone with
 (DEC-001 point 5, DEC-002 point 3, DEC-003 points 1, 4, 5, 8 and 9, DEC-004 point 6,
-DEC-005 point 7, DEC-008 point 1, DEC-013 point 2, DEC-014 point 5).
+DEC-005 point 7, DEC-008 point 1, DEC-013 points 2, 5 and 6, DEC-014 point 5).
 
 - **The library folder** is `libraries/` in the location. Each version a lock may name is
   a folder of its own, `libraries/<name>/<version>/`, holding the version whole with its
@@ -14,12 +14,12 @@ DEC-005 point 7, DEC-008 point 1, DEC-013 point 2, DEC-014 point 5).
 - **A shipped library** is one the capability ships. Its version being built lies in a
   folder of its own under `SHIPPED_LIBRARIES`, named for the library and for no version,
   and the capability ships one for each library (`shipped_names`). Its released versions
-  and its record lie apart from it (`shipped`, DEC-013 point 2). A person brings the
-  version being built in by a command, which copies the version whole into the library
-  folder and lists it with the source `shipped`, every other byte of the list kept
-  (`plan_copy`, then `copy_shipped`). A version being built is not released, so the list
-  marks it `released: false`. The copy never overwrites a version the folder holds, and
-  is refused where a file of the capability's format in the version lacks its binding.
+  and its record lie apart from it (`shipped`, DEC-013 point 2). A person brings a version
+  in by a command, which copies it whole into the library folder and lists it with the
+  source `shipped`, every other byte of the list kept, and brings every copy of the
+  library up to date in the same run (`copies`, DEC-013 point 5). The source the list
+  gives a library (`Held.source`) says whether a copy is of a library the capability
+  ships, which only whoever maintains the capability corrects (DEC-013 point 6).
 - **Versions** are `X.Y.Z` with X at least 1 in format 1, and a library's *line* is its
   major. `builds-on` names each library a library builds on by its major, an integer. A
   brand marks at most one of them as its base, `base: true` (DEC-004 point 6); a
@@ -52,26 +52,18 @@ DEC-005 point 7, DEC-008 point 1, DEC-013 point 2, DEC-014 point 5).
 
 from __future__ import annotations
 
-import os
 import re
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from typing import Any
 
 from _lib import fingerprint, notations, records
-from _lib.files import (
-    FORMAT,
-    Change,
-    FileError,
-    binding_problem,
-    read_bound,
-    refuse_links,
-    schema_of,
-)
-from _lib.findings import FAILS, Finding
+from _lib.files import FileError, read_bound
+from _lib.findings import FAILS, PROJECT, Finding
 from _lib.location import files as listed_files
+from _lib.location import walked as walked_files
 from _lib.names import is_name
 from _lib.reading import ReadError, read_yaml
 from _lib.root import SHIPPED
@@ -84,6 +76,9 @@ FOUNDATIONS = "foundations"
 
 #: The list of the project's libraries, within the location.
 LIST = f"{FOLDER}/libraries.yaml"
+
+#: The kind of source the list gives a library the capability ships (DEC-013 point 5).
+SHIPPED_SOURCE = "shipped"
 
 #: The version being built of each library the capability ships, each in a folder of its
 #: own named for the library, under a name that names no version (DEC-013 point 2). Its
@@ -267,10 +262,17 @@ class Held:
     """The library versions a location holds, and its list.
 
     `root` is the project root and `location` the location's path within it. `release` is
-    the installed capability's release, read from its `package.yaml` unless given."""
+    the installed capability's release, read from its `package.yaml` unless given. `walked`
+    lists the files as they lie, not as git sees them, for a location a command built in the
+    clone's local folder, which git ignores (`before_after`)."""
 
     def __init__(
-        self, root: Path, location: str, release: tuple[int, int, int] | None = None
+        self,
+        root: Path,
+        location: str,
+        release: tuple[int, int, int] | None = None,
+        *,
+        walked: bool = False,
     ) -> None:
         self.root = root
         self.location = location
@@ -279,7 +281,7 @@ class Held:
         self.folders: dict[str, dict[Version, Path]] = {}
         self.strays: list[str] = []
         prefix = f"{location}/{FOLDER}/"
-        self._files = listed_files(root, f"{location}/{FOLDER}")
+        self._files = (walked_files if walked else listed_files)(root, f"{location}/{FOLDER}")
         for rel in self._files:
             parts = rel[len(prefix) :].split("/")
             if len(parts) != 3 or parts[2] != "library.yaml":
@@ -383,6 +385,19 @@ class Held:
             raise LibraryError(f"{path}: `libraries` is not a mapping of libraries")
         return libraries
 
+    def source(self, name: str) -> str | None:
+        """The kind of source the list gives a library, such as `shipped` for one the
+        capability ships (`SHIPPED_SOURCE`); None where the list names no source of it, or
+        cannot be read."""
+        try:
+            listed = self.listed or {}
+        except LibraryError:
+            return None
+        library = listed.get(name)
+        source = library.get("source") if isinstance(library, Mapping) else None
+        kind = source.get("kind") if isinstance(source, Mapping) else None
+        return kind if isinstance(kind, str) else None
+
     def released(self, name: str, version: Version) -> bool:
         """Whether the list marks a version released."""
         try:
@@ -419,10 +434,12 @@ class Held:
             files=self.files(name, version),
         )
 
-    def findings(self) -> list[Finding]:
+    def findings(self, restored: Collection[str] = ()) -> list[Finding]:
         """What is wrong with the library folder and its list (DEC-003 point 9): a version
         the list does not name or the folder does not hold, a version the capability
-        cannot read, and a released version that changed."""
+        cannot read, and a released version that changed. `restored` names, by label, each
+        released version the command that brings a shipped library in restores, so its
+        `library-changed` names that command (`copies.compare`, DEC-013 point 6)."""
         found: list[Finding] = []
         file = self.list_path
         for stray in self.strays:
@@ -490,11 +507,16 @@ class Held:
                             file=f"{self.location}/{FOLDER}/{where}/library.yaml",
                             fix=f"upgrade the capability, or take {label} out of the library "
                             f"folder and off the list once no lock names it",
-                            who="the project",
+                            who=PROJECT,
                         )
                     )
                 changes = self.hash_changes(name, version)
                 if changes:
+                    fix = (
+                        f"run `pkit visual add {name}`, which restores it as released"
+                        if label in restored
+                        else "restore the version folder as it was released"
+                    )
                     found.append(
                         Finding(
                             "library-changed",
@@ -502,7 +524,7 @@ class Held:
                             f"{label} no longer matches what was released: " + "; ".join(changes),
                             file=f"{self.location}/{FOLDER}/{where}",
                             library=label,
-                            fix="restore the version folder as it was released",
+                            fix=fix,
                         )
                     )
         for name, library in listed.items():
@@ -529,25 +551,6 @@ class Held:
 # --- a shipped library --------------------------------------------------------------------------
 
 
-class CopyRefused(Exception):
-    """A shipped version that is not copied into the library folder: the message says why,
-    and the way out."""
-
-
-@dataclass(frozen=True)
-class ShippedCopy:
-    """A copy of a shipped version into the library folder, checked and not yet written: the
-    version, its shipped folder with each of its files relative to it, the version folder it
-    is copied to, and the list's path with its text once it lists the version."""
-
-    library: Library
-    source: Path
-    files: tuple[str, ...]
-    folder: Path
-    list_file: Path
-    list_text: str
-
-
 def shipped_names(folder: Path | None = None) -> list[str]:
     """The libraries the capability ships, in name order, read from their versions being
     built alone: each folder of `folder`, `SHIPPED_LIBRARIES` unless given, that holds a
@@ -556,131 +559,6 @@ def shipped_names(folder: Path | None = None) -> list[str]:
     if not folder.is_dir():
         return []
     return sorted(path.name for path in folder.iterdir() if (path / "library.yaml").is_file())
-
-
-def plan_copy(root: Path, location: str, name: str) -> ShippedCopy:
-    """The copy of the version of `name` the capability ships into the library folder of
-    `location` (DEC-003 point 5), checked, so a refused copy writes nothing. Raises
-    CopyRefused for a library the capability does not ship, a file of the capability's
-    format in the version that lacks its binding (DEC-002 point 3), a version the library
-    folder holds or the list names already, a library the list names from another source
-    (DEC-003 point 4), a list that cannot be read or cannot take the version as text, and a
-    path reached through a link."""
-    shipped = shipped_names()
-    if name not in shipped:
-        ships = ", ".join(f"`{each}`" for each in shipped) or "none"
-        raise CopyRefused(f"the capability ships no library `{name}`; it ships {ships}")
-    source = SHIPPED_LIBRARIES / name
-    files = _files_of(source)
-    unbound = _unbound(source, files)
-    if unbound:
-        raise CopyRefused(f"the shipped `{name}` cannot be copied: {'; '.join(unbound)}")
-    try:
-        library = read_library(source)
-    except LibraryError as exc:
-        raise CopyRefused(f"the shipped `{name}` cannot be read: {exc}") from exc
-    if library.name != name:
-        raise CopyRefused(f"the shipped `{name}` names itself `{library.name}` in its library.yaml")
-    folder = root / location / FOLDER / name / str(library.version)
-    if folder.exists() or folder.is_symlink():
-        raise CopyRefused(
-            f"the library folder holds {folder.relative_to(root).as_posix()} already, and a "
-            f"version it holds is never overwritten"
-        )
-    list_file = root / location / LIST
-    for path in (folder, list_file):
-        try:
-            refuse_links(root, path)
-        except FileError as exc:
-            raise CopyRefused(str(exc)) from exc
-    return ShippedCopy(
-        library, source, files, folder, list_file, _listing(root, list_file, library)
-    )
-
-
-def copy_shipped(planned: ShippedCopy, change: Change) -> None:
-    """Write a planned copy, as the next steps of `change`, and take it: the version's
-    files copied into a folder beside its own and moved into its place whole, then the
-    list. Raises WriteFailed where a write fails, every file then as it was before the run,
-    the copy removed, or named."""
-    sources = {rel: planned.source / rel for rel in planned.files}
-    change.add_folder(planned.folder, sources)
-    change.write(planned.list_file, planned.list_text.encode("utf-8"))
-    change.commit()
-
-
-def _files_of(folder: Path) -> tuple[str, ...]:
-    """Every file of `folder`, relative to it, in path order; a link is never followed."""
-    found = []
-    for current, dirs, names in os.walk(folder, followlinks=False):
-        dirs[:] = [d for d in dirs if not (Path(current) / d).is_symlink()]
-        for each in names:
-            path = Path(current) / each
-            if path.is_file() and not path.is_symlink():
-                found.append(path.relative_to(folder).as_posix())
-    return tuple(sorted(found))
-
-
-def _unbound(folder: Path, files: Sequence[str]) -> list[str]:
-    """Why each file of the capability's format among `files` is not bound to its kind."""
-    found = []
-    for rel in files:
-        kind = kind_within(rel.split("/"))
-        if kind is None:
-            continue
-        try:
-            problem = binding_problem(read_yaml(folder / rel), kind)
-        except ReadError as exc:
-            found.append(str(exc))
-            continue
-        if problem is not None:
-            found.append(f"{rel} {problem}")
-    return found
-
-
-def _listing(root: Path, list_file: Path, library: Library) -> str:
-    """The list's text once it lists the shipped `library`, not released: a list written
-    whole where the location holds none, or the list with the version added, every other
-    byte kept. Raises CopyRefused."""
-    name, version = library.name, str(library.version)
-    unreleased = {"released": False}
-    entry = {"source": {"kind": "shipped"}, "versions": {version: unreleased}}
-    if not list_file.exists():
-        record = {"pkit_schema": schema_of("libraries"), "schema_version": FORMAT}
-        return records.text({**record, "libraries": {name: entry}}, LIST_HEADER)
-    shown = list_file.relative_to(root).as_posix()
-    try:
-        data = records.read(list_file, "libraries")
-    except records.RecordError as exc:
-        raise CopyRefused(f"the list of libraries cannot be read: {exc}") from exc
-    listed = data.get("libraries")
-    if not isinstance(listed, Mapping):
-        raise CopyRefused(f"{shown}: `libraries` is not a mapping of libraries")
-    found = listed.get(name)
-    if found is None:
-        path, key, value = ["libraries"], name, entry
-    else:
-        source = found.get("source") if isinstance(found, Mapping) else None
-        if not isinstance(source, Mapping) or source.get("kind") != "shipped":
-            raise CopyRefused(
-                f"{shown} names `{name}` from another source than the capability's, and a "
-                f"name ties one library to its source: rename that library, or take it off "
-                f"the list"
-            )
-        versions = found.get("versions")
-        if isinstance(versions, Mapping) and version in versions:
-            raise CopyRefused(
-                f"{shown} names {library.label} already, though the library folder does not "
-                f"hold it: restore its folder, or take it off the list"
-            )
-        path, key, value = ["libraries", name, "versions"], version, unreleased
-    each = "library" if found is None else "version"
-    try:
-        return records.with_entry(
-            list_file.read_bytes().decode("utf-8"), path, key, value, each=each
-        )
-    except records.RecordError as exc:
-        raise CopyRefused(f"{shown} cannot take {library.label} as text: {exc}") from exc
 
 
 # --- the lock -----------------------------------------------------------------------------------

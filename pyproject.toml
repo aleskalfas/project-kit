@@ -20,7 +20,11 @@ license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
     "click>=8.1",
-    "ruamel.yaml>=0.18",
+    # The oldest version the reader of plain block YAML, `block_yaml`, is tested
+    # against: it copies the pure-Python loader's reading of that form, so it is off
+    # under a version it was not tested against, or where a part of the loader it takes
+    # is missing (`block_yaml.TESTED_VERSIONS`, #2410).
+    "ruamel.yaml>=0.19.1",
     "packaging>=24.0",
     "jsonschema>=4.20",
 ]
@@ -45,6 +49,7 @@ dev = [
     "uharfbuzz==0.57.0",  # visual-communication shapes text with it; pinned, since one release must give one scene
     "fonttools==4.68.0",  # visual-communication reads font metrics with it; pinned likewise
     "uniseg==0.10.1",  # visual-communication breaks lines by Unicode's rules with it; pinned likewise
+    "resvg-py==0.5.0",  # visual-communication draws a page as an image with it; pinned likewise
 ]
 
 [tool.hatch.version]

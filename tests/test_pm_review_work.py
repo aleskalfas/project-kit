@@ -262,6 +262,13 @@ def test_pr_ready_returns_true_on_success(rw, monkeypatch) -> None:
 CAP_ROOT = SCRIPT.parent.parent
 BRANCH = "fix/42-do-the-thing"
 PR_URL = "https://github.com/o/r/pull/77"
+PR_NUMBER = 77
+#: The PR's head by default.
+LISTED = "a" * 40
+#: A later head of the PR, after a fix round.
+MOVED = "c" * 40
+#: Where the PR's head left its base, as the change check names it.
+LEFT = "b" * 40
 PR_READS = {"list", "view"}
 # The variable an earlier revision of #1242 handed the engine's answer down in.
 HAND_DOWN_ENV = "PKIT_PM_ISSUE_STATUS"
@@ -279,7 +286,7 @@ def _task(labels: list[str]) -> dict:
 
 
 def _open_pr(*, draft: bool) -> dict:
-    return {"number": 77, "state": "OPEN", "isDraft": draft, "headRefName": BRANCH}
+    return {"number": PR_NUMBER, "state": "OPEN", "isDraft": draft, "headRefName": BRANCH}
 
 
 def _pr_writes(gh_calls: list[list[str]]) -> list[list[str]]:
@@ -293,11 +300,19 @@ def _last_failure(err: str) -> str:
 
 @pytest.fixture
 def run_main(rw, monkeypatch):
-    """Returns `run(issue, *, pr=None, move_rc=0, reviewer=None, engine=None,
-    config=None, move=None, dry_run=False, instance=None, github=None,
-    extra=())` → `(rc, gh_calls, moves)`. `pr` is the open PR on the branch
-    (None: none yet); `engine` the process engine, a `FakeEngine` (by default
-    one that gives no answer); `config` the adopter config. `move` runs the
+    """Returns `run(issue, *, pr=None, body="filled", head=LISTED, derived=None,
+    derives=None, sources=None, fork=False, move_rc=0, reviewer=None, engine=None,
+    config=None, move=None, dry_run=False, instance=None, github=None, extra=())` →
+    `(rc, gh_calls, moves)`. `pr` is the open PR on the branch (None: none yet), `body`
+    its description, None for one gh cannot read, and `head` its head. The body
+    validator finds nothing in the description, and the author's
+    sentences are read from it as they stand. `derived` is what the change check at
+    the PR's head gives,
+    `derives` records each (head, base) it is run for, and `sources` where
+    each was to fetch the head from; without `derived`, the change check gives no
+    answers. `fork` says the PR comes from a fork. `engine` is the process engine,
+    a `FakeEngine` (by default one that gives no answer); `config` the adopter
+    config. `move` runs the
     composed move-issue in process; without it the move is recorded and answers
     `move_rc`. `instance` is this clone's instance id (none by default), and
     `github` the in-memory GitHub its ownership calls reach; each ownership
@@ -308,6 +323,12 @@ def run_main(rw, monkeypatch):
         issue: dict,
         *,
         pr: dict | None = None,
+        body: str | None = "filled",
+        head: str = LISTED,
+        derived: object | None = None,
+        derives: list[tuple[str, str]] | None = None,
+        sources: list[object] | None = None,
+        fork: bool = False,
         move_rc: int = 0,
         reviewer: str | None = None,
         engine: FakeEngine | None = None,
@@ -336,7 +357,19 @@ def run_main(rw, monkeypatch):
             if args[:3] == ["gh", "pr", "list"]:
                 stdout = json.dumps([pr] if pr else [])
             elif args[:3] == ["gh", "pr", "view"]:
-                stdout = json.dumps({"body": "filled"})
+                if body is None:
+                    return subprocess.CompletedProcess(
+                        args=args, returncode=1, stdout="", stderr="HTTP 502: Bad Gateway"
+                    )
+                stdout = json.dumps(
+                    {
+                        "body": body,
+                        "headRefOid": head,
+                        "baseRefName": "main",
+                        "headRefName": BRANCH,
+                        "isCrossRepository": fork,
+                    }
+                )
             elif args[:3] == ["gh", "pr", "create"]:
                 stdout = PR_URL
             return subprocess.CompletedProcess(args=args, returncode=0, stdout=stdout, stderr="")
@@ -344,6 +377,13 @@ def run_main(rw, monkeypatch):
         def move_issue(n, target, **_kw):
             moves.append(target)
             return move_rc
+
+        def checked(at: str, base: str, *, source: object = None):
+            (derives if derives is not None else []).append((at, base))
+            (sources if sources is not None else []).append(source)
+            if derived is not None:
+                return derived
+            return rw.friction_answers.Derivation(at, document=_document(), answers=())
 
         argv = ["review-work", "42", "--yes", "--base", "main"]
         if reviewer is not None:
@@ -365,8 +405,11 @@ def run_main(rw, monkeypatch):
         monkeypatch.setattr(rw.axis_labels, "load_substrate_map", lambda _r: None)
         monkeypatch.setattr(rw, "_gh_get_issue", lambda _n, _c: issue)
         monkeypatch.setattr(rw.issue_branch, "_local_branches", lambda: (BRANCH,))
-        monkeypatch.setattr(rw, "_ready_body_ok", lambda *a: True)
+        monkeypatch.setattr(rw.pr_validation, "validate_pr", lambda **k: [])
         monkeypatch.setattr(rw, "gh_run", fake_gh_run)
+        monkeypatch.setattr(rw.friction_answers, "checked", checked)
+        # The PR's base is fetched from `upstream`; the branch tracks no remote here.
+        monkeypatch.setattr(rw.friction_answers, "base_remote", lambda _base: "upstream")
         if move is None:
             monkeypatch.setattr(rw.composed_move, "invoke_move_issue", move_issue)
         else:
@@ -640,3 +683,376 @@ def test_bypass_owner_posts_its_reason_first_and_once(run_main, rw, monkeypatch,
     assert "--bypass-owner let this clone, instance 2, act on it" in captured.err
     assert "audit comment already present; idempotent skip" in captured.out
     assert captured.out.rstrip().endswith("[ok] PR ready; #42 in Review")
+
+
+# ---- the author's sentences (DEC-065 point 3) -------------------------------------
+#
+# The description carries no list of the answers the change wrote: review-work runs
+# the change check at the PR's head on every move, and each document it marks
+# `updated` needs a sentence on what changed in it. review-work refuses before it
+# makes the PR ready, requests reviewers or moves the issue; open-pr only warns, and
+# edit-pr derives nothing (their own tests).
+
+SENTENCES = "## What changed in each updated document"
+FILLED = "Closes #42\n\n## Summary\nwork\n\n## Doc impact\n- [x] the guide\n"
+
+
+def _document(*updated: str, **others: str) -> dict:
+    """The change check's document for a change that revalidated each of `updated`
+    as updated, each of `others` with the answer given, and `docs/api.md` as
+    unchanged."""
+    entries = [{"location": location, "answer": "updated", "changed": []} for location in updated]
+    for location, answer in others.items():
+        entries.append({"location": location, "answer": answer, "reason": "Holds."})
+    entries.append({"location": "docs/api.md", "answer": "unchanged", "reason": "Holds."})
+    return {"base": {"commit": LEFT}, "answers": entries, "unreadable": []}
+
+
+def _described(said: str = "") -> str:
+    """A description with `said` — the author's sentences — below its sections."""
+    return f"{FILLED}\n{said}"
+
+
+def _derived(rw, document: dict, at: str = LISTED):
+    """What the change check at `at` gives: its `document`."""
+    return rw.friction_answers.Derivation(at, document=document, answers=tuple(document["answers"]))
+
+
+def _refusals(err: str) -> list[str]:
+    return [ln for ln in err.splitlines() if ln.startswith("  - [hard-reject] body.sentences: ")]
+
+
+def _refusal(location: str) -> str:
+    return (
+        f"  - [hard-reject] body.sentences: {location} is updated in this change, and the "
+        f"description gives no sentence on what changed in it — under `{SENTENCES}`, write one "
+        'on a line of its own as "- `path`: sentence", starting in the line\'s first column, '
+        "the document in a code span as the change check names it"
+    )
+
+
+#: The step a refused description of the open PR ends with.
+EDIT_STEP = (
+    f"  → write the description with `edit-pr {PR_NUMBER} --body-file <file>`, then run "
+    "`review-work 42` again; --force overrides."
+)
+#: The guide's sentence, as the author writes it.
+GUIDE = f"{SENTENCES}\n\n- `docs/guide.md`: The guide names the new flag.\n"
+
+
+@pytest.mark.parametrize("draft", [True, False], ids=["draft-pr", "ready-pr"])
+def test_an_updated_document_with_no_sentence_is_refused_before_any_write(
+    run_main, rw, capsys, draft
+) -> None:
+    """The change check at the PR's head decides: each document it marks updated with
+    no sentence is named, with the one-line form, and the refusal ends with the edit
+    to make; nothing is made ready or moved, and no reviewer requested."""
+    derives: list[tuple[str, str]] = []
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=draft),
+        body=_described(GUIDE),
+        derived=_derived(rw, _document("docs/guide.md", "docs/cli.md", "docs/notes.md")),
+        derives=derives,
+        reviewer="@alice",
+    )
+    assert rc == 1
+    assert _pr_writes(gh_calls) == []
+    assert moves == []
+    assert derives == [(LISTED, "main")]
+    out, err = capsys.readouterr()
+    assert "[refused] PR body is not ready for review:" in err.splitlines()
+    assert _refusals(err) == [_refusal("docs/cli.md"), _refusal("docs/notes.md")]
+    assert err.splitlines()[-1] == EDIT_STEP
+    assert "[ok]" not in out
+
+
+@pytest.mark.parametrize("head", [LISTED, MOVED], ids=["first-move", "after-a-fix-round"])
+def test_with_every_sentence_given_it_proceeds_and_the_check_ran_at_the_head(
+    run_main, rw, capsys, head
+) -> None:
+    """Every sentence given: the PR goes to review. The change check runs once, at the
+    PR's head, on every move, a fix round's included (DEC-065 point 3)."""
+    said = f"{GUIDE}- `docs/cli.md`: The page lists the new command.\n"
+    derives: list[tuple[str, str]] = []
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=True),
+        body=_described(said),
+        head=head,
+        derived=_derived(rw, _document("docs/guide.md", "docs/cli.md"), at=head),
+        derives=derives,
+    )
+    assert rc == 0
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["ready"]
+    assert moves == ["review"]
+    assert derives == [(head, "main")]
+    out, err = capsys.readouterr()
+    assert "body.sentences" not in err
+    assert out.rstrip().endswith("[ok] PR ready; #42 in Review")
+
+
+#: A sentence the host would close an issue with: past tense, which the closing
+#: references this capability reads leave out.
+CLOSING = f"{SENTENCES}\n\n- `docs/guide.md`: This fixed #77 in the guide.\n"
+CLOSING_REFUSAL = (
+    "  - [hard-reject] body.sentences: the sentence on what changed in docs/guide.md, under "
+    f"`{SENTENCES}`, reads as a closing reference (fixed #77): the host would close an issue "
+    "with it at merge — reword it"
+)
+
+
+def test_a_sentence_that_reads_as_a_closing_reference_is_refused_before_any_write(
+    run_main, rw, capsys
+) -> None:
+    """It stays in the description and the squash commit, where the host reads it
+    (DEC-065 point 5). The refusal is the sentences', named with the edit to make."""
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=True),
+        body=_described(CLOSING),
+        derived=_derived(rw, _document("docs/guide.md")),
+    )
+    assert rc == 1
+    assert _pr_writes(gh_calls) == [] and moves == []
+    _out, err = capsys.readouterr()
+    assert _refusals(err) == [CLOSING_REFUSAL]
+    assert err.splitlines()[-1] == EDIT_STEP
+
+
+def test_force_passes_a_sentence_that_reads_as_a_closing_reference(run_main, rw, capsys) -> None:
+    """A `hard-reject`, overridden as every one is (DEC-046); land-work still refuses
+    it, and nothing overrides that."""
+    rc, _gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=True),
+        body=_described(CLOSING),
+        derived=_derived(rw, _document("docs/guide.md")),
+        extra=("--force",),
+    )
+    assert rc == 0 and moves == ["review"]
+    _out, err = capsys.readouterr()
+    assert _refusals(err) == [CLOSING_REFUSAL]
+    assert err.splitlines()[-1] == "  → proceeding under --force."
+
+
+def test_a_list_an_earlier_run_left_in_the_description_is_not_read(run_main, rw, capsys) -> None:
+    """A list an earlier run wrote marks a document updated that the change check at
+    the head does not: nothing is refused for it, since the answers are the check's
+    alone (DEC-065 point 2)."""
+    listed = "\n".join(
+        [
+            rw.friction_answers.HEADING,
+            "",
+            f"{rw.friction_answers.MARKER_START} head={MOVED} base={LEFT} -->",
+            "1. `docs/notes.md` — **updated in this change**",
+            rw.friction_answers.MARKER_END,
+        ]
+    )
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=True),
+        body=f"{_described(GUIDE)}\n{listed}\n",
+        derived=_derived(rw, _document("docs/guide.md", **{"docs/notes.md": "unchanged"})),
+    )
+    assert rc == 0
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["ready"] and moves == ["review"]
+    assert "body.sentences" not in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("fork", "remote", "ref"),
+    [(False, "origin", f"refs/heads/{BRANCH}"), (True, "upstream", f"refs/pull/{PR_NUMBER}/head")],
+    ids=["same-repository", "fork"],
+)
+def test_the_head_is_fetched_from_the_pr_s_branch_or_its_pull_ref(
+    run_main, rw, fork, remote, ref
+) -> None:
+    """Where this clone lacks the PR's head, the change check fetches it, as land-work
+    fetches it: from the PR's branch on the remote it is pushed to, or for a fork
+    from the ref the base repository keeps for the PR, on the base's remote."""
+    sources: list[object] = []
+    run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=True),
+        body=_described(),
+        head=MOVED,
+        derived=_derived(rw, _document("docs/cli.md"), at=MOVED),
+        sources=sources,
+        fork=fork,
+    )
+    assert sources == [rw.friction_answers.Source(remote, ref)]
+
+
+#: What review-work says of a change check it could not run at the PR's head.
+UNDERIVED = (
+    f"the change check at PR #{PR_NUMBER}'s head ccccccc could not be run (no answers were "
+    "stood in)"
+)
+
+
+@pytest.mark.parametrize("draft", [True, False], ids=["draft-pr", "ready-pr"])
+def test_a_check_that_cannot_be_run_at_the_head_stops_and_refuses_nothing(
+    run_main, rw, capsys, draft
+) -> None:
+    """Never a pass on a guess, and never a refusal on answers nobody read: where the
+    change check cannot be run at the PR's head, the run stops at exit 2, asks no
+    edit, and says to run again."""
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=draft),
+        body=_described(),
+        head=MOVED,
+        derived=rw.friction_answers.Derivation(MOVED, problem="no answers were stood in"),
+    )
+    assert rc == rw.EXIT_UNDERIVED == 2
+    assert _pr_writes(gh_calls) == [] and moves == []
+    out, err = capsys.readouterr()
+    assert err.splitlines()[-1] == (
+        f"error: {UNDERIVED}, so which documents need a sentence cannot be told. Nothing was "
+        "made ready, no reviewer requested and the issue not moved. Run review-work again once "
+        "it can be run."
+    )
+    assert _refusals(err) == [] and "edit-pr" not in err
+    assert "[ok]" not in out
+
+
+def test_under_force_a_check_that_cannot_be_run_refuses_nothing(run_main, rw, capsys) -> None:
+    """--force passes the refusal whole: a change check that cannot be run at the head
+    stops nothing, and a warning says the sentences went unchecked (DEC-065 point 3).
+    The reviewer of the answers still blocks a missing sentence."""
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=True),
+        body=_described(),
+        head=MOVED,
+        derived=rw.friction_answers.Derivation(MOVED, problem="no answers were stood in"),
+        extra=("--force",),
+    )
+    assert rc == 0
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["ready"]
+    assert moves == ["review"]
+    err = capsys.readouterr().err
+    assert (
+        f"  [warn] {UNDERIVED}; under --force, no sentence on what changed is checked, and the "
+        "move goes on."
+    ) in err.splitlines()
+    assert _refusals(err) == []
+
+
+def test_a_sentence_on_a_document_the_check_does_not_mark_updated_is_warned_of(
+    run_main, rw, capsys
+) -> None:
+    """A sentence on a document the change check at the head does not mark updated is
+    warned of, as open-pr and land-work warn of it, with the edit that removes it; it
+    refuses nothing (DEC-065 point 3)."""
+    said = f"{GUIDE}- `docs/api.md`: The page is still right.\n"
+    rc, _gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=True),
+        body=_described(said),
+        head=MOVED,
+        derived=_derived(rw, _document("docs/guide.md"), at=MOVED),
+    )
+    assert rc == 0
+    assert moves == ["review"]
+    err = capsys.readouterr().err
+    assert [ln for ln in err.splitlines() if "[warn]" in ln] == [
+        "  [warn] docs/api.md has a sentence under `## What changed in each updated document`, "
+        "and the change check at ccccccc does not mark it updated, so no reviewer checks the "
+        f"sentence — remove it from the description with `edit-pr {PR_NUMBER} --body-file "
+        "<file>`"
+    ]
+
+
+@pytest.mark.parametrize("draft", [True, False], ids=["draft-pr", "ready-pr"])
+def test_a_description_that_cannot_be_read_stops_before_any_write(run_main, capsys, draft) -> None:
+    """A failed read is never read as a description with no sentences, which could
+    pass a ready PR and move the issue: the run stops at exit 3, saying what failed."""
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]), pr=_open_pr(draft=draft), body=None, reviewer="@alice"
+    )
+    assert rc == 3
+    assert _pr_writes(gh_calls) == []
+    assert moves == []
+    err = capsys.readouterr().err
+    assert (
+        f"error: PR #{PR_NUMBER}'s description could not be read (HTTP 502: Bad Gateway); "
+        "nothing was made ready, no reviewer requested and the issue not moved. Run "
+        "review-work again once it can be read."
+    ) in err.splitlines()
+
+
+def test_a_change_that_marks_no_document_updated_is_not_refused(run_main) -> None:
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]), pr=_open_pr(draft=True), body=FILLED
+    )
+    assert rc == 0
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["ready"]
+    assert moves == ["review"]
+
+
+def test_an_item_not_read_as_a_sentence_is_named_beside_the_refusal(run_main, rw, capsys) -> None:
+    """A sentence written in another form, the document in bold, gives none: the
+    refusal names the document, and the item by its line, with the form."""
+    item = "- **docs/guide.md:** The guide names the new flag."
+    body = _described(f"{SENTENCES}\n\n{item}\n")
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=True),
+        body=body,
+        derived=_derived(rw, _document("docs/guide.md")),
+    )
+    assert rc == 1
+    assert _pr_writes(gh_calls) == [] and moves == []
+    err = capsys.readouterr().err
+    assert _refusals(err) == [_refusal("docs/guide.md")]
+    line = body.split("\n").index(item) + 1
+    assert (
+        f"  - [warning] body.sentences: line {line} of the description, under `{SENTENCES}`, "
+        f'is not read as a sentence: "{item}" — write it as "- `path`: sentence", starting in '
+        "the line's first column, the document in a code span as the change check names it"
+    ) in err.splitlines()
+
+
+def test_force_takes_the_pr_to_review_past_the_refusal(run_main, rw, capsys) -> None:
+    """--force overrides the refusal as it overrides every hard-reject (DEC-046)."""
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=True),
+        body=_described(),
+        derived=_derived(rw, _document("docs/guide.md")),
+        extra=("--force",),
+    )
+    assert rc == 0
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["ready"]
+    assert moves == ["review"]
+    err = capsys.readouterr().err
+    assert _refusals(err) == [_refusal("docs/guide.md")]
+    assert err.splitlines()[-1] == "  → proceeding under --force."
+
+
+def test_the_refusal_joins_the_body_validator_s_findings(rw, monkeypatch, capsys) -> None:
+    """One refusal names every blocking finding, the validator's and the sentences'."""
+    no_doc_impact = rw.pr_validation.Finding(
+        rw.pr_validation.SEVERITY_HARD_REJECT, "body.doc-impact", "no Doc impact"
+    )
+    monkeypatch.setattr(rw.pr_validation, "validate_pr", lambda **k: [no_doc_impact])
+    monkeypatch.setattr(
+        rw.friction_answers,
+        "checked",
+        lambda head, base, *, source=None: _derived(rw, _document("docs/guide.md"), at=head),
+    )
+    description = rw._Description(_described(), number=PR_NUMBER, head=LISTED, base="main")
+    sentences = rw._sentence_findings(description)
+    assert sentences is not None
+    assert (
+        rw._ready_body_ok(
+            description.body, {}, CAP_ROOT, False, sentences=sentences, next_step=rw.FILL_FIRST
+        )
+        is False
+    )
+    err = capsys.readouterr().err
+    assert "  - [hard-reject] body.doc-impact: no Doc impact" in err.splitlines()
+    assert _refusals(err) == [_refusal("docs/guide.md")]
+    assert err.splitlines()[-1] == f"  → {rw.FILL_FIRST}; --force overrides."

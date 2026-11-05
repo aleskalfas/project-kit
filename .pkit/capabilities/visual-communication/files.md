@@ -8,6 +8,7 @@ pkit:
         - .pkit/capabilities/visual-communication/package.yaml
         - .pkit/capabilities/visual-communication/scripts/status.py
         - .pkit/capabilities/visual-communication/scripts/add.py
+        - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/produce.py
         - .pkit/capabilities/visual-communication/scripts/export.py
@@ -21,6 +22,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/records.py
         - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
         - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/before_after.py
         - .pkit/capabilities/visual-communication/scripts/_lib/full_read.py
         - .pkit/capabilities/visual-communication/scripts/_lib/comparison.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
@@ -43,7 +46,9 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/foundations/library.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/roles.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
-        - .pkit/capabilities/visual-communication/libraries/**
+        - .pkit/capabilities/visual-communication/libraries/**/*.yaml
+        - .pkit/capabilities/visual-communication/libraries/neutral/neutral.resolver.json
+        - .pkit/capabilities/visual-communication/libraries/neutral/tokens/*.tokens.json
         - tests/visual_communication_project.py
         - tests/test_visual_communication_pipeline.py
         - tests/test_visual_communication_layout.py
@@ -56,7 +61,49 @@ pkit:
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/notation.yaml
         - tests/fixtures/visual-communication/libraries/test-parts/1.0.0/roles.yaml
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-009", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012", "visual-communication:DEC-013", "visual-communication:DEC-014"]
+      record:
+        - visual-communication:DEC-001#3
+        - visual-communication:DEC-001#5
+        - visual-communication:DEC-001#7
+        - visual-communication:DEC-001#8
+        - visual-communication:DEC-002#1
+        - visual-communication:DEC-002#2
+        - visual-communication:DEC-002#3
+        - visual-communication:DEC-002#4
+        - visual-communication:DEC-002#5
+        - visual-communication:DEC-003#1
+        - visual-communication:DEC-003#4
+        - visual-communication:DEC-003#5
+        - visual-communication:DEC-003#6
+        - visual-communication:DEC-003#7
+        - visual-communication:DEC-003#8
+        - visual-communication:DEC-004
+        - visual-communication:DEC-007#1
+        - visual-communication:DEC-008#1
+        - visual-communication:DEC-008#3
+        - visual-communication:DEC-008#4
+        - visual-communication:DEC-008#5
+        - visual-communication:DEC-008#6
+        - visual-communication:DEC-008#7
+        - visual-communication:DEC-009#7
+        - visual-communication:DEC-010#1
+        - visual-communication:DEC-010#2
+        - visual-communication:DEC-010#3
+        - visual-communication:DEC-010#5
+        - visual-communication:DEC-010#7
+        - visual-communication:DEC-011#1
+        - visual-communication:DEC-011#2
+        - visual-communication:DEC-011#3
+        - visual-communication:DEC-011#4
+        - visual-communication:DEC-011#6
+        - visual-communication:DEC-012#1
+        - visual-communication:DEC-012#6
+        - visual-communication:DEC-013
+        - visual-communication:DEC-014#1
+        - visual-communication:DEC-014#2
+        - visual-communication:DEC-014#5
+        - visual-communication:DEC-015#2
+        - visual-communication:DEC-015#4
 ---
 
 # The files of the visual work
@@ -110,16 +157,16 @@ The commands list the location's files as git sees them: tracked files, and untr
 
 ## What the location holds
 
-The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration. Nor does any command change a library version: `pkit visual add` copies a version the capability ships, whole, into a folder of its own, and never over a version the library folder holds. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through that command (DEC-003 point 5). The table names the schema each file binds to (see [The binding](#the-binding)).
+The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration. Nor does any command change a library version, but two. `pkit visual release` writes into a version of the project's own library the release it needs ([`library.yaml`](#libraryyaml)). `pkit visual add` changes the copies of a library the capability ships (DEC-013 point 5). It copies a version the capability ships, whole, into a folder of its own. It writes over a version the library folder holds only to bring a copy not yet released up to what the capability ships under its number, or to restore a released copy to its hash. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through that command (DEC-003 point 5). The table names the schema each file binds to (see [The binding](#the-binding)).
 
 | File, in the location | Schema | Written by |
 |---|---|---|
-| `libraries/libraries.yaml` | `libraries` | a person; `pkit visual add` lists each version it copies |
-| `libraries/<library>/<version>/library.yaml` | `library` | the library's owner |
-| `libraries/<library>/<version>/roles.yaml` | `roles` | the library's owner |
-| `libraries/<library>/<version>/notation.yaml` | `notation` | the library's owner |
-| `libraries/<library>/<version>/components/<component>.yaml` | `component` | the library's owner |
-| a brand's token files, Resolver document and fonts | none: DTCG, or a font's own format | the brand's owner |
+| `libraries/libraries.yaml` | `libraries` | a person; `pkit visual add` lists each version it copies, and lists as released each copy it replaces with a released version; `pkit visual release` lists as released each version it releases |
+| `libraries/<library>/<version>/library.yaml` | `library` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships; `pkit visual release` writes the release a version needs |
+| `libraries/<library>/<version>/roles.yaml` | `roles` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
+| `libraries/<library>/<version>/notation.yaml` | `notation` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
+| `libraries/<library>/<version>/components/<component>.yaml` | `component` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
+| a brand's token files, Resolver document and fonts | none: DTCG, or a font's own format | the brand's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | `pieces/<piece>/piece.yaml` | `piece` | a person; `pkit visual render` rewrites its `lock` alone |
 | `pieces/<piece>/content.<language>.yaml` | `content` | a person |
 | `pieces/<piece>/components/<component>.yaml` | `component` | a person, or a script of the project's own (DEC-001 point 8) |
@@ -137,9 +184,11 @@ The code that `pkit visual write-code` writes lies where its declaration names, 
 
 - `previews/<piece>/`: the SVG previews `pkit visual render` draws;
 - `exports/<piece>/`: the files `pkit visual export` makes;
-- `handover/<piece>/`: what `pkit visual produce` hands a producer, and what the producer writes, until the command keeps it in the piece's folder.
+- `before-after/<piece>/`: a pinned draft's scenes as `pkit visual add` draws them both ways, in `before/` with the copy it locks and in `after/` with what the capability ships;
+- `handover/<piece>/`: what `pkit visual produce` hands a producer, and what the producer writes, until the command keeps it in the piece's folder;
+- `look/<piece>/`: the images, the frames and the report `pkit visual look` writes.
 
-*What is made from a piece* names the files in each.
+*What is made from a piece* names the files in each. While `pkit visual look` runs, the folder also holds a temporary folder of the fonts it hands its tool, which the run removes.
 
 ## Names, ids and the binding
 
@@ -247,6 +296,8 @@ A library moves no lower than the version the lock names while versions at or ab
 
 **A pinned draft,** `pinned: true`, keeps its lock: a render checks it and never changes it. The lock must name every library the piece uses, each a version the location holds and the installed capability reads, and they must fit together. A pinned piece with no lock is refused: unpin it for its first render. To move a pinned lock, change it by hand, or unpin the piece and render it.
 
+A copy not yet released that a pinned lock names may fall behind what the capability ships under its number. `pkit visual add` replaces it only where a person names each pinned draft and each declaration that locks it (DEC-013 point 5). Naming it is the move on purpose: the lock keeps its number, and what it draws changes only then. The run that leaves the copy draws the piece both ways first, so the person sees what the move changes (DEC-003 point 8).
+
 The render writes the lock into `piece.yaml` as text, as a top-level block mapping, one library a line, in the order of their names. Every other byte of the file stays: comments, order, line endings and a byte-order mark. Where the result would not read back as the file with that lock, the render refuses: write `lock:` as a block mapping, one library a line.
 
 ### Content files
@@ -307,7 +358,18 @@ libraries:
 - **`versions`** maps each version to `released: true` or `false`. A released version carries `hash`, its fingerprint over every file of its folder (*The fingerprint* in *What the check reports*). A version not released carries none.
 - **One library to a name:** a second library of one name is refused (DEC-003 point 4).
 
-`pkit visual add` lists each shipped version it copies, `released: false`. Where the location holds no list, it writes one whole, under a comment that says what the file is. Otherwise it adds the version as text: a library the list does not name yet goes last under `libraries`, and a new version of a shipped library last under its `versions`. Where that mapping's entries lie on the lines below its key, the command writes the new entry as block lines at their indent. Where the mapping is written in flow on its key's line, such as `versions: {}`, it writes the entry in flow before the closing brace. Every other byte of the file stays: comments, order, line endings and a byte-order mark. Where the result would not read back as the list with that version added, the command refuses: write `libraries`, and the library's `versions`, as block mappings. Where a key on the way, `libraries`, the library's name or `versions`, is written in quotes, the refusal names it instead, to be written without them.
+Two commands write the list:
+
+- **`pkit visual add`** lists each shipped version it copies. A released version takes `released: true` and the hash the library's record keeps, copied as it is. The version being built takes `released: false`, with no hash. A copy not yet released that the command replaces with a released version is listed released, with its hash. Where the location holds no list, the command writes one whole, under a comment that says what the file is.
+- **`pkit visual release`** lists a version of the project's own library released: `released: true`, with the version's `hash`.
+
+Where the list is there already, each command writes it as text:
+
+- **A new entry goes last:** a library the list does not name yet under `libraries`, a new version under its library's `versions`. Where that mapping's entries lie on the lines below its key, the entry is written as block lines at their indent. Where the mapping is written in flow on its key's line, such as `versions: {}`, the entry is written in flow before the closing brace.
+- **An entry listed released is written again in its place,** in the style it had. It stays on its own lines, or in flow where the list writes it so, as in `{1.0.0: {released: false}}`. A comment on its key's line stays.
+- **Every other byte of the file stays:** comments, order, line endings and a byte-order mark.
+- **Where the result would not read back as the list with that entry,** the command refuses: write `libraries`, and the library's `versions`, as block mappings.
+- **Where a key on the way is written in quotes,** such as `'1.0.0':`, the refusal names that key instead, to be written without them. The keys on the way are `libraries`, the library's name, `versions`, and the version of an entry listed released.
 
 ### `library.yaml`
 
@@ -332,7 +394,7 @@ open: [accent, space]
 | `name` | The library's name. It matches the folder's. |
 | `version` | Its version, `X.Y.Z` with X at least 1. It matches the folder's. A major release carries a breaking change, a minor one an addition or a change of look, a patch a fix (DEC-003 point 1). |
 | `kind` | `components`, a component library; `brand`; or `notation` ([Notations](#notations)). |
-| `needs-release` | The release of the capability the version needs. A released version names the capability's version current at its release, and a version being built names any release the installed capability reads. A version that names a newer release than the installed one, the `version` of the capability's `package.yaml`, cannot be read. |
+| `needs-release` | The release of the capability the version needs. A released version names the capability's version installed in the project when it was released. Its release writes it into this file before it works out the version's hash, and no person does (DEC-014 point 1). Where that copy of the capability is what a release carried, the number never understates what the version uses (DEC-014 point 2). A version being built names any release the installed capability reads. A version that names a newer release than the installed one, the `version` of the capability's `package.yaml`, cannot be read. |
 | `builds-on` | Each library it builds on, as `{name, major}`, the major an integer from 1. |
 | `dtcg` | A brand's DTCG version, `"2025.10"`, quoted, since YAML reads `2025.10` as a number. |
 | `resolver` | A brand's Resolver document, a path within its version folder. |
@@ -362,11 +424,20 @@ libraries:
 
 The released versions and the record lie outside the version being built, and each library's apart from every other's. So a release changes no file of the version being built. Only whoever maintains the capability releases a version, by a release of its own. A release of the capability releases none (DEC-013 point 1).
 
+**How a version is released.** `pkit visual release <library> --shipped` releases the version being built as the last commit holds it, where the capability is authored. A change to it that is not committed refuses the release. It releases the version only:
+
+- **Untouched since the capability's current version was released.** No change has touched the version being built since the release step's change that wrote the version the capability's `package.yaml` carries (DEC-013 point 1). That change is the one that added the changelog's entry for that version. A change since waits for the next release that moves the capability's version. So no library is released while the capability carries a version no release wrote, as 0.1.0 is.
+- **Under a number of its own.** The number is not released already. It is below neither the newest released one nor one the version being built carried at an earlier release (DEC-013 point 3). A library's first release takes the number the version being built carries.
+- **On released bases.** It is checked on the newest released version of each major of each library it builds on, a base released earlier in the same change included. A base with no released version of a major the library names is released first.
+- **Read in full and compared** with its previous release ([What a release compares](#what-a-release-compares)). A finding that fails refuses it (*What each run judges* in *What the check reports*).
+
+The release adds the released place, whole, its `library.yaml` naming the capability's current version as the release it needs. It adds the version's entry to the record, and changes no other file of the capability's folder (DEC-013 point 2). It writes the change's patch changeset for the capability, naming the library and the version.
+
 Every change to a version the capability ships reaches a project that brings it in. So it comes with a new version of the capability, at least a patch (DEC-013 point 4).
 
 ### The foundations
 
-The capability ships the foundations' version being built at `.pkit/capabilities/visual-communication/libraries/foundations/` ([The libraries the capability ships](#the-libraries-the-capability-ships)): version 1.0.0, of kind `components`, needing release 0.1.0, building on nothing, and not yet released. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the folder whole to `libraries/foundations/1.0.0/` and lists it with `source: {kind: shipped}` ([What the location holds](#what-the-location-holds)). The foundations hold:
+The capability ships the foundations' version being built at `.pkit/capabilities/visual-communication/libraries/foundations/` ([The libraries the capability ships](#the-libraries-the-capability-ships)): version 1.0.0, of kind `components`, needing release 0.1.0, building on nothing, and not yet released. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the folder whole to `libraries/foundations/1.0.0/`. No version of the foundations is released yet, so the command takes the version being built, and lists it with `source: {kind: shipped}`, `released: false` ([What the location holds](#what-the-location-holds)). The foundations hold:
 
 - `library.yaml`;
 - `roles.yaml`, the shared roles, axes, colour families and contrast pairs that every library shares (DEC-004 points 2, 7 and 8);
@@ -375,7 +446,7 @@ The capability ships the foundations' version being built at `.pkit/capabilities
 
 The top components the capability ships are the foundations' (DEC-007 point 1).
 
-Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`; the dimensions `space.1` to `space.4`, `stroke.thin`, `size.figure` and `size.slide`, a slide's width; the font families `font.body` and `font.heading`; and the typographies `type.body` and `type.heading`.
+Their shared roles are the colours `background`, `surface`, `text-primary`, `text-secondary`, `accent` and `line`. The dimensions are `space.1` to `space.4`, `size.figure` and `size.slide`, a slide's width. The strokes are `stroke.thin`, an edge's width, and `stroke.thick`, the width of a line drawn on its own. The font families are `font.body` and `font.heading`. The typographies are `type.body`, `type.heading`, `type.strong`, the body's size and line height in a heavier weight, and `type.code`, a monospace type for code.
 
 They declare six colour families: `neutral`, `blue`, `green`, `orange`, `purple` and `red` (DEC-004 point 10). Each has three members: `fill`, the colour of what it paints; `line`, its edge; and `text`, the text on its fill. Each member is a shared colour role of the family's own, `family.<family>.<member>`, such as `family.blue.fill`, with no default, so a brand gives each a value. Each family's text and fill are a pair at the level `text`.
 
@@ -435,7 +506,9 @@ pairs:
 
 The *comparison* reads two versions of one library, each in full with the versions it is checked with (DEC-014 point 1). It names each *break*, a change that breaks what the earlier version promises, and each *addition*. The later number needs a major for a break, at least a minor for an addition, and otherwise at least a patch (DEC-013 point 3). Whether a change of look makes a patch a minor is the owner's judgement.
 
-The capability's own checks run it on each library the capability ships ([The libraries the capability ships](#the-libraries-the-capability-ships)). They compare the version being built with the newest released version of its major, where that major has one. The version being built keeps that major, so each break fails (DEC-013 point 6). Each addition is reported and fails nothing, so an addition in a patch passes.
+`pkit visual release` runs it on the version it releases and the library's previous release, and prints what the number needs before it writes. It refuses a break in a version that keeps the previous release's major (DEC-003 point 7). A library's first release is compared with none.
+
+A library the capability ships breaks nothing within a major ([The libraries the capability ships](#the-libraries-the-capability-ships)). Each of its versions keeps what the release before it in that major promises (DEC-013 point 6).
 
 A change of how something looks breaks nothing (DEC-003 point 6). So it passes over a brand's values, a component's colour, the look of its states and parts, and each drawing. What it compares, kind by kind:
 
@@ -455,13 +528,13 @@ A change of how something looks breaks nothing (DEC-003 point 6). So it passes o
 - **The foundations' axes and colour families,** whatever reads them. An axis or a mode removed breaks, and so does a new axis, or an axis of another kind or default (DEC-004 point 5). A colour family or a member removed breaks (DEC-003 point 6). A new mode, colour family or member is an addition.
 - **A brand's exported names** (DEC-004 point 5): its token paths, its axes and modes ([Axes and modes](#axes-and-modes)), and its open roles ([Open roles](#open-roles)). A token removed or of another type breaks, as do an axis or a mode removed and an axis of another kind or default. So does a role taken off its open roles. A new token, axis, mode or open role is an addition.
 
-Where either version cannot be read with its bases, or the later one cannot read a component the earlier one promises, no comparison is made. The checks fail it. A brand's component tokens are not compared yet.
+Where either version cannot be read with its bases, or the later one cannot read a component the earlier one promises, no comparison is made, and the release refuses. A brand's component tokens are not compared yet.
 
 ## Brands
 
 A *brand* is a library of kind `brand`: it holds values (DEC-001 point 5). It keeps them as design tokens in the DTCG format, version 2025.10, and its modes as one Resolver document (DEC-004 point 1). The capability reads the subset of DTCG below, and refuses the rest. The test brand's `library.yaml` is shown under [`library.yaml`](#libraryyaml).
 
-No brand ships with the capability. A project writes its own, and keeps it in its library folder as it keeps any library ([The library folder](#the-library-folder)).
+The capability ships one brand to start from ([The neutral brand](#the-neutral-brand)). A project may write its own, and keeps it in its library folder as it keeps any library ([The library folder](#the-library-folder)).
 
 ### Token files
 
@@ -589,6 +662,18 @@ An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* 
 - **A brand varies an axis** through a modifier of its Resolver document. It may leave out an axis it does not vary. It adds no axis of its own, and changes no default.
 - **A value axis** changes only colours. A mode of a value axis that changes another value fails.
 - **A piece** chooses the modes it is drawn in under its `modes`.
+
+### The neutral brand
+
+The capability ships `neutral`, a brand to start from, so a project can draw before it writes a brand of its own. Its version being built lies at `.pkit/capabilities/visual-communication/libraries/neutral/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is version 1.0.0, of kind `brand`, needing release 0.1.0, and not yet released, so it may change in any release of the capability.
+
+`pkit visual add neutral` copies it whole to `libraries/neutral/1.0.0/`, and lists it with `source: {kind: shipped}`, `released: false` ([What the location holds](#what-the-location-holds)). A piece then names it as `brand: neutral` ([`piece.yaml`](#pieceyaml)).
+
+- **Its values.** It gives every shared role a value in each of the four combinations of the shared axes ([Keys of combinations](#keys-of-combinations)). Each pair the foundations declare reaches its level in all four.
+- **Its look.** Greys, with a blue accent. The colour families keep their hues in dark and at high contrast.
+- **The libraries it names.** It builds on the foundations alone, so the starter draws at its defaults ([`roles.yaml`](#rolesyaml)), and a project need not hold the starter to use it.
+- **Its open roles.** `open` is empty, so a brand built on it can change no value. A project that wants other values writes its own brand.
+- **Its fonts.** Source Sans Pro draws the body, and its semibold the headings and strong text, each weight a family of its own. Source Code Pro draws code. Each file lies unchanged in the version's `fonts/`, beside its licence ([Fonts](#fonts)).
 
 ## Notations
 

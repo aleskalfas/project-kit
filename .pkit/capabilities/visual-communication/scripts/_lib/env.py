@@ -18,6 +18,15 @@ class MissingFont(Exception):
     anything is laid out (DEC-004 point 9). The message names the font."""
 
 
+class UnreadableFont(MissingFont):
+    """A font whose committed file is present and cannot be read as one, which refuses as a
+    missing font does. The message names the file and the font reader's error."""
+
+    def __init__(self, path: Path, error: Exception) -> None:
+        why = str(error) or type(error).__name__
+        super().__init__(f"the font file {path} cannot be read: {why}")
+
+
 class UnreadableComponent(KeyError):
     """A component whose file is present and cannot be read as one: the reader refuses it,
     or it holds no mapping. It is a `KeyError`, so a reader that asks only whether there is

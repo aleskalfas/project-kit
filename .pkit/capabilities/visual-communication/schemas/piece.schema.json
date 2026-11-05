@@ -65,11 +65,12 @@
       "type": "boolean"
     },
     "exports": {
-      "description": "The formats a numbered export makes (DEC-006 point 7); may be empty.",
+      "description": "The formats a numbered export makes (DEC-006 point 7): `svg`, a file for each page, and `pdf`, a file that holds every page; may be empty.",
       "type": "array",
       "items": {
         "enum": [
-          "svg"
+          "svg",
+          "pdf"
         ]
       },
       "uniqueItems": true

@@ -87,10 +87,14 @@ def _change_check(timeline: Timeline) -> list[tuple[str, str | None]]:
 
 
 def _repository(timeline: Timeline) -> list[tuple[str, str | None, str | None]]:
+    """(kind, anchor, origin commit) per finding of the whole-repository check, an
+    over-broad anchor left out: in a history of a few commits, most anchors flagged
+    their artefacts in more than half of them (ADR-080 point 3)."""
     result = fr.run_repository_check(timeline.adopter.root)
     return [
         (f.kind.value, None if f.anchor is None else f.anchor.value, f.origin and f.origin.sha)
         for f in result.findings
+        if f.kind is not fr.RepositoryFindingKind.OVER_BROAD
     ]
 
 

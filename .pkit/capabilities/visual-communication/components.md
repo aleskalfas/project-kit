@@ -13,6 +13,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
         - .pkit/capabilities/visual-communication/scripts/_lib/scene.py
         - .pkit/capabilities/visual-communication/scripts/_lib/text.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/env.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/checks.py
@@ -26,19 +27,57 @@ pkit:
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/picture.yaml
         - tests/visual_engine.py
         - tests/test_visual_communication_scene.py
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-007", "visual-communication:DEC-008", "visual-communication:DEC-009", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012"]
+      record:
+        - visual-communication:DEC-001#4
+        - visual-communication:DEC-001#6
+        - visual-communication:DEC-003#7
+        - visual-communication:DEC-004#2
+        - visual-communication:DEC-004#9
+        - visual-communication:DEC-004#10
+        - visual-communication:DEC-005#1
+        - visual-communication:DEC-005#2
+        - visual-communication:DEC-005#3
+        - visual-communication:DEC-005#4
+        - visual-communication:DEC-005#5
+        - visual-communication:DEC-007#1
+        - visual-communication:DEC-008#1
+        - visual-communication:DEC-008#4
+        - visual-communication:DEC-008#9
+        - visual-communication:DEC-009#1
+        - visual-communication:DEC-009#5
+        - visual-communication:DEC-010#1
+        - visual-communication:DEC-010#2
+        - visual-communication:DEC-010#3
+        - visual-communication:DEC-010#4
+        - visual-communication:DEC-010#5
+        - visual-communication:DEC-010#6
+        - visual-communication:DEC-011#1
+        - visual-communication:DEC-011#2
+        - visual-communication:DEC-011#3
+        - visual-communication:DEC-011#4
+        - visual-communication:DEC-011#5
+        - visual-communication:DEC-012#1
+        - visual-communication:DEC-012#2
+        - visual-communication:DEC-012#3
+        - visual-communication:DEC-012#4
       artefact:
-        - .pkit/capabilities/visual-communication/files.md
+        - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
+        - .pkit/capabilities/visual-communication/files.md#shapes
+        - .pkit/capabilities/visual-communication/files.md#the-binding
+        - .pkit/capabilities/visual-communication/files.md#pieceyaml
+        - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#reserved-words
         - .pkit/capabilities/visual-communication/files.md#content-files
         - .pkit/capabilities/visual-communication/files.md#what-a-release-compares
+        - .pkit/capabilities/visual-communication/files.md#fonts
+        - .pkit/capabilities/visual-communication/files.md#keys-of-combinations
 ---
 
 # Components
 
-A *component* is data that says how a piece's content is arranged and drawn: the fields it takes, its options, and its parts, each placed by formulas. The *engine* is the capability's code that computes a *scene* from a piece's content and the components that draw it. It knows no component by name (DEC-001 point 4). Where a component's file lies, in a library or in a piece, is in [files](files.md).
+A *component* is data that says how a piece's content is arranged and drawn: the fields it takes, its options, and its parts, each placed by formulas. The *engine* is the capability's code that computes a *scene* from a piece's content and the components that draw it. It knows no component by name (DEC-001 point 4). Where a component's file lies, in a library or in a piece, is in [What the location holds](files.md#what-the-location-holds).
 
 The examples come from the foundations' `figure`, which ships, and from `tests`, a component library the capability's own tests draw with. No project locks `tests`.
 
@@ -58,8 +97,8 @@ One model binds every component. A pattern, an item component and a block are ro
 - **A pattern** arranges items. It has a `repeat` part over a list of the content, and decides how its items lie. `tests/steps` is a pattern.
 - **An item component** draws one item of a list. The pattern names its default in `draw`. Content may name another for the whole list, in a field the pattern declares for the list ([Lists](#lists)). An item may name its own in `use`, a pattern included. Which of them draws an item is in [Repeating over a list](#repeating-over-a-list-row-and-column).
 - **A block** is a small component, such as a card, that a pattern draws its items with, or that content places alone (DEC-007 point 1). `tests/card` and `tests/picture` are blocks.
-- **A top component** declares `layouts`. A piece names one as its top ([files](files.md)). The foundations' `figure` is one, with one layout. Their `deck` is one whose layouts are the forms its pages take, a cover and a slide ([The foundations](files.md#the-foundations), [Layouts](#layouts)).
-- **A local component** belongs to one piece. Its `use` is `piece/<component>`, and a library component's is `<library>/<component>`. The lock alone says which version of a library is read.
+- **A top component** declares `layouts`. A piece names one as its top ([`piece.yaml`](files.md#pieceyaml)). The foundations' `figure` is one, with one layout. Their `deck` is one whose layouts are the forms its pages take, a cover and a slide ([The foundations](files.md#the-foundations), [Layouts](#layouts)).
+- **A local component** belongs to one piece. Its `use` is `piece/<component>`, and a library component's is `<library>/<component>` ([Shapes](files.md#shapes)). The lock alone says which version of a library is read ([The lock](files.md#the-lock)).
 
 ## A component's file
 
@@ -98,7 +137,7 @@ The file takes these keys and no other:
 
 | Key | What it holds |
 |---|---|
-| `pkit_schema`, `schema_version` | The binding: `visual-communication:component` and `1`. Required. |
+| `pkit_schema`, `schema_version` | The binding: `visual-communication:component` and `1` ([The binding](files.md#the-binding)). Required. |
 | `status` | `experimental`, `stable` or `deprecated`, below. Required. |
 | `about` | What the component is for, in words. Required. |
 | `fields` | The content it takes, in a fixed subset of JSON Schema. |
@@ -113,7 +152,7 @@ The file takes these keys and no other:
 | `ends` | `true` where the component takes ends, so a pattern may draw a tie with it ([Ties and connectors](#ties-and-connectors)). |
 | `layouts` | On a top component only: its layouts and their slots, and, where they are its pages' forms, each layout's own drawing. |
 
-Every name in the file takes the capability's name shape ([files](files.md)).
+Every name in the file takes the capability's name shape ([Shapes](files.md#shapes)).
 
 The status says what the component's library promises (DEC-003 point 7), which a release checks ([What a release compares](files.md#what-a-release-compares)). An experimental component may change in any release, renamed, reshaped or removed. A stable one changes in a breaking way only in a major release of its library. A deprecated one may be removed only in a major release.
 
@@ -459,7 +498,7 @@ links:
 
 ## How the engine computes a scene
 
-The *scene* is every element's final frame, values and source, for one language. The engine computes it from the piece's content, the components that draw it, the roles of its brand, and the fonts and produced pictures they name. The commands compute one scene for each language of the piece, at the size key `default`, since format 1 has no size axis (keys: [files](files.md)). A scene is computed, never committed. Under one release of the capability, the same files give the same scene on every machine.
+The *scene* is every element's final frame, values and source, for one language. The engine computes it from the piece's content, the components that draw it, the roles of its brand, and the fonts and produced pictures they name. The commands compute one scene for each language of the piece, or each one asked for, at the size key `default`, since format 1 has no size axis ([Keys of combinations](files.md#keys-of-combinations)). A scene is computed, never committed. Under one release of the capability, the same files give the same scene on every machine.
 
 - **Built from the content.** The engine places the top component with the content, then builds each part, item and placed component below it.
 - **Fonts first.** Before it computes any place or size, a font family with no file, or a character no family measures, refuses the scene ([Text](#text)).
@@ -524,12 +563,12 @@ Each drawn property names its source in `sources`:
 
 ## Text
 
-- **The default font profile.** The engine measures every text from the committed font files that the brand names for each family, never from a font found on the machine. Each run records this as `measured: file`. How a brand names its files is in [files](files.md).
+- **The default font profile.** The engine measures every text from the committed font files that the brand names for each family, never from a font found on the machine. Each run records this as `measured: file`. How a brand names its files is in [Fonts](files.md#fonts).
 - **Runs.** A text is one or more runs, joined in order. A text whose field takes no runs, or is given as text, is one run. Each run is measured in the typography role its style chooses (DEC-012 point 4).
 - **The typography role** that `style` names gives `fontFamily`, one family or a list, `fontSize` in px, `lineHeight` as a ratio of the size, `fontWeight`, and a `letterSpacing` of zero, if any. A role that names no family, gives another letter spacing, a size in another unit or no line height as a number is reported, and the text is not drawn.
 - **Several families.** The first family measures each character it has, the next the rest, and so on.
 - **One file a family.** A family's one file measures the text, whatever its weight. A brand that gives a weight a family of its own, as the test brand's heading is, has that weight measured and drawn from its own file.
-- **Refused before layout.** A family with no committed file, or a character no family measures, refuses the scene, and the message names it.
+- **Refused before layout.** A family with no committed file, a file the engine cannot measure from, or a character no family measures refuses the scene. The message names it.
 - **Shaped from the file.** Each piece of a run in one family is shaped with HarfBuzz, with the font's default features. A line's width is the sum of its advances, each at its own run's font size. Spaces at its end do not count.
 - **The line height** is the font size times `lineHeight`. A text takes the greatest line height among the roles its runs take, so its lines lie evenly, and **the measured height** is the number of lines times that line height.
 - **The baseline** of each line lies below the line's top. Where the line's runs take one role, the space above and below its letters is split evenly, from the first family's metrics, as a text of one run is placed. Where they take several, it is split evenly around the greatest ascent and the greatest descent among their first families, so the line's runs stand on one baseline.

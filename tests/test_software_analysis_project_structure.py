@@ -37,11 +37,12 @@ from click.testing import CliRunner
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
+    ANALYSIS_SET,
+    ANALYSIS_SET_TEXT,
     NEW,
     RECORDS,
     STRUCTURES,
     VALIDATE,
-    accepting_san,
     actor_at,
     front,
     installed,
@@ -1111,14 +1112,16 @@ def test_the_check_reads_where_the_rule_binds_through_the_backbone(
     project: AdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """End to end: the rule's status and where it binds come from the backbone's readings
-    (`pkit friction artefacts`, `pkit rule-sets reach`), the format rule flipped to
-    accepted in the adopter's copy as a fixture."""
+    (`pkit friction artefacts`, `pkit rule-sets reach`), the format rule accepted in the
+    adopter's copy, as it ships."""
     stamped(project, "actor", "tester", "--unanchored-because", "No code embodies it.")
     path = project.root / actor_at("ACT-tester")
     text = path.read_text(encoding="utf-8")
     filled = re.sub(r"<!-- pkit:hint .*? Example: (.*?) -->", r"\1", text)
     path.write_text(filled, encoding="utf-8")
-    project.write({FILE: NOTES_REQUIRED, LOC: _rule_set("accepted"), **accepting_san(project)})
+    project.write(
+        {FILE: NOTES_REQUIRED, LOC: _rule_set("accepted"), ANALYSIS_SET: ANALYSIS_SET_TEXT}
+    )
     code, document = _validate(project)
     said = [(f["severity"], f["location"], f["message"][:40]) for f in document["findings"]]
     assert said == [("error", actor_at("ACT-tester"), "`**Notes:**` is missing, and it comes af")]
@@ -1150,7 +1153,9 @@ def test_the_preview_reads_where_a_proposed_rule_would_bind_through_the_backbone
     path = project.root / actor_at("ACT-tester")
     text = path.read_text(encoding="utf-8")
     path.write_text(re.sub(r"<!-- pkit:hint .*? Example: (.*?) -->", r"\1", text), "utf-8")
-    project.write({FILE: NOTES_REQUIRED, LOC: _rule_set("proposed"), **accepting_san(project)})
+    project.write(
+        {FILE: NOTES_REQUIRED, LOC: _rule_set("proposed"), ANALYSIS_SET: ANALYSIS_SET_TEXT}
+    )
     _code, document = _validate(project)
     assert document["findings"] == []
     _code, document = _validate(project, "--preview")

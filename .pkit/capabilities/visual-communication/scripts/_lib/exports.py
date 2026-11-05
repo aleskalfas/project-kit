@@ -2,12 +2,13 @@
 
 - **What a run makes.** Each format the piece declares under `exports`, in each of its
   languages and each combination of modes it names, drawn from the scene by the renderer
-  of that format. Format 1 declares `svg`: one file for each page, language and
-  combination. A piece with no page in one of its languages is refused.
+  of that format (`RENDERERS`). `svg` makes one file for each page, language and
+  combination; `pdf` one file for each language and combination, which holds every page
+  in order (`DOCUMENTS`). A piece with no page in one of its languages is refused.
 - **A number for each run.** Version `N` is one more than the highest the piece's
   `exports.yaml` records or a file in the piece's exports folder carries, shared by every
   file the run makes; each file is named `<piece>.v<N>.<language>.<key>.<format>`, and a
-  piece of more than one page adds the page's number, from 1:
+  file of one page of a piece of more than one page adds the page's number, from 1:
   `<piece>.v<N>.<language>.<key>.<n>.<format>`. The files lie in the clone's local exports
   folder, never committed; no export overwrites another, and a file a failed run left
   there refuses no later run.
@@ -48,7 +49,11 @@ from _lib.root import LOCAL
 from _lib.scene import SceneResult
 
 #: The renderer that draws each format a piece may export in format 1.
-RENDERERS = {"svg": "svg"}
+RENDERERS = {"svg": "svg", "pdf": "pdf"}
+
+#: The formats whose file holds every page of a scene, in order: one file for each
+#: language and combination. Every other format makes one file for each page.
+DOCUMENTS = frozenset({"pdf"})
 
 #: Where each piece's exports lie, relative to the project root.
 FOLDER = f"{LOCAL}/exports"
@@ -67,13 +72,13 @@ _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 @dataclass(frozen=True)
 class Planned:
-    """An export computed and not yet written: its number, each file's name and text, the
+    """An export computed and not yet written: its number, each file's name and bytes, the
     record's versions with the new one last, the produced outputs used while stale, and
     those named to be used while stale that were not."""
 
     piece: pl.Piece
     number: int
-    files: dict[str, str]
+    files: dict[str, bytes]
     versions: list[dict[str, Any]]
     used_stale: list[str]
     not_stale: list[str]
@@ -88,7 +93,8 @@ def file_name(
 ) -> str:
     """An exported file's name: the piece, the version, the language, the combination's
     key and the format, with the page's number before the format where `page` names one,
-    as for each page of a piece of more than one page."""
+    as for the file of each page of a piece of more than one page. A file that holds every
+    page, as a PDF does, names none."""
     numbered = "" if page is None else f".{page}"
     return f"{piece}.v{number}.{language}.{key}{numbered}.{form}"
 
@@ -147,7 +153,8 @@ def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None 
     piece = project.piece
     if not piece.exports:
         raise pl.Refused(
-            f"{piece.file(pl.PIECE_FILE)} declares no format under `exports`: name `svg` there"
+            f"{piece.file(pl.PIECE_FILE)} declares no format under `exports`: name "
+            f"{' or '.join(f'`{form}`' for form in RENDERERS)} there"
         )
     undeclared = sorted(set(use_stale) - set(piece.produced))
     if undeclared:
@@ -191,7 +198,7 @@ def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None 
     entry = {
         "version": number,
         "fingerprint": taken,
-        "files": {name: sha256(text.encode("utf-8")) for name, text in files.items()},
+        "files": {name: sha256(data) for name, data in files.items()},
         "recorded": {
             "time": now or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "state": piece.state,
@@ -239,12 +246,14 @@ def used_versions(project: pl.Project) -> dict[str, str]:
 
 def _drawn(
     project: pl.Project, results: Sequence[tuple[str, SceneResult]], number: int
-) -> dict[str, str]:
-    """Each file of the export and its text, by its name: one for each page, language and
+) -> dict[str, bytes]:
+    """Each file of the export and its bytes, by its name, format by format as the piece
+    declares them: for a format of `DOCUMENTS`, one for each language and combination,
+    which holds every page in order; for another, one for each page, language and
     combination, the pages of each in order. Raises Refused where a language has no page,
     since the version would hold no file in it."""
     piece = project.piece
-    files: dict[str, str] = {}
+    files: dict[str, bytes] = {}
     for form in piece.exports:
         for language, key, drawn in pl.drawn(project, results, RENDERERS[form]):
             if not drawn.pages:
@@ -252,12 +261,15 @@ def _drawn(
                     f"`{piece.name}` has no page in `{language}`, so the export would hold no "
                     f"file in that language"
                 )
+            if form in DOCUMENTS:
+                files[file_name(piece.name, number, language, key, form)] = drawn.document
+                continue
             several = len(drawn.pages) > 1
             for index, page in enumerate(drawn.pages, start=1):
                 name = file_name(
                     piece.name, number, language, key, form, index if several else None
                 )
-                files[name] = page.svg
+                files[name] = page.svg.encode("utf-8")
     return files
 
 
@@ -279,8 +291,8 @@ def write(planned: Planned, change: Change) -> None:
     put back as it was before the run, or named."""
     piece = planned.piece
     writable(planned)
-    for name, text in planned.files.items():
-        change.write(planned.folder / name, text.encode("utf-8"))
+    for name, data in planned.files.items():
+        change.write(planned.folder / name, data)
     record = {
         "pkit_schema": "visual-communication:exports",
         "schema_version": 1,

@@ -1,11 +1,15 @@
 """The library folder, its list, versions, and a piece's lock (DEC-001 point 5, DEC-003
 points 1, 4, 8 and 9, DEC-004 point 6); the level of a version the installed capability
-cannot read, released or not (DEC-002 point 7, DEC-014 point 5). Each project is laid in
-the test's own folder, outside git, so its files are listed by walking."""
+cannot read, released or not (DEC-002 point 7, DEC-014 point 5); what the command that
+brings a shipped library in reads of the locks and of the capability's folder (DEC-013
+point 5); and what the check finds of a copy of a library the capability ships, against a
+capability's folder the test controls (DEC-013 point 6). Each project is laid in the test's
+own folder, outside git, so its files are listed by walking."""
 
 from __future__ import annotations
 
 import re
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -28,8 +32,16 @@ from tests.visual_communication_project import (
     yaml_text,
 )
 
-libraries, fingerprint, files, reading, checks, pl = load(
-    "visual-communication", "libraries", "fingerprint", "files", "reading", "checks", "pipeline"
+libraries, fingerprint, files, reading, checks, pl, copies, shipped = load(
+    "visual-communication",
+    "libraries",
+    "fingerprint",
+    "files",
+    "reading",
+    "checks",
+    "pipeline",
+    "copies",
+    "shipped",
 )
 
 V = libraries.Version.parse
@@ -594,6 +606,92 @@ def test_a_major_the_project_holds_no_version_of_is_refused_naming_why(tmp_path:
     assert not isinstance(refused.value, libraries.MajorsConflict)
 
 
+# --- a shipped library's copies, and the locks that name them (DEC-013 point 5) ------------------
+
+
+def test_each_lock_is_read_from_its_piece_yaml_alone_and_says_whether_it_follows(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path)
+    write_piece(root, "draft", lock={"foundations": "1.0.0"})
+    write(root / "visual" / "pieces" / "draft" / "content.en.yaml", "not: [content\n")
+    write_piece(root, "pinned", lock={"foundations": "1.0.0"}, pinned=True)
+    write_piece(root, "new")
+    write(root / "visual" / "pieces" / "loose" / "notes.md", "No piece.yaml.\n")
+    write_piece(root, "odd", lock={"foundations": "latest"})
+    write_piece(root, "unpinned", pinned="no")
+    write(
+        root / "visual" / "code" / "css.yaml",
+        yaml_text(bound("code", lock={"foundations": "1.0.0"})),
+    )
+    write(root / "visual" / "code" / "broken.yaml", "lock: {foundations: 1.0.0}\n")
+    found = {
+        Path(lock.file).parent.name if lock.kind == "piece" else Path(lock.file).name: lock
+        for lock in copies.locks(root, "visual", "foundations")
+    }
+    assert [(name, lock.follows, lock.versions is None) for name, lock in found.items()] == [
+        ("draft", True, False),
+        ("loose", False, True),
+        ("new", True, False),
+        ("odd", False, True),
+        ("pinned", False, False),
+        ("unpinned", False, True),
+        ("broken.yaml", False, True),
+        ("css.yaml", False, False),
+    ]
+    one = V("1.0.0")
+    assert [name for name, lock in found.items() if lock.names("foundations", one)] == [
+        "draft",
+        "loose",
+        "odd",
+        "pinned",
+        "unpinned",
+        "broken.yaml",
+        "css.yaml",
+    ]
+    assert [lock.described for lock in copies.holding(found.values(), "foundations", one)] == [
+        "visual/pieces/loose/piece.yaml, whose lock cannot be read: the file does not exist",
+        "visual/pieces/odd/piece.yaml, whose lock cannot be read: its lock names `foundations: "
+        "latest`, which is no version",
+        "the pinned draft `pinned`",
+        "visual/pieces/unpinned/piece.yaml, whose lock cannot be read: its `pinned` is not true "
+        "or false",
+        "visual/code/broken.yaml, whose lock cannot be read: the file names no schema: add "
+        "`pkit_schema: visual-communication:code` and `schema_version: 1` at its top",
+        "the declaration `css` of written code",
+    ]
+
+
+def test_what_the_capability_ships_under_a_number_is_its_release_before_its_version_being_built(
+    tmp_path: Path,
+) -> None:
+    folder = tmp_path / "capability"
+    built = folder / "libraries" / "foundations"
+    shutil.copytree(FOUNDATIONS, built)
+    [library] = shipped.read(folder)
+    being_built = copies.under(library, V("1.0.0"))
+    assert (being_built.folder, being_built.entry, being_built.released) == (
+        built,
+        UNRELEASED,
+        None,
+    )
+    assert sorted(being_built.files) == sorted(
+        path.relative_to(FOUNDATIONS).as_posix() for path in FOUNDATIONS.rglob("*.yaml")
+    )
+    assert copies.under(library, V("1.1.0")) is None
+    place = shipped.place_of(folder, "foundations", V("1.0.0"))
+    shutil.copytree(built, place)
+    entry = shipped.entry_of(folder, "foundations", V("1.0.0"))
+    listed = {"source": {"kind": "shipped"}, "versions": {"1.0.0": entry}}
+    write(
+        folder / "releases" / "foundations" / "releases.yaml",
+        yaml_text(bound("libraries", libraries={"foundations": listed})),
+    )
+    [library] = shipped.read(folder)
+    taken = copies.under(library, V("1.0.0"))
+    assert (taken.folder, taken.entry, taken.released.version) == (place, entry, V("1.0.0"))
+
+
 # --- a search that judges each whole combination (DEC-003 point 8, DEC-010 point 2, DEC-011
 # --- point 4) -----------------------------------------------------------------------------------
 
@@ -721,3 +819,158 @@ def test_a_pinned_lock_is_never_judged(tmp_path: Path) -> None:
     lock = {"base": "1.0.0", "charts": "1.0.0"}
     judge = Judging(lambda chosen: pytest.fail(f"{chosen} judged"))
     assert libraries.move_lock(held(root), ["charts"], lock, pinned=True, judge=judge).lock == lock
+
+
+# --- a copy of a library the capability ships, against what it ships (DEC-013 point 6) ---------
+
+SHIPPED = {"kind": "shipped"}
+COPY = "visual/libraries/foundations/1.0.0"
+
+
+def capability(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, release: bool, building: str = "1.0.0"
+) -> Path:
+    """A capability's folder the test controls, in place of the capability's own for the
+    length of the test: it builds the foundations at `building`, and releases
+    foundations@1.0.0, as it was built, where `release` says so."""
+    folder = tmp_path / "capability"
+    built = folder / "libraries" / "foundations"
+    shutil.copytree(FOUNDATIONS, built)
+    if release:
+        shutil.copytree(built, shipped.place_of(folder, "foundations", V("1.0.0")))
+        entry = shipped.entry_of(folder, "foundations", V("1.0.0"))
+        listed = {"source": SHIPPED, "versions": {"1.0.0": entry}}
+        write(
+            folder / "releases" / "foundations" / "releases.yaml",
+            yaml_text(bound("libraries", libraries={"foundations": listed})),
+        )
+    file = built / "library.yaml"
+    file.write_text(
+        file.read_text(encoding="utf-8").replace("version: 1.0.0", f"version: {building}")
+    )
+    monkeypatch.setattr(copies, "SHIPPED", folder)
+    return folder
+
+
+def judged(root: Path, code: str) -> list[tuple[Any, str]]:
+    """Each finding of the check with the label `code`, with its level where it lies."""
+    return [
+        (finding, level) for finding, level in checks.check(root).judged if finding.code == code
+    ]
+
+
+@pytest.mark.parametrize("release", [True, False], ids=["shipped", "not-shipped"])
+def test_library_changed_names_the_command_only_on_a_copy_of_a_version_the_capability_ships(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, release: bool
+) -> None:
+    capability(tmp_path, monkeypatch, release=release)
+    root = project(tmp_path)
+    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    add_library(root, "charts", "1.0.0")
+    entries = {name: released_entry(root, name, "1.0.0") for name in ("charts", "foundations")}
+    write_list(
+        root,
+        {
+            "charts": {"source": PROJECT, "versions": {"1.0.0": entries["charts"]}},
+            "foundations": {"source": SHIPPED, "versions": {"1.0.0": entries["foundations"]}},
+        },
+    )
+    assert judged(root, "library-changed") == judged(root, "copy-hash-differs") == []
+    for name in ("charts", "foundations"):
+        write(version_folder(root, name, "1.0.0") / "notes.txt", "Added after the release.\n")
+    found = {
+        finding.library: (finding.fix, level) for finding, level in judged(root, "library-changed")
+    }
+    restore = ("restore the version folder as it was released", "fails")
+    add = ("run `pkit visual add foundations`, which restores it as released", "fails")
+    assert found == {"charts@1.0.0": restore, "foundations@1.0.0": add if release else restore}
+
+
+#: What the check says of a copy not released of a number the capability does not ship.
+UNSHIPPED = (
+    "move each draft that locks it, on purpose, to a version the capability ships, by pinning "
+    "it to that version or by taking a new major; once no lock names the copy, take it out of "
+    "the library folder and off the list"
+)
+#: What the check says of any other copy not released that is not what the capability ships.
+ADD = (
+    "run `pkit visual add foundations`, which replaces the copy with what the capability ships "
+    "under its number"
+)
+
+
+@pytest.mark.parametrize(
+    ("case", "message", "fix"),
+    [
+        pytest.param(
+            "files",
+            "foundations@1.0.0, listed not released, holds other files than the installed "
+            "capability ships under its number, the version being built: `notes.txt` is not in "
+            "what the capability ships; `roles.yaml` differs",
+            ADD,
+            id="other-files",
+        ),
+        pytest.param(
+            "released",
+            "foundations@1.0.0 is listed not released, and the installed capability released it",
+            ADD,
+            id="released",
+        ),
+        pytest.param(
+            "unshipped",
+            "foundations@1.0.0 is listed not released, and the installed capability ships no "
+            "foundations@1.0.0",
+            UNSHIPPED,
+            id="number-not-shipped",
+        ),
+    ],
+)
+def test_a_copy_not_released_that_is_not_what_the_capability_ships_asks_for_attention(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, case: str, message: str, fix: str
+) -> None:
+    building = "1.1.0" if case == "unshipped" else "1.0.0"
+    capability(tmp_path, monkeypatch, release=case == "released", building=building)
+    root = project(tmp_path)
+    folder = copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    write_list(root, {"foundations": {"source": SHIPPED, "versions": {"1.0.0": UNRELEASED}}})
+    if case == "files":
+        assert judged(root, "copy-not-shipped") == []
+        write(folder / "notes.txt", "Added in the copy.\n")
+        roles = folder / "roles.yaml"
+        roles.write_text(roles.read_text(encoding="utf-8") + "# changed in the copy\n")
+    [(finding, level)] = judged(root, "copy-not-shipped")
+    assert (level, finding.who, finding.library) == ("attention", "the project", "")
+    assert checks.place(finding) == COPY
+    assert (finding.message, finding.fix) == (message, fix)
+
+
+def test_a_released_copy_whose_hash_differs_from_the_capabilitys_names_both(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    folder = capability(tmp_path, monkeypatch, release=True)
+    recorded = shipped.entry_of(folder, "foundations", V("1.0.0"))["hash"]["value"]
+    root = project(tmp_path)
+    copy = copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    roles = copy / "roles.yaml"
+    role = "  space.4: {type: dimension}\n"
+    added = role + "  space.5: {type: dimension}\n"
+    roles.write_text(roles.read_text(encoding="utf-8").replace(role, added))
+    entry = released_entry(root, "foundations", "1.0.0")
+    write_list(root, {"foundations": {"source": SHIPPED, "versions": {"1.0.0": entry}}})
+    [(finding, level)] = judged(root, "copy-hash-differs")
+    assert (level, finding.who) == ("attention", "the project")
+    list_file = "visual/libraries/libraries.yaml"
+    assert checks.place(finding) == f"{list_file}#libraries.foundations.versions.1.0.0.hash"
+    assert finding.message == (
+        f"{list_file} keeps the hash `{entry['hash']['value']}` for foundations@1.0.0, released, "
+        f"and the installed capability records `{recorded}`: two contents carry one released "
+        f"number"
+    )
+    assert entry["hash"]["value"] != recorded
+    assert finding.fix == (
+        "choose which content foundations@1.0.0 holds: `pkit visual add foundations` refuses "
+        "while the two hashes differ"
+    )
+    write(copy / "notes.txt", "Added after the release.\n")
+    [(changed, _)] = judged(root, "library-changed")
+    assert changed.fix == "restore the version folder as it was released"

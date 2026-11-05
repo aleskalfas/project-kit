@@ -26,6 +26,24 @@ Gates per DEC-026:
     (`_lib/issue_position`, shared with start-work, #1242); move-issue reads
     it itself when it moves.
   - PR title is Conventional Commits.
+  - The author's sentences (DEC-065 point 3): each document the change check
+    marks `updated` at the PR's head needs a sentence on what changed in it,
+    under the description's `## What changed in each updated document`. The
+    check is run at the PR's head on every move (`friction_answers.checked`, the
+    head fetched first where this clone lacks it), since the description carries
+    no list of the answers. The description is read, a draft's or a ready PR's,
+    before the PR is made ready, reviewers are requested or the issue moves.
+    Refused at validate-at-ready's severity, hard-reject, naming each such
+    document, the form a sentence takes and each item there that is not read as
+    one. Each sentence that reads as a closing reference is refused the same way:
+    the host would close an issue with it at merge (DEC-065 point 5). Each sentence
+    on a document the check does not mark `updated` gets a warning naming the edit
+    that removes it, as open-pr and land-work give it. A
+    check that cannot be run at the head stops the run (exit 2), and so does a
+    description that cannot be read (exit 3): nothing is refused on either.
+    Under `--force`, a check that cannot be run refuses nothing, with a warning,
+    and a refusal is printed and overridden. open-pr warns of a missing
+    sentence; edit-pr derives nothing and warns of none.
   - The clash guard (DEC-035 point 6), with an instance id set or a seat of
     a topology held: an issue another instance owns is refused before any PR
     is opened or made ready and before reviewers are requested, at
@@ -55,14 +73,16 @@ Side-effects:
 Exit codes:
   0  PR ready + issue in Review (moved there, or already there)
   1  membership or foreign-repo refusal / PR body not ready for review
-     (validate-at-ready; --force overrides) / the clash guard refused an
-     issue another instance owns / this clone's seat could not be confirmed
+     (validate-at-ready, an updated document with no sentence, or a sentence that
+     reads as a closing reference; --force overrides) / the clash guard refused an
+     issue another instance owns /
+     this clone's seat could not be confirmed
   2  usage error / gate failure / illegal transition / issue not found /
      where the board carries the state, a card whose Status does not place
-     the issue
-  3  gh failure: `gh pr create` could not open the PR, or `gh pr ready`
-     could not make it ready, or the board carrying the state could not be
-     read
+     the issue / the change check could not be run at the PR's head
+  3  gh failure: `gh pr create` could not open the PR, the PR's description
+     could not be read, or `gh pr ready` could not make it ready, or the board
+     carrying the state could not be read
   *  a failed composed move-issue passes its exit code through
 """
 
@@ -72,6 +92,7 @@ import argparse
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -84,6 +105,7 @@ from _lib import (
     classification_rules,
     composed_move,
     default_branch,
+    friction_answers,
     instance_claims,
     issue_branch,
     issue_position,
@@ -106,6 +128,32 @@ from _lib.review_mode import (
 )
 
 TARGET_STATE = "review"
+#: What to do about a refused body when no PR is open yet.
+FILL_FIRST = (
+    "fill the body first (create-draft → edit-pr → review-work), or use open-pr --body-file"
+)
+#: The label of a finding on the author's sentences, as edit-pr's validation names it.
+SENTENCES_LABEL = "body.sentences"
+
+
+#: The exit where the change check could not be run at the PR's head.
+EXIT_UNDERIVED = 2
+
+
+@dataclass(frozen=True)
+class _Description:
+    """A PR's description, with the PR's number, its head, its base branch and the
+    branch it is opened from as GitHub names them, and whether it comes from a
+    fork: what the author's sentences are checked against, and where the head is
+    fetched from. A body review-work composes for a PR not opened yet has none of
+    them."""
+
+    body: str
+    number: int | None = None
+    head: str = ""
+    base: str = ""
+    branch: str = ""
+    cross_repository: bool = False
 
 
 def main() -> int:
@@ -154,7 +202,8 @@ def main() -> int:
         action="store_true",
         help=(
             "Take a PR to ready-for-review despite hard-reject body-validation "
-            "findings (empty required section / checkbox / missing Doc impact). "
+            "findings (empty required section / checkbox / missing Doc impact / an "
+            "updated document with no sentence on what changed in it). "
             "Drafts stay exempt; you normally fill a draft first (create-draft → "
             "edit-pr → review-work) or use open-pr --body-file."
         ),
@@ -328,6 +377,10 @@ def main() -> int:
     # (DEC-031 empty checkbox → hard-reject; DEC-015 Doc impact). Drafts are
     # exempt; --force overrides. An empty body cannot go ready — fill a draft
     # first (create-draft → edit-pr → review-work), or use open-pr --body-file.
+    # A description that gives no sentence on what changed in a document the
+    # change check marks updated at the PR's head is refused too, a PR already
+    # ready included, before reviewers are requested or the issue moves (DEC-065
+    # point 3).
     existing_pr = _find_pr_for_branch(branch, config)
     pr_number: int | None = None
     # What this run changed on the PR, named if the composed move then fails.
@@ -337,7 +390,12 @@ def main() -> int:
         # Open a ready PR (non-draft) — validate the composed body first.
         title = _derive_pr_title(issue, branch)
         body = f"Closes #{args.issue_number}"
-        if not _ready_body_ok(body, classification, capability_root, args.force):
+        # The body composed here has no sentences and no `## Doc impact`, so
+        # validate-at-ready refuses it unless --force passes it, which would pass a
+        # missing sentence too: no answers are derived for it.
+        if not _ready_body_ok(
+            body, classification, capability_root, args.force, sentences=[], next_step=FILL_FIRST
+        ):
             return 1
         url = _gh_pr_create_ready(branch, base, title, body, config)
         if url is None:
@@ -349,8 +407,19 @@ def main() -> int:
     elif existing_pr.get("isDraft"):
         # Flip draft → ready — validate the draft's current body first.
         pr_number = existing_pr.get("number")
+        description = _gh_pr_description(pr_number, config)
+        if description is None:
+            return 3
+        sentences = _sentence_findings(description, force=args.force)
+        if sentences is None:
+            return EXIT_UNDERIVED
         if not _ready_body_ok(
-            _gh_pr_body(pr_number, config), classification, capability_root, args.force
+            description.body,
+            classification,
+            capability_root,
+            args.force,
+            sentences=sentences,
+            next_step=_edit_step(args.issue_number, pr_number),
         ):
             return 1
         if not _gh_pr_ready(pr_number, config):
@@ -359,6 +428,14 @@ def main() -> int:
         print(f"  flipped PR #{pr_number} draft → ready")
     else:
         pr_number = existing_pr.get("number")
+        description = _gh_pr_description(pr_number, config)
+        if description is None:
+            return 3
+        sentences = _sentence_findings(description, force=args.force)
+        if sentences is None:
+            return EXIT_UNDERIVED
+        if not _body_ok(sentences, args.force, next_step=_edit_step(args.issue_number, pr_number)):
+            return 1
         print(f"  PR #{pr_number} already ready; idempotent skip")
 
     # Reviewer assignment per DEC-027 mode resolution.
@@ -566,12 +643,22 @@ def _gh_pr_create_ready(branch: str, base: str, title: str, body: str, config: d
     return proc.stdout.strip()
 
 
-def _ready_body_ok(body: str, classification: dict, capability_root: Path, force: bool) -> bool:
+def _ready_body_ok(
+    body: str,
+    classification: dict,
+    capability_root: Path,
+    force: bool,
+    *,
+    sentences: list[pr_validation.Finding],
+    next_step: str,
+) -> bool:
     """Validate-at-ready (#569): True iff `body` may go ready-for-review.
 
     Runs the shared PR-body validator at the merge-gate phase (empty checkbox →
     hard-reject). Title/closing-label checks are skipped (review-work composes the
-    title). On a blocking finding: print it and return False, or True under
+    title). The findings on the author's sentences, `sentences`, join it
+    (`_sentence_findings`), so one refusal names every blocking finding. On a
+    blocking finding: print it with `next_step`, and return False, or True under
     ``force``. Merge remains the backstop; drafts never reach here.
     """
     findings = pr_validation.validate_pr(
@@ -585,39 +672,186 @@ def _ready_body_ok(body: str, classification: dict, capability_root: Path, force
         phase=PHASE_TRANSITION,
     )
     blocking = [f for f in findings if f.severity in pr_validation.BLOCKING_SEVERITIES]
-    if not blocking:
-        return True
+    return _body_ok(blocking + sentences, force, next_step=next_step)
+
+
+def _sentence_findings(
+    description: _Description, *, force: bool = False
+) -> list[pr_validation.Finding] | None:
+    """A hard-reject finding for each document the change check marks `updated` at
+    the PR's head that the PR's description gives no sentence on what changed in it
+    (DEC-065 point 3), named with the form a sentence takes, and for each sentence
+    that reads as a closing reference (DEC-065 point 5). Each item under the
+    sentences heading that is not read as one follows a missing sentence, as a
+    warning: it is likely the sentence, in another form. Nothing where every such
+    document has a sentence and none reads so.
+
+    The answers are derived at the PR's head on every move (`_unsaid_at_head`); the
+    description carries none. None, with what failed printed, where they cannot be
+    derived there: nothing is refused on answers nobody read. Under ``force``
+    nothing is refused then either, with a warning saying so."""
+    unsaid = _unsaid_at_head(description, force=force)
+    if unsaid is None:
+        return None
+    refused = [
+        pr_validation.Finding(
+            pr_validation.SEVERITY_HARD_REJECT,
+            SENTENCES_LABEL,
+            message,
+        )
+        for message in (
+            *(friction_answers.unsaid_message(location) for location in unsaid),
+            *(
+                friction_answers.closing_message(*found)
+                for found in friction_answers.closing_references(
+                    friction_answers.sentences(description.body)
+                )
+            ),
+        )
+    ]
+    unread = [
+        pr_validation.Finding(
+            pr_validation.SEVERITY_WARNING,
+            SENTENCES_LABEL,
+            friction_answers.unread_warning(item),
+        )
+        for item in (friction_answers.unread(description.body) if unsaid else ())
+    ]
+    return refused + unread
+
+
+def _unsaid_at_head(description: _Description, *, force: bool = False) -> list[str] | None:
+    """Each document the change check marks `updated` at the PR's head that the
+    description gives no sentence for, in the check's order. Each sentence on a
+    document the check does not mark `updated` gets a warning, as open-pr and
+    land-work give it: no reviewer checks it. Only the answers are read, not the
+    friction settings (`friction_answers.checked`), and the head is fetched first
+    where this clone lacks it. None, with why printed, where the check cannot be run
+    there; under ``force``, nothing, with a warning saying so."""
+    body = description.body
+    head, number = description.head, description.number
+    problem = ""
+    if not head or number is None:
+        problem = f"GitHub named no head for PR #{number}"
+    elif not description.base:
+        problem = f"GitHub named no base branch for PR #{number}"
+    else:
+        source = (
+            friction_answers.pull_request_source(
+                description.branch,
+                number,
+                cross_repository=description.cross_repository,
+                base=description.base,
+            )
+            if description.branch or description.cross_repository
+            else None
+        )
+        derived = friction_answers.checked(head, description.base, source=source)
+        if derived.document is not None:
+            said = friction_answers.sentences(body)
+            for location in friction_answers.unlisted(derived.document, said):
+                warning = friction_answers.unlisted_warning(location, head, number)
+                print(f"  [warn] {warning}", file=sys.stderr)
+            return friction_answers.unsaid(derived.document, said)
+        problem = derived.problem or "the change check gave no document"
+    underived = (
+        f"the change check at PR #{number}'s head {_commit(head)} could not be run ({problem})"
+    )
+    if force:
+        print(
+            f"  [warn] {underived}; under --force, no sentence on what changed is checked, "
+            "and the move goes on.",
+            file=sys.stderr,
+        )
+        return []
     print(
-        "[refused] PR body is not ready for review (validate-at-ready, #569):",
+        f"error: {underived}, so which documents need a sentence cannot be told. Nothing was "
+        "made ready, no reviewer requested and the issue not moved. Run review-work again once "
+        "it can be run.",
         file=sys.stderr,
     )
-    for f in blocking:
+    return None
+
+
+def _commit(oid: str) -> str:
+    """A head as a line names it: its short form, or that none is named."""
+    return oid[: friction_answers.SHORT] or "a head it does not name"
+
+
+def _edit_step(issue_number: int, pr_number: int | None) -> str:
+    """What to do about a refused description of PR `pr_number`: write it with
+    edit-pr, then run review-work again."""
+    return (
+        f"write the description with `edit-pr {pr_number} --body-file <file>`, then run "
+        f"`review-work {issue_number}` again"
+    )
+
+
+def _body_ok(findings: list[pr_validation.Finding], force: bool, *, next_step: str) -> bool:
+    """True iff no finding of `findings` blocks; otherwise print them all, with
+    `next_step`, and return False, or True under ``force``. The findings are
+    validate-at-ready's (#569) and the author's sentences' (DEC-065 point 3)."""
+    if not pr_validation.has_blocking(findings):
+        return True
+    print("[refused] PR body is not ready for review:", file=sys.stderr)
+    for f in findings:
         print(f"  - [{f.severity}] {f.label}: {f.detail}", file=sys.stderr)
     if force:
         print("  → proceeding under --force.", file=sys.stderr)
         return True
-    print(
-        "  → fill the body first (create-draft → edit-pr → review-work), or use "
-        "open-pr --body-file; --force overrides.",
-        file=sys.stderr,
-    )
+    print(f"  → {next_step}; --force overrides.", file=sys.stderr)
     return False
 
 
-def _gh_pr_body(pr_number: int | None, config: dict) -> str:
-    """The current body of a PR (for validating a draft before flip → ready)."""
+#: What review-work reads of a PR: its description, the head and base the author's
+#: sentences are checked against, and where that head is fetched from.
+_DESCRIPTION_FIELDS = "body,headRefOid,baseRefName,headRefName,isCrossRepository"
+
+
+def _gh_pr_description(pr_number: int | None, config: dict) -> _Description | None:
+    """The current description of a PR, with its head and base: a draft's,
+    validated before the flip → ready, or a ready one's, whose sentences are
+    checked before the move. None, with what failed printed, when it cannot be
+    read: a description unread is never read as one that gives every sentence."""
     if pr_number is None:
-        return ""
+        print("error: cannot read the PR's description — no PR number resolved.", file=sys.stderr)
+        return None
     try:
-        proc = gh_run(["gh", "pr", "view", str(pr_number), "--json", "body"], config, check=False)
-    except FileNotFoundError:
-        return ""
+        proc = gh_run(
+            ["gh", "pr", "view", str(pr_number), "--json", _DESCRIPTION_FIELDS],
+            config,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        return _unread_body(pr_number, f"`gh` could not be run ({exc})")
     if proc.returncode != 0:
-        return ""
+        return _unread_body(
+            pr_number, (proc.stderr or "").strip() or f"gh exited {proc.returncode}"
+        )
     try:
-        return str((json.loads(proc.stdout) or {}).get("body") or "")
+        data = json.loads(proc.stdout)
     except json.JSONDecodeError:
-        return ""
+        return _unread_body(pr_number, "gh's answer is not JSON")
+    if not isinstance(data, dict):
+        return _unread_body(pr_number, "gh's answer names no pull request")
+    return _Description(
+        str(data.get("body") or ""),
+        number=pr_number,
+        head=str(data.get("headRefOid") or ""),
+        base=str(data.get("baseRefName") or ""),
+        branch=str(data.get("headRefName") or ""),
+        cross_repository=bool(data.get("isCrossRepository")),
+    )
+
+
+def _unread_body(pr_number: int, why: str) -> None:
+    """Say that PR `pr_number`'s description could not be read, and why."""
+    print(
+        f"error: PR #{pr_number}'s description could not be read ({why}); nothing was made "
+        "ready, no reviewer requested and the issue not moved. Run review-work again once it "
+        "can be read.",
+        file=sys.stderr,
+    )
 
 
 def _gh_pr_ready(pr_number: int | None, config: dict) -> bool:

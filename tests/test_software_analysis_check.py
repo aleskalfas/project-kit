@@ -50,7 +50,6 @@ from tests.analysis_repo import (
     SETTINGS,
     USE_CASES,
     VALIDATE,
-    accepting_san,
     actor_at,
     field_hint,
     fill,
@@ -260,8 +259,10 @@ def test_a_stamped_artefact_is_reported_once_and_passes_filled_as_its_hints_show
     writes passes filled as its hints show. Each requirement's fingerprint and the overview
     the stamp kept are then stale, and the check names the command that writes each anew."""
     project.write(
-        {SETTINGS: "pkit_schema: software-analysis:config\nschema_version: 1\n"}
-        | accepting_san(project)
+        {
+            SETTINGS: "pkit_schema: software-analysis:config\nschema_version: 1\n",
+            ANALYSIS_SET: ANALYSIS_SET_TEXT,
+        }
     )
     project.commit("bind the format rule, and keep the overview")
     stamped(project, "actor", "tester", "--path", "src/run.py")
@@ -955,7 +956,7 @@ def test_a_requirement_is_held_to_its_kind_s_schema_and_where_the_rule_binds_its
     the kinds selects none of them, so it holds no requirement to its structure."""
     place, shown, last = REQUIREMENT_KINDS[kind]
     rel = f"{place}/REQ-004-quick-result.md"
-    project.write({**accepting_san(project), rel: _requirement(shown, last)})
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT, rel: _requirement(shown, last)})
     document = check(project)
     assert errors(document) == []
     noun = kind.replace("-", " ")
@@ -1037,7 +1038,7 @@ def test_a_requirement_s_id_file_name_and_heading_agree(
     """A requirement's id is `REQ-NNN`, its file's name carries it, and its heading shows
     its id, its kind and its title (DEC-002 point 2, #1693). The heading is the heading
     check's whatever the format rule binds, so the structure never reports it twice."""
-    project.write({**accepting_san(project), QUICK: requirement()})
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT, QUICK: requirement()})
     assert errors(check(project)) == []
     title = "Show a run's result quickly"
     wanted = f"`# REQ-004 · Quality · {title}`"

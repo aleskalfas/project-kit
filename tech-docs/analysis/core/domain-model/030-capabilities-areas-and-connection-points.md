@@ -238,7 +238,7 @@ Defined in [TERM-connection](../glossary.md#term-connection--connection).
 
 **Why:** The side that needs something knows what it needs, and what the data or the signal means ([COR-053](../../../../.pkit/decisions/core/COR-053-connection-points.md)). So that side declares the connection, and nothing is asked of the other side unless the connection is marked mandatory (COR-053).
 
-A connection is a tie that a [component](../glossary.md#term-component--component) declares in its [package metadata](../glossary.md#term-package-metadata--package-metadata), under `extensions`, to a [connection point](../glossary.md#term-connection-point--connection-point) another [capability](../glossary.md#term-capability--capability) defines. `pkit connections graph` draws each one. A connection does one of three things:
+A connection is a tie that a [component](../glossary.md#term-component--component) declares, under `extensions`, to a [connection point](../glossary.md#term-connection-point--connection-point) another [capability](../glossary.md#term-capability--capability) defines. `pkit connections graph` draws each one. A connection does one of three things:
 
 - it contributes to a [data point](../glossary.md#term-data-point--data-point)
 - it subscribes to an event
@@ -254,7 +254,7 @@ A connection is a tie that a [component](../glossary.md#term-component--componen
 
 **Relations:**
 
-- A component declares it in its package metadata. The `depends-on` connections are copied there from the process definitions by a command, and never written by hand ([COR-053 point 4](../../../../.pkit/decisions/core/COR-053-connection-points.md#4-depends-on-is-generated-never-hand-written)).
+- A component declares it. The component's `depends-on` connections are copied from each process's definition by a command, and never written by hand ([COR-053 point 4](../../../../.pkit/decisions/core/COR-053-connection-points.md#4-depends-on-is-generated-never-hand-written)).
 - The [backbone](../glossary.md#term-backbone--backbone) resolves each one against the connection points of each [role](../glossary.md#term-role--role)'s active provider, and checks it ([COR-053 point 7](../../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)).
 - An [install plan](../glossary.md#term-install-plan--install-plan) lists the connections an [install](../glossary.md#term-install--install) would make, and the conflicts to resolve ([COR-053 point 8](../../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
 
@@ -262,9 +262,8 @@ A connection is a tie that a [component](../glossary.md#term-component--componen
 
 **Always true:**
 
-- It is optional unless it carries a mandatory mark, and [validation](../glossary.md#term-validation--validation) rejects a mandatory mark with no reason (COR-053 point 6).
-- It ties only to a connection point whose <!-- pkit:not-the-term -->version equals the one it targets. Otherwise it is inert: it ties to nothing, and validation reports it (COR-053 points 5 and 6).
-- Two mandatory connections facing each other form a cycle, which validation rejects (COR-053 point 6).
+- It is optional unless it carries a mandatory mark (COR-053 point 6).
+- It ties only to a connection point whose <!-- pkit:not-the-term -->version equals the one it targets. Otherwise it is inert: it ties to nothing (COR-053 point 5).
 
 ## Role
 

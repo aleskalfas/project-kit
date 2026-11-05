@@ -48,6 +48,7 @@ headings and every part's place in the body stay as they were.
 
 from __future__ import annotations
 
+import functools
 import html
 import io
 import re
@@ -59,6 +60,7 @@ from typing import Any, cast
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from project_kit import block_yaml
 from project_kit.backbone_schemas import as_written
 from project_kit.line_breaks import universal_newlines
 
@@ -85,8 +87,9 @@ _INLINE_LINK = re.compile(r"(?<!!)\[(?P<words>[^\[\]]+)\]\((?P<target>[^()\s]+)\
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
 _CODE_SPAN = re.compile(r"(?<!`)(`+)(?!`)(?:[^\n]|\n(?![ \t]*\n))+?(?<!`)\1(?!`)")
 
-# ruamel.yaml is untyped; the loaded value is judged where it is read.
-_yaml: Any = YAML(typ="safe")
+# ruamel.yaml is untyped; the loaded value is judged where it is read. The exact reading
+# behind `block_yaml`: ruamel's pure-Python safe loader, never libyaml.
+_yaml: Any = YAML(typ="safe", pure=True)
 
 
 def split_front_matter(text: str) -> tuple[str | None, str]:
@@ -125,7 +128,7 @@ def parse_front_matter(text: str) -> tuple[Mapping[str, Any] | None, str, str | 
     if front_matter is None:
         return None, body, None
     try:
-        data = _yaml.load(io.StringIO(front_matter))
+        data = block_yaml.load(front_matter, lambda: _yaml.load(io.StringIO(front_matter)))
     except YAMLError as exc:
         return None, body, yaml_reason(exc)
     except (TypeError, ValueError, KeyError) as exc:
@@ -250,6 +253,10 @@ def running_text(body: str) -> str:
     return _CODE_SPAN.sub(blank, _COMMENT.sub(blank, text))
 
 
+# Keyed on the whole input, as ADR-079 point 1 lets a cache, and bounded: a friction
+# walk cuts many parts from each version of one document, and each cut reads the same
+# body's headings and slugs again.
+@functools.lru_cache(maxsize=512)
 def body_headings(body: str) -> tuple[Heading, ...]:
     """The headings of a Markdown body, in order, fenced code skipped.
 
@@ -274,6 +281,7 @@ def heading_opens_with(title: str, part_id: str) -> bool:
     return title.startswith(part_id) and not _ID_CONTINUES.match(title, len(part_id))
 
 
+@functools.lru_cache(maxsize=8192)
 def heading_slug(title: str) -> str:
     """A heading's slug: its title in lower case, with every character but letters,
     digits, spaces and hyphens dropped, and each space made a hyphen.

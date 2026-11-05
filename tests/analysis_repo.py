@@ -90,29 +90,19 @@ MAIN = "main"
 
 #: The method rule set, as the adopter holds it, and a set of the project's own through
 #: which it binds on the whole analysis: `SAN` takes no scope, so its rules bind only
-#: through such a set (DEC-001 point 1; COR-051 point 7).
+#: through such a set (DEC-001 point 1; COR-051 point 7). The set pins `SAN` at the major
+#: it ships, 2 since its judgement rules were accepted (#1727): a pin behind binds nothing.
+#: `SAN` ships each rule accepted (#1370, #1727), so writing the set makes them bind.
 SAN_REL = f"{SA.as_posix()}/rule-sets/san.md"
 ANALYSIS_SET = "tech-docs/rule-sets/analysis.md"
 ANALYSIS_SET_TEXT = (
-    "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@1]\n"
+    "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@2]\n"
     "scope:\n  types: [software-analysis:actor, software-analysis:term, "
     "software-analysis:use-case, software-analysis:journey, "
     "software-analysis:quality-requirement, software-analysis:functional-requirement, "
     "software-analysis:constraint, software-analysis:domain-model-view]\nrules: {}\n---\n\n"
     "# ANALYSIS — the project's rules for its analysis\n"
 )
-
-
-def accepting_san(repo: AdopterRepo) -> dict[str, str]:
-    """What to write so `SAN`'s rules bind on the whole analysis, the format rule and the
-    append-only rule: the adopter's copy of `SAN` with each rule accepted, as it ships
-    them since the maintainer accepted both (#1370), and a set of the project's own that
-    inherits it."""
-    text = (repo.root / SAN_REL).read_text(encoding="utf-8")
-    return {
-        SAN_REL: text.replace("status: proposed", "status: accepted"),
-        ANALYSIS_SET: ANALYSIS_SET_TEXT,
-    }
 
 
 def proposing_san(repo: AdopterRepo) -> dict[str, str]:

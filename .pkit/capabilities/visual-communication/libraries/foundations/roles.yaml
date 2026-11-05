@@ -34,12 +34,15 @@ roles:
   space.3: {type: dimension}
   space.4: {type: dimension}
   stroke.thin: {type: dimension}
+  stroke.thick: {type: dimension}
   size.figure: {type: dimension}
   size.slide: {type: dimension}
   font.body: {type: fontFamily}
   font.heading: {type: fontFamily}
   type.body: {type: typography}
   type.heading: {type: typography}
+  type.strong: {type: typography}
+  type.code: {type: typography}
 
 # The shared axes (DEC-004 point 2). Both change colours alone, so every mode of either
 # is drawn from one scene.

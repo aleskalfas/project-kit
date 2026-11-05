@@ -11,7 +11,7 @@ pkit:
         - .pkit/capabilities/software-engineering/agents/docs-reviewer.md
         - .pkit/capabilities/software-engineering/review-contributions.yaml
         - .pkit/capabilities/software-engineering/package.yaml
-      record: ["software-engineering:DEC-001", "software-engineering:DEC-002", "software-engineering:DEC-003", "software-engineering:DEC-004", "project-management:DEC-027", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-050", "project-management:DEC-055", "project-management:DEC-060", COR-024, COR-050, COR-064, COR-070, ADR-052]
+      record: ["software-engineering:DEC-001", "software-engineering:DEC-002", "software-engineering:DEC-003", "software-engineering:DEC-004", "project-management:DEC-027", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-050", "project-management:DEC-055", "project-management:DEC-060", "project-management:DEC-065", COR-024, COR-050, COR-064, COR-070, ADR-052]
       artefact:
         - ACT-developer
         - ACT-merge-authoriser
@@ -282,13 +282,13 @@ pkit project-management land-work 12
   - a document updated in the change with no sentence on what changed, or with one that does not match the diff
   - a revisit of a target that does not hold against what the change modified
 - **Write the sentences.** The pull request's description holds one for each document the change updated, under `## What changed in each updated document`. Write each as an item of the form ``- `path`: sentence``, which the reviewer reads.
-- **Land it.** The landing command shows you the answers, their sentences, and what is left out of date, as information. What it shows of them stops no merge ([project-management's README, "The answers a change wrote, in its pull request"](../../../.pkit/capabilities/project-management/README.md#the-answers-a-change-wrote-in-its-pull-request-project-managementdec-055-pr-lists-answers)). Without `--yes`, it stops on its `ready:` line, which names the command that merges the head you were shown ([project-management's README](../../../.pkit/capabilities/project-management/README.md#landing-a-pull-request-in-one-command--land-work-1203)).
+- **Land it.** The landing command shows you what changed in each updated document, in its sentence, and what is left out of date. It also shows each answer the change check did not ask for. This is information, and stops no merge ([project-management's README, "The answers a change wrote, in its pull request"](../../../.pkit/capabilities/project-management/README.md#the-answers-a-change-wrote-in-its-pull-request-project-managementdec-055-pr-lists-answers)). Without `--yes`, it stops on its `ready:` line, which names the command that merges the head you were shown ([project-management's README](../../../.pkit/capabilities/project-management/README.md#landing-a-pull-request-in-one-command--land-work-1203)).
 
 In these cases, no reviewer's check of the answers holds the merge ([the reference](../../../.pkit/capabilities/software-engineering/README.md#the-reviewer-of-a-changes-answers)):
 
 - **A pull request that changes only documents, and closes no issue with a `type`.** The gate requires no `docs-reviewer` for it. Have the pull request close an issue that has a `type` when the change wrote answers.
 - **A project that opts out of the `docs-reviewer`,** and names no other reviewer of the answers.
-- **Human review mode.** The `docs-reviewer`'s verdict only advises there, and the person who approves checks the answers only by reading them.
+- **Human review mode.** The `docs-reviewer`'s verdict only advises there, and the person who approves checks the answers only by reading them. `pkit pm show-pr <PR> --field answers` prints what the landing command tells, and `pkit friction check` at the head gives every answer. Away from a checkout at the head, the view may print nothing, so read the answer files in the pull request's diff.
 - **A bypass on record.** A person merges past the `docs-reviewer`, or past the whole gate, with a reason (project-management DEC-050).
 - **A sentence edited after the verdict.** Editing the description makes no verdict stale, so nothing checks the new sentence.
 - **A change committed straight to your default branch.** The reviewer works from a pull request, and checking such a change's answers before the commit is not built yet.

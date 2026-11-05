@@ -10,7 +10,10 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/produce.py
         - .pkit/capabilities/visual-communication/scripts/write-code.py
+        - .pkit/capabilities/visual-communication/scripts/release.py
+        - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/scripts/_lib/checks.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/full_read.py
         - .pkit/capabilities/visual-communication/scripts/_lib/findings.py
         - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
         - .pkit/capabilities/visual-communication/scripts/_lib/reading.py
@@ -18,6 +21,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/notations.py
         - .pkit/capabilities/visual-communication/scripts/_lib/values.py
@@ -30,9 +34,39 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/seam.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/svg_declaration.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf_declaration.py
         - .pkit/capabilities/visual-communication/schemas/findings.schema.json
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
-      record: ["visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012", "visual-communication:DEC-013", "visual-communication:DEC-014"]
+      record:
+        - visual-communication:DEC-002#6
+        - visual-communication:DEC-002#7
+        - visual-communication:DEC-003#4
+        - visual-communication:DEC-003#6
+        - visual-communication:DEC-003#9
+        - visual-communication:DEC-004
+        - visual-communication:DEC-005#7
+        - visual-communication:DEC-005#9
+        - visual-communication:DEC-005#13
+        - visual-communication:DEC-005#14
+        - visual-communication:DEC-006#4
+        - visual-communication:DEC-006#5
+        - visual-communication:DEC-006#6
+        - visual-communication:DEC-006#8
+        - visual-communication:DEC-008#1
+        - visual-communication:DEC-008#3
+        - visual-communication:DEC-008#4
+        - visual-communication:DEC-008#6
+        - visual-communication:DEC-008#9
+        - visual-communication:DEC-010#2
+        - visual-communication:DEC-010#9
+        - visual-communication:DEC-011#8
+        - visual-communication:DEC-012#3
+        - visual-communication:DEC-012#8
+        - visual-communication:DEC-013#3
+        - visual-communication:DEC-013#5
+        - visual-communication:DEC-013#6
+        - visual-communication:DEC-014#1
+        - visual-communication:DEC-014#5
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
         - .pkit/capabilities/visual-communication/components.md#breaking-lines
@@ -102,9 +136,18 @@ Each finding takes one of three levels (DEC-002 point 7). Validation reads each 
 
 Only an `error` fails `pkit validate` ([CLI reference](../../cli/README.md#validate)).
 
-**A released library version.** A finding the project cannot correct in its own files never fails (DEC-002 point 7). A finding that lies in a library version names that version. Where the project's list of libraries marks the version released, and the version still matches its release, a finding that would fail there asks for attention instead, and names the library's owner as who acts: only the owner corrects it, in a new release. This level, and who it names, are worked out each time the check reads a finding, and are never stored. A released version whose folder no longer matches its release is the project's copy to restore, so its findings fail, `library-changed` among them (DEC-002 point 7, DEC-003 point 9). The list and its `released` field are described in [The files of the visual work](files.md#the-library-folder).
+**A library version the project does not correct.** A finding the project cannot correct in its own files never fails (DEC-002 point 7). A finding that lies in a library version names that version. Where the project does not correct the version, a finding that would fail there asks for attention instead, and names who does:
 
-A few findings that lie in a library folder name no version, and always fail: `library-folder` and the findings on the list itself. So does `library-unreadable` where a version needs a newer release of the capability than the one installed (DEC-014 point 5). That number is no fault in the version, released or not. Only the project corrects the finding: it upgrades the capability, or takes out a version no lock names (DEC-003 point 4). So the finding names the project as who acts, never the library's owner.
+- **A released version,** which the project's list of libraries marks released, and which still matches its release. The finding names the library's owner: only the owner corrects it, in a new release.
+- **A copy of a library the capability ships,** released or not, which the list names from the source `shipped`. The finding names whoever maintains the capability (DEC-013 point 6). No project corrects it, since the command that brings the library in writes it as it is authored.
+
+This level, and who it names, are worked out each time the check reads a finding, and are never stored.
+
+A released version whose folder no longer matches its release is the project's copy to restore (DEC-002 point 7, DEC-003 point 9). So its findings fail, `library-changed` among them, whatever the library's source. A finding in a version of the project's own library not yet released fails as well. The list, with each library's source and which versions are released, is described in [The files of the visual work](files.md#the-library-folder).
+
+A few findings that lie in a library folder name no version, so their level stands. `library-folder` and the findings on the list itself always fail. `copy-not-shipped` and `copy-hash-differs` ask the project for attention: each compares a copy with what the installed capability ships (DEC-013 point 6).
+
+`library-unreadable` fails too where a version needs a newer release of the capability than the one installed (DEC-014 point 5). That number is no fault in the version, released or not. Only the project corrects the finding: it upgrades the capability, or takes out a version no lock names (DEC-003 point 4). So the finding names the project as who acts, never the library's owner.
 
 ## What a finding says
 
@@ -121,6 +164,8 @@ A few findings that lie in a library folder name no version, and always fail: `l
 Without a piece named, each run judges, in order: the configuration, the location, the binding of each file of the capability's format in the location, the library folder and its list, then each library version checked alone, then each piece, then each declaration of written code. For each piece it judges, in order, the ids of its content, its lock, the libraries its lock names read under it (its brand and the own roles of each library of components), the names of those libraries, its notations, its content against the components it fills, its produced pictures and its scenes.
 
 **A version checked alone.** The newest version the project holds of each major of each library is checked alone, once (DEC-005 point 7, DEC-008 point 1). It is resolved with the newest version the project holds of each major it names, and of each major those name. A brand is read over its base, and the foundations' declarations are read. A component library's own roles are judged against the libraries it builds on. So is each of its patterns against the default component of each list it declares fields for, a drawing of a top's layout included. Its findings are `arrangement-clash`, `end-clash` and `tie-default` (DEC-010 point 9, DEC-011 point 8). Its components are read as a piece's are, from the versions it is resolved with, with no piece and no brand behind them, so each role stands for the type it declares. What a version shows alone lies in that version. A version that names majors no versions fit, or one of which the project holds no version, cannot be checked alone: that is its finding (`alone-majors`, `alone-missing`). An older version of a major is checked only under the locks that name it.
+
+**A version a release reads.** `pkit visual release` reads the version it releases in full on the installed capability, beside what the check of it alone judges (DEC-014 point 1). It reads each file of the capability's format in the version against its schema, and every component, a component no piece places included. It reads a brand's tokens over its base, and opens each font the version holds. It computes no scene. Each finding takes the label it takes in the check, and the level it takes in a version not yet released. It points at the version's file. A finding that fails refuses the release (DEC-003 point 6).
 
 **Under a lock.** A piece's lock combines versions, so each version it names is judged at that lock too (DEC-008 point 9). A fault the version shows alone as well lies in the version, and is reported once. A fault only the lock's combination of versions shows lies at the lock, `<piece>/piece.yaml#lock`. It names no version, so its level stands, and its message names the version and the place it was seen in. A fault of the lock itself, such as a base the lock names at another major, names no version either.
 
@@ -142,6 +187,7 @@ In the tables, `<piece>/` is the piece's folder, `<location>/pieces/<piece>/`, a
 | `files-unlisted` | git cannot list the location's files. | fails | `.` | The message gives git's error. |
 | `file-unreadable` | The configuration, or a file of the capability's format, cannot be read ([how files are read](files.md#how-the-files-are-read)). | fails | the file | Mend the file. |
 | `binding` | The file names no schema, or another schema than its name and place call for. A file at another format number is the core's data validation's to report. | fails | the file | Write the binding the message names ([the binding](files.md#the-binding)). |
+| `schema-refused` | A file of a library version breaks its schema at the key path the message names. Only a release, which reads the version in full, reports it ([What each run judges](#what-each-run-judges)). In the location, `pkit validate`'s data validation reports the same fault. | fails | the file | Mend the file. |
 | `piece-missing` | `pkit visual check <piece>` names a piece the location does not hold. | fails | `<location>/pieces` | Name a piece of the location. |
 | `piece-unreadable` | `piece.yaml` or a content file cannot be read as a piece: a field of the wrong shape, a language with no content file, or a mode the brand lacks. Not reported where a `binding` finding names one of the piece's files. | fails | `<piece>/piece.yaml` | The message names the file and the field. |
 | `unexpected-error` | The check of a piece stopped on an error it does not expect, such as one the engine raises on data it does not guard against. The message names the error. | fails | `<piece>/piece.yaml` | Mend what the error names in the piece's files or the components they use. Where none is at fault, report the error as a fault of the capability. |
@@ -157,15 +203,17 @@ These follow DEC-003 point 9, `library-name` DEC-004 point 7, `arrangement-clash
 | `library-folder` | A folder that holds a `library.yaml` is not named `X.Y.Z`. | fails | the folder | Name it after the version its `library.yaml` gives. |
 | `version-unlisted` | The folder holds a version the list does not name. | fails | the list, `#libraries.<library>.versions` | Add the version. |
 | `version-missing` | The list names a version the folder does not hold. | fails | the list, `#libraries.<library>.versions.<version>` | Restore the folder, or take the version off the list. |
-| `library-unreadable` | The installed capability cannot read a version: its `library.yaml` cannot be read, or names another library or version than its folder; or the version needs a newer release of the capability. | fails, or asks the library's owner for attention in a released version; a version that needs a newer release fails, released or not, and names the project ([why](#severities)) | `<version>/library.yaml` | Mend the file. For a newer release, upgrade the capability, or take the version out of the library folder and off the list once no lock names it. |
-| `library-changed` | A released version's folder no longer matches the fingerprint the list keeps of it. The message names each file that changed. | fails: the project restores its own copy | `<version>/` | Restore the folder as it was released. |
-| `library-name` | A library a piece's lock names takes a reserved word, or the name of a top group of the shared roles of the foundations that lock names (DEC-004 points 7 and 11). Reported once for each version. | fails, or asks the library's owner for attention in a released version | `<version>/library.yaml#name` | Rename the library, in a version of its own, and lock that version ([reserved words](files.md#reserved-words)). |
+| `library-unreadable` | The installed capability cannot read a version: its `library.yaml` cannot be read, or names another library or version than its folder; or the version needs a newer release of the capability. | fails, or asks for attention where the project does not correct the version. A version that needs a newer release fails, released or not, and names the project ([why](#severities)) | `<version>/library.yaml` | Mend the file. For a newer release, upgrade the capability, or take the version out of the library folder and off the list once no lock names it. |
+| `library-changed` | A released version's folder no longer matches the fingerprint the list keeps of it. The message names each file that changed. | fails: the project restores its own copy | `<version>/` | Restore the folder as it was released. For a copy of a version the capability releases under the hash the list keeps, run `pkit visual add <library>`, which restores it. |
+| `copy-not-shipped` | A copy the list marks not released, of a library the capability ships, is not what the installed capability ships under its number. It holds other files, the capability has released that number, or the capability ships no version of it. A draft that locks it draws what the capability no longer ships. Where the capability ships that number and has not released it, the message names each file that differs. | asks the project for attention | `<version>/` | Run `pkit visual add <library>`, which replaces the copy with what the capability ships. Where it ships no version of that number, move each draft that locks the copy, on purpose, to a version it ships. Pin the draft to that version, or take a new major. Once no lock names the copy, take it out of the library folder and off the list. |
+| `copy-hash-differs` | A copy the list marks released, of a library the capability ships, keeps another hash than the one the capability records for that version. Two contents carry one released number. The message names both hashes. | asks the project for attention | the list, `#libraries.<library>.versions.<version>.hash` | Choose which content the version holds. `pkit visual add <library>` refuses while the two hashes differ. |
+| `library-name` | A library a piece's lock names takes a reserved word, or the name of a top group of the shared roles of the foundations that lock names (DEC-004 points 7 and 11). Reported once for each version. | fails, or asks for attention where the project does not correct the version ([why](#severities)) | `<version>/library.yaml#name` | Rename the library, in a version of its own, and lock that version ([reserved words](files.md#reserved-words)). |
 | `lock-missing` | The piece has no lock yet. | fails | `<piece>/piece.yaml#lock` | Run `pkit visual render <piece>`. |
-| `alone-majors` | A version cannot be checked alone: two of the versions it is resolved with build on two majors of one library, or one builds on it at another major. The message names both. | fails, or asks the library's owner for attention in a released version | `<version>/library.yaml#builds-on` | Name majors that fit together, in a version of its own. |
+| `alone-majors` | A version cannot be checked alone: two of the versions it is resolved with build on two majors of one library, or one builds on it at another major. The message names both. | fails, or asks for attention where the project does not correct the version ([why](#severities)) | `<version>/library.yaml#builds-on` | Name majors that fit together, in a version of its own. |
 | `alone-missing` | A version cannot be checked alone: the project holds no version the capability reads of a major that it, or a library it is resolved with, builds on. | fails | the list, `#libraries.<library>` | Bring in a version of that major, or take the version out. |
-| `arrangement-clash` | A pattern of a version checked alone declares an arrangement field for a list, and the list's default component, which the part that repeats over it names in `draw`, declares a field or an option of that name ([lists](components.md#lists)). Neither reads the key on an item. | fails, or asks the library's owner for attention in a released version | `<version>/components/<pattern>.yaml#lists.<list>.arrangement.<field>` | Rename the arrangement field, or draw the list with another component, in a version of its own. |
-| `end-clash` | A pattern of a version checked alone declares an end field for a list of ties, and the list's default component declares a field or an option of that name ([lists](components.md#lists)). Neither reads it, so no tie that component draws has that end. | fails, or asks the library's owner for attention in a released version | `<version>/components/<pattern>.yaml#lists.<list>.ends`; in a drawing of a top's layout, `#layouts.<layout>.lists.<list>.ends` | Rename the end field, or draw the list with another component, in a version of its own. |
-| `tie-default` | The default component of a list of ties takes no ends, so it draws no tie ([ties and connectors](components.md#ties-and-connectors)). A library's pattern is judged when its version is checked alone. A piece's own is judged where its scenes are computed. | fails, or asks the library's owner for attention in a released version | `<version>/components/<pattern>.yaml#parts.<part>.draw`; in a drawing of a top's layout, `#layouts.<layout>.parts.<part>.draw`; a piece's own pattern, its file | Draw the list with a component that takes ends, in a version of its own. |
+| `arrangement-clash` | A pattern of a version checked alone declares an arrangement field for a list, and the list's default component, which the part that repeats over it names in `draw`, declares a field or an option of that name ([lists](components.md#lists)). Neither reads the key on an item. | fails, or asks for attention where the project does not correct the version ([why](#severities)) | `<version>/components/<pattern>.yaml#lists.<list>.arrangement.<field>` | Rename the arrangement field, or draw the list with another component, in a version of its own. |
+| `end-clash` | A pattern of a version checked alone declares an end field for a list of ties, and the list's default component declares a field or an option of that name ([lists](components.md#lists)). Neither reads it, so no tie that component draws has that end. | fails, or asks for attention where the project does not correct the version ([why](#severities)) | `<version>/components/<pattern>.yaml#lists.<list>.ends`; in a drawing of a top's layout, `#layouts.<layout>.lists.<list>.ends` | Rename the end field, or draw the list with another component, in a version of its own. |
+| `tie-default` | The default component of a list of ties takes no ends, so it draws no tie ([ties and connectors](components.md#ties-and-connectors)). A library's pattern is judged when its version is checked alone. A piece's own is judged where its scenes are computed. | fails, or asks for attention where the project does not correct the version ([why](#severities)) | `<version>/components/<pattern>.yaml#parts.<part>.draw`; in a drawing of a top's layout, `#layouts.<layout>.parts.<part>.draw`; a piece's own pattern, its file | Draw the list with a component that takes ends, in a version of its own. |
 | `lock-version`, `lock-not-held`, `lock-unreadable`, `lock-incomplete`, `lock-majors` | A lock entry is no version; or the lock names a version the project does not hold, or one the installed capability cannot read; or it leaves out a library the piece uses, or one a locked library builds on; or a locked library builds on another major of a library than the lock names. | fails | `<piece>/piece.yaml#lock` | Run `pkit visual render <piece>`, which moves a draft's lock. For a pinned piece, change the lock by hand, or unpin it and render it ([the lock](files.md#the-lock)). |
 
 ### Content against components
@@ -189,7 +237,7 @@ Each content file is read against the `fields` and `options` of each component i
 | `list-clash` | A component that draws items of a list declares a key that the list declares too, under the versions the piece locks, and no item carries it, so the content's author learns of the clash before writing the key. | Nothing, until an item needs the key. |
 | `held-clash` | The render held a library version back: under it, an item would carry a key that both its component and its list declare, where it carries none under the lock. The message names the version, the item and the key. | Nothing. To take the version, take the key off the item, and render again. |
 | `held-end` | The render held a library version back: under it, an end of a tie that the lock finds would not be found. The message names the version, the tie and the end. | Nothing. To take the version, end the tie at an item the version draws once, and render again. |
-| `lock-below` | The render moved a library below the version the lock named, within its line. The message says why: no versions at or above those the lock names fit together, or the project holds no version the lock names that the capability reads. | Nothing. |
+| `lock-below` | The render moved a library below the version the lock named, within its line ([the lock](files.md#the-lock)). The message says why: no versions at or above those the lock names fit together, or the project holds no version the lock names that the capability reads. | Nothing. |
 | `lock-kept` | The search for a draft's lock stopped at its bound of combinations judged, and the render kept the lock, with the newest version that fits of each library it does not name yet ([the lock](files.md#the-lock)). The message names the libraries it was choosing among. | Move the lock by hand, or take the versions no piece needs out of the library folder. |
 | `tie-component` | A tie's component, which its own `use` or its list's component field names, takes no ends. A list's default is judged where the pattern lies (`tie-default`). | Name a component that takes ends, or move the item to a list of its own. |
 | `tie-shape` | A tie leaves an end field out, or fills it with another shape than `{item: <key path>}`, with a `point` that is a name where it ends at one. | Give each end field its item. |
@@ -202,7 +250,11 @@ Each content file is read against the `fields` and `options` of each component i
 
 ### Brands, tokens and contrast
 
-The check reads each brand, checked alone and under each piece's lock, against the roles of the libraries it is resolved with: the foundations' `roles.yaml`, and the own roles of each library of components ([`roles.yaml`](files.md#rolesyaml), [brands](files.md#brands)). It judges a library's own roles with it. Each of these findings names the version it lies in, so it asks for attention in a released one, unless only a lock shows it: it then lies at the lock, and its level stands ([What each run judges](#what-each-run-judges)). A finding marked *stops the brand* leaves the brand unread: no piece that locks it is judged further. A finding points at the file at fault, or at `<version>/` where no one file is, with the key path or token path after `#`.
+The check reads each brand, checked alone and under each piece's lock, against the roles of the libraries it is resolved with: the foundations' `roles.yaml`, and the own roles of each library of components ([`roles.yaml`](files.md#rolesyaml), [brands](files.md#brands)). It judges a library's own roles with it.
+
+Each of these findings names the version it lies in, so it asks for attention where the project does not correct the version ([Severities](#severities)). Where only a lock shows it, it lies at the lock instead, and its level stands ([What each run judges](#what-each-run-judges)).
+
+A finding marked *stops the brand* leaves the brand unread: no piece that locks it is judged further. A finding points at the file at fault, or at `<version>/` where no one file is, with the key path or token path after `#`.
 
 | Label | What it means | Level |
 |---|---|---|
@@ -216,7 +268,7 @@ The check reads each brand, checked alone and under each piece's lock, against t
 | `base-lock` | The lock names no version the project holds of the base a brand builds on, or names one of another major. Stops the brand. A fault of the lock, it names no version, so it always fails. | fails |
 | `base-axis` | A brand built on a base varies an axis its base lacks, adds a mode to one of its base's axes, or gives one another default. Stops the brand. | fails |
 | `role-not-open` | The brand gives a value to a role its base does not open, or to a library's role where its base does not name the library. The base's value, or the role's default, holds. | fails |
-| `brand-unreadable` | The brand's `library.yaml` cannot be read. Stops the brand. It names the version its folder holds, `<version>/`, since the file cannot give it, so it asks for attention in a released one, as the others do. | fails |
+| `brand-unreadable` | The brand's `library.yaml` cannot be read. Stops the brand. It names the version its folder holds, `<version>/`, since the file cannot give it. So it asks for attention where the others do. | fails |
 | `brand-kind`, `brand-dtcg` | The library is not a brand, or names a DTCG version other than `2025.10`. Stops the brand. | fails |
 | `resolver-unreadable`, `resolver-shape`, `brand-file` | The Resolver document cannot be read, holds what format 1 does not read, or names a file the version folder does not hold. Stops the brand. | fails |
 | `brand-axis` | A modifier is no shared axis, lacks a context for one of the axis's modes, or has another default than the axis. Stops the brand. | fails |
@@ -237,7 +289,7 @@ The check reads each brand, checked alone and under each piece's lock, against t
 
 ### Notations
 
-The check reads each notation a piece names, once for each notation version and foundations version, against the colour families of the foundations the piece locks ([notations](files.md#notations)). Each of these findings names the version it lies in, so it asks the notation's owner for attention in a released one, and fails otherwise. None stops the piece, and content that names a concept the notation cannot read takes no finding of its own.
+The check reads each notation a piece names, once for each notation version and foundations version, against the colour families of the foundations the piece locks ([notations](files.md#notations)). Each of these findings names the version it lies in. It asks for attention where the project does not correct the version, and fails otherwise ([Severities](#severities)). None stops the piece, and content that names a concept the notation cannot read takes no finding of its own.
 
 | Label | What it means | Where it points |
 |---|---|---|
@@ -282,7 +334,7 @@ Each fails, unless its row says otherwise.
 | `text-overflow` | A word is wider than its text's width. Text never shrinks to fit ([breaking lines](components.md#breaking-lines)). Where some run of the text is measured otherwise than from a font file, such as from a table or by an estimate, it asks the piece's author for attention instead, and the message names how (DEC-005 point 14). | the content, `#<trace>` |
 | `missing-picture` | The piece has no produced output the content names. Left out where a produced-picture finding already reports that output. The fix is `pkit visual produce <piece> <output>`. | the content, or the component whose part gave it, `#<trace>` |
 | `picture-variants` | The variants of a picture differ in pixel size or in the places of their points, and one scene holds them all. | as above |
-| `font-missing` | A font family has no committed file, or no family measures a character. Nothing is laid out (DEC-004 point 9). The check reports it where it computes the scenes. `pkit visual render` refuses instead, and writes no record. | `<piece>/piece.yaml#brand` |
+| `font-missing` | A font family has no committed file, the engine cannot measure from that file, or no family measures a character ([text](components.md#text)). Nothing is laid out (DEC-004 point 9). The check reports it where it computes the scenes. `pkit visual render` refuses instead, and writes no record. | `<piece>/piece.yaml#brand` |
 | `contrast-drawn` | A run of a text is below WCAG's contrast against the fill under it, in its own paint, in a combination the piece names (DEC-004 point 8, DEC-012 point 3). A run of 24 px or more, or of 18.66 px or more with a weight of 700 or more, needs 3; any other run needs 4.5. The fill under each part of a run on a line is the last box or ellipse drawn before the text that holds that part's middle, a translucent fill laid over the one under it. A text over a picture, or over nothing, is not measured. | `<piece>/piece.yaml#<trace>` |
 | `unknown-colour` | An element paints its fill or stroke, or a run its fill, with a role that has no colour under the brand. It is no colour role, or a library's role whose chain of defaults reaches none and which the brand gives none. | `<piece>/piece.yaml#<trace>` |
 | `component-experimental` | The piece uses an experimental component, which its library may change in any release (DEC-003 point 9). States a fact. | `<piece>/piece.yaml#<trace>` |
@@ -294,7 +346,7 @@ The check reports `contrast-drawn`, `unknown-colour`, the two statuses and an `u
 
 | Label | What it means | Level | Where it points | What to do |
 |---|---|---|---|---|
-| `loss` | The SVG renderer, which draws every piece's previews and exports, does not draw an element's kind (it refuses it) or one of its properties (it leaves it out). The check knows this from the renderer's declaration, before it runs (DEC-005 point 9). Or a producer reported a loss, which its output's record keeps. | asks the piece's author for attention | `<piece>/piece.yaml#<trace>`; a producer's, `<piece>/piece.yaml#produced.<output>` | Accept it under the piece's `accept-losses` ([accepting a loss](outputs.md#accepting-a-loss)), or change what draws it. An accepted loss is not reported. |
+| `loss` | A renderer that draws the piece does not draw an element's kind (it refuses it) or one of its properties (it leaves it out). Those renderers are the SVG renderer, which draws every piece's previews, and the renderer of each format the piece exports in. The check knows this from each renderer's declaration, before it runs (DEC-005 point 9). Or a producer reported a loss, which its output's record keeps. | asks the piece's author for attention | `<piece>/piece.yaml#<trace>`; a producer's, `<piece>/piece.yaml#produced.<output>` | Accept it under the piece's `accept-losses` ([accepting a loss](outputs.md#accepting-a-loss)), or change what draws it. An accepted loss is not reported. |
 
 A loss of written code is `code-loss`, below. What a renderer finds only while it draws is the renderer's to report ([the loss report](outputs.md#the-loss-report)). A producer's losses are read from its record, since the check never runs a producer.
 
