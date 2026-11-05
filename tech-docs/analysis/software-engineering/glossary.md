@@ -20,6 +20,7 @@ builds-on:
       - {id: TERM-head, name: head}
       - {id: TERM-link-target, name: link target}
       - {id: TERM-methodology, name: methodology}
+      - {id: TERM-passage-for-a-person, name: passage for a person}
       - {id: TERM-permission-model, name: permission model}
       - {id: TERM-project, name: project}
       - {id: TERM-pull-request, name: pull request}
@@ -71,6 +72,23 @@ TERM-code-review-panel:
           - software-engineering:DEC-002#3
           - project-management:DEC-032#D1
           - project-management:DEC-032#D2
+          - COR-024
+          - COR-050#3
+          - COR-057#1
+          - COR-057#3
+          - COR-057#5
+          - COR-064#4
+          - COR-009#1
+          - COR-009#2
+          - COR-009#3
+          - COR-009#5
+          - project-management:DEC-027
+          - COR-001
+          - COR-010
+          - COR-017
+          - COR-026
+          - COR-031
+          - COR-050#6
 TERM-conventions-corpus:
   name: conventions corpus
   status: active
@@ -80,6 +98,9 @@ TERM-conventions-corpus:
       anchors:
         path:
           - .pkit/capabilities/software-engineering/agents/software-engineer.md
+          - .pkit/capabilities/software-engineering/agents/code-reviewer.md
+          - .pkit/capabilities/software-engineering/agents/security-reviewer.md
+          - .pkit/capabilities/software-engineering/agents/docs-reviewer.md
         record:
           - software-engineering:DEC-001#2
           - software-engineering:DEC-001#4
@@ -99,6 +120,9 @@ TERM-hand-off:
         record:
           - software-engineering:DEC-001#4
           - COR-050#3
+          - COR-009#1
+          - COR-009#5
+          - COR-050#6
 TERM-walking-skeleton:
   name: walking skeleton
   status: active
@@ -111,6 +135,11 @@ TERM-walking-skeleton:
         record:
           - software-engineering:DEC-004#1
           - project-management:DEC-060#2
+          - project-management:DEC-004
+          - COR-009#1
+          - COR-009#2
+          - COR-009#3
+          - COR-009#5
 ---
 
 # Glossary
@@ -135,6 +164,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [head](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-head--head)
   - **Term:** [link target](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-link-target--link-target)
   - **Term:** [methodology](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-methodology--methodology)
+  - **Term:** [passage for a person](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-passage-for-a-person--passage-for-a-person)
   - **Term:** [permission model](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-permission-model--permission-model)
   - **Term:** [project](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-project--project)
   - **Term:** [pull request](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-pull-request--pull-request)

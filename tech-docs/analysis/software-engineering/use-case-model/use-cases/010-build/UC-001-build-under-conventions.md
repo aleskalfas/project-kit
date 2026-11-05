@@ -13,11 +13,13 @@ pkit:
     anchors:
       path:
         - .pkit/capabilities/software-engineering/agents/software-engineer.md
+        - .pkit/capabilities/software-engineering/agents/security-reviewer.md
         - .pkit/adapters/claude-code/_resolve_agent.py
         - .pkit/rules/core.md
         - .pkit/rules/project.md
       record:
         - software-engineering:DEC-001
+        - software-engineering:DEC-002#1
         - software-engineering:DEC-002#4
         - software-engineering:DEC-004
         - project-management:DEC-060#2
@@ -58,7 +60,7 @@ pkit:
 **Other actors:**
 
 - **AI agent** (`core:ACT-ai-agent`): the `software-engineer` agent, and the reviewer agents that judge its change. Outside a walking skeleton (variant 2b), the engineer never invents a convention the conventions corpus lacks ([software-engineering DEC-001 point 5](../../../../../../.pkit/capabilities/software-engineering/decisions/DEC-001-producer-agent-and-conventions-seam.md#5-empty-tolerance)).
-- **Merge authoriser** (`core:ACT-merge-authoriser`): settles each finding a reviewer marks for a person, before authorising the merge ([project-management DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
+- **Merge authoriser** (`core:ACT-merge-authoriser`): settles each passage for a person, before authorising the merge ([project-management DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 
 **Preconditions:** None.
 
@@ -67,7 +69,7 @@ pkit:
 - The project has the software-engineering capability installed, and the adapter has deployed its `software-engineer` agent definition. The core provides both: a capability is installed, or registered in place where it is developed ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md), [COR-031](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md)), and an adapter deploys its agents ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
 - The running agent finds the conventions corpus the project names. The adapter writes its path into the deployed definition's front matter only, and the agent definition's text keeps `<project-conventions>` (ADR-052 points [3](../../../../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md#3-undefined-optional-resolves-to-a-dropped-item-the-agent-deploys) and [6](../../../../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md#6-the-agents-return-to-the-angle-bracket-form)).
 - Nothing at run time holds the agent to the corpus. Where the project runs the code-review panel, its agents read the corpus too ([software-engineering DEC-002 point 4](../../../../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md#4-knowledge-split)).
-- project-management's merge gate decides which reviewers a pull request needs ([project-management DEC-032 point D1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d1--the-required-local-reviewer-set-resolves-from-the-prs-closing-issues)). The gate leaves a finding marked for a person to the merge authoriser ([project-management DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
+- project-management's merge gate decides which reviewers a pull request needs ([project-management DEC-032 point D1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d1--the-required-local-reviewer-set-resolves-from-the-prs-closing-issues)). The gate leaves a passage for a person to the merge authoriser ([project-management DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 - The change builds only on accepted decision records ([RS-OPS-002](../../../../../../.pkit/rule-sets/ops.md#rs-ops-002--the-acceptance-gate) and COR-066 points [1](../../../../../../.pkit/decisions/core/COR-066-accepted-before-landing.md#1-a-proposal-lives-only-in-its-change) and [3](../../../../../../.pkit/decisions/core/COR-066-accepted-before-landing.md#3-the-person-sees-what-the-change-makes-accepted)).
 - The agent asks before a destructive operation, such as `git push --force` or deleting files outside `project/` ([RS-OPS-008](../../../../../../.pkit/rule-sets/ops.md#rs-ops-008--pause-and-confirm-before-destructive-operations)).
 - The agent works within the permission model, never around it ([RS-OPS-014](../../../../../../.pkit/rule-sets/ops.md#rs-ops-014--dont-escalate-past-the-permission-model), [RS-OPS-015](../../../../../../.pkit/rule-sets/ops.md#rs-ops-015--work-with-the-permission-layer-not-around-it) and [COR-028](../../../../../../.pkit/decisions/core/COR-028-permission-model-realization.md)).
@@ -76,7 +78,6 @@ pkit:
 - Before it changes files, the agent looks up the accepted records their anchors lead to, and reads those tied to them directly ([RS-OPS-022](../../../../../../.pkit/rule-sets/ops.md#rs-ops-022--read-the-records-a-changes-files-lead-to-first)).
 - Before its last commit, the agent follows the rules `pkit rule-sets altered` lists as binding on what its change owns ([RS-OPS-024](../../../../../../.pkit/rule-sets/ops.md#rs-ops-024--follow-the-rule-sets-rules-on-what-your-change-owns) and [COR-057 point 2](../../../../../../.pkit/decisions/core/COR-057-rule-set-reviewer.md#2-what-the-change-owns)).
 - In project-kit, the agent runs the tests of what it changed (project rule 2). It leaves the full suite to the pre-push hook and CI ([ADR-078](../../../../../architecture/decisions/ADR-078-ci-suite-parallel-jobs.md)).
-- In project-kit, every commit is signed, and signing is never switched off. A commit that fails to sign waits a minute before its one retry (project rule 4).
 
 **Trigger:** The developer asks the `software-engineer` agent to make a change, such as the code an issue asks for.
 
@@ -87,8 +88,8 @@ pkit:
 3. The agent writes the change's code, applying the corpus to each choice it settles, such as naming, layout and error handling.
 4. The agent reads its diff again against the corpus, and corrects what does not conform.
 5. The agent hands the change on for review, and invokes no reviewer itself ([COR-024](../../../../../../.pkit/decisions/core/COR-024-critic-and-architect-agents.md)).
-6. The reviewers judge the change: COR-024's stack where the change calls for it, and the reviewers the merge gate requires ([project-management DEC-032 point D1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d1--the-required-local-reviewer-set-resolves-from-the-prs-closing-issues)). Where the project runs the code-review panel, the panel's `security-reviewer` judges the change's code against [REQ-060](../../../requirements/quality/REQ-060-secret-off-command-line.md): a secret never goes on a command line.
-7. The agent fixes each finding its reviewer marked blocking, and records each advisory in the pull request with how it was answered. A finding marked for a person waits for the merge authoriser ([project-management DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
+6. The reviewers judge the change. Those are the core's reviewer agents where the change calls for them (COR-024), and the reviewers the merge gate requires ([project-management DEC-032 point D1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d1--the-required-local-reviewer-set-resolves-from-the-prs-closing-issues)). Where the project runs the code-review panel, the panel's `security-reviewer` judges the change's code against [REQ-060](../../../requirements/quality/REQ-060-secret-off-command-line.md): a secret never goes on a command line.
+7. The agent fixes each finding its reviewer marked blocking, and records each advisory in the pull request with how it was answered. A passage for a person waits for the merge authoriser ([project-management DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 
 **Variants:**
 
