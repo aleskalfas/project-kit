@@ -1,6 +1,6 @@
 # Overview of the analysis of software-analysis
 
-<!-- pkit:overview reads=5 fingerprint=sha256:712b94b1d26b7c4972e0b158a7b3a81275d6860a48f7f54e4d466a59625af4ca -->
+<!-- pkit:overview reads=5 fingerprint=sha256:ee0ca2514ab34d29d9b3157d7deb1338e9229a50d1b5094e028b14212efa8f9d -->
 
 [Software analysis keeps actors, use cases, journeys and terms true as the software changes](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md).
 
@@ -18,13 +18,13 @@ Describe a project in its analysis, each kind of artefact in the parts the proje
 
 - [010 — Analyses, use cases and their ids](../domain-model/010-analyses-and-use-cases.md)
 - [020 — Revalidations and what they find](../domain-model/020-revalidations.md)
-- [030 — Kinds and their declared structures](../domain-model/030-kinds-and-structures.md)
+- [030 — Artefact kinds and their declared structures](../domain-model/030-kinds-and-structures.md)
 
 **Its requirements:** none.
 
 **Its use cases:**
 
-- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/010-describe/UC-070-choose-parts.md) ([not built yet](#not-built-yet): step 5)
+- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software-analysis](../use-case-model/use-cases/010-describe/UC-070-choose-parts.md) ([not built yet](#not-built-yet): step 5)
 - [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md) ([not built yet](#not-built-yet): step 5, variant 3b, variant 3c, variant 4b)
 - [UC-074 — Free the ids of artefacts nothing cites](../use-case-model/use-cases/010-describe/UC-074-free-uncited-ids.md)
 
@@ -40,7 +40,7 @@ Keep the analysis true as the project changes, revised before a change is built 
 
 - [010 — Analyses, use cases and their ids](../domain-model/010-analyses-and-use-cases.md)
 - [020 — Revalidations and what they find](../domain-model/020-revalidations.md)
-- [030 — Kinds and their declared structures](../domain-model/030-kinds-and-structures.md)
+- [030 — Artefact kinds and their declared structures](../domain-model/030-kinds-and-structures.md)
 
 **Its requirements:** none.
 
@@ -70,20 +70,20 @@ Each view of the domain model explains a group of related concepts:
 
 - [010 — Analyses, use cases and their ids](../domain-model/010-analyses-and-use-cases.md)
 - [020 — Revalidations and what they find](../domain-model/020-revalidations.md)
-- [030 — Kinds and their declared structures](../domain-model/030-kinds-and-structures.md)
+- [030 — Artefact kinds and their declared structures](../domain-model/030-kinds-and-structures.md)
 
 ### Requirements in no area
 
 - [REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it](../requirements/functional/REQ-050-agent-proposes.md)
 - [REQ-051 · Functional · An id, once settled, names one artefact for good, save a freed id](../requirements/functional/REQ-051-id-names-one-artefact.md)
 - [REQ-052 · Functional · A revalidation record is written only where its revalidation has something to say](../requirements/functional/REQ-052-record-only-with-something-to-say.md)
-- [REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and holds a revalidation record's body always](../requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md)
+- [REQ-053 · Functional · Validation holds a body to its declared structure only where the format rule binds, and holds a revalidation record's body always](../requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md)
 
 ### Not built yet
 
 What the use cases describe and the system does not do yet, each with the record that decides it and the issue that tracks it (software-analysis DEC-001 point 1):
 
-- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/010-describe/UC-070-choose-parts.md): step 5, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software-analysis](../use-case-model/use-cases/010-describe/UC-070-choose-parts.md): step 5, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md): step 5, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md): variant 3b, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md): variant 3c, decided by `COR-004`, tracked in `#1884`

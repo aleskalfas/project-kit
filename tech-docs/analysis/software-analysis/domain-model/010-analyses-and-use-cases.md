@@ -15,6 +15,7 @@ pkit:
         - software-analysis:DEC-001#2
         - software-analysis:DEC-001#3
         - software-analysis:DEC-001#11
+        - software-analysis:DEC-002#2
       artefact:
         - TERM-analysis
         - TERM-use-case

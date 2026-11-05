@@ -34,12 +34,12 @@ When something an [analysis](../glossary.md#term-analysis--analysis) rests on ch
 
 - a [revalidation proposal](../glossary.md#term-revalidation-proposal--revalidation-proposal) drafts the outcomes
 - a [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) logs a revalidation with something to say
-- a [shortfall](../glossary.md#term-shortfall--shortfall) is a step not built yet
+- a [shortfall](../glossary.md#term-shortfall--shortfall) is a step or a variant not built yet
 
 ```mermaid
 classDiagram
   accTitle: Revalidations and what they find
-  accDescr: A revalidation gives each artefact it covers one revalidation outcome. A revalidation proposal drafts those outcomes. A revalidation record logs a revalidation with something to say, and a planned one names its design sources. A shortfall is a step of a use case.
+  accDescr: A revalidation gives each artefact it covers one revalidation outcome. A revalidation proposal drafts those outcomes. A revalidation record logs a revalidation with something to say, and a planned one names its design sources. A shortfall is a step or a variant of a use case.
   class Revalidation
   Revalidation : trigger
   Revalidation : what it reviews against
@@ -57,14 +57,14 @@ classDiagram
   RevalidationProposal : evidence
   RevalidationProposal : commands or question
   class Shortfall
-  Shortfall : record
+  Shortfall : decision record
   Shortfall : work item
   class UseCase["Use case"]
   Revalidation "1" --> "*" RevalidationOutcome : gives, one for each artefact
   RevalidationProposal "*" --> "1" Revalidation : drafts the outcomes of
   RevalidationRecord "0..1" --> "1" Revalidation : logs
   RevalidationRecord "1" --> "*" DesignSource : names, when planned
-  Shortfall "*" --> "1" UseCase : is a step of
+  Shortfall "*" --> "1" UseCase : is a step or a variant of
 ```
 
 ```mermaid
@@ -85,7 +85,7 @@ Defined in [TERM-revalidation](../glossary.md#term-revalidation--revalidation).
 
 **Why:** Checking the [analysis](../glossary.md#term-analysis--analysis) before code and checking it after an unplanned [change](../../core/glossary.md#term-change--change) are the same act with different triggers. One set of [revalidation outcomes](../glossary.md#term-revalidation-outcome--revalidation-outcome), and one shape of [revalidation record](../glossary.md#term-revalidation-record--revalidation-record), serve both ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
-A revalidation reviews some analysis [artefacts](../../core/glossary.md#term-artefact--artefact) against one state of the [system](../../core/glossary.md#term-system--system): a proposed design before its code, or the code after a change. It asks whether each description is still true of the software, and usually mends the description. Whoever performs it, a person or an agent, records its result on each artefact it covered.
+A revalidation reviews some analysis [artefacts](../../core/glossary.md#term-artefact--artefact) against one state of the [system](../../core/glossary.md#term-system--system): a proposed design before its code, or the code after a change. It asks whether each description is still true of the software, and usually mends the description. Whoever performs it, a person or an agent, records its revalidation outcome on each artefact it covered.
 
 **Attributes:**
 
@@ -96,7 +96,7 @@ A revalidation reviews some analysis [artefacts](../../core/glossary.md#term-art
 **Relations:**
 
 - It gives each artefact it covers one revalidation outcome (DEC-001 point 5).
-- Its result on each artefact is recorded as the core's [answer](../../core/glossary.md#term-answer--answer), which clears the artefact's [friction](../../core/glossary.md#term-friction--friction) ([DEC-001 point 4](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#4-every-artefact-says-what-makes-it-true)).
+- Its revalidation outcome on each artefact is recorded as the backbone's [answer](../../core/glossary.md#term-answer--answer), which clears the artefact's [friction](../../core/glossary.md#term-friction--friction) ([DEC-001 point 4](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#4-every-artefact-says-what-makes-it-true)).
 - A revalidation with something to say is logged by a revalidation record ([DEC-001 point 6](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
 
 **States:** None.
@@ -112,14 +112,14 @@ Defined in [TERM-revalidation-outcome](../glossary.md#term-revalidation-outcome-
 
 **Why:** A stale [analysis](../glossary.md#term-analysis--analysis) and regressed code differ in intent: was the [change](../../core/glossary.md#term-change--change) meant? A wrong call either rewrites the truth to match a bug, or reports a defect for an intended change ([DEC-001](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md)).
 
-A revalidation outcome ends one [artefact](../../core/glossary.md#term-artefact--artefact)'s review. It is one of these:
+A revalidation outcome ends one [artefact](../../core/glossary.md#term-artefact--artefact)'s revalidation. It is one of these:
 
 - the artefact holds
 - the analysis was stale and is updated
 - the code regressed and a defect is reported
 - a gap was found
 
-Each is recorded on the artefact as one of the core's two answers, `unchanged` or `updated`.
+Each is recorded on the artefact as one of the backbone's two answers, `unchanged` or `updated`.
 
 **Attributes:**
 
@@ -129,7 +129,7 @@ Each is recorded on the artefact as one of the core's two answers, `unchanged` o
 **Relations:**
 
 - A [revalidation](../glossary.md#term-revalidation--revalidation) gives it to one artefact (DEC-001 point 5).
-- It maps onto one of the core's two answers (DEC-001 point 5):
+- It maps onto one of the backbone's two answers (DEC-001 point 5):
   - `holds` and `code-regressed` map to `unchanged`
   - `analysis-stale` maps to `updated`
   - `gap-found` maps to either
