@@ -30,7 +30,6 @@ pkit:
       path:
         - .pkit/capabilities/project-management/scripts/land-work.py
         - .pkit/capabilities/project-management/scripts/fix-drift.py
-        - .pkit/capabilities/project-management/skills/pm/batch-plan.md
         - .pkit/capabilities/project-management/skills/pm/transition-state.md
       record:
         - project-management:DEC-013
@@ -137,4 +136,3 @@ What the worker needs here that no accepted record decides yet:
 
 - **One batch of ready heads** across the agents, which the merge authoriser authorises in one sitting. The maintainer decided on 17 October that decisions reach the person in one batch (#1675), and no record holds that decision yet.
 - **The fixers across clones.** Each [clone](../../../glossary.md#term-clone--clone) keeps its own queue and its own lock ([DEC-056 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)). So agents that land in separate clones may each start [fixers](../../../glossary.md#term-fixer--fixer) on the same out-of-date [artefact](../../../../core/glossary.md#term-artefact--artefact), and no record decides which agent runs the fixers.
-- **The review rounds that parallel landings cost.** Each landing sends every other open [pull request](../../../../core/glossary.md#term-pull-request--pull-request) on the same files through another review round (`batch-plan.md`). No record decides how a [topology](../../../glossary.md#term-topology--topology) keeps that cost down.
