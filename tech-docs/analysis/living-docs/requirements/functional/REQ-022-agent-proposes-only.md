@@ -2,10 +2,10 @@
 id: REQ-022
 title: The living-docs agent proposes each edit, and applies none
 status: active
-statement: The living-docs agent changes no tracked file and runs no friction writer, so each edit it drafts waits for a person to apply it.
-measure: Every file the agent writes lies in the agent workspace, or in the workspace a fixer run's brief names. Its one other write is a reader-review posted as a pull-request comment, where the person asks for one and names the pull request.
+statement: The living-docs agent changes no tracked file and runs no command that writes an answer, so each edit it drafts waits for a person.
+measure: Every file the agent writes lies in the agent workspace, or in the workspace the brief of a run nobody watches names. Its one other write is a reader-review posted as a pull-request comment, where the person asks for one and names the pull request.
 applies-to: "The living-docs agent in each of its intents: a fix, a reader-review, an onboarding plan, and a run a command starts with nobody watching."
-obligation: v1:sha256:b0a5e4495d488d8cc13347a1a754ebb0341cf59d5d60e0f3aeecb619cd250354
+obligation: v1:sha256:ee6f2b6cbdf7a067965d7eeb78e17bc49ddf292a68a89588ab157f8cc8edddd6
 actors:
   - core:ACT-developer
   - core:ACT-adopter
@@ -22,6 +22,7 @@ pkit:
         - living-docs:DEC-001#6
         - living-docs:DEC-001#8
         - COR-050#3
+        - COR-062#1
         - COR-009
         - ADR-061#3
         - PRJ-002#D1
@@ -39,6 +40,6 @@ pkit:
 
 # REQ-022 · Functional · The living-docs agent proposes each edit, and applies none
 
-**Verified by:** A test finds that the [agent definition](../../../core/glossary.md#term-agent-definition--agent-definition) grants Read, Glob, Grep, Bash and Write alone, and owns no path. So it has no tool that edits a file in place, and none that asks the person. Tests of its text find that it names each [friction](../../../core/glossary.md#term-friction--friction) writer and runs none, and that its [storyboard](../../../core/glossary.md#term-storyboard--storyboard) hands over no consent. Nothing confines its Write or its Bash to the workspace at run time, and no test runs the agent.
+**Verified by:** A test finds that the [agent definition](../../../core/glossary.md#term-agent-definition--agent-definition) grants Read, Glob, Grep, Bash and Write alone, and owns no path. So it has no tool that edits a file in place, and none that asks the person. Tests of its text find that it names each command that writes an [answer](../../../core/glossary.md#term-answer--answer) and runs none, and that its [storyboard](../../../core/glossary.md#term-storyboard--storyboard) hands over no consent. Nothing confines its Write or its Bash to the [agent workspace](../../../core/glossary.md#term-agent-workspace--agent-workspace) at run time, and no test runs the agent.
 
-**Rationale:** An agent that rewrites pages directly will eventually rewrite them wrongly. It will misjudge an ambiguous file's audience, or fix a [page](../../glossary.md#term-page--page) to match a regression. [Proposals](../../glossary.md#term-proposal--proposal) that cite their evidence, reviewed by a person, keep speed without giving up judgement ([living-docs DEC-001](../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)). The [answer](../../../core/glossary.md#term-answer--answer) a page carries is a person's decision too ([COR-050 point 3](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
+**Rationale:** An agent that rewrites pages directly will eventually rewrite them wrongly. It will misjudge an ambiguous file's audience, or fix a [page](../../glossary.md#term-page--page) to match a regression. [Proposals](../../glossary.md#term-proposal--proposal) that cite their evidence, reviewed by a person, keep speed without giving up judgement ([living-docs DEC-001](../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)). An [answer](../../../core/glossary.md#term-answer--answer) on a page is a person's decision too ([COR-050 point 3](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and [COR-062 point 1](../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)).

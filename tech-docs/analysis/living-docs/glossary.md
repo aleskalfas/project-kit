@@ -38,6 +38,7 @@ builds-on:
       - {id: TERM-source-repository, name: source repository}
       - {id: TERM-stamp, name: stamp}
       - {id: TERM-storyboard, name: storyboard}
+      - {id: TERM-synced-copy, name: synced copy}
       - {id: TERM-system, name: system}
       - {id: TERM-validation, name: validation}
       - {id: TERM-validator, name: validator}
@@ -71,6 +72,21 @@ TERM-captured-source:
           - .pkit/capabilities/living-docs/scripts/_lib/source_layout.py
         record:
           - living-docs:DEC-001#4
+TERM-code-to-doc-mapping:
+  name: code-to-doc mapping
+  noun-forms: [code-to-doc mappings]
+  status: active
+  definition: "list of path patterns, kept apart from the pages, each naming the documents that a commit under it must update"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/check-doc-mapping.py
+          - .pkit/capabilities/project-management/schemas/doc-check.schema.json
+        record:
+          - project-management:DEC-053#1
+          - project-management:DEC-053#5
+          - living-docs:DEC-001#8
 TERM-documentation-location:
   name: documentation location
   status: active
@@ -87,7 +103,7 @@ TERM-documentation-space:
   name: documentation space
   noun-forms: [documentation spaces]
   status: active
-  definition: "collection of pages for one audience in its places, with the page its readers start from and the rules a rule set binds on them"
+  definition: "collection of pages for one audience in its places, which gains the page its readers start from and rules a rule set binds on them"
   pkit:
     friction:
       anchors:
@@ -111,6 +127,10 @@ TERM-onboarding:
           - .pkit/capabilities/living-docs/scripts/validate.py
         record:
           - living-docs:DEC-001#8
+          - COR-050#1
+          - COR-050#2
+          - COR-050#5
+          - COR-050#6
 TERM-onboarding-plan:
   name: onboarding plan
   noun-forms: [onboarding plans]
@@ -127,7 +147,7 @@ TERM-onboarding-plan:
 TERM-page:
   name: page
   status: active
-  definition: "document in a documentation root, or in a place assigned to a documentation space, that names in its front matter the template it follows"
+  definition: "document in a place that names in its front matter the template it follows, and is no decision record, rule-set file or other owner's"
   pkit:
     friction:
       anchors:
@@ -138,6 +158,7 @@ TERM-page:
           - living-docs:DEC-001#4
           - COR-050#1
           - COR-050#14
+          - COR-051#2
 TERM-page-kind:
   name: page kind
   noun-forms: [page kinds]
@@ -179,6 +200,19 @@ TERM-reader:
           - .pkit/capabilities/living-docs/scripts/_lib/readers.py
         record:
           - living-docs:DEC-001#7
+TERM-reader-path:
+  name: reader path
+  noun-forms: [reader paths]
+  status: active
+  definition: "sequence of pages that one class of those who read the documentation takes in order, unbroken where each page links on to the next"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/living-docs/schemas/readers.schema.json
+        record:
+          - living-docs:DEC-001#3
+          - living-docs:DEC-001#7
 TERM-reader-review:
   name: reader-review
   noun-forms: [reader-reviews]
@@ -191,6 +225,7 @@ TERM-reader-review:
           - .pkit/capabilities/living-docs/agents/living-docs/living-docs.md
         record:
           - living-docs:DEC-001#6
+          - COR-051#4
 TERM-space-definition:
   name: space definition
   noun-forms: [space definitions]
@@ -221,13 +256,14 @@ TERM-unclassified-document:
           - living-docs:DEC-001#8
           - COR-050#1
           - COR-050#14
+          - COR-051#2
 ---
 
 # Glossary
 
 The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
 
-- **From core at 2.0.0:** the areas up to `030-change`. No release holds the core's analysis yet, so the links name the next release, 2.0.0, rather than living-docs's floor, 1.149.0.
+- **From core at 2.0.0:** the areas up to `030-change`.
   - **Term:** [adapter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-adapter--adapter)
   - **Term:** [agent definition](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-agent-definition--agent-definition)
   - **Term:** [agent workspace](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-agent-workspace--agent-workspace)
@@ -263,6 +299,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [source repository](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-source-repository--source-repository)
   - **Term:** [stamp](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-stamp--stamp)
   - **Term:** [storyboard](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-storyboard--storyboard)
+  - **Term:** [synced copy](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-synced-copy--synced-copy)
   - **Term:** [system](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-system--system)
   - **Term:** [validation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-validation--validation)
   - **Term:** [validator](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-validator--validator)
@@ -287,6 +324,15 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#captur
 
 - **The text it names:** the standard, specification or other text outside the repository. Nothing fetches it, so a new version of it is seen only once a person records the version they read ([DEC-001 point 4](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)).
 - **Source repository:** where the [backbone](../core/glossary.md#term-backbone--backbone) or a [component](../core/glossary.md#term-component--component) is authored. A captured source names a text outside the repository, never a repository the [project](../core/glossary.md#term-project--project) syncs from.
+
+## TERM-code-to-doc-mapping — code-to-doc mapping
+
+**Example:** a [project](../core/glossary.md#term-project--project)'s code-to-doc mapping pairs `src/cli/**` with `docs/cli.md`. A commit under that pattern that leaves the document alone is reported, until an [onboarding plan](#term-onboarding-plan--onboarding-plan) turns the entry into a [page](#term-page--page) [anchor](../core/glossary.md#term-anchor--anchor).
+
+**Distinctions:**
+
+- **Onboarding plan:** the outline of one [onboarding](#term-onboarding--onboarding). It turns entries of a code-to-doc mapping into page anchors, and retiring the mapping is a separate [change](../core/glossary.md#term-change--change) for its owner ([DEC-001 point 8](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
+- **Anchor:** what a page declares of what makes it true. A code-to-doc mapping is written from the code's side, so it says less precisely which document a commit leaves stale ([project-management DEC-053](../../../.pkit/capabilities/project-management/decisions/DEC-053-doc-check-slot.md)).
 
 ## TERM-documentation-location — documentation location
 
@@ -326,7 +372,6 @@ Explained in [VIEW-proposals-and-reviews](domain-model/020-proposals-and-reviews
 **Distinctions:**
 
 - **Proposal:** a drafted edit with its evidence. The agent writes proposals only once the plan is approved, and the plan itself changes nothing ([DEC-001 point 8](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
-- **A mapping from code to documents:** a work-tracking [capability](../core/glossary.md#term-capability--capability)'s list of which documents a [change](../core/glossary.md#term-change--change) of code obliges. The plan turns its rules into [page](#term-page--page) anchors, and retiring the mapping is a separate change for its owner (DEC-001 point 8).
 
 ## TERM-page — page
 
@@ -359,7 +404,7 @@ Explained in [VIEW-proposals-and-reviews](domain-model/020-proposals-and-reviews
 
 **Distinctions:**
 
-- **Answer:** the statement in a [page](#term-page--page)'s `friction` block that settles its [friction](../core/glossary.md#term-friction--friction). A proposal names the [answer](../core/glossary.md#term-answer--answer) to give once it is applied, and a person gives that answer ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
+- **Answer:** the statement in a [change](../core/glossary.md#term-change--change)'s own file that settles a [page](#term-page--page)'s [friction](../core/glossary.md#term-friction--friction). A proposal names the [answer](../core/glossary.md#term-answer--answer) to give once it is applied, and a person gives that answer ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and [COR-062 point 1](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)).
 - **Onboarding plan:** the outline of a whole [onboarding](#term-onboarding--onboarding). The agent drafts proposals only once a person approves it ([DEC-001 point 8](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
 - **A proposed decision record or rule:** one whose status is `proposed`, which binds nothing yet. A proposal is no record, and never binds.
 
@@ -373,6 +418,16 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#reader
 
 - **Actor:** a role an analysis names. A reader's id is distinct from an actor's, so the readers an analysis [capability](../core/glossary.md#term-capability--capability) gives stand beside the defaults ([DEC-001 point 7](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#7-connections)).
 - **A documentation space's audience:** users, or maintainers, whom the whole space serves. Each page of the space names one reader ([DEC-001 point 1](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces)).
+
+## TERM-reader-path — reader path
+
+**Example:** the [reader](#term-reader--reader) `user` carries a reader path that runs from `README.md` through `docs/install.md` to `docs/first-run.md`. A [reader-review](#term-reader-review--reader-review) of `docs/install.md` asks whether `README.md` links to it, and whether it links on.
+
+**Distinctions:**
+
+- **Reader:** the class of people or agents a reader path belongs to. Its entry carries its needs and its reader paths ([DEC-001 point 7](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#7-connections)).
+- **Reader-review:** the judgement of one [page](#term-page--page). It follows a reader path only where a [rule](../core/glossary.md#term-rule--rule) asks that reader paths stay unbroken, as the user space's own rule does ([DEC-001 point 3](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#3-what-the-shared-rules-require)).
+- **A file's path:** where a [place](../core/glossary.md#term-place--place), a `path` [anchor](../core/glossary.md#term-anchor--anchor) or the core's seed path or excluded path points. A reader path is a sequence of pages, never a location in the repository.
 
 ## TERM-reader-review — reader-review
 
@@ -390,7 +445,7 @@ Explained in [VIEW-proposals-and-reviews](domain-model/020-proposals-and-reviews
 
 Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#space-definition).
 
-**Example:** project-kit's user space has its definition in `tech-docs/living-docs/rule-sets/user.md`, the [rule set](../core/glossary.md#term-rule-set--rule-set) `USER`. It inherits `living-docs:LDOC@1`, selects the user space's pages, and adds the [rule](../core/glossary.md#term-rule--rule) that [reader](#term-reader--reader) paths stay unbroken.
+**Example:** project-kit's user space has its definition in `tech-docs/living-docs/rule-sets/user.md`, the [rule set](../core/glossary.md#term-rule-set--rule-set) `USER`. It inherits `living-docs:LDOC@1`, selects the user space's pages, and adds the [rule](../core/glossary.md#term-rule--rule) that [reader paths](#term-reader-path--reader-path) stay unbroken.
 
 **Distinctions:**
 
