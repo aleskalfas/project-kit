@@ -28,6 +28,7 @@ pkit:
         - COR-060#2
         - COR-066#1
         - COR-066#3
+        - COR-066#5
       artefact:
         - ACT-merge-authoriser
         - ACT-developer
@@ -72,7 +73,7 @@ pkit:
 - **3b.** A set of the [project](../../../glossary.md#term-project--project)'s own inherits the rule's set. Accepting the rule needs a new major of that set. Each [inheritance pin](../../../glossary.md#term-inheritance-pin--inheritance-pin) on the old major then holds back every rule of the set ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)). [Validation](../../../glossary.md#term-validation--validation) fails on each such pin until the project reviews the new major and updates the pin.
 - **3c.** The merge authoriser approved the record's addition and its acceptance together, as [UC-037](UC-037-record-decision.md) variant 9a says. The record lands `accepted` in the commit that adds it.
 - **5a.** The rule's origin cites a decision record that is still proposed. Validation fails, naming the rule. The cited record is accepted first, through this same use case, and the path rejoins at step 5.
-- **6a.** The accepted record's Implications name edits to accepted records. The change makes them in commits after the acceptance, and the numbering check lists each for the merge authoriser (UC-037 variant 9c). The path rejoins at step 7.
+- **6a.** The accepted record's Implications name edits to accepted records. The change makes those to the project's own records in commits after the acceptance. The merge authoriser is shown each, as the numbering check lists it, and reads it before the change lands ([COR-066 point 5](../../../../../../.pkit/decisions/core/COR-066-accepted-before-landing.md#5-a-new-record-lands-with-its-edits)). The path rejoins at step 7.
 - **7a.** The merge authoriser works alone, and commits the acceptance straight to the [default branch](../../../glossary.md#term-default-branch--default-branch), as [UC-034](UC-034-land-change.md) variant 1a says. No [pull request](../../../glossary.md#term-pull-request--pull-request) carries it.
 
 **Postconditions:** The record or the [rule](../../../glossary.md#term-rule--rule) is accepted, through the merge authoriser's review. An accepted rule carries a complete origin, and binds where a set of the [project](../../../glossary.md#term-project--project)'s own reaches it.

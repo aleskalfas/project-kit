@@ -229,12 +229,13 @@ Work depends only on accepted records: code, content, tooling, and records that 
 - **Documents** that describe what a record decides wait until it is accepted.
 - **Before the merge:** the person who authorises it sees each record the change makes accepted, added accepted or set to accepted. Where no component that carries out merges shows that list, the change's author shows it. An edit made to such a record after its acceptance in the change is accepted only through that list (COR-066 point 3).
 - **An edit to a record accepted where the branch left the default branch** that changes what it decides is a person's to accept. The numbering check lists it ("Refining an accepted record").
-- **A new record's edits to accepted records** follow its acceptance, in the change that proposes it, so a decision lands with what it decides. This bullet speaks of decision records. A rule's successor, and its edit to the rule it replaces, follow [COR-051](core/COR-051-rule-sets.md) points 4 and 7.
-  - **Named first:** the new record's Implications name each edit this change makes to an accepted record, one it refines, overturns in part or replaces whole. They also name, as not made here, an edit to a record the project receives by sync, which is changed where it is kept.
-  - **Which go in its change:** its edits to the project's own records. Those are the superseded-by line of each record it replaces, whole or in part, and each point it narrows or completes, rewritten. So each of those records lands stating what is decided. Such a point also takes a forward refinement pointer, where the Implications name one.
-  - **Then the edits:** a person accepts the new record in its change, and the edits follow there, as work resting on it (COR-066 point 1).
-  - **Accepted before the merge:** the new record's own edits since its acceptance are accepted only through the list above (COR-066 point 3). Its edits to other accepted records are listed by the numbering check, where a person accepts them.
-  - **How each is made:** "Refining an accepted record" below.
+- **A new decision record's edits to accepted records** follow its acceptance, in the change that proposes it ([COR-066](core/COR-066-accepted-before-landing.md) point 5):
+  - **Named first:** its Implications name each edit its change makes to an accepted record, one it refines, overturns in part or replaces whole. Each name states what the edit makes that record say, not only where it goes. Which edits those are, and how each is made: "Refining an accepted record" below.
+  - **Then the edits:** a person accepts the new record in its change, and the edits follow there, as work resting on it. A change built on this one may land later, so the edits do not wait for it.
+  - **Who accepts them:** accepting the new record accepts the edits its Implications name. An edit beyond them that changes what a record decides is a decision of its own.
+  - **Read before the merge:** these edits are shown beside the list above ("Before the merge"), by whoever shows it. The person who authorises the merge reads each before the change lands. They are the edits the numbering check lists, and those the list above shows for a record accepted in a change this one builds on.
+  - **A record the project receives from elsewhere:** the new record decides nothing against it. A change it needs there is proposed where that record is kept, and nothing rests on that change until the project receives it accepted.
+  - **A rule:** an edit the new record forces on a rule of the project's own rule sets is named and made like its edits to records ([COR-051](core/COR-051-rule-sets.md)). An example is the edit to an origin that cites a record the new record supersedes. An edit to a rule set the project receives is proposed where that set is kept.
 - **Not enforced yet:** no check refuses a merge that lands a proposed record, and none lists the records a change makes accepted (COR-066 points 2 and 3). So, before the change lands, have a person accept each record it adds.
 
 ## Adding a record
@@ -285,9 +286,13 @@ Two more disciplines bind a core record. Core records are written where the meth
 
 ## Refining an accepted record
 
-Edit an accepted record in place for a clarification, a scope tweak or a refinement where its decision stands, narrowed or completed. Git history is the change log, so the record does not repeat it. Where a change overturns the record, in whole or in part, so that another record decides otherwise, write a new superseding record instead.
+Edit an accepted record in place for a clarification, a scope tweak or a refinement where its decision stands: narrowed, widened or completed. Git history is the change log, so the record does not repeat it. Where a change overturns the record, in whole or in part, so that another record decides otherwise, write a new superseding record instead.
 
-**A new record's edits to the records it changes** are those "The acceptance gate" above names. A point is rewritten in place by the steps below. A superseded-by line is written as "To supersede" below says, and a forward refinement pointer in the form the in-body markers below give.
+**A new record's edits to the records it changes** are named in its Implications. They are made once a person accepts it ("The acceptance gate" above, and COR-066 point 5). Each is of one of these kinds:
+
+- **A record it refines:** each point it narrows, widens or completes, rewritten in place, and each point it adds, under the next unused number (step 1 below). Each takes a forward refinement pointer, in the form the in-body markers below give, where the Implications name one.
+- **A record it overturns in part:** its *Partially superseded by …* line ("To supersede" below).
+- **A record it replaces whole:** its `status: superseded` and its *Superseded by …* line, and in an ADR its `superseded_by` too ("To supersede" below).
 
 **One test sorts the edits made in place: does the edit change what the record decides, in either direction?**
 
@@ -322,7 +327,7 @@ The commit message says what changed and why.
 Two in-body markers do not narrate a revision, and are kept. Each points at another record rather than at a discarded belief:
 
 - **The superseded-by line,** whole or partial.
-- **A forward refinement pointer,** `(refinement per <record>)`, naming a later record that narrows or completes this one. It goes on the sub-section heading, decision point or sentence refined.
+- **A forward refinement pointer,** `(refinement per <record>)`, naming a later record that narrows, widens or completes this one. It goes on the sub-section heading, decision point or sentence refined.
 
 Validation warns of each line of a record that narrates its own revision, naming the file and the line:
 
