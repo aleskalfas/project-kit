@@ -22,7 +22,9 @@ says what a reader takes from them:
   needs only the answers. Given the pull request's `Source`, either first
   fetches a head this clone lacks (`fetch_head`), from its branch, or for a
   pull request from a fork from the ref its base repository keeps for it, on
-  the base's remote (`base_remote`).
+  the base's remote (`base_remote`). With `from_checkout=False`, either keeps the
+  backbone's refusal to run an anchor's resolver away from the head, and starts
+  no program the head holds (`Derivation.needs_checkout`).
 - `written(base)` runs the same check as the project's gate runs it, from the
   working directory with no `--head` and nothing fetched: the answers the
   documentation check reads, where a page's answer meets its obligation
@@ -90,14 +92,14 @@ says what a reader takes from them:
   leaving the text as it is.
 
 Which backbone derives the answers: each run of the change check — from the
-working directory, or from a temporary checkout of the head when the first
-meets the backbone's refusal to run an anchor's resolver away from the head —
-runs the `pkit` first on PATH with routing off (`PKIT_NO_ROUTE=1`). That is the
-backbone serving the command that runs this module: a source checkout's own
-environment (`uv run` puts its `pkit` first), a project's pinned version (the
-pin's run puts its `pkit` first), else the installed tool. Never routed again
-from the directory a run starts in, a temporary checkout's own source or pin
-cannot give the same head other answers.
+working directory, or, unless the caller gave it up (`from_checkout`), from a
+temporary checkout of the head when the first meets the backbone's refusal to
+run an anchor's resolver away from the head — runs the `pkit` first on PATH with
+routing off (`PKIT_NO_ROUTE=1`). That is the backbone serving the command that
+runs this module: a source checkout's own environment (`uv run` puts its `pkit`
+first), a project's pinned version (the pin's run puts its `pkit` first), else
+the installed tool. Never routed again from the directory a run starts in, a
+temporary checkout's own source or pin cannot give the same head other answers.
 
 The markers are locked to `body-format.yaml`'s `friction_answers_marker` by
 `tests/test_pm_friction_answers.py`.
@@ -317,13 +319,16 @@ def _standing(document: Mapping[str, Any]) -> dict[str, bool]:
 @dataclass(frozen=True)
 class Derivation:
     """The change check's document at one head and the friction settings the
-    change alters, or why they could not be read."""
+    change alters, or why they could not be read. `needs_checkout` says `problem`
+    is the backbone's refusal to run an anchor's resolver away from the head, kept
+    because the caller asked for no temporary checkout (`from_checkout=False`)."""
 
     head: str
     document: Mapping[str, Any] | None = None
     problem: str | None = None
     answers: tuple[Mapping[str, Any], ...] = field(default=())
     settings: tuple[Setting, ...] = field(default=())
+    needs_checkout: bool = False
 
     @property
     def listed(self) -> bool:
@@ -429,14 +434,16 @@ def fetch_head(head: str, source: Source) -> str | None:
     )
 
 
-def derive(head: str, base: str, *, source: Source | None = None) -> Derivation:
+def derive(
+    head: str, base: str, *, source: Source | None = None, from_checkout: bool = True
+) -> Derivation:
     """The change check's document for commit `head` against the branch `base` —
     the pull request's, named always — as `checked` gives it, and the friction
     settings the change alters.
 
     Never a pass on a guess: what makes `checked` unreadable, and settings that
     cannot be read, make the derivation unreadable, with why."""
-    found = checked(head, base, source=source)
+    found = checked(head, base, source=source, from_checkout=from_checkout)
     if found.document is None:
         return found
     settings = settings_change(found.merge_base, head)
@@ -445,7 +452,9 @@ def derive(head: str, base: str, *, source: Source | None = None) -> Derivation:
     return replace(found, settings=settings)
 
 
-def checked(head: str, base: str, *, source: Source | None = None) -> Derivation:
+def checked(
+    head: str, base: str, *, source: Source | None = None, from_checkout: bool = True
+) -> Derivation:
     """The change check's document for commit `head` against the branch `base`, the
     base fetched first where it is a remote's, and `head` from `source` where this
     clone lacks it. It reads no friction settings, for a reader that needs only the
@@ -457,7 +466,12 @@ def checked(head: str, base: str, *, source: Source | None = None) -> Derivation
     check runs again from a temporary checkout of `head`, removed afterwards; any
     other failure is kept as it is. Never a pass on a guess: a base or a head that
     could not be fetched, no document, and a document of another version or
-    without `answers` all make the derivation unreadable, with why."""
+    without `answers` all make the derivation unreadable, with why.
+
+    That second run starts the resolvers `head` holds, under this account, so it is
+    code from the pull request's head. A reader anyone may run on a head they have
+    not read passes `from_checkout=False`: the refusal is then kept, and the
+    derivation says so (`needs_checkout`)."""
     problem = _refresh_base(base)
     if problem is None and source is not None:
         problem = fetch_head(head, source)
@@ -465,6 +479,8 @@ def checked(head: str, base: str, *, source: Source | None = None) -> Derivation
         return Derivation(head, problem=problem)
     found = _run_check(head, base, cwd=None)
     if isinstance(found, _NoDocument) and found.elsewhere:
+        if not from_checkout:
+            return Derivation(head, problem=found.why, needs_checkout=True)
         with _checkout(head) as (path, why_not):
             if path is None:
                 found = _NoDocument(

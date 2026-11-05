@@ -26,6 +26,12 @@ prints what `land-work` tells the person who authorises the merge
 (`_lib.answers_told.at_head`, DEC-065 point 2): the one route to it for anyone
 not at `land-work`. It changes no branch, and fetches the base, and the head
 where this clone lacks it. Answers it cannot derive print why, and nothing else.
+Away from a checkout at the PR's head it starts no program the head holds, since
+anyone may run it on a head they have not read: where an anchor needs its
+resolver, the change check refuses. `land-work` and `review-work` make a temporary
+checkout of the head there, and this view makes none (`from_checkout=False`). It
+says that a checkout at the head can read those answers, and that such a run
+starts the head's own programs under the reader's account.
 
 The PR is named by its number, or by its head branch, as `gh pr view` takes
 it: an open PR from the branch first. A worker knows its Tasks' branches, and
@@ -221,7 +227,8 @@ def _pr_number(ref: str, pr: dict) -> int | None:
 def _told_at_head(pr: dict, number: int, capability_root: Path) -> list[str] | None:
     """What `land-work` tells the person who authorises the merge, derived at the
     PR's head against its base (DEC-065 point 2), or None after saying why it could
-    not be: nothing is told on a guess."""
+    not be: nothing is told on a guess. No temporary checkout of the head answers a
+    refusal to run an anchor's resolver: that would start the head's own program."""
     head, base = str(pr.get("headRefOid") or ""), str(pr.get("baseRefName") or "")
     if not head or not base:
         print(f"error: GitHub named no head or no base for PR #{number}.", file=sys.stderr)
@@ -233,7 +240,12 @@ def _told_at_head(pr: dict, number: int, capability_root: Path) -> list[str] | N
         base=base,
     )
     fed = answers_told.at_head(
-        head, base, capability_root, lambda: str(pr.get("body") or ""), source=source
+        head,
+        base,
+        capability_root,
+        lambda: str(pr.get("body") or ""),
+        source=source,
+        from_checkout=False,
     )
     derived = fed.derived
     if derived.document is None:
@@ -241,6 +253,9 @@ def _told_at_head(pr: dict, number: int, capability_root: Path) -> list[str] | N
             f"error: the answers at PR #{number}'s head could not be derived: {derived.problem}.",
             file=sys.stderr,
         )
+        if derived.needs_checkout:
+            short = head[: friction_answers.SHORT]
+            print(HEAD_PROGRAMS_MESSAGE.format(head=short), file=sys.stderr)
         return None
     if isinstance(fed.grants, fixers.ChangeUnread):
         print(
@@ -410,6 +425,15 @@ NO_VERDICT_MESSAGE = "no reviewer verdict posted"
 # Shown by `--field answers` when land-work would tell the person nothing: no silent
 # empty field, which would read as a run that failed.
 NOTHING_TOLD_MESSAGE = "nothing to tell the person who authorises the merge"
+
+# Said by `--field answers` where an anchor at the head needs its resolver: why this
+# view stops there, where the answers can be read, and what reading them there runs.
+HEAD_PROGRAMS_MESSAGE = (
+    "An anchor at this head needs its resolver, a program the head holds, and this view "
+    "starts none. Running this command from a checkout at {head}, with nothing "
+    "uncommitted, reads the answers. Such a run starts the head's own programs under "
+    "your account, so make it only on a head you trust."
+)
 
 # Appended to a shown verdict the freshness rule holds stale (#1179), naming
 # why — the merge gate will not count such a verdict, so the read surface flags

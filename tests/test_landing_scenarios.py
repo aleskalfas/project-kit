@@ -2727,7 +2727,9 @@ def _the_change_wrote_no_answers(monkeypatch: pytest.MonkeyPatch, answers: Modul
     (project-management DEC-065). The merge as it would land passes the change check
     too: the head holds the base its own check read (DEC-055 point 6)."""
 
-    def derive(head: str, base: str | None, *, source: Any = None) -> Any:
+    def derive(
+        head: str, base: str | None, *, source: Any = None, from_checkout: bool = True
+    ) -> Any:
         document = {"schema_version": 1, "base": {"commit": "", "outdated": False}}
         return answers.Derivation(head, document={**document, "answers": [], "unreadable": []})
 

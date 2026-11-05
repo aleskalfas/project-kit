@@ -40,6 +40,7 @@ class _Reads:
     def __init__(self, monkeypatch: pytest.MonkeyPatch, *, derived=None, grants=()) -> None:
         self.order: list[str] = []
         self.derive_asked: list[tuple] = []
+        self.from_checkout: list[bool] = []
         self.grants_asked: list[tuple] = []
         self.derived = derived or friction_answers.Derivation(
             HEAD,
@@ -51,9 +52,12 @@ class _Reads:
         monkeypatch.setattr(friction_answers, "derive", self._derive)
         monkeypatch.setattr(fixers, "change_between", self._change_between)
 
-    def _derive(self, head: str, base: str, *, source=None) -> friction_answers.Derivation:
+    def _derive(
+        self, head: str, base: str, *, source=None, from_checkout: bool = True
+    ) -> friction_answers.Derivation:
         self.order.append("answers")
         self.derive_asked.append((head, base, source))
+        self.from_checkout.append(from_checkout)
         return self.derived
 
     def _change_between(self, merge_base: str, oid: str, capability_root: Path):
@@ -81,6 +85,21 @@ def test_the_answers_are_derived_at_the_head_against_the_base(monkeypatch) -> No
     source = friction_answers.Source("origin", "refs/heads/feat/42-thing")
     answers_told.at_head(HEAD, "integration", ROOT, reads.read_body, source=source)
     assert reads.derive_asked == [(HEAD, "integration", source)]
+
+
+def test_a_temporary_checkout_stays_the_default_and_a_caller_gives_it_up(monkeypatch) -> None:
+    reads = _Reads(monkeypatch)
+    answers_told.at_head(HEAD, "main", ROOT, reads.read_body)
+    answers_told.at_head(HEAD, "main", ROOT, reads.read_body, from_checkout=False)
+    assert reads.from_checkout == [True, False]
+
+
+def test_only_the_read_only_view_gives_up_the_temporary_checkout() -> None:
+    """`show-pr --field answers` starts no program the head holds. Every other reader
+    keeps the checkout, so a head that needs its resolver still lands and moves."""
+    assert "from_checkout=False" in (SCRIPTS_DIR / "show-pr.py").read_text(encoding="utf-8")
+    for name in ("land-work.py", "review-work.py", "open-pr.py"):
+        assert "from_checkout" not in (SCRIPTS_DIR / name).read_text(encoding="utf-8")
 
 
 def test_the_grant_list_is_read_from_where_the_head_left_its_base(monkeypatch) -> None:

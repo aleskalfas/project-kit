@@ -431,7 +431,9 @@ class _Run:
             return fa.Coverage(full, head, True, inside=1)
         return fa.Coverage(full, head, False, outside=(f"after.txt ({head[:7]}: added)",))
 
-    def derive(self, head: str, base: str | None, *, source: Any = None) -> Any:
+    def derive(
+        self, head: str, base: str | None, *, source: Any = None, from_checkout: bool = True
+    ) -> Any:
         """`friction_answers.derive`, answered from this world's change check."""
         self.derived.append((head, base))
         fa = self.land.friction_answers

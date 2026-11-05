@@ -1154,6 +1154,23 @@ def test_a_failure_other_than_the_resolver_refusal_is_kept_with_no_checkout(
     found = fa.derive(head, "no-such-base")
     assert found.document is None and found.problem is not None
     assert "--base no-such-base" in found.problem
+    assert not fa.derive(head, "no-such-base", from_checkout=False).needs_checkout
+
+
+def test_a_caller_that_gives_up_the_checkout_keeps_the_refusal(
+    fa: ModuleType,
+    make_adopter_repo: MakeAdopterRepo,
+    pkit_here: Runner,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`from_checkout=False`: the backbone's refusal to run a resolver away from the
+    head stands, and the derivation says that is what stopped it."""
+    _repo, head = _branch_needing_its_resolver(make_adopter_repo)
+    monkeypatch.setattr(fa, "_checkout", lambda _head: pytest.fail("a checkout was made"))
+    for read in (fa.derive, fa.checked):
+        found = read(head, "main", from_checkout=False)
+        assert found.document is None and found.needs_checkout
+        assert found.problem is not None and f"--head {head}" in found.problem
 
 
 def test_a_check_that_raises_inside_the_checkout_leaves_nothing_behind(

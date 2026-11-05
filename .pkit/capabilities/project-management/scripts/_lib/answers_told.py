@@ -42,14 +42,17 @@ def at_head(
     read_body: Callable[[], str],
     *,
     source: friction_answers.Source | None = None,
+    from_checkout: bool = True,
 ) -> AnswersTold:
     """The answers derived at commit `head` against the branch `base`, the grant
     list's change from where the head left its base, the author's sentences in the
     description `read_body` gives, and what the person is told from them.
 
     `read_body` runs last, once the rest was read, so a caller that reads the
-    description from the host holds it for no longer than it must."""
-    derived = friction_answers.derive(head, base, source=source)
+    description from the host holds it for no longer than it must. `from_checkout`
+    is `friction_answers.checked`'s: the read-only view passes False, and so starts
+    no program the head holds."""
+    derived = friction_answers.derive(head, base, source=source, from_checkout=from_checkout)
     if derived.document is None:
         return AnswersTold(derived)
     grants = fixers.change_between(derived.merge_base, head, capability_root)

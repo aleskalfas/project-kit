@@ -21,13 +21,16 @@ body: >
   prints no line for any other answer, such as a document still accurate, and
   none of the check's other flags. `show-pr <PR> --field answers` prints the same
   lines, derived at the pull request's head against its base, for anyone not at
-  `land-work`. `done-work`, `merge-pr` and the host's button print nothing, so a
-  person merging there runs it. `land-work --yes` now holds at `ready:` on an
-  updated document with no sentence, and at a later head on something left out
-  of date that the head authorised did not leave. `review-work` and `land-work`
-  refuse a sentence that reads as a closing reference, as `land-work` did. Three
-  things went with the list: the stop on a description too long to hold it, the
-  refusal of a word of the list that reads as a closing reference and of a word
+  `land-work`. Away from a checkout at that head it starts no program the head
+  holds: where an anchor needs its resolver, it says why and exits 2, and says
+  that a checkout at the head can read the answers, in a run that starts the
+  head's own programs. `done-work`, `merge-pr` and the host's button print
+  nothing, so a person merging there runs it. `land-work --yes` now holds at
+  `ready:` on an updated document with no sentence, and at a later head on
+  something left out of date that the head authorised did not leave.
+  `review-work` and `land-work` refuse a sentence that reads as a closing
+  reference, as `land-work` did. Three things went with the list: the stop on a
+  description too long to hold it, the refusal of a word of the list that reads as a closing reference and of a word
   or sentence that holds an HTML comment's delimiter, and the head its start
   marker named. `edit-pr` derives nothing, so it no longer warns of a missing
   sentence. `open-pr --doc-impact-from-friction` writes a line that counts the

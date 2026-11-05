@@ -15,6 +15,10 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.anchor_kind_capabilities import RESOLVER, RESOLVING, register_kinds
+from tests.friction_documents import CONFIG, SOURCE, T1, document, friction_config, guide
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "show-pr.py"
 
@@ -772,16 +776,16 @@ TOLD = (
 )
 
 
-def _answering(sp, monkeypatch, *, answers=None, problem=None, grants=()):
+def _answering(sp, monkeypatch, *, answers=None, problem=None, grants=(), needs_checkout=False):
     """The change check answering `answers`, or `problem`, and the grant list's change
-    `grants`. Returns each (head, base, source) `derive` was asked for."""
+    `grants`. Returns each (head, base, source, from_checkout) `derive` was asked for."""
     asked: list[tuple] = []
     fa = sp.friction_answers
 
-    def derive(head, base, *, source=None):
-        asked.append((head, base, source))
+    def derive(head, base, *, source=None, from_checkout=True):
+        asked.append((head, base, source, from_checkout))
         if problem is not None:
-            return fa.Derivation(head, problem=problem)
+            return fa.Derivation(head, problem=problem, needs_checkout=needs_checkout)
         document = {"base": {"commit": LEFT_AT}, "answers": answers or []}
         return fa.Derivation(head, document=document, answers=tuple(answers or ()))
 
@@ -803,7 +807,12 @@ def test_answers_field_prints_what_land_work_tells(sp, monkeypatch, capsys) -> N
     assert code == 0
     assert capsys.readouterr().out == TOLD
     assert asked == [
-        (HEAD, "integration", sp.friction_answers.Source("origin", "refs/heads/feat/42-thing"))
+        (
+            HEAD,
+            "integration",
+            sp.friction_answers.Source("origin", "refs/heads/feat/42-thing"),
+            False,
+        )
     ]
     assert resolved == []
 
@@ -830,6 +839,95 @@ def test_answers_that_cannot_be_derived_say_why_and_tell_nothing(sp, monkeypatch
     out, err = capsys.readouterr()
     assert out == ""
     assert "the answers at PR #99's head could not be derived: the base could not" in err
+    assert "checkout" not in err
+
+
+def test_a_head_that_needs_its_resolver_says_where_the_answers_can_be_read(
+    sp, monkeypatch, capsys
+) -> None:
+    _answering(sp, monkeypatch, problem="the check refused", needs_checkout=True)
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 2
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert "could not be derived: the check refused" in err
+    assert sp.HEAD_PROGRAMS_MESSAGE.format(head=HEAD[:7]) in err
+
+
+def _head_replacing_its_resolver(
+    make_adopter_repo: MakeAdopterRepo, ran: Path
+) -> tuple[AdopterRepo, str]:
+    """A change whose answers need a registered kind's resolver, and whose head replaces
+    that resolver with one that leaves `ran` behind. The clone is on `main`."""
+    repo = make_adopter_repo()
+    repo.write({CONFIG: friction_config(mode="enforcing"), **SOURCE, "docs/guide.md": guide()})
+    capability = register_kinds(
+        repo.root, "kinds", kinds={"source": "resolve"}, script_body=RESOLVING
+    )
+    repo.write({"sources/alpha.md": "alpha\n"})
+    repo.write({"docs/sourced.md": document("sourced", anchors={"source": ["alpha"]}, at=T1)})
+    repo.commit("base", files=None)
+    repo.checkout("feature", create=True)
+    resolver = capability / RESOLVER
+    planted = resolver.read_text(encoding="utf-8") + f"open({str(ran)!r}, 'w').close()\n"
+    resolver.write_text(planted, encoding="utf-8")
+    repo.write({"sources/alpha.md": "alpha, captured again\n"})
+    repo.commit("the source and its resolver change", files=None)
+    deferred = document(
+        "sourced",
+        anchors={"source": ["alpha"]},
+        at=T1,
+        deferred=[("source", "alpha", "the recapture is checked with the next release")],
+    )
+    repo.commit("defer the source", {"docs/sourced.md": deferred})
+    head = repo.head()
+    repo.checkout("main")
+    return repo, head
+
+
+@pytest.mark.usefixtures("answers_in_files")
+@pytest.mark.process(
+    "the view's route end to end: only a real change check refuses, and only a real "
+    "resolver started from a checkout shows that the mark this test reads means a start"
+)
+def test_the_answers_view_starts_no_program_the_head_holds(
+    sp, make_adopter_repo, pkit_on_path, tmp_path_factory, monkeypatch, capsys
+) -> None:
+    """Read from a clone on `main`, a head that replaced its resolver stops the view:
+    no checkout is made, and the head's program is not started. Without `from_checkout`
+    the same head starts it, which is what the view must not do. And what the view says
+    of a checkout at the head holds: run there, it reads the answers and starts it."""
+    ran = tmp_path_factory.mktemp("outside-the-repository") / "the-head-s-resolver-ran"
+    repo, head = _head_replacing_its_resolver(make_adopter_repo, ran)
+    fa = sp.friction_answers
+    checkouts: list[str] = []
+    checkout = fa._checkout
+
+    def recorded(at: str):
+        checkouts.append(at)
+        return checkout(at)
+
+    monkeypatch.setattr(fa, "_checkout", recorded)
+    view = {**PR_VIEW, "headRefOid": head, "headRefName": "feature", "baseRefName": "main"}
+    capability_root = repo.root / ".pkit" / "capabilities" / "project-management"
+
+    assert sp._told_at_head(view, 99, capability_root) is None
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert sp.HEAD_PROGRAMS_MESSAGE.format(head=head[:7]) in err
+    assert checkouts == []
+    assert not ran.exists()
+
+    found = fa.derive(head, "main")
+    assert found.problem is None, found.problem
+    assert checkouts == [head]
+    assert ran.exists()
+
+    ran.unlink()
+    repo.checkout("feature")
+    assert sp._told_at_head(view, 99, capability_root)
+    assert checkouts == [head]
+    assert ran.exists()
 
 
 def test_a_grant_list_that_cannot_be_read_tells_nothing(sp, monkeypatch, capsys) -> None:
