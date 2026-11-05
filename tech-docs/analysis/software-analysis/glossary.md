@@ -371,12 +371,12 @@ Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.m
 
 ## TERM-box — box
 
-**Example:** the box below step 5 of UC-070 says that `pkit analysis new` runs no such check yet. It names the decision record that decides the check, and the work item that tracks building it.
+**Example:** the box below step 5 of [UC-070](use-case-model/use-cases/010-describe/UC-070-choose-parts.md) says that `pkit analysis new` runs no such check yet. It names the [decision record](../core/glossary.md#term-decision-record--decision-record) that decides the check, and the work item that tracks building it.
 
 **Distinctions:**
 
-- **Shortfall:** the step or the variant the system does not carry out yet. The box stands below it, and says what the system lacks (DEC-001 point 1).
-- **Its entry in `shortfalls`:** the data a tool reads, in the use case's front matter. Validation holds each box to an entry, and each entry to a box (DEC-001 point 1).
+- **Shortfall:** the step or the variant the [system](../core/glossary.md#term-system--system) does not carry out yet. The box stands below it, and says what the system lacks ([DEC-001 point 1](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)).
+- **Its entry in `shortfalls`:** the data a tool reads, in the [use case](#term-use-case--use-case)'s front matter. [Validation](../core/glossary.md#term-validation--validation) holds each box to an entry, and each entry to a box (DEC-001 point 1).
 - **Any other callout:** one whose text opens with other words. It is no box, and no check reads it.
 
 ## TERM-candidate — candidate
@@ -392,12 +392,12 @@ Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.m
 
 ## TERM-checked-form — checked form
 
-**Example:** `sentence` is a checked form. The declared structure of `use-case` sets it on *Goal*, so a goal of two sentences fails validation where the format rule binds.
+**Example:** `sentence` is a checked form. The [declared structure](#term-declared-structure--declared-structure) of `use-case` sets it on *Goal*, so a goal of two sentences fails [validation](../core/glossary.md#term-validation--validation) where the format [rule](../core/glossary.md#term-rule--rule) binds.
 
 **Distinctions:**
 
-- **A form in the plain sense:** the shape of anything else, such as a design source's pointer. The schema's closed list does not hold it.
-- **Schema:** what checks a member's front-matter fields, whatever any rule's status. A checked form reads the text of a part or a field (DEC-001 point 1).
+- **A form in the plain sense:** the shape of anything else, such as a [design source](#term-design-source--design-source)'s pointer. The schema's closed list does not hold it.
+- **Schema:** what checks a member's front-matter fields, whatever any rule's status. A checked form reads the text of a part or a field ([DEC-001 point 1](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)).
 - **Declared structure:** the whole list of a kind's parts. A checked form is one test that list sets on one of them (DEC-001 point 1).
 
 ## TERM-declared-structure — declared structure
@@ -465,7 +465,7 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 **Distinctions:**
 
 - **The backbone's two answers:** `unchanged` and `updated`, which record a revalidation outcome on its [artefact](../core/glossary.md#term-artefact--artefact). `holds` and a regression map to `unchanged`, and a stale [analysis](#term-analysis--analysis) maps to `updated` ([DEC-001 point 5](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)).
-- **A regression whose step an accepted record decides:** the step takes a box, which changes the use case, so it maps to `updated` (DEC-001 point 5).
+- **A regression whose step an accepted record decides:** the step takes a [box](#term-box--box), which changes the use case, so it maps to `updated` (DEC-001 point 5).
 - **Ambiguous:** no revalidation outcome yet. Only a person knows whether the [change](../core/glossary.md#term-change--change) was meant, so nothing is recorded until they say (DEC-001 point 5).
 
 ## TERM-revalidation-proposal — revalidation proposal
@@ -495,7 +495,7 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 Explained in [VIEW-revalidations](domain-model/020-revalidations.md#shortfall).
 
-**Example:** step 2 of an export's [use case](#term-use-case--use-case) signs each file, as an accepted architecture record decides. The box below it says the file is written unsigned, and names the work item that tracks the signing, as its entry in `shortfalls` does.
+**Example:** step 2 of an export's [use case](#term-use-case--use-case) signs each file, as an accepted architecture record decides. The [box](#term-box--box) below it says the file is written unsigned, and names the work item that tracks the signing, as its entry in `shortfalls` does.
 
 **Distinctions:**
 
