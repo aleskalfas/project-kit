@@ -18,6 +18,8 @@ pkit:
         - src/project_kit/rule_set_reading.py
         - src/project_kit/cli.py
         - src/project_kit/decisions_check_diff.py
+        - src/project_kit/decisions_landing.py
+        - src/project_kit/commit_contributions.py
         - .pkit/decisions/README.md
         - .pkit/rules/core.md
         - .pkit/skills/core/decision-author.md
