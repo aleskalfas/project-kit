@@ -20,7 +20,7 @@ pkit:
         - src/project_kit/validate.py
         - .pkit/skills/core/decision-author.md
         - .pkit/agents/core/architect.md
-      record: [COR-001, COR-002, COR-003, COR-012, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#1", "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6", COR-065, COR-066, COR-068]
+      record: [COR-001, COR-002, COR-003, COR-012, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#1", "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6", COR-065, COR-066, COR-068, "ADR-081#1", "ADR-081#2", "ADR-081#3", "ADR-081#4", "ADR-081#5", "ADR-081#6", "ADR-081#7"]
       artefact:
         - RS-OPS-019
         - RS-LDOC-003
@@ -467,18 +467,22 @@ pkit decisions check-diff [--base <ref>] [--head <rev>] [--json]
 
 ## Checking what a change lands
 
-The landing check judges what a change's merge would land, and lists what the change makes accepted (COR-066 points 2 and 3). [ADR-081](../../tech-docs/architecture/decisions/ADR-081-landing-check.md) realizes it, as a command of its own, apart from the numbering check:
+The landing check judges what a change's merge would land, and lists what the change makes accepted (COR-066 points 2 and 3). It is a command of its own, apart from the numbering check:
 
 ```
 pkit decisions check-landing --base <ref> [--head <rev>] [--json]
 ```
 
 - **What it judges** is the *landing state*: git's merge of the head into the base's tip. It compares each record and rule there with its state at that tip, so one the merge leaves alone lands nothing.
-- **What the change cannot move.** The key, the default branch's name and which files the project receives are read at the base's tip, the last with the landing state. The working tree is never read, though its copy of the synced-copy test runs.
+- **What the change cannot move.** The key and the default branch's name are read at the base's tip. Which files the project receives is read at that tip and at the landing state. The working tree is never read, though its copy of the synced-copy test runs.
 - **It reports** each record and rule proposed at the landing state and not proposed at the tip. One proposed at both is already on the base, and blocks nothing.
   - **A record** is paired by the numbering check's pairing, so a record moved to another path is not added.
   - **A rule** is judged on its own, however many rules its file holds. A rule moved to another set takes a new id, so it is judged as added.
-  - **What it cannot read counts as proposed,** with why. Its file may not be text, its front matter may not parse, or its status may be one its kind lacks. A rule-set file the reader cannot read counts as one proposal.
+  - **What it cannot read counts as proposed,** with why. That holds for each of these:
+    - a file that is not text
+    - front matter that does not parse
+    - a status its kind lacks
+    - a rule-set file the reader cannot read, which counts as one proposal
 - **It skips** a record or rule set the project receives by sync, which is judged where it is kept. The synced-copy test tells such a file, not the kind of set, so a method rule set a project authors is judged.
   - **Two readings.** The test is asked of the tip and of the landing state. A file either skips is skipped, and each file they disagree on is reported for the person to see.
   - **A state that cannot tell** skips no capability's file, and the check says why. A manifest that does not read is one such state.
@@ -498,6 +502,6 @@ Its options, exits, document and no-answer cases are in [the CLI reference](../c
 - **A project without one** has its host require the check, on a pipeline line of its own. The line names the pull request's target by its branch name as base, and its own head as head. It fetches their history first.
   - **With the key off,** only no answer fails that line, so it can be wired before the key is turned on.
   - **Its pass can go stale.** It holds for the tip it ran against. A project that wants no stale pass requires each change to be up to date with its base, or merges through a queue.
-- **A direct commit.** A person accepts each record and rule the commit makes accepted before the commit. Whoever commits straight to the default branch then runs the check before the push, and pushes only on a pass. Its head is the commit, and its base the default branch, fetched. A project may wire a hook for such a push, and the backbone installs none.
+- **A direct commit.** A person accepts each record and rule the commit makes accepted before the commit. Whoever commits straight to the default branch then runs the check before the push, and pushes only on a pass. The check's head is the commit, and its base is the fetched default branch. A project may wire a hook for such a push, and the backbone installs none.
 - **Never in the check gate.** The check gate, a hook run on every push and the numbering check never run it. So the refusal blocks no push and hides no other check.
 - **What meets no refusal.** A merge sent past those places meets neither the refusal nor the list. It may go by the host's own controls, or by a backbone command such as `pkit pull-request land` or the release merge. So does an administrator merge past a host check.

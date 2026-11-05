@@ -88,7 +88,7 @@ pkit:
         - .pkit/migrations/backbone/2.0.0/001-sync-force-ignored.sh
         - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
         - .pkit/adapters/claude-code/deploy-agents.sh
-      record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, COR-064, COR-068, COR-069, COR-070, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, "ADR-060#1", "ADR-060#2", "ADR-060#3", "ADR-060#4", "ADR-060#5", "ADR-060#10", ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#1", "ADR-068#3", "ADR-068#6", ADR-075, ADR-076, ADR-077, ADR-080]
+      record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, COR-064, "COR-066#2", "COR-066#3", "COR-066#4", COR-068, COR-069, COR-070, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, "ADR-060#1", "ADR-060#2", "ADR-060#3", "ADR-060#4", "ADR-060#5", "ADR-060#10", ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#1", "ADR-068#3", "ADR-068#6", ADR-075, ADR-076, ADR-077, ADR-080, "ADR-081#1", "ADR-081#2", "ADR-081#3", "ADR-081#4", "ADR-081#5", "ADR-081#6", "ADR-081#7", "ADR-081#8"]
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
         - .pkit/agents/README.md#provider-precedence
@@ -97,6 +97,7 @@ pkit:
         - .pkit/adapters/README.md#harness-requirements
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
         - .pkit/decisions/README.md#checking-a-changes-numbering
+        - .pkit/decisions/README.md#checking-what-a-change-lands
         - .pkit/decisions/README.md#looking-a-citation-up
         - .pkit/decisions/README.md#citing
         - .pkit/decisions/README.md#finding-the-records-a-path-leads-to
@@ -362,7 +363,7 @@ Flags:
 - **`--here`** installs into the current directory instead of a resolved parent. **Honored** when the current directory is a git root or a non-git folder (no git-root-wins precedence overrides your current directory, so a `.pkit/` here is reachable). It is stopped by three guards: **refused when the current directory is a subfolder of a git worktree** — every command there resolves to the git root, so a subfolder `.pkit/` would be unreachable, and `init` points you at the git root instead (or at `pkit sync`, when that root is already a project-kit project); **refused when the current directory is inside an existing project-kit project** — a second, nested install is not supported, and `init` names the enclosing project and points you at `pkit sync`; and it **does not override the dubious-ownership or broken-repository guards** — if the current directory is a real git repository git declines to vouch for (`safe.directory` / dubious ownership) or cannot open, `init` refuses and guides you to fix the tree first, `--here` included. Mutually exclusive with `--root`.
 - **`--yes`** accepts the confirm only when the resolved target **is your current directory** (a fresh non-git folder). It never installs at an off-CWD target — a bare `--yes` from a subfolder refuses and points you at `--root`, so a non-interactive run can never install somewhere you are not standing.
 - **`--root <path>`** installs at an explicit, existing path — the sanctioned way to install at a resolved parent (e.g. a git repository root) non-interactively in CI, where a bare `--yes` is refused. Mutually exclusive with `--here`; a nonexistent path is refused at the CLI boundary rather than silently materialised. Because you named the target explicitly, it **skips the confirm and the between-you-and-the-target split-brain scan** the other paths apply — but not the checks on the target itself. It refuses a target that is already a project-kit project (redirects to `pkit sync`), and it refuses a **shadowed** target: a subfolder of a git worktree (the nested `.pkit/` would be unreachable — every command resolves to the git root; the refusal names `--root <git root>`, or `pkit sync` when that root is already adopted) or a path inside an existing project-kit project (a second, nested install). When the target is itself a repository git **refuses to verify** (dubious ownership) or **cannot open**, `--root` is the escape the guided refusal names, so it installs — but warns first, naming the problem (and, for dubious ownership, the `safe.directory` remedy).
-- **`--refuse-proposals`** writes `decisions.refuse-proposals: true` into the new project's configuration, so the landing check's refusal is on from the start. The flag is the consent, and without it the install writes no key and makes no offer ([ADR-081](../../tech-docs/architecture/decisions/ADR-081-landing-check.md) point 5).
+- **`--refuse-proposals`** writes `decisions.refuse-proposals: true` into the new project's configuration, so the landing check's refusal is on from the start. The flag is the consent, and without it the install writes no key and makes no offer.
 - **`--dry-run`** previews what would be installed without writing any files or prompting (per COR-004). It skips only the confirm prompt and the non-interactive-stdin refusal that stands in for it; **every other refusal fires ahead of `--dry-run`**, so those combinations report the refusal rather than a preview: `--here` together with `--root`; the dubious-ownership and broken-repository refusals; a nested or shadowed target (`--here` in a git subfolder or inside an existing project, `--root` at a subfolder or inside an existing project); an already-adopted target, or a `.pkit` there that is not an install; the off-target split-brain; a bare `--yes` at an off-CWD target; and the install's own source checks (no usable methodology source, or a target that is the source itself).
 
 If you arrive at a partial or broken state, run `validate` to see what is and isn't consistent. An `init` that stopped on the way, or a `.pkit/manifest.yaml` that is missing or whose `backbone_version` is no version, is finished by `pkit upgrade` ([the lifecycle README, "The replay: a missing completion"](../lifecycle/README.md#the-replay-a-missing-completion)). Otherwise use targeted `sync` / `merge` to recover.
@@ -659,7 +660,7 @@ Only errors fail the command. The same repository state always yields the same f
 - **Status lines** (points 6 and 7). `pkit status` gains a `Documentation` section: one line per root with its source (`user root  docs/  (default)`, `internal root  tech-docs/  (explicit)`), then every recorded location — those lying inside the internal root under `inside root`, then those outside it under `outside root`, one line each, capability locations tagged `(<capability>)`, in a fixed order — so a project sees where its recorded locations sit and what a relocation would involve. Moving documents is always an explicit, reviewable operation.
 - **Reading is forgiving.** A root that is absent, not a relative path, or unreadable resolves to the default for every reader; `pkit validate` reports the file's problems.
 
-**The `decisions` key — the landing check's refusal** ([COR-066](../decisions/core/COR-066-accepted-before-landing.md) point 4; [ADR-081](../../tech-docs/architecture/decisions/ADR-081-landing-check.md) point 5).
+**The `decisions` key — the landing check's refusal** ([COR-066](../decisions/core/COR-066-accepted-before-landing.md) point 4).
 
 - **It counts as the default branch holds it.** `decisions check-landing` reads it at the base's tip, never in the working tree. So a change that turns it on or off counts once it has landed.
 - **It decides only whether the refusal fails.** The check reports what would land and gives its list with the key on or off.
@@ -1429,7 +1430,7 @@ A validator answers about the project's *state* and takes no base named for one 
 
 ### `decisions check-landing [--base <ref>] [--head <rev>] [--json]`
 
-What a change's merge would land ([COR-066](../decisions/core/COR-066-accepted-before-landing.md) points 2 to 4; [ADR-081](../../tech-docs/architecture/decisions/ADR-081-landing-check.md)). The check reports each decision record and rule that would land proposed, and lists what the change makes accepted. What it judges, and where a project runs it, are in [the decisions README, "Checking what a change lands"](../decisions/README.md#checking-what-a-change-lands).
+What a change's merge would land ([COR-066](../decisions/core/COR-066-accepted-before-landing.md) points 2 to 4). The check reports each decision record and rule that would land proposed, and lists what the change makes accepted. What it judges, and where a project runs it, are in [the decisions README, "Checking what a change lands"](../decisions/README.md#checking-what-a-change-lands).
 
 - **`--base <ref>`** names the base the change would land on. `$PKIT_CHECK_BASE` names it otherwise. There is no default, so a run that names neither gives no answer. It resolves as any named base does ("The `repository` key" above). The check fetches nothing, so fetch the base and the change's history first.
 - **`--head <rev>`** names the commit that would land, else HEAD. The working tree is never read.
@@ -1444,6 +1445,7 @@ What a change's merge would land ([COR-066](../decisions/core/COR-066-accepted-b
 
 **No answer** comes only from these:
 
+- The run is outside a project.
 - The run names no base, the base resolves to no commit, or the head names none.
 - The clone is shallow, so the change's commits may not all be here.
 - Git's merge of the head into the base's tip conflicts. The fix is to merge the base in.
