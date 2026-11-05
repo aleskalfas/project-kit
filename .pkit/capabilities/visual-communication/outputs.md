@@ -35,12 +35,15 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf_declaration.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/css.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/css_declaration.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/plugins/json.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/plugins/json_declaration.py
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
         - .pkit/capabilities/visual-communication/schemas/piece.schema.json
         - .pkit/capabilities/visual-communication/schemas/exports.schema.json
         - .pkit/capabilities/visual-communication/schemas/produced-record.schema.json
         - .pkit/capabilities/visual-communication/schemas/code.schema.json
         - .pkit/capabilities/visual-communication/schemas/code-record.schema.json
+        - .pkit/capabilities/visual-communication/schemas/values.schema.json
       record:
         - visual-communication:DEC-001#2
         - visual-communication:DEC-002#1
@@ -106,11 +109,18 @@ A *plugin* is code that meets the engine at one *seam*: what the engine hands it
 - A *producer* makes a picture while a piece is prepared. A person or an agent runs it with `pkit visual produce`. No render, check or export runs it.
 - A *code writer* writes a brand's resolved values as code in one language.
 
-Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships the `svg` renderer at version 1.0.1, the `pdf` renderer at version 1.0.0 and the `css` code writer at version 1.0.0. No producer ships yet.
+Every plugin is the capability's, and a project adds none (DEC-005 point 12): no file, setting or environment variable adds one. The capability ships:
 
-Each plugin declares what it can take, so the capability knows it without running the plugin. A renderer declares each primitive it draws, and each property of it. A producer declares its inputs, each a role of one *value type* (a token's DTCG type, such as `color`), and the value types it uses. A code writer declares the value types its language has a form for, the forms of its spelling, and the kinds of axis it spells.
+- the `svg` renderer, at version 1.0.1
+- the `pdf` renderer, at version 1.0.0
+- the `css` code writer, at version 1.0.0
+- the `json` code writer, at version 1.0.0
 
-Each plugin also declares what it needs beyond the project's files: the outside programs it calls (`programs`) and the services it reaches (`services`), each a list of names (DEC-005 point 9). The SVG and PDF renderers and the CSS code writer call no outside program and reach no service. A producer that names a service is refused before it runs, since a plugin that reaches a service runs only where the project's configuration turns it on, and format 1's configuration turns none on (DEC-002 point 8). So is a producer that names a program the machine lacks.
+No producer ships yet.
+
+Each plugin declares what it can take, so the capability knows it without running the plugin. A renderer declares each primitive it draws, and each property of it. A producer declares its inputs, each a role of one *value type* (a token's DTCG type, such as `color`), and the value types it uses. A code writer declares the value types its language has a form for, the forms of its spelling, the kinds of axis it spells, and whether it takes a `prefix`.
+
+Each plugin also declares what it needs beyond the project's files: the outside programs it calls (`programs`) and the services it reaches (`services`), each a list of names (DEC-005 point 9). The SVG and PDF renderers and the CSS and JSON code writers call no outside program and reach no service. A producer that names a service is refused before it runs, since a plugin that reaches a service runs only where the project's configuration turns it on, and format 1's configuration turns none on (DEC-002 point 8). So is a producer that names a program the machine lacks.
 
 ### Versions
 
@@ -118,7 +128,7 @@ Each plugin also declares what it needs beyond the project's files: the outside 
 - **The seam's version** is 3. A plugin's declaration names the seam version it reads, and the capability refuses a plugin of another version. Version 2 hands a renderer a text's runs, each with its own paint and fonts ([What a scene holds](components.md#what-a-scene-holds)). Version 3 hands it a line's arrowheads, and a tie's connector with its points and the elements its ends meet (DEC-011). What a producer and a code writer are handed and return is as version 1 had it.
 - **What rose with ties.** The seam rose to 3, since a renderer must read a line's new properties. The SVG renderer stays at 1.0.1, and the CSS code writer at 1.0.0. A scene of seam 2 holds no arrowhead and no connector, and each draws it as before. The PDF renderer reads seam 3 from its first version, 1.0.0.
 - **The document of values** that producers and code writers read has its own version, 1 ([The hand-over](#the-hand-over)).
-- **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1.
+- **A code writer's spelling** has versions of its own, called *forms*. A declaration of written code names its form, and a writer keeps writing every form it shipped (DEC-005 point 8). The CSS writer writes form 1. The JSON writer writes form 1, which is version 1 of the document of values ([The JSON code writer](#the-json-code-writer)).
 - **None of these versions** is the format number of the files a project keeps.
 
 ### The loss report
@@ -389,12 +399,12 @@ out: web/brand.css
 
 | Field | What it holds |
 |---|---|
-| `writer` | the code writer: `css`, the only one |
+| `writer` | the code writer: `css` or `json` |
 | `form` | the form of the writer's spelling: `1` |
 | `brand` | the brand, by its library's name |
 | `lock` | a version of the brand and of every library it builds on, and of any other library whose roles the code holds, each one the project holds and the capability reads, whose majors fit what each builds on |
 | `out` | where the code goes: a file of the project's tree |
-| `prefix` | optional: a name that opens every name the code writes |
+| `prefix` | optional: a name that opens every name the code writes. The `json` writer takes none ([The JSON code writer](#the-json-code-writer)) |
 | `accept-losses` | optional: the losses a person accepted ([Accepting a loss](#accepting-a-loss)) |
 
 - **The lock is the declaration's own.** A person moves it on purpose, and no command moves it (DEC-005 point 7). So the code changes only when the declaration changes, or when the person names the declaration to `pkit visual add`. Naming it lets the command replace a copy not yet released that the lock names, under the same number ([The lock](files.md#the-lock), DEC-013 point 5). The run that leaves the copy prints the difference in the code first.
@@ -433,6 +443,43 @@ A rule with no token is not written. A rule holds each token once, in the order 
 It holds no `[data-contrast="standard"]` rule: every token the contrast axis changes, the colour scheme changes too, and its name comes first. The writer writes each declaration on a line of its own.
 
 **Losses.** A token of a value type the writer has no form for is left out, as a loss known before the writer runs. In form 1 that type is `typography`, such as the test brand's `type.body`.
+
+### The JSON code writer
+
+The JSON writer writes the [document of values](#the-hand-over) as one file, for a program that reads data, such as a game's runtime. It adds nothing to the document and leaves nothing out. A declaration names `writer: json`, `form: 1` and an `out` such as `game/brand.json`.
+
+- **Its form.** Form 1 is version 1 of the document. The schema `.pkit/capabilities/visual-communication/schemas/values.schema.json` states that form, so a program can check the file against it. A later version of the document is a new form, and the writer keeps writing this one ([Versions](#versions)).
+- **What it holds.** It holds what the code holds ([The declaration](#the-declaration)), in the fields the hand-over opens with, and no others.
+- **Names.** A token keeps its path as the brand exports it, such as `space.1`. So the writer takes no `prefix`, and refuses a declaration that names one, saying why.
+- **Modes.** A token's `values` holds its value under the key of each combination ([Keys of combinations](files.md#keys-of-combinations)). A program picks a set of values by its key. Value axes and size axes are written alike.
+- **Values.** Each value is in its DTCG form, as in the hand-over. A `typography` holds its five members, each in its own form: `fontFamily`, `fontSize`, `fontWeight`, `letterSpacing` and `lineHeight`.
+- **The text.** Each key of an object lies on its own line, down to a token's values. Each value then keeps to one line, in the capability's canonical text. So a changed value changes one line, and the same document gives the same file on every machine.
+- **Losses.** The writer takes every value type and every kind of axis, so it reports no loss.
+
+The check reads this code as it reads any written code (*Written code* in *What the check reports*). The test brand gives this file, cut short:
+
+```json
+{
+  "document": "visual-communication/values",
+  "version": 1,
+  "lock": {
+    "foundations": "1.0.0",
+    "test-brand": "1.0.0"
+  },
+  "keys": ["default","colour-scheme.dark","contrast.high","colour-scheme.dark+contrast.high"],
+  "tokens": {
+    "accent": {
+      "type": "color",
+      "values": {
+        "default": {"alpha":1,"colorSpace":"srgb","components":[0.0353,0.4118,0.8549]},
+        "colour-scheme.dark": {"alpha":1,"colorSpace":"srgb","components":[0.2667,0.5765,0.9725]},
+        "contrast.high": {"alpha":1,"colorSpace":"srgb","components":[0.0353,0.4118,0.8549]},
+        "colour-scheme.dark+contrast.high": {"alpha":1,"colorSpace":"srgb","components":[0.2667,0.5765,0.9725]}
+      }
+    }
+  }
+}
+```
 
 ## The viewing step
 
