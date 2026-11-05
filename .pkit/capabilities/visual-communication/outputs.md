@@ -34,7 +34,26 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/produced-record.schema.json
         - .pkit/capabilities/visual-communication/schemas/code.schema.json
         - .pkit/capabilities/visual-communication/schemas/code-record.schema.json
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-011", "visual-communication:DEC-012"]
+      record:
+        - visual-communication:DEC-001#2
+        - visual-communication:DEC-002#1
+        - visual-communication:DEC-002#8
+        - visual-communication:DEC-005#4
+        - visual-communication:DEC-005#5
+        - visual-communication:DEC-005#7
+        - visual-communication:DEC-005#8
+        - visual-communication:DEC-005#9
+        - visual-communication:DEC-005#10
+        - visual-communication:DEC-005#12
+        - visual-communication:DEC-006#1
+        - visual-communication:DEC-006#2
+        - visual-communication:DEC-006#3
+        - visual-communication:DEC-006#4
+        - visual-communication:DEC-006#5
+        - visual-communication:DEC-006#7
+        - visual-communication:DEC-008#5
+        - visual-communication:DEC-011
+        - visual-communication:DEC-012
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options

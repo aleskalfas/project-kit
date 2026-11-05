@@ -8,10 +8,8 @@ other gates (see [CONTRIBUTING.md](../CONTRIBUTING.md) "Running checks").
 **While you build, run the tests of what you changed.** The full suite — some
 21 300 tests — is the pre-push hook's and CI's to run, not a builder's (the
 project's rules, `.pkit/rules/project.md`): run the test modules for the files
-you changed, `uv run pytest -q tests/test_<module>.py ...`, and the fast gates,
-`uv run pkit validate`, `uv run pkit friction check`,
-`uv run pkit migrations check-diff`, `uv run pkit decisions check-diff` and
-`uv run pkit release check`.
+you changed, `uv run pytest -q tests/test_<module>.py ...`, and the fast gates
+[CONTRIBUTING.md](../CONTRIBUTING.md), "Running checks", lists.
 
 **CI skips the suite where only answers changed.** On a pull request whose only
 changes since its most recent full run, which passed, are answers, CI runs the
