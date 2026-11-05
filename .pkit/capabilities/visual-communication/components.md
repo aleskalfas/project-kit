@@ -497,7 +497,7 @@ links:
 
 ## How the engine computes a scene
 
-The *scene* is every element's final frame, values and source, for one language. The engine computes it from the piece's content, the components that draw it, the roles of its brand, and the fonts and produced pictures they name. The commands compute one scene for each language of the piece, at the size key `default`, since format 1 has no size axis ([Keys of combinations](files.md#keys-of-combinations)). A scene is computed, never committed. Under one release of the capability, the same files give the same scene on every machine.
+The *scene* is every element's final frame, values and source, for one language. The engine computes it from the piece's content, the components that draw it, the roles of its brand, and the fonts and produced pictures they name. The commands compute one scene for each language of the piece, or each one asked for, at the size key `default`, since format 1 has no size axis ([Keys of combinations](files.md#keys-of-combinations)). A scene is computed, never committed. Under one release of the capability, the same files give the same scene on every machine.
 
 - **Built from the content.** The engine places the top component with the content, then builds each part, item and placed component below it.
 - **Fonts first.** Before it computes any place or size, a font family with no file, or a character no family measures, refuses the scene ([Text](#text)).

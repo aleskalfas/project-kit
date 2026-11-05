@@ -55,6 +55,7 @@ pkit:
         - visual-communication:DEC-006#4
         - visual-communication:DEC-006#5
         - visual-communication:DEC-006#7
+        - visual-communication:DEC-006#8
         - visual-communication:DEC-008#5
         - visual-communication:DEC-011
         - visual-communication:DEC-012
@@ -462,10 +463,11 @@ A run writes in `.pkit/capabilities/visual-communication/project/local/look/<pie
 
 ### What refuses a run
 
-A refused run leaves `look/<piece>/` as it was. The fonts it held in a temporary folder of the local folder are gone, and that folder itself may remain. Each of these refuses a run:
+A refused run leaves `look/<piece>/` as it was. The fonts it held in a temporary folder of the local folder are gone, and that folder itself may remain. Any fault that stops a piece being drawn refuses a run, such as:
 
 - a piece with no lock, naming the render that writes one;
 - a lock that does not hold, naming why;
 - a page, a language or a key the piece does not have, naming those it has;
-- a font with no file;
+- a brand that cannot be read;
+- a font with no file, or a character no font holds;
 - a page with no size, or one past 134217728 pixels at [its size](#the-viewing-step). `pkit visual check <piece>` names what such a piece still owes, such as a picture never produced.

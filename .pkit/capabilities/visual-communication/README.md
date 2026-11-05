@@ -252,7 +252,7 @@ Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 
 - **Prints** the piece's languages and keys, what it draws by default, each page by its number and trace id, and the tool. `--json` prints it as one document.
 - **Writes** nothing.
-- **Exits** 0 when it listed; 1 when the piece has no lock yet, or a lock that does not hold.
+- **Exits** 0 when it listed; 1 when the piece cannot be drawn, such as with no lock yet or a lock that does not hold.
 
 ### `pkit visual write-code <name>`
 

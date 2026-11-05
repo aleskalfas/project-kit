@@ -694,6 +694,18 @@ def test_a_page_of_no_width_and_no_height_refuses_naming_the_check(tmp_path: Pat
     )
 
 
+def test_a_local_folder_that_cannot_be_made_ends_in_an_error_line(flow: Path) -> None:
+    local = flow / viewing.LOCAL
+    if local.exists():
+        shutil.rmtree(local)
+    local.parent.mkdir(parents=True, exist_ok=True)
+    local.write_text("a file where the folder goes", encoding="utf-8")
+    shown = run_look(flow, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr.startswith("error: ")
+    assert "Traceback" not in shown.stderr
+
+
 def test_a_stale_picture_is_drawn_as_it_stands(flow: Path) -> None:
     """Nothing about a picture's staleness stops the step, or runs its producer."""
     piece = flow / PIECE_FOLDER / "piece.yaml"

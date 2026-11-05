@@ -90,6 +90,7 @@ def main() -> int:
         location.LocationRefused,
         location.GitFailed,
         files.WriteFailed,
+        OSError,
     ) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
