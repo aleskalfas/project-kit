@@ -1,7 +1,7 @@
 """The library folder, the list of the project's libraries, versions, the libraries the
 capability ships, a piece's lock, and the versions a library is checked alone with
 (DEC-001 point 5, DEC-002 point 3, DEC-003 points 1, 4, 5, 8 and 9, DEC-004 point 6,
-DEC-005 point 7, DEC-008 point 1, DEC-013 points 2 and 5, DEC-014 point 5).
+DEC-005 point 7, DEC-008 point 1, DEC-013 points 2, 5 and 6, DEC-014 point 5).
 
 - **The library folder** is `libraries/` in the location. Each version a lock may name is
   a folder of its own, `libraries/<name>/<version>/`, holding the version whole with its
@@ -17,7 +17,9 @@ DEC-005 point 7, DEC-008 point 1, DEC-013 points 2 and 5, DEC-014 point 5).
   and its record lie apart from it (`shipped`, DEC-013 point 2). A person brings a version
   in by a command, which copies it whole into the library folder and lists it with the
   source `shipped`, every other byte of the list kept, and brings every copy of the
-  library up to date in the same run (`copies`, DEC-013 point 5).
+  library up to date in the same run (`copies`, DEC-013 point 5). The source the list
+  gives a library (`Held.source`) says whether a copy is of a library the capability
+  ships, which only whoever maintains the capability corrects (DEC-013 point 6).
 - **Versions** are `X.Y.Z` with X at least 1 in format 1, and a library's *line* is its
   major. `builds-on` names each library a library builds on by its major, an integer. A
   brand marks at most one of them as its base, `base: true` (DEC-004 point 6); a
@@ -51,7 +53,7 @@ DEC-005 point 7, DEC-008 point 1, DEC-013 points 2 and 5, DEC-014 point 5).
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
@@ -59,7 +61,7 @@ from typing import Any
 
 from _lib import fingerprint, notations, records
 from _lib.files import FileError, read_bound
-from _lib.findings import FAILS, Finding
+from _lib.findings import FAILS, PROJECT, Finding
 from _lib.location import files as listed_files
 from _lib.names import is_name
 from _lib.reading import ReadError, read_yaml
@@ -73,6 +75,9 @@ FOUNDATIONS = "foundations"
 
 #: The list of the project's libraries, within the location.
 LIST = f"{FOLDER}/libraries.yaml"
+
+#: The kind of source the list gives a library the capability ships (DEC-013 point 5).
+SHIPPED_SOURCE = "shipped"
 
 #: The version being built of each library the capability ships, each in a folder of its
 #: own named for the library, under a name that names no version (DEC-013 point 2). Its
@@ -372,6 +377,19 @@ class Held:
             raise LibraryError(f"{path}: `libraries` is not a mapping of libraries")
         return libraries
 
+    def source(self, name: str) -> str | None:
+        """The kind of source the list gives a library, such as `shipped` for one the
+        capability ships (`SHIPPED_SOURCE`); None where the list names no source of it, or
+        cannot be read."""
+        try:
+            listed = self.listed or {}
+        except LibraryError:
+            return None
+        library = listed.get(name)
+        source = library.get("source") if isinstance(library, Mapping) else None
+        kind = source.get("kind") if isinstance(source, Mapping) else None
+        return kind if isinstance(kind, str) else None
+
     def released(self, name: str, version: Version) -> bool:
         """Whether the list marks a version released."""
         try:
@@ -408,10 +426,12 @@ class Held:
             files=self.files(name, version),
         )
 
-    def findings(self) -> list[Finding]:
+    def findings(self, restored: Collection[str] = ()) -> list[Finding]:
         """What is wrong with the library folder and its list (DEC-003 point 9): a version
         the list does not name or the folder does not hold, a version the capability
-        cannot read, and a released version that changed."""
+        cannot read, and a released version that changed. `restored` names, by label, each
+        released version the command that brings a shipped library in restores, so its
+        `library-changed` names that command (`copies.compare`, DEC-013 point 6)."""
         found: list[Finding] = []
         file = self.list_path
         for stray in self.strays:
@@ -479,11 +499,16 @@ class Held:
                             file=f"{self.location}/{FOLDER}/{where}/library.yaml",
                             fix=f"upgrade the capability, or take {label} out of the library "
                             f"folder and off the list once no lock names it",
-                            who="the project",
+                            who=PROJECT,
                         )
                     )
                 changes = self.hash_changes(name, version)
                 if changes:
+                    fix = (
+                        f"run `pkit visual add {name}`, which restores it as released"
+                        if label in restored
+                        else "restore the version folder as it was released"
+                    )
                     found.append(
                         Finding(
                             "library-changed",
@@ -491,7 +516,7 @@ class Held:
                             f"{label} no longer matches what was released: " + "; ".join(changes),
                             file=f"{self.location}/{FOLDER}/{where}",
                             library=label,
-                            fix="restore the version folder as it was released",
+                            fix=fix,
                         )
                     )
         for name, library in listed.items():
