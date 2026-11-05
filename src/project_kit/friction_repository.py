@@ -92,7 +92,10 @@ them for a revalidation that left it as it was, the anchors that drive that
 count (`_Flags`, `_driving`, ADR-080), a finding each, which the human views
 show as one for the artefact (`over_broad_runs`);
 *shared-id* — an artefact anchor on an id two artefacts share, read as naming
-the first in walk order and judged so, warned of and never failed. An
+the first in walk order and judged so, warned of and never failed;
+*whole-and-parts* — an anchor on a target whole beside anchors on the target's
+parts, read from HEAD alone and owing nothing (`_Judge.whole_and_parts`, ADR-080
+point 5). An
 artefact with an anchor that cannot be resolved — its kind has no resolver
 that may run, or its resolver gave no answer — is **not judged**: its state
 is `unresolved`, never `current`, as an artefact whose points lie beyond a
@@ -159,7 +162,7 @@ from typing import Any, TypeVar
 
 from project_kit import answer_files, cli_render
 from project_kit.answer_files import AnswerHistory, AnswerPoints, Answers, StateAnswers
-from project_kit.artefact_parts import AnchoredPart, part_standing
+from project_kit.artefact_parts import AnchoredPart, PartState, part_standing
 from project_kit.document_parts import Body, heading_slug
 from project_kit.friction_check import (
     ExclusionChange,
@@ -229,7 +232,13 @@ from project_kit.friction_history import (
     shallow_commits,
 )
 from project_kit.project_config import PROJECT_CONFIG_RELPATH
-from project_kit.record_points import RecordPoints, Standing, read_points_bytes, split_anchor
+from project_kit.record_points import (
+    PointState,
+    RecordPoints,
+    Standing,
+    read_points_bytes,
+    split_anchor,
+)
 
 #: How a tree entry's mode opens for a regular file, executable or not: the only blob
 #: a record is read from.
@@ -289,6 +298,9 @@ class RepositoryFindingKind(Enum):
     OVER_BROAD = "over-broad"
     # An artefact anchor on an id two artefacts share: ambiguous, warned of (COR-050 point 7).
     SHARED_ID = "shared-id"
+    # An anchor on a target whole, beside anchors on the target's parts, which add nothing:
+    # warned of from HEAD alone, owing nothing (COR-050 point 7; ADR-080 point 5).
+    WHOLE_AND_PARTS = "whole-and-parts"
     UNREACHABLE = "unreachable"
     UNREADABLE = "unreadable"
     # Two live revalidations of one artefact, neither of which read the other: debt, never
@@ -361,6 +373,8 @@ class RepositoryFinding:
     files: tuple[str, ...] = field(default=(), compare=False)
     # What an over-broad finding counted, the bar it crossed among it.
     over_broad: OverBroad | None = field(default=None, compare=False)
+    # The anchors on parts a whole-and-parts finding names beside its `anchor`.
+    parts: tuple[Anchor, ...] = field(default=(), compare=False)
 
     @property
     def asked(self) -> bool:
@@ -381,6 +395,14 @@ class RepositoryFinding:
         found = self.over_broad
         return found.share if found is not None and found.bar is OverBroadBar.ASKS else None
 
+    @property
+    def parts_json(self) -> list[dict[str, str]] | None:
+        """The anchors on parts a whole-and-parts finding names, as the JSON documents give
+        them; `None` for any other finding."""
+        if not self.parts:
+            return None
+        return [{"kind": part.kind, "value": part.value} for part in self.parts]
+
     def as_json(self) -> dict[str, Any]:
         return {
             "artefact": self.artefact,
@@ -395,6 +417,7 @@ class RepositoryFinding:
             "message": self.message,
             "bar": self.bar,
             "share": self.share,
+            "parts": self.parts_json,
         }
 
 
@@ -1084,6 +1107,82 @@ class _Judge:
         first = {anchor: finding(anchor, OverBroadBar.FLAGS) for anchor in most}
         driving = _driving(asks, list(flagged)) if many else ()
         return first, [finding(anchor, OverBroadBar.ASKS) for anchor in driving]
+
+    def whole_and_parts(
+        self, artefact: Artefact, anchors: Sequence[Anchor]
+    ) -> list[RepositoryFinding]:
+        """A finding for each of the artefact's live `anchors` that stands whole on what
+        others of them stand on a part of (ADR-080 point 5), naming them. Read from HEAD
+        alone. An artefact that owes no answer has none, since its anchors ask nothing."""
+        if artefact.owes_no_answer:
+            return []
+        unique = tuple(dict.fromkeys(anchors))
+        parts = {anchor: files for anchor in unique if (files := self._part_files(anchor))}
+        if not parts:
+            return []
+        found: list[RepositoryFinding] = []
+        for anchor in unique:
+            whole = self._whole_files(anchor)
+            beside = tuple(part for part, files in parts.items() if files <= whole)
+            if beside:
+                named = ", ".join(f"{part.kind} {part.value}" for part in beside)
+                message = (
+                    f"anchors a target whole beside {counted(len(beside), 'anchor', 'anchors')} "
+                    f"on its parts, so whatever flags them flags this one and they add nothing: "
+                    f"{named} — remove this anchor where the artefact rests only on those parts, "
+                    f"or them where it rests on all of it; nothing is owed"
+                )
+                found.append(
+                    RepositoryFinding(
+                        RepositoryFindingKind.WHOLE_AND_PARTS, message, anchor=anchor, parts=beside
+                    )
+                )
+        return found
+
+    def _whole_files(self, anchor: Anchor) -> frozenset[str]:
+        """The files `anchor` stands on whole (ADR-080 point 5): each a path anchor stands
+        on, or the file of the record or document a whole anchor names. Empty for anything
+        else: a part anchor, a collection entry, whose file holds others, and a value of a
+        registered kind, which counts only as a part."""
+        head = self.head
+        if anchor.kind == "path":
+            return frozenset(head.matching(anchor.value))
+        if anchor.kind == "record" and split_anchor(anchor.value)[1] is None:
+            rel = head.record_path(anchor.value)
+            return frozenset() if rel is None else frozenset({rel})
+        if anchor.kind == "artefact":
+            part = head.part_of(anchor.value)
+            target = part.target
+            if (
+                target is not None
+                and part.state is PartState.WHOLE
+                and target.kind is ArtefactKind.DOCUMENT
+            ):
+                return frozenset({target.path})
+        return frozenset()
+
+    def _part_files(self, anchor: Anchor) -> frozenset[str]:
+        """The files `anchor` stands on a part of, by its kind's own reading (ADR-080
+        point 5): the record's, for a live point; the document's, for a section or the
+        lead; those its resolver names, for a value of a registered kind. Empty for
+        anything else: a path anchor, a whole anchor, and a retired point, which stands
+        on nothing."""
+        head = self.head
+        if anchor.kind == "artefact":
+            part = head.part_of(anchor.value)
+            target = part.target
+            if target is None or part.state is not PartState.LIVE:
+                return frozenset()
+            return frozenset({target.path})
+        if anchor.kind == "record":
+            rel = head.record_path(anchor.value)
+            point = None if rel is None else head.point_of(anchor, rel)
+            if rel is None or point is None or point.state is not PointState.LIVE:
+                return frozenset()
+            return frozenset({rel})
+        if anchor.kind in CORE_ANCHOR_KINDS:
+            return frozenset()
+        return frozenset(self.kinds.resolve(anchor).paths)
 
     def _narrower(self, anchor: Anchor) -> str | None:
         """The narrower anchor that names less of what an over-broad anchor stands on, where
@@ -2215,6 +2314,7 @@ def _check_artefact(
         shared = judge.shared_id(anchor)
         if shared is not None:
             broad.append(finding(shared.kind, shared.message, anchor))
+    broad.extend(located(found) for found in judge.whole_and_parts(artefact, live))
     # The second bar's, in the order it names them, together: one finding for the artefact
     # in the human views (`over_broad_runs`).
     broad.extend(located(over) for over in asked)
@@ -3089,6 +3189,10 @@ _LEGEND: dict[RepositoryFindingKind, str] = {
     RepositoryFindingKind.SHARED_ID: (
         "an anchor on an id two artefacts share, read as naming the first: reported only"
     ),
+    RepositoryFindingKind.WHOLE_AND_PARTS: (
+        "an anchor on a target whole beside anchors on its parts, which add nothing: reported "
+        "only, nothing owed"
+    ),
     RepositoryFindingKind.UNREACHABLE: "a point beyond this clone's history",
     RepositoryFindingKind.ANSWERED_APART: (
         "two revalidations made apart, neither reading the other: debt until the next "
@@ -3284,6 +3388,11 @@ def _summary(result: RepositoryCheck) -> str:
         (RepositoryFindingKind.NO_ANSWER, "missing answer", "missing answers"),
         (RepositoryFindingKind.OVER_BROAD, "over-broad", "over-broad"),
         (RepositoryFindingKind.SHARED_ID, "anchor on a shared id", "anchors on a shared id"),
+        (
+            RepositoryFindingKind.WHOLE_AND_PARTS,
+            "whole anchor beside its parts",
+            "whole anchors beside their parts",
+        ),
         (RepositoryFindingKind.UNREACHABLE, "unreachable", "unreachable"),
         (RepositoryFindingKind.ANSWERED_APART, "answered apart", "answered apart"),
     ]

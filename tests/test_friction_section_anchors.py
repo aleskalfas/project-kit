@@ -204,7 +204,10 @@ def test_a_whole_artefact_anchor_still_changes_with_any_edit(timeline: Timeline)
     _start(timeline, anchors={"artefact": ["docs/manual.md", "docs/manual.md#using"]})
     changed = _change(timeline, sections=_edited("Installing", "Run the new installer."))
     assert _change_check(timeline) == [("friction", "docs/manual.md")]
-    assert _repository(timeline) == [("stale", "docs/manual.md", changed)]
+    assert _repository(timeline) == [
+        ("stale", "docs/manual.md", changed),
+        ("whole-and-parts", "docs/manual.md", None),  # the whole anchor flags what the part does
+    ]
 
 
 # --- a renamed heading, a shared slug -------------------------------------------------

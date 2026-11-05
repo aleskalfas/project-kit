@@ -28,6 +28,8 @@ a `commands:` leaf:
   another shape gives no answer: the anchor is unresolved, never dead, and
   its artefact is not judged — its state is `unresolved`, never `current`,
   and `record-status` refuses it;
+- a value counts as a part of a whole anchor that stands on every file its
+  resolver names, and never as the whole anchor;
 - validation and the writers admit an anchor, and a deferral, of any kind a
   word names; a kind nothing resolves is a report;
 - what the engine sees of a change to what an anchor denotes — a rename, a
@@ -1167,6 +1169,51 @@ def test_the_count_leaves_out_the_artefact_s_own_file_among_those_the_resolver_n
     assert broad.message.startswith(
         "flagged its artefact in 2 of the last 4 commits on the first-parent line"
     )
+
+
+# --- a value beside a whole anchor (COR-050 point 7; ADR-080 point 5) ------------------------
+
+
+def _whole_and_parts(repo: AdopterRepo) -> dict[fd.Anchor | None, tuple[fd.Anchor, ...]]:
+    """Each whole-and-parts finding's whole anchor, with the anchors on parts it names."""
+    result = fr.run_repository_check(repo.root)
+    kind = fr.RepositoryFindingKind.WHOLE_AND_PARTS
+    return {f.anchor: f.parts for f in result.findings if f.kind is kind}
+
+
+def test_a_value_whose_one_file_a_path_anchor_stands_on_counts_as_its_part(
+    repo: AdopterRepo,
+) -> None:
+    """The value is the narrower anchor on the file, and it flags only where the path
+    anchor does, so the path anchor is the one to narrow."""
+    _sources(repo)
+    anchors = {"path": ["sources/iso-8601.md"], "source": ["iso-8601"]}
+    _start(repo, {"docs/guide.md": guide(anchors=anchors), **CAPTURED})
+    assert _whole_and_parts(repo) == {fd.Anchor("path", "sources/iso-8601.md"): (SOURCE_ANCHOR,)}
+
+
+def test_a_value_with_a_file_beyond_the_whole_anchor_is_no_part_of_it(repo: AdopterRepo) -> None:
+    """Every file its resolver names counts: one the path anchor does not stand on is what
+    the value adds. A glob over both stands on all of it."""
+    _sources(repo, SEVERAL)
+    annex = {"sources/iso-8601-annex.md": "The annex.\n"}
+    narrow = {"path": ["sources/iso-8601.md"], "source": ["iso-8601"]}
+    _start(repo, {"docs/guide.md": guide(anchors=narrow), **CAPTURED, **annex})
+    assert _whole_and_parts(repo) == {}
+
+    glob = {"path": ["sources/**"], "source": ["iso-8601"]}
+    repo.commit("anchor every source", {"docs/guide.md": guide(anchors=glob)})
+    assert _whole_and_parts(repo) == {fd.Anchor("path", "sources/**"): (SOURCE_ANCHOR,)}
+
+
+def test_a_value_is_never_the_whole_anchor(repo: AdopterRepo) -> None:
+    """Two values on the same files, and one beside a section of a file it names: a value
+    counts only as a part, or two values on one file would each name the other."""
+    _sources(repo, EVERYTHING)
+    anchors = {"source": ["one", "two"], "artefact": ["docs/other.md#one"]}
+    other = document("other", anchors={"path": ["src/core/**"]}, body="## One\n\nText.\n")
+    _start(repo, {"docs/guide.md": guide(anchors=anchors), "docs/other.md": other})
+    assert _whole_and_parts(repo) == {}
 
 
 # --- validation and the writers admit an anchor of any kind a word names ---------------------
