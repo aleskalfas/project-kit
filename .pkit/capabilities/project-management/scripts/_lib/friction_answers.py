@@ -15,7 +15,12 @@ updated document's sentence from the change's author:
   about — its places and the files `friction.exclude` leaves out — at both ends
   of the change, through the backbone's discovery (`settings_change`). It
   returns the check's document and the friction settings the change alters —
-  or why they could not be read, which is never a pass.
+  or why they could not be read, which is never a pass. `checked(head, base)`
+  is the same run of the change check without the settings, for a reader that
+  needs only the answers. Given the pull request's `Source`, either first
+  fetches a head this clone lacks (`fetch_head`), from its branch, or for a
+  pull request from a fork from the ref its base repository keeps for it, on
+  the base's remote (`base_remote`).
 - `written(base)` runs the same check as the project's gate runs it, from the
   working directory with no `--head` and nothing fetched: the answers the
   documentation check reads, where a page's answer meets its obligation
@@ -40,10 +45,21 @@ updated document's sentence from the change's author:
   its line, and `unread_warning` is what a command says of it, with the form
   a sentence takes (`SENTENCE_FORM`). `given` is the ones the list shows, and
   `with_sentences` puts them into a list already written, for an edit that
-  derives nothing. `told` is what the person who authorises the merge is
-  told, as information: those sentences, the documents and the targets of a
-  link left out of date, and the friction settings changed; `counted_told`
-  counts them.
+  derives nothing. `listed_updated` names each document the list a
+  description carries marks `updated`, `unsaid_in` each of those with no
+  sentence, and `unsaid_message` is what a command says of one: the move to
+  review when it refuses, an edit when it warns (DEC-055 point 3).
+  `listed_head` is the head that list was derived at, which the move to review
+  compares with the pull request's head, and trusts alone to decide whether to
+  derive the list again. `updated_in` is the documents a list derived again
+  marks `updated`, so the move to review refuses exactly what the pull
+  request's head marks.
+  `unlisted` names each sentence on a document a derived list does not mark
+  `updated`, which the list never shows, and `unlisted_warning` is what the
+  commands that derive the list say of it. `told` is what the person who
+  authorises the merge is told, as information: those sentences, the
+  documents and the targets of a link left out of date, and the friction
+  settings changed; `counted_told` counts them.
 - `closing_reference` and `comment_delimiter` name a word of the list that
   must not be written: one that reads as a closing reference — the host's own
   parser would close an issue with it at merge, and nothing here can make that
@@ -53,7 +69,9 @@ updated document's sentence from the change's author:
   in an author's sentence.
 - `listed_paths(document)` names the files the list's words are on, from the
   file the change check gives each answer, an answer file or the artefact's own
-  (COR-062 point 1): the firm stop on a base that changed one (DEC-055 point 3).
+  (COR-062 point 1): the landing stops, and nothing overrides it, on a base
+  that changed one (DEC-055 point 3), and names the merge of the base
+  ([project-management:DEC-064-base-merge-named] point 1).
   `apart(document)` is each revalidation on the base's tip that a merge would
   leave answered apart from the change's own (`answered_apart_at_tip`, COR-062
   point 7), a line each, printed beside the list and never in it.
@@ -110,7 +128,7 @@ import signal
 import subprocess
 import tempfile
 from collections.abc import Iterable, Iterator, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -138,6 +156,8 @@ FORMER_HEADING = "## Friction answers"
 MARKER_START = "<!-- pkit-friction-answers:start"
 MARKER_END = "<!-- pkit-friction-answers:end -->"
 _START_LINE = re.compile(r"^<!-- pkit-friction-answers:start(?:\s[^\n]*)?-->$")
+#: The head a start marker names, `head=<oid>`.
+_LISTED_HEAD = re.compile(r"\shead=([0-9a-f]+)(?=\s|-->)")
 
 
 def _heading_line(*headings: str) -> re.Pattern[str]:
@@ -362,20 +382,114 @@ class Derivation:
         return bool(_mapping((self.document or {}).get("base")).get("outdated"))
 
 
-def derive(head: str, base: str) -> Derivation:
+@dataclass(frozen=True)
+class Source:
+    """Where a pull request's head is fetched from, where this clone lacks it: a
+    remote, and a ref in the repository it names. For a pull request from the base's
+    own repository, the remote its branch is pushed to and the branch. For one from a
+    fork, the base's remote, as `_refresh_base` resolves it, and the ref the base
+    repository keeps for the pull request: the fork is a repository this clone may
+    name no remote for."""
+
+    remote: str
+    ref: str
+
+
+def pull_request_source(
+    branch: str, number: int, *, cross_repository: bool, base: str, remote: str | None = None
+) -> Source:
+    """The `Source` of pull request `number`, opened from `branch` into the branch
+    `base`. From a fork: the base's remote (`base_remote`) and `refs/pull/<number>/head`.
+    Otherwise: `remote`, else the remote the branch is pushed to (`branch_remote`), and
+    the branch."""
+    if cross_repository:
+        return Source(base_remote(base), f"refs/pull/{number}/head")
+    return Source(remote or branch_remote(branch), f"refs/heads/{branch}")
+
+
+def base_remote(base: str) -> str:
+    """The remote the branch `base` is fetched from, as `_refresh_base` resolves it,
+    and `origin` where it resolves to no remote's branch, as `branch_remote` falls
+    back."""
+    try:
+        found = default_branch.check_base(base)
+    except default_branch.Unanswered:
+        return "origin"
+    remote = _remote_branch(found)
+    return remote[0] if remote is not None else "origin"
+
+
+def _remote_branch(found: default_branch.Base) -> tuple[str, str] | None:
+    """The remote and the branch of a base the backbone resolved to a remote-tracking
+    reference, or None for any other base."""
+    if found.resolved != "remote":
+        return None
+    remote, slash, branch = found.ref.partition("/")
+    return (remote, branch) if slash and remote and branch else None
+
+
+def branch_remote(branch: str) -> str:
+    """The remote `branch` is pushed to — its push remote, else the remote it
+    tracks — and `origin` when it names none, as start-work resolves a branch
+    (COR-054 point 2)."""
+    for atom in ("push:remotename", "upstream:remotename"):
+        remote = _git("for-each-ref", f"--format=%({atom})", f"refs/heads/{branch}").stdout
+        if remote.strip() and remote.strip() != ".":
+            return remote.strip()
+    return "origin"
+
+
+def has_commit(oid: str) -> bool:
+    """Whether this clone holds commit `oid`."""
+    return _git("cat-file", "-e", f"{oid}^{{commit}}").returncode == 0
+
+
+def fetch_head(head: str, source: Source) -> str | None:
+    """Fetch commit `head` from `source` where this clone lacks it: why it is still
+    missing, or None."""
+    if has_commit(head):
+        return None
+    proc = _git("fetch", "--quiet", source.remote, source.ref)
+    if has_commit(head):
+        return None
+    said = (proc.stderr or "").strip().splitlines()
+    return f"the head {head[:SHORT]} is not in this clone, and fetching {source.ref} from " + (
+        f"{source.remote} failed: {said[-1]}" if said else f"{source.remote} did not bring it"
+    )
+
+
+def derive(head: str, base: str, *, source: Source | None = None) -> Derivation:
     """The change check's document for commit `head` against the branch `base` —
-    the pull request's, named always — the base fetched first where it is a
-    remote's, and the friction settings the change alters.
+    the pull request's, named always — as `checked` gives it, and the friction
+    settings the change alters.
+
+    Never a pass on a guess: what makes `checked` unreadable, and settings that
+    cannot be read, make the derivation unreadable, with why."""
+    found = checked(head, base, source=source)
+    if found.document is None:
+        return found
+    settings = settings_change(found.merge_base, head)
+    if isinstance(settings, str):
+        return Derivation(head, problem=settings)
+    return replace(found, settings=settings)
+
+
+def checked(head: str, base: str, *, source: Source | None = None) -> Derivation:
+    """The change check's document for commit `head` against the branch `base`, the
+    base fetched first where it is a remote's, and `head` from `source` where this
+    clone lacks it. It reads no friction settings, for a reader that needs only the
+    answers.
 
     Run from the working directory with `--head`, which reads the commit from git
     objects. A resolver of a registered anchor kind runs only from a checkout at
     the commit, and the check refuses so elsewhere: on that refusal alone the
     check runs again from a temporary checkout of `head`, removed afterwards; any
-    other failure is kept as it is. Never a pass on a guess: a base that could
-    not be fetched, no document, a document of another version or without
-    `answers`, and settings that cannot be read all make the derivation
-    unreadable, with why."""
+    other failure is kept as it is. Never a pass on a guess: a base or a head that
+    could not be fetched, no document, and a document of another version or
+    without `answers` all make the derivation unreadable, with why."""
     problem = _refresh_base(base)
+    if problem is None and source is not None:
+        problem = fetch_head(head, source)
     if problem is not None:
         return Derivation(head, problem=problem)
     found = _run_check(head, base, cwd=None)
@@ -389,11 +503,7 @@ def derive(head: str, base: str) -> Derivation:
                 found = _run_check(head, base, cwd=path)
     if isinstance(found, _NoDocument):
         return Derivation(head, problem=found.why)
-    merge_base = str(_mapping(found.get("base")).get("commit") or "")
-    settings = settings_change(merge_base, head)
-    if isinstance(settings, str):
-        return Derivation(head, problem=settings)
-    return Derivation(head, document=found, answers=tuple(_entries(found)), settings=settings)
+    return Derivation(head, document=found, answers=tuple(_entries(found)))
 
 
 def refresh_base(base: str) -> str | None:
@@ -411,9 +521,10 @@ def _refresh_base(base: str) -> str | None:
         return str(exc)
     if found.resolved != "remote":
         return None
-    remote, slash, branch = found.ref.partition("/")
-    if not slash or not branch:
+    named = _remote_branch(found)
+    if named is None:
         return f"the base {found.ref} names no remote's branch to fetch"
+    remote, branch = named
     proc = _git("fetch", "--quiet", remote, branch)
     if proc.returncode != 0:
         said = (proc.stderr or "").strip().splitlines()
@@ -1368,6 +1479,11 @@ _SENTENCE_ITEM = re.compile(
 )
 #: The form a sentence takes, as a warning names it.
 SENTENCE_FORM = "- `path`: sentence"
+#: The form, as a command's warning or refusal tells the author to write it.
+_FORM_SAID = (
+    f'"{SENTENCE_FORM}", starting in the line\'s first column, the document in a code span '
+    "as the list names it"
+)
 #: A thematic break: three or more of one of `-`, `*`, `_`, spaces between.
 _BREAK = r" {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$"
 #: A line that ends the item above it: a list item of its own, at any depth, a
@@ -1517,15 +1633,83 @@ def unread_warning(item: Unread) -> str:
     takes."""
     return (
         f"line {item.line} of the description, under `{SENTENCES_HEADING}`, is not read as "
-        f'a sentence: "{item.text}" — write it as "{SENTENCE_FORM}", starting in the '
-        "line's first column, the document in a code span as the list names it"
+        f'a sentence: "{item.text}" — write it as {_FORM_SAID}'
     )
+
+
+def listed_updated(body: str) -> list[str]:
+    """Each document the list `body` carries marks `updated`, as the list names it
+    and in its order; none where `body` carries no list a command wrote."""
+    block = find(body)
+    return [] if block is None else list(dict.fromkeys(_region_updated(block)))
+
+
+def unsaid_in(body: str) -> list[str]:
+    """Each document the list `body` carries marks `updated` that `sentences` reads
+    no sentence for in `body`, as the list names it and in its order; none where
+    `body` carries no list a command wrote. Read from the description alone: the
+    list is for the head its start marker names (`listed_head`), so a document
+    updated since is not among them, and one among them may be updated no more."""
+    said = sentences(body)
+    return [location for location in listed_updated(body) if location not in said]
+
+
+def unsaid_message(location: str) -> str:
+    """What a command that refuses or warns says of `location`, a document the list
+    marks `updated` with no sentence: the document, and the form a sentence takes.
+    It says what the list marks, not that the change updates the document: the
+    list is the description's, and a later fix round may have answered the
+    document otherwise or dropped its revalidation."""
+    return (
+        f"{location} is marked updated in the description's list, and the description gives "
+        f"no sentence on what changed in it — under `{SENTENCES_HEADING}`, write one on a "
+        f"line of its own as {_FORM_SAID}"
+    )
+
+
+def updated_in(document: Mapping[str, Any]) -> list[str]:
+    """Each document the change check's `document` marks `updated`, as the list
+    names it and in its order. A target revisited by changing it is none: no
+    revalidation carries a sentence there."""
+    entries = (e for e in _entries(document) if e.get("answer") == UPDATED)
+    return list(dict.fromkeys(_read_entry(e).location for e in entries))
 
 
 def given(document: Mapping[str, Any], sentences_: Mapping[str, str]) -> dict[str, str]:
     """The sentences the list gives: each `updated` document's, by its location."""
-    updated = {_read_entry(e).location for e in _entries(document) if e.get("answer") == UPDATED}
+    updated = set(updated_in(document))
     return {key: words for key, words in sentences_.items() if key in updated}
+
+
+def unlisted(document: Mapping[str, Any], sentences_: Mapping[str, str]) -> list[str]:
+    """Each document `sentences_` gives a sentence for that `document` does not mark
+    `updated`, in the sentences' order: the list never shows such a sentence, so
+    the author removes it (DEC-055 point 3)."""
+    updated = set(updated_in(document))
+    return [key for key in sentences_ if key not in updated]
+
+
+def unlisted_warning(location: str, head: str, pr_number: int | None = None) -> str:
+    """What a command that derives the list at `head` says of `location`, a document
+    the author gives a sentence for that the list does not mark `updated`: the list
+    does not show it, and the edit that removes it."""
+    edit = "`edit-pr`" if pr_number is None else f"`edit-pr {pr_number} --body-file <file>`"
+    return (
+        f"{location} has a sentence under `{SENTENCES_HEADING}`, and the list at "
+        f"{head[:SHORT]} does not mark it updated, so the list does not show the sentence — "
+        f"remove it from the description with {edit}"
+    )
+
+
+def listed_head(body: str) -> str | None:
+    """The head the list `body` carries was derived at, as its start marker names
+    it; None where `body` carries no list a command wrote, or its marker names no
+    head."""
+    block = find(body)
+    if block is None:
+        return None
+    found = _LISTED_HEAD.search(_split(block)[0])
+    return found.group(1) if found is not None else None
 
 
 def unsaid(document: Mapping[str, Any], sentences_: Mapping[str, str]) -> list[str]:

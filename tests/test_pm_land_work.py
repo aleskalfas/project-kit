@@ -111,10 +111,21 @@ class _FakeGitHub:
     draft: bool = False
     state: str = "OPEN"
     mergeable: str = "MERGEABLE"
+    #: GitHub's `mergeStateStatus`; BEHIND refuses a merge, as a host that merges
+    #: only a branch up to date with its base does.
+    merge_state: str = "CLEAN"
+    #: How many readings of `mergeStateStatus` answer UNKNOWN, as GitHub answers
+    #: before it has worked the state out; the state is `merge_state` all the same.
+    unsettled: int = 0
+    #: The PR comes from a fork.
+    cross_repository: bool = False
     merge_commit: str = ""
     #: The base branch merges through a queue.
     queue: bool = False
     queued: bool = False
+    #: How many readings of the queue fail, the first ones; and how many were asked.
+    queue_unreadable: int = 0
+    queue_reads: int = 0
     #: Every reading fails once a merge has been asked for.
     unreadable_after_merge: bool = False
     comments: list[dict[str, Any]] = field(default_factory=list)
@@ -161,6 +172,9 @@ class _FakeGitHub:
             view = self._view()
             if "statusCheckRollup" in fields:
                 view["statusCheckRollup"] = self._rollup()
+            if "mergeStateStatus" in fields and self.unsettled:
+                self.unsettled -= 1
+                view["mergeStateStatus"] = "UNKNOWN"
             return _done(argv, json.dumps({f: view.get(f) for f in fields}))
         if argv[:2] == ["pr", "edit"]:
             self.body = Path(_option(argv, "--body-file") or "").read_text(encoding="utf-8")
@@ -220,7 +234,8 @@ class _FakeGitHub:
             "baseRefOid": self.base,
             "state": self.state,
             "mergeable": self.mergeable,
-            "isCrossRepository": False,
+            "mergeStateStatus": self.merge_state,
+            "isCrossRepository": self.cross_repository,
             "mergedAt": "2026-10-01T12:00:00Z" if merged else None,
             "author": self.author,
             "body": self.body,
@@ -240,7 +255,10 @@ class _FakeGitHub:
     # -- what the backbone's pull-request mechanic asks --
 
     def reading(self, pr_number: int, config: dict[str, Any]) -> Any:
+        self.queue_reads += 1
         if self.unreadable_after_merge and self.merges:
+            raise self.mq.Unreadable("HTTP 502")
+        if self.queue_reads <= self.queue_unreadable:
             raise self.mq.Unreadable("HTTP 502")
         return pull_request_backbone.reading(
             self.mq,
@@ -259,6 +277,8 @@ class _FakeGitHub:
             self.merges.append(argv)
             if _option(argv, "--match-head-commit") != self.head:
                 return _done(argv, returncode=1, stderr="Head branch was modified")
+            if self.merge_state == "BEHIND":
+                return _done(argv, returncode=1, stderr="Head branch is out of date")
             if "--auto" in argv:
                 self.queued = True
             elif not self.unreadable_after_merge:
@@ -408,7 +428,7 @@ class _Run:
             return fa.Coverage(full, head, True, inside=1)
         return fa.Coverage(full, head, False, outside=(f"after.txt ({head[:7]}: added)",))
 
-    def derive(self, head: str, base: str | None) -> Any:
+    def derive(self, head: str, base: str | None, *, source: Any = None) -> Any:
         """`friction_answers.derive`, answered from this world's change check."""
         self.derived.append((head, base))
         fa = self.land.friction_answers
@@ -1527,6 +1547,159 @@ def test_a_head_that_moves_between_the_gate_and_the_merge_request_merges_nothing
         f"merge: stopped — PR #{PR}'s head moved from {_short(pinned)} to "
         f"{_short(run.github.head)} before the merge. Nothing was merged; "
         f"`land-work {ISSUE}` checks and reviews the new head"
+    )
+
+
+def test_a_head_the_host_reads_as_behind_stops_at_the_checks_with_the_merge_to_make(
+    world, capsys
+) -> None:
+    """A host that merges only a branch up to date with its base reads the branch as
+    behind it: the run stops at the checks, before the review and the ready stop,
+    with the merge of the base to make (DEC-064 point 1)."""
+    run = world()
+    run.github.merge_state = "BEHIND"
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert run.invoked == [] and run.github.merges == []
+    assert out.splitlines()[-1] == (
+        f"ci: stopped — the host merges only a branch up to date with main, and reads "
+        f"PR #{PR} as behind it. Merge main into {BRANCH} (`git merge origin/main`), push, "
+        f"and run `land-work {ISSUE}` again"
+    )
+
+
+def test_a_base_that_merges_through_a_queue_is_not_stopped_at_the_checks(world, capsys) -> None:
+    """A queue builds the merge with the base itself, so a branch the host reads as
+    behind goes on to its review."""
+    run = world()
+    run.github.merge_state = "BEHIND"
+    run.github.queue = True
+    run.authorised(capsys=capsys)
+    assert run.invoked != []
+
+
+def test_a_queue_that_cannot_be_read_at_the_checks_is_said_and_the_run_goes_on(
+    world, capsys
+) -> None:
+    """Whether the base merges through a queue cannot be read: one line says so, the
+    run goes on to its review, and the merge step names the merge when the host
+    refuses it (DEC-064 point 2)."""
+    run = world()
+    run.github.merge_state = "BEHIND"
+    run.github.queue_unreadable = 1
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert (
+        f"  ci: PR #{PR} reads as behind main, and whether main merges through a queue could "
+        "not be read, so the run goes on: the merge step names the merge of main if the host "
+        "refuses the merge for it"
+    ) in out.splitlines()
+    assert run.invoked != []
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert out.splitlines()[-1].startswith(
+        "merge: stopped — the host merges only a branch up to date with main"
+    )
+
+
+def test_the_queue_is_read_once_while_the_checks_are_awaited(world, capsys) -> None:
+    """A PR read as behind a base that merges through a queue goes on, and the queue
+    is read once a run, not on every poll of the checks."""
+    run = world(checks=[_RUNNING, _RUNNING, _GREEN])
+    run.github.merge_state = "BEHIND"
+    run.github.queue = True
+    at_review: list[int] = []
+
+    def review_reads_the_head(argv: list[str]) -> bool:
+        return argv[:2] == ["pr", "view"] and argv[-1] == "headRefOid,baseRefOid"
+
+    run.github.before(review_reads_the_head, lambda: at_review.append(run.github.queue_reads))
+    run.authorised(capsys=capsys)
+    assert run.github._reads[run.github.head] >= 3
+    assert at_review == [1]
+
+
+def test_a_reading_not_settled_goes_on_and_the_merge_step_names_the_merge(world, capsys) -> None:
+    """GitHub answers UNKNOWN before it has worked the state out: the run goes on past
+    the checks, and where the host then refuses the merge of a head behind its base,
+    the merge step names the merge (DEC-064 point 2)."""
+    run = world()
+    run.github.merge_state = "BEHIND"
+    run.github.unsettled = 1
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert run.invoked != []
+    assert len(run.github.merges) == 1
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert out.splitlines()[-1] == (
+        f"merge: stopped — the host merges only a branch up to date with main, and reads "
+        f"PR #{PR} as behind it. Merge main into {BRANCH} (`git merge origin/main`), push, "
+        f"and run `land-work {ISSUE}` again"
+    )
+
+
+def test_a_merge_refused_on_a_head_behind_a_queued_base_names_no_merge(world, capsys) -> None:
+    """A queue builds the merge with the base itself, so a refused request on a head
+    read as behind names no merge at the merge step either, as at the checks."""
+    run = world()
+    run.github.queue = True
+
+    def behind() -> None:
+        run.github.merge_state = "BEHIND"
+
+    def review_reads_the_head(argv: list[str]) -> bool:
+        return argv[:2] == ["pr", "view"] and argv[-1] == "headRefOid,baseRefOid"
+
+    run.github.before(review_reads_the_head, behind)
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert run.github.state == "OPEN"
+    assert rc == run.land.EXIT_RETRY
+    assert out.splitlines()[-1].startswith("merge: not merged — ")
+    assert "git merge" not in out.splitlines()[-1]
+
+
+def test_a_fork_s_behind_stop_names_the_merge_from_the_base_s_remote(
+    world, capsys, monkeypatch
+) -> None:
+    """A PR from a fork: its branch's remote is the fork's, so the merge of the base
+    to make is named from the base's remote."""
+    run = world()
+    _git(run.work, "remote", "add", "fork", "../origin.git")
+    _git(run.work, "config", f"branch.{BRANCH}.pushRemote", "fork")
+    monkeypatch.setattr(run.land.friction_answers, "base_remote", lambda _base: "upstream")
+    run.github.merge_state = "BEHIND"
+    run.github.cross_repository = True
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert out.splitlines()[-1] == (
+        f"ci: stopped — the host merges only a branch up to date with main, and reads "
+        f"PR #{PR} as behind it. Merge main into {BRANCH} (`git merge upstream/main`), push, "
+        f"and run `land-work {ISSUE}` again"
+    )
+    # From the base's own repository, the branch's remote is the base's too.
+    run.github.cross_repository = False
+    _rc, out, _err = run.authorised(capsys=capsys)
+    assert "(`git merge fork/main`)" in out.splitlines()[-1]
+
+
+def test_a_merge_the_host_refuses_on_a_head_behind_its_base_names_the_merge(world, capsys) -> None:
+    """The base moved on after the checks: the host refuses the merge, and a run again
+    would fail the same way. The run stops at exit 1 with the merge of the base to
+    make (DEC-064 point 1), not exit 7."""
+    run = world()
+
+    def behind() -> None:
+        run.github.merge_state = "BEHIND"
+
+    def review_reads_the_head(argv: list[str]) -> bool:
+        return argv[:2] == ["pr", "view"] and argv[-1] == "headRefOid,baseRefOid"
+
+    run.github.before(review_reads_the_head, behind)
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert run.github.state == "OPEN"
+    assert len(run.github.merges) == 1
+    assert out.splitlines()[-1] == (
+        f"merge: stopped — the host merges only a branch up to date with main, and reads "
+        f"PR #{PR} as behind it. Merge main into {BRANCH} (`git merge origin/main`), push, "
+        f"and run `land-work {ISSUE}` again"
     )
 
 
@@ -2664,6 +2837,58 @@ def test_the_line_named_is_the_line_in_the_description_the_run_leaves(
     assert (left == before.split("\n").index(item) + 1) is current
     (warned,) = [line for line in out.splitlines() if "is not read as a sentence" in line]
     assert warned.startswith(f"  warn: line {left} of the description, ")
+
+
+@pytest.mark.parametrize("written", [[UPDATED_INSTALL, DEFERRED], []], ids=["a list", "no answers"])
+def test_a_sentence_on_a_document_the_list_does_not_mark_updated_is_warned_of(
+    world, capsys, written
+) -> None:
+    """The list never shows a sentence on a document it does not mark updated, a
+    deferred one here, or any where the change wrote no answers: a warning names
+    each, and the edit that removes it, before the run stops ready. Nothing is
+    refused (DEC-055 point 3)."""
+    run = world()
+    run.written = written
+    run.github.body = f"{_SAID}- `docs/cli.md`: The page drops the old flag.\n"
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    lines = out.splitlines()
+    head = _short(run.github.head)
+
+    def warning(location: str) -> str:
+        return (
+            f"  warn: {location} has a sentence under `## What changed in each updated "
+            f"document`, and the list at {head} does not mark it updated, so the list does not "
+            f"show the sentence — remove it from the description with `edit-pr {PR} "
+            "--body-file <file>`"
+        )
+
+    unlisted = ["docs/cli.md"] if written else ["docs/install.md", "docs/cli.md"]
+    assert [line for line in lines if "does not show the sentence" in line] == [
+        warning(location) for location in unlisted
+    ]
+    assert lines.index(warning("docs/cli.md")) < len(lines) - 1
+    assert lines[-1].startswith("ready: ")
+    assert "held for the sentence" not in lines[-1]
+
+
+def test_a_sentence_the_list_does_not_show_holds_a_run_authorised_up_front(world, capsys) -> None:
+    """The person authorised before the warning was shown, so the run stops ready, as
+    a `[person]` finding holds it, until the author removes the sentence (DEC-055
+    point 3). Once it is removed, the same command merges."""
+    run = world()
+    run.written = [UPDATED_INSTALL, DEFERRED]
+    run.github.body = f"{_SAID}- `docs/cli.md`: The page drops the old flag.\n"
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert run.github.state == "OPEN"
+    assert (
+        f"; held for the sentence on docs/cli.md, which the list does not show (above): "
+        f"remove it with `edit-pr {PR} --body-file <file>`, then run the command below again; "
+        f"merge with: pkit pm land-work {ISSUE} --yes --expect-head {run.github.head}"
+    ) in out.splitlines()[-1]
+    run.github.body = run.github.body.replace("- `docs/cli.md`: The page drops the old flag.\n", "")
+    assert run.authorised(capsys=capsys)[0] == run.land.EXIT_MERGED
 
 
 def test_a_sentence_edited_in_the_description_is_written_again(world, capsys) -> None:

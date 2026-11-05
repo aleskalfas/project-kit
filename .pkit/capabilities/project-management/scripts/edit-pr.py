@@ -30,10 +30,12 @@ list carried gives the sentence on what changed in it as the edited body's
 there is none; the check's words are carried unchanged. A sentence that
 reads as a closing reference or holds an HTML comment's delimiter is not
 copied: the list keeps the sentences it had, with a warning, and land-work
-refuses until it is reworded. Each item under that heading the commands
-cannot read — the document in bold, say, or with no code span — is a
-`warning` finding of the validation, naming its line and the form a
-sentence takes.
+refuses until it is reworded. Each `updated` document the list gives no
+sentence for is a `warning` finding of the validation, naming the document
+and the form a sentence takes: review-work refuses it, and edit-pr writes
+the edit (DEC-055 point 3). So is each item under that heading the commands
+cannot read — the document in bold, say, or with no code span — named by its
+line.
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/edit-pr.py 99 --append "Additional notes..."
@@ -352,6 +354,8 @@ def _compute_new_body(current_body: str, args: argparse.Namespace) -> str | None
 
 def _validate(*, title: str, body: str, titles: dict) -> list[Finding]:
     findings: list[Finding] = []
+    # Read from the body with the list, before it is set aside (DEC-055 point 3).
+    unsaid = friction_answers.unsaid_in(body)
     body = friction_answers.strip(body)  # the artefacts' words are never input (DEC-055)
     pattern = _pr_title_pattern(titles)
     if pattern and not re.match(pattern, title):
@@ -377,6 +381,10 @@ def _validate(*, title: str, body: str, titles: dict) -> list[Finding]:
                 "body.doc-impact",
                 "PR body is missing the `## Doc impact` section.",
             )
+        )
+    for location in unsaid:
+        findings.append(
+            Finding(SEVERITY_WARNING, "body.sentences", friction_answers.unsaid_message(location))
         )
     for item in friction_answers.unread(body):
         findings.append(

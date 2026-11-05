@@ -39,7 +39,9 @@ Inputs:
     document in a code span as the list names it — or says there is none,
     with a warning naming it. Each item under that heading it cannot read —
     the document in bold, say, or with no code span — draws a warning naming
-    its line and the form a sentence takes. A section the supplied body
+    its line and the form a sentence takes. Each sentence there on a document
+    the list does not mark `updated`, which the list never shows, draws a
+    warning naming the edit that removes it (DEC-055 point 3). A section the supplied body
     carries — written by a command or typed by hand, under that heading or
     the one an earlier run wrote — is dropped, with a warning. open-pr never
     refuses to open over it: a list it cannot derive, a branch not pushed, a word or a
@@ -595,6 +597,10 @@ def _friction_answers(branch: str, base: str, sentences: Mapping[str, str]) -> _
     derived = friction_answers.derive(head, base)
     if derived.document is None:
         return _left_out(derived.problem or "the change check gave no document")
+    # A sentence on a document the list does not mark updated: the list never
+    # shows it, so the author removes it; nothing is refused (DEC-055 point 3).
+    for location in friction_answers.unlisted(derived.document, sentences):
+        print(f"warn: {friction_answers.unlisted_warning(location, head)}", file=sys.stderr)
     count = friction_answers.documents(derived.answers)
     if not derived.listed:
         return _Answers(None, "none", derived.document)
@@ -679,12 +685,7 @@ def _fitting(body: str, answers: _Answers, versions: provenance.Versions) -> _An
 def _pushed_head(branch: str) -> tuple[str | None, str]:
     """The commit `branch`'s remote-tracking reference names — what the pull
     request opens at, not local HEAD, which may be ahead of it — or why none."""
-    remote = "origin"
-    for atom in ("push:remotename", "upstream:remotename"):
-        named = _git_out("for-each-ref", f"--format=%({atom})", f"refs/heads/{branch}")
-        if named and named != ".":
-            remote = named
-            break
+    remote = friction_answers.branch_remote(branch)
     oid = _git_out("rev-parse", "--verify", "--quiet", f"refs/remotes/{remote}/{branch}^{{commit}}")
     if not oid:
         return None, f"{remote}/{branch} names no commit — push the branch first"

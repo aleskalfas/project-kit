@@ -1,0 +1,252 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T211250Z-f74ab866.yaml
+      - 20261029T214542Z-efb6f11b.yaml
+      - 20261031T185157Z-7a2bd436.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+    revalidated:
+      at: 2026-11-05T10:02:29Z
+      outcome: unchanged
+      unchanged-because: Judged as merged with main. The requirement cites DEC-055 point 3 for the authorisation to merge staying the person's, and anchors COR-066 points 1 and 2 for proposals. Main's COR-066 point 5 has a new record's edits follow its acceptance, read by whoever authorises the change. This change adds review-work's refusal of a missing sentence, its --force fallback, and land-work's hold on a sentence the list does not show. Neither lets a command make a move a person holds without that person's authorisation, so it holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+    revalidated:
+      at: 2026-11-05T10:02:36Z
+      outcome: unchanged
+      unchanged-because: Judged as merged with main. Main's COR-066 point 5 has a new record's edits follow its acceptance in its change, and moves no issue. This change's review-work refuses a missing sentence, and stops where it cannot read the description or derive the list, all before any write, as validate-at-ready's checks do. transition-state.md's landing text concerns no move the use case describes. So step 7 and every other move stay as written.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+    revalidated:
+      at: 2026-11-05T10:02:42Z
+      outcome: unchanged
+      unchanged-because: Judged as merged with main. Step 8 prints each accepted record the change alters with the points it edits, the edits COR-066 point 5 has the merge authoriser read, and this change leaves that printing as it was. land-work's stops on a head the host reads as behind its base, and its hold of a run authorised up front on a sentence the list does not show, are paths steps 4 and 12 to 14 do not describe. Variants 9a and 9b still merge the base where the merge check fails or conflicts, two of the merges DEC-064 point 1 names. No step is made untrue.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/020-review/UC-080-check-answers.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+    revalidated:
+      at: 2026-11-05T10:02:49Z
+      outcome: unchanged
+      unchanged-because: Judged as merged with main. Main's COR-066 point 5 concerns a new record's edits and who reads them, not the answers docs-reviewer checks. This change has review-work refuse a missing sentence before review, with a --force fallback, and warn of a sentence the list does not show. Variant 5a's block finding still occurs, such as for a document that a head pushed after the move to review updated, or under --force. So every step holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+    revalidated:
+      at: 2026-11-05T10:02:51Z
+      outcome: unchanged
+      unchanged-because: Judged as merged with main. The journey takes up a Task and lands its change through review, which COR-066 point 5's edits after a record's acceptance leave as they were. Step 2 still needs the pull request review-work opens once each updated document has its sentence. The journey describes no merge of the base, so land-work's stops naming one change nothing in it.
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T013912Z-adb73078.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113029Z-9dec9cb8.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T145906Z-a3781d7a.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T152404Z-888b608a.yaml
+      - 20261029T155317Z-2d90650e.yaml
+      - 20261029T155559Z-74f6b0d1.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T160608Z-f0e5731a.yaml
+      - 20261029T190551Z-85ee9700.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T204639Z-57b1f9b1.yaml
+      - 20261029T204651Z-6eb49a72.yaml
+      - 20261029T212322Z-bf411b6a.yaml
+      - 20261029T213250Z-52102acd.yaml
+      - 20261029T213830Z-1305dbb8.yaml
+      - 20261029T230516Z-0e59ab68.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261031T010906Z-47833d43.yaml
+      - 20261031T013603Z-dccf51ad.yaml
+      - 20261031T014558Z-c26fa007.yaml
+      - 20261031T021353Z-44474827.yaml
+      - 20261031T185157Z-7a2bd436.yaml
+      - 20261101T232054Z-d8df47fb.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T114153Z-1c96ae08.yaml
+      - 20261104T114549Z-1aae0da9.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T144102Z-ac6bce95.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T090549Z-25167097.yaml
+      - 20261105T091216Z-b5483b71.yaml
+    revalidated:
+      at: 2026-11-05T10:02:54Z
+      outcome: unchanged
+      unchanged-because: Judged as merged with main. Main's change has step 3 of adding a core record say its named edits follow its acceptance, citing COR-066 points 1 and 5. This change gives the project-management README's bullet on where the sentences live review-work's refusal of a missing sentence. The guide's friction gate still sends the author's sentences to the description's heading, with open-pr writing the list and land-work writing it again, so both edits leave it true.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+    revalidated:
+      at: 2026-11-05T10:02:56Z
+      outcome: updated
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T143058Z-33fd32cd.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T214052Z-d9e0c8d3.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T224420Z-150fbc32.yaml
+      - 20261028T231033Z-db617c30.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261030T114612Z-ece11007.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+    revalidated:
+      at: 2026-11-05T10:02:58Z
+      outcome: updated
