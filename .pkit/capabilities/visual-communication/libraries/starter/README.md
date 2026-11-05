@@ -132,7 +132,7 @@ A block draws one item of a pattern, or stands alone where content places it.
 
 ### `code`
 
-- **Form:** code as a terminal or a file shows it, in a monospace type. It lies on a box with rounded corners, on its colour family's fill, under a head where the content gives one. Each line stands as written, never broken, so the block is as wide as its widest line.
+- **Form:** code as a terminal or a file shows it, in a monospace type. It lies on a box with rounded corners, on its colour family's fill, under a head where the content gives one. Each line stands as written, never broken, so the block is as wide as its widest line or its head.
 - **Fields:** `head`, optional, and `text`, required. `text` is a field of runs, its words `plain`, `prompt`, `command` and `comment`, `plain` the default.
 - **Options:** none.
 
