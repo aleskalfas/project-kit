@@ -1,0 +1,8 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-015 decides how a piece's drawn pages are seen as images, and the first
+  form of the reviewer that reads them (#2673), and point 1 of DEC-002 places
+  those images in the clone's local folder. The record designs ahead: the
+  command and the reviewer land in later pull requests, so no surface moves
+  yet.
