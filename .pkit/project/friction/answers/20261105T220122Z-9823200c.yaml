@@ -1,0 +1,83 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/domain-model/060-parallel-work.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T233109Z-431c3965.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+    revalidated:
+      at: 2026-11-05T22:01:22Z
+      outcome: unchanged
+      unchanged-because: "DEC-063 changes only point 8 and its rationale: the seat now asks for the verdicts once the checks the project names to start the review pass, and the rest run on beside the review. This view cites DEC-063 only for the builder agent, by points 1, 3, 4, 5 and 6, on the build command, the brief, the sandbox, how a build ends and who answers its questions. It says nothing of when the reviews start, of the merge gate or of a verdict, so what it says of the builder agent holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T205856Z-634ce6f0.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213757Z-6263a527.yaml
+    revalidated:
+      at: 2026-11-05T22:01:37Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces. 6c703c63 read UC-062's step 9 and its variants 9c, 9d and 12b: the description's list of answers went, the journey names no such list, and a closing reference is refused only in an author's sentence, so step 2's need for a closing keyword stands. 0a8bab69 read COR-066 point 2 reading what a change would land, which is not the head the merge is pinned to, so the postcondition's head stands. The two reach different passages, so the hand-off by the Task in Review, the keyword and that head hold together. This change gives UC-062 variant 4d, where the review starts beside checks still running, and a sentence on variant 7a. The journey states no order of checks and review, its variant 2a still rejoins on a verdict that requests changes, and the merge still ends at the head the gate judged."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213757Z-6263a527.yaml
+    revalidated:
+      at: 2026-11-05T22:01:56Z
+      outcome: unchanged
+      unchanged-because: Judged with the four answers it replaces. 2ce909e8 read batch-plan.md's rule on a record that serves one Task, COR-066 point 5 and COR-050 point 7's warning, and left the text as it was. d2872d86 then dropped the batch-plan.md anchor and the open question on review rounds, so nothing here rests on batch-plan.md any more, and COR-066 point 5 and that warning ask nothing of the use case. 6c703c63 reworded step 4, on when the worker takes in the default branch. 90d45a35 added the operator and five record anchors, and reworded step 6a. They reach separate lines, and none changes which merges the worker makes or the order of steps 3 to 6, so the text stands as one. This change starts the reviewers on the named checks on a run without --yes. Step 1 sends that run to UC-062 steps 2 to 10, which carry the order, and step 5's --yes run still waits for every check and keeps each verdict. The stop on a branch behind its base applies at both waits, and the guarantees on authorisation, the change check and a verdict's head did not move.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-013-build-and-land-next-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213757Z-6263a527.yaml
+    revalidated:
+      at: 2026-11-05T22:02:13Z
+      outcome: unchanged
+      unchanged-because: "Judged with the three answers it replaces. d2872d86 read UC-083 folding Tasks that share a file into one where it can, and ordering the rest through dependencies, and UC-089 dropping its open question on review rounds: the filed Tasks, ready once their Dependencies name no open issue, and the landed pull request still hold. 6c703c63 reworded step 2's need on a check judged to need the default branch, and moved DEC-064 point 4's citation to the next sentence. 90d45a35 reworded the first guarantee from a change to an edit. Neither moved a need or the rule on the merge authoriser, and all three reach separate passages, so they stand together. land-work.py now starts the reviewers before every check has passed on a run without --yes. The journey states no such order: it lands through UC-089, which defers to UC-062, and rests on the merge gate and the authorisation of a head, and neither moved."
