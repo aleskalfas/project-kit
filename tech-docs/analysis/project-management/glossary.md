@@ -79,7 +79,10 @@ TERM-audit-comment:
           - project-management:DEC-014
           - project-management:DEC-061#6
           - COR-001
+          - COR-002
           - COR-010
+          - COR-048#5
+          - COR-059#4
 TERM-authorisation:
   name: authorisation
   noun-forms: [authorisations]

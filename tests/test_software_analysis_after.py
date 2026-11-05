@@ -9,7 +9,8 @@ and RS-SAN-009 with its declared check:
 - **the check** — each producer resolves to a use case in force of its own analysis,
   the field and the words of *Preconditions* agree, and in a numbered area each
   precondition has a producer in no later area. It binds where RS-SAN-009 binds and
-  at its status: proposed as shipped, so it reports nothing unless a preview asks;
+  at its status: accepted as shipped (#1727), as errors; proposed, in a copy of `SAN`
+  that stands for the time before, it reports nothing unless a preview asks;
 - **the areas** — the stamp takes a numbered area, such as `010-develop`, whose
   number is no part of the id (RS-ANA-003);
 - **the words** — a precondition's opening, `**From UC-003:**`, is no label a
@@ -105,11 +106,18 @@ def _write(repo: AdopterRepo, rel: str, after: Any, lines: list[str] | None) -> 
 
 
 def _accepted(repo: AdopterRepo) -> None:
-    """RS-SAN-009 accepted in the adopter's copy of `SAN`, a fixture and not the
-    acceptance, and a set of the project's own through which `SAN` binds."""
+    """RS-SAN-009 accepted in the adopter's copy of `SAN`, as it ships (#1727), and a set
+    of the project's own through which `SAN` binds."""
     text = (repo.root / SAN_REL).read_text(encoding="utf-8")
     repo.write({SAN_REL: with_status(text, "RS-SAN-009", "accepted")})
     repo.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
+
+
+def _proposed(repo: AdopterRepo) -> None:
+    """RS-SAN-009 proposed in the adopter's copy of `SAN`, a fixture: `SAN` ships it
+    accepted (#1727), so the copy stands for the time before."""
+    text = (repo.root / SAN_REL).read_text(encoding="utf-8")
+    repo.write({SAN_REL: with_status(text, "RS-SAN-009", "proposed")})
 
 
 def _validate(repo: AdopterRepo, *args: str) -> dict[str, Any]:
@@ -148,7 +156,9 @@ def test_a_use_case_that_writes_no_after_fails_nothing(project: AdopterRepo) -> 
 
 def test_the_schema_holds_after_s_shape_whatever_the_rule_s_status(project: AdopterRepo) -> None:
     """One list of producers per precondition, each a use case's id or `environment`, and
-    never `environment` alone: the schema's, so an error with RS-SAN-009 proposed."""
+    never `environment` alone: the schema's, so an error with RS-SAN-009 proposed, in a
+    copy of `SAN` (`_proposed`)."""
+    _proposed(project)
     for after in ([["environment"]], [], [["UC-1"]], "UC-001", [[]]):
         _write(project, RELEASE, after, ["**From UC-002:** a change is checked."])
         document = _validate(project)
@@ -162,9 +172,10 @@ def test_the_schema_holds_after_s_shape_whatever_the_rule_s_status(project: Adop
 
 
 def test_proposed_the_check_reports_only_in_a_preview(project: AdopterRepo) -> None:
-    """As `SAN` ships it, RS-SAN-009 is proposed: the normal check reports nothing of
-    `after` and says so, and a preview, where the rule would bind, reports each departure
-    with `preview:`, never failing (DEC-001 point 1; COR-051 point 4)."""
+    """RS-SAN-009 proposed, in a copy of `SAN` (`_proposed`): the normal check reports
+    nothing of `after` and says so, and a preview, where the rule would bind, reports each
+    departure with `preview:`, never failing (DEC-001 point 1; COR-051 point 4)."""
+    _proposed(project)
     _write(project, CHANGE, [["UC-009"]], ["**From UC-009:** the system is developed."])
     document = _validate(project)
     assert _of_after(document) == []

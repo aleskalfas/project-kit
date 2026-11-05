@@ -7,6 +7,7 @@ other-actors:
   - core:ACT-merge-authoriser
   - core:ACT-ci-pipeline
   - core:ACT-ai-agent
+  - core:ACT-operator
 requirements:
   - REQ-040
   - REQ-041
@@ -58,6 +59,11 @@ pkit:
         - COR-068
         - project-management:DEC-063#1
         - ADR-073
+        - COR-028
+        - COR-039
+        - PRJ-004
+        - ADR-063
+        - ADR-034#1
       artefact:
         - ACT-worker-agent
         - REQ-040
@@ -74,6 +80,7 @@ pkit:
 - **Merge authoriser** (`core:ACT-merge-authoriser`): authorises the merge of one [head](../../../../core/glossary.md#term-head--head) at a time, and no [verdict](../../../glossary.md#term-verdict--verdict) stands in for that [authorisation](../../../glossary.md#term-authorisation--authorisation) ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
 - **CI pipeline** (`core:ACT-ci-pipeline`): runs the checks at each new head of the worker's [pull request](../../../../core/glossary.md#term-pull-request--pull-request).
 - **AI agent** (`core:ACT-ai-agent`): each [required reviewer](../../../glossary.md#term-required-reviewer--required-reviewer) whose verdict does not stand for the new head, such as after a conflict the worker resolved. Each such [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) reviews the new head again. A merge of the [base](../../../../core/glossary.md#term-base--base) without a conflict keeps every verdict ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). It is also each agent the [project](../../../../core/glossary.md#term-project--project) granted, which `fix-drift` starts to propose answers after the merge ([DEC-056 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)).
+- **Operator** (`core:ACT-operator`): is asked before a command changes a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:** **From [UC-084](UC-084-take-next-task.md):** The worker's [Task](../../../glossary.md#term-task--task) is in Review, and the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 
@@ -108,7 +115,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no build command exists, so the worker makes the merge in its own session. DEC-063 point 1 decides that only a recorded build adds a commit to the Task's branch, and #2287 tracks it.
 
-- **6a.** Another agent's pull request landed an [anchor](../../../../core/glossary.md#term-anchor--anchor) on what the worker's [change](../../../../core/glossary.md#term-change--change) modifies, so the [change check](../../../../core/glossary.md#term-change-check--change-check) fails on the merge. The system names each document the check fails on, and merges nothing ([DEC-055 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#6-the-merge-as-it-would-land)). The worker merges the default branch into the Task's branch through the build command ([DEC-063 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-063-task-builder.md#1-the-build-command-is-the-only-way-a-workers-task-is-built)), settles each [finding](../../../../core/glossary.md#term-finding--finding), and pushes. The path rejoins at step 5, or at step 1 where the worker edits a document itself.
+- **6a.** Another agent's pull request landed an [anchor](../../../../core/glossary.md#term-anchor--anchor) on what the worker's [change](../../../../core/glossary.md#term-change--change) modifies, so the [change check](../../../../core/glossary.md#term-change-check--change-check) fails on the merge. The system names each document the check fails on, and merges nothing ([DEC-055 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#6-the-merge-as-it-would-land)). Through the build command ([DEC-063 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-063-task-builder.md#1-the-build-command-is-the-only-way-a-workers-task-is-built)), the worker merges the default branch into the Task's branch, settles each [finding](../../../../core/glossary.md#term-finding--finding), and pushes. The path rejoins at step 5, or at step 1 where the worker edits a document itself.
 
 > [!WARNING]
 > **Not built yet:** no build command exists, so the worker makes the merge and settles the findings in its own session. DEC-063 point 1 decides that only a recorded build adds a commit to the Task's branch, and #2287 tracks it.
