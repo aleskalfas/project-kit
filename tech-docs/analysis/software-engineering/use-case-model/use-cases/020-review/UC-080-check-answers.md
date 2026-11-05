@@ -29,6 +29,9 @@ pkit:
         - project-management:DEC-032#D4
         - project-management:DEC-055#3
         - project-management:DEC-055#5
+        - project-management:DEC-065#1
+        - project-management:DEC-065#2
+        - project-management:DEC-065#4
         - COR-064#4
         - COR-013
         - COR-017
@@ -68,7 +71,7 @@ pkit:
 - Where the project opts out of the `docs-reviewer`, and chooses no other reviewer of the answers, the answers stand checked by their writer alone. COR-050 point 3 accepts that limit.
 - Where the merge gate does not require the `docs-reviewer`, the code-review panel checks no answer. An unclassified pull request changing only documents is such a case (project-management DEC-032 point D1). COR-050 point 3 does not name a pull request the merge gate leaves without the `docs-reviewer`. #1732 asks a record to decide whether such a pull request's answers are checked.
 - The change check lists every answer the change wrote, in plain words, in its last section, "Answers written in this change". It flags each answer the change was not asked for (COR-050 points 3 and [12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
-- The merge authoriser is told each sentence on an updated artefact, and each artefact left out of date, as `project-management:UC-062` describes ([project-management DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
+- The merge authoriser is told each sentence on an updated artefact, and each artefact left out of date, as `project-management:UC-062` describes ([project-management DEC-065 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-065-answers-read-from-check.md#4-what-the-landing-command-prints)).
 
 **Trigger:** The merge gate requires the `docs-reviewer` for a pull request, and project-management runs the reviewer on the pull request's head.
 
@@ -78,7 +81,7 @@ pkit:
 2. The reviewer reads the answers from the check's last section, "Answers written in this change", never from an account the change's author wrote. The artefacts the check asked about are those its findings name above the list.
 3. For each `unchanged` answer the check asked for, the reviewer reads the artefact and the diff of each anchor the list names as modified. It judges whether the reason holds against the change.
 4. Next come the deferrals the change writes or rewords on an artefact the check asked about. For each, the reviewer judges whether its reason says truly why the artefact is left out of date. It reads the state of the follow-up issue the reason names, which must be open.
-5. For each artefact revalidated as `updated`, the reviewer reads the sentence under `## What changed in each updated document` in the pull request's description. It reads the sentence as the commands that write the list of answers read it ([project-management DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)). It checks the sentence against the diff of that artefact.
+5. For each artefact revalidated as `updated`, the reviewer reads the sentence under `## What changed in each updated document` in the pull request's description. It reads the sentence as the project-management commands read it ([project-management DEC-065 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-065-answers-read-from-check.md#1-the-description-carries-no-list)). It checks the sentence against the diff of that artefact.
 6. For each revisit of a link target that owes an answer, the reviewer reads the diff of the trigger fields the list names as modified. The reviewer also reads what the link target stands on at the head. It judges each revisit by its outcome ([COR-050 point 16](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)):
    - **Updated in this change:** the changed link target contradicts nothing the modified trigger fields now say.
    - **Still accurate:** the revisit entry's reason says truly why the link target still stands against the change.
