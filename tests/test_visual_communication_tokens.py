@@ -224,7 +224,11 @@ def test_a_role_the_brand_does_not_export_or_a_mode_the_axes_lack_is_refused(bra
 
 
 def test_the_brand_names_the_font_files_it_holds(brand: Any) -> None:
-    assert brand.families() == ("Source Sans Pro", "Source Sans Pro Semibold")
+    assert brand.families() == (
+        "Source Code Pro",
+        "Source Sans Pro",
+        "Source Sans Pro Semibold",
+    )
     assert brand.font_file("Source Sans Pro") == TEST_BRAND / "fonts" / "SourceSansPro-Regular.otf"
     with pytest.raises(env.MissingFont, match="`Comic Sans`"):
         brand.font_file("Comic Sans")

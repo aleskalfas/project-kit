@@ -28,3 +28,6 @@ roles:
   # The typography of a strong run in a card's text: the shared strong type, the body's
   # size and line height in a heavier weight, so a strong run keeps the line it lies in.
   starter.type.strong: {type: typography, default: '{type.strong}'}
+  # The typography of the code block's text: the shared type of code, in a monospace
+  # family, so the columns of a terminal's lines and of a file's text stay in line.
+  starter.type.code: {type: typography, default: '{type.code}'}
