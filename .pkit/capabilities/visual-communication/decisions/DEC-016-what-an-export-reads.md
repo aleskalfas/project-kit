@@ -1,7 +1,7 @@
 ---
 id: DEC-016
 title: An export reads what can change its files, and a stand-in measures what no file holds
-status: proposed
+status: accepted
 date: 2026-11-05
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
