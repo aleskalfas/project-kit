@@ -1,0 +1,39 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  The whole-repository check's `over-broad` warning counts how often an anchor
+  asks its artefact for an answer (#2636; COR-050 point 7). Of the last 100
+  commits on the first-parent line, it warns of an anchor that flagged its
+  artefact in more than half of them. The first bar is not judged on a line
+  with fewer, as in a young repository or a shallow clone. Of an artefact
+  asked in more than 10 of them for a revalidation that left it as it was, it
+  also warns of the anchors behind those asks. They are named by their share
+  of them, the largest first, a tie going to the anchor declared first, until
+  the asks in which only named anchors asked are more than half of those asks. Such
+  an ask is a commit in which an anchor flagged the artefact, there before
+  it, and the artefact's next revalidation on the line, in that commit or a
+  later one, left its content as it was. A revalidation writes a value of
+  `at` the artefact's answers never carried, so an answer moved, an answer
+  file renamed and a value written back are none. A flag no revalidation
+  follows yet, owed or deferred, is not counted. Path, record, artefact and
+  registered anchors are all counted. An artefact that owes no answer, a dead
+  anchor, an anchor whose kind nothing resolves and one whose resolver gave
+  no answer are not. The share of tracked files a path anchor matches is no
+  longer read. The first bar gives a finding for each anchor over it, whose
+  message gives the counts and the kind of narrower anchor to use. Where
+  nothing names less, it offers removing the anchor or splitting what it
+  stands on or the artefact. The second bar gives one finding for the
+  artefact in the human views of `check --all` and `explain`. It gives the
+  artefact's asks, then the named anchors with their shares, the largest
+  first, each with the narrower anchor where one exists, and ends with one
+  line of advice for the artefact. The summary line counts it once, as
+  `over-broad`. The JSON documents of `check --all` and `explain` still list
+  each named anchor as a finding of its own, those on one artefact together
+  after its other findings, in the order the bar names them, and the count of
+  `over-broad` in `counts` counts each named anchor. They add two keys to each
+  finding: `bar`, `flags` or `asks` for an over-broad one, and `share`, a
+  second bar's finding's share of its artefact's asks, each `null` for any
+  other finding. Their `schema_version` stays 1. COR-050 point 7 names the
+  second ground.
