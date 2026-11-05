@@ -23,16 +23,17 @@ itself. It reads git and writes nothing.
   no, with why: the branch was rebased, or `since` reached it only through a
   merge.
 - **What each commit on the line contributes.**
-  - *A merge of the base* — a merge commit whose other parents are in the
+  - *A merge of the base* — a merge commit whose second parent is in the
     base tip's history — contributes only what differs from git's clean merge
-    of its parents (`git merge-tree --write-tree`). Where that merge
+    of its two parents (`git merge-tree --write-tree`). Where that merge
     conflicts, the commit is held against git's merge taking each side of
     every conflict in a file's text (`-X ours`, `-X theirs`), and must differ
     from both only in answer files the change adds. A conflict that is not in
     a file's text — a file changed on one side and removed on the other, say —
     is a change outside them.
   - *Any other commit* contributes its own diff against its first parent: a
-    merge of anything but the base included.
+    merge of anything but the base included, and a merge of three or more
+    parents.
 - **Inside the change's answer files.** A file that differs lies inside only
   when it is an answer file the base, where the head left it, does not hold, and
   on the commit's side a regular file. Its path is judged as the tree writes it,
@@ -179,13 +180,8 @@ def run_since(
     steps: list[Step] = []
     inside: set[str] = set()
     outside: list[Outside] = []
-    tip = base.tip
-
-    def in_the_base(parent: str) -> bool:
-        return contributions.is_ancestor(target_root, parent, tip)
-
     for commit, parents in reversed(line):
-        prior = contributions.prior_state(target_root, parents, settled=in_the_base)
+        prior = _prior_state(target_root, parents, base.tip)
         steps.append(Step(commit, prior.merged))
         for path, why in _contribution(target_root, held, commit, prior):
             if why is not None:
@@ -238,6 +234,17 @@ def _is_answer_path(path: str) -> bool:
 
 
 # --- one commit ----------------------------------------------------------------------
+
+
+def _prior_state(root: Path, parents: Sequence[str], tip: str) -> contributions.PriorState:
+    """The state before a commit with `parents`. Only a merge of two parents can be a merge
+    of the base, so what `all_inside` counts stays as its document's version says: a merge
+    of more is read against its first parent, as any other commit is."""
+    if len(parents) > 2:
+        return contributions.PriorState((parents[0],))
+    return contributions.prior_state(
+        root, parents, settled=lambda parent: contributions.is_ancestor(root, parent, tip)
+    )
 
 
 def _contribution(
