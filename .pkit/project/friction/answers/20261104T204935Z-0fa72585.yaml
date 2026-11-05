@@ -1,0 +1,874 @@
+answers:
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T013912Z-adb73078.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113029Z-9dec9cb8.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T145906Z-a3781d7a.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T152404Z-888b608a.yaml
+      - 20261029T155317Z-2d90650e.yaml
+      - 20261029T155559Z-74f6b0d1.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T160608Z-f0e5731a.yaml
+      - 20261029T190551Z-85ee9700.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T204639Z-57b1f9b1.yaml
+      - 20261029T204651Z-6eb49a72.yaml
+      - 20261029T212322Z-bf411b6a.yaml
+      - 20261029T213250Z-52102acd.yaml
+      - 20261029T213830Z-1305dbb8.yaml
+      - 20261029T230516Z-0e59ab68.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261031T010906Z-47833d43.yaml
+      - 20261031T013603Z-dccf51ad.yaml
+      - 20261031T014558Z-c26fa007.yaml
+      - 20261031T021353Z-44474827.yaml
+      - 20261031T185157Z-7a2bd436.yaml
+      - 20261101T232054Z-d8df47fb.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T114153Z-1c96ae08.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-04T20:49:35Z
+      outcome: updated
+  - artefact: tech-docs/analysis/living-docs/requirements/constraints/REQ-025-never-fetch-source.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T152635Z-e55266a8.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+    revalidated:
+      at: 2026-11-04T20:49:44Z
+      outcome: unchanged
+      unchanged-because: The sources test module only leaves over-broad findings out of one whole-repository assertion. Nothing in living-docs fetches a source, and the test that verifies it is as it was.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-006-gate-merges.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020925Z-e1e051d0.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+    revalidated:
+      at: 2026-11-05T09:12:45Z
+      outcome: unchanged
+      unchanged-because: ADR-055 point 5 adds an over-broad anchor to the findings that never hold the tracking issue open, and lists there the answered-apart debt ADR-068 point 6 already left out. Making merges wait on the change check, which this use case describes, is untouched.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-operator.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261031T010906Z-47833d43.yaml
+      - 20261031T013603Z-dccf51ad.yaml
+    revalidated:
+      at: 2026-11-04T20:49:51Z
+      outcome: unchanged
+      unchanged-because: The Running checks section only adds an over-broad anchor to the tracking issue's kinds that hold nothing open. Who the operator is, and whom CONTRIBUTING calls the operator, are as before.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-anchor
+    read:
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+    revalidated:
+      at: 2026-11-05T09:12:02Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. An anchor is still a declared link to what makes its artefact true, and a dead one is still an error, as the entry says.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-ci-pipeline.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+    revalidated:
+      at: 2026-11-05T09:12:08Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning of the whole-repository check, on the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. The check still fails nothing, so the pipeline runs it after merges and on a schedule as the actor says.
+  - artefact: tech-docs/analysis/core/domain-model/060-changes-review-and-releases.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044308Z-41eae20f.yaml
+      - 20261102T232455Z-c8529620.yaml
+    revalidated:
+      at: 2026-11-05T09:12:11Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning of the whole-repository check, on the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. How a change is compared with its base and reviewed before it lands, which this view describes, is untouched.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/020-write/UC-044-write-page.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+    revalidated:
+      at: 2026-11-05T09:12:15Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. What the use case takes from point 7, that a dead source anchor is reported and failed where a change adds it, still holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+    revalidated:
+      at: 2026-11-05T09:12:16Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning of the whole-repository check, on the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. Reviewing a pull request and landing it on the change check, as the use case runs them, are untouched.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+    revalidated:
+      at: 2026-11-05T09:12:18Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning of the whole-repository check, on the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. Each merge is still judged by the change check at its own head, as the use case says.
+  - artefact: tech-docs/analysis/core/domain-model/070-artefacts-and-friction.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044308Z-41eae20f.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T132647Z-b5b3a09e.yaml
+      - 20261102T133129Z-a00dd54f.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261104T120714Z-e6d6c881.yaml
+    revalidated:
+      at: 2026-11-05T09:12:20Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning, never failed, of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. What the view says of point 7, dead anchors and the excluded paths, holds, and it names no warning of a broad anchor.
+  - artefact: .pkit/rule-sets/ops.md#RS-OPS-020
+    revalidated:
+      at: 2026-11-05T09:12:22Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning, which owes no answer, of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. Who writes the answers a change owes, and who decides any other, is as the rule says.
+  - artefact: .pkit/agents/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T144833Z-029e5110.yaml
+    revalidated:
+      at: 2026-11-05T09:12:25Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning, which owes no answer, of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. What an agent may write with the friction writers, and who checks it, is as the README says.
+  - artefact: .pkit/capabilities/doc-examples/README.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T152454Z-63ed08af.yaml
+      - 20261027T155443Z-e9552da8.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T114612Z-ece11007.yaml
+      - 20261031T033803Z-982f5fe6.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+    revalidated:
+      at: 2026-11-05T09:12:29Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. That a page's anchors flag it only when what they name changes, which the contract rests on, is untouched.
+  - artefact: .pkit/capabilities/living-docs/pages.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T000914Z-bb10d180.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+    revalidated:
+      at: 2026-11-05T09:12:32Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. What a page holds, and how its source anchors are flagged, narrowed and found dead, is as the reference says.
+  - artefact: .pkit/capabilities/living-docs/spaces.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T000914Z-bb10d180.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+    revalidated:
+      at: 2026-11-05T09:12:34Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. Where the spaces lie, and which rules their pages follow, is untouched.
+  - artefact: .pkit/capabilities/living-docs/validation.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+    revalidated:
+      at: 2026-11-05T09:12:36Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning of the core's whole-repository check, on the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. What living-docs validation reads, fails on and warns of is its own, and none of it changes.
+  - artefact: docs/capabilities/living-docs/030-write-a-page.md
+    read:
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+    revalidated:
+      at: 2026-11-05T09:12:41Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. Writing a page and anchoring what it rests on, and a source name no file captures being a dead anchor, are as the page says.
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T121046Z-6806ad50.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+    revalidated:
+      at: 2026-11-05T09:12:50Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning, which owes no answer, of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. The answers the engineer writes for its change, and those it leaves to a person, are as the reference says.
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023128Z-752860d8.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T155551Z-be632892.yaml
+      - 20261030T161257Z-5352f58f.yaml
+      - 20261030T164324Z-d7667894.yaml
+      - 20261030T231942Z-8fe86054.yaml
+      - 20261030T235059Z-0bb410f6.yaml
+      - 20261031T003126Z-7b1634e4.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261101T154833Z-45114068.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261101T232054Z-d8df47fb.yaml
+      - 20261102T121046Z-6806ad50.yaml
+      - 20261102T123725Z-50894971.yaml
+      - 20261102T130909Z-658c2c39.yaml
+      - 20261102T133609Z-a3edfa39.yaml
+      - 20261102T135947Z-57ea5a73.yaml
+      - 20261102T140536Z-ff2d2c9f.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261102T214446Z-127dec5e.yaml
+      - 20261102T214752Z-f7faed46.yaml
+      - 20261102T215329Z-f5d52865.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T000914Z-bb10d180.yaml
+      - 20261103T001352Z-256282c0.yaml
+      - 20261103T003147Z-452efc9b.yaml
+      - 20261103T014145Z-5f96d643.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T113759Z-36cfe195.yaml
+      - 20261104T121552Z-b67de55f.yaml
+    revalidated:
+      at: 2026-11-05T09:12:52Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning of the whole-repository check, on the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. That a change answers the documents whose anchors it touches, as the README shows, is untouched.
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+    revalidated:
+      at: 2026-11-05T09:12:55Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning, which owes no answer, of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. The answers the agent writes, and those it leaves to you, are as the guide says.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-dead-anchor
+    read:
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T09:12:04Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was, and the check's code counts those asks. A dead anchor still resolves to nothing and is still an error.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-whole-repository-check
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261102T130630Z-ec50771c.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-04T21:51:43Z
+      outcome: unchanged
+      unchanged-because: For its over-broad warning the check now counts the recent commits in which an anchor flagged its artefact, and the asks that left the artefact as it was. It still compares every artefact at HEAD with its revalidation point, and never fails.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-deferral-point
+    read:
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-04T21:51:44Z
+      outcome: unchanged
+      unchanged-because: The history module gains a listing of the commits on the first-parent line, and a test of whether a shallow clone cut it short, both for the over-broad count. Deferral points are found as before.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-revalidation-point
+    read:
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-04T21:51:46Z
+      outcome: unchanged
+      unchanged-because: The history module gains a listing of the commits on the first-parent line, and a test of whether a shallow clone cut it short, both for the over-broad count. Revalidation points are found and measured from as before.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-005-reading-writes-nothing.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T152404Z-888b608a.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T09:12:06Z
+      outcome: unchanged
+      unchanged-because: The report tests change the text of what clears an over-broad anchor, and pin the `bar` and `share` keys of explain's document. The over-broad count reads git's history and the answers its commits wrote, keeps its caches in memory, and writes nothing in the project.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-019-reading-document-versioned.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T211920Z-6d6ac91d.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T09:12:09Z
+      outcome: unchanged
+      unchanged-because: Every finding gains two keys, `bar` and `share`, null on all but an over-broad one, in the documents of the whole-repository check and of explain. A key added keeps the schema version, so each stays at 1. The body script groups over-broad findings by `bar`, and still refuses version 2.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-004-missing-answer-never-clean.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - moved-97da208f5979.yaml
+    revalidated:
+      at: 2026-11-04T21:51:51Z
+      outcome: unchanged
+      unchanged-because: The anchor-kinds tests change their over-broad tests, and leave over-broad findings out of the others' assertions, which assert as much as before. A resolver's missing answer is still never read as naming nothing.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-006-command-time-bound.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - moved-4695bf771ed9.yaml
+    revalidated:
+      at: 2026-11-04T21:51:53Z
+      outcome: unchanged
+      unchanged-because: The anchor-kinds tests change their over-broad tests, and leave over-broad findings out of the others' assertions, which assert as much as before. The over-broad count runs no resolver per commit, and the time-bound tests hold.
+  - artefact: tech-docs/analysis/core/requirements/constraints/REQ-007-offline-same-answer.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261030T101221Z-1eafbd45.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - moved-c65929ef6b08.yaml
+    revalidated:
+      at: 2026-11-04T21:51:55Z
+      outcome: unchanged
+      unchanged-because: The anchor-kinds tests change their over-broad tests, and leave over-broad findings out of the others' assertions, which assert as much as before. The count reads HEAD's resolver answers and runs no command of its own.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-020-dead-anchor-error.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T211920Z-6d6ac91d.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T09:12:13Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was, which the check's code and tests count. Both checks still report every dead anchor, and judge its artefact on its other anchors.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261029T204651Z-6eb49a72.yaml
+      - 20261031T011427Z-45248979.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-04T21:51:58Z
+      outcome: unchanged
+      unchanged-because: The skill's only edit says that an anchor of any kind can be over-broad, alone or with its artefact's other anchors. What the agent proposes, and a person confirms, is as before.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/010-describe/UC-074-free-uncited-ids.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-04T21:52:00Z
+      outcome: unchanged
+      unchanged-because: The skill's only edit says that an anchor of any kind can be over-broad, alone or with its artefact's other anchors. Freeing ids nothing cites is untouched.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-04T21:52:01Z
+      outcome: unchanged
+      unchanged-because: The skill's only edit says that an anchor of any kind can be over-broad, alone or with its artefact's other anchors. Describing an existing project, its stamps and its covered surface run as before.
+  - artefact: .pkit/decisions/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023310Z-317632ec.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T09:12:24Z
+      outcome: unchanged
+      unchanged-because: The change caches a body's headings and slugs, keyed on the whole input, so a record's points read as before. COR-050 point 7 adds only a warning of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was, which this README does not describe.
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T114612Z-ece11007.yaml
+      - 20261031T011427Z-45248979.yaml
+      - 20261101T134626Z-e7f1b78f.yaml
+      - 20261101T145814Z-cbb4f94d.yaml
+      - 20261101T150931Z-cb546c1b.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T162642Z-9490cb38.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T09:12:27Z
+      outcome: unchanged
+      unchanged-because: The skills' only edit says in analysis-author that an anchor of any kind can be over-broad. COR-050 point 7 adds only a warning of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was, and the README states neither.
+  - artefact: .pkit/schemas/backbone-files.md
+    read:
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T09:12:31Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 and the CLI reference now warn of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was, and the answer reader gains a reading of what one commit wrote, for that count. This page describes no over-broad warning, and what exclusion spares and which schema binds an answer file hold.
+  - artefact: .pkit/capabilities/living-docs/agent.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T09:12:37Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 and the CLI sections the agent reads change only the over-broad warning, and what an excluded artefact shows. The documents it reads gain two keys, `bar` and `share`, on each finding, and keep version 1, so it reads them as before.
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T214030Z-7cd17739.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T120747Z-7de02ad2.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T144053Z-34ba002b.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T09:12:39Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 and the CLI sections the README rests on change only the over-broad warning, and what an excluded artefact shows. The documents it reads gain two keys, `bar` and `share`, on each finding, and keep version 1, and the documentation check reads its stale pages and surface as before.
+  - artefact: docs/capabilities/living-docs/README.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T09:12:53Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds only a warning of the anchors behind most of the many changes that ask one artefact for a revalidation that leaves its content as it was. Explain shows that warning as one finding for the artefact, gives each finding the `bar` and `share` keys, and shows no over-broad anchor under an excluded artefact. That explain names the commits behind a stale page holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-answer-file
+    read:
+      - 20261103T183525Z-1aa84fc0.yaml
+    revalidated:
+      at: 2026-11-04T23:38:18Z
+      outcome: unchanged
+      unchanged-because: The answer reader gains one reading, whether a commit wrote a revalidation of an artefact, for the whole-repository check's over-broad count. What an answer file is, where it lies and what it holds are as the entry says.
+  - artefact: .pkit/schemas/data-binding.md
+    read:
+      - 20261104T121552Z-b67de55f.yaml
+    revalidated:
+      at: 2026-11-04T23:39:28Z
+      outcome: unchanged
+      unchanged-because: The answer reader gains one reading, whether a commit wrote a revalidation of an artefact, for the over-broad count. Answer files keep their location, fields and schema, and the one module still reads them for both checks and every writer.
+  - artefact: docs/capabilities/living-docs/050-fix-a-stale-page.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T09:12:43Z
+      outcome: unchanged
+      unchanged-because: The explain section adds the `bar` and `share` keys to each finding of its document, and drops over-broad anchors from what an excluded artefact shows. Fixing a stale page from explain's output, which names the anchor that changed and the commits behind it, is as the page says.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T09:12:46Z
+      outcome: unchanged
+      unchanged-because: The change alters the over-broad warning, which is no debt. ADR-055 point 5 lists it, and the answered-apart debt ADR-068 point 6 already left out, among the findings that never hold the tracking issue open. Resolving stale and deferred debt runs as the use case says.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261101T123506Z-dc6ee532.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T09:12:48Z
+      outcome: unchanged
+      unchanged-because: The change alters the whole-repository check's over-broad warning. ADR-055 point 5 lists it, and the answered-apart debt ADR-068 point 6 already left out, among the findings that never hold the tracking issue open. The change check a delivered change answers is untouched.

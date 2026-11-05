@@ -45,8 +45,10 @@ pkit:
         - COR-050
         - COR-051
         - COR-053#3
+        - COR-053#4
         - COR-053#8
         - COR-054#3
+        - COR-055#3
         - COR-056
         - COR-062
         - COR-068
@@ -999,18 +1001,19 @@ Defined in [TERM-package-metadata](../glossary.md#term-package-metadata--package
 
 **Why:** What a [component](../glossary.md#term-component--component) adds to the [backbone](../glossary.md#term-backbone--backbone) must be declared on purpose, not found by scanning its files ([COR-021](../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)). A scan would let a renamed file reshape the commands others rely on, without a word (COR-021).
 
-Package metadata is the file a component ships that declares its [version](../glossary.md#term-version--version), its ranges and what it adds to the backbone. It may add places, types, [roles](../glossary.md#term-role--role), commands and [validators](../glossary.md#term-validator--validator). The `package.yaml` of `software-analysis` declares the glossary as a [place](../glossary.md#term-place--place).
+Package metadata is the file a component ships that declares its [version](../glossary.md#term-version--version), its ranges and what it adds to the backbone. It may add places, [artefact types](../glossary.md#term-artefact-type--artefact-type), [roles](../glossary.md#term-role--role), commands and [validators](../glossary.md#term-validator--validator) ([COR-055 point 3](../../../../.pkit/decisions/core/COR-055-validation.md#3-a-component-joins-by-naming-a-command)). The `package.yaml` of `software-analysis` declares the glossary as a [place](../glossary.md#term-place--place).
 
 **Attributes:**
 
 - the component's name, kind and version, and its ranges: on the backbone, and on other [capabilities](../glossary.md#term-capability--capability) ([COR-017](../../../../.pkit/decisions/core/COR-017-capability-pattern.md), [COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md))
 - its commands (COR-021)
 - the [connection points](../glossary.md#term-connection-point--connection-point) it defines, and its [connections](../glossary.md#term-connection--connection) to those it plugs into ([COR-053 point 3](../../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality))
-- its places, and its [artefact types](../glossary.md#term-artefact-type--artefact-type) ([COR-050 point 1](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts), [COR-056 point 2](../../../../.pkit/decisions/core/COR-056-artefact-types.md#2-who-declares-it))
+- its places, and its artefact types ([COR-050 point 1](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts), [COR-056 point 2](../../../../.pkit/decisions/core/COR-056-artefact-types.md#2-who-declares-it))
 
 **Relations:**
 
 - A component ships it (COR-017).
+- Its `depends-on` connections are copied into it from each [process](../glossary.md#term-process--process)'s definition by a command ([COR-053 point 4](../../../../.pkit/decisions/core/COR-053-connection-points.md#4-depends-on-is-generated-never-hand-written)).
 - It is no [manifest](../glossary.md#term-manifest--manifest): a manifest is what the [project](../glossary.md#term-project--project) recorded when it installed the component.
 
 **States:** None.
@@ -1225,7 +1228,10 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
 - [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
 
-**Loaded file:** None.
+**Loaded file:**
+
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
 
 **Rules index:**
 

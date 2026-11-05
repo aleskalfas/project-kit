@@ -246,7 +246,7 @@ TERM-changeset-guard:
 TERM-completion:
   name: completion
   status: active
-  definition: "state that first install or a transition of the backbone records last, after all else it writes, naming the version it reached"
+  definition: "state that first install or a version transition of the backbone records last, after all else it writes, naming the version it reached"
   pkit:
     friction:
       anchors:
@@ -601,7 +601,7 @@ TERM-friction-mode:
   name: friction mode
   noun-forms: [friction modes]
   status: active
-  definition: "setting of the backbone configuration, `warning` by default or `enforcing`, saying whether the change check reports its findings and passes, or fails on them"
+  definition: "backbone configuration setting, `warning` by default or `enforcing`, saying whether the change check only reports its findings or fails on those COR-050 point 12 names"
   pkit:
     friction:
       anchors:
@@ -1108,7 +1108,7 @@ TERM-project-owned-content:
 TERM-propagation:
   name: propagation
   status: active
-  definition: "operation that writes the methodology's files into a project verbatim, at the recorded versions or a transition's target, over whatever stands at those paths"
+  definition: "operation that writes the methodology's files into a project verbatim, at the recorded versions or a version transition's target, over whatever stands at those paths"
   pkit:
     friction:
       anchors:
@@ -1430,7 +1430,7 @@ TERM-seed-path:
   name: seed path
   noun-forms: [seed paths]
   status: active
-  definition: "project-owned location the methodology declares with a template, created from it at first install and at each transition of the backbone where it is missing"
+  definition: "project-owned location the methodology declares with a template, created from it at first install and at each backbone version transition where it is missing"
   pkit:
     friction:
       anchors:
@@ -1443,7 +1443,7 @@ TERM-seed-path:
 TERM-seeding:
   name: seeding
   status: active
-  definition: "operation that creates a declared seed path from its template where the path is missing, at first install and at each backbone transition"
+  definition: "operation that creates a declared seed path from its template where the path is missing, at first install and at each backbone version transition"
   pkit:
     friction:
       anchors:
@@ -1621,7 +1621,7 @@ TERM-trigger-field:
 TERM-validation:
   name: validation
   status: active
-  definition: "check of a project's own files against the invariants its records own, which installed components join through validators, failing on one severity alone"
+  definition: "check of a project's state against the invariants its records own, which installed components join through validators, failing on one severity alone"
   pkit:
     friction:
       anchors:
@@ -3011,7 +3011,7 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#rule-set).
 
-**Example:** `ANA` is project-kit's rule set for its analysis. Its scope selects the analysis by type, and it inherits `WRITE@2` and `software-analysis:SAN@1`.
+**Example:** `ANA` is project-kit's rule set for its analysis. Its scope selects the analysis by type, and it inherits `WRITE@2` and `software-analysis:SAN@2`.
 
 **Distinctions:**
 

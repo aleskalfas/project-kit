@@ -46,6 +46,8 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/foundations/roles.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
         - .pkit/capabilities/visual-communication/libraries/**/*.yaml
+        - .pkit/capabilities/visual-communication/libraries/neutral/neutral.resolver.json
+        - .pkit/capabilities/visual-communication/libraries/neutral/tokens/*.tokens.json
         - tests/visual_communication_project.py
         - tests/test_visual_communication_pipeline.py
         - tests/test_visual_communication_layout.py
@@ -161,7 +163,7 @@ The location holds four folders: `libraries/`, the library folder; `pieces/`, on
 | `libraries/<library>/<version>/roles.yaml` | `roles` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | `libraries/<library>/<version>/notation.yaml` | `notation` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | `libraries/<library>/<version>/components/<component>.yaml` | `component` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
-| a brand's token files, Resolver document and fonts | none: DTCG, or a font's own format | the brand's owner |
+| a brand's token files, Resolver document and fonts | none: DTCG, or a font's own format | the brand's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | `pieces/<piece>/piece.yaml` | `piece` | a person; `pkit visual render` rewrites its `lock` alone |
 | `pieces/<piece>/content.<language>.yaml` | `content` | a person |
 | `pieces/<piece>/components/<component>.yaml` | `component` | a person, or a script of the project's own (DEC-001 point 8) |
@@ -526,7 +528,7 @@ Where either version cannot be read with its bases, or the later one cannot read
 
 A *brand* is a library of kind `brand`: it holds values (DEC-001 point 5). It keeps them as design tokens in the DTCG format, version 2025.10, and its modes as one Resolver document (DEC-004 point 1). The capability reads the subset of DTCG below, and refuses the rest. The test brand's `library.yaml` is shown under [`library.yaml`](#libraryyaml).
 
-No brand ships with the capability. A project writes its own, and keeps it in its library folder as it keeps any library ([The library folder](#the-library-folder)).
+The capability ships one brand to start from ([The neutral brand](#the-neutral-brand)). A project may write its own, and keeps it in its library folder as it keeps any library ([The library folder](#the-library-folder)).
 
 ### Token files
 
@@ -654,6 +656,18 @@ An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* 
 - **A brand varies an axis** through a modifier of its Resolver document. It may leave out an axis it does not vary. It adds no axis of its own, and changes no default.
 - **A value axis** changes only colours. A mode of a value axis that changes another value fails.
 - **A piece** chooses the modes it is drawn in under its `modes`.
+
+### The neutral brand
+
+The capability ships `neutral`, a brand to start from, so a project can draw before it writes a brand of its own. Its version being built lies at `.pkit/capabilities/visual-communication/libraries/neutral/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is version 1.0.0, of kind `brand`, needing release 0.1.0, and not yet released, so it may change in any release of the capability.
+
+`pkit visual add neutral` copies it whole to `libraries/neutral/1.0.0/`, and lists it with `source: {kind: shipped}`, `released: false` ([What the location holds](#what-the-location-holds)). A piece then names it as `brand: neutral` ([`piece.yaml`](#pieceyaml)).
+
+- **Its values.** It gives every shared role a value in each of the four combinations of the shared axes ([Keys of combinations](#keys-of-combinations)). Each pair the foundations declare reaches its level in all four.
+- **Its look.** Greys, with a blue accent. The colour families keep their hues in dark and at high contrast.
+- **The libraries it names.** It builds on the foundations alone, so the starter draws at its defaults ([`roles.yaml`](#rolesyaml)), and a project need not hold the starter to use it.
+- **Its open roles.** `open` is empty, so a brand built on it can change no value. A project that wants other values writes its own brand.
+- **Its fonts.** Source Sans Pro draws the body, and its semibold the headings and strong text, each weight a family of its own. Source Code Pro draws code. Each file lies unchanged in the version's `fonts/`, beside its licence ([Fonts](#fonts)).
 
 ## Notations
 

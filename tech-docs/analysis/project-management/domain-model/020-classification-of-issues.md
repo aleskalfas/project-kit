@@ -167,7 +167,7 @@ A substrate map is a file of the project's own. It binds each [classification ax
 
 **Relations:**
 
-- It binds each classification axis it names, and the state, to one carrier (DEC-036 point 1).
+- It binds each classification axis it names to one carrier, or marks the axis unsupported. Where it names the issue state, it binds that state the same way (DEC-036 point 1).
 - An axis is on the project's board only where the map binds the axis there ([DEC-062 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#1-the-flag-says-only-that-a-board-exists)).
 
 **States:** None.

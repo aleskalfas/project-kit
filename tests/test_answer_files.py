@@ -30,6 +30,7 @@ from tests.friction_documents import (
     Timeline,
     document,
     friction_config,
+    without_over_broad,
 )
 from tests.shipped_rule_sets import without_shipped_rule_sets
 
@@ -118,7 +119,11 @@ def _answers(result: fr.RepositoryCheck, location: str = GUIDE) -> Mapping[str, 
 
 
 def _kinds(result: fr.RepositoryCheck) -> list[tuple[str, str | None]]:
-    return [(f.kind.value, None if f.anchor is None else f.anchor.value) for f in result.findings]
+    """(kind, anchor) per finding, the over-broad anchors left out (`without_over_broad`)."""
+    return [
+        (f.kind.value, None if f.anchor is None else f.anchor.value)
+        for f in without_over_broad(result.findings)
+    ]
 
 
 # --- the folder ---------------------------------------------------------------------
@@ -325,7 +330,8 @@ def test_an_artefact_whose_block_holds_no_answer_is_read_from_its_answer_file(
 
     changed = timeline.commit("change the CLI", {"src/cli/main.py": "print('v2')\n"})
     result = _check(timeline)
-    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in result.findings] == [
+    found = without_over_broad(result.findings)
+    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in found] == [
         ("stale", changed)
     ]
 
@@ -375,7 +381,8 @@ def test_a_value_written_back_keeps_its_first_point(timeline: Timeline) -> None:
     )
     result = _check(timeline)
     assert _points(result) == [first]
-    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in result.findings] == [
+    found = without_over_broad(result.findings)
+    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in found] == [
         ("stale", changed)
     ]
 
@@ -649,7 +656,8 @@ def test_a_deferral_in_an_answer_file_covers_its_anchor_until_it_changes_again(
 
     again = timeline.commit("change the CLI again", {"src/cli/main.py": "print('v3')\n"})
     result = _check(timeline)
-    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in result.findings] == [
+    found = without_over_broad(result.findings)
+    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in found] == [
         ("stale", again),
         ("deferred", deferred),
     ]
@@ -679,7 +687,8 @@ def test_a_deferral_moved_out_of_the_block_keeps_its_point(timeline: Timeline) -
         },
     )
     result = _check(timeline)
-    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in result.findings] == [
+    found = without_over_broad(result.findings)
+    assert [(f.kind.value, f.origin.sha if f.origin else None) for f in found] == [
         ("deferred", deferred)
     ]
 

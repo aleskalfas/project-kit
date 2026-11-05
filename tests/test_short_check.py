@@ -906,6 +906,6 @@ def test_the_tests_that_read_the_repository_s_answers_carry_the_mark() -> None:
         ),
         (
             "test_software_analysis_rule_set.py",
-            "test_the_judgement_rules_ship_proposed_declaring_no_check",
+            "test_the_judgement_rules_ship_accepted_declaring_no_check",
         ),
     } <= marked

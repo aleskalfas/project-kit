@@ -26,9 +26,11 @@ pkit:
     anchors:
       path:
         - .pkit/capabilities/project-management/scripts/review-pr.py
+        - .pkit/capabilities/project-management/scripts/review-work.py
         - .pkit/capabilities/project-management/scripts/land-work.py
         - .pkit/capabilities/project-management/scripts/done-work.py
         - .pkit/capabilities/project-management/scripts/_lib/pr_review.py
+        - .pkit/capabilities/project-management/scripts/_lib/review_mode.py
         - .pkit/capabilities/project-management/scripts/_lib/required_reviewers.py
         - .pkit/capabilities/project-management/scripts/_lib/review_contributions.py
         - .pkit/capabilities/project-management/scripts/_lib/review_opt_outs.py

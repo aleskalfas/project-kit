@@ -279,7 +279,7 @@ Defined in [TERM-task](../glossary.md#term-task--task).
 
 **Why:** The lowest structural level of planning is the unit of work that lands as one [change](../../core/glossary.md#term-change--change), or that a completed close ends instead. A Task is that unit ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
-A Task is an [issue](../glossary.md#term-issue--issue) for one unit of implementation work. One [pull request](../../core/glossary.md#term-pull-request--pull-request) delivers that work, or a completed close ends it where the work is no pull request (DEC-006). Its body says these:
+A Task is an [issue](../glossary.md#term-issue--issue) for one unit of work. One [pull request](../../core/glossary.md#term-pull-request--pull-request) delivers that work, or a completed close ends it where the work is no pull request (DEC-006). Its body says these:
 
 - what changes
 - how the change is checked

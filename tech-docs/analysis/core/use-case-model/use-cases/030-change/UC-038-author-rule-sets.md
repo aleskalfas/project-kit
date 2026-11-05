@@ -71,7 +71,7 @@ pkit:
 6. The developer runs `pkit validate`. Its `rule-sets` pass checks each set's schema and the join between its data and its sections. It checks the ids, the origins, the successors and what each set inherits too (COR-051 points 2, 3, [5](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically) and 7).
 7. The developer runs `pkit rule-sets reach`. The [system](../../../glossary.md#term-system--system) answers which accepted rules bind on each artefact, and through which sets. It names each rule that an [inheritance pin](../../../glossary.md#term-inheritance-pin--inheritance-pin) behind its set holds back (COR-051 point 7).
 8. The developer runs `pkit rule-sets reach --preview`, which answers as if every proposed rule were accepted. It marks what holds only under the preview, and [validation](../../../glossary.md#term-validation--validation) never reads that output.
-9. The developer commits the rule set. Its rules stay proposed until the merge authoriser accepts them ([UC-040](UC-040-accept-through-review.md)).
+9. The developer commits the rule set. Its rules stay proposed until they are accepted, as [UC-040](UC-040-accept-through-review.md) describes.
 
 **Variants:**
 
@@ -98,7 +98,7 @@ pkit:
 - **6h.** A part of a rule that the set declares under `checks` names a check that is not there. Validation reports it without failing, and that part goes back to whoever judges the rest of the rule ([COR-051 point 2](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#2-a-rule-set-is-a-collection-of-artefacts)).
 - **7a.** The developer passes `--at <rev>`. The [system](../../../glossary.md#term-system--system) answers for that commit's state, read from the commit's objects, and checks nothing out.
 
-**Postconditions:** The [project](../../../glossary.md#term-project--project) holds a [rule set](../../../glossary.md#term-rule-set--rule-set) of its own that [validation](../../../glossary.md#term-validation--validation) passes. It inherits each [method rule set](../../../glossary.md#term-method-rule-set--method-rule-set) it extends at a major the project reviewed, and leaves each one unedited. The accepted rules it inherits bind on the [artefacts](../../../glossary.md#term-artefact--artefact) its scope selects. Each new [rule](../../../glossary.md#term-rule--rule) of its own is proposed, and binds nothing until the merge authoriser accepts it.
+**Postconditions:** The [project](../../../glossary.md#term-project--project) holds a [rule set](../../../glossary.md#term-rule-set--rule-set) of its own that [validation](../../../glossary.md#term-validation--validation) passes. It inherits each [method rule set](../../../glossary.md#term-method-rule-set--method-rule-set) it extends at a major the project reviewed, and leaves each one unedited. The accepted rules it inherits bind on the [artefacts](../../../glossary.md#term-artefact--artefact) its scope selects. Each new [rule](../../../glossary.md#term-rule--rule) of its own is proposed, and binds nothing until it is accepted.
 
 **Minimal guarantees:**
 

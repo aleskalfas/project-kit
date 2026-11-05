@@ -114,10 +114,12 @@ A slug is a word: a lowercase letter, then lowercase letters, digits and hyphens
 
 An anchor says *if this changes, check me*. Anchor what makes the artefact true, and nothing broader:
 
-- **`--path <glob>`** — the code that embodies it: the entry point and the files that do the behaviour, not a whole tree. An anchor matching more than half the tracked files is reported as over-broad, because it would make every change a revalidation.
+- **`--path <glob>`** — the code that embodies it: the entry point and the files that do the behaviour, not a whole tree.
 - **`--record <id>`** — a decision it relies on: an architecture decision, a capability's decision, a project record or a core record. For a use case, that is each record it rests on and each record that answers it. The anchor runs from the analysis only. Records carry no drivers: a record never anchors an analysis artefact, not even the use case it was made to meet, so no cycle runs between the two (DEC-001 point 11).
 - **An architecture view** that realises a use case, where the project keeps one: `--path` on the view's file. Where a place holds the view, write an artefact anchor on it instead. A view never anchors the analysis back.
 - **The analysis's own artefact anchors are the stamp's.** A use case anchors to its actor and each other actor it involves, and a journey to its actor and to the use cases of its steps and its `relies-on`. Each also anchors to the requirements it lists in `requirements`. A requirement anchors to its `actors` and to the requirements it `refines`. A domain-model view anchors to the terms its `explains` lists, and to no code. So a changed actor flags its use cases, journeys and requirements, and a changed term the view that explains it. A changed use case flags the journeys that pass through it or rely on it. A changed requirement flags the requirements that refine it, and the use cases and journeys that list it. Never write them by hand.
+
+**An anchor of any kind can be over-broad.** One that asks its artefact for an answer too often, alone or with the artefact's other anchors, is warned of as `over-broad`, since revalidations asked that often risk being answered blindly. `pkit friction check --all` gives the counts, and suggests what names less.
 
 **Quote the code you describe.** When a use case's step names a command, a flag, a function or a message, write it in backticks. What an artefact quotes from the code it anchors to is how a revalidation tells a change that leaves the description true from one that removes what it says — the resolver agent's first reading of a flagged artefact rests on it.
 
@@ -132,11 +134,11 @@ Analysis written first lets an agent invent what the system must do, and everyth
 - **Existing behaviour:** code the artefact anchors with `--path`, which already does what the item says. Code shows what the system does, never how well, so it sources no value a requirement's `measure` sets.
 - **A quoted decision:** the words of the person who decided, quoted in the artefact, with their name and the date. Quote a requirement's in its *Rationale* or *Imposed by*, and a guarantee's beside it. A goal holds one sentence, so quote its decision under a heading of your own after the last part, such as `## Sources`, and name the goal in plain words. The check never reports a heading of your own. Where the project closes the kind's labels, it reports a bold label of your own, so write none there.
 
-A source covers only what it bears out, so a requirement's sources together cover what its `statement` asks and any value its `measure` sets. Nothing else is a source: not the need a goal states, and not a proposed record. A *Rationale* or an *Imposed by* counts once it is filled, so write in it the reason the person who decides or a record gives, never one you supply. Where you find no source, do not write the item. Ask the person who decides, and quote the answer. `SAN`'s `RS-SAN-007` asks the same. While it is proposed, it binds nothing.
+A source covers only what it bears out, so a requirement's sources together cover what its `statement` asks and any value its `measure` sets. Nothing else is a source: not the need a goal states, and not a proposed record. A *Rationale* or an *Imposed by* counts once it is filled, so write in it the reason the person who decides or a record gives, never one you supply. Where you find no source, do not write the item. Ask the person who decides, and quote the answer. `SAN`'s `RS-SAN-007` asks the same. It binds through a rule set of the project's own pinned at `SAN@2`.
 
 ### Use the glossary's terms
 
-Each artefact you write uses a concept of the domain only where a term of the glossary defines it, and names the concept by that term's name. A term's definition does the same. `SAN`'s `RS-SAN-008` asks it, and its *How* says what counts. While it is proposed, it binds nothing.
+Each artefact you write uses a concept of the domain only where a term of the glossary defines it, and names the concept by that term's name. A term's definition does the same. `SAN`'s `RS-SAN-008` asks it, and its *How* says what counts. It binds through a rule set of the project's own pinned at `SAN@2`.
 
 - **No term yet.** Stamp the term first (`term.md`), then use the concept.
 - **One name.** Never name a defined concept by another word, a name the term replaces included. Never use a term's name in another meaning, unless the term tells that meaning apart from its own.

@@ -24,6 +24,7 @@ pkit:
         - .pkit/capabilities/living-docs/scripts/new.py
         - .pkit/capabilities/living-docs/scripts/_lib/stamp.py
         - .pkit/capabilities/living-docs/scripts/validate.py
+        - .pkit/capabilities/living-docs/scripts/_lib/mentions.py
         - .pkit/capabilities/living-docs/scripts/_lib/spaces.py
         - .pkit/capabilities/living-docs/scripts/_lib/formats.py
         - .pkit/capabilities/living-docs/scripts/_lib/sources.py
