@@ -1,0 +1,9 @@
+component: doc-examples
+kind: patch
+custom:
+  category: Changed
+body: >
+  A run of the console examples spends less time watching the repository
+  (#2681). It lists every path of the repository after each command, and that
+  listing now takes about a sixth of the time on Linux and a quarter on macOS.
+  What it lists, what it compares and what it reports are unchanged.

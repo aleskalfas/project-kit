@@ -100,7 +100,7 @@ Steps and variants are **only ever added**, never renumbered or removed: journey
 - **A new step** takes a number higher than every number of its use case, even when it goes between two steps. The path keeps its order, and no number moves.
 - **A new variant** takes a letter after every letter of its step.
 - **A step that no longer happens** stays in place, under its number. A variant does the same, under its letter.
-- **The check.** `pkit analysis check-numbers` compares each use case with the same use case where your branch left its base, the default branch unless you name another, and fails on a step or a variant renumbered or removed. It fails only where the append-only rule, `RS-SAN-002`, is accepted and binds. While that rule is proposed, run it with `--preview`: it reports what it would fail, and never fails.
+- **The check.** `pkit analysis check-numbers` compares each use case with the same use case where your branch left its base, the default branch unless you name another, and fails on a step or a variant renumbered or removed. It fails only where the append-only rule, `RS-SAN-002`, binds.
 
 `requirements` is the source of the use case's requirement anchors. To change it, edit it and those anchors together. The check names the anchors to write when they differ. A use case in force never lists a withdrawn requirement. So the change that withdraws one takes it off each list, with its anchor.
 

@@ -212,9 +212,7 @@ def _draw(project: pl.Project, results: Results, lost: list[seam.Loss]) -> dict[
     name = project.piece.name
     previews: dict[str, str] = {}
     for language, key, drawn in pl.drawn(project, results, "svg"):
-        for index, page in enumerate(drawn.pages, start=1):
-            number = f".{index}" if len(drawn.pages) > 1 else ""
-            previews[f"{name}.{language}.{key}{number}.svg"] = page.svg
+        previews.update(pl.preview_files(name, language, key, drawn.pages))
         lost.extend(loss for loss in drawn.losses if loss not in lost)
     return previews
 

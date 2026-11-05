@@ -43,6 +43,8 @@ MISSING = f"{PIECE_FOLDER}/produced/square/record.yaml#produced.square"
 # A word with no place to break, wider than the figure: its text overflows its box.
 LONG_WORD = "Unbreakable" * 40
 
+BRAND_FONT = "visual/libraries/test-brand/1.0.0/fonts/SourceSansPro-Regular.otf"
+
 
 @pytest.fixture(autouse=True)
 def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
@@ -95,6 +97,14 @@ def test_without_json_it_lists_the_findings_and_exits_1_when_one_fails(tmp_path:
     lines = shown.stdout.splitlines()
     assert lines[0].startswith("1 piece(s) in `visual`")
     assert f"  error   {MISSING}  [produced-record-missing]" in lines
+
+
+def test_a_font_file_that_cannot_be_read_fails_as_a_missing_font_does(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    (root / BRAND_FONT).write_bytes(b"not a font")
+    [found] = [f for f in document(root)["findings"] if f["label"] == "font-missing"]
+    assert found["severity"] == "error"
+    assert "cannot be read" in found["message"]
 
 
 def test_a_piece_whose_findings_do_not_fail_exits_0(tmp_path: Path) -> None:

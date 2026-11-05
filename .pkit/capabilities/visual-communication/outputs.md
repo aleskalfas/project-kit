@@ -6,6 +6,7 @@ pkit:
     anchors:
       path:
         - .pkit/capabilities/visual-communication/package.yaml
+        - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/export.py
         - .pkit/capabilities/visual-communication/scripts/produce.py
@@ -22,6 +23,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/values.py
         - .pkit/capabilities/visual-communication/scripts/_lib/keys.py
         - .pkit/capabilities/visual-communication/scripts/_lib/code.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/before_after.py
         - .pkit/capabilities/visual-communication/scripts/_lib/checks.py
         - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/__init__.py
@@ -59,6 +62,7 @@ pkit:
         - visual-communication:DEC-008#5
         - visual-communication:DEC-011
         - visual-communication:DEC-012
+        - visual-communication:DEC-013#5
         - visual-communication:DEC-015#1
         - visual-communication:DEC-015#2
         - visual-communication:DEC-015#3
@@ -75,6 +79,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#shapes
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
+        - .pkit/capabilities/visual-communication/files.md#the-lock
 ---
 
 # What is made from a piece
@@ -156,7 +161,7 @@ The `svg` renderer draws a scene as SVG files: one for each page, each language 
 
 ### Previews
 
-A *preview* is a render for a person to look at, which `pkit visual render` draws. It takes no version number, and is never an export (DEC-006 point 7). The previews of a piece lie in `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`, a folder local to the clone, of which no file is committed (DEC-002 point 1; [The clone's local folder](files.md#the-clones-local-folder)). Each is named `<piece>.<language>.<key>.svg`, such as `flow.en.colour-scheme.dark.svg`, where the key names the combination of modes ([Keys of combinations](files.md#keys-of-combinations)). A piece of more than one page adds the page's number, from 1: `<piece>.<language>.<key>.<n>.svg`.
+A *preview* is a render for a person to look at, which `pkit visual render` draws. It takes no version number, and is never an export (DEC-006 point 7). The previews of a piece lie in `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`, a folder local to the clone, of which no file is committed (DEC-002 point 1; [The clone's local folder](files.md#the-clones-local-folder)). Each is named `<piece>.<language>.<key>.svg`, such as `flow.en.colour-scheme.dark.svg`, where the key names the combination of modes ([Keys of combinations](files.md#keys-of-combinations)). A piece of more than one page adds the page's number, from 1: `<piece>.<language>.<key>.<n>.svg`. The scenes `pkit visual add` draws both ways take the same names ([The clone's local folder](files.md#the-clones-local-folder)).
 
 ### What the SVG renderer loses
 
@@ -392,7 +397,7 @@ out: web/brand.css
 | `prefix` | optional: a name that opens every name the code writes |
 | `accept-losses` | optional: the losses a person accepted ([Accepting a loss](#accepting-a-loss)) |
 
-- **The lock is the declaration's own.** A person moves it on purpose, and no command moves it, so the code changes only when the declaration changes (DEC-005 point 7).
+- **The lock is the declaration's own.** A person moves it on purpose, and no command moves it (DEC-005 point 7). So the code changes only when the declaration changes, or when the person names the declaration to `pkit visual add`. Naming it lets the command replace a copy not yet released that the lock names, under the same number ([The lock](files.md#the-lock), DEC-013 point 5). The run that leaves the copy prints the difference in the code first.
 - **What the code holds:** the document of values under the lock: every token the brand exports, and every other role of each library of components the lock names, at the brand's value or at its default (DEC-008 point 5), in every combination of the brand's axes, at the versions the lock names. A library's role that has no value under the brand is left out. Code that reads a library's role names that library's major in its lock, since the library promises its names by major. A brand built on a base is read over the base the lock names. The code follows no piece's modes.
 - **Where `out` may not lie:** outside the repository, under `.pkit/`, under a hidden folder, or in the location's library folder, its `code/` folder or its `pieces/` folder. Nor may it be reached through a link, or be a folder.
 - **Committing the code** is the project's choice, as for any file its build writes. Its record goes with it (DEC-006 point 4).

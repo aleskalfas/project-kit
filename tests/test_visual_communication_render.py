@@ -51,6 +51,7 @@ script, svg, seam, framing, files, reading, pl, checks, libraries = load(
 PREVIEWS = ".pkit/capabilities/visual-communication/project/local/previews/flow"
 FINDINGS = f"{PIECE_FOLDER}/findings.yaml"
 TESTS_FOLDER = "visual/libraries/tests/1.0.0"
+BRAND_FONT = "visual/libraries/test-brand/1.0.0/fonts/SourceSansPro-Regular.otf"
 LOCATION = (
     f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
     f"to move the work, move the folder and change the `location:` line there"
@@ -369,6 +370,18 @@ def test_a_component_whose_file_cannot_be_read_is_reported_at_that_file(tmp_path
     )
     assert "unknown-component" not in [e["code"] for e in kept]
     assert str(tmp_path) not in entry["message"]
+
+
+def test_a_font_file_that_cannot_be_read_refuses_the_render_naming_it(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    (root / BRAND_FONT).write_bytes(b"not a font")
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert (
+        f"the render of `{PIECE}` is refused before anything is laid out: "
+        f"the font file {root / BRAND_FONT} cannot be read: "
+    ) in shown.stderr
+    assert not (root / PREVIEWS).exists()
 
 
 # --- what a failed render leaves ----------------------------------------------------------------

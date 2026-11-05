@@ -911,6 +911,15 @@ def drawn(
             )
 
 
+def preview_files(
+    piece: str, language: str, key: str, pages: Sequence[Any]
+) -> Iterator[tuple[str, str]]:
+    """Each page a renderer drew of a scene, as the name of its preview and its text."""
+    for index, page in enumerate(pages, start=1):
+        number = f".{index}" if len(pages) > 1 else ""
+        yield f"{piece}.{language}.{key}{number}.svg", page.svg
+
+
 # --- the inputs of a fingerprint, worked out from the current files -----------------------------
 
 

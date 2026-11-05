@@ -13,6 +13,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
         - .pkit/capabilities/visual-communication/scripts/_lib/scene.py
         - .pkit/capabilities/visual-communication/scripts/_lib/text.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/env.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/checks.py
@@ -567,7 +568,7 @@ Each drawn property names its source in `sources`:
 - **The typography role** that `style` names gives `fontFamily`, one family or a list, `fontSize` in px, `lineHeight` as a ratio of the size, `fontWeight`, and a `letterSpacing` of zero, if any. A role that names no family, gives another letter spacing, a size in another unit or no line height as a number is reported, and the text is not drawn.
 - **Several families.** The first family measures each character it has, the next the rest, and so on.
 - **One file a family.** A family's one file measures the text, whatever its weight. A brand that gives a weight a family of its own, as the test brand's heading is, has that weight measured and drawn from its own file.
-- **Refused before layout.** A family with no committed file, or a character no family measures, refuses the scene, and the message names it.
+- **Refused before layout.** A family with no committed file, a file the engine cannot measure from, or a character no family measures refuses the scene. The message names it.
 - **Shaped from the file.** Each piece of a run in one family is shaped with HarfBuzz, with the font's default features. A line's width is the sum of its advances, each at its own run's font size. Spaces at its end do not count.
 - **The line height** is the font size times `lineHeight`. A text takes the greatest line height among the roles its runs take, so its lines lie evenly, and **the measured height** is the number of lines times that line height.
 - **The baseline** of each line lies below the line's top. Where the line's runs take one role, the space above and below its letters is split evenly, from the first family's metrics, as a text of one run is placed. Where they take several, it is split evenly around the greatest ascent and the greatest descent among their first families, so the line's runs stand on one baseline.

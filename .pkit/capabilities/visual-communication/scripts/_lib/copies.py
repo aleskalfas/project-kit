@@ -17,7 +17,10 @@ point 5, DEC-013 points 5 and 6).
   - **A copy the list marks not released,** of a number the capability ships, is replaced
     whole by what the capability ships under it, and listed released, with its hash, where
     that number is released. It is left as it is where it holds that already, or where a
-    lock that moves only on purpose names it, or may (`holding`).
+    lock that moves only on purpose names it, or may (`holding`), unless the person names
+    each such piece and declaration in the command. Naming it is the move on purpose: the
+    lock keeps its number, and only its copy changes. A person names only a lock that
+    locks a copy the run would replace, and one the command can read (`_check_named`).
   - **A released copy** whose files no longer match its hash is restored as released, from
     the capability's released place; one that matches is not written. Where the hash the
     capability records for its version differs from the list's, the run refuses.
@@ -48,7 +51,7 @@ attention (DEC-013 point 6).
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -78,7 +81,7 @@ from _lib.reading import ReadError, read_yaml
 from _lib.root import SHIPPED
 
 #: The folder of the location that holds the pieces, one folder each (`pipeline.PIECES`,
-#: not imported: the pipeline measures text, and this command reads only the locks).
+#: not imported: the pipeline measures text, and this module reads only the locks).
 PIECES = "pieces"
 
 #: A piece's file that holds its lock.
@@ -90,6 +93,10 @@ DECLARATIONS = "code"
 #: The state of a piece format 1 takes (DEC-003 point 8). A final or a published piece's
 #: lock is read once the format takes those states (#2572).
 DRAFT = "draft"
+
+#: The kinds of lock, each what a person names one by in the command (`Lock.key`).
+PIECE = "piece"
+DECLARATION = "declaration"
 
 
 class CopyRefused(Exception):
@@ -132,6 +139,11 @@ class Lock:
     versions: Mapping[str, str] | None
     why: str = ""
 
+    @property
+    def key(self) -> tuple[str, str]:
+        """What a person names it by in the command: its kind and its name."""
+        return self.kind, self.name
+
     def names(self, library: str, version: Version) -> bool:
         """Whether it names the copy of `library` at `version`, or may: a lock that cannot
         be read may name any."""
@@ -142,7 +154,7 @@ class Lock:
         """The piece or the declaration, in words."""
         if self.versions is None:
             return f"{self.file}, whose lock cannot be read: {self.why}"
-        if self.kind == "declaration":
+        if self.kind == DECLARATION:
             return f"the declaration `{self.name}` of written code"
         return f"the draft `{self.name}`" if self.follows else f"the pinned draft `{self.name}`"
 
@@ -161,11 +173,15 @@ class Written:
 
 @dataclass(frozen=True)
 class Left:
-    """A copy the run leaves as it is, why, and each lock that holds it."""
+    """A copy the run leaves as it is, why, and each lock that holds it, the person not having
+    named it. Where only such locks hold it: what the capability ships, which the run would
+    replace it with, and each lock a run names to replace it, those already named included."""
 
     label: str
     why: str
     locks: tuple[Lock, ...] = ()
+    source: Source | None = None
+    to_name: tuple[Lock, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -187,16 +203,18 @@ def plan(
     version: Version | None = None,
     *,
     being_built: bool = False,
+    named: Collection[tuple[str, str]] = (),
 ) -> Plan:
     """The run of the command for the library `name` in `location`: the version it takes,
     the released `version` where one is named, or the version being built where
-    `being_built` asks for it; and each copy of the library brought up to date. Raises
-    CopyRefused, before anything is written, for a library the capability does not ship, a
-    version it does not ship, files it ships that no longer match the hash its record keeps
-    or lack their binding, a list that cannot be read or names the library from another
-    source, a hash the list keeps that differs from the record's, a folder the list does not
-    name where the version is to be copied, a path reached through a link, and a list that
-    cannot take what changes as text."""
+    `being_built` asks for it; and each copy of the library brought up to date, `named`
+    giving each lock the person names, by its `Lock.key`. Raises CopyRefused, before anything
+    is written, for a library the capability does not ship, a version it does not ship,
+    files it ships that no longer match the hash its record keeps or lack their binding, a
+    list that cannot be read or names the library from another source, a hash the list keeps
+    that differs from the record's, a folder the list does not name where the version is to
+    be copied, a lock named that locks no copy the run would replace, a path reached through
+    a link, and a list that cannot take what changes as text."""
     library = _library(name)
     taken = _taken(library, version, being_built)
     held = Held(root, location)
@@ -226,10 +244,11 @@ def plan(
         elif entry.get("released") is True:
             copies.append(_released_copy(held, library, number, entry, folder, naming, shown))
         else:
-            copied = _copy_not_released(held, library, number, entry, folder, naming, found)
+            copied = _copy_not_released(held, library, number, entry, folder, naming, found, named)
             copies.append(copied)
             if isinstance(copied, Written) and dict(copied.source.entry) != dict(entry):
                 entries.append((number, copied.source.entry, False))
+    _check_named(named, found, name, copies)
     written = [each for each in copies if isinstance(each, Written)]
     sources = {(each.version, each.folder): each for each in (taken, *(w.source for w in written))}
     for source in sources.values():
@@ -271,14 +290,18 @@ def write(planned: Plan, change: Change) -> None:
     change.commit()
 
 
-def report(planned: Plan, root: Path) -> list[str]:
+def report(planned: Plan, root: Path, shown: Mapping[tuple[str, str], Sequence[str]]) -> list[str]:
     """What a run says: each copy it wrote, with each lock that names it, and each it left,
-    with why and each lock that holds it; then each line the list took."""
+    with why, each lock that holds it with what `shown` gives of it by its `Lock.key`, and
+    how to replace it; then each line the list took."""
     said = []
     for each in planned.copies:
         if isinstance(each, Left):
             said.append(f"left {each.label} as it is: {each.why}")
-            said.extend(f"  {lock.described}" for lock in each.locks)
+            for lock in each.locks:
+                said.append(f"  {lock.described}")
+                said.extend(f"    {line}" for line in shown.get(lock.key, ()))
+            said.extend(_way_to_replace(each))
             continue
         count = len(each.source.files)
         where = "to" if each.how == "copied" else "in"
@@ -288,6 +311,15 @@ def report(planned: Plan, root: Path) -> list[str]:
         )
         said.extend(f"  locked by {lock.described}" for lock in each.locks)
     return [*said, *planned.listed]
+
+
+def _way_to_replace(left: Left) -> list[str]:
+    """The command that replaces a copy only locks hold, naming each of them; none while a
+    lock cannot be read, which no person can name."""
+    if left.source is None or any(lock.versions is None for lock in left.to_name):
+        return []
+    named = " ".join(f"--{lock.kind} {lock.name}" for lock in left.to_name)
+    return [f"  to replace it, run `pkit visual add {left.source.name} {named}`"]
 
 
 # --- what the capability ships ------------------------------------------------------------------
@@ -472,18 +504,22 @@ def _copy_not_released(
     folder: Path,
     naming: tuple[Lock, ...],
     found: Sequence[Lock],
+    named: Collection[tuple[str, str]],
 ) -> Written | Left:
     """A copy the list marks not released: replaced by what the capability ships under its
-    number, else left, with why."""
+    number, else left, with why. A lock that moves only on purpose holds it unless `named`
+    names that lock."""
     label = f"{library.name}@{version}"
     source = under(library, version)
     if source is None:
         return Left(label, f"the installed capability ships no {label}")
     if dict(source.entry) == dict(entry) and holds(held, source):
         return Left(label, f"it holds {source.said} of its number already")
-    held_by = holding(found, library.name, version)
+    to_name = holding(found, library.name, version)
+    held_by = tuple(lock for lock in to_name if lock.key not in named)
     if held_by:
-        return Left(label, "a lock that moves only on purpose names it", held_by)
+        why = "a lock that moves only on purpose names it"
+        return Left(label, why, held_by, source, to_name)
     if folder.is_dir() and not folder.is_symlink():
         said = f", with {source.said}"
     else:
@@ -493,9 +529,37 @@ def _copy_not_released(
 
 def holding(found: Sequence[Lock], library: str, version: Version) -> tuple[Lock, ...]:
     """The locks that keep a copy not yet released as it is: each that names it, or may, and
-    moves only on purpose. A person naming such a piece in the command is the move on
-    purpose that lets the copy be replaced (#2608)."""
+    moves only on purpose. A person naming each such piece and declaration in the command is
+    the move on purpose that lets the copy be replaced."""
     return tuple(lock for lock in found if lock.names(library, version) and not lock.follows)
+
+
+def _check_named(
+    named: Collection[tuple[str, str]],
+    found: Sequence[Lock],
+    library: str,
+    copies: Sequence[Written | Left],
+) -> None:
+    """Refuse each lock a person names that locks no copy the run would replace, whichever
+    other locks still hold that copy, naming what it locks; a piece or a declaration the
+    location does not hold; and a lock the command cannot read. Raises CopyRefused."""
+    replaced = {
+        each.source.version
+        for each in copies
+        if each.source is not None and (isinstance(each, Left) or each.how == "replaced")
+    }
+    for kind, name in sorted(named):
+        lock = next((each for each in found if each.key == (kind, name)), None)
+        if lock is None:
+            raise CopyRefused(f"the location holds no {kind} `{name}`")
+        if lock.versions is None:
+            raise CopyRefused(f"{lock.described}: mend it, then name it")
+        if not any(lock.names(library, number) for number in replaced):
+            locked = ", ".join(f"{each}@{lock.versions[each]}" for each in sorted(lock.versions))
+            raise CopyRefused(
+                f"{lock.described} locks no copy of `{library}` this run would replace: it "
+                f"locks {locked or 'nothing'}"
+            )
 
 
 def holds(held: Held, source: Source) -> bool:
@@ -684,8 +748,8 @@ def _piece_lock(root: Path, file: str, name: str, library: str) -> Lock:
         else:
             versions, why = _versions(data, library)
             if versions is not None:
-                return Lock("piece", name, file, not pinned, versions)
-    return Lock("piece", name, file, False, None, why)
+                return Lock(PIECE, name, file, not pinned, versions)
+    return Lock(PIECE, name, file, False, None, why)
 
 
 def _declaration_lock(root: Path, file: str, name: str, library: str) -> Lock:
@@ -694,8 +758,8 @@ def _declaration_lock(root: Path, file: str, name: str, library: str) -> Lock:
     if data is not None:
         versions, why = _versions(data, library)
         if versions is not None:
-            return Lock("declaration", name, file, False, versions)
-    return Lock("declaration", name, file, False, None, why)
+            return Lock(DECLARATION, name, file, False, versions)
+    return Lock(DECLARATION, name, file, False, None, why)
 
 
 def _bound(path: Path, kind: str) -> tuple[Mapping[str, Any] | None, str]:

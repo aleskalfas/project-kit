@@ -12,7 +12,8 @@
   left, once. A share with no test makes pytest exit 5. Each slice reports its cut
   and what it ran.
 - **The table** is written from the times the slices of a run in CI kept, by a
-  command that reads the run through `gh`. Here `gh` is a fake.
+  command that reads the run through `gh`, and that says how far apart the run's
+  runners were. Here `gh` is a fake.
 """
 
 from __future__ import annotations
@@ -357,7 +358,7 @@ def test_the_table_is_written_from_every_slice_of_the_newest_run_that_kept_them(
     gh.kept[80]["test-times-1-of-2"] = gh.kept[80].pop("test-times-1-of-1")
     out = tmp_path / "times.json"
 
-    address, tests = slices.write_table(gh, REPOSITORY, None, out)
+    address, tests, _apart = slices.write_table(gh, REPOSITORY, None, out)
 
     assert (address, tests) == (f"https://github.com/{REPOSITORY}/actions/runs/{RUN}", 2)
     document = _read(out)
@@ -421,3 +422,32 @@ def test_the_command_says_what_it_wrote_or_why_not(
     assert "1 tests" in capsys.readouterr().out
     assert slices.main(["table", "--repository", REPOSITORY, "--run", "5"], Gh({})) == 1
     assert "did not keep" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("summed", "apart"),
+    [
+        ([2.0, 2.0], 0.0),
+        ([3.0, 2.0], 0.5),
+        ([2.0, 3.0], 0.5),
+        ([4.0, 2.0, 3.0], 1.0),
+        ([2.0], 0.0),
+        ([2.0, 0.0], float("inf")),
+    ],
+    ids=["level", "the-first-slower", "the-second-slower", "three-slices", "one-slice", "no-time"],
+)
+def test_the_runners_are_as_far_apart_as_the_slowest_slice_passes_the_fastest(
+    summed: list[float], apart: float
+) -> None:
+    assert slices.runners_apart(summed) == apart
+
+
+def test_the_command_says_how_far_apart_the_run_s_runners_were(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(slices, "TABLE", tmp_path / "times.json")
+    first = {"tests/test_a.py::test_x": 1.0, "tests/test_a.py::test_y": 2.0}
+    gh = Gh({RUN: _kept(first, {"tests/test_b.py::test_z": 2.0})})
+
+    assert slices.main(["table", "--repository", REPOSITORY, "--run", str(RUN)], gh) == 0
+    assert "runners were about 50% apart" in capsys.readouterr().out

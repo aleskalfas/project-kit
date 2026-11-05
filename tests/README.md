@@ -87,6 +87,14 @@ never a contributor's machine.
   run, `test-times-<i>-of-<N>`. `--run <id>` names another run. Review it like any
   change. No run writes the table, so a pull request's run cannot change what
   later runs read.
+- **Which run:** each slice's times come from that slice's own runner, and one
+  runner can take half as long again as another. So a run whose runners differ
+  bakes that difference into the cut, and the slices of later runs end further
+  apart. The command says how far apart the run's runners were. It reads that from
+  the test time each slice summed, since the cut gave the slices equal shares. Over
+  a tenth apart, run `git restore tests/test_times.json` and name another run. By
+  #2677's estimate, tables from runs 3%, 15% and 39% apart leave the slices 27, 69
+  and 172 s apart on equal runners.
 
 **The parallel pass ends by printing its 30 slowest tests** (`--durations=30`),
 in every run: in a local run's output, and in the log of each slice's step in

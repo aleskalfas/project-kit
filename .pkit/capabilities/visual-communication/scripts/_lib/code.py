@@ -272,9 +272,12 @@ def _parsed(name: str, rel: str, data: Mapping[str, Any]) -> Declaration | None:
 # --- a run --------------------------------------------------------------------------------------
 
 
-def plan(root: Path, location: str, declaration: Declaration) -> Plan:
+def plan(
+    root: Path, location: str, declaration: Declaration, held: libraries.Held | None = None
+) -> Plan:
     """What the declaration's writer would be handed now, its losses and its record's
-    sources: the brand read at the versions the lock names. Raises CodeRefused."""
+    sources: the brand read at the versions the lock names, of what the location holds, or
+    of `held` where given. Raises CodeRefused."""
     try:
         writer = seam.declaration(declaration.writer, seam.CODE_WRITER)
     except seam.PluginError as exc:
@@ -285,7 +288,7 @@ def plan(root: Path, location: str, declaration: Declaration) -> Plan:
             f"{declaration.file}: the {writer['name']} writer {writer['version']} writes "
             f"form {forms}, not form {declaration.form}"
         )
-    brand = _brand(root, location, declaration)
+    brand = _brand(root, location, declaration, held)
     axes = {
         axis.name: {"kind": axis.kind, "modes": list(axis.modes), "default": axis.default}
         for axis in sorted(brand.axes.values(), key=lambda axis: axis.name)
@@ -329,6 +332,18 @@ def plan(root: Path, location: str, declaration: Declaration) -> Plan:
     )
 
 
+def text_of(planned: Plan) -> str:
+    """The code the declaration's writer writes of `planned`. Raises CodeRefused."""
+    declaration = planned.declaration
+    implementation = seam.implementation(declaration.writer)
+    try:
+        return implementation.write(
+            planned.document, planned.axes, form=declaration.form, prefix=declaration.prefix
+        )
+    except ValueError as exc:
+        raise CodeRefused(f"the {declaration.writer} writer refused: {exc}") from exc
+
+
 def write(root: Path, location: str, name: str, *, now: datetime | None = None) -> Written:
     """Write the code the declaration `name` asks for, and its record, as one change; or
     nothing, where the record verifies and the code is what the writer writes now. Raises
@@ -336,14 +351,7 @@ def write(root: Path, location: str, name: str, *, now: datetime | None = None) 
     were before the run, or named."""
     declaration = read(root, location, name)
     planned = plan(root, location, declaration)
-    implementation = seam.implementation(declaration.writer)
-    try:
-        text = implementation.write(
-            planned.document, planned.axes, form=declaration.form, prefix=declaration.prefix
-        )
-    except ValueError as exc:
-        raise CodeRefused(f"the {declaration.writer} writer refused: {exc}") from exc
-    data = text.encode("utf-8")
+    data = text_of(planned).encode("utf-8")
     taken = fingerprint.fingerprint(planned.inputs)
     code, record = root / declaration.out, root / declaration.record
     unaccepted = tuple(planned.unaccepted)
@@ -370,13 +378,15 @@ def write(root: Path, location: str, name: str, *, now: datetime | None = None) 
     return Written(declaration.out, declaration.record, changed=True, losses=unaccepted)
 
 
-def _brand(root: Path, location: str, declaration: Declaration) -> tokens.Brand:
+def _brand(
+    root: Path, location: str, declaration: Declaration, held: libraries.Held | None
+) -> tokens.Brand:
     """The declaration's brand, read at the versions its lock names, over its base when it
     builds on one, against the roles of the libraries the lock names: the shared roles of
     the foundations it locks, and the own roles of each component library it locks, which
     the code then holds at the brand's values or their defaults (DEC-008 point 5). Raises
     CodeRefused."""
-    held = libraries.Held(root, location)
+    held = libraries.Held(root, location) if held is None else held
     reached = _check_lock(held, declaration)
     brand_version = libraries.Version.parse(declaration.lock[declaration.brand])
     if held.library(declaration.brand, brand_version).kind != "brand":

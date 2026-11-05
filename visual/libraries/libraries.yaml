@@ -1,0 +1,31 @@
+# The list of the project's libraries (visual-communication DEC-003 point 4): each
+# library's source, the versions the library folder holds, which of them are released,
+# and the fingerprint of each released one. `pkit visual add` lists a version it copies.
+
+pkit_schema: visual-communication:libraries
+schema_version: 1
+libraries:
+  foundations:
+    source:
+      kind: shipped
+    versions:
+      1.0.0:
+        released: false
+  starter:
+    source:
+      kind: shipped
+    versions:
+      1.0.0:
+        released: false
+  neutral:
+    source:
+      kind: shipped
+    versions:
+      1.0.0:
+        released: false
+  pkit:
+    source:
+      kind: project
+    versions:
+      1.0.0:
+        released: false

@@ -1,0 +1,7 @@
+component: visual-communication
+kind: none
+body: >
+  project-kit records the location of its own visual work in its configuration
+  of the capability, and draws its showcase there (#2567, PRJ-012). The
+  configuration and the location are project-kit's own files, which no release
+  carries, so nothing the capability ships moves.

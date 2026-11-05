@@ -10,7 +10,8 @@ combination of modes (visual-communication DEC-005 points 4, 5, 9 and 10).
 - **Fonts** are embedded as `@font-face` from the brand's committed files, never the
   machine's: each family's file subset to the characters the page draws in it. A family's
   name is written as a CSS string (`css_string`), so no name a brand gives can end the
-  style element, start another element, or leave the file malformed XML.
+  style element, start another element, or leave the file malformed XML. A file the engine
+  could measure from may still fail to subset, which raises `UnreadableFont`.
 - **Text** is drawn as the engine measured it: each of its lines as given, at its own
   baseline, anchored at the start, the middle or the end of the text's width. The
   `<text>` takes the font and the paint of the text's first run; each span of a run that
@@ -46,6 +47,7 @@ from typing import Any
 from fontTools import subset
 from fontTools.ttLib import TTFont
 
+from _lib.env import UnreadableFont
 from _lib.plugins import seam
 from _lib.plugins.svg_declaration import DECLARATION
 
@@ -485,20 +487,25 @@ _SUBSETS: dict[tuple[str, str], tuple[str, str, str]] = {}
 
 
 def _subset(path: Path, characters: str) -> tuple[str, str, str]:
-    """A font file subset to `characters`, base64, with its format and media type."""
+    """A font file subset to `characters`, base64, with its format and media type. Raises
+    `UnreadableFont` where it cannot be read as a font, which measuring, reading only some of
+    its tables, may not have found."""
     mark = (str(path), characters)
     if mark not in _SUBSETS:
-        font = TTFont(str(path), recalcTimestamp=False)
-        options = subset.Options()
-        options.layout_features = ["*"]
-        options.name_IDs = ["*"]
-        options.notdef_outline = True
-        subsetter = subset.Subsetter(options)
-        subsetter.populate(text=characters + " ")
-        subsetter.subset(font)
         out = io.BytesIO()
-        font.save(out)
-        font.close()
+        try:
+            font = TTFont(str(path), recalcTimestamp=False)
+            options = subset.Options()
+            options.layout_features = ["*"]
+            options.name_IDs = ["*"]
+            options.notdef_outline = True
+            subsetter = subset.Subsetter(options)
+            subsetter.populate(text=characters + " ")
+            subsetter.subset(font)
+            font.save(out)
+            font.close()
+        except Exception as exc:  # the font library has no one error for a file it cannot read
+            raise UnreadableFont(path, exc) from exc
         form, mime = (
             ("opentype", "font/otf") if font.sfntVersion == "OTTO" else ("truetype", "font/ttf")
         )
