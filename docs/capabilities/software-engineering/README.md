@@ -287,7 +287,7 @@ In these cases, no reviewer's check of the answers holds the merge ([the referen
 
 - **A pull request that changes only documents, and closes no issue with a `type`.** The gate requires no `docs-reviewer` for it. Have the pull request close an issue that has a `type` when the change wrote answers.
 - **A project that opts out of the `docs-reviewer`,** and names no other reviewer of the answers.
-- **Human review mode.** The `docs-reviewer`'s verdict only advises there, and the person who approves checks the answers only by reading them. `pkit pm show-pr <PR> --field answers` prints what the landing command tells, and `pkit friction check` at the head gives every answer.
+- **Human review mode.** The `docs-reviewer`'s verdict only advises there, and the person who approves checks the answers only by reading them. `pkit pm show-pr <PR> --field answers` prints what the landing command tells, and `pkit friction check` at the head gives every answer. Away from a checkout at the head, the view may print nothing, so read the answer files in the pull request's diff.
 - **A bypass on record.** A person merges past the `docs-reviewer`, or past the whole gate, with a reason (project-management DEC-050).
 - **A sentence edited after the verdict.** Editing the description makes no verdict stale, so nothing checks the new sentence.
 - **A change committed straight to your default branch.** The reviewer works from a pull request, and checking such a change's answers before the commit is not built yet.

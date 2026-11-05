@@ -6,7 +6,7 @@ feeds `friction_answers.told` itself. `at_head` feeds it for both: it derives th
 answers, reads the change to the fixers' grant list, reads the author's sentences
 and builds what `told` adds last. It stops nothing and prints nothing. What could
 not be read it hands back (`AnswersTold`), since the landing command refuses in its
-own words and the read-only view reports in its own.
+own words and the view reports in its own.
 
 It lives apart from `friction_answers`, which also loads standalone by path, where
 `fixers` cannot.
@@ -50,7 +50,7 @@ def at_head(
 
     `read_body` runs last, once the rest was read, so a caller that reads the
     description from the host holds it for no longer than it must. `from_checkout`
-    is `friction_answers.checked`'s: the read-only view passes False, and so starts
+    is `friction_answers.checked`'s: the view passes False, and so starts
     no program the head holds."""
     derived = friction_answers.derive(head, base, source=source, from_checkout=from_checkout)
     if derived.document is None:

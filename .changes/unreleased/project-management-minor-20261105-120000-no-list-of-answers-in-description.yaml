@@ -25,7 +25,7 @@ body: >
   holds: where an anchor needs its resolver, it says why and exits 2, and says
   that a checkout at the head can read the answers, in a run that starts the
   head's own programs. `done-work`, `merge-pr` and the host's button print
-  nothing, so a person merging there runs it. `land-work --yes` now holds at
+  nothing, so a person merging there runs it, within that limit. `land-work --yes` now holds at
   `ready:` on an updated document with no sentence, and at a later head on
   something left out of date that the head authorised did not leave.
   `review-work` and `land-work` refuse a sentence that reads as a closing

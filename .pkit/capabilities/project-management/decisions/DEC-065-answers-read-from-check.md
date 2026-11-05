@@ -76,11 +76,11 @@ What guards the answers themselves stays, as DEC-055 point 3 has it, since it gu
 
 ### 6. What this gives up
 
-- **The other merge commands and the host's button print no answer.** DEC-055 point 5 accepted that a merge through them "may carry the list of an earlier head, or none". This widens that limit: such a merge shows the person no answer, and nothing holds it. A project that runs no checks on its pull requests lands only this way, since the landing command waits for checks (DEC-055 point 5). The person there runs the view, or the agent they direct does. On a project whose anchors need the head's programs, that prints nothing. There the person is told only the sentences, so COR-064 point 5's telling of what a delegate decided, and COR-050 point 3's of what is left out of date, fall short. A follow-up Task closes this gap.
+- **The other merge commands and the host's button print no answer.** DEC-055 point 5 accepted that a merge through them "may carry the list of an earlier head, or none". This widens that limit: such a merge shows the person no answer, and nothing holds it. A project that runs no checks on its pull requests lands only this way, since the landing command waits for checks (DEC-055 point 5). The person there runs the view, or the agent they direct does. On a project whose anchors need the head's programs, that prints nothing. There the person is told only the sentences, so COR-064 point 5's telling of what a delegate decided, and COR-050 point 3's of what is left out of date, fall short. [project-kit#2696](https://github.com/aleskalfas/project-kit/issues/2696) closes this gap.
 - **An agent's relay.** A person who directs an agent is told what the agent passes on, the case DEC-055's Context feared. The printout's words are the command's, and the view gives them first-hand where it can derive them (point 2).
 - **No record of what was told.** The printout goes where the run's output goes, and nothing keeps it. The answer files that land hold what was answered, not what was shown.
 - **A reader with no clone** reads the sentences alone, since the view runs the change check. So does a reader away from the head, on a project whose anchors need the head's programs. Either may read the answer files the change adds in its diff on the host.
-- **The landing command still starts the head's programs.** It and the move to review take the checkout the view refuses, a fork's head included. Whoever runs them starts that head's programs. A follow-up Task decides what a head must be for that to happen.
+- **The landing command still starts the head's programs.** It and the move to review take the checkout the view refuses, a fork's head included. Whoever runs them starts that head's programs. [project-kit#2697](https://github.com/aleskalfas/project-kit/issues/2697) decides what a head must be for that to happen.
 
 ## Rationale
 
@@ -106,10 +106,10 @@ What guards the answers themselves stays, as DEC-055 point 3 has it, since it gu
 
 - **A shorter list, of the answers that matter.** Rejected. It would still be a second copy of what the check derives, and it would keep the size stop and the markers.
 - **A pull-request comment.** Rejected for the list: it keeps the second copy, and a later comment does not replace an earlier one. Not taken for what the person is told alone: it would keep a record of that, at the cost of a write on every run. Point 6 states the gap.
-- **The other merge commands printing what the person is told.** Not taken. It would reach the person on every path of this capability, at the cost of a run of the change check, in a checkout of the head, on each merge. The view was to give the same lines to whoever asks. Point 2's limit leaves that short on some projects (point 6), so the follow-up weighs this again.
+- **The other merge commands printing what the person is told.** Not taken. It would reach the person on every path of this capability, at the cost of a run of the change check, in a checkout of the head, on each merge. The view was to give the same lines to whoever asks. Point 2's limit leaves that short on some projects (point 6), so [project-kit#2696](https://github.com/aleskalfas/project-kit/issues/2696) weighs this again.
 - **Keeping the view's checkout where the head's resolvers match the base's.** Not taken. A resolver loads more than its own file, so two equal scripts prove nothing.
 - **Reading the answer files a change adds, as data.** Not taken. It would start nothing. But whether an answer was asked for needs the file list a resolver gives, so the line a delegate's telling rests on could not come from the files.
-- **A comment stamped with the head, from the move to review or from CI.** Left to the follow-up. It would reach every reader with nothing run on their machine, at the cost of a write on each move.
+- **A comment stamped with the head, from the move to review or from CI.** Left to [project-kit#2696](https://github.com/aleskalfas/project-kit/issues/2696). It would reach every reader with nothing run on their machine, at the cost of a write on each move.
 - **Superseding DEC-055 whole.** Rejected. Its authorisation, its findings' hold, its rule on a later head and its check of the merge stand. Restating them would add words and decide nothing.
 
 ## Implications
