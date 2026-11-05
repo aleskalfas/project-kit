@@ -58,7 +58,7 @@ Some questions are too large for a decision record at first, and the work that m
 ```mermaid
 classDiagram
   accTitle: The system and its methodology
-  accDescr: The system ships and enforces the methodology. The methodology is made of decision records, rules, operational rules and conventions, and states harness requirements. A harness meets each harness requirement to some grade. A decision record holds points. A scratchpad note may produce decision records. Work builds only on accepted decision records and rules, as the acceptance gate says. A harness loads an instruction file into each session, and the instruction file includes the operational rules.
+  accDescr: The system ships and enforces the methodology. The methodology is made of decision records, rules, operational rules and conventions, and states harness requirements. How far a harness meets each harness requirement is graded. A decision record holds points. A scratchpad note may produce decision records. Work builds only on accepted decision records and rules, as the acceptance gate says. A harness loads an instruction file into each session, and the instruction file includes the operational rules.
   class System["System"]
   class Harness["Harness"]
   class HarnessRequirement["Harness requirement"]
@@ -89,7 +89,7 @@ classDiagram
   AcceptanceGate ..> DecisionRecord : admits only accepted
   AcceptanceGate ..> Rule : admits only accepted
   Methodology --> HarnessRequirement : states
-  Harness ..> HarnessRequirement : meets to some grade
+  Harness ..> HarnessRequirement : is graded against
   Harness --> InstructionFile : loads into each session
   InstructionFile ..> OperationalRule : includes
 ```
@@ -150,7 +150,7 @@ A harness is an external tool that hosts working sessions and runs the tool call
 
 - A line in its instruction file loads the [operational rules](../glossary.md#term-operational-rule--operational-rule) into each session it hosts.
 - It is no part of the [system](../glossary.md#term-system--system).
-- The methodology states what it relies on a harness to do as [harness requirements](../glossary.md#term-harness-requirement--harness-requirement), which a harness meets to some grade ([COR-047 point 2](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
+- The methodology states what it relies on a harness to do as [harness requirements](../glossary.md#term-harness-requirement--harness-requirement). How far a harness meets each is graded ([COR-047 point 2](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
 
 **States:** None.
 

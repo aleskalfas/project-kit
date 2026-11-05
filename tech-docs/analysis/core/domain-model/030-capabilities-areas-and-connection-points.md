@@ -393,7 +393,7 @@ An event is a signal a capability offers when one of its writing commands finish
 
 - It is the kind of connection point that signals that a writing command finished (COR-053 point 2).
 - A component subscribes to it by a [connection](../glossary.md#term-connection--connection), declared under `subscribes` with a command of its own ([COR-053 point 3](../../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality)).
-- The [backbone](../glossary.md#term-backbone--backbone) runs the subscribers after the command that emits it finishes (COR-053 point 2).
+- The [backbone](../glossary.md#term-backbone--backbone) runs each command subscribed to it after the command that emits it finishes (COR-053 point 2).
 
 **States:** None.
 
@@ -402,7 +402,7 @@ An event is a signal a capability offers when one of its writing commands finish
 - The component that offers it never names those that subscribe to it (COR-053 point 2).
 - Only a writing command emits it, never a reading command or the backbone's engine (COR-053 point 2).
 - An edit made by hand emits none ([COR-053 point 9](../../../../.pkit/decisions/core/COR-053-connection-points.md#9-events-bounded-visible-cascading-with-a-guard-no-separate-consent-model)).
-- A subscriber that fails never undoes the command that emitted the event, and is reported (COR-053 point 9).
+- A subscribed command that fails never undoes the command that emitted the event, and is reported (COR-053 point 9).
 - Within one command's chain, it is handled once for each thing it is about, and a repeat is reported as a loop (COR-053 point 9).
 
 ## Install plan

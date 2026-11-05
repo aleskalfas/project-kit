@@ -567,7 +567,7 @@ The changeset guard is a check that a change adds or edits a changeset naming th
 
 **Attributes:**
 
-- its escape hatch, which skips its [surface](../glossary.md#term-surface--surface) check for a change that moves no surface (PRJ-002)
+- its escape hatch, which skips its check of those paths for a change that moves no [surface](../glossary.md#term-surface--surface) (PRJ-002)
 
 **Relations:**
 
@@ -578,7 +578,7 @@ The changeset guard is a check that a change adds or edits a changeset naming th
 
 **Always true:**
 
-- Its surface check reads only paths, so it may flag a change that moves no surface. A person still judges each [bump segment](../glossary.md#term-bump-segment--bump-segment) ([PRJ-002 D2](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
+- Of the diff, it reads only paths, so it may flag a change that moves no surface. A person still judges each [bump segment](../glossary.md#term-bump-segment--bump-segment) ([PRJ-002 D2](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
 - No escape hatch waives its refusal of a floor that no change of its component, or new [version](../glossary.md#term-version--version) of it, bears (PRJ-002).
 
 ## Release step

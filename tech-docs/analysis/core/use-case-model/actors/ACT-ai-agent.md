@@ -33,4 +33,4 @@ An AI agent working under the methodology, acting on the system from outside.
 - **Occasions:** whenever work is done. It keeps no memory between sessions beyond what the repository holds.
 - **Context:** None.
 - **Place in the model:** when it does a <!-- pkit:not-the-term -->role's work, it appears as a step in that <!-- pkit:not-the-term -->role's use cases.
-- **Core:** the agent architecture, the rules loaded into every session and the [adapter](../../glossary.md#term-adapter--adapter)'s deployment make this actor exist. The core's [reviewer](../../glossary.md#term-reviewer--reviewer) agents advise, and no core gate counts their verdict.
+- **Core:** the agent architecture, the [operational rules](../../glossary.md#term-operational-rule--operational-rule) loaded into every session and the [adapter](../../glossary.md#term-adapter--adapter)'s deployment make this actor exist. The core's [reviewer](../../glossary.md#term-reviewer--reviewer) agents advise, and no core gate counts their verdict.

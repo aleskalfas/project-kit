@@ -294,6 +294,7 @@ TERM-collection-file:
           - src/project_kit/friction_discovery.py
         record:
           - COR-050#1
+          - COR-051#2
 TERM-completion:
   name: completion
   status: active
@@ -2451,7 +2452,7 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 **Distinctions:**
 
 - **Data point and process:** the two other kinds of [connection point](#term-connection-point--connection-point) ([COR-053 point 2](../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds)).
-- **A process subject's move:** emits no event, since the [backbone](#term-backbone--backbone)'s engine emits none (COR-053 point 2).
+- **A process subject's move:** a bare operation of the [backbone](#term-backbone--backbone)'s engine emits no event, but a capability's writing command that wraps the move may emit one (COR-053 point 2).
 
 ## TERM-excluded-path — excluded path
 
