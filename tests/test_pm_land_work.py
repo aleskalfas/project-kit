@@ -1199,9 +1199,47 @@ def test_a_finding_posted_beside_the_rest_is_shown_before_the_ready_line(world, 
     assert run.github.merges == []
 
 
+@pytest.mark.parametrize(
+    ("rest", "code"),
+    [
+        pytest.param(_parts("SUCCESS", "FAILURE"), 1, id="a failed check"),
+        pytest.param(_SUITE_RUNNING, 5, id="a wait that ran out"),
+    ],
+)
+def test_a_stop_on_the_rest_shows_the_finding_the_run_posted(
+    world, capsys, rest: list[dict[str, Any]], code: int
+) -> None:
+    """A later `--yes` would find this verdict at its start and merge on it, so the run
+    that posted it shows it before it waits for the rest (DEC-055 point 3)."""
+    run = world(checks=[_SUITE_RUNNING, rest], start_after=_FIRST)
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    rc, out, _err = run.run("--wait-minutes", "1", capsys=capsys)
+    assert rc == code
+    lines = out.splitlines()
+    at = lines.index(_person_lines("code-reviewer")[0])
+    assert lines[at : at + 3] == [*_person_lines("code-reviewer"), f"{_FINDINGS}: 1, above"]
+    assert run.github.merges == []
+
+
+def test_a_finding_posted_during_the_wait_for_the_rest_is_shown_too(world, capsys) -> None:
+    """The findings shown before the wait are not the last word: what the run prints
+    before it stops ready is each latest verdict as it stands then (DEC-055 point 3)."""
+    run = world(checks=[_SUITE_RUNNING, _ALL_PASSED], start_after=_FIRST)
+    head = run.github.head
+    run.github.before(
+        _nth(lambda a: a[:2] == ["pr", "view"] and "statusCheckRollup" in a[-1], 2),
+        lambda: run.github.comments.append(_verdict(run, "reviewer", _PERSON, sha=head)),
+    )
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 8
+    lines = out.splitlines()
+    assert _person_lines("reviewer")[0] in lines
+    assert "1 finding to judge above" in lines[-1]
+
+
 def test_a_finding_posted_before_a_stop_on_the_rest_is_shown_by_the_next_run(world, capsys) -> None:
-    """A run with no `--yes` that stops on the rest printed no finding; the same command
-    run again does, and stops at `ready:` for the person."""
+    """The same command run again after a stop on the rest shows the finding once more,
+    and stops at `ready:` for the person."""
     run = world(checks=[_SUITE_RUNNING, _parts("SUCCESS", "FAILURE")], start_after=_FIRST)
     run.answers["code-reviewer"] = ("APPROVED", _PERSON)
     assert run.run(capsys=capsys)[0] == 1

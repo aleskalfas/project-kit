@@ -107,7 +107,10 @@ there instead, and changes nothing else.
           verdict, and each stands for the pinned head; one posted by this
           run, or while it ran up to this step's read, stops it at `ready:`,
           and one that does not stand for the head stops every `--yes` run
-          there, naming the review it waits for (DEC-055 point 3). Verdicts
+          there, naming the review it waits for (DEC-055 point 3). Where the
+          review ran beside checks, this step runs before the wait for the
+          rest, so no way that wait ends hides a verdict the run posted, and
+          again after it, for one posted during it. Verdicts
           that cannot be read, or whose reviewers cannot be resolved, stop
           the run, and so does a remote reviewer's `[person]` finding on a PR
           whose author cannot be read, since its verdict cannot be told from
@@ -730,6 +733,10 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
     beside_checks = ci == _CI_FIRST_PASSED
     review = _review(args, head, config, reading, beside_checks=beside_checks)
     if beside_checks:
+        # Before the wait: however it ends, this run shows the verdicts it posted, which
+        # a later `--yes` would find at its start (DEC-055 point 3). The step runs again
+        # below, for a verdict posted during the wait.
+        _findings(args, head, config, capability_root, found)
         # The rest of the checks, which ran beside the review (DEC-063 point 8).
         ci = wait_for_checks(reviewed=True)
         if ci == _CI_PR_MERGED:

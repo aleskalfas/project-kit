@@ -12,8 +12,10 @@ body: >
   So a round costs the longer of CI and those checks plus the review, not all
   of CI plus the review. A check that fails then stops the run before the
   merge, and a `CHANGES_REQUESTED` on a review beside checks still running also
-  names each that has failed by then. A name no check bears draws a `warn:`
-  line. A project that names none lands as before, and so does a run with
+  names each that has failed by then. A run that reviews beside checks prints
+  the findings to judge before it waits for the rest, and again after. A name
+  no check bears draws a `warn:` line. A project that names none lands as
+  before, and so does a run with
   `--yes` or `--no-wait`. The merge gate, the hold on findings for a person and
   the freshness of a verdict are unchanged. The stop on a head that moved after
   the `ci` step now calls it the head this run pinned, not the head whose
