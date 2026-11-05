@@ -741,3 +741,123 @@ def test_mergeable_field_prints_the_bare_value(sp, monkeypatch, capsys) -> None:
     code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "mergeable"], answer)
     assert code == 0
     assert capsys.readouterr().out == "MERGEABLE\n"
+
+
+# --- what land-work tells, for anyone not at land-work (DEC-065 point 2) -------------
+
+HEAD = "c" * 40
+LEFT_AT = "b" * 40
+PR_VIEW = {
+    "number": 99,
+    "title": "x",
+    "state": "OPEN",
+    "headRefOid": HEAD,
+    "headRefName": "feat/42-thing",
+    "baseRefName": "integration",
+    "isCrossRepository": False,
+    "body": (
+        "Closes #42\n\n## What changed in each updated document\n\n"
+        "- `docs/guide.md`: The guide names the flag.\n"
+    ),
+}
+ANSWERS = [
+    {"location": "docs/guide.md", "answer": "updated", "asked": True},
+    {"location": "docs/api.md", "answer": "unchanged", "reason": "Holds.", "asked": True},
+    {"location": "docs/cli.md", "answer": "deferred", "reason": "Until #7.", "asked": True},
+]
+#: What land-work prints of `ANSWERS`, and `--field answers` with it.
+TOLD = (
+    'What changed in docs/guide.md: "The guide names the flag."\n'
+    'Left out of date: docs/cli.md: "Until #7."\n'
+)
+
+
+def _answering(sp, monkeypatch, *, answers=None, problem=None, grants=()):
+    """The change check answering `answers`, or `problem`, and the grant list's change
+    `grants`. Returns each (head, base, source) `derive` was asked for."""
+    asked: list[tuple] = []
+    fa = sp.friction_answers
+
+    def derive(head, base, *, source=None):
+        asked.append((head, base, source))
+        if problem is not None:
+            return fa.Derivation(head, problem=problem)
+        document = {"base": {"commit": LEFT_AT}, "answers": answers or []}
+        return fa.Derivation(head, document=document, answers=tuple(answers or ()))
+
+    monkeypatch.setattr(fa, "derive", derive)
+    monkeypatch.setattr(fa, "branch_remote", lambda branch: "origin")
+    monkeypatch.setattr(sp.fixers, "change_between", lambda *args: grants)
+    return asked
+
+
+def test_answers_field_is_in_the_valid_fields_list(sp) -> None:
+    assert "answers" in sp.PR_FIELD_NAMES
+
+
+def test_answers_field_prints_what_land_work_tells(sp, monkeypatch, capsys) -> None:
+    """Derived at the PR's head against its base, a stacked PR's included, and no
+    verdict is resolved for it: only what is told is printed, a line each."""
+    asked = _answering(sp, monkeypatch, answers=ANSWERS)
+    code, _calls, resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 0
+    assert capsys.readouterr().out == TOLD
+    assert asked == [
+        (HEAD, "integration", sp.friction_answers.Source("origin", "refs/heads/feat/42-thing"))
+    ]
+    assert resolved == []
+
+
+def test_answers_field_prints_a_grant_change_as_land_work_does(sp, monkeypatch, capsys) -> None:
+    grant = sp.fixers.GrantChange("fixer", "page", True, sp.fixers.GRANTED)
+    _answering(sp, monkeypatch, answers=[], grants=(grant,))
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 0
+    assert capsys.readouterr().out == f"{grant.said()}\n"
+
+
+def test_answers_field_says_so_where_there_is_nothing_to_tell(sp, monkeypatch, capsys) -> None:
+    _answering(sp, monkeypatch, answers=[])
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 0
+    assert capsys.readouterr().out == f"{sp.NOTHING_TOLD_MESSAGE}\n"
+
+
+def test_answers_that_cannot_be_derived_say_why_and_tell_nothing(sp, monkeypatch, capsys) -> None:
+    _answering(sp, monkeypatch, problem="the base could not be fetched")
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 2
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert "the answers at PR #99's head could not be derived: the base could not" in err
+
+
+def test_a_grant_list_that_cannot_be_read_tells_nothing(sp, monkeypatch, capsys) -> None:
+    _answering(sp, monkeypatch, answers=ANSWERS, grants=sp.fixers.ChangeUnread("no such commit"))
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 2
+    out, err = capsys.readouterr()
+    assert out == "" and "the fixers' grant list could not be read: no such commit" in err
+
+
+def test_answers_field_needs_the_head_and_the_base(sp, monkeypatch, capsys) -> None:
+    asked = _answering(sp, monkeypatch, answers=ANSWERS)
+    view = {**PR_VIEW, "baseRefName": ""}
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], view)
+    assert code == 2 and asked == []
+    assert "GitHub named no head or no base for PR #99" in capsys.readouterr().err
+
+
+def test_a_pr_from_a_fork_is_fetched_by_the_ref_its_base_keeps(sp, monkeypatch, capsys) -> None:
+    asked = _answering(sp, monkeypatch, answers=[])
+    monkeypatch.setattr(sp.friction_answers, "base_remote", lambda base: "upstream")
+    view = {**PR_VIEW, "isCrossRepository": True}
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], view)
+    assert code == 0
+    assert asked[0][2] == sp.friction_answers.Source("upstream", "refs/pull/99/head")
+
+
+def test_no_other_view_runs_the_change_check(sp, monkeypatch, capsys) -> None:
+    asked = _answering(sp, monkeypatch, answers=ANSWERS)
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "title"], PR_VIEW)
+    assert code == 0 and asked == []

@@ -2684,7 +2684,7 @@ def land(
         accepted = lw.accepted_records
         monkeypatch.setattr(accepted, "derive", lambda head, base: accepted.Derivation())
         # The stub's change writes no answer and changes no grant list.
-        monkeypatch.setattr(lw, "_grants_between", lambda *args: ())
+        monkeypatch.setattr(lw.fixers, "change_between", lambda *args: ())
         monkeypatch.setattr(lw, "_sleep", clock.sleep)
         monkeypatch.setattr(lw, "_monotonic", clock)
 
@@ -2721,10 +2721,10 @@ def land(
 
 
 def _the_change_wrote_no_answers(monkeypatch: pytest.MonkeyPatch, answers: ModuleType) -> None:
-    """land-work's step that lists the answers (`documents this change affects:`),
+    """land-work's step that reads the answers (`documents this change affects:`),
     answered as for a change that wrote none: the landings these rows walk are the
     ones a change with no answers takes, which the step leaves as they were
-    (project-management DEC-055). The merge as it would land passes the change check
+    (project-management DEC-065). The merge as it would land passes the change check
     too: the head holds the base its own check read (DEC-055 point 6)."""
 
     def derive(head: str, base: str | None, *, source: Any = None) -> Any:
