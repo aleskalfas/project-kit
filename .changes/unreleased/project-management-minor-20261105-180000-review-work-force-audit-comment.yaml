@@ -1,0 +1,17 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  `review-work --force` posts one audit comment on the pull request it
+  overrides a refusal for (#2660, DEC-046 point 2). The comment is rendered
+  from `audit_comment_template` and names who gave the override and each
+  refusal it passed, a change check that could not be run at the head among
+  them. It lands before the pull request is made ready, reviewers are requested
+  or the issue moves, and on a pull request the run opens, right after the
+  opening. A retry of the same override at the same head posts no second
+  comment. A comment that cannot be posted stops the run at exit 3. At
+  `audit.projection: off` none is posted. Text a head controls is written with
+  each character a terminal would act on as its escape, in the comment and in
+  `review-work`'s output, where the refusals and warnings printed it raw until
+  now. The comment quotes it in a code span, with no live `<!--`.

@@ -115,7 +115,7 @@ A block draws one item of a pattern, or stands alone where content places it.
 - **Fields:** `head`, `tag` and `text`, each optional. `text` is a field of runs, its words `plain` and `strong`, `plain` the default.
 - **Options:**
   - `fill`: `plain`, the default, lies on the surface; `tint` lies on its colour family's fill, its texts in the family's text.
-  - `bar`: `none`, the default; `top` or `left` draws a bar in the family's line along that side.
+  - `bar`: `none`, the default; `top` or `left` draws a bar in the family's line along that side. A top bar moves nothing the card holds, so the heads of a row of cards stand at one height, whichever bar each has.
 
 ### `tag`
 
@@ -164,7 +164,7 @@ A connector's line takes its family's text, not its line. Nothing beside the lin
 A component reads a shared role where the starter means just that role, such as the body's type or the surface. It reads one of its own roles where a brand may want the starter's look apart, such as a card's corners.
 
 - **Colours** are always shared: `surface`, `line`, `text-primary`, `text-secondary`, `accent`, and each family's `fill`, `line` and `text`. The starter declares no colour role, and so no contrast pair.
-- **Shared sizes and types:** `type.body` sets a card's plain text, a tag's label and an aside's text. `space.1` and `space.2` lie around a tag's label. `space.2` lies between a block's head, tag, command and text.
+- **Shared sizes and types:** `type.body` sets a card's plain text, a tag's label and an aside's text. `space.1` and `space.2` lie around a tag's label. `space.2` lies between a block's head, tag, command and text. It is also the least a card keeps between a top bar and what it holds. So a brand's thick bar lowers every card's head alike.
 - **Three more shared roles:** `stroke.thick`, `type.strong` and `type.code`, roles of the foundations ([The foundations](../../files.md#the-foundations)). None has a default, so every brand gives each a value (visual-communication DEC-008 point 2).
 - **The starter's own roles,** each with a default whose chain ends at a shared role:
 

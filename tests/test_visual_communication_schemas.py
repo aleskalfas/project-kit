@@ -21,7 +21,7 @@ from tests.visual_communication_project import (
     TEST_PARTS,
 )
 
-files, reading = load("visual-communication", "files", "reading")
+files, reading, seam = load("visual-communication", "files", "reading", "plugins.seam")
 
 COMPANIONS = sorted(SCHEMAS.glob("*.schema.json"))
 
@@ -35,10 +35,10 @@ def refused(data: Any, kind: str) -> list[str]:
     return files.shape_problems(data, kind)
 
 
-def test_each_kind_has_its_pair_and_the_shared_definitions_stand_alone() -> None:
+def test_each_kind_has_its_pair_and_the_shared_definitions_and_the_document_stand_alone() -> None:
     names = {path.name for path in SCHEMAS.iterdir()}
     wanted = {f"{kind}{suffix}" for kind in files.KINDS for suffix in (".yaml", ".schema.json")}
-    assert names == wanted | {"defs.schema.json", ".gitkeep"}
+    assert names == wanted | {"defs.schema.json", "values.schema.json", ".gitkeep"}
 
 
 @pytest.mark.parametrize("path", COMPANIONS, ids=lambda path: path.name)
@@ -211,3 +211,110 @@ def test_a_name_is_never_a_yes_or_no_nor_nothing(value: str) -> None:
     validator = Draft202012Validator(defs["$defs"]["name"])
     assert not validator.is_valid(value)
     assert validator.is_valid(f"{value}-1")
+
+
+def test_a_declaration_names_each_code_writer_the_capability_ships() -> None:
+    schema = json.loads((SCHEMAS / "code.schema.json").read_text(encoding="utf-8"))
+    assert schema["properties"]["writer"]["enum"] == seam.names(seam.CODE_WRITER)
+
+
+# --- the document of values (DEC-005 points 7 and 8) --------------------------------------------
+
+COLOUR = {"colorSpace": "srgb", "components": [0, 0.5, 1], "alpha": 1}
+LENGTH = {"value": 16, "unit": "px"}
+TYPOGRAPHY = {
+    "fontFamily": ["Source Sans Pro"],
+    "fontSize": LENGTH,
+    "fontWeight": 400,
+    "letterSpacing": {"value": 0, "unit": "px"},
+    "lineHeight": 1.4,
+}
+OF_EACH_TYPE = {
+    "color": COLOUR,
+    "dimension": LENGTH,
+    "fontFamily": ["Source Sans Pro", "Arial"],
+    "fontWeight": 700,
+    "number": 1.5,
+    "typography": TYPOGRAPHY,
+}
+
+
+def values_document(tokens: dict[str, Any] | None = None, **fields: Any) -> dict[str, Any]:
+    """A values document of two combinations, with the `tokens` given or one of each type."""
+    each = {
+        f"of.{type_.lower()}": {"type": type_, "values": {"default": value, "mood.loud": value}}
+        for type_, value in OF_EACH_TYPE.items()
+    }
+    return {
+        "document": "visual-communication/values",
+        "version": 1,
+        "lock": {"foundations": "1.0.0", "test-brand": "1.0.0"},
+        "keys": ["default", "mood.loud"],
+        "tokens": each if tokens is None else tokens,
+        **fields,
+    }
+
+
+def token_of(type_: str, value: Any) -> dict[str, Any]:
+    return {"a": {"type": type_, "values": {"default": value}}}
+
+
+def test_the_document_holds_a_value_of_each_type() -> None:
+    assert refused(values_document(), "values") == []
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        pytest.param({"document": "another"}, id="another-document"),
+        pytest.param({"version": 2}, id="another-version"),
+        pytest.param({"lock": {}}, id="empty-lock"),
+        pytest.param({"lock": {"foundations": "one"}}, id="version-of-a-library"),
+        pytest.param({"keys": []}, id="no-key"),
+        pytest.param({"keys": ["default", "default"]}, id="a-key-twice"),
+        pytest.param({"keys": ["Dark"]}, id="shape-of-a-key"),
+        pytest.param({"inputs": {}}, id="a-field-it-does-not-declare"),
+    ],
+)
+def test_the_document_refuses_a_field_of_another_shape(fields: dict[str, Any]) -> None:
+    assert refused(values_document(**fields), "values") != []
+
+
+@pytest.mark.parametrize("field", ["document", "version", "lock", "keys", "tokens"])
+def test_the_document_holds_all_its_fields(field: str) -> None:
+    document = values_document()
+    del document[field]
+    assert refused(document, "values") != []
+
+
+@pytest.mark.parametrize(
+    "tokens",
+    [
+        pytest.param({"Accent": token_of("number", 1)["a"]}, id="token-path"),
+        pytest.param(token_of("shadow", {}), id="type-it-does-not-read"),
+        pytest.param({"a": {"type": "number"}}, id="no-values"),
+        pytest.param({"a": {"type": "number", "values": {}}}, id="empty-values"),
+        pytest.param({"a": {"type": "number", "values": {"Dark": 1}}}, id="key-of-a-value"),
+        pytest.param(token_of("color", {**COLOUR, "hex": "#0080ff"}), id="colour-with-hex"),
+        pytest.param(
+            token_of("color", {k: v for k, v in COLOUR.items() if k != "alpha"}),
+            id="colour-without-alpha",
+        ),
+        pytest.param(token_of("color", {**COLOUR, "colorSpace": "hsl"}), id="colour-space"),
+        pytest.param(token_of("color", {**COLOUR, "components": [0, 2, 1]}), id="component"),
+        pytest.param(token_of("dimension", {"value": 1, "unit": "rem"}), id="dimension-unit"),
+        pytest.param(token_of("fontFamily", "Source Sans Pro"), id="family-of-one-name"),
+        pytest.param(token_of("fontFamily", []), id="family-of-no-name"),
+        pytest.param(token_of("fontWeight", 1001), id="font-weight"),
+        pytest.param(token_of("number", "1"), id="number"),
+        pytest.param(
+            token_of("typography", {k: v for k, v in TYPOGRAPHY.items() if k != "lineHeight"}),
+            id="typography-of-four-members",
+        ),
+        pytest.param(
+            token_of("typography", {**TYPOGRAPHY, "fontSize": 16}), id="typography-member"
+        ),
+    ],
+)
+def test_the_document_refuses_a_token_of_another_shape(tokens: dict[str, Any]) -> None:
+    assert refused(values_document(tokens), "values") != []

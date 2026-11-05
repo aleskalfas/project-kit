@@ -1,0 +1,13 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit visual write-code` writes a brand as JSON (#2720). A declaration of
+  written code may name `writer: json`, form 1: the file is the document of
+  a brand's resolved values, unchanged, each set of values named by the key
+  of its combination, `typography` and size axes included, so the writer
+  reports no loss. A token path stays as the brand exports it, so a
+  declaration that names a `prefix` for this writer is refused. The
+  document's form is public: the capability ships it as
+  `schemas/values.schema.json`, at version 1.

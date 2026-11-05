@@ -6,6 +6,7 @@ pkit:
     anchors:
       path:
         - .pkit/capabilities/visual-communication/package.yaml
+        - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
         - .pkit/capabilities/visual-communication/scripts/status.py
         - .pkit/capabilities/visual-communication/scripts/check.py
         - .pkit/capabilities/visual-communication/scripts/add.py
@@ -36,6 +37,7 @@ pkit:
         - visual-communication:DEC-015#2
         - visual-communication:DEC-015#4
         - visual-communication:DEC-015#5
+        - visual-communication:DEC-015#7
         - COR-017
         - COR-031
         - COR-055#3
@@ -63,6 +65,7 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/starter/README.md#the-blocks
         - .pkit/capabilities/visual-communication/components.md#
         - .pkit/capabilities/visual-communication/components.md#how-the-engine-computes-a-scene
+        - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/outputs.md#contents
         - .pkit/capabilities/visual-communication/outputs.md#exports
         - .pkit/capabilities/visual-communication/outputs.md#the-record-of-exports
@@ -78,6 +81,7 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-an-export
         - .pkit/capabilities/visual-communication/outputs.md#written-code
         - .pkit/capabilities/visual-communication/outputs.md#the-record-beside-the-code
+        - .pkit/capabilities/visual-communication/outputs.md#the-json-code-writer
         - .pkit/capabilities/visual-communication/outputs.md#the-viewing-step
         - .pkit/capabilities/visual-communication/outputs.md#what-a-run-writes
         - .pkit/capabilities/visual-communication/outputs.md#what-the-report-says
@@ -90,6 +94,7 @@ pkit:
         - .pkit/capabilities/visual-communication/checks.md#the-findings-record
         - .pkit/capabilities/visual-communication/checks.md#when-the-check-reads-it
         - .pkit/capabilities/visual-communication/checks.md#in-pkit-validate
+        - .pkit/agents/README.md#deploy-mechanics
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#validate
 ---
@@ -105,8 +110,9 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 - **The foundations library,** under `libraries/foundations/`: a few shared roles, two axes, six colour families, and two top components: `figure`, for a figure, and `deck`, for a presentation ([The foundations](files.md#the-foundations)). Its version is not released yet, so it may change in any release of the capability ([The libraries the capability ships](files.md#the-libraries-the-capability-ships)).
 - **The starter library,** under `libraries/starter/`: patterns, such as `layers` and `network`, and blocks, such as `card` and `code`, each experimental. Its README lists them by the question each answers ([The starter](libraries/starter/README.md)). `pkit visual add starter` brings it in, and its version is not released yet either.
 - **The neutral brand,** under `libraries/neutral/`: a brand to start from, with a value for every shared role and the fonts it draws in ([The neutral brand](files.md#the-neutral-brand)). `pkit visual add neutral` brings it in, and its version is not released yet either.
-- **Three plugins:** the SVG renderer, which draws the previews and the SVG exports; the PDF renderer, which draws a piece as one PDF for each language and combination of modes; and the CSS code writer, which writes a brand out as CSS variables ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [The PDF renderer](outputs.md#the-pdf-renderer), [Written code](outputs.md#written-code)).
+- **Four plugins:** the SVG renderer, which draws the previews and the SVG exports; the PDF renderer, which draws a piece as one PDF for each language and combination of modes; the CSS code writer, which writes a brand out as CSS variables; and the JSON code writer, which writes a brand's resolved values as one JSON document ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [The PDF renderer](outputs.md#the-pdf-renderer), [Written code](outputs.md#written-code), [The JSON code writer](outputs.md#the-json-code-writer)).
 - **The check,** the `visual-communication:check` member of `pkit validate` ([In `pkit validate`](checks.md#in-pkit-validate)).
+- **The agent** `graphic-design-reviewer`, which reads a piece's drawn pages and reports what no check measures ([The reviewer](#the-reviewer)).
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
 
 No notation or producer ships ([Notations](files.md#notations), [Plugins](outputs.md#plugins)). A project writes its own notations, and may write its own brand ([Brands](files.md#brands)). `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)).
@@ -142,7 +148,7 @@ A library the capability ships reaches the location only through [`pkit visual a
 1. **Bring the libraries.** [`pkit visual add <library>`](#pkit-visual-add-library) copies a library the capability ships, such as the foundations, into the location's library folder, and lists it in `libraries/libraries.yaml`. Put each other library version a piece uses there yourself, and list it ([The library folder](files.md#the-library-folder)). A piece needs a brand: bring the neutral brand, or write the project's own ([Brands](files.md#brands)).
 2. **Write the piece.** A piece is a folder under `pieces/`: its `piece.yaml` names its libraries, languages, modes and exports, and its content names the components that draw it ([A piece](files.md#a-piece)).
 3. **Draw it.** `pkit visual render <piece>` writes the piece's lock, computes its scenes, keeps their findings in `findings.yaml`, and draws an SVG preview of each scene. Open the previews under `.pkit/capabilities/visual-communication/project/local/previews/<piece>/` ([The clone's local folder](files.md#the-clones-local-folder)).
-4. **See it.** [`pkit visual look <piece>`](#pkit-visual-look-piece) draws each page as an image, with a report of what the images cannot show ([The viewing step](outputs.md#the-viewing-step)).
+4. **See it.** [`pkit visual look <piece>`](#pkit-visual-look-piece) draws each page as an image, with a report of what the images cannot show ([The viewing step](outputs.md#the-viewing-step)). [The reviewer](#the-reviewer) can read them for you.
 5. **Check it.** `pkit visual check <piece>`, or `pkit validate`, reports what the piece breaks ([What the check reports](checks.md)).
 6. **Commit the piece's folder:** `piece.yaml`, the content and `findings.yaml` ([The findings record](checks.md#the-findings-record)). The previews stay local to the clone ([The clone's local folder](files.md#the-clones-local-folder)).
 7. **Hand it out.** `pkit visual export <piece>` makes a numbered export in each format the piece declares, and records the version in the piece's `exports.yaml`. Commit `exports.yaml`; the exported files stay local until they are handed out ([Exports](outputs.md#exports)).
@@ -268,6 +274,25 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 - **Never moves** the declaration's lock ([The declaration](outputs.md#the-declaration)).
 - **Prints** each loss of the writer that the declaration does not accept ([Accepting a loss](outputs.md#accepting-a-loss)).
 - **Exits** 0 when it wrote the code or found it up to date; 1 when it refused, or a write failed ([Commands](#commands)); 2 on a usage error.
+
+## The reviewer
+
+`graphic-design-reviewer` is the capability's agent. It looks at a piece's pages as they were drawn, and reports what no check measures, such as a text over a picture. The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
+
+To use it:
+
+1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages and modes you want read. The reviewer runs no command, so it sees only what that run drew.
+2. **Dispatch it,** naming the piece. It reads the images, with the piece and the brand, and the frames and the report beside them. It changes nothing.
+3. **Read its report.** It opens with the pages, languages and modes it looked at, and names what it did not see. What it did not see is not looked at, never clean.
+
+Each finding names the page, and the element's trace id where the element was drawn ([Trace ids](components.md#trace-ids)). A finding is one of two kinds:
+
+- **A fault,** which the agent's list names: a part missing or blank, a wrong font, text over text, a text that does not read over a picture, a wrong picture, an overlap, a fault of alignment, or a drawing that disagrees with a passing check.
+- **A note,** anything else worth a look.
+
+Its findings are advice. They join no validation and hold no merge.
+
+It needs a harness that reads images. Where the harness reads none, it stops and says so, and reports nothing as looked at.
 
 ## Citing this capability's decisions
 
