@@ -18,7 +18,7 @@ A component that carries out merges runs the check before it merges, and shows t
 
 **What COR-066 decides.** A decision record or a rule reaches the default branch only accepted, within the change that proposes it (point 1). A check of its own refuses to land a proposal: one added proposed, or an accepted one set back to proposed (point 2). The same check lists what a change makes accepted, for the person who authorises the change to land (point 3). A key in the backbone configuration turns the refusal on, and it counts as the default branch holds it (point 4).
 
-**What this record rests on.** This record judges what a change's merge would land, where accepted COR-066 point 2 reads the change's head. So it reads true only once point 2 says the same, an edit that lands first as a core change of its own. COR-066's Implications give the list to the numbering check, where its point 3 gives it to the same check as the refusal. This record follows point 3, which is the decision.
+**What this record rests on.** COR-066 point 2 reads what a change would land, so this record judges what the change's merge would land. The list goes to the same check as the refusal (point 3).
 
 **What the backbone has.**
 - **The numbering check,** `pkit decisions check-diff`, compares the records a change touches with where its branch left the base ([COR-058](../../../.pkit/decisions/core/COR-058-record-points.md) point 8). It is a line of the project's check gate, which the pre-push hook and the pipeline run on every change. Its exit 1 means an error in the change's numbering, and its document, at version 1, lists the accepted records the change edits. project-management's landing command reads that document, and refuses any other version.
