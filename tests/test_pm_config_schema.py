@@ -344,6 +344,18 @@ def test_contributed_opt_out_entry_shape(
     assert _errors(validator, doc)
 
 
+def test_the_checks_that_start_the_reviewers_are_a_list_of_names(
+    validator: Draft202012Validator,
+) -> None:
+    def named(value: object) -> dict[str, Any]:
+        return _minimal() | {"review": {"agents": {"start_after_checks": value}}}
+
+    assert not _errors(validator, named(["the remainder", "lint"]))
+    assert not _errors(validator, named([]))
+    for wrong in ("the remainder", [7], [""], ["  "]):
+        assert _errors(validator, named(wrong)), wrong
+
+
 @pytest.mark.parametrize(
     "floors",
     [

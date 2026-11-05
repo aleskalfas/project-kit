@@ -199,7 +199,7 @@ def test_review_work_opens_its_pr_against_the_resolved_base(
     _stub_gates(monkeypatch, mod, issue, ["review-work", "42", "--yes", *extra_argv])
     monkeypatch.setattr(mod.issue_branch, "_local_branches", lambda: (BRANCH,))
     monkeypatch.setattr(mod, "_find_pr_for_branch", lambda *a: None)
-    monkeypatch.setattr(mod, "_ready_body_ok", lambda *a, **k: True)
+    monkeypatch.setattr(mod, "_ready_findings", lambda *a, **k: [])
     captured = {}
 
     def fake_create_ready(branch, base, title, body, config):
