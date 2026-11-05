@@ -42,7 +42,7 @@ A sidecar is one file for one document, holding the document's data as its front
 The backbone and every component read a sidecar as part of its document, at the document's path, and never as a file of its own.
 - **Anchors.** A path anchor, or an anchor of a registered kind, stands on the documents it names, each with its sidecar's data where point 3 reads it. It never stands on a sidecar's file or its mode. So an anchor that names only sidecars names nothing, and is dead as one that matches only answer files is (COR-062 point 2).
 - **The excluded paths and the declared surface** reach a sidecar exactly where they reach its document (COR-050 points 7 and 8).
-- **No artefact.** No place reads a sidecar as a document, and neither measure counts one (COR-050 point 8).
+- **No artefact.** No place reads a sidecar as a document, or as a placed data file (refinement per COR-071), and neither measure counts one (COR-050 point 8).
 - **A component** that judges a change by the paths it touches reads a change to a sidecar as one to its document. One such judgement is a review that a change to code requires.
 
 ### 3. The backbone reads a sidecar wherever it reads an artefact
@@ -51,6 +51,7 @@ The backbone and every component read a sidecar as part of its document, at the 
 - **Found by its document.** At each state, the backbone finds the sidecar from the document's path there, the document's renames followed. A sidecar's own history is never followed apart from its document's.
 - **Reading never depends on a permission.** The backbone reads a sidecar whatever the document's type, and whatever a type registry says, at that state or at any other. So history reads a document whose type allowed a sidecar once and no longer does. Friction reads no type (COR-056 point 5).
 - **Nowhere else.** Beside a file whose content the backbone does not read as an artefact's, a sidecar is never read as data. No synced tree is a place (COR-050 point 14), so a sidecar a project receives by sync is never read as data.
+- **Not beside a placed data file.** A placed data file is its data, so a sidecar beside one is never read as data (refinement per COR-071).
 
 ### 4. The owner of a document's type allows a sidecar
 
@@ -64,7 +65,7 @@ The backbone and every component read a sidecar as part of its document, at the 
   - **Back into front matter** for any document, so a sidecar no type allows can always be mended.
 
   Each owner decides in its own records whether its commands write sidecars. A command that moves data between homes leaves the body exactly as it was. Either home stays legal for a document whose type allows a sidecar.
-- **Validation** fails each sidecar that no type allows. It reads every sidecar in the repository, beside a placed file or not. So it fails a sidecar beside a file with no type, and a sidecar whose document is missing, as after a rename that left it behind.
+- **Validation** fails each sidecar that no type allows. It reads every sidecar in the repository, beside a placed file or not. So it fails a sidecar beside a file with no type, and a sidecar whose document is missing, as after a rename that left it behind. It fails a sidecar beside a placed data file too, whatever its type allows (refinement per COR-071).
 
 ### 5. A decision record and a rule-set file keep their front matter
 

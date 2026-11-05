@@ -1,0 +1,1111 @@
+answers:
+  - artefact: .pkit/capabilities/demo-recording/README.md
+    read:
+      - moved-04bca1569ad8.yaml
+    revalidated:
+      at: 2026-10-31T21:52:45Z
+      outcome: unchanged
+      unchanged-because: COR-023 now says `pkit data validate` reads a placed data file without the methodology's containers. A bundle's `record.yaml` lies in no place and holds no container, so its binding to `record-config` and its validation read as this page says.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-anchor
+    read:
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261031T022026Z-006436af.yaml
+    revalidated:
+      at: 2026-10-31T21:52:49Z
+      outcome: unchanged
+      unchanged-because: COR-050 points 2 and 7 make a value of a placed data file a part, named by its key path, and say when an anchor on one is dead. The definition, a link to what makes a document or an entry true, holds. No place reads a data file until the backbone builds the declaration (#2416).
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-answer
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+    revalidated:
+      at: 2026-10-31T21:52:52Z
+      outcome: unchanged
+      unchanged-because: COR-062 point 1 adds that an answer names a placed data file by its path, as it names a document. The definition, a statement in a change's own file that settles an edit or a revisit, holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-artefact
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261031T022026Z-006436af.yaml
+    revalidated:
+      at: 2026-10-31T21:52:56Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 adds that a place may say it reads data files, each then read from its data as front matter with no body. The definition, a document with front matter or a keyed entry in a declared place, holds of every artefact. No place reads a data file until the backbone builds the declaration (#2416).
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-artefact-type
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261031T022026Z-006436af.yaml
+    revalidated:
+      at: 2026-10-31T21:52:59Z
+      outcome: unchanged
+      unchanged-because: COR-056 point 3 adds that a placed data file takes its type only from the places that read it as data. A type is still a declared name the place holding the file gives, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-friction
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261031T022026Z-006436af.yaml
+    revalidated:
+      at: 2026-10-31T21:53:03Z
+      outcome: unchanged
+      unchanged-because: COR-050 points 1 and 5 and COR-062 point 1 add placed data files, read from their data as front matter and named by path in an answer. Friction, a changed ground with no answer standing, reads the same for them, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-head
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+    revalidated:
+      at: 2026-10-31T21:53:06Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 5 adds what an anchor on a value of a placed data file stands on. The head is still the later state a check compares with the base, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-place
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261031T022026Z-006436af.yaml
+    revalidated:
+      at: 2026-10-31T21:53:10Z
+      outcome: unchanged
+      unchanged-because: COR-050 points 1 and 14 let a place say it reads data files too. The definition, a path or glob within which the backbone looks for documents that carry anchors, holds. No place reads a data file until the backbone builds the declaration (#2416).
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-revisit
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+    revalidated:
+      at: 2026-10-31T21:53:13Z
+      outcome: unchanged
+      unchanged-because: COR-062 point 1 adds only that an answer names a placed data file by its path. A revisit, the judgement a change owes for one link target a trigger field asks about, is untouched, so the definition holds.
+  - artefact: tech-docs/analysis/core/domain-model/030-capabilities-areas-and-connection-points.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+    revalidated:
+      at: 2026-10-31T21:53:17Z
+      outcome: unchanged
+      unchanged-because: COR-053 point 10 adds that a placed data file's data holds the methodology's container at its top. This view's roles, connection points, versions and wiring say nothing of where the container sits, so they hold.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-synced-copy
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+    revalidated:
+      at: 2026-10-31T21:53:20Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 14 adds that a project's place may say it reads data files. A synced copy is still a file propagation writes and the project never edits, so the definition holds.
+  - artefact: tech-docs/analysis/core/domain-model/070-artefacts-and-friction.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044308Z-41eae20f.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-10-31T21:53:24Z
+      outcome: unchanged
+      unchanged-because: "COR-050, COR-056 and COR-062 gain pointers to COR-071: a place may read YAML data files as artefacts, with parts named by key path. The view's artefact, anchor, part, place and type read true. No place reads a data file until the backbone builds the declaration (#2416)."
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-005-reading-writes-nothing.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T152404Z-888b608a.yaml
+      - 20261029T202326Z-9a279d42.yaml
+    revalidated:
+      at: 2026-10-31T21:53:27Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 2 adds that a value of a placed data file is a part, named by its key path. A command that only reads or validates still changes nothing, whatever part an anchor names, so the requirement holds.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-ci-pipeline.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+    revalidated:
+      at: 2026-10-31T21:53:31Z
+      outcome: unchanged
+      unchanged-because: COR-050 gains pointers to COR-071 in points 1, 2, 5, 7 and 14 on placed data files. The pipeline's needs, running the checks unattended against one base, are untouched.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-004-missing-answer-never-clean.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261031T022026Z-006436af.yaml
+      - moved-97da208f5979.yaml
+    revalidated:
+      at: 2026-10-31T21:53:34Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 2 adds parts named by key path in a placed data file. A check still never reads a missing result as one that found nothing, whatever part an anchor names, so the requirement holds.
+  - artefact: tech-docs/analysis/demo-recording/glossary.md#TERM-recording-configuration
+    revalidated:
+      at: 2026-10-31T21:53:38Z
+      outcome: unchanged
+      unchanged-because: COR-023 now says `pkit data validate` reads a placed data file without the methodology's containers. A recording configuration lies in no place and binds by its `pkit_schema` line, so the definition and its example hold.
+  - artefact: tech-docs/analysis/demo-recording/use-case-model/use-cases/UC-035-record-demo.md
+    read:
+      - 20261030T114612Z-ece11007.yaml
+      - moved-69052de31607.yaml
+    revalidated:
+      at: 2026-10-31T21:53:41Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 2 adds parts named by key path in a placed data file. Recording a demo from its bundle's configuration and storyboard is untouched, and `record.yaml` lies in no place, so the use case holds.
+  - artefact: tech-docs/analysis/living-docs/requirements/constraints/REQ-025-never-fetch-source.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T152635Z-e55266a8.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+    revalidated:
+      at: 2026-10-31T21:53:45Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 2 adds parts named by key path in a placed data file, read from the repository like any part. Nothing in living-docs fetches a captured source's text, so the constraint holds.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-045-propose-page-fix.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261030T114612Z-ece11007.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+    revalidated:
+      at: 2026-10-31T21:53:48Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 5 adds what an anchor on a value of a placed data file stands on. For a page's stale part anchor the agent still reads that part's diff first, as step 3 says, so the use case holds.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-047-onboard-documents.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+    revalidated:
+      at: 2026-10-31T21:53:52Z
+      outcome: unchanged
+      unchanged-because: COR-050 points 1 and 14 let a place say it reads data files. Onboarding assigns the places that hold a space's Markdown documents, so the use case holds. No place reads a data file until the backbone builds the declaration (#2416).
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-081-decide-unasked-answers.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-10-31T21:53:55Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 adds that a place may read YAML data files as artefacts. Who decides an answer no change owes does not turn on the kind of file the artefact is, so the use case holds.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-043-set-up-space.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261030T114612Z-ece11007.yaml
+    revalidated:
+      at: 2026-10-31T21:53:59Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 adds that a place may read YAML data files as artefacts. A space's places hold its pages, which are Markdown documents, so setting a space up holds as written.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-044-write-page.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261031T003946Z-045a5765.yaml
+    revalidated:
+      at: 2026-10-31T21:54:03Z
+      outcome: unchanged
+      unchanged-because: COR-050 points 1, 2 and 7 add placed data files, their values as parts named by key path, and when such an anchor is dead or ambiguous. Writing a page and anchoring a path, a record, an artefact or a section holds as written. No place reads a data file until the backbone builds the declaration (#2416).
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T020848Z-91131abb.yaml
+      - 20261028T040414Z-bea9746a.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T233109Z-431c3965.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+    revalidated:
+      at: 2026-10-31T21:54:06Z
+      outcome: unchanged
+      unchanged-because: COR-053 point 10 adds that a placed data file's data holds the container at its top. Planning intent through a data point and the fillers it resolves is untouched, so the use case holds.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-070-choose-parts.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-31T21:54:10Z
+      outcome: unchanged
+      unchanged-because: COR-023 now says `pkit data validate` reads a placed data file without the methodology's containers. `structures.yaml` lies in no place and holds no container, so its validation against its schema holds as step 11a says.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-071-describe-existing-project.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+    revalidated:
+      at: 2026-10-31T21:54:14Z
+      outcome: unchanged
+      unchanged-because: Judged together, the two answers held apart agree. Step 7 fills each part, DEC-006's body included, and links each id a candidate names. The developer confirms each candidate and accepts each reason. COR-050 points 1 and 14 now let a place read data files, yet the capability's places read Markdown only, so the use case holds.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-073-revalidate-after-change.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261030T114612Z-ece11007.yaml
+    revalidated:
+      at: 2026-10-31T21:54:17Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 5 adds what an anchor on a value of a placed data file stands on. The analysis's artefacts are Markdown documents and entries, revalidated as the steps say, so the use case holds.
+  - artefact: tech-docs/analysis/core/domain-model/060-changes-review-and-releases.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044308Z-41eae20f.yaml
+    revalidated:
+      at: 2026-10-31T21:54:21Z
+      outcome: unchanged
+      unchanged-because: COR-050 gains pointers to COR-071 on placed data files. This view's changes, reviews and releases say nothing of what kind of file an artefact is, so they hold.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-006-command-time-bound.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261031T022026Z-006436af.yaml
+      - moved-4695bf771ed9.yaml
+    revalidated:
+      at: 2026-10-31T21:54:25Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 2 adds parts named by key path in a placed data file. The thirty-second bound on a command the backbone runs is untouched. No place reads a data file until the backbone builds the declaration (#2416).
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-10-31T21:54:28Z
+      outcome: unchanged
+      unchanged-because: COR-053 point 10 adds that a placed data file's data holds the container at its top. Connecting a capability, writing its process definition and its scripts, is untouched, so the use case holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-source-repository
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+    revalidated:
+      at: 2026-10-31T21:54:32Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 14 adds that a project's place may say it reads data files. The source repository is still where the originals of synced copies are authored, so the definition holds.
+  - artefact: tech-docs/analysis/core/requirements/constraints/REQ-007-offline-same-answer.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261030T101221Z-1eafbd45.yaml
+      - 20261031T022026Z-006436af.yaml
+      - moved-c65929ef6b08.yaml
+    revalidated:
+      at: 2026-10-31T21:54:36Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 2 adds parts named by key path in a placed data file, read from the repository like any part. Resolving an anchor stays offline, read-only and deterministic, so the constraint holds.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-020-dead-anchor-error.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T211920Z-6d6ac91d.yaml
+    revalidated:
+      at: 2026-10-31T21:54:39Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 7 adds when an anchor on a value of a placed data file is dead or ambiguous. A dead anchor the change added or turned dead is still an error, so the requirement holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-005-anchor-document.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261031T022026Z-006436af.yaml
+    revalidated:
+      at: 2026-10-31T21:54:43Z
+      outcome: unchanged
+      unchanged-because: COR-050 points 1, 2 and 7 add placed data files, their values as parts named by key path, and when such an anchor is dead or ambiguous. Anchoring a document through its friction block holds as written. No place reads a data file until the backbone builds the declaration (#2416).
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+    revalidated:
+      at: 2026-10-31T21:54:47Z
+      outcome: unchanged
+      unchanged-because: COR-050 and COR-062 gain pointers to COR-071 on placed data files, which an answer names by path. Reviewing and landing a change, its required reviewers and its answers, is untouched, so the use case holds.
+  - artefact: tech-docs/analysis/core/domain-model/040-versions-and-copies.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+    revalidated:
+      at: 2026-10-31T21:54:50Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 14 adds that a project's place may say it reads data files. Manifests, versions and synced copies are untouched by that, so the view holds.
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T044443Z-53a77744.yaml
+    revalidated:
+      at: 2026-10-31T21:54:54Z
+      outcome: unchanged
+      unchanged-because: COR-050 and COR-062 point 1 gain pointers on placed data files, which an answer names by path. The panel's reviewers and the list of what changed in each updated document read the same, so the page holds.
+  - artefact: .pkit/lifecycle/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261031T022026Z-006436af.yaml
+    revalidated:
+      at: 2026-10-31T21:54:58Z
+      outcome: unchanged
+      unchanged-because: "COR-050 points 1, 5 and 14 and COR-053 point 10 add placed data files and their container. The manifests, package metadata and propagation described here hold as written, since no package-metadata field declares a data place until #2416 builds it."
+  - artefact: .pkit/decisions/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023310Z-317632ec.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-10-31T21:55:01Z
+      outcome: unchanged
+      unchanged-because: COR-050 points 1, 2 and 7 and COR-053 point 10 add placed data files and their parts by key path. Records and rule sets stay Markdown files that keep their front matter and are cited by point, so the page holds.
+  - artefact: .pkit/agents/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-10-31T21:55:06Z
+      outcome: unchanged
+      unchanged-because: COR-050 and COR-062 gain pointers on placed data files, which an answer names by path. The agents' shape, their deployment and the answer writers they use read the same, so the page holds.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T143058Z-33fd32cd.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T214052Z-d9e0c8d3.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T224420Z-150fbc32.yaml
+      - 20261028T231033Z-db617c30.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261030T114612Z-ece11007.yaml
+      - 20261031T010527Z-8e577440.yaml
+    revalidated:
+      at: 2026-10-31T21:55:09Z
+      outcome: unchanged
+      unchanged-because: COR-023 now says `pkit data validate` reads a placed data file without containers, and COR-053 point 10 that its container sits at its top. The capability's `config.yaml` lies in no place, so its binding and validation hold as written.
+  - artefact: .pkit/process/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261027T152454Z-63ed08af.yaml
+    revalidated:
+      at: 2026-10-31T21:55:13Z
+      outcome: unchanged
+      unchanged-because: COR-053 point 10 adds that a placed data file's data holds the container at its top. The process definitions, predicates and journal described here are untouched, so the page holds.
+  - artefact: .pkit/rule-sets/ops.md#RS-OPS-020
+    revalidated:
+      at: 2026-10-31T21:55:17Z
+      outcome: unchanged
+      unchanged-because: COR-050 and COR-062 gain pointers on placed data files, which an answer names by path. Who writes the answers a change owes, and who checks them, is untouched, so the rule holds.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-005
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+    revalidated:
+      at: 2026-10-31T21:55:20Z
+      outcome: unchanged
+      unchanged-because: "Judged together, the two answers held apart agree. A reason for having no anchors stays a person's for the analysis until #2123. An artefact's statements are its body and the fields a writer fills. COR-050 points 1, 2 and 5 now add placed data files and parts by key path, yet no analysis artefact is one, so the rule holds."
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T114612Z-ece11007.yaml
+    revalidated:
+      at: 2026-10-31T21:55:24Z
+      outcome: unchanged
+      unchanged-because: COR-023, COR-050, COR-053 and COR-062 point 1 gain pointers on placed data files. The capability's eight places read Markdown documents only, and `structures.yaml` lies in no place, so what the page says of places, artefacts and validation holds.
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T030614Z-db9a0a3b.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T134448Z-e94c9244.yaml
+      - 20261031T022026Z-006436af.yaml
+    revalidated:
+      at: 2026-10-31T21:55:28Z
+      outcome: unchanged
+      unchanged-because: "COR-050 and COR-062 gain pointers on placed data files. The friction and data commands read as this reference says, since no command reads a data place until #2416 builds it."
+  - artefact: .pkit/capabilities/doc-examples/README.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T152454Z-63ed08af.yaml
+      - 20261027T155443Z-e9552da8.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T114612Z-ece11007.yaml
+      - 20261031T033803Z-982f5fe6.yaml
+    revalidated:
+      at: 2026-10-31T21:55:32Z
+      outcome: unchanged
+      unchanged-because: COR-050 and COR-056 gain pointers on placed data files and their type. A page the run reads is still a Markdown document with front matter in a place, as this page says, so it holds.
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T013912Z-adb73078.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113029Z-9dec9cb8.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T145906Z-a3781d7a.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T152404Z-888b608a.yaml
+      - 20261029T155317Z-2d90650e.yaml
+      - 20261029T155559Z-74f6b0d1.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T160608Z-f0e5731a.yaml
+      - 20261029T190551Z-85ee9700.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T204639Z-57b1f9b1.yaml
+      - 20261029T204651Z-6eb49a72.yaml
+      - 20261029T212322Z-bf411b6a.yaml
+      - 20261029T213250Z-52102acd.yaml
+      - 20261029T213830Z-1305dbb8.yaml
+      - 20261029T230516Z-0e59ab68.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261031T010906Z-47833d43.yaml
+      - 20261031T013603Z-dccf51ad.yaml
+      - 20261031T014558Z-c26fa007.yaml
+      - 20261031T021353Z-44474827.yaml
+      - 20261031T185157Z-7a2bd436.yaml
+    revalidated:
+      at: 2026-10-31T21:55:35Z
+      outcome: unchanged
+      unchanged-because: COR-050 and COR-062 point 1 gain pointers on placed data files. The friction gate and the prose lint read Markdown artefacts as described. No place reads a data file until the backbone builds the declaration (#2416).
+  - artefact: .pkit/schemas/README.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T152454Z-63ed08af.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261031T033803Z-982f5fe6.yaml
+      - 20261031T183549Z-5d506662.yaml
+    revalidated:
+      at: 2026-10-31T21:55:39Z
+      outcome: unchanged
+      unchanged-because: "COR-023, COR-050, COR-053, COR-056 and COR-062 gain pointers on placed data files. The friction block, the container in front matter and `pkit data validate` read as this page says until #2416 builds the reading, so it holds."
+  - artefact: .pkit/capabilities/living-docs/pages.md
+    revalidated:
+      at: 2026-10-31T21:55:42Z
+      outcome: unchanged
+      unchanged-because: COR-050 and COR-056 gain pointers on placed data files and their type. A page is still a Markdown document whose parts are its sections and lead, and a captured source lies in no place, so the page holds.
+  - artefact: .pkit/capabilities/living-docs/spaces.md
+    revalidated:
+      at: 2026-10-31T21:55:46Z
+      outcome: unchanged
+      unchanged-because: COR-050 and COR-056 gain pointers on placed data files and their type. A space's places hold its pages, which are Markdown documents, so the page holds.
+  - artefact: .pkit/capabilities/living-docs/validation.md
+    revalidated:
+      at: 2026-10-31T21:55:50Z
+      outcome: unchanged
+      unchanged-because: COR-023, COR-050 and COR-056 gain pointers on placed data files. Validation reads each place's Markdown files and their front matter, and checks a captured source by its own shape, as the page says, so it holds.
+  - artefact: .pkit/capabilities/living-docs/agent.md
+    revalidated:
+      at: 2026-10-31T21:55:53Z
+      outcome: unchanged
+      unchanged-because: COR-050 and COR-062 point 1 gain pointers on placed data files. The agent proposes changes to pages, which are Markdown documents, so what it reads and proposes holds.
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T214030Z-7cd17739.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+    revalidated:
+      at: 2026-10-31T21:55:57Z
+      outcome: unchanged
+      unchanged-because: COR-050 and COR-053 point 10 gain pointers on placed data files and their container. The capability's pages, spaces and readers point read as this page says, so it holds.
+  - artefact: docs/capabilities/living-docs/010-set-up-your-spaces.md
+    revalidated:
+      at: 2026-10-31T21:56:00Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 14 lets a project's place say it reads data files. Setting up spaces assigns the places that hold pages, which are Markdown, so the guide holds.
+  - artefact: docs/capabilities/living-docs/030-write-a-page.md
+    revalidated:
+      at: 2026-10-31T21:56:04Z
+      outcome: unchanged
+      unchanged-because: COR-050 points 5 and 7 add what an anchor on a value of a placed data file stands on, and when it is dead or ambiguous. A page anchoring a section or a captured source reads as the guide says, so it holds.
+  - artefact: docs/capabilities/living-docs/050-fix-a-stale-page.md
+    revalidated:
+      at: 2026-10-31T21:56:08Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 5 adds what an anchor on a value of a placed data file stands on. Fixing a stale page and answering for it read as the guide says, so it holds.
+  - artefact: docs/capabilities/living-docs/020-bring-in-your-documents.md
+    revalidated:
+      at: 2026-10-31T21:56:11Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 adds that a place may read YAML data files as artefacts. Bringing in Markdown documents, new to the checks where they had no front matter, reads as the guide says, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-10-31T21:56:15Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 14 lets a project's place say it reads data files. Setting a key of the backbone configuration through the consent-gated writer is untouched, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+    revalidated:
+      at: 2026-10-31T21:56:18Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 2 adds parts named by key path in a placed data file, and COR-062 point 1 names one by path in an answer. Answering a stale artefact reads the same, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-006-gate-merges.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020925Z-e1e051d0.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+    revalidated:
+      at: 2026-10-31T21:56:22Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 2 adds parts named by key path in a placed data file. Gating merges on the change check, dormant where nothing carries the container, is untouched, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T022026Z-006436af.yaml
+    revalidated:
+      at: 2026-10-31T21:56:25Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 2 adds parts named by key path, and COR-062 point 1 names a placed data file by path in an answer. Resolving debt reads the same, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T161257Z-5352f58f.yaml
+    revalidated:
+      at: 2026-10-31T21:56:29Z
+      outcome: unchanged
+      unchanged-because: COR-050 points 1 and 14 let a place say it reads data files. Adopting the system and declaring its places reads the same, so the journey holds.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261031T022026Z-006436af.yaml
+    revalidated:
+      at: 2026-10-31T21:56:33Z
+      outcome: unchanged
+      unchanged-because: COR-050 points 1 and 5 add placed data files and what an anchor on one of their values stands on. Delivering a change and revising each document it makes untrue reads the same, so the journey holds.
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023128Z-752860d8.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T155551Z-be632892.yaml
+      - 20261030T161257Z-5352f58f.yaml
+      - 20261030T164324Z-d7667894.yaml
+      - 20261030T231942Z-8fe86054.yaml
+      - 20261030T235059Z-0bb410f6.yaml
+      - 20261031T003126Z-7b1634e4.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+    revalidated:
+      at: 2026-10-31T21:56:36Z
+      outcome: unchanged
+      unchanged-because: COR-050 gains pointers on placed data files. The README's friction example anchors a Markdown document under `docs/`, which holds as written.
+  - artefact: docs/capabilities/living-docs/README.md
+    revalidated:
+      at: 2026-10-31T21:56:40Z
+      outcome: unchanged
+      unchanged-because: COR-050 gains pointers on placed data files. A page is still a Markdown file of a space with its anchors in its friction block, so the guide holds.

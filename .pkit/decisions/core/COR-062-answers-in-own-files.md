@@ -34,7 +34,7 @@ Four terms recur:
 ### 1. Answers live in answer files
 
 A change writes its answers to friction in an answer file: a file in the answer folder, under a name no other change uses.
-- **What it holds.** For each artefact it answers, the artefact's location and the answers on it. Those are a revalidation (COR-050 point 3), deferrals (point 4) and revisit entries (point 16). A document is named by its path. A collection entry is named by its file's path, `#` and its id.
+- **What it holds.** For each artefact it answers, the artefact's location and the answers on it. Those are a revalidation (COR-050 point 3), deferrals (point 4) and revisit entries (point 16). A document is named by its path, and so is a placed data file (refinement per COR-071). A collection entry is named by its file's path, `#` and its id.
 - **Its keys** are COR-050's: `at`, `outcome`, `unchanged-because`, `deferred` and `revisited`. Each answer adds `read` (point 4). Their layout, and the checks a schema makes of them, belong to the schema the backbone ships.
 - **What stays in the artefact.** Its block keeps its anchors, its reason for having none and the tool-written status (COR-050 points 1 and 10). It holds no answer. An answer left in it is read only in history, for its points (point 6), and validation finds it (point 10).
 - **What the checks read.** Both checks, the debt listing and the explanation read an artefact's answers from the answer files. The change check reads the answers a change wrote from the answer files its diff adds. Its machine-readable output lists them, each with its words and its flags, for the reviewer of COR-050 point 3.
