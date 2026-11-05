@@ -43,7 +43,7 @@ Three kinds of file declare a hook:
 The implementation in a `provides:` entry is read by its prefix:
 
 - **`/<skill-name>`** invokes that skill, through the harness's skill mechanism.
-- **Anything else** runs as a shell command, through bash.
+- **Anything else** runs as a shell command.
 
 ```yaml
 # a capability's package.yaml
@@ -56,7 +56,7 @@ A skill's `answers:` entry is provided by the skill itself.
 
 ## Hook signature
 
-A hook takes positional string arguments, and writes text to standard output. Exit code 0 is success, and standard error carries errors and warnings. Each hook's own contract, its arguments and the form of its output, is in its provider's body or README.
+A hook takes positional string arguments, and writes text to standard output. Its exit code signals success (0) or failure. Each hook's own contract, its arguments and the form of its output, is in its provider's body or README.
 
 ## Naming
 
@@ -94,7 +94,7 @@ An agent invokes a hook it needs by running the hook's provider, as the provider
 
 ## Commands
 
-The commands that query hooks. `list`, `resolve` and `who-provides` read the precedence above.
+Four commands query hooks. `list`, `resolve` and `who-provides` read the precedence above.
 
 ### `pkit hooks list`
 

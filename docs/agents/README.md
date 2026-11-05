@@ -25,6 +25,7 @@ pkit:
         - UC-029
         - UC-042
         - REQ-021
+        - .pkit/agents/README.md#layout
         - .pkit/agents/README.md#frontmatter-schema
         - .pkit/agents/README.md#body-conventions
         - .pkit/agents/README.md#the-reference-graph
@@ -159,7 +160,7 @@ flowchart TD
   session["A session dispatches the agent"] -->|loads| copy
 ```
 
-- **The sources.** The core's definitions are in `.pkit/agents/core/`, and an installed capability's are in its `agents/` folder. Each sync refreshes both. Yours are in `.pkit/agents/project/`, which no sync writes.
+- **The sources.** The core's definitions are in `.pkit/agents/core/`, and an installed capability's are in its `agents/` folder. Each sync refreshes both. Yours are in `.pkit/agents/project/`, which no sync writes ([the reference, "Layout"](../../.pkit/agents/README.md#layout)).
 - **The core's six** are the four reviewers, the architect and the `process-author`. The `process-author` writes the checks behind a process definition, and owns nothing until you name its paths.
 - **One definition for each name.** Where two sources ship one name, the deploy takes yours, then a capability's, then the core's ([the reference, "Deploy mechanics"](../../.pkit/agents/README.md#deploy-mechanics)).
 - **The overlay,** `.pkit/agents/project/overlay.yaml`, names your paths for each category, such as `adr-records`. A definition's front matter names the category as `<adr-records>`, and the deploy writes the paths in its place. `pkit init` writes the overlay with a value for each category the core's definitions name ([the reference, "Adopter overlay"](../../.pkit/agents/README.md#adopter-overlay)).

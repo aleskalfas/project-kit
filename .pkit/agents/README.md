@@ -22,7 +22,7 @@ pkit:
         - .pkit/agents/core/methodology-reviewer.md
         - .pkit/adapters/claude-code/harness-support.yaml
         - .pkit/agents/project/overlay.yaml
-      record: [COR-001, COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-024, COR-026, COR-028, COR-049, COR-050, COR-051, COR-053, COR-057, COR-058, COR-060, COR-062, COR-064, COR-068, ADR-051, ADR-052, "ADR-065#11"]
+      record: [COR-001, COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-017, COR-019, COR-024, COR-026, COR-028, COR-049, COR-050, COR-051, COR-053, COR-057, COR-058, COR-060, COR-062, COR-064, COR-068, ADR-051, ADR-052, "ADR-065#11"]
       artefact:
         - .pkit/agents/hooks.md#
         - .pkit/agents/storyboards.md#
@@ -89,7 +89,7 @@ The area holds the definitions core ships and those the project writes, each in 
 - **`core/`** is core's. Sync refreshes it, and the project never edits it (COR-001).
 - **`project/`** is the project's own. Sync reads it to deploy the definitions, and never writes it.
 - **`overlay.yaml`** stands at the top of `project/`. Its per-agent overrides sit inside it, under `overrides:`.
-- **A capability's definitions** take the same two forms in its own `agents/` folder, `.pkit/capabilities/<capability>/agents/` (COR-026).
+- **A capability's definitions** take the same two forms in its own `agents/` folder, `.pkit/capabilities/<capability>/agents/` (COR-017, COR-026).
 
 ## Frontmatter schema
 
@@ -148,7 +148,7 @@ A body cites what its front matter declares, in forms the validator reads withou
 - **A record id** as a bare token: `COR-NNN`, `PRJ-NNN` or `ADR-NNN`.
 - **A capability's decision** in brackets, `[<capability>:DEC-NNN-<slug>]`. It is not declared in the front matter, and must name a decision file of an installed capability.
 - **A rule id,** `RS-<SET>-NNN`, an extension point, `RS-<SET>-NNN#<point>`, or a component's rule with its component, `[<component>:RS-<SET>-NNN]` (COR-051). It is not declared in the front matter either, and must name a rule of an installed rule set.
-- **A role or point address** in brackets, such as `[pkit::documentation]` or `[pkit::documentation:readers]` (COR-053). It must name a role or point an installed capability declares. A bracketed token that holds `::` and is no address is reported as malformed.
+- **A role or point address** in brackets, such as `[pkit::documentation]` or `[pkit::documentation:readers]` (COR-019, COR-053). It must name a role or point an installed capability declares. A bracketed token that holds `::` and is no address is reported as malformed.
 - **A hook name:** `<topic>.<operation>` or `<topic>.<provider>.<operation>` ([`hooks.md`](hooks.md)).
 - **An operational rule** by its layer and number, such as "core rule 16", or by its id in a loaded set, such as `RS-OPS-NNN` (COR-068). `pkit refs validate` warns, without failing, of one that is missing or retired.
 - **A point of a record,** such as `COR-NNN point N`, `COR-NNN#N` or `[<capability>:DEC-NNN] point N` (COR-058). `pkit refs validate` warns, without failing, of a point its record neither holds nor retires ([the decisions README, "Citing"](../decisions/README.md#citing)).
