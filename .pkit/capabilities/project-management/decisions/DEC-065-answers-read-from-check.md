@@ -6,7 +6,7 @@ date: 2026-11-05
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** a pull request's description no longer carries a list of the answers its change wrote. Whoever needs the answers derives them from the change check at the pull request's head. The reviewer of the answers, the move to review and the landing command each do so, and one read-only command prints them for anyone else. The author still writes one sentence on what changed in each updated document. The other merge commands and the host's button print no answer, so a person who merges there runs that command.
+**In plain terms:** a pull request's description no longer carries a list of the answers its change wrote. Whoever needs the answers derives them from the change check at the pull request's head. The reviewer of the answers, the move to review and the landing command each do so, and one command prints them for anyone else. Away from a clean checkout of the head, that command starts nothing the head holds. So on a project whose anchors need such a program, it prints no answer on any change. The author still writes one sentence on what changed in each updated document. The other merge commands and the host's button print no answer, so on such a project a person who merges there is told only the sentences, which falls short of what that person is owed (point 6).
 
 ## Context
 
@@ -18,7 +18,7 @@ The reviewer of the answers works from the change check's own list, never from a
 
 ## Decision
 
-**No command of this capability writes the list of the answers a change wrote into its pull request's description, or carries one there. The landing command removes one an earlier run left. Each reader that needs the answers derives them from the change check at the pull request's head, and a read-only command prints them for anyone not at the landing command. The author's sentences stay in the description, in the sentences' section (point 1). This overturns DEC-055 where it puts the list in the description: its points 1, 2 and 4, and each other passage of it that writes, carries, reads, prints or compares that list. Every other choice of DEC-055 stands.**
+**No command of this capability writes the list of the answers a change wrote into its pull request's description, or carries one there. The landing command removes one an earlier run left. Each reader that needs the answers derives them from the change check at the pull request's head, and a command prints them for anyone not at the landing command, within the limit point 2 states. The author's sentences stay in the description, in the sentences' section (point 1). This overturns DEC-055 where it puts the list in the description: its points 1, 2 and 4, and each other passage of it that writes, carries, reads, prints or compares that list. Every other choice of DEC-055 stands.**
 
 ### 1. The description carries no list
 
@@ -33,7 +33,10 @@ The reviewer of the answers works from the change check's own list, never from a
 
 Each reader that needs a change's answers derives them from the change check, at the pull request's head against its base (COR-050 points 6 and 12). None reads them from the description. The reviewer of the answers, the command that makes the pull request ready and the landing command each do so.
 
-- **Anyone else** runs `pkit pm show-pr <N> --field answers`. It is read-only. It derives the answers as the landing command does, and prints what that command prints (point 4). Where it cannot derive them, it says why and prints nothing more.
+- **Anyone else** runs `pkit pm show-pr <N> --field answers`, the view. It changes no branch, and fetches the base and any head the clone lacks. It derives the answers as the landing command does, and prints what that command prints (point 4), with one limit: it never checks a head out to start that head's programs.
+  - **What that costs.** The change check reads every anchor of every artefact on each run. So on a project where any anchor needs a program the head holds, the check refuses on every change away from a clean checkout at the head, and the view prints no answer. It says why, and that a run from such a checkout reads them.
+  - **That run.** It starts the head's programs under the reader's account. So a reader makes it only on a head they trust, and an agent only on its person's word.
+  - **Anything else.** Where the view cannot derive the answers for any other reason, it says why and prints nothing more.
 - **"The list" in a record that stands.** Where a passage of DEC-055, or of [project-management:DEC-064-base-merge-named], speaks of the list of answers, it is the change check's list the landing command derives.
 
 ### 3. The move to review derives the answers at the head
@@ -73,10 +76,11 @@ What guards the answers themselves stays, as DEC-055 point 3 has it, since it gu
 
 ### 6. What this gives up
 
-- **The other merge commands and the host's button print no answer.** DEC-055 point 5 accepted that a merge through them "may carry the list of an earlier head, or none". This widens that limit: such a merge shows the person no answer, and nothing holds it. A project that runs no checks on its pull requests lands only this way, since the landing command waits for checks (DEC-055 point 5). The person there runs the read-only command, or the agent they direct does, and COR-064's telling of what a delegate decided rests on that.
-- **An agent's relay.** A person who directs an agent is told what the agent passes on, the case DEC-055's Context feared. The printout's words are the command's, and the read-only command gives them first-hand.
+- **The other merge commands and the host's button print no answer.** DEC-055 point 5 accepted that a merge through them "may carry the list of an earlier head, or none". This widens that limit: such a merge shows the person no answer, and nothing holds it. A project that runs no checks on its pull requests lands only this way, since the landing command waits for checks (DEC-055 point 5). The person there runs the view, or the agent they direct does. On a project whose anchors need the head's programs, that prints nothing. There the person is told only the sentences, so COR-064 point 5's telling of what a delegate decided, and COR-050 point 3's of what is left out of date, fall short. A follow-up Task closes this gap.
+- **An agent's relay.** A person who directs an agent is told what the agent passes on, the case DEC-055's Context feared. The printout's words are the command's, and the view gives them first-hand where it can derive them (point 2).
 - **No record of what was told.** The printout goes where the run's output goes, and nothing keeps it. The answer files that land hold what was answered, not what was shown.
-- **A reader with no clone** reads the sentences alone, since the read-only command runs the change check.
+- **A reader with no clone** reads the sentences alone, since the view runs the change check. So does a reader away from the head, on a project whose anchors need the head's programs. Either may read the answer files the change adds in its diff on the host.
+- **The landing command still starts the head's programs.** It and the move to review take the checkout the view refuses, a fork's head included. Whoever runs them starts that head's programs. A follow-up Task decides what a head must be for that to happen.
 
 ## Rationale
 
@@ -96,11 +100,16 @@ What guards the answers themselves stays, as DEC-055 point 3 has it, since it gu
 
 **Why only a region is removed.** DEC-055 removed a section no command wrote so that it was not shown beside the list. No list remains, so such a section is the author's, and its plain heading invites one. A start marker with no end may be quoted, and removing what follows it could take the author's text and a closing reference.
 
+**Why the view starts no program of the head.** A person turns to this view to look at a change before trusting it, and a head may come from a fork. A view that checked the head out would run its programs at that moment, under the reader's account. So away from a checkout at the head it gives up the answers, and leaves that run to the reader. A reader already at such a checkout has made that choice.
+
 ### Alternatives considered
 
 - **A shorter list, of the answers that matter.** Rejected. It would still be a second copy of what the check derives, and it would keep the size stop and the markers.
 - **A pull-request comment.** Rejected for the list: it keeps the second copy, and a later comment does not replace an earlier one. Not taken for what the person is told alone: it would keep a record of that, at the cost of a write on every run. Point 6 states the gap.
-- **The other merge commands printing what the person is told.** Not taken. It would reach the person on every path of this capability, at the cost of a run of the change check on each merge. The read-only command gives the same lines to whoever asks.
+- **The other merge commands printing what the person is told.** Not taken. It would reach the person on every path of this capability, at the cost of a run of the change check, in a checkout of the head, on each merge. The view was to give the same lines to whoever asks. Point 2's limit leaves that short on some projects (point 6), so the follow-up weighs this again.
+- **Keeping the view's checkout where the head's resolvers match the base's.** Not taken. A resolver loads more than its own file, so two equal scripts prove nothing.
+- **Reading the answer files a change adds, as data.** Not taken. It would start nothing. But whether an answer was asked for needs the file list a resolver gives, so the line a delegate's telling rests on could not come from the files.
+- **A comment stamped with the head, from the move to review or from CI.** Left to the follow-up. It would reach every reader with nothing run on their machine, at the cost of a write on each move.
 - **Superseding DEC-055 whole.** Rejected. Its authorisation, its findings' hold, its rule on a later head and its check of the merge stand. Restating them would add words and decide nothing.
 
 ## Implications
