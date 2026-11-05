@@ -77,7 +77,7 @@ An [overlay](../glossary.md#term-overlay--overlay) gives agent definitions the p
 ```mermaid
 classDiagram
   accTitle: Agents and permissions
-  accDescr: The permission model holds the permission catalog, the grants and the guardrails. The permission catalog names the privileges, and a capability may add a fragment to it. A grant allows or denies one or more privileges to one grant subject, within a scope where it names one. A guardrail is a privilege denied to every grant subject. A profile holds grants and sets a posture, and grants the privilege of the agent workspace. An adapter has its harness run the permission hook, which has the permission code decide each tool call from the model. The permission code reads the permission catalog. An adapter writes native denies into its harness's settings, which hold each guardrail, and ships an enforcement declaration for the model. The permission hook logs each call it defers while a diagnostic session is on. The harness runs shell commands in the sandbox, and records the session anchor, which the cross-repository guard compares with. An adapter reads the overlay as it deploys an agent definition. The overlay holds overlay categories, and each placeholder of an agent definition names one.
+  accDescr: The permission model holds the permission catalog, the grants and the guardrails. The permission catalog names the privileges, and a capability may add a fragment to it. A grant allows or denies one or more privileges to one grant subject, within a scope where it names one. A guardrail is a privilege denied to every grant subject. A profile holds grants and sets a posture, and grants the privilege of the agent workspace. An adapter has its harness run the permission hook, which has the permission code decide each tool call from the model. The permission code reads the permission catalog. An adapter writes native denies into its harness's settings, which hold each guardrail where the harness fails closed, and ships an enforcement declaration for the model. The permission hook logs each call it defers while a diagnostic session is on. The harness runs shell commands in the sandbox, and records the session anchor, which the cross-repository guard compares with. An adapter reads the overlay as it deploys an agent definition. The overlay holds overlay categories, and each placeholder of an agent definition names one.
   class PermissionModel["Permission model"]
   class PermissionCatalog["Permission catalog"]
   class Privilege {
@@ -132,8 +132,8 @@ classDiagram
   Adapter "1" --> "1" EnforcementDeclaration : ships
   EnforcementDeclaration ..> PermissionModel : names a layer for each dimension of
   PermissionHook ..> DiagnosticSession : logs each deferred call during
-  Harness "1" --> "1" Sandbox : runs shell commands in
-  Harness "1" --> "1" SessionAnchor : records
+  Harness "1" --> "0..1" Sandbox : runs shell commands in
+  Harness "1" --> "0..1" SessionAnchor : records
   CrossRepositoryGuard ..> SessionAnchor : compares with
   Adapter ..> Overlay : reads as it deploys
   Overlay "1" *-- "*" OverlayCategory : holds
@@ -144,9 +144,9 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How a tool call is decided
-  accDescr: Before the harness runs a tool call, the permission hook has the permission code decide it. A guardrail's privilege is denied, and so is a call a grant denies. A call a grant allows runs, and a shell command runs in the sandbox. A call no grant decides follows the posture. A fault in deciding defers the call to the harness. While a diagnostic session is on, a deferred call is logged.
+  accDescr: Before the harness runs a tool call, the permission hook has the permission code decide it. A guardrail is denied, and so is a call a grant denies. A call a grant allows runs, and a shell command runs in the sandbox. A call no grant decides follows the posture. A fault in deciding defers the call to the harness. While a diagnostic session is on, a deferred call is logged.
   call([A tool call]) --> hook{Permission hook and permission code}
-  hook -->|a guardrail's privilege| denied[Denied]
+  hook -->|a guardrail| denied[Denied]
   hook -->|a grant denies it| denied
   hook -->|a grant allows it| allowed[Allowed]
   hook -->|no grant decides it| posture{Posture}
@@ -313,7 +313,7 @@ The permission catalog is the data that names each [privilege](../glossary.md#te
 
 Defined in [TERM-grant](../glossary.md#term-grant--grant).
 
-**Why:** With the rules spread across a [harness](../glossary.md#term-harness--harness)'s settings, a call wrongly allowed or blocked could not be traced to its cause ([COR-028](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). A grant is one statement of one model. So a fault traces to the model, to how an [adapter](../glossary.md#term-adapter--adapter) carried it out, or to the harness (COR-028).
+**Why:** With what an agent may do spread across a [harness](../glossary.md#term-harness--harness)'s settings, a call wrongly allowed or blocked could not be traced to its cause ([COR-028](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). A grant is one statement of one permission model. So a fault traces to the permission model, to how an [adapter](../glossary.md#term-adapter--adapter) carried it out, or to the harness (COR-028).
 
 A grant is an entry of the [permission model](../glossary.md#term-permission-model--permission-model). It allows or denies one or more privileges to a [grant subject](../glossary.md#term-grant-subject--grant-subject). Where it names a scope, such as the folders a command may run in, it holds only there.
 
@@ -351,7 +351,7 @@ A grant subject is whom a [grant](../glossary.md#term-grant--grant) is for. It i
 
 - Each grant names one (COR-028 point 1).
 - A grant subject's effective grants are those to `all` and its own (COR-028 point 1).
-- Every grant subject is denied each [guardrail](../glossary.md#term-guardrail--guardrail), whose deny the model holds for `all` ([ADR-005 point 2](../../../architecture/decisions/ADR-005-permission-profile-surface.md#2-contents--posture-plus-a-layered-grant-source-confinement-and-native-allow-referenced-not-owned)).
+- Every grant subject is denied each [guardrail](../glossary.md#term-guardrail--guardrail), whose deny the permission model holds for `all` ([ADR-005 point 2](../../../architecture/decisions/ADR-005-permission-profile-surface.md#2-contents--posture-plus-a-layered-grant-source-confinement-and-native-allow-referenced-not-owned)).
 
 **States:** None.
 
@@ -370,7 +370,7 @@ A guardrail is a [privilege](../glossary.md#term-privilege--privilege) that ever
 **Relations:**
 
 - It is a kind of privilege.
-- The [backbone](../glossary.md#term-backbone--backbone)'s code denies it to `all`, beneath every [profile](../glossary.md#term-profile--profile)'s grants and the [project](../glossary.md#term-project--project)'s own ([ADR-005 point 2](../../../architecture/decisions/ADR-005-permission-profile-surface.md#2-contents--posture-plus-a-layered-grant-source-confinement-and-native-allow-referenced-not-owned)).
+- The permission code denies it to `all`, beneath every [profile](../glossary.md#term-profile--profile)'s grants and the [project](../glossary.md#term-project--project)'s own ([ADR-005 point 2](../../../architecture/decisions/ADR-005-permission-profile-surface.md#2-contents--posture-plus-a-layered-grant-source-confinement-and-native-allow-referenced-not-owned)).
 
 **States:** None.
 
@@ -486,7 +486,7 @@ A native deny is an entry in a harness's own settings that refuses a call, such 
 **Relations:**
 
 - An [adapter](../glossary.md#term-adapter--adapter) writes it from the [permission model](../glossary.md#term-permission-model--permission-model), where its harness can express the deny natively (COR-028 point 2).
-- A native deny holds each [guardrail](../glossary.md#term-guardrail--guardrail), beside the permission hook (ADR-002 point 3).
+- Where its harness fails closed, each [guardrail](../glossary.md#term-guardrail--guardrail) is held by a native deny, beside the permission hook (ADR-002 point 3).
 
 **States:** None.
 
@@ -498,7 +498,7 @@ A native deny is an entry in a harness's own settings that refuses a call, such 
 
 Defined in [TERM-diagnostic-session](../glossary.md#term-diagnostic-session--diagnostic-session).
 
-**Why:** Prompts still recur under autonomy, and nobody can see which recur, why, or what would stop them ([PRJ-006](../../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md)). Logging every call always would ([PRJ-006 point 1](../../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md#1-opt-in-off-by-default)):
+**Why:** Prompts still recur while agents work on their own, and nobody can see which recur, why, or what would stop them ([PRJ-006](../../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md)). Logging every call always would ([PRJ-006 point 1](../../../../.pkit/decisions/project/PRJ-006-permission-prompt-diagnostics.md#1-opt-in-off-by-default)):
 
 - cost time on each call
 - add noise
@@ -600,7 +600,7 @@ The agent workspace is the folder `.agent-workspace/` at the root of a checkout,
 
 - The privilege `workspace` is path-scoped to it, for the file tools alone ([ADR-060 point 1](../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#1-recognition-from-the-target-path-for-the-file-tools-only)).
 - Every [profile](../glossary.md#term-profile--profile) the [backbone](../glossary.md#term-backbone--backbone) ships grants that privilege to `all` ([ADR-060 point 5](../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#5-granted-to-all-by-every-shipped-profile)).
-- The [permission hook](../glossary.md#term-permission-hook--permission-hook) allows a file tool's call into the folder, never an allow in the [harness](../glossary.md#term-harness--harness)'s settings for the whole session ([ADR-060 point 6](../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#6-realised-by-the-hook-never-as-a-settings-rule)).
+- The [permission hook](../glossary.md#term-permission-hook--permission-hook) allows a file tool's call into the agent workspace, never an allow in the [harness](../glossary.md#term-harness--harness)'s settings for the session ([ADR-060 point 6](../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#6-realised-by-the-hook-never-as-a-settings-rule)).
 
 **States:** None.
 
@@ -608,7 +608,7 @@ The agent workspace is the folder `.agent-workspace/` at the root of a checkout,
 
 - No shell command counts as the workspace's: a shell write there is judged like any other ([ADR-060 point 4](../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#4-no-bash-exception)).
 - Another repository's workspace never counts as this checkout's ([ADR-060 point 3](../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#3-which-checkouts-count)).
-- The system excludes the folder in each clone's local exclude file, and only recommends the line for the committed ignore file ([ADR-060 point 9](../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#9-excluded-per-clone-the-committed-ignore-line-is-recommended-never-written)).
+- The system excludes the agent workspace in each clone's local exclude file, and only recommends the line for the committed ignore file ([ADR-060 point 9](../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#9-excluded-per-clone-the-committed-ignore-line-is-recommended-never-written)).
 - A prompt for a file tool there is a defect, never a gap to allow around ([ADR-060 point 7](../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#7-a-prompt-there-is-a-defect)).
 
 ## Session anchor
@@ -637,7 +637,7 @@ A session anchor is the directory the [harness](../glossary.md#term-harness--har
 
 Defined in [TERM-cross-repository-guard](../glossary.md#term-cross-repository-guard--cross-repository-guard).
 
-**Why:** A command can be pointed at any repository, and the [permission model](../glossary.md#term-permission-model--permission-model) cannot see where it writes ([COR-039](../../../../.pkit/decisions/core/COR-039-session-repo-mutation-boundary.md)). Only the program that makes the write sees both repositories, so the check lies there ([COR-039 point 2](../../../../.pkit/decisions/core/COR-039-session-repo-mutation-boundary.md#2-enforced-at-the-program-that-owns-the-mutation-where-it-can-see-both-sides)).
+**Why:** A command can be pointed at any repository, and the [permission model](../glossary.md#term-permission-model--permission-model) cannot see where it writes ([COR-039](../../../../.pkit/decisions/core/COR-039-session-repo-mutation-boundary.md)). Only the program that makes the write sees both repositories, so the cross-repository guard lies there ([COR-039 point 2](../../../../.pkit/decisions/core/COR-039-session-repo-mutation-boundary.md#2-enforced-at-the-program-that-owns-the-mutation-where-it-can-see-both-sides)).
 
 The cross-repository guard is the check each writing command of the [system](../glossary.md#term-system--system) makes before it writes. It compares the repository its working directory names with the [session anchor](../glossary.md#term-session-anchor--session-anchor)'s repository. On a mismatch, it refuses where nobody can reply, and asks otherwise.
 
