@@ -25,7 +25,15 @@ from project_kit import friction_repository as fr
 from project_kit import friction_validate as fv
 from project_kit.friction_check import record_naming
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.friction_documents import CONFIG, MANUAL, Timeline, friction_config, guide, manual
+from tests.friction_documents import (
+    CONFIG,
+    MANUAL,
+    Timeline,
+    friction_config,
+    guide,
+    manual,
+    without_over_broad,
+)
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -205,7 +213,7 @@ def test_the_explanation_says_what_mends_it(timeline: Timeline) -> None:
         {MANUAL: manual(), LATER: _other_manual(), "docs/guide.md": guide(anchors=ON_MANUAL)},
     )
     explanation = frep.run_explain(timeline.adopter.root, "docs/guide.md")
-    (finding,) = explanation.findings
+    (finding,) = without_over_broad(explanation.findings)
     assert finding.finding.kind is fr.RepositoryFindingKind.SHARED_ID
     assert finding.clears.startswith("give the artefacts that share its id ids no two share")
 

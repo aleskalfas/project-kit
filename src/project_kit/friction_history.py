@@ -14,12 +14,14 @@ point reaches (`History.ancestors`), which commits touched a path
 (`History.touched`), a file's names over time (`History.versions`, renames
 followed as git's rename detection paired them).
 
-**The changes on the first-parent line** (point 7; `first_parent_changes`). The
-newest changes on the line of first parents from the newest commit, each with
+**The commits on the first-parent line** (point 7; `first_parent_changes`). The
+newest commits on the line of first parents from the newest commit, each with
 the paths it changed against its first parent: what the warning on an
 over-broad anchor counts its flags in (ADR-080 point 2). A commit with one
 parent is read from the one log; a merge, against its first parent, from one
-`git diff-tree` for them all.
+`git diff-tree` for them all. A line that ends at a shallow clone's cut,
+short of the count asked for, is told apart from one that ends at the root
+(`cut_short`): the clone lacks history that exists.
 
 **The revalidation point** (point 3; `Walker.carried`). An artefact's history
 is its file's, renames followed, back to where the file was last added — for
@@ -547,18 +549,18 @@ def _merge_entry(fields: Sequence[str], named: Sequence[str], parents: int) -> M
     return MergeEntry(status, path, old_path, None, after, before, sources)
 
 
-# --- the changes on the first-parent line ------------------------------------------
+# --- the commits on the first-parent line ------------------------------------------
 
 
 @dataclass(frozen=True)
 class LineChange:
-    """One change on the first-parent line that leads to the history's newest commit: a
-    commit whose first parent this clone holds, with the paths it changed against that
-    parent alone (COR-050 point 7; ADR-080 point 2).
+    """What one commit on the first-parent line that leads to the history's newest commit
+    changed: a commit whose first parent this clone holds, with the paths it changed
+    against that parent alone (COR-050 point 7; ADR-080 point 2).
 
     A commit with one parent is listed as the one log lists it. A merge is
     listed against its first parent, so what the side it merged brought in is
-    its change, as the change check reads a pull request merged by a merge
+    what it changed, as the change check reads a pull request merged by a merge
     commit."""
 
     index: int  # the commit's position in the log
@@ -566,14 +568,16 @@ class LineChange:
 
 
 def first_parent_changes(root: Path, history: History, count: int) -> tuple[LineChange, ...]:
-    """The newest `count` changes on the first-parent line from the history's newest commit,
-    newest first (`LineChange`); fewer where the line holds fewer.
+    """The newest `count` commits on the first-parent line from the history's newest commit,
+    newest first, each with what it changed (`LineChange`); fewer where the line holds
+    fewer.
 
     The line ends at a commit whose first parent the clone does not hold: the
     root, or a shallow clone's cut, which the log lists as adding every file.
-    Neither is a change. The merges on the line are read against their first
-    parents in one `git diff-tree --stdin`; every other change is read from the
-    log, with no process started.
+    Neither is counted, having no parent to be compared with (`cut_short` tells
+    them apart). The merges on the line are read against their first parents in
+    one `git diff-tree --stdin`; every other commit is read from the log, with no
+    process started.
     """
     line: list[int] = []
     index: int | None = 0 if history.commits else None
@@ -621,6 +625,16 @@ def _against_first_parents(
             at += 3 if letter in ("R", "C") else 2
         by_sha[sha] = tuple(_raw_entries(tokens[start:at]))
     return {i: by_sha.get(sha, ()) for sha, i in zip(shas, merges, strict=True)}
+
+
+def cut_short(history: History, changes: Sequence[LineChange], count: int) -> bool:
+    """Whether `changes`, the first-parent line `first_parent_changes` read for `count`,
+    are fewer than `count` because the line ends at a shallow clone's cut: the clone
+    lacks history that exists, where a line that ends at the root holds all there is."""
+    if len(changes) >= count or not history.commits:
+        return False
+    stop = history.parent_positions[changes[-1].index][0] if changes else 0
+    return stop is not None and history.is_cut(stop)
 
 
 def shallow_commits(root: Path) -> frozenset[str]:
@@ -1692,6 +1706,7 @@ __all__ = [
     "carrier",
     "changed",
     "changed_since",
+    "cut_short",
     "differs",
     "file_entry",
     "files_line_changes",

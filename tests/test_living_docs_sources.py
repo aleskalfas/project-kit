@@ -65,7 +65,7 @@ from project_kit import friction_validate as fv
 from project_kit import rule_sets as rs
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.friction_documents import T1, document
+from tests.friction_documents import T1, document, without_over_broad
 from tests.in_process import QUERY_ENVIRONMENT, load, route_pkit, run_main, start_in_process
 from tests.test_living_docs_points import filled
 
@@ -268,7 +268,7 @@ def test_a_new_version_recorded_stales_the_page_until_it_is_answered(
 
     whole = fr.run_repository_check(repo.root)
     assert {r.location: r.state for r in whole.artefact_reports}[PAGE] is fr.ArtefactState.STALE
-    [stale] = _of_anchor(whole.findings)
+    [stale] = _of_anchor(without_over_broad(whole.findings))
     assert stale.kind is fr.RepositoryFindingKind.STALE
 
     owed = _fill_doc_check(repo.root, in_a_process=in_a_process)

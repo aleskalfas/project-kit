@@ -12,7 +12,9 @@ and as a process, as the workflow runs it, in one test.
 Held to: stale debt with what changed and since when; deferrals listed with
 their reason and never counted; revalidations answered apart listed and counted
 apart from what needs an answer (COR-062 point 7, #2206); the other findings;
-both measures, never counted; the same findings giving the same body; what the
+over-broad anchors listed apart and never counted (ADR-055 point 5), the second
+bar's on one artefact as one entry (ADR-080 point 3); both
+measures, never counted; the same findings giving the same body; what the
 findings carry staying
 inert text, a path that is no UTF-8 included; the body within its size, cut by
 whole entries, the findings that need an answer last; and nothing rendered from
@@ -355,19 +357,21 @@ def test_the_same_findings_render_the_same_body(timeline: Timeline) -> None:
     assert report.publication(later) == report.publication(earlier)
 
 
-def test_an_over_broad_anchor_keeps_the_body_while_its_count_moves(
+def test_an_over_broad_anchor_is_listed_apart_and_holds_nothing_open(
     timeline: Timeline, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The check's message counts the recent changes the anchor flagged its artefact in,
-    which most pushes move; the body tells the finding without the count. The window and
-    the bar are made small, so a few changes cross it."""
-    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 10)
-    monkeypatch.setattr(fr, "OVER_BROAD_FLAGS", 1)
+    """An over-broad anchor is reported only, and its count moves as the window of
+    commits slides, with no anchor changed (ADR-055 point 5; ADR-080). So it is listed in
+    a section of its own, counted for nothing, in words that keep the body while the
+    check's message, which gives the counts, moves with most pushes. Each check reads a
+    window as long as the line."""
     timeline.start({"docs/guide.md": guide(anchors={"path": ["**"]})})
     root = timeline.adopter.root
     timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 2)
     earlier = _check(root)
     timeline.commit("add a module", {"src/extra/tool.py": "TOOL = 1\n"})
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 3)
     later = _check(root)
 
     def over_broad(check: dict[str, Any]) -> str:
@@ -375,12 +379,61 @@ def test_an_over_broad_anchor_keeps_the_body_while_its_count_moves(
         return finding["message"]
 
     assert over_broad(earlier) != over_broad(later)  # the count moved
-    body = report.publication(later)["body"]
-    assert body == report.publication(earlier)["body"]
+    made = report.publication(later)
+    assert made["body"] == report.publication(earlier)["body"]
+    assert made["needs_answer"] == 1  # the stale guide alone
+    assert made["body"].startswith("**Needs an answer: 1 stale.**\n")
+    assert "### Other findings" not in made["body"]
+    section = _section(made["body"], "Over-broad: reported, holding nothing open")
     assert (
-        "- `docs/guide.md` · `over-broad` · `path:**`\n  flagged its artefact in many of the "
-        "recent changes"
-    ) in body
+        "- `docs/guide.md` · `path:**`\n  flagged its artefact in most of the recent commits"
+    ) in section
+
+    alone = report.publication(_document(findings=[later["findings"][-1]]))
+    assert later["findings"][-1]["kind"] == "over-broad"
+    assert alone["needs_answer"] == 0
+    assert alone["body"].startswith("**Nothing needs an answer.**\n")
+
+
+def test_the_second_bar_s_anchors_on_one_artefact_are_one_entry() -> None:
+    """Grouped as the check's own view groups them (ADR-080 point 3): the anchors the
+    second bar names on one artefact are one entry, in the document's order, the largest
+    share first; an anchor over the first bar is an entry of its own, and so is the
+    same anchor named by the second; a finding with no `bar`, from an older backbone,
+    is listed apart, in words that cover either bar."""
+
+    def broad(location: str, value: str, bar: str | None) -> dict[str, Any]:
+        anchor = {"kind": "path", "value": value}
+        finding = _finding("over-broad", location, "counts", anchor=anchor)
+        return {**finding, "bar": bar}
+
+    findings = [
+        broad("docs/guide.md", "src/cli/**", "flags"),
+        broad("docs/guide.md", "src/lib/**", "asks"),
+        broad("docs/guide.md", "src/cli/**", "asks"),
+        broad("docs/other.md", "src/core/**", "asks"),
+        broad("docs/older.md", "src/a/**", None),
+        broad("docs/older.md", "src/b/**", None),
+    ]
+    made = report.publication(_document(findings=findings))
+    assert made["needs_answer"] == 0
+    section = _section(made["body"], "Over-broad: reported, holding nothing open")
+    entries = [line for line in section.splitlines() if line.startswith("- ")]
+    assert entries == [
+        "- `docs/guide.md` · `path:src/cli/**`",
+        "- `docs/guide.md` · `path:src/lib/**` · `path:src/cli/**`",
+        "- `docs/other.md` · `path:src/core/**`",
+        "- `docs/older.md` · `path:src/a/**`",
+        "- `docs/older.md` · `path:src/b/**`",
+    ]
+    said = [line.strip() for line in section.splitlines() if line.startswith("  ")]
+    assert said == [
+        report.OVER_BROAD_SAID[report.FLAGS],
+        report.OVER_BROAD_SAID[report.ASKS],
+        report.OVER_BROAD_SAID[report.ASKS],
+        report.OVER_BROAD_SAID[None],
+        report.OVER_BROAD_SAID[None],
+    ]
 
 
 def test_since_when_is_the_utc_day_the_checks_message_names() -> None:

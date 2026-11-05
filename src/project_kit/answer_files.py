@@ -67,6 +67,18 @@ everything about them:
   `friction_history` supplies the walk.
 - **The first commit holding two answers made apart** (`AnswerHistory.
   first_holding`), where their debt originates (COR-050 point 9, COR-062 point 7).
+- **What one commit wrote for an artefact** (`AnswerHistory.revalidated_in`),
+  against its first parent, for the warning on an over-broad anchor (ADR-080
+  point 1): whether it wrote a revalidation, a value of `at` in the artefact's
+  block or in an answer file it added or rewrote that the artefact's answers, in
+  either home, never carried at its first parent or before
+  (`AnswerHistory.carried_by`). A file rewritten counts, since a change may rewrite
+  one it added, as a fix round does, and its commits may land one by one. So an
+  answer moved out of the block, an answer file renamed or put back, and a value
+  written back, as a revert writes it, write none (COR-050 point 3, COR-062 point
+  3). It reads what the commit wrote, never which answers are live after it, as
+  the change check reads a change's head against its base's values: that would
+  take a state's answers at every commit.
 - **What a prune removes** (`StateAnswers.prune`): each answer file in which no
   answer is live (`StateAnswers.not_live`), unless removing it would change one that
   is. A file is kept where it cannot be read, where removing it brings back an
@@ -1579,6 +1591,8 @@ class AnswerHistory:
         self._naming: dict[str, bool] = {}
         self._at: dict[str, Mapping[str, TreeEntry]] = {}
         self._locations: dict[str, frozenset[str]] = {}
+        self._written: dict[int, Mapping[str, tuple[Entry, ...]]] = {}  # by commit
+        self._value_writes: dict[tuple[str, Any], tuple[int, ...] | None] = {}
 
     @property
     def dormant(self) -> bool:
@@ -1764,6 +1778,102 @@ class AnswerHistory:
         if unreachable:
             return Carried((), unreachable=True, cut=True)
         return self.walker.first_carried(like, writes, cut=block.cut)
+
+    # --- what one commit wrote -----------------------------------------------------
+
+    def revalidated_in(
+        self,
+        like: Artefact,
+        index: int,
+        diff: Iterable[DiffEntry],
+        before: Artefact | None,
+        after: Artefact | None,
+    ) -> bool:
+        """Whether the commit at log `index` wrote a revalidation of `like` against its
+        first parent, `diff` being what it changed against that parent (ADR-080 point 1).
+
+        It wrote one where it wrote a value of `at` that the artefact's answers, in
+        either home, carried at no commit its first parent is or descends from
+        (`carried_by`; COR-050 point 3). The values it wrote are its block's `at`
+        where `after`, the artefact after the commit, carries one that `before`, the
+        artefact at the first parent, did not, and the `at` of each entry naming the
+        artefact in an answer file the diff adds or rewrites (`changed_files`). A
+        change may rewrite an answer file it added itself, as a fix round does, and
+        where its commits land one by one the rewrite is a commit of its own (COR-062
+        point 3). A value the file carried before is refused as any is. So an answer
+        moved out of the block, an answer file renamed or put back, and a value written
+        back, as a revert writes it, write none. A merge on the line wrote what its other
+        parents brought in. Which answers are live after the commit is not read."""
+        values: list[Any] = []
+        if after is not None:
+            value = parsed_at(after)
+            if value is not None and (before is None or parsed_at(before) != value):
+                values.append(value)
+        written = self._written_in(index, diff)
+        for location in self._names_artefact(like):
+            for entry in written.get(location, ()):
+                if entry.revalidation is not None and entry.revalidation.at is not None:
+                    values.append(entry.revalidation.at)
+        if not values:
+            return False
+        parents = self.history.parent_positions[index]
+        first = parents[0] if parents else None
+        if first is None:  # no parent in this clone to have carried it
+            return True
+        return any(not self.carried_by(like, value, first) for value in dict.fromkeys(values))
+
+    def carried_by(self, like: Artefact, value: Any, index: int) -> bool:
+        """Whether the artefact's answers, in either home, carried `value`, a parsed `at`,
+        at the commit at log `index` or at one it descends from, within the artefact's own
+        history (`_since_added`; COR-050 point 3, COR-062 point 6). A value a shallow
+        clone's cut carries is taken as carried there, before every commit of the clone."""
+        writes = self._writes_of(like, value)
+        if writes is None:
+            return True
+        older = [write for write in writes if write >= index]  # the log lists parents later
+        return bool(older) and any(write in self.history.ancestors(index) for write in older)
+
+    def _writes_of(self, like: Artefact, value: Any) -> tuple[int, ...] | None:
+        """The commits that wrote a version of one of the artefact's homes carrying `value`:
+        its block's writes (`Walker.block_writes`), and each version of an answer file in
+        which an entry naming the artefact carries it; read once for each value. `None`
+        where a shallow clone's cut carries it."""
+        key = (like.location, value)
+        if key in self._value_writes:
+            return self._value_writes[key]
+        block = self.walker.block_writes(like, value)
+        found: tuple[int, ...] | None = None
+        if not block.unreachable:
+
+            def in_entry(entry: Entry) -> bool:
+                return entry.revalidation is not None and entry.revalidation.at == value
+
+            writes = set(block.points)
+            if not self.dormant:
+                writes |= self._file_candidates(like, in_entry)
+            since = self._since_added(like)
+            found = tuple(sorted(writes if since is None else writes & since))
+        self._value_writes[key] = found
+        return found
+
+    def _written_in(self, index: int, diff: Iterable[DiffEntry]) -> Mapping[str, tuple[Entry, ...]]:
+        """The entries of the answer files a commit's `diff` adds or rewrites
+        (`changed_files`), as the commit left them, by the location each names; read once
+        for the commit at log `index`, each file by its object (`parsed`)."""
+        found = self._written.get(index)
+        if found is None:
+            listed = list(diff)
+            by_path = {entry.path: entry for entry in listed}
+            changed = changed_files(listed)
+            entries: dict[str, list[Entry]] = {}
+            for name in (*changed.added, *changed.rewritten):
+                state = by_path[path_of(name)].after
+                if state is None:
+                    continue
+                for entry in self.parsed(state, name).entries:
+                    entries.setdefault(entry.location, []).append(entry)
+            found = self._written[index] = {loc: tuple(each) for loc, each in entries.items()}
+        return found
 
     # --- a deferral's point --------------------------------------------------------
 

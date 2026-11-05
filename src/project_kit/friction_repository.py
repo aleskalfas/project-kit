@@ -85,8 +85,12 @@ change); *deferred* — every deferral, with its point's origin and, in the
 human view, its age; *left-out* — a widening of `friction.exclude` since the
 point that asks nothing; dead anchors, unresolved kinds and resolvers that
 gave no answer, all of them, not only a change's; *over-broad* anchors —
-each that flagged its artefact in more than `OVER_BROAD_FLAGS` of the newest
-`OVER_BROAD_WINDOW` changes on the first-parent line (`_Flags`, ADR-080);
+of the newest `OVER_BROAD_WINDOW` commits on the first-parent line, each that
+flagged its artefact in more than `OVER_BROAD_SHARE` of them where the line holds
+them all, and, of an artefact asked in more than `OVER_BROAD_UNCHANGED_ASKS` of
+them for a revalidation that left it as it was, the anchors that drive that
+count (`_Flags`, `_driving`, ADR-080), a finding each, which the human views
+show as one for the artefact (`over_broad_runs`);
 *shared-id* — an artefact anchor on an id two artefacts share, read as naming
 the first in walk order and judged so, warned of and never failed. An
 artefact with an anchor that cannot be resolved — its kind has no resolver
@@ -151,11 +155,12 @@ from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from project_kit import answer_files, cli_render
 from project_kit.answer_files import AnswerHistory, AnswerPoints, Answers, StateAnswers
-from project_kit.artefact_parts import part_standing
+from project_kit.artefact_parts import AnchoredPart, part_standing
+from project_kit.document_parts import Body, heading_slug
 from project_kit.friction_check import (
     ExclusionChange,
     HeadState,
@@ -177,6 +182,7 @@ from project_kit.friction_discovery import (
     Anchor,
     AnchorKinds,
     Artefact,
+    ArtefactKind,
     Discovery,
     FrictionSettings,
     PathIndex,
@@ -212,6 +218,7 @@ from project_kit.friction_history import (
     Walker,
     changed,
     changed_since,
+    cut_short,
     differs,
     file_entry,
     files_line_changes,
@@ -228,14 +235,35 @@ from project_kit.record_points import RecordPoints, Standing, read_points_bytes,
 #: a record is read from.
 _FILE_MODE = "100"
 
-#: How many changes the warning on an over-broad anchor reads (COR-050 point 7; ADR-080
+#: How many commits the warning on an over-broad anchor reads (COR-050 point 7; ADR-080
 #: point 2): the newest on the first-parent line to HEAD, each against its first parent.
 OVER_BROAD_WINDOW = 100
 
-#: An anchor that flagged its artefact in more of the window's changes than this is
-#: over-broad (ADR-080 point 3): a tenth of a full window. A history with fewer changes
-#: is held to the same count, so a young project's few changes warn of nothing by chance.
-OVER_BROAD_FLAGS = 10
+#: An anchor that flagged its artefact in more than this share of the window's commits
+#: is over-broad (ADR-080 point 3, the first bar): COR-050 point 7's "most changes",
+#: more than half of them. It is judged only where the line holds the whole window.
+OVER_BROAD_SHARE = 0.5
+
+#: The second bar names an artefact's anchors until the asks in which only named anchors
+#: asked are more than this share of its asks (ADR-080 point 3, `_driving`): the named
+#: anchors are then behind most of them, point 7's word reused for a rule that names.
+OVER_BROAD_CLEARED = 0.5
+
+#: An artefact asked in more of the window's commits than this for a revalidation that
+#: left it as it was has the anchors that drive that count warned of as over-broad
+#: (ADR-080 point 3, the second bar): taken by their share, the largest first, until the
+#: asks in which only they asked are more than `OVER_BROAD_CLEARED` of its asks
+#: (`_driving`). Such an ask is a commit in which an anchor flagged the artefact, whose
+#: next revalidation on the line, in that commit or a later one, left its content as it
+#: was when the commit flagged it (`_Flags.asks`).
+OVER_BROAD_UNCHANGED_ASKS = 10
+
+#: What the second bar's finding says to do, for the artefact as a whole (ADR-080
+#: point 3): its last line, under the anchors it names.
+ASKED_ADVICE = (
+    "narrow the named anchors where a narrower one exists; where none does, split the "
+    "artefact or what the anchors stand on, or remove an anchor the artefact does not rest on"
+)
 
 # The file a state's `friction.exclude` is written in: a commit that changes the
 # exclusions touches it (COR-050 point 14).
@@ -275,6 +303,30 @@ UNRESOLVED_KINDS = frozenset(
 )
 
 
+class OverBroadBar(Enum):
+    """Which of ADR-080's two bars an over-broad finding crossed; the `bar` field of the
+    JSON output."""
+
+    FLAGS = "flags"  # the anchor flagged its artefact in most of the window's commits
+    ASKS = "asks"  # it is among the anchors behind most of its artefact's many asks
+
+
+@dataclass(frozen=True)
+class OverBroad:
+    """What an over-broad finding counted (ADR-080 point 3): the bar it crossed, the
+    window it read, the artefact's asks that left it as it was and the anchor's share of
+    them, and the narrower anchor that names less of what it stands on, where the check
+    knows one exists. The human views read it to show the second bar's findings on one
+    artefact as one (`asked_lines`), and the JSON documents give a second bar's finding
+    its share (`RepositoryFinding.share`)."""
+
+    bar: OverBroadBar
+    window: str  # "the last 100 commits on the first-parent line", or a shallow clone's
+    asks: int
+    share: int
+    narrower: str | None
+
+
 class ArtefactState(Enum):
     """What the check found for one artefact with anchors (point 10).
 
@@ -307,6 +359,27 @@ class RepositoryFinding:
     # A deferral's reason, for the debt listing; the files made apart, for answered apart.
     reason: str | None = field(default=None, compare=False)
     files: tuple[str, ...] = field(default=(), compare=False)
+    # What an over-broad finding counted, the bar it crossed among it.
+    over_broad: OverBroad | None = field(default=None, compare=False)
+
+    @property
+    def asked(self) -> bool:
+        """It is a second bar's finding: one of the anchors its artefact's view names
+        together (ADR-080 point 3)."""
+        return self.over_broad is not None and self.over_broad.bar is OverBroadBar.ASKS
+
+    @property
+    def bar(self) -> str | None:
+        """The bar an over-broad finding crossed, as the JSON documents give it; `None` for
+        any other finding."""
+        return None if self.over_broad is None else self.over_broad.bar.value
+
+    @property
+    def share(self) -> int | None:
+        """A second bar's finding's share of its artefact's asks, as the JSON documents
+        give it, so a reader need not rely on their order; `None` for any other finding."""
+        found = self.over_broad
+        return found.share if found is not None and found.bar is OverBroadBar.ASKS else None
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -320,6 +393,8 @@ class RepositoryFinding:
             ),
             "origin": None if self.origin is None else self.origin.as_json(),
             "message": self.message,
+            "bar": self.bar,
+            "share": self.share,
         }
 
 
@@ -943,32 +1018,133 @@ class _Judge:
             return None
         return RepositoryFinding(RepositoryFindingKind.SHARED_ID, warning, anchor=anchor)
 
-    def over_broad(self, artefact: Artefact, anchor: Anchor) -> RepositoryFinding | None:
-        """An anchor that flagged its artefact in more than `OVER_BROAD_FLAGS` of the newest
-        `OVER_BROAD_WINDOW` changes on the first-parent line (point 7; ADR-080): of every
-        kind, the rule being no kind's, counted by `_Flags`. An artefact that owes no
-        answer is never flagged, so none of its anchors is over-broad."""
-        if artefact.owes_no_answer:
-            return None
+    def over_broad(
+        self, artefact: Artefact, anchors: Sequence[Anchor]
+    ) -> tuple[dict[Anchor, RepositoryFinding], list[RepositoryFinding]]:
+        """The over-broad findings on the artefact's live `anchors` (ADR-080 point 3), of
+        the newest `OVER_BROAD_WINDOW` commits on the first-parent line (COR-050 point 7),
+        counted by `_Flags`: the first bar's, by anchor, and the second bar's, in the
+        order it names them.
+
+        The first bar is an anchor's own: it flagged its artefact in more than
+        `OVER_BROAD_SHARE` of them. It is judged only where the line holds the whole
+        window, since a few commits, of a young history or a shallow clone, say nothing
+        of the line. The second is the artefact's: it was asked in more than
+        `OVER_BROAD_UNCHANGED_ASKS` of them for a revalidation that left it as it was
+        (`_Flags.asks`), and the anchors that drive that count are named (`_driving`), a
+        finding each, with its own share, which the human views show as one finding for
+        the artefact (`asked_lines`). An anchor over both bars has a finding for each.
+        Every kind is counted alike. An artefact that owes no answer is never flagged, so
+        none of its anchors is over-broad.
+
+        The asks are among the flags, so they are read only for an artefact whose
+        anchors flagged it in more commits than the second bar, or one of whose anchors
+        crossed the first, whose message names them too."""
+        if artefact.owes_no_answer or not anchors:
+            return {}, []
         if self._flags is None:
             changes = first_parent_changes(self.head.root, self.history, OVER_BROAD_WINDOW)
             self._flags = _Flags(self, changes)
         flags = self._flags
-        count = flags.count(anchor, flags.own(artefact.path))
-        if count <= OVER_BROAD_FLAGS:
-            return None
+        own = flags.own(artefact.path)
+        flagged = {anchor: flags.flagged(anchor, own) for anchor in dict.fromkeys(anchors)}
+        full = flags.size >= OVER_BROAD_WINDOW
+        most = [
+            anchor
+            for anchor, found in flagged.items()
+            if full and len(found) > flags.size * OVER_BROAD_SHARE
+        ]
+        if not most and len(frozenset[int]().union(*flagged.values())) <= OVER_BROAD_UNCHANGED_ASKS:
+            return {}, []
+        asks = flags.asks(artefact, flagged)
+        many = len(asks) > OVER_BROAD_UNCHANGED_ASKS
+        window = f"the last {flags.size} commits on the first-parent line"
+        if flags.cut:
+            window = (
+                f"the {flags.size} commits on the first-parent line that this shallow clone holds"
+            )
+
+        def finding(anchor: Anchor, bar: OverBroadBar) -> RepositoryFinding:
+            share = sum(anchor in asked for asked in asks.values())
+            narrower = self._narrower(anchor)
+            if bar is OverBroadBar.FLAGS:
+                over = f", more than {OVER_BROAD_SHARE:.0%} of them; in {len(asks)} of them"
+            else:
+                over = f"; in {len(asks)} of them, more than {OVER_BROAD_UNCHANGED_ASKS},"
+            message = (
+                f"flagged its artefact in {len(flagged[anchor])} of {window}{over} its anchors "
+                f"asked it for a revalidation that left it as it was, this anchor in {share} — "
+                f"{self._less(anchor, narrower)}"
+            )
+            counted = OverBroad(bar, window, len(asks), share, narrower)
+            return RepositoryFinding(
+                RepositoryFindingKind.OVER_BROAD, message, anchor=anchor, over_broad=counted
+            )
+
+        first = {anchor: finding(anchor, OverBroadBar.FLAGS) for anchor in most}
+        driving = _driving(asks, list(flagged)) if many else ()
+        return first, [finding(anchor, OverBroadBar.ASKS) for anchor in driving]
+
+    def _narrower(self, anchor: Anchor) -> str | None:
+        """The narrower anchor that names less of what an over-broad anchor stands on, where
+        the check knows one exists (ADR-080 point 3): a path anchor on several files,
+        narrow it; a whole record, or its file, its points; a whole document, or its file,
+        its sections or its lead; a section, its sub-sections. `None` where nothing names
+        less — a record's point, a lead, a section with no sub-section, a collection
+        entry — and where only a registered kind might, which the check cannot tell."""
+        head = self.head
         if anchor.kind == "path":
-            fix = "narrow it"
-        elif anchor.kind in CORE_ANCHOR_KINDS:
-            fix = "anchor only the points or sections the artefact rests on"
-        else:
-            fix = "have its resolver name less, or anchor to a narrower value"
-        message = (
-            f"flagged its artefact in {count} of the last {flags.size} changes, more than "
-            f"{OVER_BROAD_FLAGS}: so many revalidations teach people to bump the marker "
-            f"blindly — {fix}"
+            files = head.matching(anchor.value)
+            if len(files) > 1:
+                return "narrow it to the files the artefact rests on"
+            if not files:  # a dead anchor, which the count never reaches
+                return None
+            rel = files[0]
+            if head.record_named(rel) is not None:
+                found = head.record_points(rel)
+                return _POINTS if found is not None and found.points else None
+            return _narrower_part(head.part_of(rel))
+        if anchor.kind == "record":
+            rel = head.record_path(anchor.value)
+            found = None if rel is None else head.record_points(rel)
+            if split_anchor(anchor.value)[1] is None and found is not None and found.points:
+                return _POINTS
+            return None
+        if anchor.kind == "artefact":
+            part = head.part_of(anchor.value)
+            target = part.target
+            if target is not None and part.part is None and head.record_named(target.path):
+                return _POINTS
+            return _narrower_part(part)
+        return None
+
+    def _less(self, anchor: Anchor, narrower: str | None) -> str:
+        """What an over-broad anchor's finding says to do, by what the anchor names (ADR-080
+        point 3): the `narrower` anchor where one exists (`_narrower`); for a single file
+        that is no record, where a kind is registered, a narrower value of a registered
+        kind; for an anchor of a registered kind, a narrower value of its kind. Where
+        nothing names less — a record's point, a document's lead, a section with no
+        sub-section, a collection entry, a file that is neither a record nor a document
+        where no kind is registered — it says so, and offers splitting what the anchor
+        stands on into parts an anchor can name, or the artefact into parts that each
+        rest on less. A single file where a kind is registered gets that offer too, for
+        where no kind names a part of it."""
+        if narrower is not None:
+            return narrower
+        split = (
+            "remove it unless the artefact rests on all of it, or split what it stands on into "
+            "parts an anchor can name, or the artefact into parts that each rest on less"
         )
-        return RepositoryFinding(RepositoryFindingKind.OVER_BROAD, message, anchor=anchor)
+        if anchor.kind not in ("path", "record", "artefact"):
+            return "anchor a narrower value of its kind, one its resolver names less for"
+        if anchor.kind == "path" and self.kinds.registry:
+            files = self.head.matching(anchor.value)
+            if len(files) == 1 and self.head.record_named(files[0]) is None:
+                return (
+                    "anchor a narrower value of a registered kind, where one names a part of "
+                    f"the file the artefact rests on; where none does, {split}"
+                )
+        return f"nothing names less of what it stands on: {split}"
 
     def matching_paths(self, pattern: str, point: int) -> frozenset[str]:
         """Every path the history touched that `pattern` stands on at the revalidation
@@ -1582,31 +1758,38 @@ class _Judge:
 
 
 class _Flags:
-    """How many of the window's changes each anchor flagged its artefact in (COR-050 point
-    7; ADR-080 point 1): the changes on the first-parent line (`first_parent_changes`), each
-    read against its first parent alone, in which what the anchor stands on differs.
+    """The window's commits in which each anchor flagged its artefact (COR-050 point 7;
+    ADR-080 point 1): the commits on the first-parent line (`first_parent_changes`), each
+    read against its first parent alone, in which what the anchor stands on differs; and,
+    for an artefact, those that asked it for a revalidation that left it as it was (`asks`).
 
     The anchor is HEAD's, read as the whole check reads a part at HEAD — under
     HEAD's exclusions, places and derived links — so the count is the anchor's as
-    it stands, whatever the artefact declared when each change was made, or
+    it stands, whatever the artefact declared when each commit was made, or
     whether it was there. Each part is read by the judge's own readings: a path
     anchor's files by mode and object, a Markdown file HEAD's places hold by its
-    content (`placed_in`), so a change that wrote only its containers flags
+    content (`placed_in`), so a commit that wrote only its containers flags
     nothing; a registered kind's files the same way, each followed across the
     window's renames; a record anchor by what it stands on (`standing_in`); an
     artefact anchor by its target's content, or by what its section or lead stands
     on (`part_in`). So an artefact or record anchor flags where what it leads to
-    changed — a flag reached through another artefact, revalidated as updated in
-    the same change, counts, and one an `unchanged` revalidation stopped does not,
-    as the change check's cascade reads it. Each anchor value is counted once for
-    the run, whichever artefacts declare it.
+    changed — a flag reached through another artefact passes where that artefact's
+    content changed in the commit, and stops where it did not, whatever its
+    revalidation's outcome, as the change check's cascade reads it. Each anchor value
+    is counted once for the run, whichever artefacts declare it. The flags take in the
+    commits before the artefact was there, as every flag measures the anchor's breadth;
+    the asks do not (ADR-080 point 3).
     """
 
     def __init__(self, judge: _Judge, changes: Sequence[LineChange]) -> None:
         self.judge = judge
+        self._changes = tuple(changes)
         self.size = len(changes)
-        """How many changes the window holds: `OVER_BROAD_WINDOW`, or fewer where the
+        """How many commits the window holds: `OVER_BROAD_WINDOW`, or fewer where the
         first-parent line holds fewer."""
+        self.cut = cut_short(judge.history, changes, OVER_BROAD_WINDOW)
+        """Whether a shallow clone cut the window short: the line holds more commits than
+        the clone does, so no share of the window is judged (ADR-080 point 2)."""
         self._by_path: list[dict[str, DiffEntry]] = [
             {entry.path: entry for entry in change.entries} for change in changes
         ]
@@ -1621,6 +1804,8 @@ class _Flags:
         self._by_file: dict[str, frozenset[int]] = {}
         self._versions: dict[str, tuple[tuple[int, DiffEntry], ...]] = {}
         self._by_value: dict[tuple[str, str], frozenset[int]] = {}
+        self._unchanged: dict[str, frozenset[int]] = {}
+        self._revalidated: dict[str, frozenset[int]] = {}
 
     def own(self, rel: str) -> frozenset[str]:
         """The names the artefact's file at `rel` had over the window: a change under one
@@ -1631,9 +1816,9 @@ class _Flags:
                 names.add(entry.old_path)
         return frozenset(names)
 
-    def count(self, anchor: Anchor, own: frozenset[str]) -> int:
-        """How many of the window's changes `anchor` flagged its artefact in, the
-        artefact's own names (`own`) left out of what a path or registered anchor
+    def flagged(self, anchor: Anchor, own: frozenset[str]) -> frozenset[int]:
+        """The positions of the window's commits in which `anchor` flagged its artefact,
+        the artefact's own names (`own`) left out of what a path or registered anchor
         stands on."""
         judge = self.judge
         if anchor.kind == "path":
@@ -1642,10 +1827,89 @@ class _Flags:
             flagged = [self._by(("file", rel)) for rel in judge.files_of(anchor, own)]
         else:
             flagged = [self._by((anchor.kind, anchor.value))]
-        return len(frozenset[int]().union(*flagged))
+        return frozenset[int]().union(*flagged)
+
+    def asks(
+        self, artefact: Artefact, flagged: Mapping[Anchor, frozenset[int]]
+    ) -> dict[int, frozenset[Anchor]]:
+        """The positions of the window's commits that asked `artefact` for a revalidation
+        that left it as it was (ADR-080 point 3), each with the anchors that flagged it
+        there. Such a commit is one in which an anchor flagged the artefact (`flagged`),
+        and whose ask the artefact's next revalidation on the line answered with its
+        content as it was when the commit flagged it: the newest commit, that one or a
+        later one, that revalidated it (`revalidated`), with each commit from the flag
+        to it leaving the artefact as it was (`left_as_it_was`). A flag that no
+        revalidation follows in the window, still owed or deferred, is no such ask.
+        Each commit counts once, whichever anchors flagged it there."""
+        flagging = frozenset[int]().union(*flagged.values())
+        unchanged = self.left_as_it_was(artefact)
+        if not unchanged & flagging:
+            return {}
+        revalidated = self.revalidated(artefact)
+        found: dict[int, frozenset[Anchor]] = {}
+        answered = False  # the newest revalidation from here on left the artefact as it was
+        for position in range(max(flagging) + 1):
+            if position in revalidated:
+                answered = position in unchanged
+            else:
+                answered = answered and position in unchanged
+            if answered and position in flagging:
+                found[position] = frozenset(
+                    anchor for anchor, positions in flagged.items() if position in positions
+                )
+        return found
+
+    def revalidated(self, artefact: Artefact) -> frozenset[int]:
+        """The positions of the window's commits that revalidated `artefact` against their
+        first parents, as the answer reader reads what one commit wrote for it
+        (`AnswerHistory.revalidated_in`): its block, where the commit changed its file,
+        and the answer files the commit added or rewrote. Read once for each artefact."""
+        found = self._revalidated.get(artefact.location)
+        if found is None:
+            walker, across = self.judge.walker, self.judge.across
+            versions = dict(self.versions(artefact.path))
+            positions: set[int] = set()
+            for position, change in enumerate(self._changes):
+                before = after = None
+                entry = versions.get(position)
+                if entry is not None:
+                    state = entry.before[0] if entry.before else None
+                    before = walker.artefact_in(state, entry.old_path or entry.path, artefact)
+                    after = walker.artefact_in(entry.after, entry.path, artefact)
+                if across.revalidated_in(artefact, change.index, change.entries, before, after):
+                    positions.add(position)
+            found = self._revalidated[artefact.location] = frozenset(positions)
+        return found
+
+    def left_as_it_was(self, artefact: Artefact) -> frozenset[int]:
+        """The positions of the window's commits that left `artefact` as it was: it was
+        there at the commit's first parent, and its content was the same on both sides,
+        read by the check's own reading of an artefact's content (`content_in`; COR-050
+        point 5). Its file's changes are read down the line, renames followed, to the
+        newest at whose first parent the artefact was not there; that commit and every
+        older one are left out, as an ask before the artefact was there changed nothing
+        of it. Read once for each artefact, and only where an anchor of it needs them
+        (`_Judge.over_broad`)."""
+        found = self._unchanged.get(artefact.location)
+        if found is None:
+            reading = self.judge.content_in(artefact)
+            there_since = self.size
+            changed: set[int] = set()
+            for position, entry in self.versions(artefact.path):
+                before = reading(
+                    entry.old_path or entry.path, entry.before[0] if entry.before else None
+                )
+                if before is None:
+                    there_since = position
+                    break
+                if before != reading(entry.path, entry.after):
+                    changed.add(position)
+            found = frozenset(range(there_since)) - changed
+            self._unchanged[artefact.location] = found
+        return found
 
     def versions(self, rel: str) -> tuple[tuple[int, DiffEntry], ...]:
-        """The window's changes to the file now at `rel`, newest first, each with its entry:
+        """The window's commits to the file now at `rel`, newest first, each with its entry:
         down the line, renames followed to the file's earlier name, back to where it was
         last added."""
         found = self._versions.get(rel)
@@ -1665,7 +1929,7 @@ class _Flags:
         return found
 
     def _matching(self, pattern: str) -> tuple[str, ...]:
-        """The paths the window's changes touched that a path anchor's `pattern` stands on
+        """The paths the window's commits touched that a path anchor's `pattern` stands on
         under HEAD's exclusions (`Side.stands_on`), matched once per pattern."""
         found = self._matched.get(pattern)
         if found is None:
@@ -1675,7 +1939,7 @@ class _Flags:
         return found
 
     def _file(self, rel: str) -> frozenset[int]:
-        """The changes that changed what a path anchor stands on at the path `rel`: each
+        """The commits that changed what a path anchor stands on at the path `rel`: each
         that touched it, but one that changed a file HEAD's places hold in place, leaving
         its content as it was (`placed_in`)."""
         found = self._by_file.get(rel)
@@ -1690,7 +1954,7 @@ class _Flags:
         return found
 
     def _by(self, key: tuple[str, str]) -> frozenset[int]:
-        """The changes in which what a part stands on differs from its first parent: a
+        """The commits in which what a part stands on differs from its first parent: a
         registered kind's file (`("file", rel)`), a record anchor's or an artefact
         anchor's value — counted once per part for the run."""
         found = self._by_value.get(key)
@@ -1908,7 +2172,9 @@ def _check_artefact(
     only what it declares is checked: dead anchors, unresolved kinds and missing
     answers — never an over-broad anchor, since no change asks it for an answer.
     So it is with an artefact the project
-    receives by sync, which owes it no answer (COR-062 point 9). An artefact
+    receives by sync, which owes it no answer (COR-062 point 9). Only a live anchor
+    can be over-broad: one already reported dead, or not resolved, stands on
+    nothing that could be counted at HEAD. An artefact
     with an anchor that cannot be resolved is not judged
     (`ArtefactState.UNRESOLVED`): what its other anchors owe is still found and
     reported, and its state says the reading is not whole.
@@ -1937,12 +2203,21 @@ def _check_artefact(
             live.append(anchor)
         else:
             problems.append(finding(problem.kind, problem.message, anchor))
-        over = judge.over_broad(artefact, anchor)
+
+    def located(over: RepositoryFinding) -> RepositoryFinding:
+        return replace(over, artefact=artefact.id, location=artefact.location)
+
+    over_broad, asked = judge.over_broad(artefact, live)
+    for anchor in anchors_of(artefact):
+        over = over_broad.get(anchor)
         if over is not None:
-            broad.append(finding(over.kind, over.message, anchor))
+            broad.append(located(over))
         shared = judge.shared_id(anchor)
         if shared is not None:
             broad.append(finding(shared.kind, shared.message, anchor))
+    # The second bar's, in the order it names them, together: one finding for the artefact
+    # in the human views (`over_broad_runs`).
+    broad.extend(located(over) for over in asked)
     if artefact.owes_no_answer:
         return None, problems + broad
 
@@ -2641,7 +2916,107 @@ def _content_of(artefact: Artefact | None) -> tuple[str, dict[str, Any]] | None:
     return None if artefact is None else content(artefact)
 
 
+def _driving(
+    asks: Mapping[int, frozenset[Anchor]], anchors: Sequence[Anchor]
+) -> tuple[Anchor, ...]:
+    """The anchors the second bar names of an artefact over it (ADR-080 point 3), in the
+    order it names them: those that asked it, in order of their share of its `asks`, the
+    largest first and a tie in the order `anchors` declares them, until the asks in which
+    only named anchors asked are more than `OVER_BROAD_CLEARED` of the asks. Narrowing the
+    named anchors together then brings the count to half or below, which narrowing the
+    first of two anchors that always ask together would not. Where each ask comes from a
+    commit that touched several anchors, it can name anchors with a share of one, and it
+    does not always name the fewest anchors that would do."""
+    shares = {anchor: sum(anchor in asked for asked in asks.values()) for anchor in anchors}
+    named: list[Anchor] = []
+    for anchor in sorted(
+        (anchor for anchor in anchors if shares[anchor]), key=shares.__getitem__, reverse=True
+    ):
+        held = frozenset(named)
+        cleared = sum(asked <= held for asked in asks.values())
+        if cleared > len(asks) * OVER_BROAD_CLEARED:
+            break
+        named.append(anchor)
+    return tuple(named)
+
+
+#: What an over-broad anchor on a whole record, or its file, says to anchor instead.
+_POINTS = "anchor only the points of the record the artefact rests on"
+
+
+def _narrower_part(part: AnchoredPart) -> str | None:
+    """What an over-broad artefact anchor's finding says to anchor instead, where the
+    document it names holds a narrower part (COR-050 point 2): a whole document, its
+    sections or its lead; a section, its sub-sections. `None` for a lead, a section that
+    holds none, a document with no section, or a collection entry, cited whole."""
+    target = part.target
+    if target is None or target.kind is not ArtefactKind.DOCUMENT:
+        return None
+    body = Body.read(target.body)
+    named = [heading for heading in body.headings if heading_slug(heading.title)]
+    if part.part is None:
+        lead = body.lead()
+        if any(heading.start >= lead.end for heading in named):
+            return "anchor only the sections of it, or its lead, that the artefact rests on"
+        return None
+    extent = part.extent
+    if extent is None or extent.heading is None:
+        return None
+    level = extent.heading.level
+    if any(extent.start < h.start < extent.end and h.level > level for h in named):
+        return "anchor only the sub-sections of it the artefact rests on"
+    return None
+
+
 # --- output --------------------------------------------------------------------------
+
+_Item = TypeVar("_Item")
+
+
+def over_broad_runs(
+    items: Iterable[_Item], finding_of: Callable[[_Item], RepositoryFinding]
+) -> Iterator[list[_Item]]:
+    """`items`, each holding a finding, in report order, in runs that the human views show
+    as one finding each: the second bar's findings on one artefact together, every other
+    finding alone (ADR-080 point 3). The JSON documents list them one by one."""
+    run: list[_Item] = []
+    for item in items:
+        found = finding_of(item)
+        if run and found.asked:
+            last = finding_of(run[-1])
+            if last.asked and last.location == found.location:
+                run.append(item)
+                continue
+        if run:
+            yield run
+        run = [item]
+    if run:
+        yield run
+
+
+def asked_lines(named: Sequence[RepositoryFinding]) -> tuple[str, list[str]]:
+    """The second bar's findings on one artefact as the one finding the human views show
+    (ADR-080 point 3): its message, then the lines under it, each anchor `named` with its
+    share, the largest first, and the narrower anchor beside it where one exists. The
+    advice for the artefact as a whole, `ASKED_ADVICE`, is the view's to add, as its last
+    line or as what clears the finding."""
+    counted = [finding.over_broad for finding in named if finding.over_broad is not None]
+    first = counted[0]
+    message = (
+        f"the artefact was asked in {first.asks} of {first.window}, more than "
+        f"{OVER_BROAD_UNCHANGED_ASKS}, for a revalidation that left it as it was; the anchors "
+        f"behind most of those asks, by their share of them, the largest first:"
+    )
+    cells = [_anchor_cell(finding) for finding in named]
+    width = max(len(cell) for cell in cells)
+    share_width = max(len(str(found.share)) for found in counted)
+    rows = [
+        f"{cell:{width}}  {found.share:>{share_width}}"
+        + (f"  {found.narrower}" if found.narrower else "")
+        for cell, found in zip(cells, counted, strict=True)
+    ]
+    return message, rows
+
 
 #: The version of the document `render_json` returns. A change a reader could break
 #: against — a key removed, renamed or given another meaning — raises it; a key added
@@ -2706,8 +3081,10 @@ _LEGEND: dict[RepositoryFindingKind, str] = {
         "a resolver gave no answer for an anchor: its artefact is not judged — run again"
     ),
     RepositoryFindingKind.OVER_BROAD: (
-        f"an anchor that flagged its artefact in more than {OVER_BROAD_FLAGS} of the last "
-        f"{OVER_BROAD_WINDOW} changes"
+        f"an anchor that flagged its artefact in more than {OVER_BROAD_SHARE:.0%} of the last "
+        f"{OVER_BROAD_WINDOW} commits on the first-parent line; or, of an artefact asked in "
+        f"more than {OVER_BROAD_UNCHANGED_ASKS} of them for a revalidation that left it as it "
+        f"was, the anchors behind most of those asks, in one finding for the artefact"
     ),
     RepositoryFindingKind.SHARED_ID: (
         "an anchor on an id two artefacts share, read as naming the first: reported only"
@@ -2743,18 +3120,25 @@ def render_human(result: RepositoryCheck, *, now: datetime | None = None) -> str
     unreadable = [f for f in result.findings if f.kind is RepositoryFindingKind.UNREADABLE]
     if not rows and not unreadable:
         lines.append("  nothing to report")
+    runs = list(over_broad_runs(rows, _itself))
     kind_width = max((len(f.kind.value) for f in rows + unreadable), default=0)
-    anchor_width = max((len(_anchor_cell(f)) for f in rows), default=0)
+    anchor_width = max((len(_run_cell(run)) for run in runs), default=0)
     points: dict[str | None, ArtefactReport] = {r.location: r for r in result.artefact_reports}
     current: str | None = None
-    for finding in rows:
+    for run in runs:
+        finding = run[0]
         if finding.location != current:
             current = finding.location
             lines.append(f"  {current}{_point_note(points.get(current))}")
+        cells = f"{finding.kind.value:{kind_width}}  {_run_cell(run):{anchor_width}}"
+        if finding.asked:
+            message, under = asked_lines(run)
+            lines.append(f"    {cells}  {message}")
+            lines.extend(f"      {line}" for line in [*under, ASKED_ADVICE])
+            continue
         message = finding.message
         if finding.kind is RepositoryFindingKind.DEFERRED and finding.origin is not None:
             message += f", {_age(now, finding.origin.date)}"
-        cells = f"{finding.kind.value:{kind_width}}  {_anchor_cell(finding):{anchor_width}}"
         lines.append(f"    {cells}  {message}".rstrip())
     for finding in unreadable:
         lines.append(f"  {finding.location}")
@@ -2781,6 +3165,22 @@ def render_human(result: RepositoryCheck, *, now: datetime | None = None) -> str
 
 def _anchor_cell(finding: RepositoryFinding) -> str:
     return "—" if finding.anchor is None else f"{finding.anchor.kind} {finding.anchor.value}"
+
+
+def _run_cell(run: Sequence[RepositoryFinding]) -> str:
+    """The anchor cell of a run's one finding: none for the second bar's, which is the
+    artefact's and names its anchors under it."""
+    return "—" if run[0].asked else _anchor_cell(run[0])
+
+
+def _itself(finding: RepositoryFinding) -> RepositoryFinding:
+    return finding
+
+
+def _shown(result: RepositoryCheck, kind: RepositoryFindingKind) -> int:
+    """How many findings of `kind` the human view shows: the second bar's on one artefact
+    count once (`over_broad_runs`)."""
+    return sum(1 for _ in over_broad_runs((f for f in result.findings if f.kind is kind), _itself))
 
 
 def _point_note(report: ArtefactReport | None) -> str:
@@ -2882,13 +3282,13 @@ def _summary(result: RepositoryCheck) -> str:
         (RepositoryFindingKind.DEAD_ANCHOR, "dead anchor", "dead anchors"),
         (RepositoryFindingKind.UNRESOLVED_KIND, "unresolved kind", "unresolved kinds"),
         (RepositoryFindingKind.NO_ANSWER, "missing answer", "missing answers"),
-        (RepositoryFindingKind.OVER_BROAD, "over-broad anchor", "over-broad anchors"),
+        (RepositoryFindingKind.OVER_BROAD, "over-broad", "over-broad"),
         (RepositoryFindingKind.SHARED_ID, "anchor on a shared id", "anchors on a shared id"),
         (RepositoryFindingKind.UNREACHABLE, "unreachable", "unreachable"),
         (RepositoryFindingKind.ANSWERED_APART, "answered apart", "answered apart"),
     ]
     return ", ".join(
-        counted(result.count(kind), one, many) for kind, one, many in parts if result.count(kind)
+        counted(_shown(result, kind), one, many) for kind, one, many in parts if result.count(kind)
     )
 
 
@@ -2904,8 +3304,11 @@ def _result_line(result: RepositoryCheck) -> str:
 
 
 __all__ = [
+    "ASKED_ADVICE",
     "LET_BACK_IN",
-    "OVER_BROAD_FLAGS",
+    "OVER_BROAD_CLEARED",
+    "OVER_BROAD_SHARE",
+    "OVER_BROAD_UNCHANGED_ASKS",
     "OVER_BROAD_WINDOW",
     "REPOSITORY_SCHEMA_VERSION",
     "UNRESOLVED_KINDS",
@@ -2919,11 +3322,15 @@ __all__ = [
     "CommitBehind",
     "History",
     "MergeEntry",
+    "OverBroad",
+    "OverBroadBar",
     "RepositoryCheck",
     "RepositoryFinding",
     "RepositoryFindingKind",
     "TracedFinding",
     "Version",
+    "asked_lines",
+    "over_broad_runs",
     "read_history",
     "render_human",
     "render_json",

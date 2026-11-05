@@ -92,11 +92,12 @@ Add a check by editing `scripts/check.sh` once; both the hook and CI pick it up.
 
 The findings go to **one tracking issue**, its body rewritten in place when they change, with no comment per run. `scripts/friction_report_body.py` renders the body and counts the findings that need an answer; `scripts/friction_tracking_issue.py` keeps the issue. The run's step summary carries the same body.
 
-The issue is open exactly while a finding needs an answer (ADR-055 point 5). Every finding needs one except three kinds, which the body lists without holding the issue open:
+The issue is open exactly while a finding needs an answer (ADR-055 point 5). Every finding needs one except four kinds, which the body lists without holding the issue open:
 
 - a deferral, which is itself an answer, listed with its reason
 - a `left-out` finding, which owes nothing
 - two revalidations of one artefact answered apart, debt that no change owes, counted in the headline apart from what needs an answer (COR-062 point 7, ADR-068 point 6)
+- an over-broad anchor, listed in a section of its own: its count moves as the window of commits slides with no anchor changed, and nothing records a person's judgement that an anchor is fine, so it would hold the issue open for good (ADR-055 point 5)
 
 The body also holds the two measures, unanchored artefacts and uncovered surface, and neither holds the issue open. With nothing to answer the issue is closed, and none is opened where none exists. A finding that needs an answer reopens it.
 

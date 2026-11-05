@@ -76,6 +76,7 @@ from tests.friction_documents import (
     friction_config,
     guide,
     own_entry,
+    without_over_broad,
 )
 from tests.in_process import MARK, start_in_process
 from tests.shipped_rule_sets import own
@@ -307,12 +308,12 @@ def test_the_whole_repository_check_finds_the_anchor_stale_after_its_file_change
     _start(repo, {"docs/guide.md": guide(anchors=SOURCE_ANCHORS), **CAPTURED})
     current = fr.run_repository_check(repo.root)
     assert [r.state for r in current.artefact_reports] == [fr.ArtefactState.CURRENT]
-    assert [f for f in current.findings if f.anchor == SOURCE_ANCHOR] == []
+    assert [f for f in without_over_broad(current.findings) if f.anchor == SOURCE_ANCHOR] == []
 
     changed = repo.commit("the standard is captured anew", {"sources/iso-8601.md": "2019.\n"})
     stale = fr.run_repository_check(repo.root)
     assert [r.state for r in stale.artefact_reports] == [fr.ArtefactState.STALE]
-    [finding] = [f for f in stale.findings if f.anchor == SOURCE_ANCHOR]
+    [finding] = [f for f in without_over_broad(stale.findings) if f.anchor == SOURCE_ANCHOR]
     assert finding.kind is fr.RepositoryFindingKind.STALE
     assert finding.origin is not None and finding.origin.sha == changed
 
@@ -347,7 +348,7 @@ def test_a_slow_reading_of_history_leaves_no_registered_anchor_without_an_answer
 
     whole = fr.run_repository_check(repo.root)
     assert spent, "the check read history"
-    assert [f for f in whole.findings if f.anchor == SOURCE_ANCHOR] == []
+    assert [f for f in without_over_broad(whole.findings) if f.anchor == SOURCE_ANCHOR] == []
     assert [r.state for r in whole.artefact_reports] == [fr.ArtefactState.CURRENT]
 
     spent.clear()
@@ -408,14 +409,16 @@ def test_a_dead_registered_anchor_leaves_the_artefact_judged_on_its_other_anchor
     _sources(repo)
     _start(repo, {"docs/guide.md": guide(anchors={"path": ["src/cli/**"], "source": ["iso-9999"]})})
     current = fr.run_repository_check(repo.root)
-    assert [(f.kind, f.anchor) for f in current.findings if f.anchor is not None] == [
+    found = without_over_broad(current.findings)
+    assert [(f.kind, f.anchor) for f in found if f.anchor is not None] == [
         (fr.RepositoryFindingKind.DEAD_ANCHOR, DEAD_SOURCE)
     ]
     assert [r.state for r in current.artefact_reports] == [fr.ArtefactState.CURRENT]
 
     repo.commit("the CLI changes", {"src/cli/main.py": "print('cli, changed')\n"})
     stale = fr.run_repository_check(repo.root)
-    assert {(f.kind, f.anchor) for f in stale.findings if f.anchor is not None} == {
+    found = without_over_broad(stale.findings)
+    assert {(f.kind, f.anchor) for f in found if f.anchor is not None} == {
         (fr.RepositoryFindingKind.DEAD_ANCHOR, DEAD_SOURCE),
         (fr.RepositoryFindingKind.STALE, fd.Anchor("path", "src/cli/**")),
     }
@@ -639,7 +642,7 @@ def test_a_registered_anchor_on_a_placed_file_stands_on_its_content(repo: Adopte
     repo.commit("edit the notes", {notes: noted(at=T2, body="Edited.")})
     [asked] = _of_anchor(fc.run_change_check(repo.root, "main").findings, SOURCE_ANCHOR)
     assert asked.message.startswith(f"changed in this diff ({notes})")
-    whole = fr.run_repository_check(repo.root).findings
+    whole = without_over_broad(fr.run_repository_check(repo.root).findings)
     [stale] = [f for f in whole if f.anchor == SOURCE_ANCHOR]
     assert stale.kind is fr.RepositoryFindingKind.STALE
 
@@ -666,12 +669,13 @@ def test_a_registered_file_moved_out_of_a_place_is_read_one_way_since_the_point(
     held = noted(at=T2, outcome="unchanged", because="the engine is still one module")
     contained = repo.commit("the notes revalidated, their content as it was", {"notes/x.md": held})
     edited = repo.commit("edit the notes", {"notes/x.md": noted(at=T2, body="Edited.")})
-    [stale] = [f for f in fr.run_repository_check(repo.root).findings if f.anchor == SOURCE_ANCHOR]
+    found = without_over_broad(fr.run_repository_check(repo.root).findings)
+    [stale] = [f for f in found if f.anchor == SOURCE_ANCHOR]
     assert stale.origin is not None and stale.origin.sha == edited
 
     deferring = guide(anchors=anchors, deferred=[("source", "iso-8601", "rewrite after #1")])
     repo.commit("defer the guide's source", {"docs/guide.md": deferring})
-    explained = frep.run_explain(repo.root, "docs/guide.md").findings
+    explained = without_over_broad(frep.run_explain(repo.root, "docs/guide.md").findings)
     [behind] = [f for f in explained if f.finding.anchor == SOURCE_ANCHOR]
     listed = [c.commit.sha for c in behind.commits]
     assert edited in listed and contained not in listed
@@ -787,7 +791,7 @@ def test_the_whole_repository_readers_read_head_s_registrations_never_the_workin
 
     whole = fr.run_repository_check(repo.root)
     assert [r.state for r in whole.artefact_reports] == [fr.ArtefactState.CURRENT]
-    assert [f for f in whole.findings if f.anchor == SOURCE_ANCHOR] == []
+    assert [f for f in without_over_broad(whole.findings) if f.anchor == SOURCE_ANCHOR] == []
     explained = CliRunner().invoke(main, ["friction", "explain", "docs/guide.md", "--json"])
     assert explained.exit_code == 0, explained.output
     assert json.loads(explained.output)["state"] == "current"
@@ -802,7 +806,7 @@ def test_a_link_the_repository_holds_is_a_file_of_the_answer(repo: AdopterRepo) 
     _start(repo, {})
     assert _kinds(repo).resolve(SOURCE_ANCHOR).paths == ("sources/iso-8601.md",)
     whole = fr.run_repository_check(repo.root)
-    assert [f for f in whole.findings if f.anchor == SOURCE_ANCHOR] == []
+    assert [f for f in without_over_broad(whole.findings) if f.anchor == SOURCE_ANCHOR] == []
 
 
 # --- no answer: the anchor is unresolved, the page flagged, never passed ------------------
@@ -910,7 +914,7 @@ def _assert_unresolved(repo: AdopterRepo, said: str) -> None:
     assert unresolved in result.failing
 
     whole = fr.run_repository_check(repo.root)
-    [reported] = [f for f in whole.findings if f.anchor == SOURCE_ANCHOR]
+    [reported] = [f for f in without_over_broad(whole.findings) if f.anchor == SOURCE_ANCHOR]
     assert reported.kind is fr.RepositoryFindingKind.NO_ANSWER
     assert said in reported.message
     # The artefact is not judged: its state says so, and is never current.
@@ -966,7 +970,7 @@ def test_an_artefact_with_an_unresolved_anchor_is_counted_unresolved_never_curre
     assert states == {"docs/guide.md": "unresolved", "docs/other.md": "current"}
     # Unresolved wins over stale, and what its other anchors owe is still listed.
     found = [(f["kind"], f["anchor"]["kind"]) for f in report["findings"]]
-    assert found == [("stale", "path"), (kind, "source")]
+    assert [f for f in found if f[0] != "over-broad"] == [("stale", "path"), (kind, "source")]
     assert report["counts"][kind] == 1
     assert report["findings"][0]["origin"]["commit"] == changed
 
@@ -1030,7 +1034,7 @@ def test_the_file_a_resolver_names_is_followed_through_a_rename(repo: AdopterRep
     changed = repo.commit("redraft the standard", {"drafts/iso-8601.md": "Redrafted.\n"})
     repo.rename("drafts/iso-8601.md", "sources/iso-8601.md")
     stale = fr.run_repository_check(repo.root)
-    [finding] = [f for f in stale.findings if f.anchor == SOURCE_ANCHOR]
+    [finding] = [f for f in without_over_broad(stale.findings) if f.anchor == SOURCE_ANCHOR]
     assert finding.kind is fr.RepositoryFindingKind.STALE
     assert finding.origin is not None and finding.origin.sha == changed
 
@@ -1045,7 +1049,7 @@ def test_a_file_that_enters_the_answer_asks_the_artefact(repo: AdopterRepo) -> N
     assert asked.kind is fc.FindingKind.FRICTION
     assert asked.message.startswith("changed in this diff (sources/iso-8601-annex.md)")
     whole = fr.run_repository_check(repo.root)
-    [stale] = [f for f in whole.findings if f.anchor == SOURCE_ANCHOR]
+    [stale] = [f for f in without_over_broad(whole.findings) if f.anchor == SOURCE_ANCHOR]
     assert stale.kind is fr.RepositoryFindingKind.STALE
     assert stale.origin is not None and stale.origin.sha == added
 
@@ -1063,7 +1067,7 @@ def test_a_file_that_leaves_the_answer_is_not_seen(repo: AdopterRepo) -> None:
 
     assert _of_anchor(fc.run_change_check(repo.root, "main").findings, SOURCE_ANCHOR) == []
     whole = fr.run_repository_check(repo.root)
-    assert [f for f in whole.findings if f.anchor == SOURCE_ANCHOR] == []
+    assert [f for f in without_over_broad(whole.findings) if f.anchor == SOURCE_ANCHOR] == []
     assert [r.state for r in whole.artefact_reports] == [fr.ArtefactState.CURRENT]
 
 
@@ -1091,7 +1095,7 @@ def test_a_repointed_mapping_asks_the_artefact_when_the_answer_names_the_mapping
     assert asked.kind is fc.FindingKind.FRICTION
     assert asked.message.startswith("changed in this diff (sources/index.json)")
     whole = fr.run_repository_check(repo.root)
-    [stale] = [f for f in whole.findings if f.anchor == SOURCE_ANCHOR]
+    [stale] = [f for f in without_over_broad(whole.findings) if f.anchor == SOURCE_ANCHOR]
     assert stale.kind is fr.RepositoryFindingKind.STALE
     assert stale.origin is not None and stale.origin.sha == repointed
 
@@ -1099,11 +1103,10 @@ def test_a_repointed_mapping_asks_the_artefact_when_the_answer_names_the_mapping
 def test_an_anchor_whose_resolver_names_a_file_most_changes_edit_is_over_broad(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The over-broad rule is not a kind's (COR-050 point 7; ADR-080 point 1): the file the
-    resolver names flagged the guide in the base and in each of two edits, three changes,
-    over a bar made small."""
-    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 10)
-    monkeypatch.setattr(fr, "OVER_BROAD_FLAGS", 2)
+    """The over-broad rule is not a kind's (COR-050 point 7; ADR-080 point 1): over a window
+    as long as the line, the file the resolver names flagged the guide in the base and in
+    each of two edits, 3 of 3 commits, more than half."""
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 3)
     _sources(repo)
     _start(repo, {"docs/guide.md": guide(anchors=SOURCE_ANCHORS), **CAPTURED})
     for edit in (1, 2):
@@ -1111,17 +1114,42 @@ def test_an_anchor_whose_resolver_names_a_file_most_changes_edit_is_over_broad(
     result = fr.run_repository_check(repo.root)
     [broad] = [f for f in result.findings if f.kind is fr.RepositoryFindingKind.OVER_BROAD]
     assert broad.anchor == SOURCE_ANCHOR
-    assert broad.message.startswith("flagged its artefact in 3 of the last 3 changes")
-    assert broad.message.endswith("have its resolver name less, or anchor to a narrower value")
+    assert broad.message.startswith(
+        "flagged its artefact in 3 of the last 3 commits on the first-parent line, more than"
+    )
+    assert broad.message.endswith(
+        "anchor a narrower value of its kind, one its resolver names less for"
+    )
+
+
+def test_a_single_file_where_a_kind_is_registered_is_offered_a_kind_or_a_split(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A path anchor on one code file, over-broad where a kind is registered: the message
+    suggests a narrower value of a registered kind, and, where none names a part of the
+    file, removing the anchor or splitting the file or the artefact (ADR-080 point 3)."""
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 2)  # as long as the line
+    _sources(repo)
+    _start(repo, {"docs/guide.md": guide(anchors={"path": ["src/cli/main.py"]}), **CAPTURED})
+    repo.commit("change the CLI", {"src/cli/main.py": "print('cli v2')\n"})
+    result = fr.run_repository_check(repo.root)
+    [broad] = [f for f in result.findings if f.kind is fr.RepositoryFindingKind.OVER_BROAD]
+    assert broad.message.endswith(
+        "anchor a narrower value of a registered kind, where one names a part of the file the "
+        "artefact rests on; where none does, remove it unless the artefact rests on all of it, "
+        "or split what it stands on into parts an anchor can name, or the artefact into parts "
+        "that each rest on less"
+    )
 
 
 def test_the_count_leaves_out_the_artefact_s_own_file_among_those_the_resolver_names(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A resolver naming every tracked file names the guide's own: its edits flag nothing,
-    as a change under an artefact's own names is never an anchor's."""
-    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 10)
-    monkeypatch.setattr(fr, "OVER_BROAD_FLAGS", 0)
+    as a change under an artefact's own names is never an anchor's. A bar of nothing
+    names every anchor that flagged its artefact at all, with its count."""
+    monkeypatch.setattr(fr, "OVER_BROAD_WINDOW", 4)  # as long as the line
+    monkeypatch.setattr(fr, "OVER_BROAD_SHARE", 0.0)
     _sources(repo, EVERYTHING)
     _start(repo, {"docs/guide.md": guide(anchors=SOURCE_ANCHORS)})
     for edit in (1, 2):
@@ -1136,7 +1164,9 @@ def test_the_count_leaves_out_the_artefact_s_own_file_among_those_the_resolver_n
         for f in result.findings
         if f.kind is fr.RepositoryFindingKind.OVER_BROAD and f.anchor == SOURCE_ANCHOR
     ]
-    assert broad.message.startswith("flagged its artefact in 2 of the last 4 changes")
+    assert broad.message.startswith(
+        "flagged its artefact in 2 of the last 4 commits on the first-parent line"
+    )
 
 
 # --- validation and the writers admit an anchor of any kind a word names ---------------------

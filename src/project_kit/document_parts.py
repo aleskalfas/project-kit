@@ -253,9 +253,9 @@ def running_text(body: str) -> str:
     return _CODE_SPAN.sub(blank, _COMMENT.sub(blank, text))
 
 
-# Kept for the life of the process, keyed on the whole input, as ADR-079 point 1 lets a
-# cache: a friction walk cuts many parts from each version of one document, and each
-# cut reads the same body's headings and slugs again.
+# Keyed on the whole input, as ADR-079 point 1 lets a cache, and bounded: a friction
+# walk cuts many parts from each version of one document, and each cut reads the same
+# body's headings and slugs again.
 @functools.lru_cache(maxsize=512)
 def body_headings(body: str) -> tuple[Heading, ...]:
     """The headings of a Markdown body, in order, fenced code skipped.
