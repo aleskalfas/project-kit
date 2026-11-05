@@ -167,7 +167,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `move-issue` writes the Done label without checking the checkboxes, and leaves the issue open. DEC-007 decides that an issue with an unticked checkbox cannot move to Done, and #1215 tracks it.
 
-**Postconditions:** The [Task](../../../glossary.md#term-task--task) is in Review, its [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open, and each [issue](../../../glossary.md#term-issue--issue) above it is in In Progress or later. A [won't-do close](../../../glossary.md#term-wont-do-close--wont-do-close) leaves its issue in Done, and a [completed close](../../../glossary.md#term-completed-close--completed-close) its Task. An issue moved back is in Backlog or Todo.
+**Postconditions:** The [Task](../../../glossary.md#term-task--task) is in Review, its [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open, and each [issue](../../../glossary.md#term-issue--issue) above it is in In Progress or later. A [won't-do close](../../../glossary.md#term-wont-do-close--wont-do-close) leaves its issue in Done, and a [completed close](../../../glossary.md#term-completed-close--completed-close) leaves its Task there. An issue moved back is in Backlog or Todo.
 
 **Minimal guarantees:**
 

@@ -141,7 +141,7 @@ pkit:
    - each friction setting the change alters
    - how many files the change check could not read
    - each [revalidation answer](../../../../core/glossary.md#term-revalidation-answer--revalidation-answer) on a document on the base's tip that the change's answer did not read (DEC-055 point 3)
-   - what the change does to the delegate's name ([COR-064 point 2](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#2-named-in-committed-configuration-by-the-person-alone))
+   - what the change does to `friction.delegate` ([COR-064 point 2](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#2-named-in-committed-configuration-by-the-person-alone))
 
 > [!WARNING]
 > **Not built yet:** `land-work` does not show what the change does to the delegate's name. COR-064 point 2 decides that the merge authoriser is shown it, and #2122 tracks it.

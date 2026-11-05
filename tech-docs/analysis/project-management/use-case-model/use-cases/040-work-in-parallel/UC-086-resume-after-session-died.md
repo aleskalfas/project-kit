@@ -68,7 +68,7 @@ pkit:
 
 **Assumptions:**
 
-- The [harness](../../../../core/glossary.md#term-harness--harness) hosts a new session in the same [clone](../../../glossary.md#term-clone--clone) ([COR-047](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)). The clone outlives every session in it ([DEC-059 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
+- The [harness](../../../../core/glossary.md#term-harness--harness) hosts a new session in the same [clone](../../../glossary.md#term-clone--clone) ([COR-047](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)). The clone outlives the session that died, unless the clone's sandbox went with it, as variant 1a describes ([DEC-059 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
 
 **Trigger:** The operator starts a new session in the worker's [clone](../../../glossary.md#term-clone--clone) after the clone's last session died, such as at a usage limit or a crash.
 

@@ -239,7 +239,7 @@ An organizer seat is the one seat of a [topology](../glossary.md#term-topology--
 **Always true:**
 
 - The release by force is its one privilege, which a reviewed [change](../../core/glossary.md#term-change--change) to the topology grants (DEC-059).
-- That privilege rests on a [clone key](../glossary.md#term-clone-key--clone-key) each clone asserts, so it catches mistakes and is no security boundary (DEC-059).
+- That privilege rests on a [clone key](../glossary.md#term-clone-key--clone-key) each clone asserts, so the privilege catches mistakes and is no security boundary (DEC-059).
 
 ## Scope
 
@@ -417,7 +417,7 @@ The owner of an [issue](../glossary.md#term-issue--issue) is the [instance](../g
 **Always true:**
 
 - Two instances that take one issue at the same instant end with one owner, the lower number (DEC-035 point 6).
-- The owner is never an input to a check, a move of the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) or the [cascade](../glossary.md#term-cascade--cascade) ([DEC-035 point 8](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#8-the-instance-marker-is-a-pm-domain-side-effect-never-engine-state) and [DEC-043 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#6-realm-blindness-is-preserved)).
+- The owner is never an input to a check the [backbone](../../core/glossary.md#term-backbone--backbone)'s engine makes, a move of the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) or the [cascade](../glossary.md#term-cascade--cascade). [DEC-035 point 8](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#8-the-instance-marker-is-a-pm-domain-side-effect-never-engine-state) and [DEC-043 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#6-realm-blindness-is-preserved) decide this.
 - In the comment log, the comments are the record, and the summary in the description is rebuilt from the comments (DEC-043 points [3](../../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#3-in-comment-mode-the-source-of-truth-is-a-per-instance-append-only-ownership-event-log) and [4](../../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#4-the-current-owner-is-mirrored-into-the-issue-description-as-a-derived-regenerable-view)).
 
 ## Ownership
@@ -472,7 +472,7 @@ A state issue holds one piece of shared data that changes while agents work, nam
 
 - A comment counts only where its author may write to the repository (DEC-058 point 4).
 - Where a state issue's data says who holds a seat or the like, the first comment that takes a free seat holds. A later comment, while the seat is held, counts for nothing ([DEC-058 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#6-the-first-claim-on-a-free-state-holds)).
-- Every listing, check and plan of work leaves state issues out. A state issue is never an input to a check, a move of the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) or the [cascade](../glossary.md#term-cascade--cascade) (DEC-058 point 3).
+- Every listing, check and plan of work leaves state issues out. A state issue is never an input to a check the [backbone](../../core/glossary.md#term-backbone--backbone)'s engine makes, a move of the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) or the [cascade](../glossary.md#term-cascade--cascade). DEC-058 point 3 decides both.
 
 ## Builder agent
 
@@ -518,6 +518,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Seat:**
 
@@ -534,6 +535,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 - [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Organizer seat:**
 
@@ -588,13 +590,14 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 - [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
-- [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Clone key:**
 
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Instance:**
 
@@ -608,7 +611,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [REQ-061 · Functional · No two instances keep working on one issue](../requirements/functional/040-work-in-parallel/REQ-061-one-owner-per-issue.md)
-- [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Owner:**
 
@@ -623,7 +626,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
-- [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Ownership:**
 
@@ -634,7 +637,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md)
 - [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
 - [REQ-061 · Functional · No two instances keep working on one issue](../requirements/functional/040-work-in-parallel/REQ-061-one-owner-per-issue.md)
-- [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **State issue:**
 

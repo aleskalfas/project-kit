@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=5 fingerprint=sha256:8dbbbeb8fb87742ada141891ce20eb1419960f1fd4758f1c92b6ff5c49d3e166 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:08b7616dd2d9fc4ed7d8b47bd0c8573bf5a039420c6597c6358dfe7242346d07 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -96,7 +96,7 @@ Run several AI agents on one project at once, each on its own scope and never on
 **Its requirements:**
 
 - [REQ-061 · Functional · No two instances keep working on one issue](../requirements/functional/040-work-in-parallel/REQ-061-one-owner-per-issue.md)
-- [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Its use cases:**
 

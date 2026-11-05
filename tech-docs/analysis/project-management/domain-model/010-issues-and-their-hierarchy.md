@@ -375,7 +375,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
 - [REQ-042 · Functional · A move a person holds, asked for directly, is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)
 - [REQ-061 · Functional · No two instances keep working on one issue](../requirements/functional/040-work-in-parallel/REQ-061-one-owner-per-issue.md)
-- [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Milestone:**
 
@@ -408,7 +408,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
-- [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Feature:**
 
@@ -439,7 +439,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 - [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
 - [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
-- [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
+- [REQ-062 · Functional · An instance's work in flight is found again only from GitHub, the instance's number and, under a topology, the clone key](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Parent reference:**
 

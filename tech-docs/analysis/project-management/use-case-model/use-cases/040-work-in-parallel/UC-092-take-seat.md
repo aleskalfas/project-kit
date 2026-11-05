@@ -99,7 +99,7 @@ pkit:
 3. The agent follows the agent definition the seat names, the project-manager agent's by default. The agent reads whether the seat's agent plans, builds or does both, and runs that loop of the `pm` [skill](../../../../core/glossary.md#term-skill--skill), in `work-loop.md`. The seat sets the agent's direction in place of the agent's request ([DEC-059 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#8-the-agent-a-seat-names-runs-the-seats-role-through-the-pm-skill), [DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md) and [DEC-008](../../../../../../.pkit/capabilities/project-management/decisions/DEC-008-pm-and-implementer-roles.md)).
 
 > [!WARNING]
-> **Not built yet:** `work-loop.md` holds no loop for a seat whose agent does both. DEC-059 point 8 decides that the agent runs the procedure of the seat's [role](../../../../core/glossary.md#term-role--role), and #2136 tracks it.
+> **Not built yet:** `work-loop.md` holds no loop for a seat whose agent does both. DEC-059 point 8 decides that the agent runs the procedure for what the seat's agent does, and #2136 tracks it.
 
 4. The agent goes on as the planning agent (`UC-083`), a worker agent (`UC-084`) or a lead agent (`UC-088`).
 
