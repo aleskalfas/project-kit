@@ -1,7 +1,7 @@
 ---
 id: DEC-064
 title: This capability's commands ask for a merge of the base only in named cases
-status: proposed
+status: accepted
 date: 2026-11-04
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
