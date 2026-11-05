@@ -353,6 +353,7 @@ An analysis artefact uses a domain concept only where a term of the glossary def
     - a form made from the name in the term's sense, such as a plural, a possessive or a verb
     - a phrase whose other words keep their dictionary meaning, such as "the last release". A phrase that names a thing of its own, such as "release tag", is a concept of its own. It names a thing of its own where the system keeps, shows or acts on what it names as one thing.
     - a pronoun or a shortened name that points back to the term, where the same part already named it
+    - in a domain-model view, a pronoun or a shortened name that points back to the term the heading of its section names
   - **A term's name in another sense.** Once a term holds a name, the name means the term's concept wherever a statement uses it, a sense a dictionary gives it included. The exception is a sense the term tells apart from its own. Each phrase a term lists in its `other-senses` is such a sense, which its distinctions tell apart.
   - **A definition and its own name.** The `definition` form refuses a word of the term's own name, and whether a definition holds one is that form's to check. Where such a word is the name of a term the definition relates to, such as its broader kind, the definition names that concept in other words. That is no break.
   - **What uses no concept.**
