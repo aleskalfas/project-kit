@@ -65,6 +65,8 @@ def test_it_writes_the_code_and_its_record_and_prints_the_losses(root: Path) -> 
         "wrote web/brand.css and its record web/brand.css.record.yaml",
         "loss: css left out `type.body`: form 1 of the css writer has no form for a "
         "typography value",
+        "loss: css left out `type.code`: form 1 of the css writer has no form for a "
+        "typography value",
         "loss: css left out `type.heading`: form 1 of the css writer has no form for a "
         "typography value",
         "loss: css left out `type.strong`: form 1 of the css writer has no form for a "
@@ -87,7 +89,7 @@ def test_run_again_it_writes_nothing_and_says_so(root: Path) -> None:
 def test_accepted_losses_are_not_printed(root: Path) -> None:
     accepted = [
         {"plugin": "css", "what": path, "reason": "Pages set their own type."}
-        for path in ("type.body", "type.heading", "type.strong")
+        for path in ("type.body", "type.code", "type.heading", "type.strong")
     ]
     declare(root, **{"accept-losses": accepted})
     shown = run(root, "brand-css")

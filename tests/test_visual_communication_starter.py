@@ -7,7 +7,10 @@ each option and of each field of runs (DEC-007 point 3). A run that reads a colo
 lies on that family's fill (`components.md`, *Values, states and colour*). A connector's
 line reaches 3:1 against what it lies on in every mode, and crosses no item but its ends;
 a strong run keeps the body's size and line height. The README names what the components
-declare.
+declare. A network's ties reach, by key path, the items its groups draw (DEC-011 point 3);
+no part passes a field of runs on (DEC-012 point 8); a pattern placed inside another draws
+within it with no overflow; a panel's span gives its share of the row (DEC-010 point 4);
+and a code block's lines stand as written.
 
 The reference renders are the pieces under `tests/fixtures/visual-communication/starter/`,
 one for each component, drawn in English and in German. Run in this process
@@ -286,15 +289,49 @@ def elements(element: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
         yield from elements(child)
 
 
+#: A step of a source's field path: a key, then the item of each list it leads into, by
+#: `[<id>]` or by `#<place>` from 1 (`components.md`, *Sources*).
+SOURCE_STEP = re.compile(r"^([A-Za-z0-9_-]+)((?:\[[^\]]+\]|#\d+)*)$")
+SOURCE_ITEM = re.compile(r"\[([^\]]+)\]|#(\d+)")
+
+
+def at_source(content: Any, path: str) -> Any:
+    """What a content file holds at the field path a scene's source names."""
+    value = content
+    for step in path.split("."):
+        found = SOURCE_STEP.match(step)
+        assert found, (path, step)
+        value = value[found.group(1)]
+        for item, place in SOURCE_ITEM.findall(found.group(2)):
+            if item:
+                [value] = [
+                    each for each in value if isinstance(each, Mapping) and each.get("id") == item
+                ]
+            else:
+                value = value[int(place) - 1]
+    return value
+
+
+def run_word(run: Mapping[str, Any], words: list[str], content: Any) -> str:
+    """The word of a drawn run: the style the content names on it, read at its style's
+    source, else its field's first word."""
+    source = str(run["sources"]["style"])
+    if not source.startswith("content:"):
+        return words[0]
+    return str(at_source(content, source.removeprefix("content:")))
+
+
 def drawn_words(
     scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
 ) -> dict[tuple[str, str], set[str]]:
     """The words each option, and each field of runs, of each starter component took in
-    the scenes of `language`. A run's word is read from the role its style took."""
+    the scenes of `language`. A run's word is read from its content, where its style's
+    source names it, since two words may take one role and one paint."""
     words: dict[tuple[str, str], set[str]] = {}
-    for (_, lang), scene in scenes.items():
+    for (piece, lang), scene in scenes.items():
         if lang != language:
             continue
+        content = read(PIECES / piece / f"content.{lang}.yaml")
         for element in elements(scene):
             component = str(element.get("component", ""))
             if not component.startswith("starter/"):
@@ -302,19 +339,21 @@ def drawn_words(
             name = component.removeprefix("starter/")
             for option, word in (element.get("options") or {}).items():
                 words.setdefault((name, option), set()).add(word)
-            for field, by_style in styled_runs(COMPONENTS[name]).items():
+            for field, declared in run_words(COMPONENTS[name]).items():
                 for child in element.get("children", []):
                     if child["id"] != f"{element['id']}/{field}":
                         continue
                     for paragraph in child["paragraphs"]:
                         for run in paragraph:
-                            words.setdefault((name, field), set()).add(by_style[run["style"]])
+                            word = run_word(run, declared, content)
+                            words.setdefault((name, field), set()).add(word)
     return words
 
 
 def styled_runs(component: Mapping[str, Any]) -> dict[str, dict[str, str]]:
-    """For each field of runs, the run word each typography role its text part's style
-    switch gives stands for. Each word takes a role of its own."""
+    """For each field of runs of a component whose every word takes a role of its own,
+    such as the card, the run word each typography role its text part's style switch
+    gives stands for."""
     found = {}
     for field, words in run_words(component).items():
         [part] = [
@@ -390,8 +429,8 @@ COMBINATIONS = math.prod(
 SAMPLES = 16
 
 Point = tuple[float, float]
-#: A box drawn on a page: its fill, and its frame on the page.
-Painted = tuple[str, tuple[float, float, float, float]]
+#: A box drawn on a page: its fill, its frame on the page, and its trace id.
+Painted = tuple[str, tuple[float, float, float, float], str]
 
 
 def connector_lines(
@@ -405,7 +444,7 @@ def connector_lines(
         if element.get("component") == "starter/connector":
             connectors.add(str(element["id"]))
         if element["type"] == "box" and element.get("fill"):
-            boxes.append((str(element["fill"]), frame))
+            boxes.append((str(element["fill"]), frame, str(element["id"])))
         if element["type"] == "line" and str(element["id"]).rpartition("/")[0] in connectors:
             left, top = frame[0] - element["x"], frame[1] - element["y"]
             ends = element.get("points") or [
@@ -424,14 +463,25 @@ def inside(route: list[Point]) -> Iterator[Point]:
             yield x1 + (x2 - x1) * share, y1 + (y2 - y1) * share
 
 
-def under(point: Point, boxes: list[Painted]) -> list[str]:
-    """The fills of the boxes that hold `point`, the last drawn first."""
+def holding(point: Point, boxes: list[Painted]) -> list[Painted]:
+    """The boxes that hold `point`, the last drawn first."""
     x, y = point
     return [
-        fill
-        for fill, (left, top, right, bottom) in reversed(boxes)
-        if left <= x <= right and top <= y <= bottom
+        box
+        for box in reversed(boxes)
+        if box[1][0] <= x <= box[1][2] and box[1][1] <= y <= box[1][3]
     ]
+
+
+def under(point: Point, boxes: list[Painted]) -> list[str]:
+    """The fills of the boxes that hold `point`, the last drawn first."""
+    return [fill for fill, _, _ in holding(point, boxes)]
+
+
+def holds(owner: str, end: str) -> bool:
+    """Whether the element whose trace id is `owner` is the element `end`, or holds it:
+    a trace id is the path of instances, parts and items that lead to an element."""
+    return end == owner or end.startswith(f"{owner}/")
 
 
 @pytest.mark.parametrize("language", LANGUAGES)
@@ -474,15 +524,23 @@ def test_a_connector_crosses_no_item_but_its_ends(
     scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
 ) -> None:
     """The connector routes around nothing, so each reference render places its items
-    where a tie's line, short of its ends, lies on the page's background alone."""
+    where a tie's line, short of its ends, lies only on the page's background and on the
+    boxes of what holds an end, such as the group whose item a tie reaches."""
     checked = 0
     for (piece, lang), scene in scenes.items():
         if lang != language:
             continue
         for page in [each for each in elements(scene) if each.get("page")]:
             for line, route, boxes in connector_lines(page):
+                ends = [str(line["attached"][end]["id"]) for end in ("start", "end")]
                 for point in inside(route):
-                    assert under(point, boxes) == ["background"], (piece, line["id"], point)
+                    crossed = [
+                        box_id
+                        for _, _, box_id in holding(point, boxes)
+                        if not any(holds(box_id.rpartition("/")[0], end) for end in ends)
+                    ]
+                    assert crossed == [], (piece, line["id"], point)
+                    assert under(point, boxes)[-1] == "background", (piece, line["id"], point)
                 checked += 1
     assert checked > 0
 
@@ -531,5 +589,175 @@ def test_the_readme_names_what_the_components_declare() -> None:
             expected |= {option, *words}
         for listed, declared in (component.get("lists") or {}).items():
             expected |= {listed, declared["component"], *declared.get("ends", [])}
+            for field, arrangement in (declared.get("arrangement") or {}).items():
+                expected |= {field, *arrangement["words"]}
         assert expected <= named, (name, sorted(expected - named))
     assert set(OWN) <= named, sorted(set(OWN) - named)
+
+
+# --- patterns that compose, and the code block -------------------------------------------------
+
+#: The starter's patterns, as the README heads each, by its name and the question it answers.
+PATTERNS = set(re.findall(r"^### `([a-z-]+)`: ", README.read_text(encoding="utf-8"), re.MULTILINE))
+#: The weight on a panel, its words and the share each gives.
+SPAN = COMPONENTS["panels"]["lists"]["panels"]["arrangement"]["span"]
+#: How far a drawn length may stray from what it should be, for rounding.
+EPSILON = 1e-6
+
+
+def by_id(scene: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+    """Each element of a scene that carries a trace id, by its trace id."""
+    return {str(element["id"]): element for element in elements(scene) if "id" in element}
+
+
+def ancestors(trace_id: str) -> list[str]:
+    """The trace ids of what holds the element `trace_id`, the outermost first."""
+    steps = trace_id.split("/")
+    return ["/".join(steps[:count]) for count in range(1, len(steps))]
+
+
+def content_at(content: Any, trace_id: str) -> Any:
+    """What a content file holds for the element `trace_id`, where each step of the trace id
+    after the top's is a field of the content, or an item of a list by its id."""
+    return at_source(content, ".".join(trace_id.split("/")[1:]))
+
+
+def is_pattern(element: Mapping[str, Any]) -> bool:
+    component = str(element.get("component", ""))
+    return component.startswith("starter/") and component.removeprefix("starter/") in PATTERNS
+
+
+def within(inner: tuple[float, ...], outer: tuple[float, ...]) -> bool:
+    return (
+        outer[0] - EPSILON <= inner[0]
+        and outer[1] - EPSILON <= inner[1]
+        and inner[2] <= outer[2] + EPSILON
+        and inner[3] <= outer[3] + EPSILON
+    )
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_a_networks_ties_reach_the_items_its_groups_draw_by_their_key_paths(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
+) -> None:
+    """Each tie of a network ends at the item its end fields' key paths name (DEC-011
+    point 3), among them items that a group draws inside a pattern in one of its columns."""
+    in_groups = 0
+    for (piece, lang), scene in scenes.items():
+        if lang != language:
+            continue
+        content = read(PIECES / piece / f"content.{lang}.yaml")
+        drawn = by_id(scene)
+        for network, element in drawn.items():
+            if element.get("component") != "starter/network":
+                continue
+            for tie in content_at(content, network).get("ties", []):
+                [line] = [
+                    each
+                    for each in elements(drawn[f"{network}/ties[{tie['id']}]"])
+                    if each.get("attached")
+                ]
+                for field, end in (("from", "start"), ("to", "end")):
+                    reached = str(line["attached"][end]["id"])
+                    named = f"{network}/{tie[field]['item'].replace('.', '/')}"
+                    assert reached == named, (piece, tie["id"], field)
+                    owners = [drawn[owner].get("component") for owner in ancestors(reached)]
+                    in_groups += "starter/group" in owners
+    assert in_groups > 0
+
+
+@pytest.mark.parametrize("name", sorted(COMPONENTS))
+def test_no_part_passes_a_field_of_runs_on_to_a_component_it_places(name: str) -> None:
+    """A field of runs is drawn by a text part of the component that declares it (DEC-012
+    point 8), as the code block shows a terminal's line with a text part of its own."""
+    component = COMPONENTS[name]
+    runs = set(run_words(component))
+    for part, value in component["parts"].items():
+        passed = set((value.get("fields") or {}).values()) & runs
+        assert passed == set(), (name, part, sorted(passed))
+    for field in runs:
+        assert [
+            part
+            for part in component["parts"].values()
+            if (part.get("text") or {}).get("content") == field
+        ], (name, field)
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_a_pattern_placed_inside_another_draws_within_it_with_no_overflow(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
+) -> None:
+    """A network holds a pattern of groups, and panels hold a network and panels of their
+    own. Each is drawn with no finding (the `scenes` fixture), each of its elements within
+    its frame, and each of its texts' lines within the text's own."""
+    nested = 0
+    for (piece, lang), scene in scenes.items():
+        if lang != language:
+            continue
+        for page in [each for each in elements(scene) if each.get("page")]:
+            placed = {str(element["id"]): (element, frame) for element, frame in frames(page)}
+            for trace_id, (element, frame) in placed.items():
+                outer = [
+                    owner
+                    for owner in ancestors(trace_id)
+                    if owner in placed and is_pattern(placed[owner][0])
+                ]
+                if not is_pattern(element) or not outer:
+                    continue
+                nested += 1
+                assert within(frame, placed[outer[-1]][1]), (piece, trace_id)
+                left, top = frame[0] - element["x"], frame[1] - element["y"]
+                for inner, inner_frame in frames(element, left, top):
+                    assert within(inner_frame, frame), (piece, inner["id"])
+                    for line in inner.get("lines", []):
+                        assert line["width"] <= inner["width"] + EPSILON, (piece, inner["id"])
+                    measured = inner.get("measured-height", 0.0)
+                    assert measured <= inner["height"] + EPSILON, (piece, inner["id"])
+    assert nested > 0
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_a_panels_span_gives_it_its_share_of_the_row(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
+) -> None:
+    """Each panel's width is in proportion to the share its span's word gives it (DEC-010
+    point 4), so a wide panel is half as wide again as a normal one. Each word is drawn."""
+    spans: set[str] = set()
+    for (piece, lang), scene in scenes.items():
+        if lang != language:
+            continue
+        content = read(PIECES / piece / f"content.{lang}.yaml")
+        drawn = by_id(scene)
+        for trace_id, element in drawn.items():
+            if element.get("component") != "starter/panels":
+                continue
+            widths = []
+            for panel in content_at(content, trace_id)["panels"]:
+                word = panel.get("span", SPAN["words"][0])
+                spans.add(word)
+                width = drawn[f"{trace_id}/panels[{panel['id']}]"]["width"]
+                widths.append(width / SPAN["shares"][word])
+            assert max(widths) == pytest.approx(min(widths)), (piece, trace_id, widths)
+    assert spans == set(SPAN["words"])
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_a_code_blocks_lines_stand_as_written(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
+) -> None:
+    """A code block's text takes no width, so no line of it breaks: each paragraph is one
+    line, and the block is wider than its widest."""
+    checked = 0
+    for (piece, lang), scene in scenes.items():
+        if lang != language:
+            continue
+        for element in elements(scene):
+            if element.get("component") != "starter/code":
+                continue
+            [text] = [each for each in element["children"] if each["id"] == f"{element['id']}/text"]
+            paragraphs = [line["paragraph"] for line in text["lines"]]
+            assert paragraphs == list(range(len(text["paragraphs"]))), (piece, text["id"])
+            widest = max(line["width"] for line in text["lines"])
+            assert text["x"] + widest < element["width"], (piece, text["id"])
+            checked += 1
+    assert checked > 0

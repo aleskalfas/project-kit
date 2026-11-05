@@ -42,6 +42,7 @@ roles:
   type.body: {type: typography}
   type.heading: {type: typography}
   type.strong: {type: typography}
+  type.code: {type: typography}
 
 # The shared axes (DEC-004 point 2). Both change colours alone, so every mode of either
 # is drawn from one scene.
