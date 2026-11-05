@@ -452,7 +452,7 @@ The JSON writer writes the [document of values](#the-hand-over) as one file, for
 - **What it holds.** It holds what the code holds ([The declaration](#the-declaration)), in the fields the hand-over opens with, and no others.
 - **Names.** A token keeps its path as the brand exports it, such as `space.1`. So the writer takes no `prefix`, and refuses a declaration that names one, saying why.
 - **Modes.** A token's `values` holds its value under the key of each combination ([Keys of combinations](files.md#keys-of-combinations)). A program picks a set of values by its key. Value axes and size axes are written alike.
-- **Values.** Each value is in its DTCG form, as in the hand-over. A `typography` holds its five members, each in its own form: `fontFamily`, `fontSize`, `fontWeight`, `letterSpacing` and `lineHeight`.
+- **Values.** Each value is in its DTCG form, as in the hand-over.
 - **The text.** Each key of an object lies on its own line, down to a token's values. Each value then keeps to one line, in the capability's canonical text. So a changed value changes one line, and the same document gives the same file on every machine.
 - **Losses.** The writer takes every value type and every kind of axis, so it reports no loss.
 
