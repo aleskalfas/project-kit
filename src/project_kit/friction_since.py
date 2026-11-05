@@ -23,9 +23,9 @@ itself. It reads git and writes nothing.
   no, with why: the branch was rebased, or `since` reached it only through a
   merge.
 - **What each commit on the line contributes.**
-  - *A merge of the base* — a merge commit whose second parent is in the
+  - *A merge of the base* — a merge commit whose other parents are in the
     base tip's history — contributes only what differs from git's clean merge
-    of its two parents (`git merge-tree --write-tree`). Where that merge
+    of its parents (`git merge-tree --write-tree`). Where that merge
     conflicts, the commit is held against git's merge taking each side of
     every conflict in a file's text (`-X ours`, `-X theirs`), and must differ
     from both only in answer files the change adds. A conflict that is not in
@@ -47,6 +47,12 @@ itself. It reads git and writes nothing.
   the base does not resolve, and when git lacks `merge-tree --write-tree`
   (2.38) or, for a conflicted merge, its `-X` option.
 
+Which commits it walks, git's merges and the state before each commit are read
+through the home of what a change's commits contribute (`commit_contributions`,
+ADR-057 point 2). What it judges against them is its own. A parent on the head's
+own line is an ancestor of the first parent, so git's merge of such a commit's
+parents is that first parent, and only the base's history needs asking.
+
 Version 1 of its document counted changes inside the artefacts' `revalidated`
 blocks and `revisited` lists, where answers lived before they moved into answer
 files (COR-062 point 11). Version 2 counts answer files the change adds, and
@@ -56,17 +62,17 @@ nothing in a block.
 from __future__ import annotations
 
 import json
-import re
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 from project_kit import answer_files, cli_render, default_branch
+from project_kit import commit_contributions as contributions
+from project_kit.commit_contributions import ABSENT, Entry
 from project_kit.friction_check import printable  # the friction group's one escape of a human view
 from project_kit.friction_git import (
     SHORT,
     FrictionCheckError,
-    commit_of,
     run_git,
 )
 from project_kit.working_tree import nul_separated
@@ -81,12 +87,6 @@ SINCE_SCHEMA_VERSION = 2
 
 # What a file's mode is, as a tree writes it, when it is a regular file.
 _FILE_MODES = frozenset({"100644", "100755"})
-# The mode a raw diff gives a side that holds no file.
-_ABSENT = "000000"
-# `git merge-tree` exits 0 for a clean merge and 1 for one with conflicts.
-_MERGED = (0, 1)
-# A name that reads as a commit's id, in full or abbreviated.
-_HEX = re.compile(r"[0-9a-fA-F]{7,40}")
 
 
 @dataclass(frozen=True)
@@ -147,8 +147,10 @@ def run_since(
     branch). `resolved` is that base when the caller has read it already
     (`default_branch.settled`), so it is not resolved twice. Raises
     `FrictionCheckError` when it cannot answer."""
-    since = _commit(target_root, since_rev, "the commit named")
-    head = _commit(target_root, head_rev or "HEAD", "--head" if head_rev else "HEAD")
+    since = contributions.commit_named(target_root, since_rev, "the commit named")
+    head = contributions.commit_named(
+        target_root, head_rev or "HEAD", "--head" if head_rev else "HEAD"
+    )
     if run_git(target_root, "rev-parse", "--is-shallow-repository").stdout.strip() == b"true":
         raise FrictionCheckError(
             "this clone is shallow, so the history between the two commits may not be here; "
@@ -160,13 +162,13 @@ def run_since(
     found = Since(since, head, base.ref, base.tip)
     if since == head:
         return found
-    if not _is_ancestor(target_root, since, head):
+    if not contributions.is_ancestor(target_root, since, head):
         return _off_the_line(
             found,
             f"{head[:SHORT]} does not descend from {since[:SHORT]}: the branch was rebased "
             f"or force-pushed",
         )
-    line = _first_parent_line(target_root, since, head)
+    line = contributions.first_parent_line(target_root, since, head)
     if not line or line[-1][1][0] != since:
         return _off_the_line(
             found,
@@ -177,15 +179,15 @@ def run_since(
     steps: list[Step] = []
     inside: set[str] = set()
     outside: list[Outside] = []
+    tip = base.tip
+
+    def in_the_base(parent: str) -> bool:
+        return contributions.is_ancestor(target_root, parent, tip)
+
     for commit, parents in reversed(line):
-        merges_base = len(parents) == 2 and _is_ancestor(target_root, parents[1], base.tip)
-        steps.append(Step(commit, merges_base))
-        judged: Sequence[tuple[str | None, str | None]] = (
-            _merge_of_base(target_root, held, commit, parents[0], parents[1])
-            if merges_base
-            else _against(target_root, held, commit, (parents[0],))
-        )
-        for path, why in judged:
+        prior = contributions.prior_state(target_root, parents, settled=in_the_base)
+        steps.append(Step(commit, prior.merged))
+        for path, why in _contribution(target_root, held, commit, prior):
             if why is not None:
                 outside.append(Outside(path, commit, why))
             elif path is not None:
@@ -203,38 +205,6 @@ def run_since(
 
 def _off_the_line(found: Since, reason: str) -> Since:
     return Since(found.since, found.head, found.base_ref, found.base_tip, reason=reason)
-
-
-def _commit(root: Path, rev: str, what: str) -> str:
-    commit = None if not rev or rev.startswith("-") else commit_of(root, rev)
-    if commit is None:
-        raise FrictionCheckError(f"{what} {rev!r} names no commit of this repository.")
-    if _HEX.fullmatch(rev) and not commit.startswith(rev.lower()):
-        # git reads a branch or tag before a short id: one named like a commit's id
-        # would stand in for that commit.
-        raise FrictionCheckError(
-            f"{what} {rev!r} reads as a commit's id but names {commit[:SHORT]}, through a "
-            f"branch or tag of that name; name the commit in full."
-        )
-    return commit
-
-
-def _is_ancestor(root: Path, ancestor: str, descendant: str) -> bool:
-    done = run_git(root, "merge-base", "--is-ancestor", ancestor, descendant, accept=(0, 1))
-    return done.returncode == 0
-
-
-def _first_parent_line(root: Path, since: str, head: str) -> list[tuple[str, list[str]]]:
-    """The commits from `head` back to `since` along first parents, each with its
-    parents, newest first."""
-    listed = run_git(root, "rev-list", "--first-parent", "--parents", f"{since}..{head}")
-    line: list[tuple[str, list[str]]] = []
-    for text in listed.stdout.decode().splitlines():
-        oids = text.split()
-        if len(oids) < 2:
-            raise FrictionCheckError(f"`git rev-list` listed a commit without parents: {text!r}.")
-        line.append((oids[0], oids[1:]))
-    return line
 
 
 def _base_answer_files(root: Path, head: str, tip: str) -> frozenset[str]:
@@ -270,70 +240,19 @@ def _is_answer_path(path: str) -> bool:
 # --- one commit ----------------------------------------------------------------------
 
 
-def _merge_of_base(
-    root: Path, held: frozenset[str], commit: str, first: str, second: str
+def _contribution(
+    root: Path, held: frozenset[str], commit: str, prior: contributions.PriorState
 ) -> Sequence[tuple[str | None, str | None]]:
-    """A merge of the base, held against git's clean merge of its parents — or, where
-    that merge conflicts, against git's merge taking each side of every conflict."""
-    clean, written = _merge_tree(root, first, second)
-    if clean:
-        return _against(root, held, commit, (_tree_of(written),))
-    sides: list[str] = []
-    for side in ("ours", "theirs"):
-        clean, written = _merge_tree(root, first, second, "-X", side)
-        if not clean:
-            why = (
-                "the merge of the base conflicts on it outside its text, as where one side "
-                "changed a file the other removed or renamed"
-            )
-            named: list[str | None] = [*_conflicted(written)] or [None]
-            return [(path, why) for path in named]
-        sides.append(_tree_of(written))
-    return _against(root, held, commit, tuple(sides))
-
-
-def _merge_tree(root: Path, first: str, second: str, *options: str) -> tuple[bool, bytes]:
-    """Git's merge of two commits, `options` given: whether it merged cleanly, and what
-    `merge-tree --write-tree -z` wrote — the tree, then each conflicted path."""
-    done = run_git(
-        root,
-        "merge-tree",
-        "--write-tree",
-        "-z",
-        "--no-messages",
-        *options,
-        first,
-        second,
-        accept=(*_MERGED, 128, 129),
-    )
-    if done.returncode not in _MERGED:
-        detail = done.stderr.decode("utf-8", "replace").strip().splitlines()
-        needs = "a git whose `merge-tree` takes `-X`" if options else "git 2.38 or later"
-        raise FrictionCheckError(
-            f"`git merge-tree --write-tree {' '.join(options)}` failed — it needs {needs}"
-            + (f": {detail[-1]}" if detail else "")
-            + "."
+    """What one commit contributes, against the state before it. A merge of the base is
+    held against git's merge of its parents, or, where that conflicts, against git's merge
+    taking each side of every conflict. A conflict no side settles lies outside."""
+    if prior.off_text:
+        why = (
+            "the merge of the base conflicts on it outside its text, as where one side "
+            "changed a file the other removed or renamed"
         )
-    return done.returncode == 0, done.stdout
-
-
-def _tree_of(written: bytes) -> str:
-    return written.split(b"\0", 1)[0].decode().strip()
-
-
-def _conflicted(written: bytes) -> list[str]:
-    """The paths a conflicted `merge-tree -z` lists: `<mode> <object> <stage>\\t<path>`
-    after the tree, up to the empty record."""
-    records = written.split(b"\0")[1:]
-    paths: list[str] = []
-    for record in records:
-        if not record:
-            break
-        _meta, tab, path = record.partition(b"\t")
-        name = path.decode("utf-8", "surrogateescape")
-        if tab and name not in paths:
-            paths.append(name)
-    return paths
+        return [(path, why) for path in prior.off_text]
+    return _against(root, held, commit, prior.states)
 
 
 def _against(
@@ -341,7 +260,7 @@ def _against(
 ) -> list[tuple[str, str | None]]:
     """Each file `commit` holds otherwise than a tree-ish of `expected`, with why it lies
     outside the change's answer files, or `None` where it lies inside them against each."""
-    diffs = [dict(_raw_diff(root, tree, commit)) for tree in expected]
+    diffs = [dict(contributions.raw_diff(root, tree, commit)) for tree in expected]
     paths: set[str] = set()
     for diff in diffs:
         paths.update(diff)
@@ -352,37 +271,19 @@ def _against(
     return judged
 
 
-#: A file's mode and object in a tree; the mode is `_ABSENT` where the tree holds none.
-_Entry = tuple[str, str]
-
-
-def _raw_diff(root: Path, before: str, after: str) -> Iterable[tuple[str, tuple[_Entry, _Entry]]]:
-    """`git diff-tree -r --no-renames` between two tree-ishes: each path, with its mode
-    and object on each side. A submodule's entry is never left out, whatever the working
-    tree's `.gitmodules` says (`--ignore-submodules=none`): a repointed submodule is a
-    change outside."""
-    out = run_git(
-        root, "diff-tree", "-r", "-z", "--no-renames", "--ignore-submodules=none", before, after
-    ).stdout
-    tokens = nul_separated(out)
-    for meta, path in zip(tokens[0::2], tokens[1::2], strict=True):
-        mode_b, mode_a, obj_b, obj_a, _status = meta.lstrip(":").split(" ")
-        yield path, ((mode_b, obj_b), (mode_a, obj_a))
-
-
-def _judge(held: frozenset[str], path: str, before: _Entry, after: _Entry) -> str | None:
+def _judge(held: frozenset[str], path: str, before: Entry, after: Entry) -> str | None:
     """Why the change to the file at `path`, from `before` to the commit's `after`, lies
     outside the answer files the change adds, or `None` where it lies inside them."""
     (mode_b, _obj_b), (mode_a, _obj_a) = before, after
     if not _is_answer_path(path):
         return "not an answer file"
-    if mode_a == _ABSENT:
+    if mode_a == ABSENT:
         return "an answer file removed, which takes its answers away"
     if path in held:
         return "an answer file the base holds, which no change rewrites"
     if mode_a not in _FILE_MODES:
         return "not a regular file"
-    if mode_b not in (_ABSENT, mode_a):
+    if mode_b not in (ABSENT, mode_a):
         return f"its mode changed ({mode_b} to {mode_a})"
     return None
 
