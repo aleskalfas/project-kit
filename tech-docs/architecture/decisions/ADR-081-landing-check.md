@@ -1,7 +1,7 @@
 ---
 id: ADR-081
 title: A check of its own refuses to land a proposal and lists what a change makes accepted
-status: proposed
+status: accepted
 date: 2026-11-05
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
