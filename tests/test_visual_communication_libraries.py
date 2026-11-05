@@ -1,9 +1,10 @@
 """The library folder, its list, versions, and a piece's lock (DEC-001 point 5, DEC-003
 points 1, 4, 8 and 9, DEC-004 point 6); the level of a version the installed capability
-cannot read, released or not (DEC-002 point 7, DEC-014 point 5); and what the command that
+cannot read, released or not (DEC-002 point 7, DEC-014 point 5); what the command that
 brings a shipped library in reads of the locks and of the capability's folder (DEC-013
-point 5). Each project is laid in the test's own folder, outside git, so its files are
-listed by walking."""
+point 5); and what the check finds of a copy of a library the capability ships, against a
+capability's folder the test controls (DEC-013 point 6). Each project is laid in the test's
+own folder, outside git, so its files are listed by walking."""
 
 from __future__ import annotations
 
@@ -818,3 +819,158 @@ def test_a_pinned_lock_is_never_judged(tmp_path: Path) -> None:
     lock = {"base": "1.0.0", "charts": "1.0.0"}
     judge = Judging(lambda chosen: pytest.fail(f"{chosen} judged"))
     assert libraries.move_lock(held(root), ["charts"], lock, pinned=True, judge=judge).lock == lock
+
+
+# --- a copy of a library the capability ships, against what it ships (DEC-013 point 6) ---------
+
+SHIPPED = {"kind": "shipped"}
+COPY = "visual/libraries/foundations/1.0.0"
+
+
+def capability(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, release: bool, building: str = "1.0.0"
+) -> Path:
+    """A capability's folder the test controls, in place of the capability's own for the
+    length of the test: it builds the foundations at `building`, and releases
+    foundations@1.0.0, as it was built, where `release` says so."""
+    folder = tmp_path / "capability"
+    built = folder / "libraries" / "foundations"
+    shutil.copytree(FOUNDATIONS, built)
+    if release:
+        shutil.copytree(built, shipped.place_of(folder, "foundations", V("1.0.0")))
+        entry = shipped.entry_of(folder, "foundations", V("1.0.0"))
+        listed = {"source": SHIPPED, "versions": {"1.0.0": entry}}
+        write(
+            folder / "releases" / "foundations" / "releases.yaml",
+            yaml_text(bound("libraries", libraries={"foundations": listed})),
+        )
+    file = built / "library.yaml"
+    file.write_text(
+        file.read_text(encoding="utf-8").replace("version: 1.0.0", f"version: {building}")
+    )
+    monkeypatch.setattr(copies, "SHIPPED", folder)
+    return folder
+
+
+def judged(root: Path, code: str) -> list[tuple[Any, str]]:
+    """Each finding of the check with the label `code`, with its level where it lies."""
+    return [
+        (finding, level) for finding, level in checks.check(root).judged if finding.code == code
+    ]
+
+
+@pytest.mark.parametrize("release", [True, False], ids=["shipped", "not-shipped"])
+def test_library_changed_names_the_command_only_on_a_copy_of_a_version_the_capability_ships(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, release: bool
+) -> None:
+    capability(tmp_path, monkeypatch, release=release)
+    root = project(tmp_path)
+    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    add_library(root, "charts", "1.0.0")
+    entries = {name: released_entry(root, name, "1.0.0") for name in ("charts", "foundations")}
+    write_list(
+        root,
+        {
+            "charts": {"source": PROJECT, "versions": {"1.0.0": entries["charts"]}},
+            "foundations": {"source": SHIPPED, "versions": {"1.0.0": entries["foundations"]}},
+        },
+    )
+    assert judged(root, "library-changed") == judged(root, "copy-hash-differs") == []
+    for name in ("charts", "foundations"):
+        write(version_folder(root, name, "1.0.0") / "notes.txt", "Added after the release.\n")
+    found = {
+        finding.library: (finding.fix, level) for finding, level in judged(root, "library-changed")
+    }
+    restore = ("restore the version folder as it was released", "fails")
+    add = ("run `pkit visual add foundations`, which restores it as released", "fails")
+    assert found == {"charts@1.0.0": restore, "foundations@1.0.0": add if release else restore}
+
+
+#: What the check says of a copy not released of a number the capability does not ship.
+UNSHIPPED = (
+    "move each draft that locks it, on purpose, to a version the capability ships, by pinning "
+    "it to that version or by taking a new major; once no lock names the copy, take it out of "
+    "the library folder and off the list"
+)
+#: What the check says of any other copy not released that is not what the capability ships.
+ADD = (
+    "run `pkit visual add foundations`, which replaces the copy with what the capability ships "
+    "under its number"
+)
+
+
+@pytest.mark.parametrize(
+    ("case", "message", "fix"),
+    [
+        pytest.param(
+            "files",
+            "foundations@1.0.0, listed not released, holds other files than the installed "
+            "capability ships under its number, the version being built: `notes.txt` is not in "
+            "what the capability ships; `roles.yaml` differs",
+            ADD,
+            id="other-files",
+        ),
+        pytest.param(
+            "released",
+            "foundations@1.0.0 is listed not released, and the installed capability released it",
+            ADD,
+            id="released",
+        ),
+        pytest.param(
+            "unshipped",
+            "foundations@1.0.0 is listed not released, and the installed capability ships no "
+            "foundations@1.0.0",
+            UNSHIPPED,
+            id="number-not-shipped",
+        ),
+    ],
+)
+def test_a_copy_not_released_that_is_not_what_the_capability_ships_asks_for_attention(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, case: str, message: str, fix: str
+) -> None:
+    building = "1.1.0" if case == "unshipped" else "1.0.0"
+    capability(tmp_path, monkeypatch, release=case == "released", building=building)
+    root = project(tmp_path)
+    folder = copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    write_list(root, {"foundations": {"source": SHIPPED, "versions": {"1.0.0": UNRELEASED}}})
+    if case == "files":
+        assert judged(root, "copy-not-shipped") == []
+        write(folder / "notes.txt", "Added in the copy.\n")
+        roles = folder / "roles.yaml"
+        roles.write_text(roles.read_text(encoding="utf-8") + "# changed in the copy\n")
+    [(finding, level)] = judged(root, "copy-not-shipped")
+    assert (level, finding.who, finding.library) == ("attention", "the project", "")
+    assert checks.place(finding) == COPY
+    assert (finding.message, finding.fix) == (message, fix)
+
+
+def test_a_released_copy_whose_hash_differs_from_the_capabilitys_names_both(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    folder = capability(tmp_path, monkeypatch, release=True)
+    recorded = shipped.entry_of(folder, "foundations", V("1.0.0"))["hash"]["value"]
+    root = project(tmp_path)
+    copy = copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
+    roles = copy / "roles.yaml"
+    role = "  space.4: {type: dimension}\n"
+    added = role + "  space.5: {type: dimension}\n"
+    roles.write_text(roles.read_text(encoding="utf-8").replace(role, added))
+    entry = released_entry(root, "foundations", "1.0.0")
+    write_list(root, {"foundations": {"source": SHIPPED, "versions": {"1.0.0": entry}}})
+    [(finding, level)] = judged(root, "copy-hash-differs")
+    assert (level, finding.who) == ("attention", "the project")
+    list_file = "visual/libraries/libraries.yaml"
+    assert checks.place(finding) == f"{list_file}#libraries.foundations.versions.1.0.0.hash"
+    assert finding.message == (
+        f"{list_file} keeps the hash `{entry['hash']['value']}` for foundations@1.0.0, released, "
+        f"and the installed capability records `{recorded}`: two contents carry one released "
+        f"number"
+    )
+    assert entry["hash"]["value"] != recorded
+    assert finding.fix == (
+        "choose which content foundations@1.0.0 holds: `pkit visual add foundations` refuses "
+        "while the two hashes differ"
+    )
+    write(copy / "notes.txt", "Added after the release.\n")
+    [(changed, _)] = judged(root, "library-changed")
+    assert changed.fix == "restore the version folder as it was released"

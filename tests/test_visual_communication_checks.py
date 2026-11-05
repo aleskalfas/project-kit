@@ -13,8 +13,9 @@ against its run styles, skipped by the check of ids, each run measured against t
 under it (DEC-012 points 1, 3 and 8). A tie's component, the shape of its ends and their
 key paths, read in the content; an end the scene does not find, reported at its tie; a
 list of ties whose default takes no ends, or declares an end field, checked alone
-(DEC-011 point 8). The command around it is
-`test_visual_communication_check.py`."""
+(DEC-011 point 8). A failing finding in a copy of a library the capability ships, released
+or not, and in a released one whose files changed (DEC-013 point 6). The command around it
+is `test_visual_communication_check.py`."""
 
 from __future__ import annotations
 
@@ -140,9 +141,9 @@ def test_a_whole_lock_has_no_finding(tmp_path: Path) -> None:
 # --- library names and released versions ------------------------------------------------------
 
 
-def held_as(root: Path, name: str, *, released: bool = False) -> Path:
+def held_as(root: Path, name: str, *, released: bool = False, source: str = "project") -> Path:
     """The drawing project without its picture, the `tests` library held, listed and used
-    under `name` instead; released where `released` says so."""
+    under `name` instead, from the source `source`; released where `released` says so."""
     folder = root / "visual" / "libraries" / name
     (root / "visual" / "libraries" / "tests").rename(folder)
     for path in folder.rglob("*.yaml"):
@@ -158,7 +159,7 @@ def held_as(root: Path, name: str, *, released: bool = False) -> Path:
             "foundations": {"source": {"kind": "shipped"}, "versions": unreleased},
             "test-brand": {"source": {"kind": "project"}, "versions": unreleased},
             name: {
-                "source": {"kind": "project"},
+                "source": {"kind": source},
                 "versions": {"1.0.0": released_entry(folder / "1.0.0", name)}
                 if released
                 else unreleased,
@@ -1996,3 +1997,46 @@ def test_each_run_is_measured_against_the_fill_under_it_in_its_own_paint() -> No
         "`paper` on `paper` `large-text`)",
     ]
     assert {f.where for f in found} == {"figure/said"}
+
+
+# --- a copy of a library the capability ships (DEC-013 point 6) --------------------------------
+
+#: Who a finding in a copy of the library `line`, listed from the source `shipped`, names.
+MAINTAINER = "whoever maintains the capability, who corrects `line` where it is authored"
+
+
+@pytest.mark.parametrize("released", [False, True], ids=["not-released", "released"])
+def test_a_failing_finding_in_a_shipped_copy_asks_whoever_maintains_the_capability(
+    tmp_path: Path, released: bool
+) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    root = held_as(root, "line", released=released, source="shipped")
+    report = checks.check(root)
+    [(finding, level)] = [(f, level) for f, level in report.judged if f.code == "library-name"]
+    assert (level, finding.who) == ("attention", MAINTAINER)
+    assert checks.said(finding) == (
+        f"`line` is a top group of the shared roles, so no library takes it — for {MAINTAINER} "
+        f"— rename the library, in a version of its own, and lock that version"
+    )
+
+
+def test_a_failing_finding_in_a_shipped_copy_that_changed_since_its_release_fails(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    root = held_as(root, "line", released=True, source="shipped")
+    write(root / "visual/libraries/line/1.0.0/notes.txt", "Added after the release.\n")
+    report = checks.check(root)
+    levels = {f.code: (level, f.who) for f, level in report.judged}
+    assert levels["library-changed"] == ("fails", "")
+    assert levels["library-name"] == ("fails", "")
+
+
+def test_a_finding_lowered_in_a_shipped_copy_names_its_maintainer_and_is_never_stored() -> None:
+    finding = findings_.Finding("text-overflow", "fails", "too wide", library="line@1.0.0")
+    for released in (False, True):
+        lowered, level = findings_.as_read(finding, released, shipped=True)
+        assert (level, lowered.who) == ("attention", MAINTAINER)
+    assert finding.who == "" and finding.level == "fails"
+    unversioned = findings_.Finding("lock-missing", "fails", "no lock")
+    assert findings_.as_read(unversioned, False, shipped=True) == (unversioned, "fails")

@@ -1,5 +1,6 @@
-"""A project's copies of a library the capability ships, and what the command that brings
-the library in writes of them (visual-communication DEC-003 point 5, DEC-013 point 5).
+"""A project's copies of a library the capability ships, what the command that brings the
+library in writes of them, and what the check finds of them (visual-communication DEC-003
+point 5, DEC-013 points 5 and 6).
 
 - **What the capability ships under a number** (`under`): its released version of that
   number, from its released place, with the entry the library's record keeps of it; else
@@ -38,6 +39,11 @@ the library in writes of them (visual-communication DEC-003 point 5, DEC-013 poi
 Every check that can refuse runs in `plan`, before the first write. `write` writes the plan
 as one change (`files.Change`): each folder copied, or replaced whole, then the list, every
 other byte of it kept.
+
+**What the check finds** of each copy (`compare`) follows what a run would write of it: a
+copy not released that is not what the capability ships under its number, and a released
+copy whose hash differs from the one the capability records, each ask the project for
+attention (DEC-013 point 6).
 """
 
 from __future__ import annotations
@@ -56,10 +62,12 @@ from _lib.files import (
     refuse_links,
     schema_of,
 )
+from _lib.findings import ATTENTION, PROJECT, Finding
 from _lib.libraries import (
     FOLDER,
     LIST,
     LIST_HEADER,
+    SHIPPED_SOURCE,
     Held,
     LibraryError,
     Version,
@@ -492,14 +500,29 @@ def holding(found: Sequence[Lock], library: str, version: Version) -> tuple[Lock
 
 def holds(held: Held, source: Source) -> bool:
     """Whether the location's copy of the version holds exactly the files `source` ships."""
+    held_it = source.version in held.folders.get(source.name, {})
+    return held_it and not differences(held, source)
+
+
+def differences(held: Held, source: Source) -> list[str]:
+    """How the location's copy of the version differs from what `source` ships, file by file
+    in path order: a file only one of them holds, or one whose bytes differ. Empty where the
+    copy holds exactly the files `source` ships."""
     prefix = f"{held.location}/{FOLDER}/{source.name}/{source.version}/"
     mine = {
         path.relative_to(held.root).as_posix()[len(prefix) :]: path
         for path in held.files(source.name, source.version)
     }
-    if source.version not in held.folders.get(source.name, {}) or set(mine) != set(source.files):
-        return False
-    return all(mine[rel].read_bytes() == (source.folder / rel).read_bytes() for rel in source.files)
+    theirs = set(source.files)
+    found = []
+    for rel in sorted(set(mine) | theirs):
+        if rel not in theirs:
+            found.append(f"`{rel}` is not in what the capability ships")
+        elif rel not in mine:
+            found.append(f"`{rel}` is missing")
+        elif mine[rel].read_bytes() != (source.folder / rel).read_bytes():
+            found.append(f"`{rel}` differs")
+    return found
 
 
 def _value(entry: Mapping[str, Any]) -> str:
@@ -507,6 +530,126 @@ def _value(entry: Mapping[str, Any]) -> str:
     found = entry.get("hash")
     value = found.get("value") if isinstance(found, Mapping) else None
     return f"`{value}`" if isinstance(value, str) else "none"
+
+
+# --- what the check finds of each copy ----------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Compared:
+    """Each copy of a library the capability ships, compared with what the installed
+    capability ships (`compare`): what the check finds of them, and each released copy, by
+    its label, that the command restores where its files no longer match its hash."""
+
+    findings: tuple[Finding, ...]
+    restored: frozenset[str]
+
+
+def compare(held: Held) -> Compared:
+    """Each copy the list names of a library the capability ships, compared with what the
+    installed capability ships under its number (DEC-013 point 6). Each finding asks the
+    project for attention, and names no version, so its level stands:
+
+    - `copy-not-shipped`: a copy the list marks not released, that the library folder holds,
+      and that is not what the capability ships under its number: other files, a released
+      version, or a number it does not ship. It names the command, or, for a number not
+      shipped, the way out of DEC-013 point 5.
+    - `copy-hash-differs`: a copy the list marks released whose hash differs from the one the
+      capability records for that version, naming both: two contents carry one released
+      number.
+
+    A released copy whose hash is the one the capability records is one the command
+    restores (`Compared.restored`). A library the list gives another source, or that the
+    capability does not ship, is not compared. Nor is one whose record or version being
+    built the capability cannot read: the capability's own checks hold those."""
+    try:
+        listed = held.listed or {}
+    except LibraryError:
+        return Compared((), frozenset())  # `list-unreadable`, in `Held.findings`
+    ships = {each.name: each for each in shipped.read(SHIPPED)}
+    found: list[Finding] = []
+    restored: set[str] = set()
+    for name in sorted(listed):
+        library = ships.get(name)
+        if library is None or held.source(name) != SHIPPED_SOURCE:
+            continue
+        try:
+            mine, theirs = _compared(held, library, _listed(held, name))
+        except CopyRefused:
+            continue
+        found.extend(mine)
+        restored |= theirs
+    return Compared(tuple(found), frozenset(restored))
+
+
+def _compared(
+    held: Held, library: shipped.Shipped, versions: Mapping[Version, Mapping[str, Any]]
+) -> tuple[list[Finding], set[str]]:
+    """The findings of one library's copies, the newest first, and the label of each released
+    copy the command restores. Raises CopyRefused where the library's record, or its version
+    being built, cannot be read."""
+    found: list[Finding] = []
+    restored: set[str] = set()
+    name = library.name
+    for version in sorted(versions, reverse=True):
+        entry = versions[version]
+        label = f"{name}@{version}"
+        source = under(library, version)
+        if entry.get("released") is True:
+            if source is None or source.released is None:
+                continue  # the capability releases no version of that number
+            if entry.get("hash") == source.entry.get("hash"):
+                restored.add(label)
+                continue
+            found.append(
+                Finding(
+                    "copy-hash-differs",
+                    ATTENTION,
+                    f"{held.list_path} keeps the hash {_value(entry)} for {label}, released, "
+                    f"and the installed capability records {_value(source.entry)}: two "
+                    f"contents carry one released number",
+                    file=held.list_path,
+                    where=f"libraries.{name}.versions.{version}.hash",
+                    fix=f"choose which content {label} holds: `pkit visual add {name}` refuses "
+                    f"while the two hashes differ",
+                    who=PROJECT,
+                )
+            )
+            continue
+        if version not in held.folders.get(name, {}):
+            continue  # `version-missing`, in `Held.findings`
+        fix = (
+            f"run `pkit visual add {name}`, which replaces the copy with what the capability "
+            f"ships under its number"
+        )
+        if source is None:
+            said = f"{label} is listed not released, and the installed capability ships no {label}"
+            fix = (
+                "move each draft that locks it, on purpose, to a version the capability ships, "
+                "by pinning it to that version or by taking a new major; once no lock names "
+                "the copy, take it out of the library folder and off the list"
+            )
+        elif source.released is not None:
+            said = f"{label} is listed not released, and the installed capability released it"
+        else:
+            changes = differences(held, source)
+            if not changes:
+                continue
+            said = (
+                f"{label}, listed not released, holds other files than the installed "
+                f"capability ships under its number, {source.said}: " + "; ".join(changes)
+            )
+        found.append(
+            Finding(
+                "copy-not-shipped",
+                ATTENTION,
+                said,
+                file=f"{held.location}/{FOLDER}/{name}/{version}",
+                fix=fix,
+                who=PROJECT,
+            )
+        )
+    return found, restored
 
 
 # --- the locks ----------------------------------------------------------------------------------

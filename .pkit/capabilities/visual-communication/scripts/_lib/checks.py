@@ -1,7 +1,7 @@
 """The check: what the project's visual work breaks, within the project's validation
 (visual-communication DEC-002 points 3, 4, 6 and 7, DEC-003 point 9, DEC-004 points 8, 9
 and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9, DEC-010
-points 1, 2 and 9).
+points 1, 2 and 9, DEC-013 point 6).
 
 **File-level findings, every run:**
 
@@ -9,7 +9,9 @@ points 1, 2 and 9).
   name, and of the configuration: a file that names no schema, or another one, fails (a
   file at another format number the core's data validation reports, so this check does
   not repeat it);
-- the library folder and its list (`libraries.Held.findings`);
+- the library folder and its list (`libraries.Held.findings`), and each copy of a library
+  the capability ships against what the installed capability ships under its number
+  (`copies.compare`, DEC-013 point 6);
 - each piece's lock: a version the project does not hold or the capability cannot read,
   a library the piece uses that the lock does not name, libraries that build on another
   major than the one locked; a piece with no lock yet; and, read with the content, a key
@@ -54,10 +56,12 @@ it does not guard against, stops that piece alone: it fails as `unexpected-error
 the error, and the check goes on to the next piece.
 
 **Severity** is computed when a finding is read: a failing finding in a released library
-version asks for attention instead, naming the library's owner (`findings.as_read`).
-Whether a version is released is read from the list. A released version whose folder no
-longer matches what was released is the project's to restore, so a finding in it fails
-(DEC-002 point 7, DEC-003 point 9).
+version asks for attention instead, naming the library's owner; in a copy of a library the
+capability ships, released or not, it names whoever maintains the capability
+(`findings.as_read`). Whether a version is released, and a library's source, are read from
+the list. A released version whose folder no longer matches what was released is the
+project's to restore, so a finding in it fails (DEC-002 point 7, DEC-003 point 9, DEC-013
+point 6).
 
 In the findings record, a finding's file is relative to the piece's folder, or, where it
 lies in a library version, to that version's folder, so the record stays true when the
@@ -75,7 +79,7 @@ from collections.abc import Collection, Iterator, Mapping, Sequence
 from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 
-from _lib import code, exports, fingerprint, framing, layout, location, names, tokens
+from _lib import code, copies, exports, fingerprint, framing, layout, location, names, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.files import FileError, binding_problem, nearest, read_bound, schema_of
@@ -102,6 +106,7 @@ from _lib.layout import (
 from _lib.libraries import (
     FOLDER,
     FOUNDATIONS,
+    SHIPPED_SOURCE,
     Held,
     Library,
     LibraryError,
@@ -230,7 +235,7 @@ class _Run:
         self.reported: set[tuple[str, str, str, str, str]] = set()
         self.named: set[str] = set()
         self.notations: set[str] = set()
-        self.as_released: dict[tuple[str, Version], bool] = {}
+        self.held_as: dict[tuple[str, Version], tuple[bool, bool]] = {}
         self.counts = {"pieces": 0, "read": 0, "computed": 0, "unchecked": 0}
 
     def add(self, finding: Finding) -> None:
@@ -243,18 +248,23 @@ class _Run:
             version = Version.parse(text)
         except ValueError:
             return as_read(finding, False)
-        return as_read(finding, self._as_released(name, version))
+        released, shipped = self._as_released(name, version)
+        return as_read(finding, released, shipped=shipped)
 
-    def _as_released(self, name: str, version: Version) -> bool:
+    def _as_released(self, name: str, version: Version) -> tuple[bool, bool]:
         """Whether the list marks a version released and its folder is still as it was
-        released. A copy that no longer matches is the project's to restore (DEC-002
-        point 7, DEC-003 point 9)."""
+        released; and whether it is a copy of a library the list names from the source
+        `shipped`, other than a released copy whose folder no longer matches. A copy that no
+        longer matches is the project's to restore (DEC-002 point 7, DEC-003 point 9). Any
+        other copy of a library the capability ships only whoever maintains the capability
+        corrects (DEC-013 point 6)."""
         key = (name, version)
-        if key not in self.as_released:
-            self.as_released[key] = self.held.released(name, version) and not (
-                self.held.hash_changes(name, version)
-            )
-        return self.as_released[key]
+        if key not in self.held_as:
+            released = self.held.released(name, version)
+            changed = released and bool(self.held.hash_changes(name, version))
+            shipped = self.held.source(name) == SHIPPED_SOURCE and not changed
+            self.held_as[key] = (released and not changed, shipped)
+        return self.held_as[key]
 
     def summary(self, only: str | None) -> list[str]:
         c = self.counts
@@ -268,7 +278,9 @@ class _Run:
         files = location.files(self.root, self.location)
         if only is None:
             self._bindings(files)
-            self.found.extend(self.held.findings())
+            compared = copies.compare(self.held)
+            self.found.extend(self.held.findings(compared.restored))
+            self.found.extend(compared.findings)
             self._alone_pass()
         names_ = pl.piece_names(self.root, self.location)
         if only is not None:
