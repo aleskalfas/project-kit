@@ -7,11 +7,12 @@
   accepted. Its name is the file's name.
 - **Where the code goes.** `out` is a file of the project's tree. It is refused outside
   the repository, under `.pkit/`, under a hidden folder, reached through a link, as a
-  folder, in the location's library folder, whose copies no command writes (DEC-002 point
-  9), and in its folder of declarations, where the record would read as one. Its record
-  lies beside it, `<out>.record.yaml` (format `code-record`). The CRLF line endings a
-  checkout may give the code are read as the LF it was written with, by the check and by a
-  run alike (`as_written`), so a run leaves such code as it is.
+  folder, in the location's library folder, whose copies only the command that brings a
+  shipped library in writes (DEC-002 point 9, DEC-013 point 5), and in its folder of
+  declarations, where the record would read as one. Its record lies beside it,
+  `<out>.record.yaml` (format `code-record`). The CRLF line endings a checkout may give the
+  code are read as the LF it was written with, by the check and by a run alike
+  (`as_written`), so a run leaves such code as it is.
 - **The lock is the declaration's,** which a person moves on purpose (DEC-005 point 7).
   The command reads the brand at the versions it names, and never moves it.
 - **A run** resolves every token the brand exports, and every other role of the
@@ -212,7 +213,7 @@ def out_problem(root: Path, location: str, out: str) -> str | None:
     if found is not None:
         return found
     for folder, why in (
-        (libraries.FOLDER, "lies in the library folder, whose copies no command writes"),
+        (libraries.FOLDER, "lies in the library folder, whose copies `pkit visual add` writes"),
         (FOLDER, "lies in the folder of declarations, where its record would read as one"),
         # The location's folder of pieces (`pipeline.PIECES`, not imported: a command that
         # writes code measures no text).

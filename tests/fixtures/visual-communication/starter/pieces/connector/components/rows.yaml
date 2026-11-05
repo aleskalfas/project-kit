@@ -1,0 +1,63 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: stable
+about: >-
+  Cards in two rows, set well apart across and down, so a line between any two of them
+  crosses no other card. The connector routes around nothing, so its reference renders lay
+  their ties on this pattern of the piece's own, each tie drawn by the starter's connector.
+
+fields:
+  type: object
+  required: [upper, lower]
+  properties:
+    upper:
+      type: array
+      minItems: 1
+      description: The cards of the upper row, each with the card's fields.
+      items: {type: object}
+    lower:
+      type: array
+      minItems: 1
+      description: The cards of the lower row, each with the card's fields.
+      items: {type: object}
+    ties:
+      type: array
+      description: >-
+        The ties between the cards, each from one card to another, both named by their key
+        paths.
+      items: {type: object}
+    tie:
+      type: object
+      description: >-
+        The component that draws each tie that names none, with words for its options:
+        the connector unless the content names another.
+
+lists:
+  ties: {component: tie, ends: [from, to]}
+
+values:
+  # The space between two cards of a row, and between the two rows: wide enough that a
+  # tie's line and its arrowheads stand clear of the cards.
+  across: "=@space.4 * 4"
+  down: "=@space.4 * 5"
+
+parts:
+  upper:
+    repeat: upper
+    draw: starter/card
+    width: "=:width"
+    row: {gap: "=across", sizes: equal, align-items: stretch}
+  lower:
+    repeat: lower
+    draw: starter/card
+    y: "=upper.bottom + down"
+    width: "=:width"
+    row: {gap: "=across", sizes: equal, align-items: stretch}
+  # Drawn last, over the cards.
+  ties:
+    repeat: ties
+    draw: starter/connector
+
+preferred:
+  height: "=lower.bottom"

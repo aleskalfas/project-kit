@@ -1,0 +1,151 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+    revalidated:
+      at: 2026-11-04T17:46:44Z
+      outcome: unchanged
+      unchanged-because: The use case reads from land-work only the count of this clone's fixer proposals that a run prints. land-work's new stop, naming the merge of the base where the host refuses a branch behind its base, leaves that count and every step of the listing as written.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+    revalidated:
+      at: 2026-11-04T17:46:50Z
+      outcome: unchanged
+      unchanged-because: Its main path merges no base, and variants 9a and 9b merge it where the merge check fails or conflicts, two of the merges DEC-055 point 6 now names. land-work's stop where the host refuses to merge a branch behind its base is a path step 14 does not describe, and makes none of its steps untrue. friction_answers gains only the helpers review-work and edit-pr read the description with, and DEC-055 point 3's added bullet concerns the move to Review, which comes before this use case.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+    revalidated:
+      at: 2026-11-04T17:46:57Z
+      outcome: unchanged
+      unchanged-because: Step 7 says review-work checks the title, opens the pull request or makes a draft ready, and moves the Task to Review. Its refusal of a missing sentence is a body check before that, as validate-at-ready's are, and its stop on a description it cannot read is a gh failure before any write; the use case describes neither. transition-state.md's landing rule and exit list concern no move it describes.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/020-review/UC-080-check-answers.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+    revalidated:
+      at: 2026-11-04T17:46:58Z
+      outcome: unchanged
+      unchanged-because: "The use case is docs-reviewer's check of the answers. Its variant 5a, a missing or unread sentence drawing a block finding, still occurs: where the description carried no list when review-work read it, where the list predates an update, or where --force passed the refusal. DEC-055 point 3's refusal, its severity and the rationale added after point 5 make none of its steps untrue."
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+    revalidated:
+      at: 2026-11-04T17:47:20Z
+      outcome: unchanged
+      unchanged-because: It needs from UC-089 only each Task's pull request merged, with each review round's verdict naming the head it reviewed. In UC-089 the worker now merges the base only where the pull request conflicts or a command names that merge, and the merge counts only verdicts that stand for the head it lands, which leaves that need as written.
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T121046Z-6806ad50.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+    revalidated:
+      at: 2026-11-04T17:47:11Z
+      outcome: unchanged
+      unchanged-because: It says what docs-reviewer checks of each updated document's sentence and how it reads one, that an authorisation covers a later head of answers and a clean merge, and links project-management's sections on the answers and on land-work. review-work's refusal and its exit on an unread description, edit-pr's warning, land-work's stop on a branch behind its base and the rule on when a branch takes in its base leave that check, that cover and those links as written.
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+    revalidated:
+      at: 2026-11-04T17:47:13Z
+      outcome: unchanged
+      unchanged-because: The page tells a user to write each updated document's sentence in the read form and says the reviewer blocks a missing one. review-work refusing it before review, edit-pr warning of it, land-work stopping on a branch behind its base and the rule on when a branch takes in its base contradict nothing it says of the review, of opening and editing a pull request, or of land-work.

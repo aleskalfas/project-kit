@@ -52,6 +52,14 @@ Judge each choice:
 - **In hand:** an open foundation's Feature lists it under its `## Shared choices`. Plan no foundation of your own for it, and plan the slices once that Feature closes.
 - **Open:** nothing settles it, so the work needs a foundation. Say whether the foundation settles it by a record or by its walking skeleton.
 
+**A record that serves one Task rides that Task.** A choice only one Task makes is no shared choice, so it calls for no foundation (DEC-060 point 1). Where such a choice needs a record:
+
+- **The Task drafts it** in its own change. A person accepts it there before the Task's work follows ([COR-066](../../../../decisions/core/COR-066-accepted-before-landing.md) point 1), and before its edits to accepted records (COR-066 point 5). That acceptance is one of the Task's acceptance criteria, so the Task cannot close on a draft.
+- **No Task of its own** is planned for the record.
+- **Refused:** the change closes, as COR-066 point 1 says, and the Task goes back to be planned again.
+
+A record that changes a foundation's record does not ride a Task: the change goes through a Task of its own (DEC-060 point 5).
+
 Where every choice is settled, slice the work at once, as the rest of this step says. Otherwise this plan is the first of two, and files an EPIC even for a single deliverable (DEC-060 points 2 to 4):
 
 - **The EPIC** for the work holds the intent in its body, and an outline of the slices under `## Outline of the slices` ([project-management:DEC-004-six-level-hierarchy]). The outline names each foundation's Feature the slices wait for. No slice is filed.

@@ -9,45 +9,76 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/status.py
         - .pkit/capabilities/visual-communication/scripts/check.py
         - .pkit/capabilities/visual-communication/scripts/add.py
+        - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/produce.py
         - .pkit/capabilities/visual-communication/scripts/export.py
         - .pkit/capabilities/visual-communication/scripts/write-code.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/__init__.py
-      record: ["visual-communication:DEC-001", "visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-007", COR-017, COR-023, COR-031, COR-055]
+      record:
+        - visual-communication:DEC-001#1
+        - visual-communication:DEC-001#3
+        - visual-communication:DEC-001#5
+        - visual-communication:DEC-002#9
+        - visual-communication:DEC-003#5
+        - visual-communication:DEC-007#3
+        - visual-communication:DEC-013#1
+        - visual-communication:DEC-013#5
+        - visual-communication:DEC-014#3
+        - COR-017
+        - COR-031
+        - COR-055#3
+        - ADR-059#1
       artefact:
-        - .pkit/capabilities/visual-communication/checks.md
-        - .pkit/capabilities/visual-communication/checks.md#content-against-components
-        - .pkit/capabilities/visual-communication/checks.md#the-findings-record
-        - .pkit/capabilities/visual-communication/checks.md#when-the-check-reads-it
-        - .pkit/capabilities/visual-communication/checks.md#what-each-run-judges
-        - .pkit/capabilities/visual-communication/components.md
-        - .pkit/capabilities/visual-communication/files.md
+        - .pkit/capabilities/visual-communication/files.md#contents
         - .pkit/capabilities/visual-communication/files.md#a-piece
         - .pkit/capabilities/visual-communication/files.md#brands
         - .pkit/capabilities/visual-communication/files.md#notations
         - .pkit/capabilities/visual-communication/files.md#the-binding
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-foundations
+        - .pkit/capabilities/visual-communication/files.md#the-libraries-the-capability-ships
         - .pkit/capabilities/visual-communication/files.md#the-library-folder
+        - .pkit/capabilities/visual-communication/files.md#libraryyaml
         - .pkit/capabilities/visual-communication/files.md#the-list-librariesyaml
         - .pkit/capabilities/visual-communication/files.md#the-location
+        - .pkit/capabilities/visual-communication/files.md#how-a-command-finds-it
         - .pkit/capabilities/visual-communication/files.md#the-lock
+        - .pkit/capabilities/visual-communication/files.md#what-a-release-compares
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
-        - .pkit/capabilities/visual-communication/outputs.md
+        - .pkit/capabilities/visual-communication/libraries/starter/README.md#
+        - .pkit/capabilities/visual-communication/libraries/starter/README.md#the-patterns-by-the-question-they-answer
+        - .pkit/capabilities/visual-communication/libraries/starter/README.md#the-blocks
+        - .pkit/capabilities/visual-communication/components.md#
+        - .pkit/capabilities/visual-communication/components.md#how-the-engine-computes-a-scene
+        - .pkit/capabilities/visual-communication/outputs.md#contents
         - .pkit/capabilities/visual-communication/outputs.md#exports
+        - .pkit/capabilities/visual-communication/outputs.md#the-record-of-exports
         - .pkit/capabilities/visual-communication/outputs.md#plugins
+        - .pkit/capabilities/visual-communication/outputs.md#accepting-a-loss
         - .pkit/capabilities/visual-communication/outputs.md#previews
         - .pkit/capabilities/visual-communication/outputs.md#produced-pictures
+        - .pkit/capabilities/visual-communication/outputs.md#variants
+        - .pkit/capabilities/visual-communication/outputs.md#the-hand-over
         - .pkit/capabilities/visual-communication/outputs.md#the-declaration
         - .pkit/capabilities/visual-communication/outputs.md#the-svg-renderer
         - .pkit/capabilities/visual-communication/outputs.md#the-pdf-renderer
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-an-export
         - .pkit/capabilities/visual-communication/outputs.md#written-code
+        - .pkit/capabilities/visual-communication/outputs.md#the-record-beside-the-code
+        - .pkit/capabilities/visual-communication/checks.md#
+        - .pkit/capabilities/visual-communication/checks.md#contents
+        - .pkit/capabilities/visual-communication/checks.md#what-a-finding-says
+        - .pkit/capabilities/visual-communication/checks.md#what-each-run-judges
+        - .pkit/capabilities/visual-communication/checks.md#content-against-components
+        - .pkit/capabilities/visual-communication/checks.md#the-findings-record
+        - .pkit/capabilities/visual-communication/checks.md#when-the-check-reads-it
+        - .pkit/capabilities/visual-communication/checks.md#in-pkit-validate
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#validate
 ---
@@ -60,9 +91,10 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 
 - **The commands** `pkit visual …`, also reachable as `pkit visual-communication …`. Each is described under [Commands](#commands).
 - **The file formats,** format 1: a schema for each kind of file a piece, a library or a command writes, under `schemas/`. Each file names its schema in its first lines ([The binding](files.md#the-binding)), so `pkit validate` checks its shape.
-- **The foundations library,** under `libraries/foundations/`: a few shared roles, two axes, six colour families, and two top components: `figure`, for a figure, and `deck`, for a presentation ([The foundations](files.md#the-foundations)). Its version is not released yet, so it may change in any release of the capability.
+- **The foundations library,** under `libraries/foundations/`: a few shared roles, two axes, six colour families, and two top components: `figure`, for a figure, and `deck`, for a presentation ([The foundations](files.md#the-foundations)). Its version is not released yet, so it may change in any release of the capability ([The libraries the capability ships](files.md#the-libraries-the-capability-ships)).
+- **The starter library,** under `libraries/starter/`: the patterns `layers` and `list`, and the blocks `card`, `tag` and `connector`, each experimental. Its README lists them by the question each answers ([The starter](libraries/starter/README.md)). `pkit visual add starter` brings it in, and its version is not released yet either.
 - **Three plugins:** the SVG renderer, which draws the previews and the SVG exports; the PDF renderer, which draws a piece as one PDF for each language and combination of modes; and the CSS code writer, which writes a brand out as CSS variables ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [The PDF renderer](outputs.md#the-pdf-renderer), [Written code](outputs.md#written-code)).
-- **The check,** the `visual-communication:check` member of `pkit validate`.
+- **The check,** the `visual-communication:check` member of `pkit validate` ([In `pkit validate`](checks.md#in-pkit-validate)).
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
 
 No brand, notation or producer ships ([Brands](files.md#brands), [Notations](files.md#notations), [Plugins](outputs.md#plugins)). A project writes its own brand and notations, and `pkit visual produce` has no producer to run yet, so a piece that declares a produced picture cannot be given one ([Produced pictures](outputs.md#produced-pictures)).
@@ -76,7 +108,7 @@ The pages beside this README are the reference:
 
 ## Adopter setup
 
-Install the capability, then sync, so the check's dependencies are in place before `pkit validate` runs it offline:
+Install the capability, then sync, so the check's dependencies are in place before `pkit validate` runs it offline ([In `pkit validate`](checks.md#in-pkit-validate)):
 
 ```
 pkit capabilities install visual-communication
@@ -85,13 +117,13 @@ pkit sync
 
 The visual work lies in one folder of the repository, the *location*: `visual/` at the top of the repository, unless the project names another. Nothing needs configuring before the first command: the first command that writes there records the location in the capability's configuration. [The location](files.md#the-location) says how it is found and recorded.
 
-Every piece uses the foundations, so bring them into the location first:
+Every piece's lock names the foundations ([The lock](files.md#the-lock)), so bring them into the location first:
 
 ```
 pkit visual add foundations
 ```
 
-A library the capability ships reaches the location only through [`pkit visual add`](#pkit-visual-add-library). No install, sync or upgrade of the capability writes there, so an upgrade changes no piece's look ([What the location holds](files.md#what-the-location-holds)).
+A library the capability ships reaches the location only through [`pkit visual add`](#pkit-visual-add-library). No install, sync or upgrade of the capability writes there, so an upgrade alone changes no piece's look ([What the location holds](files.md#what-the-location-holds)). Run the command again after an upgrade to take the newest released version, and to bring each copy of the library up to date.
 
 ## Drawing a piece
 
@@ -99,14 +131,14 @@ A library the capability ships reaches the location only through [`pkit visual a
 2. **Write the piece.** A piece is a folder under `pieces/`: its `piece.yaml` names its libraries, languages, modes and exports, and its content names the components that draw it ([A piece](files.md#a-piece)).
 3. **Draw it.** `pkit visual render <piece>` writes the piece's lock, computes its scenes, keeps their findings in `findings.yaml`, and draws an SVG preview of each scene. Open the previews under `.pkit/capabilities/visual-communication/project/local/previews/<piece>/` ([The clone's local folder](files.md#the-clones-local-folder)).
 4. **Check it.** `pkit visual check <piece>`, or `pkit validate`, reports what the piece breaks ([What the check reports](checks.md)).
-5. **Commit the piece's folder:** `piece.yaml`, the content and `findings.yaml`. The previews stay local to the clone ([The clone's local folder](files.md#the-clones-local-folder)).
-6. **Hand it out.** `pkit visual export <piece>` makes a numbered export in each format the piece declares, and records the version in the piece's `exports.yaml`. Commit `exports.yaml`; the exported files stay local until they are handed out.
+5. **Commit the piece's folder:** `piece.yaml`, the content and `findings.yaml` ([The findings record](checks.md#the-findings-record)). The previews stay local to the clone ([The clone's local folder](files.md#the-clones-local-folder)).
+6. **Hand it out.** `pkit visual export <piece>` makes a numbered export in each format the piece declares, and records the version in the piece's `exports.yaml`. Commit `exports.yaml`; the exported files stay local until they are handed out ([Exports](outputs.md#exports)).
 
 A brand's values reach code the same way: a declaration under the location's `code/` folder names the brand and where the code goes, and `pkit visual write-code <name>` writes it ([Written code](outputs.md#written-code)).
 
 ## Commands
 
-Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, and takes back the location it recorded. It names each file it could not put back. `produce` alone writes before it can refuse: it hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)).
+Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names ([How a command finds it](files.md#how-a-command-finds-it)). `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, puts back each folder it replaced, and takes back the location it recorded. It names each file it could not put back. `produce` alone writes before it can refuse: it hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)).
 
 ### `pkit visual status`
 
@@ -118,63 +150,86 @@ Shows where the visual work lies, and each piece with its state and its lock.
 
 ### `pkit visual add <library>`
 
-Copies a library the capability ships into the location's library folder, and lists it.
+Copies a library the capability ships into the location's library folder, lists it, and brings every copy of it up to date.
 
-- **Copies** the version the capability ships, whole, to `libraries/<library>/<version>/`, and never over a version the library folder holds ([What the location holds](files.md#what-the-location-holds)). `pkit visual add foundations` makes `libraries/foundations/1.0.0/`.
-- **Lists it** in `libraries/libraries.yaml` with the source `shipped`, `released: false`, since no shipped library is released yet. Every other byte of the list stays ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)).
-- **Refuses** a library the capability does not ship, naming the ones it ships; a version whose files of the capability's format lack their binding ([The binding](files.md#the-binding)); a version the list names already; and a library the list names from another source, since one name ties one library to its source.
-- **Exits** 0 when it copied and listed the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
+- **Takes** the newest released version the capability ships ([The libraries the capability ships](files.md#the-libraries-the-capability-ships)). `pkit visual add <library>@<version>` names another released version, and `--being-built` asks for the version being built. Where the library has no released version, it takes the version being built. Asked for the version being built while it carries a released number, it takes that released version.
+- **Copies** the version whole into a folder of its own, beside the versions the location holds ([What the location holds](files.md#what-the-location-holds)).
+- **Lists it** in `libraries/libraries.yaml`, released with its hash or not released ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)).
+- **Brings every copy of the library up to date** in the same run ([What the location holds](files.md#what-the-location-holds)):
+  - A copy the list marks not released, of a number the capability ships, is replaced whole by what the capability ships under that number. Where that number is released, the list then marks the copy released ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)).
+  - Such a copy is replaced only where every lock that names it is the lock of a draft that is not pinned, which moves at each render. Under a pinned draft's lock, or written code's, the copy stays as it is. The command names each such piece or declaration, and goes on with the rest of the run. A lock it cannot read counts as one that moves only on purpose, and the command names its file. It reads only a piece's `lock`, `pinned` and `state`, so a fault in the piece's content stops nothing.
+  - A released copy whose files no longer match its hash is restored as released. One that matches is not written.
+  - A copy of a number the installed capability does not ship stays as it is, and so does a version folder the list does not name.
+  - A version the list names whose folder is missing is brought in as a copy of its kind is: a released one restored, one not released replaced, under the same locks.
+- **Prints** each copy it writes, as copied, replaced or restored, with each piece and declaration whose lock names it. Then each copy it leaves, with why, and each version it lists.
+- **Refuses** a library the capability does not ship, naming the ones it ships, and a released version it does not ship. It refuses files the capability ships that no longer match the hash the library's record keeps, or whose files of the capability's format lack their binding ([The binding](files.md#the-binding)). It refuses a hash the list keeps for a released version that differs from the one the capability records, naming both. It refuses a version folder the list does not name, where the version is to be copied, and a library the list names from another source ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)).
+- **Exits** 0 when it wrote each copy, or left it with why; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
-Running it is the consent for the copy.
+Running it is the consent for each copy it writes. A change the project made in a copy it replaces or restores is lost, as the project's diff shows: a shipped library changes where it is authored, never in a copy.
+
+### `pkit visual release <library>`
+
+Releases a version of a project's own library, after it reads the version in full and compares it with the library's previous release.
+
+- **Takes** the newest version the library folder holds of a library the list names from the source `project`, listed `released: false`.
+- **Reads it in full,** and names each finding that refuses the release ([What each run judges](checks.md#what-each-run-judges)).
+- **Compares it** with the library's previous release, and prints what it finds ([What a release compares](files.md#what-a-release-compares)).
+- **Writes** the release the version needs into its `library.yaml` ([`library.yaml`](files.md#libraryyaml)), then lists the version released ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)). It writes nothing else.
+- **Refuses** a version the list does not name, one released already, and a library the project does not own: one the capability ships, or one another repository shares.
+- **Exits** 0 when it released the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
+
+Before you release a library for other projects, sync from a tagged install of the methodology. Then the release the version needs covers what it uses ([`library.yaml`](files.md#libraryyaml)). The advice does not apply where the capability is authored, since no sync copies into that tree.
+
+`pkit visual release <library> --shipped` releases the version being built of a library the capability ships, where the capability is authored. It reads and compares the version the same way. Each condition it holds the version to, and each file it writes, is under [The libraries the capability ships](files.md#the-libraries-the-capability-ships). Among the files it writes is a patch changeset for the capability: raise its kind where the release needs more.
 
 ### `pkit visual render <piece>`
 
 Draws a piece in each of its languages and each combination of modes it names.
 
-- **Moves the lock** of a draft to the newest versions the project holds that fit together, within the lines the lock names, and writes it into `piece.yaml`, every other byte kept. It holds back versions under which an item clashes or a tie loses an end, where neither does under the lock. A pinned piece's lock is checked, never moved ([The lock](files.md#the-lock)).
-- **States** each version it held back, each library it moved below its lock, and a search that stopped at its bound and kept the lock. Each is a fact at the lock, kept in no `findings.yaml` ([Content against components](checks.md#content-against-components)).
-- **Computes every scene.** A font with no file, or a character no font family can measure, refuses the render before anything is laid out.
-- **Writes `findings.yaml`** beside `piece.yaml`: what computing the scenes found, keyed by a fingerprint of every file they were computed from ([The findings record](checks.md#the-findings-record)).
-- **Draws the previews** with the SVG renderer, one file for each page, language and combination of modes, in `.pkit/capabilities/visual-communication/project/local/previews/<piece>/`. They replace the piece's previews from before ([Previews](outputs.md#previews)).
-- **Prints** the lock, the facts it states, each finding, and each loss the renderer reports that the piece does not accept.
+- **Moves the lock** of a draft and writes it into `piece.yaml`, or checks a pinned piece's lock ([The lock](files.md#the-lock)).
+- **States** the facts of the lock's move ([The lock](files.md#the-lock)), which no `findings.yaml` keeps ([Content against components](checks.md#content-against-components)).
+- **Computes every scene,** or refuses where a font cannot measure the text ([How the engine computes a scene](components.md#how-the-engine-computes-a-scene)).
+- **Writes `findings.yaml`** beside `piece.yaml` ([The findings record](checks.md#the-findings-record)).
+- **Draws the previews** with the SVG renderer, and replaces the piece's previews from before ([Previews](outputs.md#previews)).
+- **Prints** the lock, the facts it states, each finding, and each loss the renderer reports that the piece does not accept ([Accepting a loss](outputs.md#accepting-a-loss)).
 - **Exits** 0 when it drew the piece, findings or not; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
 ### `pkit visual check [<piece>]`
 
 Checks every piece of the location, or the one named, without drawing anything.
 
-- **Reads** every file of the capability's format in the location, the library folder and its list, the newest version of each major of each library checked alone, each piece's lock and the libraries it locks, its content against the components it fills, and its scenes. With a piece named, it checks no version alone but to tell where a finding under the piece's lock lies ([What each run judges](checks.md#what-each-run-judges)). A piece's scenes are read from its `findings.yaml` while the record's key still verifies; otherwise they are computed now ([When the check reads it](checks.md#when-the-check-reads-it)).
-- **Prints** a summary, then each finding with its severity, where it points and what it says. `--json` prints the findings document `pkit validate` reads.
-- **Writes** nothing, runs no program of the project's, and needs no network.
+- **Reads** the location, or the piece named, and judges each part in turn ([What each run judges](checks.md#what-each-run-judges)). It reads a piece's scenes from its findings record where it can ([When the check reads it](checks.md#when-the-check-reads-it)).
+- **Prints** a summary, then each finding with its severity ([What a finding says](checks.md#what-a-finding-says)). `--json` prints the findings document `pkit validate` reads.
+- **Writes** nothing, and runs offline ([In `pkit validate`](checks.md#in-pkit-validate)).
 - **Exits** 1 when a finding fails; 0 otherwise. With `--json` it always exits 0, as `pkit validate` requires.
 
 ### `pkit visual produce <piece> <output>`
 
 Runs the producer a piece declares for one of its produced outputs, and keeps its picture.
 
-- **Makes the variants:** it resolves the roles the producer's inputs name in every combination the piece names, under the piece's lock, and makes one variant for each distinct set of values.
+- **Works out the variants** the producer makes ([Variants](outputs.md#variants)), and hands it their values ([The hand-over](outputs.md#the-hand-over)).
 - **Keeps the picture** only when no input changed during the run and every variant is a PNG of the declared pixel size, exposing the same points. Then it writes each variant and the record in the piece's folder, under `produced/<output>/`, and removes a variant file left from before.
-- **Prints** each loss the producer reports that the piece does not accept.
-- **Refuses** a piece with no lock yet (run `pkit visual render <piece>` first), and a producer that reaches a service or calls an outside program this machine lacks, before it runs. What a producer is handed and returns is under [Produced pictures](outputs.md#produced-pictures).
+- **Prints** each loss the producer reports that the piece does not accept ([Accepting a loss](outputs.md#accepting-a-loss)).
+- **Refuses** a piece with no lock yet (run `pkit visual render <piece>` first), and, before it runs, a producer it cannot run here ([Plugins](outputs.md#plugins)). What a producer is handed and returns is under [Produced pictures](outputs.md#produced-pictures).
 - **Exits** 0 when it wrote the variants and their record; 1 when it refused, with nothing written in the location, or a write failed ([Commands](#commands)).
 
 ### `pkit visual export <piece>`
 
 Makes a numbered export of a piece in each format it declares.
 
-- **Numbers the run:** every file it makes carries the piece's next version number, as `<piece>.v<N>.<language>.<key>.<format>`, in `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`. As `svg`, a piece of more than one page makes one file for each page, which adds the page's number, from 1: `<piece>.v<N>.<language>.<key>.<n>.svg`. As `pdf`, it makes one file for each language and combination, which holds every page in order. No file overwrites another ([Exports](outputs.md#exports)).
-- **Records the version** in `exports.yaml`.
+- **Makes the run's files,** each under the piece's next version number, in the clone's local folder ([Exports](outputs.md#exports)).
+- **Records the version** in `exports.yaml` ([The record of exports](outputs.md#the-record-of-exports)).
 - **Uses the lock** `piece.yaml` holds, and never moves it.
-- **Refuses** a piece with no lock yet, a lock that does not hold, and a produced picture that is missing or stale, unless `--use-stale <output>` names it. `--use-stale` may repeat. Every reason it refuses is under [What refuses an export](outputs.md#what-refuses-an-export).
+- **Refuses** for each reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, and may repeat.
 - **Exits** 0 when it exported and recorded the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
 ### `pkit visual write-code <name>`
 
 Writes a brand out as code, as the declaration `code/<name>.yaml` in the location asks.
 
-- **Writes** the code to the declaration's `out`, and its record beside it, `<out>.record.yaml`. Where the record verifies and the code is what the writer writes now, it writes nothing and says the code is up to date.
-- **Never moves** the declaration's lock: a person moves it on purpose ([The declaration](outputs.md#the-declaration)).
-- **Prints** each token the writer has no form for as a loss, unless the declaration accepts it under `accept-losses`.
+- **Writes** the code to the declaration's `out`, and its record beside it ([The record beside the code](outputs.md#the-record-beside-the-code)). Where the record verifies and the code is what the writer writes now, it writes nothing and says the code is up to date.
+- **Never moves** the declaration's lock ([The declaration](outputs.md#the-declaration)).
+- **Prints** each loss of the writer that the declaration does not accept ([Accepting a loss](outputs.md#accepting-a-loss)).
 - **Exits** 0 when it wrote the code or found it up to date; 1 when it refused, or a write failed ([Commands](#commands)); 2 on a usage error.
 
 ## Citing this capability's decisions

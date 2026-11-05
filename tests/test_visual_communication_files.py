@@ -249,3 +249,58 @@ def test_a_file_that_cannot_be_removed_is_named_and_nothing_else_changes(
         change.commit()
     assert str(failed.value).startswith("gone.yaml could not be removed: ")
     assert tree(tmp_path) == before
+
+
+def replaced_in(root: Path) -> Any:
+    """A change that replaces the folder `kept/`, holding `old.txt`, by one holding a copy of
+    `source.txt`, then writes `record.yaml`."""
+    write(root / "kept" / "old.txt", "old\n")
+    write(root / "record.yaml", "c: 1\n")
+    write(root / "source.txt", "copied\n")
+    change = files.Change(root)
+    change.replace_folder(root / "kept", {"sub/new.txt": root / "source.txt"})
+    change.write(root / "record.yaml", b"c: 2\n")
+    return change
+
+
+def test_a_folder_replaced_holds_its_copy_alone_and_leaves_nothing_beside_it(
+    tmp_path: Path,
+) -> None:
+    replaced_in(tmp_path).commit()
+    assert tree(tmp_path) == {
+        "kept/sub/new.txt": b"copied\n",
+        "record.yaml": b"c: 2\n",
+        "source.txt": b"copied\n",
+    }
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["kept", "record.yaml", "source.txt"]
+
+
+def test_a_write_that_fails_after_a_folder_is_replaced_moves_the_folder_back(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    change = replaced_in(tmp_path)
+    before = tree(tmp_path)
+    failing(monkeypatch, write={"record.yaml"})
+    with pytest.raises(files.WriteFailed) as failed:
+        change.commit()
+    assert str(failed.value) == f"record.yaml could not be written: {FULL}"
+    assert tree(tmp_path) == before
+    assert sorted(path.name for path in tmp_path.iterdir()) == sorted(
+        {name.split("/")[0] for name in before}
+    )
+
+
+def test_a_folder_whose_copy_cannot_be_moved_in_is_named_where_it_cannot_be_moved_back(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    change = replaced_in(tmp_path)
+    failing(monkeypatch, write={"kept"})
+    with pytest.raises(files.WriteFailed) as failed:
+        change.commit()
+    assert str(failed.value) == (
+        f"kept could not be replaced: {FULL}; these could not be put back as they were before "
+        f"the run: kept"
+    )
+    assert (tmp_path / "record.yaml").read_bytes() == b"c: 1\n"
+    [aside] = [path for path in tmp_path.iterdir() if path.name.startswith(".kept.")]
+    assert tree(aside) == {"old.txt": b"old\n"}

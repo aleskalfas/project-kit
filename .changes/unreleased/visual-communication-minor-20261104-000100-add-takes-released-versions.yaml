@@ -1,0 +1,25 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  `pkit visual add <library>` takes the newest released version of a library
+  the capability ships, checks its files against the hash in the library's
+  record, and lists it `released: true` with that hash, as it is (#2606,
+  DEC-013 point 5). `<library>@<version>` names another released version, and
+  `--being-built` takes the version being built, or the released version of
+  its number; where none is released, as for the foundations today, the
+  command takes the version being built, `released: false`, as before. Each run
+  also brings every copy of the library up to date: a copy not yet released,
+  of a number the capability ships, is replaced whole by what it ships under
+  that number, and listed released where that number is released, but only
+  where every lock that names it is an unpinned draft's; under a pinned
+  draft's, written code's or an unreadable lock it stays, and the command
+  names each piece or declaration. A released copy whose files no longer match
+  its hash is restored, and a hash the list keeps that differs from the
+  record's is refused, naming both. A new number is copied beside the others,
+  and a number the capability does not ship stays. A version the list names
+  whose folder is missing is now brought in rather than refused, and a version
+  folder the list does not name is refused where the version is copied. The
+  command prints each copy it wrote, replaced or restored, with the locks that
+  name it, and each copy it left, with why.

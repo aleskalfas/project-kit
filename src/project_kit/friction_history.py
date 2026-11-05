@@ -43,9 +43,14 @@ held it, tested again the same way. Rewording within a stretch moves nothing.
 **Reading little** (critic G4). A file's versions are parsed once each, by
 object id, shared by every artefact in the file; and a version whose bytes
 hold none of what the walk looks for — the value, in any spelling YAML's
-timestamp grammar allows (`stamps_in`), the block's key, every word of a
+timestamp grammar allows (`stamps_in`), sought in its front matter alone,
+where every artefact's data is read; the block's key; every word of a
 deferral's reason (`reason_words`) — carries none of it, so it is never
-parsed.
+parsed. The walk that finds where each entry of a collection file was last
+added reads each version of the file from git once, however many of its
+entries it seeks: it keeps their bytes by object id while it walks that
+file, and lets them go when it walks another, so it holds one file's
+versions at most (`Walker.added`).
 
 **A shallow clone.** The boundary commit is listed as adding every file. A
 value — or a deferral entry — the file already carries there has its point
@@ -94,6 +99,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, TypeVar
 
+from project_kit.document_parts import split_front_matter
 from project_kit.friction_discovery import (
     Anchor,
     Artefact,
@@ -140,7 +146,8 @@ _INSTANT = "%Y-%m-%dT%H:%M:%S"
 # The bytes every version carrying a `friction` block holds.
 _BLOCK_KEY = b"friction"
 
-# How many blobs the walker keeps in memory between a prefilter and a parse.
+# How many blobs the walker keeps in memory between a prefilter and a parse, beside
+# those it keeps for the walk of one collection file (`Walker._kept`).
 _RECENT = 16
 
 # The shortest word of a deferral's reason worth searching for.
@@ -649,6 +656,20 @@ class _Bytes:
     block: bool  # it holds the block's key
 
 
+def _data_of(raw: bytes) -> bytes:
+    """The part of a version's bytes a time is sought in: its front matter, as
+    `parse_artefacts` cuts it, since a body holds no artefact's data — so a long
+    document's body is never scanned for times. The whole where no front matter is
+    cut, or the bytes are not UTF-8 text, so a file whose data is held some other
+    way is never passed over unread."""
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw
+    front_matter, _body = split_front_matter(text)
+    return raw if front_matter is None else front_matter.encode("utf-8")
+
+
 def stamp(value: datetime) -> str:
     """An aware time as the prefilters compare one: the UTC instant, `YYYY-MM-DDTHH:MM:SS`."""
     return value.astimezone(UTC).strftime(_INSTANT)
@@ -716,11 +737,16 @@ class Walker:
         self._recent: OrderedDict[str, bytes | None] = OrderedDict()
         self._added: dict[tuple[str, str | None], int | None] = {}
         self._held: dict[tuple[str, str], bool] = {}
+        self._walking: str | None = None  # the collection file whose versions `_kept` holds
+        self._kept: dict[str, bytes | None] = {}
 
     # --- one version --------------------------------------------------------------
 
     def _read(self, obj: str) -> bytes | None:
-        """The blob `obj` names; the last few kept, so a prefilter and a parse read it once."""
+        """The blob `obj` names: one kept for the walk of a collection file (`_kept`), else
+        one of the last few read, so a prefilter and a parse read it once, else from git."""
+        if obj in self._kept:
+            return self._kept[obj]
         if obj in self._recent:
             self._recent.move_to_end(obj)
             return self._recent[obj]
@@ -730,17 +756,32 @@ class Walker:
             self._recent.popitem(last=False)
         return raw
 
+    def _walk(self, path: str) -> None:
+        """Start keeping the blobs of the collection file at `path` (`_kept_read`), letting
+        go of another file's: the walker holds one file's versions at most."""
+        if path != self._walking:
+            self._walking = path
+            self._kept = {}
+
+    def _kept_read(self, obj: str) -> bytes | None:
+        """The blob `obj` names, read from git once for the walk of its file (`_walk`) and
+        kept by object id until the walker walks another."""
+        if obj not in self._kept:
+            self._kept[obj] = self._read(obj)
+        return self._kept[obj]
+
     def _scan(self, obj: str) -> _Bytes:
         found = self._bytes.get(obj)
         if found is None:
             raw = self._read(obj) or b""
-            found = _Bytes(frozenset(stamps_in(raw)), _BLOCK_KEY in raw)
+            found = _Bytes(frozenset(stamps_in(_data_of(raw))), _BLOCK_KEY in raw)
             self._bytes[obj] = found
         return found
 
     def may_carry(self, state: TreeEntry | None, value: Any) -> bool:
-        """Whether the blob of `state` could carry `value`: `False` only where its bytes
-        hold no spelling of it (`stamps_in`), so it is never parsed to find out."""
+        """Whether the blob of `state` could carry `value`: `False` only where the part of
+        its bytes a parse reads data from holds no spelling of it (`stamps_in`,
+        `_data_of`), so it is never parsed to find out."""
         if state is None or state[0] in (LINK_MODE, _GITLINK_MODE):
             return False
         if value is BLOCK:
@@ -752,11 +793,20 @@ class Walker:
     def holds(self, state: TreeEntry | None, words: Sequence[str]) -> bool:
         """Whether the blob of `state` holds every one of `words` — any blob does where
         there are none."""
+        return self._holds(state, words, self._read)
+
+    def _holds(
+        self,
+        state: TreeEntry | None,
+        words: Sequence[str],
+        read: Callable[[str], bytes | None],
+    ) -> bool:
+        """`holds`, the blob's bytes given by `read`."""
         if state is None or state[0] in (LINK_MODE, _GITLINK_MODE):
             return False
         if not words:
             return True
-        raw = self._read(state[1]) or b""
+        raw = read(state[1]) or b""
         return all(word.encode() in raw for word in words)
 
     def artefact_in(self, state: TreeEntry | None, path: str, like: Artefact) -> Artefact | None:
@@ -826,13 +876,19 @@ class Walker:
         is taken to hold none, so its child may read as the add. A merge that took the file
         whole from a side adds nothing, as it is
         no version of the file, so an entry a line of work removed where the merge kept it
-        keeps its start."""
+        keeps its start.
+
+        Each version of a collection file is read from git once while the walker seeks its
+        entries' starts, however many it seeks: kept by object id until it seeks those of
+        another file (`_walk`). So the walker holds one file's versions at most, and a file
+        it comes back to is read again."""
         key = (like.path, like.id if like.kind is ArtefactKind.ENTRY else None)
         if key in self._added:
             return self._added[key]
         versions = list(self.history.versions(like.path))
         found = versions[-1].index if versions else None
         if like.kind is ArtefactKind.ENTRY:
+            self._walk(like.path)
             for version in versions:
                 if any(self._holds_id(state, like.id) for state, _name in version.parents()):
                     continue
@@ -845,13 +901,14 @@ class Walker:
         return found
 
     def _holds_id(self, state: TreeEntry | None, entry_id: str) -> bool:
-        """Whether the blob of `state` holds `entry_id` (`holds`), asked once per blob."""
+        """Whether the blob of `state` holds `entry_id` (`holds`), asked once per blob and id,
+        the blob read from git once for the walk of its file (`_kept_read`)."""
         if state is None:
             return False
         key = (state[1], entry_id)
         found = self._held.get(key)
         if found is None:
-            found = self._held[key] = self.holds(state, (entry_id,))
+            found = self._held[key] = self._holds(state, (entry_id,), self._kept_read)
         return found
 
     # --- the revalidation point ---------------------------------------------------

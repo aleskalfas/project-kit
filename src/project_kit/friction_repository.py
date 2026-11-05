@@ -176,12 +176,12 @@ from project_kit.friction_discovery import (
     Artefact,
     Discovery,
     FrictionSettings,
+    PathIndex,
     RecordContent,
     ResolverCommand,
     SetAside,
     content,
     discover_artefacts,
-    pattern_matcher,
     placed_content,
     placed_files,
     read_friction_settings,
@@ -576,6 +576,8 @@ class _Judge:
         self._as_head: dict[int, bool] = {}
         self._trees: dict[str, CommitTree] = {}
         self._matched: dict[str, tuple[frozenset[str], frozenset[str]]] = {}
+        self._stands_on_count: dict[str, int] = {}  # by path pattern: HEAD's files it stands on
+        self._history_paths: PathIndex | None = None  # every path the history touched, indexed
         self._matching: dict[tuple[str, tuple[str, ...] | None], frozenset[str]] = {}
         self._after: dict[int, frozenset[str]] = {}
         self._moved: dict[tuple[str, int], ExclusionChange] = {}
@@ -690,10 +692,11 @@ class _Judge:
         whatever excludes them — matched once per pattern."""
         found = self._matched.get(pattern)
         if found is None:
-            match = pattern_matcher(pattern)
+            if self._history_paths is None:
+                self._history_paths = PathIndex(self.history.paths)
             found = self._matched[pattern] = (
-                frozenset(filter(match, self.head.files)),
-                frozenset(filter(match, self.history.paths)),
+                frozenset(self.head.matched(pattern)),
+                frozenset(self._history_paths.matching(pattern)),
             )
         return found
 
@@ -947,7 +950,10 @@ class _Judge:
         if not self._tracked:
             return None
         if anchor.kind == "path":
-            matched = sum(map(self.head.stands_on(anchor.value), self.head.files))
+            matched = self._stands_on_count.get(anchor.value)
+            if matched is None:
+                matched = len(self.head.matching(anchor.value))
+                self._stands_on_count[anchor.value] = matched
             verb, fix = "matches", "narrow it"
         elif anchor.kind not in CORE_ANCHOR_KINDS:
             matched = len(self._tracked.intersection(self.kinds.files(anchor)))
@@ -2000,14 +2006,14 @@ def _uncovered_surface(
     """
     surface: set[str] = set()
     for declared in head.settings.surface:
-        surface.update(filter(head.stands_on(declared.resolved), head.files))
+        surface.update(head.matching(declared.resolved))
     if not surface:
         return 0, ()
     anchored: set[str] = set()
     for artefact in discovery.artefacts:
         for anchor in anchors_of(artefact):
             if anchor.kind == "path":
-                anchored.update(filter(head.stands_on(anchor.value), surface))
+                anchored.update(rel for rel in head.matching(anchor.value) if rel in surface)
             elif anchor.kind == "record":
                 rel = head.record_path(anchor.value)
                 if rel is not None:

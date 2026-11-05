@@ -67,6 +67,8 @@ def test_it_writes_the_code_and_its_record_and_prints_the_losses(root: Path) -> 
         "typography value",
         "loss: css left out `type.heading`: form 1 of the css writer has no form for a "
         "typography value",
+        "loss: css left out `type.strong`: form 1 of the css writer has no form for a "
+        "typography value",
         f"accept a loss under `accept-losses` in {DECLARATION} to stop it being reported",
     ]
     assert (root / "web/brand.css").is_file()
@@ -85,7 +87,7 @@ def test_run_again_it_writes_nothing_and_says_so(root: Path) -> None:
 def test_accepted_losses_are_not_printed(root: Path) -> None:
     accepted = [
         {"plugin": "css", "what": path, "reason": "Pages set their own type."}
-        for path in ("type.body", "type.heading")
+        for path in ("type.body", "type.heading", "type.strong")
     ]
     declare(root, **{"accept-losses": accepted})
     shown = run(root, "brand-css")

@@ -69,6 +69,7 @@ REFERENCE = {
   --space--2: 8px;
   --space--3: 16px;
   --space--4: 32px;
+  --stroke--thick: 2px;
   --stroke--thin: 1px;
   --surface: #f6f8fa;
   --text-primary: #1f2328;

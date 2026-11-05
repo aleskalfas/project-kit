@@ -1139,6 +1139,106 @@ def test_a_base_that_moved_on_is_outdated(
     assert found.problem is None and found.outdated
 
 
+def test_checked_reads_the_answers_and_no_friction_settings(
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_here: Runner, monkeypatch
+) -> None:
+    """The narrower run, for a reader that needs only the answers: the change check
+    alone, with no reading of the friction settings at either end of the change."""
+    _repo, head = _branch_with_an_answer(make_adopter_repo)
+
+    def settings_read(*_args: Any) -> Any:
+        raise AssertionError("checked read the friction settings")
+
+    monkeypatch.setattr(fa, "settings_change", settings_read)
+    found = fa.checked(head, "main")
+    assert found.problem is None, found.problem
+    assert [(a["location"], a["answer"]) for a in found.answers] == [("docs/guide.md", "unchanged")]
+    assert found.settings == ()
+
+
+HEAD_OID = "c" * 40
+
+
+def _clone_git(monkeypatch, fa: ModuleType, *, holds: bool, fetch_brings: bool) -> list[tuple]:
+    """`git` as a clone answers it, recorded: whether it holds `HEAD_OID`, and
+    whether a fetch brings it."""
+    held = {HEAD_OID} if holds else set()
+    calls: list[tuple] = []
+
+    def git(*argv: str) -> subprocess.CompletedProcess[str]:
+        calls.append(argv)
+        if argv[0] == "cat-file":
+            return subprocess.CompletedProcess(argv, 0 if HEAD_OID in held else 1, "", "")
+        if argv[0] == "fetch":
+            if not fetch_brings:
+                return subprocess.CompletedProcess(argv, 128, "", "fatal: couldn't find ref\n")
+            held.add(HEAD_OID)
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(fa, "_git", git)
+    return calls
+
+
+def _base_resolved(fa: ModuleType, monkeypatch, ref: str, resolved: str | None) -> None:
+    """The backbone resolves every base named to `ref`, `resolved` as it says."""
+    base = fa.default_branch.Base(ref, "e" * 40, None, None, resolved)
+    monkeypatch.setattr(fa.default_branch, "check_base", lambda _named=None: base)
+
+
+@pytest.mark.parametrize(
+    ("cross_repository", "remote", "ref"),
+    [(False, "fork", "refs/heads/feat/7-x"), (True, "upstream", "refs/pull/7/head")],
+    ids=["same-repository", "fork"],
+)
+def test_a_head_this_clone_lacks_is_fetched_from_its_source(
+    fa: ModuleType, monkeypatch, cross_repository: bool, remote: str, ref: str
+) -> None:
+    """A PR from the base's own repository is fetched from its branch, on the remote
+    the branch is pushed to. One from a fork is fetched by the ref the base repository
+    keeps for it, on the base's remote as the base is fetched, never the branch's."""
+    calls = _clone_git(monkeypatch, fa, holds=False, fetch_brings=True)
+    _base_resolved(fa, monkeypatch, "upstream/main", "remote")
+    source = fa.pull_request_source(
+        "feat/7-x", 7, cross_repository=cross_repository, base="main", remote="fork"
+    )
+    assert source == fa.Source(remote, ref)
+    assert fa.fetch_head(HEAD_OID, source) is None
+    assert ("fetch", "--quiet", remote, ref) in calls
+
+
+@pytest.mark.parametrize("resolved", ["local", None], ids=["local-branch", "revision"])
+def test_a_base_that_names_no_remote_s_branch_is_fetched_from_origin(
+    fa: ModuleType, monkeypatch, resolved: str | None
+) -> None:
+    _base_resolved(fa, monkeypatch, "main", resolved)
+    assert fa.base_remote("main") == "origin"
+
+
+def test_a_head_this_clone_holds_is_not_fetched(fa: ModuleType, monkeypatch) -> None:
+    calls = _clone_git(monkeypatch, fa, holds=True, fetch_brings=True)
+    assert fa.fetch_head(HEAD_OID, fa.Source("origin", "refs/heads/feat/7-x")) is None
+    assert [argv for argv in calls if argv[0] == "fetch"] == []
+
+
+def test_a_head_no_fetch_brings_makes_the_derivation_unreadable(
+    fa: ModuleType, monkeypatch
+) -> None:
+    """Never a pass on a guess: the check is not run on a head the clone lacks."""
+    _clone_git(monkeypatch, fa, holds=False, fetch_brings=False)
+    monkeypatch.setattr(fa, "_refresh_base", lambda base: None)
+
+    def run_check(*_args: Any, **_kwargs: Any) -> Any:
+        raise AssertionError("the check ran on a head the clone lacks")
+
+    monkeypatch.setattr(fa, "_run_check", run_check)
+    found = fa.checked(HEAD_OID, "main", source=fa.Source("origin", "refs/heads/feat/7-x"))
+    assert found.document is None
+    assert found.problem == (
+        "the head ccccccc is not in this clone, and fetching refs/heads/feat/7-x from origin "
+        "failed: fatal: couldn't find ref"
+    )
+
+
 def test_no_document_is_unreadable_never_a_pass(
     fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_here: Runner
 ) -> None:
@@ -1727,6 +1827,69 @@ def test_the_warning_names_the_line_and_the_form(fa: ModuleType) -> None:
         f'read as a sentence: "- not a document" — write it as "{FORM}", starting in the '
         "line's first column, the document in a code span as the list names it"
     )
+
+
+def test_the_description_names_each_updated_document_it_gives_no_sentence(
+    fa: ModuleType,
+) -> None:
+    """For the move to review, which derives nothing (DEC-055 point 3): each document
+    the list the description carries marks updated, in the list's order, that the
+    author's section gives no sentence for. A target revisited by its own change
+    asks for none, and a description with no list names nothing."""
+    document = _document(
+        _entry("docs/c.md", "updated"),
+        _entry("docs/a.md", "updated"),
+        _entry("tech-docs/actors.md#ACT-one", "updated"),
+        _entry("docs/b.md", "unchanged", "Holds."),
+        _revisit(SOURCE_REQ, "updated"),
+    )
+    body = fa.stamp(SAID_BODY, fa.render(document, HEAD))
+    assert fa.unsaid_in(body) == ["docs/c.md"]
+    assert fa.unsaid_in(SAID_BODY) == []
+    assert fa.unsaid_in(fa.stamp(BODY, fa.render(document, HEAD))) == [
+        "docs/c.md",
+        "docs/a.md",
+        "tech-docs/actors.md#ACT-one",
+    ]
+    assert fa.unsaid_message("docs/c.md") == (
+        "docs/c.md is marked updated in the description's list, and the description gives no "
+        "sentence on what changed in it — under `## What changed in each updated document`, "
+        f'write one on a line of its own as "{FORM}", starting in the line\'s first column, the '
+        "document in a code span as the list names it"
+    )
+
+
+def test_the_description_s_list_names_the_head_it_was_derived_at(fa: ModuleType) -> None:
+    """The move to review compares it with the PR's head (DEC-055 point 3); a
+    description with no list a command wrote names none."""
+    document = _document(_entry("docs/a.md", "updated"))
+    assert fa.listed_head(fa.stamp(BODY, fa.render(document, HEAD))) == HEAD
+    assert fa.listed_head(BODY) is None
+    unnamed = fa.stamp(BODY, fa.render(document, HEAD)).replace(f" head={HEAD}", "")
+    assert fa.listed_head(unnamed) is None
+
+
+def test_a_sentence_on_a_document_the_list_does_not_mark_updated_is_unlisted(
+    fa: ModuleType,
+) -> None:
+    """The documents a derived list marks updated, in its order, a target revisited
+    by its own change among none of them; each sentence on any other document is
+    named, in the sentences' order, with the edit that removes it."""
+    document = _document(
+        _entry("docs/b.md", "updated"),
+        _entry("docs/a.md", "unchanged", "Holds."),
+        _revisit(SOURCE_REQ, "updated"),
+    )
+    assert fa.updated_in(document) == ["docs/b.md"]
+    said = fa.sentences(SAID_BODY)
+    assert fa.unlisted(document, said) == ["docs/a.md", "tech-docs/actors.md#ACT-one"]
+    assert fa.unlisted(_document(), {}) == []
+    assert fa.unlisted_warning("docs/a.md", HEAD, 7) == (
+        "docs/a.md has a sentence under `## What changed in each updated document`, and the "
+        "list at 1a2b3c4 does not mark it updated, so the list does not show the sentence — "
+        "remove it from the description with `edit-pr 7 --body-file <file>`"
+    )
+    assert fa.unlisted_warning("docs/a.md", HEAD).endswith("with `edit-pr`")
 
 
 def test_a_line_keeps_its_number_past_the_list_and_is_shown_escaped(fa: ModuleType) -> None:

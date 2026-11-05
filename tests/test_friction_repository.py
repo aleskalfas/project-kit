@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import textwrap
+from collections import Counter
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
@@ -29,7 +30,7 @@ from project_kit import friction_history as fh
 from project_kit import friction_report as frep
 from project_kit import friction_repository as fr
 from project_kit.cli import main
-from project_kit.friction_discovery import Anchor
+from project_kit.friction_discovery import Anchor, ArtefactKind, discover_artefacts
 from project_kit.friction_git import BlobReader, TreeReader
 from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author, GitRepo, MakeAdopterRepo
 from tests.anchor_kind_capabilities import register_kinds
@@ -974,6 +975,61 @@ def test_an_over_broad_anchor_is_warned_about(timeline: Timeline) -> None:
     message = result.findings[0].message
     assert "tracked files (100%)" in message and "most changes" in message
     assert result.artefact_reports[0].state is fr.ArtefactState.CURRENT
+
+
+#: Paths whose names sort next to one another: `-`, `.` and `0` fall either side of `/`.
+_NEIGHBOURS = (
+    "a",
+    "a-b",
+    "a.md",
+    "a/b",
+    "a/b-c",
+    "a/b.md",
+    "a/b/c.md",
+    "a/b/d/e.md",
+    "a/b0",
+    "a/bc",
+    "a0",
+    "b/a/b",
+    ".hidden/a",
+    "docs/guide.md",
+)
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        "a", "a/", "./a", "a//b", "a/b", "a/b/", "a/b/c.md", "a/b/c", "a/b0", "b", "b/a",
+        "docs/guide.md", "docs", "c", "", ".", "..", "../a", ".hidden", "*", "a/*", "a/**",
+        "**/b", "a/b/**/*.md", "a?", "[ab]/b", "z",
+    ],
+)  # fmt: skip
+def test_an_index_of_paths_matches_what_the_pattern_reading_matches(pattern: str) -> None:
+    """The index finds a literal path's files by bisection, the same paths, in the same
+    order, as reading every path with the one pattern reading does."""
+    from project_kit.friction_discovery import PathIndex, pattern_matcher
+
+    index = PathIndex(reversed(_NEIGHBOURS))
+    expected = tuple(sorted(filter(pattern_matcher(pattern), _NEIGHBOURS)))
+    assert index.matching(pattern) == expected
+    assert PathIndex(()).matching(pattern) == ()
+    assert index.paths == tuple(sorted(_NEIGHBOURS))
+
+
+def test_an_over_broad_anchor_two_artefacts_share_is_warned_about_on_each(
+    timeline: Timeline,
+) -> None:
+    """The share is counted once for a pattern, and every artefact anchored by it is told."""
+    timeline.start(
+        {
+            "docs/guide.md": guide(anchors={"path": [".", "src/cli/**"]}),
+            "docs/notes.md": notes(anchors={"path": ["."]}),
+        }
+    )
+    result = _run(timeline)
+    broad = [f for f in result.findings if f.kind is fr.RepositoryFindingKind.OVER_BROAD]
+    assert sorted(str(f.location) for f in broad) == ["docs/guide.md", "docs/notes.md"]
+    assert len({f.message for f in broad}) == 1
 
 
 # --- the two measures, excluded paths ---------------------------------------------------------
@@ -2280,6 +2336,63 @@ def test_an_entry_moved_to_another_collection_with_an_earlier_at_reads_as_new(
     assert _summary(result) == []
 
 
+class _CountingBlobs(BlobReader):
+    """A `BlobReader` that counts how often each object is read from git."""
+
+    def __init__(self, root: Path) -> None:
+        super().__init__(root)
+        self.reads: Counter[str] = Counter()
+
+    def read_object(self, obj: str) -> bytes | None:
+        self.reads[obj] += 1
+        return super().read_object(obj)
+
+
+def test_the_walk_to_where_each_entry_was_added_reads_each_version_of_its_file_once(
+    timeline: Timeline,
+) -> None:
+    """Where each entry of a collection file was last added is a walk back through the file's
+    versions, one per entry (`Walker.added`). However many entries it seeks, each version is
+    read from git once — the file having more versions than the walker keeps between a
+    prefilter and a parse."""
+
+    def collection(held: list[str]) -> str:
+        """The file holding the entries `held`, each anchored to the engine, none answered."""
+        block = {"pkit": {"friction": {"anchors": {"path": ["src/core/**"]}}}}
+        body = "".join(f"## {entry} — Rule\n\nText of {entry}.\n\n" for entry in held)
+        return f"---\n{json.dumps(dict.fromkeys(held, block))}\n---\n\n{body}"
+
+    repo = timeline.adopter
+    # One entry's walk reads every version but the newest, more than the walker keeps.
+    ids = [f"RS-{n}" for n in range(1, fh._RECENT + 3)]
+    timeline.start({"docs/rules.md": collection(ids[:1])})
+    for count in range(2, len(ids) + 1):
+        # Committed by git alone: the file holds no answer to take into answer files.
+        (repo.root / "docs/rules.md").write_text(collection(ids[:count]), encoding="utf-8")
+        repo.git("commit", "-q", "-m", f"add {ids[count - 1]}", "--", "docs/rules.md")
+    adds = dict(zip(ids, reversed(repo.shas("docs/rules.md")), strict=True))
+    history = fh.read_history(repo.root, repo.head())
+    entries = [
+        a
+        for a in discover_artefacts(repo.root).artefacts
+        if a.path == "docs/rules.md" and a.kind is ArtefactKind.ENTRY
+    ]
+    blobs = _CountingBlobs(repo.root)
+    try:
+        walker = fh.Walker(history, blobs)
+        starts: dict[str, str] = {}
+        for entry in entries:
+            start = walker.added(entry)
+            assert start is not None
+            starts[entry.id] = history.commits[start].sha
+    finally:
+        blobs.close()
+    assert starts == adds
+    versions = {v.entry.after[1] for v in history.versions("docs/rules.md") if v.entry.after}
+    assert len(versions) == len(ids) and set(blobs.reads) == versions
+    assert set(blobs.reads.values()) == {1}
+
+
 def test_a_mode_change_is_a_change_in_both_checks(timeline: Timeline) -> None:
     repo = timeline.adopter
     timeline.start({"docs/guide.md": guide()})
@@ -2509,6 +2622,23 @@ def _typed_guide(at: str, because: str = "the CLI surface is as described") -> s
 )
 def test_every_spelling_of_a_time_reads_as_the_instant_it_denotes(written: str) -> None:
     assert fh.stamps_in(f"at: {written}\n".encode()) == {"2026-01-01T09:00:00": 1}
+
+
+def test_the_walk_seeks_a_time_in_a_version_s_front_matter_alone() -> None:
+    """A time a body writes is no artefact's value, so the prefilter reads only the front
+    matter, cut as a parse cuts it: a long document's body is never scanned for times. A
+    version with no front matter cut, or not UTF-8, is scanned whole, so data held some
+    other way is never passed over."""
+    front = "---\nid: guide\nat: 2026-01-01T09:00:00Z\n---\n"
+    body = "Changed on 2026-02-02T10:00:00Z.\n" * 3
+    assert fh.stamps_in(fh._data_of((front + body).encode())) == {"2026-01-01T09:00:00": 1}
+    assert fh._data_of(front.replace("\n", "\r\n").encode() + b"Body.") == (
+        b"id: guide\nat: 2026-01-01T09:00:00Z\n"
+    )
+    assert fh._data_of(body.encode()) == body.encode()
+    assert fh._data_of(b"---\nat: 2026-01-01T09:00:00Z\n\xff---\n") == (
+        b"---\nat: 2026-01-01T09:00:00Z\n\xff---\n"
+    )
 
 
 @pytest.mark.parametrize("spelling", sorted(SPELLINGS))

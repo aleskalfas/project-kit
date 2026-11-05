@@ -79,6 +79,7 @@ pkit:
         - src/project_kit/loaded_rules.py
         - src/project_kit/refs.py
         - src/project_kit/document_parts.py
+        - src/project_kit/block_yaml.py
         - src/project_kit/backbone_schemas.py
         - src/project_kit/artefact_parts.py
         - .pkit/migrations/backbone/2.0.0/001-sync-force-ignored.sh
