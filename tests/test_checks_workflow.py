@@ -30,7 +30,9 @@ The parts (#2308, ADR-078):
   verdict (`scripts/ci_parts.py verdict`) runs here for each outcome of each part,
   each missing output and each output that attests another step, on each event;
 - **only a new head cancels**, and a run on `main` or in the merge queue takes a
-  group of its own; each job but `checks` stops after 30 minutes, `checks` after 5.
+  group of its own; each job but `checks` stops after 30 minutes, `checks` after 5;
+- **the reviewers start** on a job this workflow names: the check project-kit's
+  configuration names to start the review is the remainder's (#2638).
 
 `test_short_check.py` holds the decision.
 """
@@ -51,6 +53,14 @@ from tests import slices
 from tests.adopter_repo import sign_nothing
 
 WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "checks.yml"
+PM_CONFIG = (
+    Path(__file__).resolve().parents[1]
+    / ".pkit"
+    / "capabilities"
+    / "project-management"
+    / "project"
+    / "config.yaml"
+)
 
 #: The jobs of the workflow, the slices among them, and the parts `checks` judges.
 SLICES = 2
@@ -1041,3 +1051,12 @@ def test_the_remainder_names_each_failing_line_and_each_failing_test(tmp_path: P
     assert "- `validate`\n- `prose`" in summary
     assert "- `tests/test_s.py::test_alone`" in summary
     assert "Run it again: `./scripts/check.sh --rest`." in summary
+
+
+def test_the_check_that_starts_the_reviewers_is_the_remainders(
+    workflow: dict[str, Any],
+) -> None:
+    """A name no check bears never passes, so a job renamed here would leave the
+    reviewers waiting for every check, with nothing to say so (#2638)."""
+    config = YAML(typ="safe").load(PM_CONFIG.read_text(encoding="utf-8"))
+    assert config["review"]["agents"]["start_after_checks"] == [_job(workflow, "rest")["name"]]
