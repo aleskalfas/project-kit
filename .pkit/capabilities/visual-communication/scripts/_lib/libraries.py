@@ -63,6 +63,7 @@ from _lib import fingerprint, notations, records
 from _lib.files import FileError, read_bound
 from _lib.findings import FAILS, PROJECT, Finding
 from _lib.location import files as listed_files
+from _lib.location import walked as walked_files
 from _lib.names import is_name
 from _lib.reading import ReadError, read_yaml
 from _lib.root import SHIPPED
@@ -261,10 +262,17 @@ class Held:
     """The library versions a location holds, and its list.
 
     `root` is the project root and `location` the location's path within it. `release` is
-    the installed capability's release, read from its `package.yaml` unless given."""
+    the installed capability's release, read from its `package.yaml` unless given. `walked`
+    lists the files as they lie, not as git sees them, for a location a command built in the
+    clone's local folder, which git ignores (`before_after`)."""
 
     def __init__(
-        self, root: Path, location: str, release: tuple[int, int, int] | None = None
+        self,
+        root: Path,
+        location: str,
+        release: tuple[int, int, int] | None = None,
+        *,
+        walked: bool = False,
     ) -> None:
         self.root = root
         self.location = location
@@ -273,7 +281,7 @@ class Held:
         self.folders: dict[str, dict[Version, Path]] = {}
         self.strays: list[str] = []
         prefix = f"{location}/{FOLDER}/"
-        self._files = listed_files(root, f"{location}/{FOLDER}")
+        self._files = (walked_files if walked else listed_files)(root, f"{location}/{FOLDER}")
         for rel in self._files:
             parts = rel[len(prefix) :].split("/")
             if len(parts) != 3 or parts[2] != "library.yaml":

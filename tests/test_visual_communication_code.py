@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -29,7 +30,7 @@ from tests.visual_communication_project import (
 )
 from tests.visual_communication_writes import FULL, failing
 
-code, css, seam, files, fingerprint, reading, findings_ = load(
+code, css, seam, files, fingerprint, reading, findings_, before_after, copies = load(
     "visual-communication",
     "code",
     "plugins.css",
@@ -38,6 +39,8 @@ code, css, seam, files, fingerprint, reading, findings_ = load(
     "fingerprint",
     "reading",
     "findings",
+    "before_after",
+    "copies",
 )
 
 NAME = "brand-css"
@@ -526,3 +529,50 @@ def test_a_library_the_lock_names_that_the_project_does_not_hold_is_refused(root
     declare(root, lock={**LOCK, "test-parts": "1.0.0"})
     with pytest.raises(code.CodeRefused, match=r"test-parts@1\.0\.0, which the project does not"):
         run(root)
+
+
+# --- a side of a before-and-after (DEC-005 point 7, DEC-013 point 5) ----------------------------
+
+PARTS_LOCK = {**LOCK, "test-parts": "1.0.0"}
+
+
+def shipped_parts(tmp_path: Path) -> Any:
+    """What a capability ships under `test-parts`' number: its gap on another spacing."""
+    folder = tmp_path / "shipped"
+    shutil.copytree(TEST_PARTS, folder)
+    roles = folder / "roles.yaml"
+    text = roles.read_text(encoding="utf-8")
+    roles.write_text(text.replace("{space.2}", "{space.3}"), encoding="utf-8")
+    files = tuple(
+        path.relative_to(folder).as_posix() for path in folder.rglob("*") if path.is_file()
+    )
+    number = copies.Version.parse("1.0.0")
+    return copies.Source("test-parts", number, folder, files, {"released": False}, None)
+
+
+def test_a_side_is_the_code_the_writer_writes_under_the_lock(root: Path) -> None:
+    copy_library(root, TEST_PARTS, "test-parts", "1.0.0")
+    declare(root, lock=PARTS_LOCK)
+    side = before_after.writing(root, "visual", NAME, PARTS_LOCK)
+    assert side.why == ""
+    assert not (root / "web").exists()
+    run(root)
+    assert side.files == {"web/brand.css": (root / "web/brand.css").read_text(encoding="utf-8")}
+
+
+def test_a_version_given_stands_in_for_the_copy_and_changes_the_code(
+    root: Path, tmp_path: Path
+) -> None:
+    copy_library(root, TEST_PARTS, "test-parts", "1.0.0")
+    declare(root, lock=PARTS_LOCK)
+    before = before_after.writing(root, "visual", NAME, PARTS_LOCK)
+    after = before_after.writing(root, "visual", NAME, PARTS_LOCK, [shipped_parts(tmp_path)])
+    assert before_after.differing(before, after) == ["web/brand.css"]
+    assert "--test-parts--gap: 8px;" in before.files["web/brand.css"]
+    assert "--test-parts--gap: 16px;" in after.files["web/brand.css"]
+
+
+def test_a_side_that_cannot_be_written_says_why(root: Path) -> None:
+    side = before_after.writing(root, "visual", NAME, PARTS_LOCK)
+    assert side.files == {}
+    assert "test-parts@1.0.0, which the project does not hold" in side.why

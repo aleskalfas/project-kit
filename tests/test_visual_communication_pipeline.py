@@ -12,6 +12,9 @@ whose nodes take their colour family by concept, by the pattern's and by state.
 
 from __future__ import annotations
 
+import hashlib
+import json
+import shutil
 from collections.abc import Mapping
 from pathlib import Path
 from types import ModuleType
@@ -30,6 +33,7 @@ from tests.visual_communication_project import (
     add_library,
     bound,
     copy_library,
+    importable,
     project,
     write,
     write_list,
@@ -37,8 +41,16 @@ from tests.visual_communication_project import (
     yaml_text,
 )
 
-pl, framing, seam, reading, fingerprint = load(
-    "visual-communication", "pipeline", "framing", "plugins.seam", "reading", "fingerprint"
+pl, framing, seam, reading, fingerprint, before_after, copies, svg = load(
+    "visual-communication",
+    "pipeline",
+    "framing",
+    "plugins.seam",
+    "reading",
+    "fingerprint",
+    "before_after",
+    "copies",
+    "plugins.svg",
 )
 
 TESTS = FIXTURES / "libraries" / "tests" / "1.0.0"
@@ -934,3 +946,131 @@ def test_each_file_a_version_holds_is_read_once_across_the_combinations_judged(
 def test_a_piece_with_no_lock_yet_has_no_fit_to_judge(tmp_path: Path) -> None:
     root = lab_project(tmp_path, ROW, None, {"1.0.0": False}, {"1.0.0": {}})
     assert pl.fit(piece_of(root), pl.Held(root, "visual")) is None
+
+
+# --- a side of a before-and-after (DEC-003 point 8, DEC-013 point 5) ----------------------------
+
+#: The text a step's card draws, as the `tests` library ships it, and in another style.
+HEAD = "text: {content: head, style: type.body, fill: text-primary}"
+CHANGED_HEAD = "text: {content: head, style: type.heading, fill: text-primary}"
+
+
+def every_file(folder: Path) -> dict[str, bytes]:
+    return {
+        path.relative_to(folder).as_posix(): path.read_bytes()
+        for path in sorted(folder.rglob("*"))
+        if path.is_file()
+    }
+
+
+def previews_of(root: Path) -> dict[str, str]:
+    """The previews of the piece as its own location draws them."""
+    drawn_project = project_of(root)
+    found: dict[str, str] = {}
+    for language, key, drawn in pl.drawn(drawn_project, drawn_project.scenes(), "svg"):
+        found.update(pl.preview_files(PIECE, language, key, drawn.pages))
+    return found
+
+
+def changed_tests(folder: Path, version: str = "1.0.0") -> Path:
+    """The `tests` library copied to `folder` at `version`, its card's head in another style."""
+    shutil.copytree(TESTS, folder)
+    card = folder / "components" / "card.yaml"
+    card.write_text(card.read_text(encoding="utf-8").replace(HEAD, CHANGED_HEAD), encoding="utf-8")
+    library = folder / "library.yaml"
+    library.write_text(
+        library.read_text(encoding="utf-8").replace("version: 1.0.0", f"version: {version}"),
+        encoding="utf-8",
+    )
+    return folder
+
+
+def shipped_tests(folder: Path) -> Any:
+    """What a capability ships under the `tests` library's number, from `folder`."""
+    files = tuple(every_file(folder))
+    number = copies.Version.parse("1.0.0")
+    return copies.Source("tests", number, folder, files, {"released": False}, None)
+
+
+def test_a_side_with_no_version_given_is_what_the_pieces_own_location_draws(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importable(monkeypatch, svg)
+    root = drawing_project(tmp_path, picture=False)
+    side = before_after.drawing(root, "visual", PIECE, LOCK)
+    assert side.why == ""
+    assert side.files == previews_of(root)
+    assert sorted(side.files) == [f"{PIECE}.en.colour-scheme.dark.svg", f"{PIECE}.en.default.svg"]
+
+
+def test_a_version_given_stands_in_for_the_copy_and_no_file_of_the_project_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importable(monkeypatch, svg)
+    root = drawing_project(tmp_path, picture=False)
+    source = shipped_tests(changed_tests(tmp_path / "shipped"))
+    before = every_file(root)
+    side = before_after.drawing(root, "visual", PIECE, LOCK, [source])
+    other = before_after.drawing(root, "visual", PIECE, LOCK)
+    assert side.why == ""
+    assert sorted(before_after.differing(other, side)) == sorted(other.files)
+    assert every_file(root) == before
+    assert list((root / before_after.FOLDER).iterdir()) == []
+
+
+def test_a_side_under_another_lock_draws_the_versions_it_names(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importable(monkeypatch, svg)
+    root = drawing_project(tmp_path, picture=False)
+    changed_tests(root / "visual/libraries/tests/1.1.0", "1.1.0")
+    side = before_after.drawing(root, "visual", PIECE, {**LOCK, "tests": "1.1.0"})
+    other = before_after.drawing(root, "visual", PIECE, LOCK)
+    assert (side.why, other.why) == ("", "")
+    assert sorted(before_after.differing(other, side)) == sorted(other.files)
+
+
+def test_a_side_holds_the_pieces_own_files_and_the_locations_fonts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importable(monkeypatch, svg)
+    root = drawing_project(tmp_path)
+    write_picture(root, framing)
+    brand = root / "visual/libraries/test-brand/1.0.0"
+    regular = brand / "fonts" / "SourceSansPro-Regular.otf"
+    digest = f"sha256:{hashlib.sha256(regular.read_bytes()).hexdigest()}"
+    base = brand / "tokens" / "base.tokens.json"
+    data = json.loads(base.read_text(encoding="utf-8"))
+    font = data["font"]["body"]["$extensions"]["pkit.visual-communication"]
+    font["files"] = {"Source Sans Pro": {"hash": digest}}
+    base.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    (root / "visual" / "fonts").mkdir()
+    regular.rename(root / "visual" / "fonts" / "any-name.otf")
+    side = before_after.drawing(root, "visual", PIECE, LOCK)
+    assert side.why == ""
+    assert side.files == previews_of(root)
+    assert all("data:image/png" in text for text in side.files.values())
+
+
+def test_a_side_that_cannot_be_drawn_says_why_and_names_the_projects_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    importable(monkeypatch, svg)
+    root = drawing_project(tmp_path, picture=False)
+    write(root / PIECE_FOLDER / "content.en.yaml", "not: [content\n")
+    side = before_after.drawing(root, "visual", PIECE, LOCK)
+    assert side.files == {}
+    assert side.why.startswith(f"{PIECE_FOLDER}/content.en.yaml: ")
+    assert list((root / before_after.FOLDER).iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    ("library", "version"), [("../../..", "1.0.0"), ("tests", "../../../.."), ("tests", "2.0")]
+)
+def test_a_lock_entry_that_spells_no_version_reads_nothing_outside_the_library_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, library: str, version: str
+) -> None:
+    importable(monkeypatch, svg)
+    root = drawing_project(tmp_path, picture=False)
+    side = before_after.drawing(root, "visual", PIECE, {**LOCK, library: version})
+    assert side.why.startswith(f"the lock of {PIECE_FOLDER}/piece.yaml names `{library}: ")

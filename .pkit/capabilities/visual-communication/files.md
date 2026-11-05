@@ -23,6 +23,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
         - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
         - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/before_after.py
         - .pkit/capabilities/visual-communication/scripts/_lib/full_read.py
         - .pkit/capabilities/visual-communication/scripts/_lib/comparison.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
@@ -179,6 +180,7 @@ The code that `pkit visual write-code` writes lies where its declaration names, 
 
 - `previews/<piece>/`: the SVG previews `pkit visual render` draws;
 - `exports/<piece>/`: the files `pkit visual export` makes;
+- `before-after/<piece>/`: a pinned draft's scenes as `pkit visual add` draws them both ways, in `before/` with the copy it locks and in `after/` with what the capability ships;
 - `handover/<piece>/`: what `pkit visual produce` hands a producer, and what the producer writes, until the command keeps it in the piece's folder.
 
 *What is made from a piece* names the files in each.
@@ -288,6 +290,8 @@ A library moves no lower than the version the lock names while versions at or ab
 **The search's bounds.** It tries at most 10 000 versions. Past that bound it refuses, naming the libraries it was choosing among. Name the line of each in the lock, or take the versions no piece needs out of the library folder, and render again. It also judges at most 50 combinations. Past that bound it keeps the lock, with the newest version that fits of each library the lock does not name yet. It states that, naming the libraries it was choosing among. Move the lock by hand, or take the versions no piece needs out of the library folder.
 
 **A pinned draft,** `pinned: true`, keeps its lock: a render checks it and never changes it. The lock must name every library the piece uses, each a version the location holds and the installed capability reads, and they must fit together. A pinned piece with no lock is refused: unpin it for its first render. To move a pinned lock, change it by hand, or unpin the piece and render it.
+
+A copy not yet released that a pinned lock names may fall behind what the capability ships under its number. `pkit visual add` replaces it only where a person names each pinned draft and each declaration that locks it (DEC-013 point 5). Naming it is the move on purpose: the lock keeps its number, and what it draws changes only then. The run that leaves the copy draws the piece both ways first, so the person sees what the move changes (DEC-003 point 8).
 
 The render writes the lock into `piece.yaml` as text, as a top-level block mapping, one library a line, in the order of their names. Every other byte of the file stays: comments, order, line endings and a byte-order mark. Where the result would not read back as the file with that lock, the render refuses: write `lock:` as a block mapping, one library a line.
 
