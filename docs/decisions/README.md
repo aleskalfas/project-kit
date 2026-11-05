@@ -262,7 +262,7 @@ Install project-kit
 ```
 
 > [!WARNING]
-> Nothing enforces [COR-066](../../.pkit/decisions/core/COR-066-accepted-before-landing.md) yet ([the reference, "The acceptance gate"](../../.pkit/decisions/README.md#the-acceptance-gate)). No check refuses a merge that lands a record still `proposed`, and none lists the records a change makes accepted. So before the merge, accept each such record in the change, and look again at any work that rested on it.
+> [COR-066](../../.pkit/decisions/core/COR-066-accepted-before-landing.md) binds only where a merge runs the landing check ([the reference, "Checking what a change lands"](../../.pkit/decisions/README.md#checking-what-a-change-lands)). `pkit decisions check-landing` lists the records a change makes accepted. With `decisions.refuse-proposals` on, it refuses a merge that lands a record still `proposed`. Elsewhere, before the merge, accept each such record in the change, and look again at any work that rested on it.
 
 ## Refine a record, or supersede it
 

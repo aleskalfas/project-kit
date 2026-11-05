@@ -47,10 +47,12 @@ pkit:
         - src/project_kit/scratchpads.py
         - src/project_kit/permissions.py
         - src/project_kit/project_config.py
+        - src/project_kit/config_at_commit.py
         - src/project_kit/yaml_splice.py
         - src/project_kit/line_breaks.py
         - src/project_kit/config_validate.py
         - src/project_kit/docs_roots.py
+        - src/project_kit/decisions_landing.py
         - src/project_kit/default_branch.py
         - src/project_kit/answer_files.py
         - src/project_kit/data_validate.py
@@ -63,6 +65,7 @@ pkit:
         - src/project_kit/friction_report.py
         - src/project_kit/friction_prune.py
         - src/project_kit/friction_since.py
+        - src/project_kit/commit_contributions.py
         - src/project_kit/friction_write.py
         - src/project_kit/friction_move.py
         - src/project_kit/connections_config.py
@@ -188,7 +191,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 
 | Command | Operation | Mutates? | Idempotent? |
 |---|---|---|---|
-| `init` | first install: announce target + confirm off-CWD, then propagation + seed + merge (`--here` / `--yes` / `--root <path>` / `--dry-run`); refuses, before writing anything, a methodology source that ships an adapter under a reserved name (see `new adapter`), or an adapter and a capability of one name | yes | no — refuses re-run (points you to `pkit sync`) |
+| `init` | first install: announce target + confirm off-CWD, then propagation + seed + merge (`--here` / `--yes` / `--root <path>` / `--dry-run` / `--refuse-proposals`); refuses, before writing anything, a methodology source that ships an adapter under a reserved name (see `new adapter`), or an adapter and a capability of one name | yes | no — refuses re-run (points you to `pkit sync`) |
 | `sync` | re-run propagation | yes | yes |
 | `merge [<target>...]` | re-run merge for one or all targets | yes | yes |
 | `settings consolidate [--dry-run] [--yes]` | remove the permission allow entries a broader rule already covers from `.claude/settings.json` and `.claude/settings.local.json`; the plan first, then one confirmation (see "Lifecycle commands") | yes | yes — nothing redundant left is a no-op |
@@ -230,6 +233,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `schemas rename <namespace> <old-id> <new-id>` | rename an entry's id in one run, in three places: the owner's collection, every typed token `[<namespace>:<old-id>]`, and every mapping key a companion takes from the namespace (`x-pkit-keys-from-namespace`). Restores every file when a result fails validation | yes | no — the old id is gone after a run |
 | `decisions validate` | detect duplicate decision ids within an id-space (core / project / ADR / per-capability DEC) + id-vs-filename mismatches, and a rule id (`RS-<SET>-NNN`, COR-051) claimed twice across the rule sets; exit non-zero on any. A record that arrives as a synced copy is not checked (COR-055 point 1), and a project's record that takes a synced copy's id is reported on the project's record. Then warn of each line where a record narrates its own revision — an amendment heading or marker, a revision stamped with an issue number or a date, change-log phrasing — at `<file>:<line>` (the decisions README, "Refining an accepted record"); superseded records and records that arrive as synced copies are not read. The warnings do not fail the command, because the shapes are read from prose and a gate that fails on a heuristic reading of prose fails for the wrong reasons (COR-055, "Why exactly one fails"). Then check each record's points over the same records (COR-058 point 7), each finding at `<file>#<id>`, or at `<file>:/retired-points` for the field's shape: exit non-zero on a malformed `retired-points`, a retired id with no stub, a stub whose id is not retired or whose sentence differs from its entry's, a live point on a retired id, a successor the record neither holds nor retires, or a retired id named as its own successor. Warn, without failing, of a duplicate id, a gap in the ids counting retired ones, and a heading in the Decision that opens with a number or a label in a form a point's heading refuses (the decisions README, "Checking a record's points"). Then warn, without failing, of each citation in those records that names a point its record neither holds nor retires, in the forms [the decisions README, "Citing"](../decisions/README.md#citing) names, at `<file>:<line>` | no | yes (read-only) |
 | `decisions check-diff [--base <ref>] [--head <rev>] [--json]` | the numbering check of a change (COR-058 point 8): each decision record the change touches in the working tree, or in commit `<rev>` read from git objects, against its state where the branch left its base. It fails a point dropped without being retired, a renumbered point, a new id not past the others of its series, and a point or record id another change took first, and warns of what may be a renumbering; exit non-zero on an error only. Beside its findings it lists, and fails nothing on, each record accepted at the branch point that the change alters or removes, with each point it adds, alters or retires and each other part of the record it changes, for whoever judges those edits. `--json` prints the findings and that list as one document. Refuses a base that resolves nowhere, and reads none when no record is here. A line of its own in a project's check gate. Its base, what it fails and warns of, what it lists, and what it skips are in [the decisions README, "Checking a change's numbering"](../decisions/README.md#checking-a-changes-numbering) | no | yes (read-only) |
+| `decisions check-landing [--base <ref>] [--head <rev>] [--json]` | the landing check of a change (COR-066 points 2 to 4): what git's merge of the head into the base's tip would land. It reports each decision record and rule that would land proposed, and lists what the change makes accepted, with the commits around each acceptance. With `decisions.refuse-proposals` on at the base's tip, a reported proposal fails a landing on the default branch. Exits 0 on a pass, 1 on a refusal and 3 where it gives no answer. It takes no default base, and the check gate never runs it. See [its section below](#decisions-check-landing---base-ref---head-rev---json) | no | yes (read-only) |
 | `migrations check-diff [--base <ref>] [--include-working-tree]` | the migration check of a change. It fails a rename or a removal in a tree the methodology ships that no migration of its tier and component in the same change covers ([the lifecycle README, "What ships a migration"](../lifecycle/README.md#what-ships-a-migration)). It also fails a migration script the change adds, or moves in, whose `<major>.<minor>.0/` folder is at or below the version its tier records at the base's tip: a project already there never runs it. The line names the version to move it to. A script the project receives by sync is not judged, nor one the tip already holds, at its path or renamed in its folder with the same content. It also fails a script the change adds, or moves in, whose number another script in its folder holds, the folder read as merging the base would leave it. The line names the number to take ([the lifecycle README, "Naming"](../lifecycle/README.md#naming)). Its base is `--base`, else `$PKIT_CHECK_BASE`, else the default branch. `--include-working-tree` adds staged and unstaged changes. The rule is in [the lifecycle README, "Which version a migration targets"](../lifecycle/README.md#which-version-a-migration-targets) | no | yes (read-only) |
 | `data validate <path>` | validate adopter data files against their bound capability schemas (per COR-023); resolves binding field-first via `pkit_schema:`, then via per-schema `binds_to:` fallback | no | yes (read-only) |
 | `harness report [--adapter <name>] [--json]` | report the harness requirements the project's harness leaves unmet (COR-047): each requirement the core declares, resolved for each registered adapter from its support declaration; offline, files only; exit 1 while anything is unmet (see "Diagnostic commands") | no | yes (read-only) |
@@ -358,6 +362,7 @@ Flags:
 - **`--here`** installs into the current directory instead of a resolved parent. **Honored** when the current directory is a git root or a non-git folder (no git-root-wins precedence overrides your current directory, so a `.pkit/` here is reachable). It is stopped by three guards: **refused when the current directory is a subfolder of a git worktree** — every command there resolves to the git root, so a subfolder `.pkit/` would be unreachable, and `init` points you at the git root instead (or at `pkit sync`, when that root is already a project-kit project); **refused when the current directory is inside an existing project-kit project** — a second, nested install is not supported, and `init` names the enclosing project and points you at `pkit sync`; and it **does not override the dubious-ownership or broken-repository guards** — if the current directory is a real git repository git declines to vouch for (`safe.directory` / dubious ownership) or cannot open, `init` refuses and guides you to fix the tree first, `--here` included. Mutually exclusive with `--root`.
 - **`--yes`** accepts the confirm only when the resolved target **is your current directory** (a fresh non-git folder). It never installs at an off-CWD target — a bare `--yes` from a subfolder refuses and points you at `--root`, so a non-interactive run can never install somewhere you are not standing.
 - **`--root <path>`** installs at an explicit, existing path — the sanctioned way to install at a resolved parent (e.g. a git repository root) non-interactively in CI, where a bare `--yes` is refused. Mutually exclusive with `--here`; a nonexistent path is refused at the CLI boundary rather than silently materialised. Because you named the target explicitly, it **skips the confirm and the between-you-and-the-target split-brain scan** the other paths apply — but not the checks on the target itself. It refuses a target that is already a project-kit project (redirects to `pkit sync`), and it refuses a **shadowed** target: a subfolder of a git worktree (the nested `.pkit/` would be unreachable — every command resolves to the git root; the refusal names `--root <git root>`, or `pkit sync` when that root is already adopted) or a path inside an existing project-kit project (a second, nested install). When the target is itself a repository git **refuses to verify** (dubious ownership) or **cannot open**, `--root` is the escape the guided refusal names, so it installs — but warns first, naming the problem (and, for dubious ownership, the `safe.directory` remedy).
+- **`--refuse-proposals`** writes `decisions.refuse-proposals: true` into the new project's configuration, so the landing check's refusal is on from the start. The flag is the consent, and without it the install writes no key and makes no offer ([ADR-081](../../tech-docs/architecture/decisions/ADR-081-landing-check.md) point 5).
 - **`--dry-run`** previews what would be installed without writing any files or prompting (per COR-004). It skips only the confirm prompt and the non-interactive-stdin refusal that stands in for it; **every other refusal fires ahead of `--dry-run`**, so those combinations report the refusal rather than a preview: `--here` together with `--root`; the dubious-ownership and broken-repository refusals; a nested or shadowed target (`--here` in a git subfolder or inside an existing project, `--root` at a subfolder or inside an existing project); an already-adopted target, or a `.pkit` there that is not an install; the off-target split-brain; a bare `--yes` at an off-CWD target; and the install's own source checks (no usable methodology source, or a target that is the source itself).
 
 If you arrive at a partial or broken state, run `validate` to see what is and isn't consistent. An `init` that stopped on the way, or a `.pkit/manifest.yaml` that is missing or whose `backbone_version` is no version, is finished by `pkit upgrade` ([the lifecycle README, "The replay: a missing completion"](../lifecycle/README.md#the-replay-a-missing-completion)). Otherwise use targeted `sync` / `merge` to recover.
@@ -587,6 +592,7 @@ A project keeps its declarations to the backbone in **one project-owned file**: 
 | Key | Meaning | Default | Owning record |
 |---|---|---|---|
 | `name` | The project's declared name, rendered wherever the backbone names the project (never derived from a folder or remote name). | none — readers fall back to the git remote's repository name | COR-048 point 2 (writer: the `pkit report` prompt-once write-back, ADR-050) |
+| `decisions.refuse-proposals` | Turns on the landing check's refusal: with `true`, a record or rule that would land proposed fails a landing on the default branch. See "The `decisions` key" below. | `false` | [COR-066](../decisions/core/COR-066-accepted-before-landing.md) point 4 (writers: `pkit init --refuse-proposals`, and a change a person authorises, by `pkit config set` or by an edit) |
 | `docs.user` | The **user root**: the directory, relative to the repository root, where user-facing documentation lives. | `docs/` | [COR-049](../decisions/core/COR-049-documentation-roots.md) point 1 |
 | `docs.internal` | The **internal root**: where technical documentation for maintainers and agents (decisions, architecture, guides, analysis) lives; components that choose a documentation location derive it from this root plus their conventional sub-path. | `docs/` | COR-049 points 1 and 4 |
 | `friction.mode` | How the friction change check treats what it finds: `warning` reports and passes; `enforcing` fails on friction, dead anchors and a bump with nothing behind it. | `warning` | [COR-050](../decisions/core/COR-050-anchors-and-friction.md) points 12 and 14 |
@@ -606,6 +612,7 @@ A project keeps its declarations to the backbone in **one project-owned file**: 
 ```yaml
 # yaml-language-server: $schema=../schemas/backbone/config.schema.json
 name: example
+decisions: { refuse-proposals: true }
 docs: { user: docs/, internal: docs/ }
 friction:
   mode: warning
@@ -652,11 +659,18 @@ Only errors fail the command. The same repository state always yields the same f
 - **Status lines** (points 6 and 7). `pkit status` gains a `Documentation` section: one line per root with its source (`user root  docs/  (default)`, `internal root  tech-docs/  (explicit)`), then every recorded location — those lying inside the internal root under `inside root`, then those outside it under `outside root`, one line each, capability locations tagged `(<capability>)`, in a fixed order — so a project sees where its recorded locations sit and what a relocation would involve. Moving documents is always an explicit, reviewable operation.
 - **Reading is forgiving.** A root that is absent, not a relative path, or unreadable resolves to the default for every reader; `pkit validate` reports the file's problems.
 
+**The `decisions` key — the landing check's refusal** ([COR-066](../decisions/core/COR-066-accepted-before-landing.md) point 4; [ADR-081](../../tech-docs/architecture/decisions/ADR-081-landing-check.md) point 5).
+
+- **It counts as the default branch holds it.** `decisions check-landing` reads it at the base's tip, never in the working tree. So a change that turns it on or off counts once it has landed.
+- **It decides only whether the refusal fails.** The check reports what would land and gives its list with the key on or off.
+- **Read forgivingly at that tip.** A file that does not parse, or a value that is no boolean, gives a warning and off. A misspelt key reads as absent. `pkit validate` fails all three.
+- **Who writes it.** The install writes it only on `--refuse-proposals`, and an upgrade never does. Otherwise a change a person authorises writes it, by `pkit config set` or by an edit.
+
 **The `repository` key — the default branch** ([COR-054](../decisions/core/COR-054-default-branch.md)). One module resolves it (`src/project_kit/default_branch.py`); `pkit repository base` (below) shows what it answers, and is how a capability's script reads it (point 5).
 
 - **Resolution** (point 2). The remote-tracking reference of the branch's upstream (`git branch --set-upstream-to`), else `origin/<name>`, when it names a commit; else, only when there is no remote — no upstream and no `origin` — the local branch, and every reader prints `warning: the default branch 'main' is read from the local branch 'main': …`. Each is looked up by its full reference, so a tag of the same name never stands in. A remote with another name is found only as the branch's upstream.
 - **A branch named as a base** (`--base develop`, `PKIT_CHECK_BASE=integration/x`) resolves the same way. A remote-tracking reference (`origin/main`) is read as named, and so is any other revision — a commit, a tag, or `refs/heads/<name>`, the way to compare with a local branch while a remote exists.
-- **The base of a comparison** (point 3): `--base`, else `$PKIT_CHECK_BASE`, else the default branch — for `friction check`, `migrations check-diff`, [`decisions check-diff`](../decisions/README.md#checking-a-changes-numbering), `release check`, software-analysis' `check-numbers` and [`check-pointers`](../capabilities/software-analysis/README.md#commits-off-the-default-branch-pkit-analysis-check-pointers), and project-management's `check-doc-mapping`. A command that allocates from settled state reads the default branch, never `$PKIT_CHECK_BASE`. Software-analysis' stamp reads its own `--base` too, and [`new decision`](#new-decision-namespace-slug---yes) and [`new migration`](#new-migration---tier-tier---component-name---version-xy0---name-slug---scope-scope) take no base.
+- **The base of a comparison** (point 3): `--base`, else `$PKIT_CHECK_BASE`, else the default branch — for `friction check`, `migrations check-diff`, [`decisions check-diff`](../decisions/README.md#checking-a-changes-numbering), `release check`, software-analysis' `check-numbers` and [`check-pointers`](../capabilities/software-analysis/README.md#commits-off-the-default-branch-pkit-analysis-check-pointers), and project-management's `check-doc-mapping`. A command that allocates from settled state reads the default branch, never `$PKIT_CHECK_BASE`. Software-analysis' stamp reads its own `--base` too, and [`new decision`](#new-decision-namespace-slug---yes) and [`new migration`](#new-migration---tier-tier---component-name---version-xy0---name-slug---scope-scope) take no base. [`decisions check-landing`](#decisions-check-landing---base-ref---head-rev---json) takes `--base`, else `$PKIT_CHECK_BASE`, and has no default.
 - **Nothing resolves** (point 4). The message names the references tried and the fixes — `git fetch <remote> <name>`, declare the right name, or name a base; a remote without its copy is never replaced by the local branch. Git may be unable to run, or to read the branches here, as outside a repository. Then the default branch's message says so in plain words, in place of the fixes, with git's own reason where git gives one. A comparison refuses (exit 1); one with nothing to compare reads no base.
 - **Reading is forgiving** (COR-048 point 4). A value that is not a branch name reads as `main`, with a `warning:` line from every reader; `pkit validate` fails on it.
 
@@ -1403,6 +1417,7 @@ Each installed component's validators follow (a capability's or an adapter's —
 **What is not a validator.** Validation is not every check of the project's state: a check stays outside when failing on it would fail the project for what it cannot correct in its own files, or when its own record puts it elsewhere (COR-055 point 1). Outside it:
 
 - the checks that compare with a base and answer about a *change* — `friction check`, `migrations check-diff`, `decisions check-diff`, `release lint` — each its own line of the check aggregator (`scripts/check.sh`), which calls `pkit validate` once beside them and drops the lines it subsumes;
+- the landing check, `decisions check-landing`, which answers about a change too and is never a line of the check aggregator ([its section below](#decisions-check-landing---base-ref---head-rev---json));
 - the whole-repository friction check, which reports and never fails and needs every artefact's full history; its findings reach `pkit validate` only as the obligations a filler reads from it;
 - the process engine's check of one subject against a process's invariants, `process validate <address>`;
 - process health, `process health`;
@@ -1411,6 +1426,52 @@ Each installed component's validators follow (a capability's or an adapter's —
 A validator answers about the project's *state* and takes no base named for one run (COR-055 point 2): the query policy ([the lifecycle README, "How a registered command is run"](../lifecycle/README.md#how-a-registered-command-is-run)) removes the base override (`PKIT_CHECK_BASE`) and the change's own head (`PKIT_CHECK_HEAD`) from the environment of every validator and every data point's filler it starts — under `pkit validate`, `pkit status` and `pkit connections resolve` alike — so `pkit validate` answers the same for the same working tree, HEAD, fetched history and default-branch commit, whatever base a pipeline named. A filler may read history and the default branch ([COR-052](../decisions/core/COR-052-slots.md) point 6), and the `connections` member names, for each such filler, the state it declared and the commit it was read at (ADR-058 point 7).
 
 `status` answers "what's installed?"; `validate` answers "is it consistent?". Different questions, different commands.
+
+### `decisions check-landing [--base <ref>] [--head <rev>] [--json]`
+
+What a change's merge would land ([COR-066](../decisions/core/COR-066-accepted-before-landing.md) points 2 to 4; [ADR-081](../../tech-docs/architecture/decisions/ADR-081-landing-check.md)). The check reports each decision record and rule that would land proposed, and lists what the change makes accepted. What it judges, and where a project runs it, are in [the decisions README, "Checking what a change lands"](../decisions/README.md#checking-what-a-change-lands).
+
+- **`--base <ref>`** names the base the change would land on. `$PKIT_CHECK_BASE` names it otherwise. There is no default, so a run that names neither gives no answer. It resolves as any named base does ("The `repository` key" above). The check fetches nothing, so fetch the base and the change's history first.
+- **`--head <rev>`** names the commit that would land, else HEAD. The working tree is never read.
+- **`--json`** prints one document, whether the check answers or not.
+
+| Exit | Meaning |
+|---|---|
+| 0 | A pass. The human view says why nothing is refused. |
+| 1 | A refusal: the key is on at the base's tip, the base is the default branch, and a proposal would land. |
+| 2 | A usage error, such as an unknown option. |
+| 3 | No answer: the check cannot compute what lands. A caller holds the merge on it, whatever the key says. |
+
+**No answer** comes only from these:
+
+- The run names no base, the base resolves to no commit, or the head names none.
+- The clone is shallow, so the change's commits may not all be here.
+- Git's merge of the head into the base's tip conflicts. The fix is to merge the base in.
+- The git at hand cannot compute a merge the check needs. It needs git 2.38.
+- The synced-copy test cannot run: the working tree's copy raises, or no stand-in root can be made.
+
+With no answer the human view prints `No answer:` and why on standard error. Warnings go to standard error too.
+
+**The document.** One JSON document, keys sorted. Its `schema_version` is `1` and its own: it rises when a key a reader relies on changes its meaning or goes, never for a key added. A reader refuses a version it does not know.
+
+- `problem`: why there is no answer, else `null`. With a problem, the document holds only `schema_version` and `problem`.
+- `base`: `named`, as the run named it; `source`, `option` or `environment`; `ref`, the reference read; `tip`, the commit judged; `fork`, where the head left the base.
+- `head`: the commit judged. `landing_tree`: the tree of the landing state, which a caller can use rather than build again.
+- `default_branch`: `declared`, the name the tip declares; `is_base`, whether the base counts as the default branch; `warning`, why a declared name was not read, else `null`.
+- `key`: `name`; `value`, as the tip holds it; `read_at`, the tip; `warning`, why the value was read as the default, else `null`; `refusal_on`, whether a proposal fails this landing; `change`, the value at each state as `{tip, landing}`, else `null`.
+- `proposals`: each `{kind, name, path, was, why}`.
+  - `kind` is `record`, `rule` or `rule-set-file`.
+  - `was` is its status at the tip, `null` where the tip holds none.
+  - `why` says what could not be read of it, which is why it counts as proposed, else `null`.
+- `refuses`: whether the check refuses on them.
+- `accepted`: what the change makes accepted, each `{kind, name, path, was, commits}`. `commits` holds each commit that accepted it:
+  - `commit`, `subject`, `paths` and `nothing_lands`. `paths` is the rest of its work, as far as that lands, and `nothing_lands` says none of it does.
+  - `before`: the change's commits before it that touch anything else, each `{commit, subject, paths, nothing_lands}`.
+  - `edits_since`: how the landing state differs from that commit, else `null`. A record's are read as the numbering check reads an accepted record's, in the form of that check's document. A rule's are `{fields, text, removed}`.
+- `accepted_on_base`: what the base accepted since the branch left it and the merge changes, each `{kind, name, path, edits}`, the edits read against the tip.
+- `received_disagreements`: each file the tip and the landing state disagree on, as to whether the project receives it.
+- `cannot_tell`: why a state could not tell which files the project receives.
+- `default_branch_proposals`: each proposal the tip holds, on the run whose landing turns the key on, else empty. Each is in the form of `proposals`.
 
 ### `schemas validate [<path>]`
 

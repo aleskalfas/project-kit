@@ -8,6 +8,7 @@ pkit:
       path:
         - src/project_kit/decisions.py
         - src/project_kit/decisions_check_diff.py
+        - src/project_kit/decisions_landing.py
         - src/project_kit/decisions_validate.py
         - src/project_kit/default_branch.py
         - src/project_kit/docs_roots.py
@@ -50,6 +51,7 @@ A decision record states one choice among alternatives, with its context and rea
 - [Finding the records a path leads to](#finding-the-records-a-path-leads-to)
 - [Checking a record's points](#checking-a-records-points)
 - [Checking a change's numbering](#checking-a-changes-numbering)
+- [Checking what a change lands](#checking-what-a-change-lands)
 <!-- /pkit:contents -->
 
 ## Two namespaces, two prefixes
@@ -236,7 +238,7 @@ Work depends only on accepted records: code, content, tooling, and records that 
   - **Read before the merge:** these edits are shown beside the list above ("Before the merge"), by whoever shows it. The person who authorises the merge reads each before the change lands. They are the edits the numbering check lists, and those the list above shows for a record accepted in a change this one builds on.
   - **A record the project receives from elsewhere:** the new record decides nothing against it. A change it needs there is proposed where that record is kept, and nothing rests on that change until the project receives it accepted.
   - **A rule:** an edit the new record forces on a rule of the project's own rule sets is named and made like its edits to records ([COR-051](core/COR-051-rule-sets.md)). An example is the edit to an origin that cites a record the new record supersedes. An edit to a rule set the project receives is proposed where that set is kept.
-- **Not enforced yet:** no check refuses a merge that lands a proposed record, and none lists the records a change makes accepted (COR-066 points 2 and 3). So, before the change lands, have a person accept each record it adds.
+- **Not enforced yet:** the landing check refuses a merge that lands a proposed record, and lists what a change makes accepted (COR-066 points 2 and 3). It binds only where a project turns its key on, and a merge component or the host runs it ("Checking what a change lands" below). Until then, have a person accept each record a change adds before it lands.
 
 ## Adding a record
 
@@ -462,3 +464,40 @@ pkit decisions check-diff [--base <ref>] [--head <rev>] [--json]
 - **Two changes that take one number:** the first to land keeps it. The other moves its point, or its record, to the next unused number, which the finding names.
   - **No clash:** a point the default branch holds under that id with the change's very text is the change's own work landed, such as a parent branch's. So is a record the default branch holds at the change's own path.
   - **A parent's point edited since** fails, and merging the default branch in clears it.
+
+## Checking what a change lands
+
+The landing check judges what a change's merge would land, and lists what the change makes accepted (COR-066 points 2 and 3). [ADR-081](../../tech-docs/architecture/decisions/ADR-081-landing-check.md) realizes it, as a command of its own, apart from the numbering check:
+
+```
+pkit decisions check-landing --base <ref> [--head <rev>] [--json]
+```
+
+- **What it judges** is the *landing state*: git's merge of the head into the base's tip. It compares each record and rule there with its state at that tip, so one the merge leaves alone lands nothing.
+- **What the change cannot move.** The key, the default branch's name and which files the project receives are read at the base's tip, the last with the landing state. The working tree is never read, though its copy of the synced-copy test runs.
+- **It reports** each record and rule proposed at the landing state and not proposed at the tip. One proposed at both is already on the base, and blocks nothing.
+  - **A record** is paired by the numbering check's pairing, so a record moved to another path is not added.
+  - **A rule** is judged on its own, however many rules its file holds. A rule moved to another set takes a new id, so it is judged as added.
+  - **What it cannot read counts as proposed,** with why. Its file may not be text, its front matter may not parse, or its status may be one its kind lacks. A rule-set file the reader cannot read counts as one proposal.
+- **It skips** a record or rule set the project receives by sync, which is judged where it is kept. The synced-copy test tells such a file, not the kind of set, so a method rule set a project authors is judged.
+  - **Two readings.** The test is asked of the tip and of the landing state. A file either skips is skipped, and each file they disagree on is reported for the person to see.
+  - **A state that cannot tell** skips no capability's file, and the check says why. A manifest that does not read is one such state.
+- **The refusal.** `decisions.refuse-proposals` at the base's tip decides whether a reported proposal fails the landing. Only a landing on the default branch can fail, told by the name the run gives its base. A base named only by a commit counts as the default branch. Otherwise the check passes and says why.
+- **A change to the key** is reported, with its value at each state, and counts once it has landed. On the run whose landing turns it on, the check also lists the proposals the tip holds. They block nothing, and a person settles each.
+- **The list** gives, for each record and rule the change makes accepted:
+  - each commit that accepted it, with the rest of that commit's work
+  - the change's commits before that one that touch anything else, one on a parallel line among them. For a rule, an edit to another rule in its file counts.
+  - how its text at the landing state differs from its text at that commit, a record's point by point
+- **Only what lands is shown** of a commit's work, so a parent's work the base already holds is not shown again. A commit left with nothing to show stays listed, and says so.
+- **A second list** gives each record and rule the tip holds accepted and the branch point does not, where the merge changes it. It shows how it differs at the landing state from the tip.
+- **No answer** is never a pass, never an empty list and never the refusal off. The check gives none where it cannot compute what lands, and exits apart from a refusal. A caller holds the merge on it, whatever the key says.
+
+Its options, exits, document and no-answer cases are in [the CLI reference](../cli/README.md#decisions-check-landing---base-ref---head-rev---json). Where a project runs it:
+
+- **Through a merge component,** a component that carries out merges on a person's authority. It runs the check before it merges, after the reviewers have judged the change, and shows the person the list. It does not merge while the check refuses or gives no answer. The backbone's own merge commands are not one.
+- **A project without one** has its host require the check, on a pipeline line of its own. The line names the pull request's target by its branch name as base, and its own head as head. It fetches their history first.
+  - **With the key off,** only no answer fails that line, so it can be wired before the key is turned on.
+  - **Its pass can go stale.** It holds for the tip it ran against. A project that wants no stale pass requires each change to be up to date with its base, or merges through a queue.
+- **A direct commit.** A person accepts each record and rule the commit makes accepted before the commit. Whoever commits straight to the default branch then runs the check before the push, and pushes only on a pass. Its head is the commit, and its base the default branch, fetched. A project may wire a hook for such a push, and the backbone installs none.
+- **Never in the check gate.** The check gate, a hook run on every push and the numbering check never run it. So the refusal blocks no push and hides no other check.
+- **What meets no refusal.** A merge sent past those places meets neither the refusal nor the list. It may go by the host's own controls, or by a backbone command such as `pkit pull-request land` or the release merge. So does an administrator merge past a host check.
