@@ -14,11 +14,19 @@ pkit:
         - visual-communication:DEC-003#7
         - visual-communication:DEC-003#9
         - visual-communication:DEC-004#10
+        - visual-communication:DEC-005#2
         - visual-communication:DEC-007
-        - visual-communication:DEC-008
-        - visual-communication:DEC-010
-        - visual-communication:DEC-011
-        - visual-communication:DEC-012
+        - visual-communication:DEC-008#1
+        - visual-communication:DEC-008#2
+        - visual-communication:DEC-008#3
+        - visual-communication:DEC-008#4
+        - visual-communication:DEC-008#6
+        - visual-communication:DEC-010#1
+        - visual-communication:DEC-010#2
+        - visual-communication:DEC-010#6
+        - visual-communication:DEC-011#1
+        - visual-communication:DEC-012#1
+        - visual-communication:DEC-012#2
       artefact:
         - .pkit/capabilities/visual-communication/files.md#the-foundations
 ---

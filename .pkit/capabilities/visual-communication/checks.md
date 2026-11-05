@@ -35,7 +35,34 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf_declaration.py
         - .pkit/capabilities/visual-communication/schemas/findings.schema.json
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
-      record: ["visual-communication:DEC-002", "visual-communication:DEC-003", "visual-communication:DEC-004", "visual-communication:DEC-005", "visual-communication:DEC-006", "visual-communication:DEC-008", "visual-communication:DEC-010", "visual-communication:DEC-011", "visual-communication:DEC-012", "visual-communication:DEC-013", "visual-communication:DEC-014"]
+      record:
+        - visual-communication:DEC-002#6
+        - visual-communication:DEC-002#7
+        - visual-communication:DEC-003#4
+        - visual-communication:DEC-003#6
+        - visual-communication:DEC-003#9
+        - visual-communication:DEC-004
+        - visual-communication:DEC-005#7
+        - visual-communication:DEC-005#9
+        - visual-communication:DEC-005#13
+        - visual-communication:DEC-005#14
+        - visual-communication:DEC-006#4
+        - visual-communication:DEC-006#5
+        - visual-communication:DEC-006#6
+        - visual-communication:DEC-006#8
+        - visual-communication:DEC-008#1
+        - visual-communication:DEC-008#3
+        - visual-communication:DEC-008#4
+        - visual-communication:DEC-008#6
+        - visual-communication:DEC-008#9
+        - visual-communication:DEC-010#2
+        - visual-communication:DEC-010#9
+        - visual-communication:DEC-011#8
+        - visual-communication:DEC-012#3
+        - visual-communication:DEC-012#8
+        - visual-communication:DEC-013#3
+        - visual-communication:DEC-014#1
+        - visual-communication:DEC-014#5
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
         - .pkit/capabilities/visual-communication/components.md#breaking-lines
@@ -195,7 +222,7 @@ Each content file is read against the `fields` and `options` of each component i
 | `list-clash` | A component that draws items of a list declares a key that the list declares too, under the versions the piece locks, and no item carries it, so the content's author learns of the clash before writing the key. | Nothing, until an item needs the key. |
 | `held-clash` | The render held a library version back: under it, an item would carry a key that both its component and its list declare, where it carries none under the lock. The message names the version, the item and the key. | Nothing. To take the version, take the key off the item, and render again. |
 | `held-end` | The render held a library version back: under it, an end of a tie that the lock finds would not be found. The message names the version, the tie and the end. | Nothing. To take the version, end the tie at an item the version draws once, and render again. |
-| `lock-below` | The render moved a library below the version the lock named, within its line. The message says why: no versions at or above those the lock names fit together, or the project holds no version the lock names that the capability reads. | Nothing. |
+| `lock-below` | The render moved a library below the version the lock named, within its line ([the lock](files.md#the-lock)). The message says why: no versions at or above those the lock names fit together, or the project holds no version the lock names that the capability reads. | Nothing. |
 | `lock-kept` | The search for a draft's lock stopped at its bound of combinations judged, and the render kept the lock, with the newest version that fits of each library it does not name yet ([the lock](files.md#the-lock)). The message names the libraries it was choosing among. | Move the lock by hand, or take the versions no piece needs out of the library folder. |
 | `tie-component` | A tie's component, which its own `use` or its list's component field names, takes no ends. A list's default is judged where the pattern lies (`tie-default`). | Name a component that takes ends, or move the item to a list of its own. |
 | `tie-shape` | A tie leaves an end field out, or fills it with another shape than `{item: <key path>}`, with a `point` that is a name where it ends at one. | Give each end field its item. |
