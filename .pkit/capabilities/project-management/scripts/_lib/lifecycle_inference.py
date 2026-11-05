@@ -367,8 +367,8 @@ def state_before_close(
 
 def closing_issue_numbers(pr_body: str) -> list[int]:
     """Issue numbers a PR closes via `Closes/Fixes/Resolves #N` (cross-checked
-    against the checkbox close-gate) — outside its friction answers' section,
-    which closes nothing (DEC-055)."""
+    against the checkbox close-gate) — outside a list of the answers an earlier
+    run left, which closes nothing (DEC-065 point 1)."""
     pattern = re.compile(r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE)
     seen: list[int] = []
     for m in pattern.finditer(friction_answers.strip(pr_body or "")):

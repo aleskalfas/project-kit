@@ -15,6 +15,10 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.anchor_kind_capabilities import RESOLVER, RESOLVING, register_kinds
+from tests.friction_documents import CONFIG, SOURCE, T1, document, friction_config, guide
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "show-pr.py"
 
@@ -741,3 +745,217 @@ def test_mergeable_field_prints_the_bare_value(sp, monkeypatch, capsys) -> None:
     code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "mergeable"], answer)
     assert code == 0
     assert capsys.readouterr().out == "MERGEABLE\n"
+
+
+# --- what land-work tells, for anyone not at land-work (DEC-065 point 2) -------------
+
+HEAD = "c" * 40
+LEFT_AT = "b" * 40
+PR_VIEW = {
+    "number": 99,
+    "title": "x",
+    "state": "OPEN",
+    "headRefOid": HEAD,
+    "headRefName": "feat/42-thing",
+    "baseRefName": "integration",
+    "isCrossRepository": False,
+    "body": (
+        "Closes #42\n\n## What changed in each updated document\n\n"
+        "- `docs/guide.md`: The guide names the flag.\n"
+    ),
+}
+ANSWERS = [
+    {"location": "docs/guide.md", "answer": "updated", "asked": True},
+    {"location": "docs/api.md", "answer": "unchanged", "reason": "Holds.", "asked": True},
+    {"location": "docs/cli.md", "answer": "deferred", "reason": "Until #7.", "asked": True},
+]
+#: What land-work prints of `ANSWERS`, and `--field answers` with it.
+TOLD = (
+    'What changed in docs/guide.md: "The guide names the flag."\n'
+    'Left out of date: docs/cli.md: "Until #7."\n'
+)
+
+
+def _answering(sp, monkeypatch, *, answers=None, problem=None, grants=(), needs_checkout=False):
+    """The change check answering `answers`, or `problem`, and the grant list's change
+    `grants`. Returns each (head, base, source, from_checkout) `derive` was asked for."""
+    asked: list[tuple] = []
+    fa = sp.friction_answers
+
+    def derive(head, base, *, source=None, from_checkout=True):
+        asked.append((head, base, source, from_checkout))
+        if problem is not None:
+            return fa.Derivation(head, problem=problem, needs_checkout=needs_checkout)
+        document = {"base": {"commit": LEFT_AT}, "answers": answers or []}
+        return fa.Derivation(head, document=document, answers=tuple(answers or ()))
+
+    monkeypatch.setattr(fa, "derive", derive)
+    monkeypatch.setattr(fa, "branch_remote", lambda branch: "origin")
+    monkeypatch.setattr(sp.fixers, "change_between", lambda *args: grants)
+    return asked
+
+
+def test_answers_field_is_in_the_valid_fields_list(sp) -> None:
+    assert "answers" in sp.PR_FIELD_NAMES
+
+
+def test_answers_field_prints_what_land_work_tells(sp, monkeypatch, capsys) -> None:
+    """Derived at the PR's head against its base, a stacked PR's included, and no
+    verdict is resolved for it: only what is told is printed, a line each."""
+    asked = _answering(sp, monkeypatch, answers=ANSWERS)
+    code, _calls, resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 0
+    assert capsys.readouterr().out == TOLD
+    assert asked == [
+        (
+            HEAD,
+            "integration",
+            sp.friction_answers.Source("origin", "refs/heads/feat/42-thing"),
+            False,
+        )
+    ]
+    assert resolved == []
+
+
+def test_answers_field_prints_a_grant_change_as_land_work_does(sp, monkeypatch, capsys) -> None:
+    grant = sp.fixers.GrantChange("fixer", "page", True, sp.fixers.GRANTED)
+    _answering(sp, monkeypatch, answers=[], grants=(grant,))
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 0
+    assert capsys.readouterr().out == f"{grant.said()}\n"
+
+
+def test_answers_field_says_so_where_there_is_nothing_to_tell(sp, monkeypatch, capsys) -> None:
+    _answering(sp, monkeypatch, answers=[])
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 0
+    assert capsys.readouterr().out == f"{sp.NOTHING_TOLD_MESSAGE}\n"
+
+
+def test_answers_that_cannot_be_derived_say_why_and_tell_nothing(sp, monkeypatch, capsys) -> None:
+    _answering(sp, monkeypatch, problem="the base could not be fetched")
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 2
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert "the answers at PR #99's head could not be derived: the base could not" in err
+    assert "checkout" not in err
+
+
+def test_a_head_that_needs_its_resolver_says_where_the_answers_can_be_read(
+    sp, monkeypatch, capsys
+) -> None:
+    _answering(sp, monkeypatch, problem="the check refused", needs_checkout=True)
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 2
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert "could not be derived: the check refused" in err
+    assert sp.HEAD_PROGRAMS_MESSAGE.format(head=HEAD[:7]) in err
+
+
+def _head_replacing_its_resolver(
+    make_adopter_repo: MakeAdopterRepo, ran: Path
+) -> tuple[AdopterRepo, str]:
+    """A change whose answers need a registered kind's resolver, and whose head replaces
+    that resolver with one that leaves `ran` behind. The clone is on `main`."""
+    repo = make_adopter_repo()
+    repo.write({CONFIG: friction_config(mode="enforcing"), **SOURCE, "docs/guide.md": guide()})
+    capability = register_kinds(
+        repo.root, "kinds", kinds={"source": "resolve"}, script_body=RESOLVING
+    )
+    repo.write({"sources/alpha.md": "alpha\n"})
+    repo.write({"docs/sourced.md": document("sourced", anchors={"source": ["alpha"]}, at=T1)})
+    repo.commit("base", files=None)
+    repo.checkout("feature", create=True)
+    resolver = capability / RESOLVER
+    planted = resolver.read_text(encoding="utf-8") + f"open({str(ran)!r}, 'w').close()\n"
+    resolver.write_text(planted, encoding="utf-8")
+    repo.write({"sources/alpha.md": "alpha, captured again\n"})
+    repo.commit("the source and its resolver change", files=None)
+    deferred = document(
+        "sourced",
+        anchors={"source": ["alpha"]},
+        at=T1,
+        deferred=[("source", "alpha", "the recapture is checked with the next release")],
+    )
+    repo.commit("defer the source", {"docs/sourced.md": deferred})
+    head = repo.head()
+    repo.checkout("main")
+    return repo, head
+
+
+@pytest.mark.usefixtures("answers_in_files")
+@pytest.mark.process(
+    "the view's route end to end: only a real change check refuses, and only a real "
+    "resolver started from a checkout shows that the mark this test reads means a start"
+)
+def test_the_answers_view_starts_no_program_the_head_holds(
+    sp, make_adopter_repo, pkit_on_path, tmp_path_factory, monkeypatch, capsys
+) -> None:
+    """Read from a clone on `main`, a head that replaced its resolver stops the view:
+    no checkout is made, and the head's program is not started. Without `from_checkout`
+    the same head starts it, which is what the view must not do. And what the view says
+    of a checkout at the head holds: run there, it reads the answers and starts it."""
+    ran = tmp_path_factory.mktemp("outside-the-repository") / "the-head-s-resolver-ran"
+    repo, head = _head_replacing_its_resolver(make_adopter_repo, ran)
+    fa = sp.friction_answers
+    checkouts: list[str] = []
+    checkout = fa._checkout
+
+    def recorded(at: str):
+        checkouts.append(at)
+        return checkout(at)
+
+    monkeypatch.setattr(fa, "_checkout", recorded)
+    view = {**PR_VIEW, "headRefOid": head, "headRefName": "feature", "baseRefName": "main"}
+    capability_root = repo.root / ".pkit" / "capabilities" / "project-management"
+
+    assert sp._told_at_head(view, 99, capability_root) is None
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert sp.HEAD_PROGRAMS_MESSAGE.format(head=head[:7]) in err
+    assert checkouts == []
+    assert not ran.exists()
+
+    found = fa.derive(head, "main")
+    assert found.problem is None, found.problem
+    assert checkouts == [head]
+    assert ran.exists()
+
+    ran.unlink()
+    repo.checkout("feature")
+    assert sp._told_at_head(view, 99, capability_root)
+    assert checkouts == [head]
+    assert ran.exists()
+
+
+def test_a_grant_list_that_cannot_be_read_tells_nothing(sp, monkeypatch, capsys) -> None:
+    _answering(sp, monkeypatch, answers=ANSWERS, grants=sp.fixers.ChangeUnread("no such commit"))
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    assert code == 2
+    out, err = capsys.readouterr()
+    assert out == "" and "the fixers' grant list could not be read: no such commit" in err
+
+
+def test_answers_field_needs_the_head_and_the_base(sp, monkeypatch, capsys) -> None:
+    asked = _answering(sp, monkeypatch, answers=ANSWERS)
+    view = {**PR_VIEW, "baseRefName": ""}
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], view)
+    assert code == 2 and asked == []
+    assert "GitHub named no head or no base for PR #99" in capsys.readouterr().err
+
+
+def test_a_pr_from_a_fork_is_fetched_by_the_ref_its_base_keeps(sp, monkeypatch, capsys) -> None:
+    asked = _answering(sp, monkeypatch, answers=[])
+    monkeypatch.setattr(sp.friction_answers, "base_remote", lambda base: "upstream")
+    view = {**PR_VIEW, "isCrossRepository": True}
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], view)
+    assert code == 0
+    assert asked[0][2] == sp.friction_answers.Source("upstream", "refs/pull/99/head")
+
+
+def test_no_other_view_runs_the_change_check(sp, monkeypatch, capsys) -> None:
+    asked = _answering(sp, monkeypatch, answers=ANSWERS)
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "title"], PR_VIEW)
+    assert code == 0 and asked == []

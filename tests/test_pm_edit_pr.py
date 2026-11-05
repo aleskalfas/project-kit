@@ -119,7 +119,7 @@ def test_closes_applies_to_a_replaced_body(ep, monkeypatch, tmp_path) -> None:
     assert rec.edits[0]["body"].startswith("Closes #42\nCloses #43\n\n## Summary\nrewritten")
 
 
-# ---- the friction answers' section (DEC-055) ---------------------------------------
+# ---- a list of the answers in the description (DEC-065 point 1) ---------------------
 
 FOOTER = (
     "<!-- pkit-provenance:start -->\n\n---\n<sub>🧰 pkit · tree `1` · pm `2`</sub>\n"
@@ -127,33 +127,30 @@ FOOTER = (
 )
 
 
-def _section(ep, reason: str, head: str = "a" * 40) -> str:
-    """The section land-work or open-pr writes, for one answer with `reason`."""
-    entry = {
-        "artefact": "guide",
-        "location": "docs/guide.md",
-        "answer": "unchanged",
-        "anchor": None,
-        "reason": reason,
-        "kept": [],
-        "asked": True,
-        "status": "stands",
-        "new": False,
-    }
-    document = {"base": {"commit": "b" * 40}, "answers": [entry], "unreadable": []}
-    section = ep.friction_answers.render(document, head)
-    assert section is not None
-    return section
+def _section(ep, reason: str, head: str = "a" * 40, heading: str | None = None) -> str:
+    """The section an earlier run of land-work or open-pr wrote, for one answer with
+    `reason` (DEC-055 point 1)."""
+    fa = ep.friction_answers
+    return "\n".join(
+        [
+            heading or fa.HEADING,
+            "",
+            f"{fa.MARKER_START} head={head} base={'b' * 40} -->",
+            f'1. `docs/guide.md` — **still accurate**: "``{reason}``"',
+            fa.MARKER_END,
+        ]
+    )
 
 
-def _carrying(ep, reason: str = "The guide holds; fixes #99 is elsewhere.") -> tuple[str, str]:
-    section = _section(ep, reason)
-    return section, f"{PR_BODY}\n{section}\n\n{FOOTER}"
+def _carrying(ep, reason: str = "The guide holds; fixes #99 is elsewhere.") -> str:
+    return f"{PR_BODY}\n{_section(ep, reason)}\n\n{FOOTER}"
 
 
 #: The section's heading, and the one an earlier run wrote it under.
 HEADING = "## Documentation this change affects"
 FORMER_HEADING = "## Friction answers"
+#: What edit-pr says when it drops a section.
+DROPPED = f"warn: the `{HEADING}` section is dropped"
 
 
 def _sections(body: str) -> int:
@@ -161,10 +158,12 @@ def _sections(body: str) -> int:
 
 
 @pytest.mark.parametrize("how", ["--body", "--body-file"])
-def test_a_replaced_body_keeps_the_section_the_description_carried(
-    ep, monkeypatch, tmp_path, how
+def test_a_replaced_body_drops_the_section_the_description_and_the_body_carried(
+    ep, monkeypatch, tmp_path, capsys, how
 ) -> None:
-    section, body = _carrying(ep)
+    """No command carries a list across an edit (DEC-065 point 1): the one the
+    description carried and the one the supplied body carries are both dropped."""
+    body = _carrying(ep)
     supplied = "Closes #42\n\n## Summary\nrewritten\n\n## Doc impact\n- [x] none\n\n" + _section(
         ep, "A list an agent wrote.", head="c" * 40
     )
@@ -176,26 +175,36 @@ def test_a_replaced_body_keeps_the_section_the_description_carried(
     assert rec.rc == 0
     written = rec.edits[0]["body"]
     assert "rewritten" in written and "A list an agent wrote." not in written
-    assert _sections(written) == 1
-    assert f"- [x] none\n\n{section}\n\n<!-- pkit-provenance:start -->" in written
+    assert _sections(written) == 0 and "The guide holds" not in written
+    assert "- [x] none\n\n<!-- pkit-provenance:start -->" in written
+    assert DROPPED in capsys.readouterr().err
 
 
-def test_appended_text_lands_outside_the_section(ep, monkeypatch) -> None:
-    section, body = _carrying(ep)
-    rec = _run(ep, monkeypatch, ["7", "--append", "## Notes\n\nA later note.", "--yes"], body=body)
+def test_appended_text_drops_the_section(ep, monkeypatch, capsys) -> None:
+    rec = _run(
+        ep, monkeypatch, ["7", "--append", "## Notes\n\nA later note.", "--yes"], body=_carrying(ep)
+    )
     assert rec.rc == 0
     written = rec.edits[0]["body"]
-    assert f"A later note.\n\n{section}\n\n<!-- pkit-provenance:start -->" in written
-    assert _sections(written) == 1
+    assert "A later note.\n\n<!-- pkit-provenance:start -->" in written
+    assert _sections(written) == 0
+    assert DROPPED in capsys.readouterr().err
 
 
-def test_closes_reads_no_reference_in_the_section_and_keeps_it(ep, monkeypatch) -> None:
-    section, body = _carrying(ep)
+def test_a_description_with_no_section_draws_no_warning(ep, monkeypatch, capsys) -> None:
+    rec = _run(ep, monkeypatch, ["7", "--append", "A note.", "--yes"], body=f"{PR_BODY}\n{FOOTER}")
+    assert rec.rc == 0
+    assert "A note." in rec.edits[0]["body"]
+    assert DROPPED not in capsys.readouterr().err
+
+
+def test_closes_reads_no_reference_in_the_section_and_drops_it(ep, monkeypatch) -> None:
+    body = _carrying(ep)
     rec = _run(ep, monkeypatch, ["7", "--closes", "99", "--yes"], body=body, known_issues=(42, 99))
     assert rec.rc == 0
     written = rec.edits[0]["body"]
     assert written.startswith("Closes #42\nCloses #99\n\n## Summary")
-    assert section in written and _sections(written) == 1
+    assert _sections(written) == 0
 
 
 def test_a_closing_reference_only_in_the_section_meets_no_requirement(ep) -> None:
@@ -205,122 +214,65 @@ def test_a_closing_reference_only_in_the_section_meets_no_requirement(ep) -> Non
     assert labels == ["body.closes", "body.doc-impact"]
 
 
-def test_of_two_lists_the_latest_is_kept_and_the_other_dropped(ep, monkeypatch, capsys) -> None:
-    """Every write places its list last, so of two the last is the latest: edit-pr
-    carries it, drops the other, and says so."""
+def test_of_two_lists_both_are_dropped(ep, monkeypatch) -> None:
     stale = _section(ep, "An earlier head's words.", head="e" * 40)
     latest = _section(ep, "The latest words.")
     body = f"{PR_BODY}\n{stale}\n\n{latest}\n\n{FOOTER}"
     rec = _run(ep, monkeypatch, ["7", "--append", "A note.", "--yes"], body=body)
     assert rec.rc == 0
     written = rec.edits[0]["body"]
-    assert "The latest words." in written and "An earlier head's words." not in written
-    assert _sections(written) == 1
-    assert "edit-pr keeps only the latest list the description carried" in capsys.readouterr().err
+    assert "words." not in written and _sections(written) == 0
 
 
-def test_a_section_typed_by_hand_is_dropped(ep, monkeypatch, capsys) -> None:
-    section, body = _carrying(ep)
-    hand = f"{HEADING}\n\n1. docs/guide.md — unchanged: as I recall it\n"
-    rec = _run(ep, monkeypatch, ["7", "--append", hand, "--yes"], body=body)
+@pytest.mark.parametrize("heading", [HEADING, FORMER_HEADING], ids=["heading", "former heading"])
+def test_a_section_typed_under_the_heading_stays(ep, monkeypatch, capsys, heading) -> None:
+    """Only a region a command wrote is dropped: no list remains for a person's section
+    to be mistaken for (DEC-065 point 1)."""
+    hand = f"{heading}\n\nIn the author's words.\n"
+    rec = _run(ep, monkeypatch, ["7", "--append", hand, "--yes"], body=f"{PR_BODY}\n{FOOTER}")
+    assert rec.rc == 0
+    assert "In the author's words." in rec.edits[0]["body"]
+    assert DROPPED not in capsys.readouterr().err
+
+
+def test_a_start_marker_with_no_end_warns_and_stays(ep, monkeypatch, capsys) -> None:
+    marker = ep.friction_answers.MARKER_START
+    quoted = f"```\n{marker} head=x base=y -->\n```\n\nAfter the quote.\n"
+    rec = _run(ep, monkeypatch, ["7", "--append", quoted, "--yes"], body=f"{PR_BODY}\n{FOOTER}")
     assert rec.rc == 0
     written = rec.edits[0]["body"]
-    assert "as I recall it" not in written and section in written and _sections(written) == 1
-    assert f"drops every other `{HEADING}` section" in capsys.readouterr().err
+    assert marker in written and "After the quote." in written
+    assert f"warn: {ep.friction_answers.ORPHAN_WARNING}" in capsys.readouterr().err
 
 
-def test_a_section_typed_by_hand_under_the_former_heading_is_dropped(ep, monkeypatch) -> None:
-    section, body = _carrying(ep)
-    hand = f"{FORMER_HEADING}\n\n1. docs/guide.md — unchanged: as I recall it\n"
-    rec = _run(ep, monkeypatch, ["7", "--append", hand, "--yes"], body=body)
-    assert rec.rc == 0
-    written = rec.edits[0]["body"]
-    assert "as I recall it" not in written and FORMER_HEADING not in written
-    assert section in written and _sections(written) == 1
-
-
-def test_a_list_an_earlier_run_left_under_the_former_heading_is_carried_under_the_heading(
-    ep, monkeypatch, capsys
-) -> None:
-    """The markers identify the list: edit-pr carries the region an earlier run
-    wrote under the former heading, its words unchanged, and places it under the
-    heading — no stray former heading, and no warning, since it dropped nothing."""
-    section = _section(ep, "Words of an earlier run.")
-    earlier = FORMER_HEADING + section.removeprefix(HEADING)
+def test_a_list_an_earlier_run_left_under_the_former_heading_is_dropped(ep, monkeypatch) -> None:
+    """The markers identify the list, and the former heading directly above it goes
+    with it: no stray former heading is left."""
+    earlier = _section(ep, "Words of an earlier run.", heading=FORMER_HEADING)
     body = f"{PR_BODY}\n{earlier}\n\n{FOOTER}"
     rec = _run(ep, monkeypatch, ["7", "--append", "A note.", "--yes"], body=body)
     assert rec.rc == 0
     written = rec.edits[0]["body"]
-    assert FORMER_HEADING not in written and _sections(written) == 1
-    assert f"A note.\n\n{section}\n\n<!-- pkit-provenance:start -->" in written
-    assert "edit-pr keeps only the latest list" not in capsys.readouterr().err
+    assert _sections(written) == 0 and "Words of an earlier run." not in written
+    assert "A note.\n\n<!-- pkit-provenance:start -->" in written
 
 
-# ---- the author's sentences (DEC-055 points 1 and 2) ---------------------------------
+# ---- the author's sentences (DEC-065 points 1 and 3) ---------------------------------
 
 SENTENCES = "## What changed in each updated document"
 
 
-def _updated_section(ep, sentences: dict[str, str] | None = None) -> str:
-    """The list for a change that updated `docs/guide.md` and holds `docs/api.md`."""
-    entries = [
-        {"location": "docs/guide.md", "answer": "updated", "changed": []},
-        {"location": "docs/api.md", "answer": "unchanged", "reason": "Holds."},
-    ]
-    document = {"base": {"commit": "b" * 40}, "answers": entries, "unreadable": []}
-    section = ep.friction_answers.render(document, "a" * 40, (), sentences or {})
-    assert section is not None
-    return section
-
-
-def test_an_edit_gives_each_updated_document_its_sentence_as_it_now_stands(ep, monkeypatch) -> None:
-    """edit-pr derives nothing: the check's words are carried as they were, and each
-    updated document's sentence is the one the edited body's own section now has."""
-    before = _updated_section(ep)
-    body = f"{PR_BODY}\n{before}\n\n{FOOTER}"
+def test_an_edit_keeps_the_author_s_sentences_as_written(ep, monkeypatch, capsys) -> None:
+    """The sentences stay in the author's own section. edit-pr derives nothing, so it
+    warns of no updated document given no sentence: review-work refuses one."""
     said = f"{SENTENCES}\n\n- `docs/guide.md`: The guide names the new flag.\n"
+    body = f"{PR_BODY}\n{_section(ep, 'Holds.')}\n\n{FOOTER}"
     rec = _run(ep, monkeypatch, ["7", "--append", said, "--yes"], body=body)
     assert rec.rc == 0
     written = rec.edits[0]["body"]
-    after = _updated_section(ep, {"docs/guide.md": "The guide names the new flag."})
-    assert f"{said}\n{after}\n\n<!-- pkit-provenance:start -->" in written
-    assert "has not said" not in written and _sections(written) == 1
-
-
-def test_an_updated_document_given_no_sentence_is_a_warning_and_the_edit_is_written(
-    ep, monkeypatch, capsys
-) -> None:
-    """edit-pr only warns: an edit that leaves an updated document with no sentence
-    is written, its list says so, and the validation names the document and the
-    form a sentence takes. The move to review refuses it (DEC-055 point 3,
-    `test_pm_review_work`)."""
-    body = f"{PR_BODY}\n{_updated_section(ep)}\n\n{FOOTER}"
-    rec = _run(ep, monkeypatch, ["7", "--append", "A note.", "--yes"], body=body)
-    assert rec.rc == 0
-    assert "(what changed: the pull request's author has not said)" in rec.edits[0]["body"]
+    assert f"{said}\n<!-- pkit-provenance:start -->" in written
     out = capsys.readouterr().out
-    assert "[hard-reject]" not in out and "[refused]" not in out
-    assert (
-        "  [warning] body.sentences: docs/guide.md is marked updated in the description's "
-        f"list, and the description gives no sentence on what changed in it — under "
-        f'`{SENTENCES}`, write one on a line of its own as "- `path`: sentence", starting in '
-        "the line's first column, the document in a code span as the list names it"
-    ) in out.splitlines()
-
-
-def test_a_sentence_the_list_must_not_hold_leaves_its_sentences_as_they_were(
-    ep, monkeypatch, capsys
-) -> None:
-    before = _updated_section(ep, {"docs/guide.md": "Old words."})
-    body = f"{PR_BODY}\n{before}\n\n{FOOTER}"
-    said = f"{SENTENCES}\n\n- `docs/guide.md`: This fixes #12.\n"
-    rec = _run(ep, monkeypatch, ["7", "--append", said, "--yes"], body=body)
-    assert rec.rc == 0
-    written = rec.edits[0]["body"]
-    assert f"{said}\n{before}\n\n<!-- pkit-provenance:start -->" in written
-    err = capsys.readouterr().err
-    assert "the sentence on what changed in docs/guide.md reads as a closing reference" in err
-    assert "land-work refuses the list until then" in err
+    assert "validation: clean (no findings)." in out
 
 
 @pytest.mark.parametrize(
@@ -338,8 +290,7 @@ def test_an_item_it_cannot_read_is_a_warning_naming_its_line_and_the_form(
     """On PR #1519 four sentences in bold read as none, while edit-pr said
     "validation: clean". The edit is still written; the validation names the line
     and the form a sentence takes."""
-    before = _updated_section(ep)
-    body = f"{PR_BODY}\n{before}\n\n{FOOTER}"
+    body = f"{PR_BODY}\n{_section(ep, 'Holds.')}\n\n{FOOTER}"
     said = f"{SENTENCES}\n\n{item}\n"
     rec = _run(ep, monkeypatch, ["7", "--append", said, "--yes"], body=body)
     assert rec.rc == 0
@@ -354,6 +305,5 @@ def test_an_item_it_cannot_read_is_a_warning_naming_its_line_and_the_form(
         f"  [warning] body.sentences: line {line} of the description, under `## What changed in "
         f'each updated document`, is not read as a sentence: "{item}" — write it as "- `path`: '
         "sentence\", starting in the line's first column, the document in a code span as the "
-        "list names it"
+        "change check names it"
     ) in out.splitlines()
-    assert "(what changed: the pull request's author has not said)" in written

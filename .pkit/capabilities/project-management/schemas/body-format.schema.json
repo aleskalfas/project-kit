@@ -51,7 +51,7 @@
     },
     "friction_answers_marker": {
       "$ref": "#/$defs/friction_answers_marker_block",
-      "description": "Shape and semantics of a pull request's `## Documentation this change affects` section (DEC-055): the change check's list of the answers the change wrote, in plain words, each updated document with its author's sentence on what changed, a sentinel-delimited region the capability's scripts write and every reader of the body strips before it reads."
+      "description": "Shape and semantics of the `## Documentation this change affects` section an earlier run of the capability's scripts wrote into a pull request's body (DEC-055, DEC-065): a sentinel-delimited region no script writes any longer, which every reader of the body strips before it reads. The block also names the section where the change's author writes a sentence on what changed in each updated document."
     },
     "checkbox_rules": {
       "$ref": "#/$defs/checkbox_rules_block",
@@ -170,7 +170,7 @@
         "start_marker": {
           "type": "string",
           "minLength": 1,
-          "description": "How the line that opens the region begins: an HTML comment that goes on to name the head and the merge-base the list is for."
+          "description": "How the line that opens the region begins: an HTML comment that goes on to name the head and the merge-base the list was for."
         },
         "end_marker": {
           "type": "string",
@@ -180,7 +180,7 @@
         "position": {
           "type": "string",
           "minLength": 1,
-          "description": "Where the section sits — last, before the provenance footer."
+          "description": "Where an earlier run wrote the section: last, before the provenance footer."
         },
         "agent_managed": {
           "type": "boolean",
@@ -198,7 +198,7 @@
         "sentences_heading": {
           "type": "string",
           "pattern": "^## .+$",
-          "description": "The heading of the body's own section where the change's author says what changed in each document the change revalidated as `updated`, one sentence each. The author's text, kept in the body between writes; the scripts read it and give each sentence beside its document in the list (DEC-055 point 1)."
+          "description": "The heading of the body's own section where the change's author says what changed in each document the change revalidated as `updated`, one sentence each. The author's text, which the scripts read and never write (DEC-065 point 1)."
         },
         "sentences_rule": {
           "type": "string",
