@@ -4,7 +4,8 @@ custom:
   category: Changed
 body: >
   `SAN` 2.0.0 accepts its twelve judgement rules, RS-SAN-003 to RS-SAN-014,
-  together (#1727, software-analysis DEC-003 point 10 and DEC-005). They judge
+  together (#1727, software-analysis DEC-005). Its two diagram rules follow
+  in a later major, which you review apart (software-analysis DEC-008). They judge
   a use case's actors and goal, what each artefact's anchors name, a
   requirement against its records, the source of each goal, minimal
   guarantee and requirement, the domain concepts the glossary defines, what
@@ -17,7 +18,9 @@ body: >
   behind its set, so no rule of `SAN` binds through it and `pkit validate`
   fails on the pin until you re-pin it at `SAN@2`. Moving the pin brings
   every artefact the rules bind on under them, and the rule-set reviewer
-  judges each break the rules' text settles as that change's. Mend the
+  judges each break the rules' text settles as that change's. `pkit validate`
+  also fails on each departure of a use case's `after`, which RS-SAN-009
+  checks. Mend the
   analysis first, or leave part of it out of your set's scope until it is
   mended, as the README's "Moving your pin" says. No migration ships: only
   the project can review its analysis against the new rules.

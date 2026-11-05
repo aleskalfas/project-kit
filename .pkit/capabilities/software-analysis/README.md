@@ -971,7 +971,7 @@ Where you keep several analyses, it also fails on (DEC-001 points 2 and 3):
 - **a term that takes a name of an analysis it builds on** — the name or a noun form of a term in force there, listed by the head or not, or a name such a term replaces. For an analysis your settings do not list, such as one in another repository, the names its head lists stand for its terms. The rest of that analysis's names are a reviewer's, under `RS-SAN-012` (DEC-001 point 2);
 - **two analyses it builds on that share a name** — its text reads both, so one of the two is renamed in its own analysis. The finding stands at its glossary's head.
 
-Where `RS-SAN-009` binds, it holds each use case in force that writes `after` (DEC-001 points 1 and 12). Accepted, each departure is an error. Proposed, as the rule ships, `--preview` reports it where the rule would bind, and the normal check says it checked nothing. It fails on:
+Where `RS-SAN-009` binds, it holds each use case in force that writes `after` (DEC-001 points 1 and 12). The rule is accepted, so each departure is an error, and `pkit validate` fails on it. While a rule is proposed, `--preview` reports it where the rule would bind, and the normal check says it checked nothing. It fails on:
 
 - **a producer that is no use case in force of its own analysis, nor `environment`** (what a use case starts from, in [The artefacts](#the-artefacts), above);
 - **an `after` its words do not match** (what a use case starts from, in [The artefacts](#the-artefacts), above). A line of *Preconditions* that opens with no producer breaks it, and so does `None.` beside an `after`;
@@ -1335,7 +1335,7 @@ In an analysis that builds on another, an actor of that analysis follows your ow
   - **A break that starts outside a use case.** A change that records a decision answering a use case, or adds a view that realises it, alters no use case. So the rule-set reviewer does not judge the use case's missing anchor there (COR-057 point 1). Add that anchor in the same change.
   - **A break that starts in the glossary.** A change that renames, withdraws or redefines a term alters only the term. So the rule-set reviewer judges none of the artefacts that still use its old name or meaning (COR-057 point 1). A rename the rule-set reviewer judges on the term itself, which breaks `RS-SAN-008` while an artefact in force uses a name it replaces. Find each use of the term's name, and of the names it replaces, and mend them in the same change.
   - **A break that starts outside a requirement.** A change that accepts or changes a record a requirement rests on alters no requirement. So the rule-set reviewer judges no contradiction there (COR-057 point 1). The friction check flags the requirement instead, so check it against the record when you revalidate it (COR-050).
-  - **Moving your pin.** Accepting a judgement rule gives `SAN` a new major. The change that moves your set's pin to it brings every artefact the rule binds on under the rule. Each break the rule's text settles is then that change's, and withholds the rule-set reviewer's approval (COR-060 point 1). It weighs most for `RS-SAN-007`, since every goal, guarantee and requirement without a source breaks it, and for `RS-SAN-008`, since every concept of your domain, in the rule's sense, that the glossary does not define breaks it. Besides mending each in that change, COR-060 point 2 gives these ways out:
+  - **Moving your pin.** Accepting a judgement rule gives `SAN` a new major. The change that moves your set's pin to it brings every artefact the rule binds on under the rule. Each break the rule's text settles is then that change's, and withholds the rule-set reviewer's approval (COR-060 point 1). Where a rule declares a check, as `RS-SAN-009` does for a use case's `after`, `pkit validate` fails on each departure too. It weighs most for `RS-SAN-007`, since every goal, guarantee and requirement without a source breaks it, and for `RS-SAN-008`, since every concept of your domain, in the rule's sense, that the glossary does not define breaks it. Besides mending each in that change, COR-060 point 2 gives these ways out:
     - leave a file out of your set's scope until it is mended, such as one area at a time, in the order the analysis is built
     - propose a change to the rule, or do not inherit `SAN`
     - where a gate requires the reviewer, override a judgement held wrong, as that gate allows
@@ -1803,7 +1803,7 @@ Shipped: the decision; the method rule set `SAN`, its format rule and its append
 
 ## Citing this capability's decisions
 
-`[software-analysis:DEC-001-software-analysis-discipline]`, `[software-analysis:DEC-002-analysis-requirements]`, `[software-analysis:DEC-003-analysis-diagrams]`, `[software-analysis:DEC-004-domain-model-views]`, `[software-analysis:DEC-005-finding-functionality]` and `[software-analysis:DEC-007-path-edges]`.
+`[software-analysis:DEC-001-software-analysis-discipline]`, `[software-analysis:DEC-002-analysis-requirements]`, `[software-analysis:DEC-003-analysis-diagrams]`, `[software-analysis:DEC-004-domain-model-views]`, `[software-analysis:DEC-005-finding-functionality]`, `[software-analysis:DEC-007-path-edges]` and `[software-analysis:DEC-008-diagram-rules-later-major]`.
 
 ## Dependencies
 
