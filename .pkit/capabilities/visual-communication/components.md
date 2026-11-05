@@ -13,6 +13,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
         - .pkit/capabilities/visual-communication/scripts/_lib/scene.py
         - .pkit/capabilities/visual-communication/scripts/_lib/text.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/env.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/checks.py
