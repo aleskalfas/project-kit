@@ -27,4 +27,10 @@ pkit:
 
 **Rationale:** The adopter may declare the [documentation roots](../../glossary.md#term-documentation-root--documentation-root) before the [project](../../glossary.md#term-project--project) holds any document. [COR-049 point 7](../../../../../.pkit/decisions/core/COR-049-documentation-roots.md#7-visible-and-checked) decides that such a root "produces a warning, not a failure, since a fresh project may have no documentation folder".
 
-The warning must say which root it means, that the folder is missing, and that the default applies to readers until the folder exists. So the adopter learns from the warning alone what a reader of the root gets meanwhile, and its citation says why this is no failure.
+The warning must say:
+
+- which root it means
+- that the folder is missing
+- that the default applies to readers until the folder exists
+
+So the adopter learns from the warning alone what a reader of the root gets meanwhile, and its citation says why this is no failure.
