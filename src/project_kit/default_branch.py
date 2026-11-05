@@ -207,6 +207,14 @@ class Base:
     resolved: str | None
     problem: str | None
 
+    @property
+    def warning(self) -> str | None:
+        """What a reader of a named base says of it, on standard error: a base read from
+        the local branch, which can lag the shared one (point 2)."""
+        if self.resolved != RESOLVED_LOCAL:
+            return None
+        return _local(f"the base {self.ref!r}", self.ref)
+
     def as_json(self) -> dict[str, Any]:
         return {
             "ref": self.ref,
@@ -255,8 +263,8 @@ class Settled:
         if found.source == DEFAULT_BRANCH:
             return branch.warnings
         said: list[str] = [branch.warning] if branch.warning else []
-        if found.resolved == RESOLVED_LOCAL:
-            said.append(_local(f"the base {found.ref!r}", found.ref))
+        if found.warning is not None:
+            said.append(found.warning)
         return said
 
     def as_json(self) -> dict[str, Any]:
@@ -471,6 +479,32 @@ def _named(target_root: Path, ref: str, source: str, head_rev: str = "HEAD") -> 
             f"{CHECK_BASE_ENV}.",
         )
     return _compared(target_root, ref, source, tip, None, head_rev)
+
+
+def branch_named(target_root: Path, ref: str) -> str | None:
+    """The branch a base named for a run names, or `None` where it names none, such as a
+    commit or a tag. A remote's copy counts by its branch's name, so `origin/main` and
+    `refs/remotes/origin/main` name `main`. It is read from the name as given and resolves
+    no branch, so a reader that must tell a branch by its name alone asks here (ADR-081
+    point 3)."""
+    if ref.startswith("refs/heads/"):
+        return ref.removeprefix("refs/heads/")
+    tracking = ref.removeprefix("refs/remotes/")
+    if tracking != ref or commit_of(target_root, f"refs/remotes/{ref}") is not None:
+        return _without_remote(target_root, tracking)
+    if is_branch_name(ref) and _branch_refs(target_root, ref).known:
+        return ref
+    return None
+
+
+def _without_remote(target_root: Path, tracking: str) -> str:
+    """A remote-tracking name without its remote, which may hold a slash of its own."""
+    listed = _git(target_root, "remote")
+    remotes = listed.stdout.split() if listed is not None and listed.returncode == 0 else []
+    for remote in sorted(remotes, key=len, reverse=True):
+        if tracking.startswith(f"{remote}/"):
+            return tracking.removeprefix(f"{remote}/")
+    return tracking.partition("/")[2] or tracking
 
 
 def _compared(
