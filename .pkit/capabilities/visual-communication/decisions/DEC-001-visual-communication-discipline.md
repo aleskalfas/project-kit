@@ -104,7 +104,7 @@ Some pieces need what the engine's tools cannot compute, such as items placed on
 - **Who runs it, and what it writes.** A person or an agent runs a program: a *helper*, which is a script of the project's own, or one of the capability's producers (point 2). It writes a local component, as data, or a picture.
 - **Checked like everything else.** Its output is kept beside the piece. A local component it writes holds no raw values and takes its text from the content. It places its parts by formulas, or is written once for each scene it is drawn in, so it fits each language and set of fonts. A picture takes its values from the brand alone, holds none of the piece's words, and may name points in its pixels, so the piece places a label at one as its own text.
 - **A record of its inputs says when its output is stale,** so the program runs again when any of them changes.
-- **The engine runs no helper, no producer and no other program,** and reads neither the machine's fonts nor the network. It computes only from the project's files, so the same files give the same scene on every machine, and its check can run within validation.
+- **The engine runs no helper, no producer and no other program,** and reads neither the machine's fonts nor the network. It computes only from the project's files and the facts of an export, so the same files and facts give the same scene on every machine. Its check takes stand-ins for the facts no file holds, so it can run within validation (refinement per [visual-communication:DEC-016-what-an-export-reads]).
 - **A helper needed again and again** is a sign that the engine lacks a general tool (point 4).
 
 ### 9. What is outside the capability
