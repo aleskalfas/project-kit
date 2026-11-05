@@ -84,6 +84,7 @@ TERM-code-to-doc-mapping:
           - .pkit/capabilities/project-management/scripts/check-doc-mapping.py
           - .pkit/capabilities/project-management/schemas/doc-check.schema.json
         record:
+          - project-management:DEC-015
           - project-management:DEC-053#1
           - project-management:DEC-053#5
           - living-docs:DEC-001#8

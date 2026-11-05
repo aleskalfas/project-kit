@@ -36,7 +36,7 @@ classDiagram
   OnboardingPlan : documentation spaces
   OnboardingPlan : splits and rewrites
   OnboardingPlan : anchors
-  OnboardingPlan : code-to-doc mappings
+  OnboardingPlan : code-to-doc mapping entries
   class Page
   class Reader
   Proposal "*" --> "*" Page : edits
@@ -118,7 +118,7 @@ An onboarding plan says how a project's existing documents come into its [docume
 - which documentation space each existing document belongs to ([DEC-001 point 8](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation))
 - how pages are split, merged or rewritten for their [readers](../glossary.md#term-reader--reader) (DEC-001 point 8)
 - which anchors each statement should carry (DEC-001 point 8)
-- which of the project's [code-to-doc mappings](../glossary.md#term-code-to-doc-mapping--code-to-doc-mapping) become [page](../glossary.md#term-page--page) anchors, where it keeps any (DEC-001 point 8)
+- which entries of the project's [code-to-doc mapping](../glossary.md#term-code-to-doc-mapping--code-to-doc-mapping) become [page](../glossary.md#term-page--page) anchors, where it keeps one (DEC-001 point 8)
 
 **Relations:**
 

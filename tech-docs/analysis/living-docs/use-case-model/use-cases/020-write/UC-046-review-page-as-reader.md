@@ -33,7 +33,7 @@ pkit:
         - living-docs:DEC-002#7
         - living-docs:DEC-002#8
         - living-docs:DEC-002#9
-        - ADR-004#5
+        - ADR-060#6
         - COR-013
         - COR-017
         - COR-031
@@ -73,7 +73,7 @@ pkit:
 
 - The [project](../../../../core/glossary.md#term-project--project) has living-docs installed, or registered in place where living-docs is developed, and the [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys its `living-docs` [agent definition](../../../../core/glossary.md#term-agent-definition--agent-definition) ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md), [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-031](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md)).
 - The [backbone](../../../../core/glossary.md#term-backbone--backbone) resolves the [readers](../../../glossary.md#term-reader--reader) [data point](../../../../core/glossary.md#term-data-point--data-point) from its default, the project's file and each [capability](../../../../core/glossary.md#term-capability--capability) that fills it ([COR-052](../../../../../../.pkit/decisions/core/COR-052-slots.md)). It answers where each [rule](../../../../core/glossary.md#term-rule--rule) binds ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
-- Nothing at run time confines the agent to the [agent workspace](../../../../core/glossary.md#term-agent-workspace--agent-workspace). Its definition grants no tool that edits a file in place and owns no path (COR-013). Its Write and its Bash still reach any file, since no confinement holds for one agent alone ([ADR-004 point 5](../../../../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#5-no-per-agent-confinement)).
+- In a session, nothing at run time confines the agent to the [agent workspace](../../../../core/glossary.md#term-agent-workspace--agent-workspace). The [system](../../../../core/glossary.md#term-system--system) only stops prompting for writes there ([ADR-060 point 6](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#6-realised-by-the-hook-never-as-a-settings-rule)). The `living-docs` agent definition grants no tool that edits a file in place and owns no path (COR-013).
 
 **Trigger:** The developer wants to know whether a [page](../../../glossary.md#term-page--page) serves the [reader](../../../glossary.md#term-reader--reader) it names, such as before the page is published.
 

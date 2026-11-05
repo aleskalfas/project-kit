@@ -39,7 +39,7 @@ pkit:
         - COR-050#13
         - COR-062#1
         - COR-064#1
-        - ADR-004#5
+        - ADR-060#6
         - COR-009
         - ADR-061#3
         - PRJ-002#D1
@@ -74,7 +74,7 @@ pkit:
 - The history at hand reaches the page's last [answer](../../../../core/glossary.md#term-answer--answer), as those checks need it (COR-050 point 5).
 - An answer on a page is a person's decision, or that of the delegate a person named. The developer gives it once the diff is applied, as `core:UC-002` describes ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation), [COR-062 point 1](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files) and [COR-064 point 1](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#1-the-answers-a-delegate-decides)).
 - Where the project grants the agent the [artefact type](../../../../core/glossary.md#term-artefact-type--artefact-type) `living-docs:page`, a work-tracking [capability](../../../../core/glossary.md#term-capability--capability)'s command may start it with nobody watching. That capability passes the run its brief, gathers the [proposals](../../../glossary.md#term-proposal--proposal), and applies the ones the person accepts (project-management DEC-056 points [3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers) and [6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)).
-- Nothing at run time confines the agent to the [agent workspace](../../../../core/glossary.md#term-agent-workspace--agent-workspace). Its definition grants no tool that edits a file in place and owns no path (COR-013). Its Write and its Bash still reach any file, since no confinement holds for one agent alone ([ADR-004 point 5](../../../../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#5-no-per-agent-confinement)).
+- In a session, nothing at run time confines the agent to the [agent workspace](../../../../core/glossary.md#term-agent-workspace--agent-workspace). The [system](../../../../core/glossary.md#term-system--system) only stops prompting for writes there ([ADR-060 point 6](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#6-realised-by-the-hook-never-as-a-settings-rule)). The `living-docs` agent definition grants no tool that edits a file in place and owns no path (COR-013).
 
 **Trigger:** The [change check](../../../../core/glossary.md#term-change-check--change-check) or the [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check) names a [page](../../../glossary.md#term-page--page) stale or deferred, and the developer wants its fix.
 

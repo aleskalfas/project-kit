@@ -22,7 +22,7 @@ pkit:
         - living-docs:DEC-001#4
         - living-docs:DEC-001#8
         - project-management:DEC-053
-        - ADR-004#5
+        - ADR-060#6
         - COR-013
         - COR-017
         - COR-031
@@ -60,7 +60,7 @@ pkit:
 - The project's [declared surface](../../../../core/glossary.md#term-declared-surface--declared-surface) names what its documentation ought to cover, so the [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check) measures what no [page](../../../glossary.md#term-page--page) anchors (COR-050 points [8](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#8-two-measures-not-failures) and [14](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#14-project-settings)).
 - Where a work-tracking [capability](../../../../core/glossary.md#term-capability--capability) keeps a [code-to-doc mapping](../../../glossary.md#term-code-to-doc-mapping--code-to-doc-mapping), it gives the mapping through its documentation-check [data point](../../../../core/glossary.md#term-data-point--data-point) ([project-management DEC-053](../../../../../../.pkit/capabilities/project-management/decisions/DEC-053-doc-check-slot.md)). Without one, the agent has no mapping to read.
 - A page new in a [change](../../../../core/glossary.md#term-change--change) counts as answered there. A change that alters the anchors of a document with front matter asks it for an [answer](../../../../core/glossary.md#term-answer--answer) in the same change ([COR-050 point 6](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)).
-- Nothing at run time confines the agent to the [agent workspace](../../../../core/glossary.md#term-agent-workspace--agent-workspace). Its definition grants no tool that edits a file in place and owns no path (COR-013). Its Write and its Bash still reach any file, since no confinement holds for one agent alone ([ADR-004 point 5](../../../../../architecture/decisions/ADR-004-autonomy-intent-confinement.md#5-no-per-agent-confinement)).
+- In a session, nothing at run time confines the agent to the [agent workspace](../../../../core/glossary.md#term-agent-workspace--agent-workspace). The [system](../../../../core/glossary.md#term-system--system) only stops prompting for writes there ([ADR-060 point 6](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#6-realised-by-the-hook-never-as-a-settings-rule)). The `living-docs` agent definition grants no tool that edits a file in place and owns no path (COR-013).
 
 **Trigger:** The adopter installs living-docs on a [project](../../../../core/glossary.md#term-project--project) that has documentation already.
 
