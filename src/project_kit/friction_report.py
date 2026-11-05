@@ -690,8 +690,10 @@ def _explained(
         )
     elif kind is _Kind.WHOLE_AND_PARTS and anchor is not None:
         clears = (
-            f"nothing is owed; remove {_label(anchor)} from the block where the artefact rests "
-            f"only on those parts, or the anchors on them where it rests on all of it, then "
+            f"nothing is owed; remove the anchors on its parts from the block, which loses no "
+            f"flag and no ask but gives up a deferral or revisit of one part, the report when a "
+            f"part goes and the narrower explanation, or remove {_label(anchor)} where the "
+            f"artefact rests on those parts alone, which misses a change outside them; then "
             f"revalidate (a changed anchor list needs a revalidation)"
         )
     elif kind is _Kind.UNREACHABLE:

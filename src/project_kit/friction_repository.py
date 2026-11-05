@@ -93,9 +93,9 @@ count (`_Flags`, `_driving`, ADR-080), a finding each, which the human views
 show as one for the artefact (`over_broad_runs`);
 *shared-id* — an artefact anchor on an id two artefacts share, read as naming
 the first in walk order and judged so, warned of and never failed;
-*whole-and-parts* — an anchor on a target whole beside anchors on the target's
-parts, read from HEAD alone and owing nothing (`_Judge.whole_and_parts`, ADR-080
-point 5). An
+*whole-and-parts* — an anchor on a record or a document whole beside anchors on
+its parts, read from HEAD alone and owing nothing (`_Judge.whole_and_parts`,
+ADR-080 point 5). An
 artefact with an anchor that cannot be resolved — its kind has no resolver
 that may run, or its resolver gave no answer — is **not judged**: its state
 is `unresolved`, never `current`, as an artefact whose points lie beyond a
@@ -298,8 +298,9 @@ class RepositoryFindingKind(Enum):
     OVER_BROAD = "over-broad"
     # An artefact anchor on an id two artefacts share: ambiguous, warned of (COR-050 point 7).
     SHARED_ID = "shared-id"
-    # An anchor on a target whole, beside anchors on the target's parts, which add nothing:
-    # warned of from HEAD alone, owing nothing (COR-050 point 7; ADR-080 point 5).
+    # An anchor on a record or a document whole, beside anchors on its parts, which ask
+    # nothing the whole anchor does not: warned of from HEAD alone, owing nothing (ADR-080
+    # point 5).
     WHOLE_AND_PARTS = "whole-and-parts"
     UNREACHABLE = "unreachable"
     UNREADABLE = "unreadable"
@@ -1111,26 +1112,29 @@ class _Judge:
     def whole_and_parts(
         self, artefact: Artefact, anchors: Sequence[Anchor]
     ) -> list[RepositoryFinding]:
-        """A finding for each of the artefact's live `anchors` that stands whole on what
-        others of them stand on a part of (ADR-080 point 5), naming them. Read from HEAD
-        alone. An artefact that owes no answer has none, since its anchors ask nothing."""
+        """A finding for each of the artefact's live `anchors` that stands whole on a record
+        or a document others of them name a part of (ADR-080 point 5), naming them. Read
+        from HEAD alone. An artefact that owes no answer has none, since its anchors ask
+        nothing."""
         if artefact.owes_no_answer:
             return []
         unique = tuple(dict.fromkeys(anchors))
-        parts = {anchor: files for anchor in unique if (files := self._part_files(anchor))}
+        parts = {anchor: rel for anchor in unique if (rel := self._part_file(anchor)) is not None}
         if not parts:
             return []
         found: list[RepositoryFinding] = []
         for anchor in unique:
-            whole = self._whole_files(anchor)
-            beside = tuple(part for part, files in parts.items() if files <= whole)
+            whole = self._whole_file(anchor)
+            beside = tuple(part for part, rel in parts.items() if rel == whole)
             if beside:
                 named = ", ".join(f"{part.kind} {part.value}" for part in beside)
                 message = (
-                    f"anchors a target whole beside {counted(len(beside), 'anchor', 'anchors')} "
-                    f"on its parts, so whatever flags them flags this one and they add nothing: "
-                    f"{named} — remove this anchor where the artefact rests only on those parts, "
-                    f"or them where it rests on all of it; nothing is owed"
+                    f"anchors a record or document whole beside "
+                    f"{counted(len(beside), 'anchor', 'anchors')} on its parts, so they ask "
+                    f"nothing this one does not: {named} — removing them loses no flag and no "
+                    f"ask, but gives up what they still do; removing this one misses a change "
+                    f"outside those parts, so do it only where the artefact rests on them alone; "
+                    f"a changed anchor list needs a revalidation; nothing is owed"
                 )
                 found.append(
                     RepositoryFinding(
@@ -1139,17 +1143,16 @@ class _Judge:
                 )
         return found
 
-    def _whole_files(self, anchor: Anchor) -> frozenset[str]:
-        """The files `anchor` stands on whole (ADR-080 point 5): each a path anchor stands
-        on, or the file of the record or document a whole anchor names. Empty for anything
-        else: a part anchor, a collection entry, whose file holds others, and a value of a
-        registered kind, which counts only as a part."""
+    def _whole_file(self, anchor: Anchor) -> str | None:
+        """The file of the record or document `anchor` stands on whole (ADR-080 point 5): a
+        record anchor's, an artefact anchor's, or the one file a path anchor names. `None`
+        for anything else: a part anchor, a collection entry, whose file holds others, a
+        path anchor on a glob or a folder, and a value of a registered kind."""
         head = self.head
         if anchor.kind == "path":
-            return frozenset(head.matching(anchor.value))
+            return anchor.value if head.matching(anchor.value) == (anchor.value,) else None
         if anchor.kind == "record" and split_anchor(anchor.value)[1] is None:
-            rel = head.record_path(anchor.value)
-            return frozenset() if rel is None else frozenset({rel})
+            return head.record_path(anchor.value)
         if anchor.kind == "artefact":
             part = head.part_of(anchor.value)
             target = part.target
@@ -1158,31 +1161,24 @@ class _Judge:
                 and part.state is PartState.WHOLE
                 and target.kind is ArtefactKind.DOCUMENT
             ):
-                return frozenset({target.path})
-        return frozenset()
+                return target.path
+        return None
 
-    def _part_files(self, anchor: Anchor) -> frozenset[str]:
-        """The files `anchor` stands on a part of, by its kind's own reading (ADR-080
-        point 5): the record's, for a live point; the document's, for a section or the
-        lead; those its resolver names, for a value of a registered kind. Empty for
-        anything else: a path anchor, a whole anchor, and a retired point, which stands
-        on nothing."""
+    def _part_file(self, anchor: Anchor) -> str | None:
+        """The file of the record or document `anchor` names a part of (COR-050 point 2): a
+        live point's record, or the document of a section or the lead. `None` for anything
+        else: a whole anchor, a path anchor and a value of a registered kind, which name no
+        part, and a retired point, which stands on nothing."""
         head = self.head
         if anchor.kind == "artefact":
             part = head.part_of(anchor.value)
             target = part.target
-            if target is None or part.state is not PartState.LIVE:
-                return frozenset()
-            return frozenset({target.path})
+            return target.path if target is not None and part.state is PartState.LIVE else None
         if anchor.kind == "record":
             rel = head.record_path(anchor.value)
             point = None if rel is None else head.point_of(anchor, rel)
-            if rel is None or point is None or point.state is not PointState.LIVE:
-                return frozenset()
-            return frozenset({rel})
-        if anchor.kind in CORE_ANCHOR_KINDS:
-            return frozenset()
-        return frozenset(self.kinds.resolve(anchor).paths)
+            return rel if point is not None and point.state is PointState.LIVE else None
+        return None
 
     def _narrower(self, anchor: Anchor) -> str | None:
         """The narrower anchor that names less of what an over-broad anchor stands on, where
@@ -3190,8 +3186,8 @@ _LEGEND: dict[RepositoryFindingKind, str] = {
         "an anchor on an id two artefacts share, read as naming the first: reported only"
     ),
     RepositoryFindingKind.WHOLE_AND_PARTS: (
-        "an anchor on a target whole beside anchors on its parts, which add nothing: reported "
-        "only, nothing owed"
+        "an anchor on a record or document whole beside anchors on its parts, which ask nothing "
+        "it does not: reported only, nothing owed"
     ),
     RepositoryFindingKind.UNREACHABLE: "a point beyond this clone's history",
     RepositoryFindingKind.ANSWERED_APART: (

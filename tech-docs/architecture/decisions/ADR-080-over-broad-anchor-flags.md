@@ -8,7 +8,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Summary
 
-**In plain terms:** the whole-repository check warns of an anchor that asks its artefact for an answer too often. It reads the last 100 commits on the first-parent line, and counts those in which each anchor flagged its artefact. An anchor that flagged it in more than half of them is over-broad. An artefact may be asked in more than 10 of them for a revalidation that left it as it was. Then the anchors behind most of those asks are over-broad too, named in one finding for the artefact where a person reads the findings. The first is COR-050 point 7's ground. This record adds the second to point 7, and sets the numbers of both.
+**In plain terms:** the whole-repository check warns of an anchor that asks its artefact for an answer too often. It reads the last 100 commits on the first-parent line, and counts those in which each anchor flagged its artefact. An anchor that flagged it in more than half of them is over-broad. An artefact may be asked in more than 10 of them for a revalidation that left it as it was. Then the anchors behind most of those asks are over-broad too, named in one finding for the artefact where a person reads the findings. The first is COR-050 point 7's ground. This record adds the second to point 7, and sets the numbers of both. It also warns, from HEAD alone, of an artefact that anchors a record or a document whole beside anchors on its parts.
 - **Why:** the warning measured the share of tracked files a path anchor matches. An anchor on one busy page matches one file, so it never tripped, however many answers it asked ([project-kit#2636](https://github.com/aleskalfas/project-kit/issues/2636)).
 - **The cost:** the documentation check's filler reads the whole check, so it counts too, though it never reads the count. That adds about 5 percent to its time, well within the budget a test holds it to.
 
@@ -24,7 +24,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Decision
 
-**Of the last 100 commits on the first-parent line, an anchor is over-broad when it flagged its artefact in more than half of them. Where an artefact is asked in more than 10 of them for a revalidation that left it as it was, its anchors are named over-broad too. They are named by their share of those asks, the largest first, until the asks in which only named anchors asked are more than half of the artefact's asks, in one finding for the artefact where a person reads the findings.**
+**Of the last 100 commits on the first-parent line, an anchor is over-broad when it flagged its artefact in more than half of them. Where an artefact is asked in more than 10 of them for a revalidation that left it as it was, its anchors are named over-broad too. They are named by their share of those asks, the largest first, until the asks in which only named anchors asked are more than half of the artefact's asks, in one finding for the artefact where a person reads the findings. Apart from both bars, an anchor on a record or a document whole beside anchors on its parts is warned of from HEAD alone.**
 
 ### 1. The reading: the commits in which an anchor flagged its artefact
 
@@ -84,6 +84,38 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 The count runs in every whole-repository check. The explanation of one artefact's friction marks each over-broad anchor of it, and shows the second bar's findings as one, as the check's own view does. The doc check's filler reads the whole check ([ADR-079](ADR-079-exact-fast-paths.md) point 2), so it pays for the count, which it never reads. Sparing it would take an option on the check's command and a change to the filler that runs it, for about 5 percent of the filler's time.
 
+### 5. A whole anchor beside anchors on its parts
+
+An artefact may anchor a record or a document whole, and parts of it too, a pair in the words of this point. Whatever flags a part anchor then also flags the whole anchor, so the part anchors ask nothing the whole anchor does not. The check warns of each such whole anchor. It reads HEAD alone, with no history and no number.
+
+- **The whole anchor,** in COR-050 point 2's terms:
+  - a record anchor on a whole record
+  - an artefact anchor on a whole document, a record's own file among them
+  - a path anchor on that single file
+- **The anchors on its parts,** in the same terms:
+  - a record anchor on a live point of the record
+  - an artefact anchor on a section or the lead of the document
+- **What the part anchors still do.**
+  - **A deferral.** Each names one anchor (COR-050 point 4), so a part anchor keeps one to that part. The whole anchor, flagged too, needs its own.
+  - **A revisit.** A link's target is an anchor (COR-050 point 16), so a part anchor names one part for a revisit.
+  - **A dead anchor.** A part anchor goes dead when its point or heading does (COR-050 point 7). The whole anchor does not.
+  - **The explanation.** A stale part anchor shows what changed in its part alone (COR-050 point 13).
+- **What is left out.**
+  - A glob or a folder, which stands on files and names neither a record nor a document.
+  - A value of a registered kind, on either side. Such a kind names no part (COR-050 points 2 and 5), and the check cannot tell whether a value names a part of a file (point 3).
+  - A section beside its own sub-section. COR-050 point 2 calls both parts, so neither is a whole anchor.
+  - An anchor reported dead, ambiguous, refused or unresolved, and one on a retired point, which stands on nothing.
+  - A path anchor beside a broader one, and a collection entry beside a path anchor on its file. Neither names a part.
+  - An artefact that owes no answer, whose anchors ask for none (point 1).
+- **The finding.** Its kind is `whole-and-parts`, one finding for each whole anchor, naming the anchors on parts beside it.
+- **The advice.** Its message gives two moves and what each costs, the safe one first.
+  - **Remove the part anchors.** This loses no flag and no ask, but gives up what they still do.
+  - **Remove the whole anchor.** This narrows what asks the artefact, and misses a change outside those parts. So it suits only an artefact that rests on those parts alone.
+  - **Either move** changes the anchor list, which owes a revalidation (COR-050 point 6).
+- **Reported only.** It never fails (COR-050 point 12), and it owes no answer.
+- **The tracking issue.** It never holds project-kit's tracking issue open. It is a finding the check reports as owing nothing, which [ADR-055](ADR-055-first-adopter-analysis-and-living-docs.md) point 5 counts among the four kinds that need no answer. The issue's body lists it with the other findings that owe nothing.
+- **Where it runs.** In every whole-repository check, and in the explanation of one artefact's friction.
+
 ## Rationale
 
 **Why commits, not files.** A file share asks how much an anchor covers, not how often it asks. An anchor on one busy page covers little and asks often. Counting commits measures what a person meets: answers asked.
@@ -140,6 +172,24 @@ The count runs in every whole-repository check. The explanation of one artefact'
 
 **What dropping the file share costs.** The file share named a broad path anchor before any change touched what it matched. The count names an anchor only once commits have flagged its artefact. A new anchor on a quiet tree is warned of only once that tree changes. A broad anchor in a young project is named by the first bar once its line holds 100 commits, or by the second once its artefact's asks cross it.
 
+**Why this record alone decides the pair.** COR-050 point 7 grounds its over-broad warning in a harm, the habit of updating markers blindly. This warning states no harm, only redundancy, so it needs no core footing. COR-050 point 12 already reports the whole-repository check's findings only, whichever their kind.
+
+**Why ADR-055 point 5 holds as written.** That point counts four kinds that need no answer, and one of them is a finding the check reports as owing nothing. This finding is one, as `left-out` is, so the count stands.
+
+**Why the finding is keyed on the whole anchor.** One finding for each whole anchor and its parts is the shortest list: 48 at `4c5a72d8`, where one for each pair of anchors gives 141. Neither anchor of a pair is wrong by itself, so the key says nothing of which to remove. The message gives both moves.
+
+**Why the pair reads HEAD alone.** The pair is a fact of one block, so history adds nothing. The bars count how often an anchor asked, so they name a whole anchor only where it asks often. The pair stands however seldom it flags.
+
+**Why a kind of its own.** `over-broad` says how often an anchor asks, and its count moves as the window slides. This finding has no count and no bar, and it stands until a block changes. So `bar` keeps its meaning, and a reader can tell the two apart.
+
+**Why it owes no answer.** The pair makes nothing untrue. An artefact owes one answer for each change, whichever anchor flagged it, so the part anchors add no answer to a change.
+
+**What a pair kept on purpose costs.** A person may keep a pair for what its part anchors still do. It then warns for ever, and nothing records that it is meant. That cost is accepted for now, since the finding owes nothing and holds nothing open.
+
+**What it names here.** At `4c5a72d8`, 4 November before #2634, it names 48 whole anchors on 37 artefacts. The visual-communication README's anchors on `checks.md`, `files.md`, `outputs.md` and the starter README are among them. At `96ab08b0` it names 43 on 35. At both trees, 33 are a whole record beside points of it, and the rest a whole document beside its sections.
+
+**What the warning costs.** Measured on `96ab08b0` with this change, in ADR-079 point 2's units. The filler took 15.69 units with the warning and 15.51 without, each the median of ten runs, alternated. That difference lies inside the runs' spread, of 1 to 1.6 units. Timed at each of its 530 calls, in five runs, the warning's own reading took 0.18 units of a run of about 15.5, about 1 percent. The budget test holds the filler to 32 units, so it passes with about 16 to spare.
+
 ### Alternatives considered
 
 - **One bar at more than 10 flags.** It reads "most" as a tenth of the window.
@@ -156,10 +206,13 @@ The count runs in every whole-repository check. The explanation of one artefact'
 - **Each anchor's share of its artefact's flags.** It names the anchor that asks most of one artefact, but cannot tell a broad anchor from a busy artefact.
 - **A bar on the share of flags that left the artefact as it was.** With few flags it is noisy.
 - **Counting `unchanged` answers.** COR-050 point 3 never reads the outcome to compute staleness, which it recomputes from git. Reading the content keeps the count on the same footing. An `updated` answer that left the content as it was would go uncounted, too.
+- **The pair reported under `over-broad`, with a third `bar`.** It keeps one kind, but `bar` names a count crossed, and this finding counts nothing.
+- **A finding for each pair of anchors.** It gives 141 findings at `4c5a72d8` and 110 at `96ab08b0`, where one for each whole anchor gives 48 and 43.
+- **A glob, and a value of a registered kind, read as a whole or a part.** It reads a kind as naming a part, which COR-050 point 2 says it does not. It names no more at either tree.
 
 ## Implications
 
-- **The finding's words.** `over-broad` keeps its kind, and its message gives the counts, the bar crossed and what to do. The machine-readable documents of the check and of the explanation add two keys to each finding. `bar` is `flags` or `asks` for an over-broad finding, and `null` for any other. `share` is a second bar's finding's share of its artefact's asks, and `null` for any other. A key added leaves their version as it was.
+- **The finding's words.** `over-broad` keeps its kind, and its message gives the counts, the bar crossed and what to do. The machine-readable documents of the check and of the explanation add three keys to each finding. `bar` is `flags` or `asks` for an over-broad finding, and `null` for any other. `share` is a second bar's finding's share of its artefact's asks, and `null` for any other. `parts` lists the anchors on parts a `whole-and-parts` finding names, and is `null` for any other. A key added leaves their version as it was.
 - **Where the bars are stated.** The CLI README's `over-broad` row states both bars with their numbers, their reference home outside this record. The backbone's changeset states them too, for the release.
 - **The tracking issue.** An over-broad anchor never holds project-kit's tracking issue open ([ADR-055](ADR-055-first-adopter-analysis-and-living-docs.md) point 5). Its count moves as the window slides, with no anchor changed. A person may judge an anchor fine, and nothing records that, so an issue it held open would stay open for good. The issue's body lists the anchor in words of its own, with no count and no window's size, since they move with most pushes. The check's message and the explanation of one artefact's friction give both. The body gives the second bar's anchors on one artefact as one entry, as the check's own view does.
 - **A busy narrow anchor.** A page anchored on one module that changes often, without changing the page, can cross the second bar. The warning names it, and a person judges it. Where nothing names less of the module, the message offers the removal or the split.
@@ -174,7 +227,8 @@ The count runs in every whole-repository check. The explanation of one artefact'
   - how many artefacts anchor each target;
   - recording a person's judgement that an anchor is fine as it is;
   - telling the person who answers an ask in the change check how often that anchor has asked, since on project-kit the warning reaches only the tracking issue;
-  - warning, from HEAD alone, of an artefact that anchors a whole record or document and some of its parts too, which needs no history and no numbers ([project-kit#2659](https://github.com/aleskalfas/project-kit/issues/2659)).
+  - recording a person's judgement that a pair of a whole anchor and its parts is meant;
+  - warning of a whole anchor beside anchors on its parts in the change check, where a change adds the pair.
 - **Recorded trigger to revisit.** Any of these:
   - the doc check's budget test fails with the count among the causes;
   - anchors over a bar turn out narrow in most reviews;

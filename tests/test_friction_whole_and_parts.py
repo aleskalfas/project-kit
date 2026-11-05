@@ -1,22 +1,24 @@
 """The warning on a whole anchor beside anchors on its parts, `pkit friction check --all`
-(COR-050 point 7; ADR-080 point 5; #2659).
+(ADR-080 point 5; #2659).
 
-An artefact that anchors a target whole and parts of that target too gains nothing from the
-part anchors: whatever flags them flags the whole anchor. The check names each such whole
-anchor, with the anchors on parts beside it, from HEAD alone. Every test lays down a real
-history on an adopter whose install is committed once per session (`committed_adopter`).
+An artefact may anchor a record or a document whole and parts of it too. Whatever flags a
+part anchor then flags the whole anchor, so the part anchors ask nothing it does not. The
+check names each such whole anchor, with the anchors on parts beside it, from HEAD alone.
+Every test lays down a real history on an adopter whose install is committed once per
+session (`committed_adopter`).
 
 Held to: a whole document beside its sections or its lead, and a whole record beside its
-points; a target named by its id or by its path, by any of the anchors that name it whole,
-a path anchor among them, a glob's too; each whole anchor a finding of its own, naming only
-its target's parts. Not named: parts alone, a whole anchor alone, parts of another target, a
-dead or retired part, a collection entry and an artefact that owes no answer. It reads HEAD
-alone: no history and no number, one commit enough, and the commits after it moving
-nothing. It owes nothing: no state, no debt, no failure in enforcing mode, and no finding of
-the change check. And the finding as the views show it: its row, its count and its legend in
-the human view, the `parts` key of both JSON documents, and what clears it in the
-explanation. A registered value's reading is `test_friction_anchor_kinds`'s, and the
-tracking issue's `test_friction_report_body`'s.
+points; each named by its id or by its path, by any of the anchors that name it whole, a
+path anchor on its one file among them; each whole anchor a finding of its own, naming only
+its own parts; its message giving both moves, the safe one first. Not named: parts alone, a
+whole anchor alone, a part of something else, a glob and a folder, a section beside its own
+sub-section, a dead or retired part, a collection entry and an artefact that owes no answer.
+It reads HEAD alone: no history and no number, one commit enough, and the commits after it
+moving nothing. It owes nothing: no state, no debt, no failure in enforcing mode, and no
+finding of the change check. And the finding as the views show it: its row, its count and
+its legend in the human view, the `parts` key of both JSON documents, and what clears it in
+the explanation. That a registered value is on neither side is `test_friction_anchor_kinds`'s,
+and the tracking issue's `test_friction_report_body`'s.
 """
 
 from __future__ import annotations
@@ -95,7 +97,9 @@ def test_a_whole_document_beside_its_sections_and_lead_is_named_with_both_anchor
     assert (finding.artefact, finding.location) == ("guide", GUIDE)
     assert (finding.anchor, finding.parts) == (WHOLE, (USING, LEAD))
     assert f"artefact {USING.value}, artefact {LEAD.value}" in finding.message
-    assert finding.message.startswith("anchors a target whole beside 2 anchors on its parts")
+    assert finding.message.startswith(
+        "anchors a record or document whole beside 2 anchors on its parts"
+    )
 
 
 def test_a_whole_record_beside_its_points_is_named(timeline: Timeline) -> None:
@@ -109,11 +113,10 @@ def test_a_whole_record_beside_its_points_is_named(timeline: Timeline) -> None:
         pytest.param(Anchor("artefact", "manual"), USING, id="the-whole-by-its-id"),
         pytest.param(WHOLE, Anchor("artefact", "manual#using"), id="the-part-by-its-id"),
         pytest.param(Anchor("path", MANUAL), USING, id="a-path-anchor-on-the-document"),
-        pytest.param(Anchor("path", "docs/*.md"), USING, id="a-glob-over-the-document"),
         pytest.param(Anchor("path", POINTED), POINT, id="a-path-anchor-on-the-record"),
     ],
 )
-def test_any_anchor_that_stands_on_the_target_whole_is_named(
+def test_any_anchor_that_stands_on_the_file_whole_is_named(
     timeline: Timeline, whole: Anchor, part: Anchor
 ) -> None:
     anchors: dict[str, list[str]] = {}
@@ -134,7 +137,7 @@ def test_an_artefact_anchor_on_a_record_is_whole_beside_a_record_anchor_on_its_p
     assert _named(timeline) == {Anchor("artefact", ADR): (point,)}
 
 
-def test_each_whole_anchor_is_a_finding_naming_only_its_own_target_s_parts(
+def test_each_whole_anchor_is_a_finding_naming_only_its_own_parts(
     timeline: Timeline,
 ) -> None:
     second = "docs/second.md"
@@ -158,9 +161,21 @@ def test_each_whole_anchor_is_a_finding_naming_only_its_own_target_s_parts(
     }
 
 
-def test_two_anchors_on_one_target_whole_are_each_named(timeline: Timeline) -> None:
+def test_two_anchors_on_one_document_whole_are_each_named(timeline: Timeline) -> None:
     _start(timeline, {"path": [MANUAL], "artefact": [MANUAL, USING.value]})
     assert _named(timeline) == {Anchor("path", MANUAL): (USING,), WHOLE: (USING,)}
+
+
+def test_the_message_gives_both_moves_the_safe_one_first(timeline: Timeline) -> None:
+    """Removing the part anchors loses no ask, so it stands first. Removing the whole anchor
+    misses a change outside those parts, and either way the anchor list has changed."""
+    _start(timeline, {"artefact": [MANUAL, USING.value]})
+    (finding,) = [
+        f for f in fr.run_repository_check(timeline.adopter.root).findings if f.kind is KIND
+    ]
+    safe = finding.message.index("removing them loses no flag and no ask")
+    assert safe < finding.message.index("removing this one misses a change outside those parts")
+    assert "a changed anchor list needs a revalidation" in finding.message
 
 
 # --- what it does not name ----------------------------------------------------------------
@@ -171,14 +186,39 @@ def test_two_anchors_on_one_target_whole_are_each_named(timeline: Timeline) -> N
     [
         pytest.param({"artefact": [USING.value, LEAD.value]}, id="parts-alone"),
         pytest.param({"artefact": [MANUAL]}, id="a-whole-anchor-alone"),
-        pytest.param({"record": [POINT.value], "artefact": [MANUAL]}, id="another-target-s-part"),
+        pytest.param({"record": [POINT.value], "artefact": [MANUAL]}, id="a-part-of-another"),
         pytest.param({"path": ["src/cli/**"], "artefact": [USING.value]}, id="a-path-beside-it"),
     ],
 )
-def test_nothing_is_named_without_a_whole_anchor_beside_its_target_s_parts(
+def test_nothing_is_named_without_a_whole_anchor_beside_its_own_parts(
     timeline: Timeline, anchors: dict[str, list[str]]
 ) -> None:
     _start(timeline, anchors)
+    assert _named(timeline) == {}
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        pytest.param("docs/*.md", id="a-glob-over-several-files"),
+        pytest.param("docs/man*.md", id="a-glob-over-the-one-file"),
+        pytest.param("docs", id="a-folder"),
+    ],
+)
+def test_a_path_anchor_is_whole_only_where_it_names_the_one_file(
+    timeline: Timeline, path: str
+) -> None:
+    """COR-050 point 2's whole is a record or a document, and a glob or a folder names
+    neither, however many files it stands on."""
+    _start(timeline, {"path": [path], "artefact": [USING.value]})
+    assert _named(timeline) == {}
+
+
+def test_a_section_beside_its_own_sub_section_is_no_pair(timeline: Timeline) -> None:
+    """Both are parts, and COR-050 point 2's whole anchor names neither."""
+    sections = (("Using", "Run it.\n\n### Flags\n\nThe flags."),)
+    anchors = {"artefact": [USING.value, f"{MANUAL}#flags"]}
+    timeline.start({MANUAL: manual(sections), GUIDE: guide(anchors=anchors)})
     assert _named(timeline) == {}
 
 
@@ -206,7 +246,7 @@ def test_a_retired_point_stands_on_nothing_and_is_no_part(timeline: Timeline) ->
     assert _named(timeline) == {}
 
 
-def test_a_collection_entry_is_no_target_and_no_part(timeline: Timeline) -> None:
+def test_a_collection_entry_is_neither_whole_nor_part(timeline: Timeline) -> None:
     """An entry shares its file with other entries, and is cited whole: a path anchor on
     the file beside an anchor on an entry is no pair."""
     rules = "docs/rules.md"
@@ -292,8 +332,8 @@ def test_the_human_view_gives_its_row_its_count_and_its_legend(timeline: Timelin
 
     assert "1 whole anchor beside its parts" in shown.splitlines()[0]
     (row,) = [line for line in shown.splitlines() if line.startswith("    whole-and-parts")]
-    assert f"artefact {MANUAL}  anchors a target whole beside 1 anchor on its parts" in row
-    assert f"artefact {USING.value} — remove this anchor where" in row
+    assert f"artefact {MANUAL}  anchors a record or document whole beside 1 anchor" in row
+    assert f"artefact {USING.value} — removing them loses no flag" in row
     assert row.endswith("nothing is owed")
     (legend,) = [line for line in shown.splitlines() if line.startswith("  whole-and-parts")]
     assert "reported only, nothing owed" in legend
@@ -320,7 +360,9 @@ def test_the_explanation_says_what_clears_it_and_asks_no_answer(timeline: Timeli
 
     (explained,) = [f for f in explanation.findings if f.finding.kind is KIND]
     assert explained.answers == () and explained.commits == ()
-    assert explained.clears.startswith(f"nothing is owed; remove artefact:{MANUAL} from the block")
+    assert explained.clears.startswith("nothing is owed; remove the anchors on its parts")
+    assert "gives up a deferral or revisit of one part" in explained.clears
+    assert f"or remove artefact:{MANUAL} where the artefact rests" in explained.clears
     assert explanation.report is not None
     assert explanation.report.state is fr.ArtefactState.CURRENT
 

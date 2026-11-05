@@ -422,7 +422,7 @@ def test_a_whole_anchor_beside_its_parts_is_listed_as_owing_nothing_and_holds_no
     assert earlier["body"].startswith("**Nothing needs an answer.**\n")
     section = _section(earlier["body"], "Reported, nothing owed")
     assert f"- `docs/guide.md` · `whole-and-parts` · `artefact:{MANUAL}`\n" in section
-    assert f"artefact {MANUAL}#using — remove this anchor" in section
+    assert f"artefact {MANUAL}#using — removing them loses no flag" in section
 
 
 def test_the_second_bar_s_anchors_on_one_artefact_are_one_entry() -> None:

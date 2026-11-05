@@ -9,17 +9,15 @@ document: it runs no check, reads no repository and talks to no tracker. It is
 project-kit's own pipeline tooling, no part of what project-kit ships (ADR-055
 point 5).
 
-- **What needs an answer** is every finding but five kinds (`NO_ANSWER_NEEDED`).
-  A deferral, `deferred`, is itself an answer (COR-050 point 5), and the check
-  reports `left-out` as owing nothing. Two revalidations made apart,
-  `answered-apart`, are debt that no change owes, reported only until the next
-  revalidation on the artefact judges them together (COR-062 point 7, ADR-068
+- **What needs an answer** is every finding but ADR-055 point 5's four kinds
+  (`NO_ANSWER_NEEDED`). A deferral, `deferred`, is itself an answer (COR-050 point
+  5), and the check reports `left-out` and `whole-and-parts` as owing nothing. Two
+  revalidations made apart, `answered-apart`, are debt that no change owes, reported
+  only until the next revalidation on the artefact judges them together (COR-062 point 7, ADR-068
   point 6). An `over-broad` anchor is reported only (COR-050 point 12). Its count
   moves as the window of commits slides, with no anchor changed, and nothing records a
   person's judgement that an anchor is fine, so it would hold the issue open for good
-  (ADR-055 point 5, ADR-080). A `whole-and-parts` anchor makes nothing untrue, and a
-  person may keep it, which nothing records, so it would hold the issue open for good
-  too (ADR-080 point 5). Deferrals, each with its reason,
+  (ADR-055 point 5, ADR-080). Deferrals, each with its reason,
   the revalidations answered apart and the over-broad anchors are listed in
   sections of their own, a `whole-and-parts` anchor beside `left-out` as reported, nothing
   owed, and the headline counts the revalidations answered
@@ -97,11 +95,10 @@ ANSWERED_APART = "answered-apart"
 WHOLE_AND_PARTS = "whole-and-parts"
 
 #: The kinds that need no answer: a deferral is one (COR-050 point 5), the check
-#: reports `left-out` as owing nothing (the CLI reference, "Friction checks"),
-#: revalidations answered apart are debt reported only, which no change owes
-#: (COR-062 point 7), an over-broad anchor is reported only, its count moving with
-#: no anchor changed (COR-050 point 12; ADR-055 point 5), and a whole anchor beside
-#: anchors on its parts owes nothing (COR-050 point 7; ADR-080 point 5).
+#: reports `left-out` and `whole-and-parts` as owing nothing (the CLI reference,
+#: "Friction checks"; ADR-080 point 5), revalidations answered apart are debt reported
+#: only, which no change owes (COR-062 point 7), and an over-broad anchor is reported
+#: only, its count moving with no anchor changed (COR-050 point 12; ADR-055 point 5).
 NO_ANSWER_NEEDED = frozenset({DEFERRED, LEFT_OUT, ANSWERED_APART, OVER_BROAD, WHOLE_AND_PARTS})
 
 #: The size a body keeps within: GitHub caps an issue body at 65 536 characters,
