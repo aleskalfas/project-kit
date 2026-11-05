@@ -18,7 +18,7 @@ The capability's maintainer chose on 3 November, on [project-kit#1727](https://g
 
 ## Decision
 
-The two diagram rules of [software-analysis:DEC-003-analysis-diagrams] point 10 bind from a later major of `SAN` than the one that accepts the twelve judgement rules. That later major is the first after the two rules join `SAN` as proposed rules and the analyses are judged and mended against them.
+The two diagram rules of [software-analysis:DEC-003-analysis-diagrams] point 10 bind from a later major of `SAN` than the one that accepts the twelve judgement rules. That later major is the first after the analyses are judged and mended against the two rules, and the change that makes it adds them already accepted (COR-066 point 1).
 
 ### What this overturns, and what stands
 
@@ -50,7 +50,7 @@ The cost is a second major for each adopter that follows both. When it ships, ea
 ## Implications
 
 - **`SAN` 2.0.0** accepts RS-SAN-003 to RS-SAN-014, and not the diagram rules.
-- **The diagram rules** join `SAN` as proposed rules ([project-kit#1806](https://github.com/aleskalfas/project-kit/issues/1806)), which needs only a minor version of `SAN`. A later major accepts them, and project-kit's own set moves its pin to it ([project-kit#2625](https://github.com/aleskalfas/project-kit/issues/2625)).
+- **The diagram rules** join `SAN` accepted, in the one change that makes that later major ([project-kit#1806](https://github.com/aleskalfas/project-kit/issues/1806), [project-kit#2625](https://github.com/aleskalfas/project-kit/issues/2625)), since a rule reaches the default branch only accepted (COR-066 point 1). project-kit's own set moves its pin in that change.
 - **DEC-003** stays accepted, and its top line reads that this record partially supersedes it, naming point 10.
 - **DEC-005's rule** joins the twelve's major, as DEC-005 says. Nothing in DEC-005 changes.
 - **The software-analysis README and the `analysis-author` skill** say nothing of the diagram rules' major, so neither changes. The README describes the diagram rules once [project-kit#1806](https://github.com/aleskalfas/project-kit/issues/1806) adds them.
