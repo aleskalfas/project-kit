@@ -1,7 +1,7 @@
 ---
 id: DEC-067
 title: A pull request's head starts programs only from the base's own repository, or on a person's word
-status: proposed
+status: accepted
 date: 2026-11-05
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
