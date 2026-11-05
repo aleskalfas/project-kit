@@ -123,6 +123,7 @@ The container, in both its forms: a document's front matter, and a collection's 
 The backbone configuration file, at the fixed path the CLI reference's "Configuration file" gives. Its keys:
 
 - `name`
+- `decisions`: the key that turns the landing check's refusal on ([COR-066](../decisions/core/COR-066-accepted-before-landing.md) point 4)
 - `docs`
 - `friction`
 - `connections`

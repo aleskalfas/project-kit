@@ -1242,6 +1242,15 @@ def _mapping_loader(
     return lambda rel: read(rel)[0]
 
 
+def read_mapping_at(
+    target_root: Path, tree: RepositoryTree, rel: str
+) -> tuple[dict[str, Any], str | None]:
+    """The repository-relative YAML file `rel` as the state `tree` holds it: a mapping with
+    text keys, and why it does not read (`_yaml_reader`). The one reading of a file at a
+    state, which a reader of a configuration key at a commit stands on (ADR-057 point 2)."""
+    return _yaml_reader(target_root, tree)(rel)
+
+
 def _yaml_reader(
     target_root: Path, tree: RepositoryTree | None
 ) -> Callable[[str], tuple[dict[str, Any], str | None]]:
