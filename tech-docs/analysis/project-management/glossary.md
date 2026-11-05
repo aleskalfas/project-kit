@@ -901,13 +901,13 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#clone).
 
 Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#clone-key).
 
-**Example:** the clone that takes the seat `api-worker` generates its clone key. The seat's state issue names that clone key, and the clone's commands read it there before they write.
+**Example:** the [clone](#term-clone--clone) that takes the [seat](#term-seat--seat) `api-worker` generates its clone key. The seat's [state issue](#term-state-issue--state-issue) names that clone key, and the clone's commands read it there before they write.
 
 **Distinctions:**
 
-- **Clone:** the working copy itself. The clone key is one thing a clone keeps, beside its number and its seat (DEC-058 point 5).
-- **A seat's number:** the number a clone takes with a seat, which passes to the next clone that holds that seat. A clone key stays with its clone (DEC-059 points 6 and 9).
-- **A state issue's key:** the name of the data a state issue holds, such as a seat's name. A clone key names a clone, and no data (DEC-058 point 2).
+- **Clone:** the working copy itself. The clone key is one thing a clone keeps, beside its number and its seat ([DEC-058 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)).
+- **A seat's number:** the number a clone takes with a seat, which passes to the next clone that holds that seat. A clone key stays with its clone (DEC-059 points [6](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) and [9](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
+- **A state issue's key:** the name of the data a state issue holds, such as a seat's name. A clone key names a clone, and no data ([DEC-058 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#2-a-state-issue-holds-one-piece-of-state-named-by-its-key)).
 
 ## TERM-close-trigger — close trigger
 
@@ -922,13 +922,13 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 ## TERM-completed-close — completed close
 
-**Example:** #1712 is an audit, with nothing to merge. Once its checkboxes are ticked, `pkit pm close-issue 1712 --mode=completed --result "#1801"` ends it, and its close comment names #1801 as where the result lives.
+**Example:** #1712 is an audit, with nothing to merge. Once its [checkboxes](#term-checkbox--checkbox) are ticked, `pkit pm close-issue 1712 --mode=completed --result "#1801"` ends it, and its close comment names #1801 as where the result lives.
 
 **Distinctions:**
 
-- **Won't-do close:** the end of dropped work. A completed close ends finished work, so it brings each issue above that is behind up to In Progress (DEC-006).
-- **A close through a merge:** a Task whose pull request merges closes through that merge, and takes no completed close (DEC-006).
-- **Close trigger:** the line on a Milestone that says when the Milestone closes. A completed close ends a Task, and no Milestone takes one (DEC-016).
+- **Won't-do close:** the end of dropped work. A completed close ends finished work, so it brings each [issue](#term-issue--issue) above that is behind up to In Progress ([DEC-006](../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
+- **A close through a merge:** a [Task](#term-task--task) whose [pull request](../core/glossary.md#term-pull-request--pull-request) merges closes through that merge, and takes no completed close (DEC-006).
+- **Close trigger:** the line on a [Milestone](#term-milestone--milestone) that says when the Milestone closes. A completed close ends a Task, and no Milestone takes one ([DEC-016](../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 
 ## TERM-epic — EPIC
 
@@ -970,12 +970,12 @@ Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge
 
 Explained in [VIEW-batch-planning](domain-model/050-batch-planning.md#foundation).
 
-**Example:** the slices of a new product would each choose a web framework. So a first batch plan files an EPIC and a Feature, #1900, whose body lists that choice. One Task under #1900 holds the record of it, and the next builds one thin slice end to end. Once #1900 closes, a second batch plan files the slices.
+**Example:** the slices of a new product would each choose a web framework. So a first [batch plan](#term-batch-plan--batch-plan) files an [EPIC](#term-epic--epic) and a [Feature](#term-feature--feature), #1900, whose body lists that choice. One [Task](#term-task--task) under #1900 holds the record of it, and the next builds one thin slice end to end. Once #1900 closes, a second batch plan files the slices.
 
 **Distinctions:**
 
-- **Feature:** an issue that claims one coherent piece of functionality. A foundation is filed as one, and what it settles is the choices its body lists (DEC-060 point 2).
-- **A settled choice:** one an accepted record decides, or merged code shows a pattern for. Work whose shared choices are all settled plans no foundation (DEC-060 point 1).
+- **Feature:** an [issue](#term-issue--issue) that claims one coherent piece of functionality. A foundation is filed as one, and what it settles is the choices its body lists ([DEC-060 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md#2-the-foundation-is-one-feature-built-one-task-at-a-time)).
+- **A settled choice:** one an accepted record decides, or merged code shows a pattern for. Work whose shared choices are all settled plans no foundation ([DEC-060 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md#1-a-choice-that-tasks-would-share-and-nothing-settles-calls-for-a-foundation)).
 
 ## TERM-instance — instance
 
@@ -1077,12 +1077,12 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#organizer-seat).
 
-**Example:** the topology marks the seat `planner` as its organizer seat. The clone of the seat `api-worker` is gone for good, so the clone of `planner` releases `api-worker` by force, with a reason.
+**Example:** the [topology](#term-topology--topology) marks the [seat](#term-seat--seat) `planner` as its organizer seat. The [clone](#term-clone--clone) of the seat `api-worker` is gone for good, so the clone of `planner` releases `api-worker` by force, with a reason.
 
 **Distinctions:**
 
-- **Seat:** any place in a topology. An organizer seat is a seat with one privilege more (DEC-059 point 2).
-- **A person's release by force:** a person in any clone may release a seat by force too, whichever seat that clone holds (DEC-059 point 5).
+- **Seat:** any place in a topology. An organizer seat is a seat with one privilege more ([DEC-059 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope)).
+- **A person's release by force:** a person in any clone may release a seat by force too, whichever seat that clone holds ([DEC-059 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#5-in-the-first-mode-a-seat-stays-taken-until-it-is-released)).
 
 ## TERM-owner — owner
 
@@ -1273,9 +1273,9 @@ Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge
 
 **Distinctions:**
 
-- **Completed close:** the end of finished work. A won't-do close ends dropped work, so it moves no issue above (DEC-006).
+- **Completed close:** the end of finished work. A won't-do close ends dropped work, so it moves no [issue](#term-issue--issue) above ([DEC-006](../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 - **Not planned:** what GitHub records for a won't-do close, so every reader of it takes the work as dropped (DEC-006).
-- **Close trigger:** the line on a Milestone that says when the Milestone closes. A won't-do close ends an issue, and no Milestone takes one (DEC-016).
+- **Close trigger:** the line on a [Milestone](#term-milestone--milestone) that says when the Milestone closes. A won't-do close ends an issue, and no Milestone takes one ([DEC-016](../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 
 ## TERM-workstream — workstream
 

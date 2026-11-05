@@ -62,7 +62,7 @@ pkit:
 2. The lead starts a helper agent for the Task through the [harness](../../../../core/glossary.md#term-harness--harness), and passes the helper agent no name. The helper agent's whole result then comes back ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)). The helper agent acts as the lead's instance while the helper agent builds the Task ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 3. The helper agent builds the Task on the Task's branch, then commits and pushes the work.
 4. The helper agent ends, and returns its result to the lead.
-6. The lead opens the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) with `pkit pm review-work <N>`, as `UC-084` step 7 describes, which moves the Task to Review (DEC-026).
+6. The lead opens the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) with `pkit pm review-work <N>`, as `UC-084` step 7 describes, which moves the Task to Review ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 5. The lead reviews the result, and lands the Task, as `UC-089` describes.
 
 **Variants:**

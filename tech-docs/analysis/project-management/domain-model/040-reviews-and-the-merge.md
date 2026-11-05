@@ -28,7 +28,7 @@ pkit:
 
 # VIEW-reviews-and-the-merge — Reviews and the merge
 
-Where the [project](../../core/glossary.md#term-project--project)'s settings leave review to agents (the `agent` mode of `review.mode`), no person is assigned to review (DEC-027). So an agent's review needs a signal that counts as approval. The signal must say these ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)):
+Where the [project](../../core/glossary.md#term-project--project)'s settings leave review to agents (the `agent` mode of `review.mode`), no person is assigned to review ([DEC-027](../../../../.pkit/capabilities/project-management/decisions/DEC-027-review-modes.md)). So an agent's review needs a signal that counts as approval. The signal must say these ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)):
 
 - whose review it is
 - what stops self-approval
@@ -82,7 +82,7 @@ flowchart LR
 
 Defined in [TERM-verdict](../glossary.md#term-verdict--verdict).
 
-**Why:** Where the [project](../../core/glossary.md#term-project--project)'s settings leave review to agents, no person is assigned to review (DEC-027). So an agent's review needs a signal that counts as approval. A command must read the signal, tell whose it is, and see when new commits make it stale ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
+**Why:** Where the [project](../../core/glossary.md#term-project--project)'s settings leave review to agents, no person is assigned to review ([DEC-027](../../../../.pkit/capabilities/project-management/decisions/DEC-027-review-modes.md)). So an agent's review needs a signal that counts as approval. A command must read the signal, tell whose it is, and see when new commits make it stale ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 
 A verdict is a comment a [reviewer](../../core/glossary.md#term-reviewer--reviewer) agent posts on a [pull request](../../core/glossary.md#term-pull-request--pull-request). Its first line approves the [change](../../core/glossary.md#term-change--change) or requests changes, and a marker names the [head](../../core/glossary.md#term-head--head) and the [base](../../core/glossary.md#term-base--base) it reviewed. Its [findings](../../core/glossary.md#term-finding--finding) follow, each tagged for what it does to the merge.
 
@@ -137,7 +137,7 @@ Defined in [TERM-merge-gate](../glossary.md#term-merge-gate--merge-gate).
 
 **Why:** An approval counts only for what its [reviewer](../../core/glossary.md#term-reviewer--reviewer) saw. So the gate judges one [head](../../core/glossary.md#term-head--head), and the merge is pinned to it. A push between the two then fails the merge, rather than landing commits no [verdict](../glossary.md#term-verdict--verdict) covers ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). A [Task](../glossary.md#term-task--task)'s [checkboxes](../glossary.md#term-checkbox--checkbox) are checked before the merge, since closing the Task by the merge would otherwise pass them by ([DEC-007](../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)).
 
-The merge gate is the set of conditions project-management holds a [pull request](../../core/glossary.md#term-pull-request--pull-request) to before it lands it. Each [required reviewer](../glossary.md#term-required-reviewer--required-reviewer)'s latest verdict must be a standing approval, and the pull request's checks must be green (DEC-026). The checkboxes of each [issue](../glossary.md#term-issue--issue) the pull request closes must be ticked.
+The merge gate is the set of conditions project-management holds a [pull request](../../core/glossary.md#term-pull-request--pull-request) to before it lands it. Each [required reviewer](../glossary.md#term-required-reviewer--required-reviewer)'s latest verdict must be a standing approval, and the pull request's checks must be green ([DEC-026](../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)). The checkboxes of each [issue](../glossary.md#term-issue--issue) the pull request closes must be ticked.
 
 **Attributes:** None.
 

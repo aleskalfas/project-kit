@@ -66,7 +66,7 @@ pkit:
 
 **Goal:** Never work on a Task that another agent already works on.
 
-**Other actors:** **Developer** (`core:ACT-developer`): only a person makes a bypass, with a reason that an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) records before the start ([DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
+**Other actors:** **Developer** (`core:ACT-developer`): only a person makes a [bypass](../../../glossary.md#term-bypass--bypass), with a reason that an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) records before the start ([DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
 
 **Preconditions:** **From [UC-083](UC-083-plan-across-scopes.md), [UC-060](../020-file-and-move/UC-060-file-task.md) or [UC-063](../010-plan/UC-063-plan-intent.md):** The [Task](../../../glossary.md#term-task--task) is filed, with its [workstream](../../../glossary.md#term-workstream--workstream) ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
@@ -88,7 +88,7 @@ pkit:
 - **1a.** The worker acts on the [Task](../../../glossary.md#term-task--task) with another ordinary command: `done-work`, `edit-issue` or `move-issue`. The [system](../../../../core/glossary.md#term-system--system) refuses as at step 3 ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
 - **2a.** No [instance](../../../glossary.md#term-instance--instance) owns the Task, and another instance starts the Task at the same instant. Each instance writes itself as the Task's [owner](../../../glossary.md#term-owner--owner), reads the Task again and finds two owners. The higher-numbered instance gives the Task up and says so, and the lower-numbered instance keeps the Task ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
 - **2b.** The Task is assigned to another person's account. `start-work` refuses, points to `handoff-issue`, and changes nothing (`start-work.py`).
-- **3a.** The developer decides that the worker takes the Task all the same, and makes a bypass with a reason. The worker passes that reason with the worker's start, and an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) records the reason before the start ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock) and [DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
+- **3a.** The developer decides that the worker takes the Task all the same, and makes a [bypass](../../../glossary.md#term-bypass--bypass) with a reason. The worker passes that reason with the worker's start, and an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) records the reason before the start ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock) and [DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
 - **3b.** The owner's agent no longer works on the Task, such as an agent whose [scope](../../../glossary.md#term-scope--scope) changed. The worker takes the Task over: `pkit pm handoff-issue <N> --to-instance self --reason "<R>"`. The worker's instance becomes the owner, and the assignee stays ([DEC-035 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#4-ownership-releases-when-the-work-ends-or-stops-and-transfers-on-reclaim)).
 
 > [!WARNING]
@@ -99,7 +99,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no ownership lapses. DEC-059 point 9 decides that an ownership that lapsed is no ownership, and #2136 tracks it.
 
-**Postconditions:** The [Task](../../../glossary.md#term-task--task) has one [owner](../../../glossary.md#term-owner--owner). The worker works on no Task that the worker's [instance](../../../glossary.md#term-instance--instance) does not own, unless a person made a bypass.
+**Postconditions:** The [Task](../../../glossary.md#term-task--task) has one [owner](../../../glossary.md#term-owner--owner). The worker works on no Task that the worker's [instance](../../../glossary.md#term-instance--instance) does not own, unless a person made a [bypass](../../../glossary.md#term-bypass--bypass).
 
 **Minimal guarantees:**
 

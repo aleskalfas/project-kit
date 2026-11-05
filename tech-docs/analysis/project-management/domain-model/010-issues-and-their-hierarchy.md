@@ -111,7 +111,7 @@ An issue is one item of work a [project](../../core/glossary.md#term-project--pr
 
 **Attributes:**
 
-- its title, which opens with a prefix, such as `[EPIC]` ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and DEC-011)
+- its title, which opens with a prefix, such as `[EPIC]` ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-011](../../../../.pkit/capabilities/project-management/decisions/DEC-011-title-formats.md))
 - its body, whose first line is its [parent reference](../glossary.md#term-parent-reference--parent-reference) where it has a parent ([DEC-005](../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md) and [DEC-010](../../../../.pkit/capabilities/project-management/decisions/DEC-010-issue-body-minimum-structure.md))
 - its labels, such as `type:docs` (DEC-003)
 
@@ -134,13 +134,13 @@ Defined in [TERM-milestone](../glossary.md#term-milestone--milestone).
 
 **Why:** Teams plan in different cadences, such as a sprint, a release wave or a quarter. So each [project](../../core/glossary.md#term-project--project) declares what its Milestones mean, rather than one meaning for every project. A date-based Milestone models a sprint: it ends on its date, and its unfinished work goes on in the next ([DEC-016](../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 
-A Milestone is GitHub's own container, kept apart from issues. It holds the issues of one delivery window, or of one bundle of outcomes that close together. Its description opens with its close trigger, which says when it closes.
+A Milestone is GitHub's own container, kept apart from issues. It holds the issues of one delivery window, or of one bundle of outcomes that close together. Its description opens with its [close trigger](../glossary.md#term-close-trigger--close-trigger), which says when it closes.
 
 **Attributes:**
 
 - its title, in the format of its [Milestone category](../glossary.md#term-milestone-category--milestone-category) (DEC-016)
 - its due date, which it may lack (DEC-016)
-- its [close trigger](../glossary.md#term-close-trigger--close-trigger), `date-based`, `content-based` or `either`, on the first line of its description (DEC-016)
+- its close trigger, `date-based`, `content-based` or `either`, on the first line of its description (DEC-016)
 
 **Relations:**
 
@@ -279,7 +279,7 @@ An Umbrella is a bucket of related work. Its body says what holds that work toge
 
 Defined in [TERM-task](../glossary.md#term-task--task).
 
-**Why:** The lowest structural level of planning is the unit of work that lands as one [change](../../core/glossary.md#term-change--change), or that a completed close ends instead. A Task is that unit ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
+**Why:** The lowest structural level of planning is the unit of work that lands as one [change](../../core/glossary.md#term-change--change), or that a [completed close](../glossary.md#term-completed-close--completed-close) ends instead. A Task is that unit ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
 A Task is an [issue](../glossary.md#term-issue--issue) for one unit of work. One [pull request](../../core/glossary.md#term-pull-request--pull-request) delivers that work, or a completed close ends it where the work is no pull request (DEC-006). Its body says these:
 
@@ -360,20 +360,20 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/020-file-and-move/UC-060-file-task.md)
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md)
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md)
-- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the batch plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md)
 - [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md)
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md)
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md)
-- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
+- [UC-087 — Hand the next piece of the work to the agent of the scope that holds that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 - [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
 - [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
-- [REQ-042 · Functional · A move a person holds is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)
+- [REQ-042 · Functional · A move a person holds, asked for directly, is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)
 - [REQ-061 · Functional · No two instances keep working on one issue](../requirements/functional/040-work-in-parallel/REQ-061-one-owner-per-issue.md)
 - [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
@@ -381,11 +381,11 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 - [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/020-file-and-move/UC-060-file-task.md)
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md)
-- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the batch plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md)
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md)
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
-- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
+- [UC-087 — Hand the next piece of the work to the agent of the scope that holds that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
@@ -403,7 +403,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 - [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/020-file-and-move/UC-060-file-task.md)
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md)
-- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the batch plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md)
@@ -413,7 +413,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 **Feature:**
 
 - [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/020-file-and-move/UC-060-file-task.md)
-- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the batch plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md)
 
 **Umbrella:**
@@ -425,21 +425,20 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/020-file-and-move/UC-060-file-task.md)
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md)
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md)
-- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the batch plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md)
 - [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md)
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md)
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md)
-- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
+- [UC-087 — Hand the next piece of the work to the agent of the scope that holds that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [UC-088 — Delegate a Task of my scope to a helper agent](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md)
 - [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 - [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
 - [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
-- [REQ-042 · Functional · A move a person holds is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)
 - [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
 **Parent reference:**

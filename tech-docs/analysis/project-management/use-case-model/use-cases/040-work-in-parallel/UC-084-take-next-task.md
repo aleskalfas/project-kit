@@ -101,7 +101,7 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`core:ACT-ai-agent`): the [builder agent](../../../glossary.md#term-builder-agent--builder-agent) the build command starts for the Task, which leaves each write to GitHub to the worker (DEC-063 point 4).
+- **AI agent** (`core:ACT-ai-agent`): the [builder agent](../../../glossary.md#term-builder-agent--builder-agent) the build command starts for the [Task](../../../glossary.md#term-task--task), which leaves each write to GitHub to the worker ([DEC-063 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-063-task-builder.md#4-the-builder-runs-in-a-sandboxed-clone-of-its-own-under-rules-that-leave-the-seats-writes-to-the-seat)).
 - **Operator** (`core:ACT-operator`): is asked before a command changes a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:**
@@ -112,7 +112,7 @@ pkit:
 **Assumptions:**
 
 - The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and the commands of `pkit pm` ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
-- The [harness](../../../../core/glossary.md#term-harness--harness) hosts the worker's session in the worker's own [clone](../../../glossary.md#term-clone--clone) (COR-047 and DEC-059 point 4).
+- The [harness](../../../../core/glossary.md#term-harness--harness) hosts the worker's session in the worker's own [clone](../../../glossary.md#term-clone--clone) ([COR-047](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md) and [DEC-059 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
 
 **Trigger:** The worker has no [Task](../../../glossary.md#term-task--task) in flight, and Tasks wait to be built.
 
@@ -126,10 +126,10 @@ pkit:
 2. The worker asks for the next Task to build: `pkit pm next-task`. Of the Tasks in Backlog with no owner, the [system](../../../../core/glossary.md#term-system--system) keeps those whose `## Dependencies` section names no [issue](../../../glossary.md#term-issue--issue) still open. These Tasks are ready, as are the Tasks In Progress of variant 2b. Where the [topology](../../../glossary.md#term-topology--topology) declares no [pools](../../../glossary.md#term-pool--pool), every [seat](../../../glossary.md#term-seat--seat) shares the [ready Tasks](../../../glossary.md#term-ready-task--ready-task) ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 3. Where the worker's seat gives the worker a [scope](../../../glossary.md#term-scope--scope), the system keeps the Tasks that fall in the scope. The system chooses the highest in priority among the Tasks in Backlog that the worker's instance owns and whose dependencies name no open issue. Where there is none, the system chooses the highest in priority among the ready Tasks (DEC-059 point 7 and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 4. The system starts the chosen Task through `pkit pm start-work <N>`. That command checks the move, cuts the Task's branch, assigns the worker's account and moves the Task to In Progress ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
-5. The system makes the worker's instance the Task's owner ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)). The [ownership](../../../glossary.md#term-ownership--ownership) names the worker's seat, the seat's number and the clone key ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
+5. The system makes the worker's instance the Task's owner ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)). The [ownership](../../../glossary.md#term-ownership--ownership) names the worker's seat, the seat's number and the [clone key](../../../glossary.md#term-clone-key--clone-key) ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
 6. The system reads the Task again after writing, and finds the worker's instance the Task's only owner ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
 
-9. As the worker builds, the worker's work renews the ownership, each renewal by a separate comment. The worker renews the ownership before each push, and at least once within a part of the limit the topology sets (DEC-059 point 9). Before each push, the worker also checks that the worker's clone still holds the seat, and that the ownership still counts.
+9. As the worker builds, the worker's work renews the ownership, each renewal by a separate comment. The worker renews the ownership before each push, and at least once within a part of the limit the topology sets (DEC-059 point 9). Before each push, the worker also checks that the worker's [clone](../../../glossary.md#term-clone--clone) still holds the seat, and that the ownership still counts.
 
 > [!WARNING]
 > **Not built yet:** nothing renews an ownership, or checks an ownership before a push. DEC-059 point 9 decides both, and #2136 tracks it.
@@ -174,15 +174,15 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no session parks its work. DEC-059 point 9 decides how a session parks the work, and #2136 tracks it.
 
-**Postconditions:** The worker's [instance](../../../glossary.md#term-instance--instance) owns the [Task](../../../glossary.md#term-task--task), which is in Review, as step 7 leaves it. The Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open on the Task's own branch, which the worker's clone holds.
+**Postconditions:** The worker's [instance](../../../glossary.md#term-instance--instance) owns the [Task](../../../glossary.md#term-task--task), which is in Review, as step 7 leaves it. The Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open on the Task's own branch, which the worker's [clone](../../../glossary.md#term-clone--clone) holds.
 
 **Minimal guarantees:**
 
 - A start refused at its checks writes no branch and no assignee (`start-work.py`).
-- A run that stops after step 6 leaves the Task In Progress, with the worker's instance its owner (`start-work.py`). The worker's clone holds the Task's own branch.
-- The [owner](../../../glossary.md#term-owner--owner) is never an input to a move of the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) ([DEC-035 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#8-the-instance-marker-is-a-pm-domain-side-effect-never-engine-state)).
-- A worker whose [ownership](../../../glossary.md#term-ownership--ownership) no longer counts writes nothing to the [Task](../../../glossary.md#term-task--task)'s branch or [pull request](../../../../core/glossary.md#term-pull-request--pull-request) ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
-- Renewal and lapse use the time GitHub records for each comment, so no [clone](../../../glossary.md#term-clone--clone)'s clock decides them (DEC-059 point 9).
+- A run that stops after step 6 leaves the [Task](../../../glossary.md#term-task--task) In Progress, with the worker's [instance](../../../glossary.md#term-instance--instance) its [owner](../../../glossary.md#term-owner--owner) (`start-work.py`). The worker's [clone](../../../glossary.md#term-clone--clone) holds the Task's own branch.
+- The owner is never an input to a move of the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) ([DEC-035 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#8-the-instance-marker-is-a-pm-domain-side-effect-never-engine-state)).
+- A worker whose [ownership](../../../glossary.md#term-ownership--ownership) no longer counts writes nothing to the Task's branch or [pull request](../../../../core/glossary.md#term-pull-request--pull-request) ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
+- Renewal and lapse use the time GitHub records for each comment, so no clone's clock decides them (DEC-059 point 9).
 
 ## Open for the design
 

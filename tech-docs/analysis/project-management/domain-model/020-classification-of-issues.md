@@ -103,7 +103,7 @@ Defined in [TERM-kind-of-work](../glossary.md#term-kind-of-work--kind-of-work).
 
 **Why:** A reader should see from a [Task](../glossary.md#term-task--task)'s title, and from the [pull request](../../core/glossary.md#term-pull-request--pull-request) that closes the Task, which kind of work the Task holds. One fixed set of values keeps each title prefix and each commit type in step with the work ([DEC-011](../../../../.pkit/capabilities/project-management/decisions/DEC-011-title-formats.md) and [DEC-012](../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
-A kind of work is the value an [issue](../glossary.md#term-issue--issue) takes on the `type` classification axis, such as `bug`, `docs` or `test`. A Task's kind of work sets the prefix its title opens with, such as `[Docs]`. The kind of work also sets the commit type of the pull request that closes the Task.
+A kind of work is the value an [issue](../glossary.md#term-issue--issue) takes on the `type` [classification axis](../glossary.md#term-classification-axis--classification-axis), such as `bug`, `docs` or `test`. A Task's kind of work sets the prefix its title opens with, such as `[Docs]`. The kind of work also sets the commit type of the pull request that closes the Task.
 
 **Attributes:**
 
@@ -112,7 +112,7 @@ A kind of work is the value an [issue](../glossary.md#term-issue--issue) takes o
 
 **Relations:**
 
-- Each issue takes one kind of work, on the `type` [classification axis](../glossary.md#term-classification-axis--classification-axis) (DEC-012).
+- Each issue takes one kind of work, on the `type` classification axis (DEC-012).
 - An [EPIC](../glossary.md#term-epic--epic), a [Feature](../glossary.md#term-feature--feature) and an [Umbrella](../glossary.md#term-umbrella--umbrella) always take `feature`. Every other kind of work is a Task's alone (DEC-012).
 
 **States:** None.
@@ -127,7 +127,7 @@ Defined in [TERM-workstream](../glossary.md#term-workstream--workstream).
 
 **Why:** A team invests in long-lived areas over many outcomes. Where each [project](../../core/glossary.md#term-project--project) improvises their names and their lifecycle, the names drift. One definition, kept in one file with fixed forms for the names, keeps every project's workstreams in one shape ([DEC-018](../../../../.pkit/capabilities/project-management/decisions/DEC-018-workstream-taxonomy-and-lifecycle.md)).
 
-A workstream is a long-lived area of a project's work, such as `docs` or `cli`. It outlasts the [EPICs](../glossary.md#term-epic--epic) whose outcomes lie within it. The project declares its workstreams in a file of its own, and each one is a value of the `workstream` classification axis.
+A workstream is a long-lived area of a project's work, such as `docs` or `cli`. It outlasts the [EPICs](../glossary.md#term-epic--epic) whose outcomes lie within it. The project declares its workstreams in a file of its own, and each one is a value of the `workstream` [classification axis](../glossary.md#term-classification-axis--classification-axis).
 
 **Attributes:**
 
@@ -137,7 +137,7 @@ A workstream is a long-lived area of a project's work, such as `docs` or `cli`. 
 
 **Relations:**
 
-- It is one value of the `workstream` [classification axis](../glossary.md#term-classification-axis--classification-axis) ([DEC-012](../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
+- It is one value of the `workstream` classification axis ([DEC-012](../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 - An EPIC covers a single outcome inside a workstream (DEC-018).
 - It groups issues, and is the parent of none ([DEC-016](../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 
@@ -152,9 +152,9 @@ A workstream is a long-lived area of a project's work, such as `docs` or `cli`. 
 
 Defined in [TERM-substrate-map](../glossary.md#term-substrate-map--substrate-map).
 
-**Why:** Some projects cannot create the labels project-management writes, since their tracker already has conventions of its own. Such a [project](../../core/glossary.md#term-project--project) says where each classification axis already lives. Each check that needs an axis the project cannot carry then warns, rather than refusing ([DEC-036](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md)).
+**Why:** Some projects cannot create the labels project-management writes, since their tracker already has conventions of its own. Such a [project](../../core/glossary.md#term-project--project) says where each [classification axis](../glossary.md#term-classification-axis--classification-axis) already lives. Each check that needs an axis the project cannot carry then warns, rather than refusing ([DEC-036](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md)).
 
-A substrate map is a file of the project's own. It binds each [classification axis](../glossary.md#term-classification-axis--classification-axis) it names, and the [issue](../glossary.md#term-issue--issue) state where it names that state, to one carrier on GitHub, or marks either unsupported. The carrier may be project-management's own labels, or labels the project already has ([DEC-062 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#3-the-map-can-name-the-kits-own-labels)). It may also be one of these ([DEC-036 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#1-a-dedicated-substrate-mapyaml-schema)):
+A substrate map is a file of the project's own. It binds each classification axis it names, and the [issue](../glossary.md#term-issue--issue) state where it names that state, to one carrier on GitHub, or marks either unsupported. The carrier may be project-management's own labels, or labels the project already has ([DEC-062 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#3-the-map-can-name-the-kits-own-labels)). It may also be one of these ([DEC-036 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-036-substrate-pluggable-adoption.md#1-a-dedicated-substrate-mapyaml-schema)):
 
 - a title prefix
 - a field of the project's board
@@ -186,7 +186,8 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 **Classification axis:**
 
 - [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/020-file-and-move/UC-060-file-task.md)
-- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the batch plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
+- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md)
 - [JRN-012 — Take up my Task, and land its change](../use-case-model/journeys/JRN-012-take-up-and-land-task.md)
 
 **Kind of work:**
@@ -194,18 +195,18 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/020-file-and-move/UC-060-file-task.md)
 - [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md)
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md)
-- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
+- [UC-087 — Hand the next piece of the work to the agent of the scope that holds that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 
 **Workstream:**
 
 - [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/020-file-and-move/UC-060-file-task.md)
-- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the batch plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md)
 - [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md)
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md)
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
-- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
+- [UC-087 — Hand the next piece of the work to the agent of the scope that holds that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 - [JRN-013 — Build my next Task, and land it while other agents land theirs](../use-case-model/journeys/JRN-013-build-and-land-next-task.md)
 

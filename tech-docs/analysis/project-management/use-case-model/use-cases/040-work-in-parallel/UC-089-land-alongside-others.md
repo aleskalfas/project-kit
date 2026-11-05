@@ -122,7 +122,7 @@ pkit:
 
 - **7a.** Another run of `fix-drift` in the same [clone](../../../glossary.md#term-clone--clone) holds the clone's lock. The command refuses, and the worker runs `fix-drift` again later ([DEC-056 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#4-the-run-is-bounded)).
 
-**Postconditions:** The worker's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) merged at the [head](../../../../core/glossary.md#term-head--head) the merge gate judged, after the other agents' changes, and the pull request's [Task](../../../glossary.md#term-task--task) is in Done.
+**Postconditions:** The worker's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) merged at the [head](../../../../core/glossary.md#term-head--head) the [merge gate](../../../glossary.md#term-merge-gate--merge-gate) judged, after the other agents' changes, and the pull request's [Task](../../../glossary.md#term-task--task) is in Done.
 
 **Minimal guarantees:**
 
