@@ -29,6 +29,7 @@ pkit:
         - COR-016
         - COR-017
         - COR-025
+        - COR-028#2
         - COR-047
         - COR-047#2
         - COR-047#3
@@ -103,7 +104,7 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How the system enters a repository
-  accDescr: The first install, pkit init, adds the backbone to a repository, which is a project from then on. Install then adds components to the project. Before it writes, it checks that the component exists in its source, works with the backbone and collides by name with nothing. On a collision, a person chooses for each file whether to override it, skip it or look at it first. An installed adapter deploys skills and agent definitions where its harness looks for them, and uninstall removes a component again.
+  accDescr: The first install, pkit init, adds the backbone to a repository, which is a project from then on. Install then adds components to the project. Before it writes, it checks that the component exists, works with the backbone and collides by name with nothing. On a collision, a person chooses for each file whether to override it, skip it or look at it first. An installed adapter deploys skills and agent definitions where its harness looks for them, and uninstall removes a component again.
   R([Repository]) -->|the first install adds the backbone| P[Project]
   P -->|install adds a component| K{Install checks before it writes}
   K -->|it exists, works with the backbone, no name collides| C[Component installed]
@@ -145,7 +146,7 @@ The backbone is the part of the [system](../glossary.md#term-system--system) tha
 
 **Attributes:**
 
-- one version, such as 1.149.0, kept in `.pkit/VERSION` (COR-010)
+- one version, such as 1.149.0 (COR-010)
 
 **Relations:**
 
@@ -194,7 +195,7 @@ A skill is a document that holds a procedure, loaded when a task matches it. It 
 **Attributes:**
 
 - what it reads and what it needs, declared in its front matter ([COR-013 point 2](../../../../.pkit/decisions/core/COR-013-agent-architecture.md#2-unified-frontmatter-shape-agents-and-skills))
-- its `gates`: the records whose acceptance it waits on (COR-013 point 2)
+- its `gates`: the [decision records](../glossary.md#term-decision-record--decision-record) whose acceptance it waits on (COR-013 point 2)
 
 **Relations:**
 
@@ -206,7 +207,7 @@ A skill is a document that holds a procedure, loaded when a task matches it. It 
 **Always true:**
 
 - It cites the records and documents it relies on, and never copies their text (COR-006).
-- It refuses to run unless each record its `gates` names is accepted (COR-013 point 2).
+- It refuses to run unless each decision record its `gates` names is accepted (COR-013 point 2).
 - Each reference it declares, its body cites, and the other way round ([COR-013 point 3](../../../../.pkit/decisions/core/COR-013-agent-architecture.md#3-reference-graph-and-bidirectional-consistency)).
 
 ## Agent definition
@@ -215,13 +216,13 @@ Defined in [TERM-agent-definition](../glossary.md#term-agent-definition--agent-d
 
 **Why:** Some work needs a standing remit with boundaries, rather than one procedure for one task ([COR-006](../../../../.pkit/decisions/core/COR-006-artifact-roles.md)). Written down with what it reads and owns, a remit can ship to every repository, and each path has one owner ([COR-013](../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
 
-An agent definition is a document that sets one standing remit, with its boundaries: what it reads and the paths it owns. It is deployed for a [harness](../glossary.md#term-harness--harness) to delegate work to. `critic.md` is the critic's.
+An agent definition is a document that sets one standing remit, with its boundaries: what it reads and the paths it owns. It is deployed for a [harness](../glossary.md#term-harness--harness) to hand work to. `critic.md` is the critic's.
 
 **Attributes:**
 
-- `reads`: the paths, records and patterns it reads ([COR-013 point 2](../../../../.pkit/decisions/core/COR-013-agent-architecture.md#2-unified-frontmatter-shape-agents-and-skills))
+- `reads`: the paths, [decision records](../glossary.md#term-decision-record--decision-record) and patterns it reads ([COR-013 point 2](../../../../.pkit/decisions/core/COR-013-agent-architecture.md#2-unified-frontmatter-shape-agents-and-skills))
 - `owns`: the paths it is responsible for (COR-013 point 2)
-- `needs`: the hooks it calls (COR-013 point 2)
+- `needs`: the named entry points it calls (COR-013 point 2)
 
 **Relations:**
 
@@ -240,7 +241,7 @@ An agent definition is a document that sets one standing remit, with its boundar
 
 Defined in [TERM-storyboard](../glossary.md#term-storyboard--storyboard).
 
-**Why:** A dialogue that a tool holds with a person, turn by turn, is hard to get right inside the tool's own body ([COR-016](../../../../.pkit/decisions/core/COR-016-scripted-scenario-storyboards.md)). Written first as a script, its ambiguities surface before anything is built, and its edge cases become scenarios of their own (COR-016).
+**Why:** A dialogue that a tool holds with a person, turn by turn, is hard to get right inside the tool's own body ([COR-016](../../../../.pkit/decisions/core/COR-016-scripted-scenario-storyboards.md)). Written first as a script, its ambiguities show before anything is built, and its edge cases become scenarios of their own (COR-016).
 
 A storyboard is a document that scripts a dialogue with a person, scenario by scenario, before the file that carries it out is written. That file then reads it and follows it. Today that file is an [agent definition](../glossary.md#term-agent-definition--agent-definition), and its storyboard lies beside it, as `storyboard.md`.
 
@@ -274,7 +275,7 @@ A storyboard is a document that scripts a dialogue with a person, scenario by sc
 
 Defined in [TERM-stamp](../glossary.md#term-stamp--stamp).
 
-**Why:** Writing a new file by hand repeats mechanical steps, such as picking its number, and an early record written so took the wrong number ([COR-005](../../../../.pkit/decisions/core/COR-005-bundle-pattern.md)). A stamp does those steps the same way each time, and the [skill](../glossary.md#term-skill--skill) it pairs with carries the judgement (COR-005).
+**Why:** Writing a new file by hand repeats mechanical steps, such as picking its number ([COR-005](../../../../.pkit/decisions/core/COR-005-bundle-pattern.md)). An early [decision record](../glossary.md#term-decision-record--decision-record) written so took the wrong number (COR-005). A stamp does those steps the same way each time, and the [skill](../glossary.md#term-skill--skill) it pairs with carries the judgement (COR-005).
 
 A stamp is an authoring command that writes a new file with its id, its front matter and its location right. It pairs with a skill, which carries the disciplines the command cannot check, such as choosing a slug. `pkit analysis new term` is one.
 
@@ -375,7 +376,7 @@ Install is the operation that adds the [backbone](../glossary.md#term-backbone--
 
 **Always true:**
 
-- Before it touches a file, it checks that the component exists in its source and works with the backbone. It also checks that no name collides (COR-017).
+- Installing a component, it checks, before it touches a file, that the component exists and works with the backbone. It also checks that no name collides (COR-017).
 - On a collision, a person chooses for each file whether to override it, skip it or look at it first (COR-017).
 - `pkit init` refuses to run again in a project ([COR-004](../../../../.pkit/decisions/core/COR-004-cli-surface.md)).
 
