@@ -22,6 +22,7 @@ builds-on:
       - {id: TERM-declared-surface, name: declared surface}
       - {id: TERM-default-branch, name: default branch}
       - {id: TERM-deferral, name: deferral}
+      - {id: TERM-distribution, name: distribution}
       - {id: TERM-documentation-root, name: documentation root}
       - {id: TERM-friction, name: friction}
       - {id: TERM-head, name: head}
@@ -320,6 +321,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [declared surface](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-declared-surface--declared-surface)
   - **Term:** [default branch](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-default-branch--default-branch)
   - **Term:** [deferral](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-deferral--deferral)
+  - **Term:** [distribution](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-distribution--distribution)
   - **Term:** [documentation root](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-documentation-root--documentation-root)
   - **Term:** [friction](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-friction--friction)
   - **Term:** [head](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-head--head)

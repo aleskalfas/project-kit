@@ -86,7 +86,7 @@ pkit:
 
 - **AI agent** (`core:ACT-ai-agent`): the `analysis-resolver` agent, which proposes each [revalidation outcome](../../../glossary.md#term-revalidation-outcome--revalidation-outcome) with its evidence. It runs no command that writes, so the developer decides each [answer](../../../../core/glossary.md#term-answer--answer) ([REQ-050](../../../requirements/functional/REQ-050-agent-proposes.md)).
 - **Operator** (`core:ACT-operator`): is asked before `pkit analysis new` or `pkit analysis link` writes in a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
-- **Project management** (`ACT-project-management`): its drift command starts the `analysis-resolver` agent with nobody to ask. The agent writes each answer as fields, and each waits until a person decides it ([project-management DEC-056 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)).
+- **Project management** (`ACT-project-management`): where it is installed, its drift command starts the `analysis-resolver` agent with nobody to ask. The agent writes each answer as fields, and each waits until a person decides it ([project-management DEC-056 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)).
 
 **Preconditions:**
 
