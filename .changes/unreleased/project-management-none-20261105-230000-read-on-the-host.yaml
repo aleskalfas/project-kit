@@ -1,0 +1,8 @@
+component: project-management
+kind: none
+body: >
+  DEC-067 proposes what a person who merges outside the landing command is
+  told, and where they read what no command can tell them (#2696). Nothing
+  moves until a person accepts it. This change then takes the edits it names
+  to accepted records, and declares those for the backbone.
+  The merge commands and the view land in later pull requests.
