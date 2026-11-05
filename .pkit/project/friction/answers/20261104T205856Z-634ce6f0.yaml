@@ -1,0 +1,288 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-authorisation
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+    revalidated:
+      at: 2026-11-04T23:42:40Z
+      outcome: unchanged
+      unchanged-because: The term says an authorisation is the person's go-ahead for a pull request at its head, and that no gate gives one. DEC-055 point 3 gains review-work's refusal of what the list at the pull request's head marks updated with no sentence, derived again where the list is for another head, its --force fallback, and warnings of a sentence the list does not show, one of which holds land-work's run authorised up front. None changes what an authorisation is or who gives it.
+  - artefact: tech-docs/analysis/project-management/domain-model/030-the-issue-lifecycle.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+    revalidated:
+      at: 2026-11-04T23:42:41Z
+      outcome: unchanged
+      unchanged-because: "The view cites DEC-055 point 3 for the head an authorisation to merge covers and for that authorisation being the person's. The point's added bullets change neither: review-work refusing what the list at the pull request's head marks updated with no sentence, deriving it again for another head and falling back under --force, and warnings of a sentence the list does not show, on which land-work holds a run authorised up front until the author removes it."
+  - artefact: tech-docs/analysis/project-management/domain-model/040-reviews-and-the-merge.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T032927Z-451d90fd.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+    revalidated:
+      at: 2026-11-04T22:48:46Z
+      outcome: unchanged
+      unchanged-because: The view cites DEC-055 point 3 for each person finding shown whole to whoever authorises the merge, and for a passing gate giving no authorisation. review-work refusing, before the review, what the list at the pull request's head marks updated with no sentence, with its --force fallback and its warning of a sentence the list does not show, and land-work holding a run authorised up front on such a sentence, change neither.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T211250Z-f74ab866.yaml
+      - 20261029T214542Z-efb6f11b.yaml
+      - 20261031T185157Z-7a2bd436.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+    revalidated:
+      at: 2026-11-04T22:48:48Z
+      outcome: unchanged
+      unchanged-because: The requirement cites DEC-055 point 3 only for the authorisation to merge staying the person's, whatever a reviewer approved. review-work's refusal of what the list at the pull request's head marks updated with no sentence, its --force fallback, and the warnings and the hold on a sentence the list does not show leave that as it was.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+    revalidated:
+      at: 2026-11-04T23:42:45Z
+      outcome: unchanged
+      unchanged-because: Its main path merges no base, and variants 9a and 9b merge it where the merge check fails or conflicts, two of the merges DEC-064 point 1 names, which DEC-055 point 6 now cites for the merge to name. land-work's stop at the checks, or at the merge, on a head the host reads as behind its base, unless the base merges through a queue, read once a run, and its hold of a run authorised up front on a sentence the list does not show, are paths steps 4 and 12 to 14 do not describe, and make none of their steps untrue; variant 14a's queue is as it was. Step 9 lists and writes the answers as before. friction_answers gains a run of the change check without the friction settings, the fetch of a missing head, from the base's remote for a fork, and helpers that read the head a description's list names and the sentences a list does not show. DEC-055 point 3's added bullets concern the move to Review and that hold, and the record's summary and rationale change no step.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T174644Z-506bd270.yaml
+    revalidated:
+      at: 2026-11-04T22:48:56Z
+      outcome: unchanged
+      unchanged-because: The use case reads from land-work only the count of this clone's fixer proposals that a run prints. land-work's stops naming the merge of the base on a head the host reads as behind it, at the checks or at the merge, the line it prints where the base's queue cannot be read, and its warning of a sentence the list does not show, with the hold of a run authorised up front, leave that count and every step of the listing as written.
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T121046Z-6806ad50.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+    revalidated:
+      at: 2026-11-04T23:42:51Z
+      outcome: unchanged
+      unchanged-because: It says what docs-reviewer checks of each updated document's sentence and how it reads one, that what the person is shown of the answers stops nothing, that an authorisation covers a later head of answers and a clean merge, and links project-management's sections on the answers and on land-work. review-work refusing what the list at the head marks updated with no sentence, deriving it again for another head, and warning of a sentence the list does not show, land-work holding a run authorised up front on such a sentence, its stops on a head behind its base, and DEC-064's rule on when a branch takes in its base leave that check, that cover and those links as written.
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+    revalidated:
+      at: 2026-11-04T22:49:03Z
+      outcome: unchanged
+      unchanged-because: The page tells a user to write each updated document's sentence in the read form, says the reviewer blocks a missing one, and that what land-work shows of the answers and their sentences stops no merge. review-work refusing what the list at the head marks updated with no sentence, with its --force fallback and its warning of a sentence the list does not show, land-work holding a run authorised up front on such a sentence, its stops on a head behind its base, and DEC-064's rule on when a branch takes in its base contradict nothing it says.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/020-review/UC-080-check-answers.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+    revalidated:
+      at: 2026-11-04T23:42:43Z
+      outcome: unchanged
+      unchanged-because: "The use case is docs-reviewer's check of the answers. Its variant 5a, a missing or unread sentence drawing a block finding, still occurs: where the description carried no list when review-work read it, where a head pushed after the move to review updated a document, where a pull request retargeted with its head unmoved kept the description's list, or where --force passed the refusal or stood the description's list in for one review-work could not derive. DEC-055 point 3's refusal, its severity, the warnings of a sentence the list does not show and the hold on one make none of its steps untrue."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+    revalidated:
+      at: 2026-11-04T22:48:52Z
+      outcome: unchanged
+      unchanged-because: Step 7 says review-work checks the title, opens the pull request or makes a draft ready, and moves the Task to Review. Its refusal of a missing sentence is a body check before that, as validate-at-ready's are, and its stops on a description it cannot read or a list it cannot derive come before any write, as does its warning of a sentence the list does not show; the use case describes none of them. transition-state.md's landing text, on when the author takes in the base and on the later head an authorisation covers, concerns no move it describes.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+    revalidated:
+      at: 2026-11-04T23:42:46Z
+      outcome: unchanged
+      unchanged-because: Step 2 needs the pull request review-work opened from the Task's branch, which it still opens once each updated document has its sentence, whatever head the description's list is for. The journey describes no merge of the base, so land-work's stops naming one, and its handling of a queue and of a pull request from a fork, change nothing in it.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+    revalidated:
+      at: 2026-11-04T22:48:58Z
+      outcome: unchanged
+      unchanged-because: Step 7 has the worker open the Task's pull request with review-work, as UC-061 step 7 describes. review-work refusing a missing sentence until the worker mends the body, or stopping where it cannot derive the list, leaves that step true, as its warning of a sentence the list does not show does.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T165722Z-1191f1a6.yaml
+      - 20261104T174644Z-506bd270.yaml
+    revalidated:
+      at: 2026-11-04T23:42:50Z
+      outcome: unchanged
+      unchanged-because: It needs from UC-089 only each Task's pull request merged, with each review round's verdict naming the head it reviewed. In UC-089 the worker now takes in the base only where the pull request conflicts, the system names that merge, or the worker judges that the merge settles a check failing only on the hosting service's merge or the queue's. The stop on a branch behind its base is variant 5b, and variants 4a, 5b and 6a make their merges through the build command, not built yet (#2287). The merge still counts only verdicts that stand for the head it lands, which leaves that need as written.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+    revalidated:
+      at: 2026-11-04T23:42:48Z
+      outcome: unchanged
+      unchanged-because: "Step 3 has the seat's agent run its loop of the pm skill in work-loop.md, and step 4 hands a worker on to UC-084. The worker's loop gains one sentence: where a landing stop handed back names a merge of the base, the worker makes it through the build command, as DEC-064 point 4 says, and on the Task's branch until #2287 builds that command. Which loop the agent runs, and every step of taking and holding a seat, stay as written."

@@ -21,6 +21,7 @@ pkit:
         - project-management:DEC-026
         - project-management:DEC-055#3
         - project-management:DEC-055#6
+        - project-management:DEC-064
         - project-management:DEC-059#7
       artefact:
         - ACT-worker-agent
@@ -42,7 +43,7 @@ pkit:
    - **Needs from [UC-083](../use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md) (outside this journey):** Tasks the planning agent filed, each with its [workstream](../../glossary.md#term-workstream--workstream). A [Task](../../glossary.md#term-task--task) whose `## Dependencies` section names an [issue](../../glossary.md#term-issue--issue) still open is not ready. The worker takes such a Task only once that issue closes (UC-084 step 2).
    - **Needs from [UC-060](../use-cases/020-file-and-move/UC-060-file-task.md) (outside this journey):** Tasks a developer filed, each with its workstream. Tasks either use case filed are enough.
 2. [UC-089](../use-cases/040-work-in-parallel/UC-089-land-alongside-others.md) — Land my Task while other agents land theirs
-   - **Needs from step 1 (UC-084):** the Task in Review, and its [pull request](../../../core/glossary.md#term-pull-request--pull-request) open, which `pkit pm review-work` opened on the Task's branch ([project-management DEC-026](../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)). Step 1 ends by landing the Task, as UC-089 describes. Other agents' pull requests may merge first, and move the [default branch](../../../core/glossary.md#term-default-branch--default-branch) past the worker's [base](../../../core/glossary.md#term-base--base). The worker merges it in only where the pull request conflicts or a command names that merge (UC-089 step 4, variants 4a, 6a and 6b).
+   - **Needs from step 1 (UC-084):** the Task in Review, and its [pull request](../../../core/glossary.md#term-pull-request--pull-request) open, which `pkit pm review-work` opened on the Task's branch ([project-management DEC-026](../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)). Step 1 ends by landing the Task, as UC-089 describes, and other agents' pull requests may first move the [default branch](../../../core/glossary.md#term-default-branch--default-branch) past the worker's [base](../../../core/glossary.md#term-base--base). The worker takes in the default branch only on a conflict, a named merge, or a check it judges needs it ([DEC-064 point 4](../../../../../.pkit/capabilities/project-management/decisions/DEC-064-base-merge-named.md#4-where-the-pull-requests-author-takes-in-the-base)). Such a check fails only on the hosting service's merge or the queue's.
 
 **Variants:**
 

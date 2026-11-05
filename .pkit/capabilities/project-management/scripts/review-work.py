@@ -33,12 +33,25 @@ Gates per DEC-026:
     the PR found, a draft or one already ready, before it is made ready,
     reviewers are requested or the issue moves; refused at validate-at-ready's
     severity, hard-reject, naming each such document, the form a sentence
-    takes and each item there that is not read as one (`--force` overrides,
-    and is the remedy where a later fix round left such a document unchanged).
-    A description that cannot be read stops the run (exit 3), never read as
-    one with no list. The list is read as the description carries it,
-    nothing derived, so a document updated after it was written is the
-    reviewer's to catch. open-pr and edit-pr only warn of it.
+    takes and each item there that is not read as one. Where the list's start
+    marker names another head than the PR's, the list is derived at the PR's
+    head (`friction_answers.checked`, the head fetched first where this clone
+    lacks it), and exactly what that list marks `updated` with no sentence is
+    refused, a document updated since the description's list included. The
+    marker's head alone decides: a PR retargeted with its head unmoved keeps the
+    description's list, which the reviewer backs and land-work writes again
+    before it merges. Each document only the description's list
+    marks, with no sentence, gets an information line naming both lists'
+    commits: the description's list is out of date for it, land-work writes the
+    list again before it merges, and a merge through done-work or merge-pr run
+    directly keeps the list as written. Each sentence on a document the derived
+    list does not mark `updated` gets a warning naming the edit that removes it,
+    as open-pr and land-work give it. A list that cannot be derived there stops
+    the run (exit 2), and so does a description that cannot be read (exit 3):
+    neither is read as one with no list, and nothing is refused. Under
+    `--force`, a list that cannot be derived gives way to the description's,
+    with a warning, and its findings are printed and overridden. open-pr and
+    edit-pr only warn of a missing sentence.
   - The clash guard (DEC-035 point 6), with an instance id set or a seat of
     a topology held: an issue another instance owns is refused before any PR
     is opened or made ready and before reviewers are requested, at
@@ -73,7 +86,7 @@ Exit codes:
      this clone's seat could not be confirmed
   2  usage error / gate failure / illegal transition / issue not found /
      where the board carries the state, a card whose Status does not place
-     the issue
+     the issue / the list of answers could not be derived at the PR's head
   3  gh failure: `gh pr create` could not open the PR, the PR's description
      could not be read, or `gh pr ready` could not make it ready, or the board
      carrying the state could not be read
@@ -86,6 +99,7 @@ import argparse
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -127,15 +141,26 @@ FILL_FIRST = (
 )
 #: The label of a finding on the author's sentences, as edit-pr's validation names it.
 SENTENCES_LABEL = "body.sentences"
-#: What to do about a refused sentence where the description's list is out of date:
-#: a later fix round left the document unchanged, and the refusal is wrong. --force
-#: is its remedy, never a sentence on a change the document no longer has (DEC-055
-#: point 3; the capability README, "Where the sentences live").
-UNDONE_STEP = (
-    "where a later fix round left a document the list marks updated unchanged, write no "
-    "sentence for it: once nothing else is refused, run review-work again with --force, and "
-    "land-work writes the list again for the head it merges"
-)
+
+
+#: The exit where the list of answers could not be derived at the PR's head.
+EXIT_UNDERIVED = 2
+
+
+@dataclass(frozen=True)
+class _Description:
+    """A PR's description, with the PR's number, its head, its base branch and the
+    branch it is opened from as GitHub names them, and whether it comes from a
+    fork: what the author's sentences are checked against, and where the head is
+    fetched from. A body review-work composes for a PR not opened yet has none of
+    them."""
+
+    body: str
+    number: int | None = None
+    head: str = ""
+    base: str = ""
+    branch: str = ""
+    cross_repository: bool = False
 
 
 def main() -> int:
@@ -371,8 +396,9 @@ def main() -> int:
         # Open a ready PR (non-draft) — validate the composed body first.
         title = _derive_pr_title(issue, branch)
         body = f"Closes #{args.issue_number}"
+        # The body composed here carries no list, so it has no sentence to check.
         if not _ready_body_ok(
-            body, classification, capability_root, args.force, next_step=FILL_FIRST
+            body, classification, capability_root, args.force, sentences=[], next_step=FILL_FIRST
         ):
             return 1
         url = _gh_pr_create_ready(branch, base, title, body, config)
@@ -385,14 +411,18 @@ def main() -> int:
     elif existing_pr.get("isDraft"):
         # Flip draft → ready — validate the draft's current body first.
         pr_number = existing_pr.get("number")
-        body = _gh_pr_body(pr_number, config)
-        if body is None:
+        description = _gh_pr_description(pr_number, config)
+        if description is None:
             return 3
+        sentences = _sentence_findings(description, force=args.force)
+        if sentences is None:
+            return EXIT_UNDERIVED
         if not _ready_body_ok(
-            body,
+            description.body,
             classification,
             capability_root,
             args.force,
+            sentences=sentences,
             next_step=_edit_step(args.issue_number, pr_number),
         ):
             return 1
@@ -402,14 +432,13 @@ def main() -> int:
         print(f"  flipped PR #{pr_number} draft → ready")
     else:
         pr_number = existing_pr.get("number")
-        body = _gh_pr_body(pr_number, config)
-        if body is None:
+        description = _gh_pr_description(pr_number, config)
+        if description is None:
             return 3
-        if not _body_ok(
-            _sentence_findings(body),
-            args.force,
-            next_step=_edit_step(args.issue_number, pr_number),
-        ):
+        sentences = _sentence_findings(description, force=args.force)
+        if sentences is None:
+            return EXIT_UNDERIVED
+        if not _body_ok(sentences, args.force, next_step=_edit_step(args.issue_number, pr_number)):
             return 1
         print(f"  PR #{pr_number} already ready; idempotent skip")
 
@@ -619,16 +648,22 @@ def _gh_pr_create_ready(branch: str, base: str, title: str, body: str, config: d
 
 
 def _ready_body_ok(
-    body: str, classification: dict, capability_root: Path, force: bool, *, next_step: str
+    body: str,
+    classification: dict,
+    capability_root: Path,
+    force: bool,
+    *,
+    sentences: list[pr_validation.Finding],
+    next_step: str,
 ) -> bool:
     """Validate-at-ready (#569): True iff `body` may go ready-for-review.
 
     Runs the shared PR-body validator at the merge-gate phase (empty checkbox →
     hard-reject). Title/closing-label checks are skipped (review-work composes the
-    title). The author's sentences are checked beside it (`_sentence_findings`),
-    so one refusal names every blocking finding. On a blocking finding: print it
-    with `next_step`, and return False, or True under ``force``. Merge remains the
-    backstop; drafts never reach here.
+    title). The findings on the author's sentences, `sentences`, join it
+    (`_sentence_findings`), so one refusal names every blocking finding. On a
+    blocking finding: print it with `next_step`, and return False, or True under
+    ``force``. Merge remains the backstop; drafts never reach here.
     """
     findings = pr_validation.validate_pr(
         pr_title="",
@@ -641,17 +676,34 @@ def _ready_body_ok(
         phase=PHASE_TRANSITION,
     )
     blocking = [f for f in findings if f.severity in pr_validation.BLOCKING_SEVERITIES]
-    return _body_ok(blocking + _sentence_findings(body), force, next_step=next_step)
+    return _body_ok(blocking + sentences, force, next_step=next_step)
 
 
-def _sentence_findings(body: str) -> list[pr_validation.Finding]:
-    """A hard-reject finding for each document the list in the description `body`
-    marks `updated` that its author gives no sentence on what changed in it
-    (DEC-055 point 3), named with the form a sentence takes. Each item under the
-    sentences heading that is not read as one follows, as a warning: it is
-    likely the sentence, in another form. Nothing where every such document has
-    a sentence, or the description carries no list."""
-    unsaid = friction_answers.unsaid_in(body)
+def _sentence_findings(
+    description: _Description, *, force: bool = False
+) -> list[pr_validation.Finding] | None:
+    """A hard-reject finding for each document the list of answers marks `updated`
+    that the PR's description gives no sentence on what changed in it (DEC-055
+    point 3), named with the form a sentence takes. Each item under the sentences
+    heading that is not read as one follows, as a warning: it is likely the
+    sentence, in another form. Nothing where every such document has a sentence,
+    or the description carries no list.
+
+    The list is the description's where it is for the PR's head as it stands
+    (`_listed_for_head`). Otherwise the list is derived at the PR's head, and that
+    list decides (`_unsaid_at_head`). None, with what failed printed, where it
+    cannot be derived there: nothing is refused on a list nobody read. Under
+    ``force`` the description's list stands in for it, with a warning."""
+    body = description.body
+    if friction_answers.find(body) is None:
+        return []
+    if _listed_for_head(description):
+        unsaid = friction_answers.unsaid_in(body)
+    else:
+        found = _unsaid_at_head(description, force=force)
+        if found is None:
+            return None
+        unsaid = found
     if not unsaid:
         return []
     refused = [
@@ -673,6 +725,98 @@ def _sentence_findings(body: str) -> list[pr_validation.Finding]:
     return refused + unread
 
 
+def _listed_for_head(description: _Description) -> bool:
+    """Whether the list the description carries is for the PR's head: its start
+    marker names that head. The head alone decides, since where a head left its
+    base is the backbone's to compute (COR-054 point 5): a PR retargeted with its
+    head unmoved keeps the description's list, which the reviewer backs and
+    land-work writes again before it merges (DEC-055 point 3)."""
+    head = description.head
+    return bool(head) and friction_answers.listed_head(description.body) == head
+
+
+def _unsaid_at_head(description: _Description, *, force: bool = False) -> list[str] | None:
+    """Each document the list derived at the PR's head marks `updated` that the
+    description gives no sentence for, in that list's order. A fix round after the
+    description's list was written may have updated a document, answered one
+    otherwise or dropped its revalidation, and the edit command carries the list as
+    it was (DEC-055 point 2). Each document only the description's list marks, with
+    no sentence, gets an information line naming both lists: a sentence on it would
+    describe a change it no longer has. Each sentence on a document the derived list
+    does not mark `updated` gets a warning, as open-pr and land-work give it: the
+    list never shows it. Only the answers are read, not the friction settings
+    (`friction_answers.checked`), and the head is fetched first where this clone
+    lacks it. None, with why printed, where the list cannot be derived there; under
+    ``force``, the description's list instead, with a warning saying so."""
+    body = description.body
+    listed = _commit(friction_answers.listed_head(body) or "")
+    head, number = description.head, description.number
+    problem = ""
+    if not head or number is None:
+        problem = f"GitHub named no head for PR #{number}"
+    elif not description.base:
+        problem = f"GitHub named no base branch for PR #{number}"
+    else:
+        source = (
+            friction_answers.pull_request_source(
+                description.branch,
+                number,
+                cross_repository=description.cross_repository,
+                base=description.base,
+            )
+            if description.branch or description.cross_repository
+            else None
+        )
+        derived = friction_answers.checked(head, description.base, source=source)
+        if derived.document is not None:
+            now = set(friction_answers.updated_in(derived.document))
+            for location in friction_answers.unsaid_in(body):
+                if location not in now:
+                    print(f"  [info] {_out_of_date(location, listed, head, number)}")
+            said = friction_answers.sentences(body)
+            for location in friction_answers.unlisted(derived.document, said):
+                warning = friction_answers.unlisted_warning(location, head, number)
+                print(f"  [warn] {warning}", file=sys.stderr)
+            return friction_answers.unsaid(derived.document, said)
+        problem = derived.problem or "the change check gave no document"
+    underived = (
+        f"the list of answers at PR #{number}'s head {_commit(head)} could not be derived "
+        f"({problem}), and the description's list is for {listed}"
+    )
+    if force:
+        print(
+            f"  [warn] {underived}; under --force, the description's list is read as it "
+            "stands, and its findings are overridden.",
+            file=sys.stderr,
+        )
+        return friction_answers.unsaid_in(body)
+    print(
+        f"error: {underived}, so which documents need a sentence cannot be told. Nothing was "
+        "made ready, no reviewer requested and the issue not moved. Run review-work again once "
+        "it can be derived.",
+        file=sys.stderr,
+    )
+    return None
+
+
+def _commit(oid: str) -> str:
+    """A head as a line names it: its short form, or that none is named."""
+    return oid[: friction_answers.SHORT] or "a head it does not name"
+
+
+def _out_of_date(location: str, listed: str, head: str, number: int | None) -> str:
+    """What review-work says of `location`, a document the list the description
+    carries, for the commit `listed` names, marks `updated`, that the list at PR
+    `number`'s head `head` does not: the list is out of date for it, and needs no
+    sentence on it."""
+    return (
+        f"{location} is marked updated in the description's list, for {listed}, and not in "
+        f"the list at PR #{number}'s head {_commit(head)}: the description's list is out of date "
+        "for it, and it needs no sentence. land-work writes the list again before it merges; "
+        "a merge through done-work or merge-pr run directly keeps the list as written."
+    )
+
+
 def _edit_step(issue_number: int, pr_number: int | None) -> str:
     """What to do about a refused description of PR `pr_number`: write it with
     edit-pr, then run review-work again."""
@@ -685,9 +829,7 @@ def _edit_step(issue_number: int, pr_number: int | None) -> str:
 def _body_ok(findings: list[pr_validation.Finding], force: bool, *, next_step: str) -> bool:
     """True iff no finding of `findings` blocks; otherwise print them all, with
     `next_step`, and return False, or True under ``force``. The findings are
-    validate-at-ready's (#569) and the author's sentences' (DEC-055 point 3); a
-    refused sentence also gets `UNDONE_STEP`, for a list a later fix round left
-    out of date."""
+    validate-at-ready's (#569) and the author's sentences' (DEC-055 point 3)."""
     if not pr_validation.has_blocking(findings):
         return True
     print("[refused] PR body is not ready for review:", file=sys.stderr)
@@ -697,24 +839,28 @@ def _body_ok(findings: list[pr_validation.Finding], force: bool, *, next_step: s
         print("  → proceeding under --force.", file=sys.stderr)
         return True
     print(f"  → {next_step}; --force overrides.", file=sys.stderr)
-    if any(
-        f.label == SENTENCES_LABEL and f.severity == pr_validation.SEVERITY_HARD_REJECT
-        for f in findings
-    ):
-        print(f"  → {UNDONE_STEP}.", file=sys.stderr)
     return False
 
 
-def _gh_pr_body(pr_number: int | None, config: dict) -> str | None:
-    """The current body of a PR: a draft's, validated before the flip → ready, or
-    a ready one's, whose sentences are checked before the move. None, with what
-    failed printed, when it cannot be read: a description unread is never read
-    as one with no list."""
+#: What review-work reads of a PR: its description, the head and base the author's
+#: sentences are checked against, and where that head is fetched from.
+_DESCRIPTION_FIELDS = "body,headRefOid,baseRefName,headRefName,isCrossRepository"
+
+
+def _gh_pr_description(pr_number: int | None, config: dict) -> _Description | None:
+    """The current description of a PR, with its head and base: a draft's,
+    validated before the flip → ready, or a ready one's, whose sentences are
+    checked before the move. None, with what failed printed, when it cannot be
+    read: a description unread is never read as one with no list."""
     if pr_number is None:
         print("error: cannot read the PR's description — no PR number resolved.", file=sys.stderr)
         return None
     try:
-        proc = gh_run(["gh", "pr", "view", str(pr_number), "--json", "body"], config, check=False)
+        proc = gh_run(
+            ["gh", "pr", "view", str(pr_number), "--json", _DESCRIPTION_FIELDS],
+            config,
+            check=False,
+        )
     except FileNotFoundError as exc:
         return _unread_body(pr_number, f"`gh` could not be run ({exc})")
     if proc.returncode != 0:
@@ -727,7 +873,14 @@ def _gh_pr_body(pr_number: int | None, config: dict) -> str | None:
         return _unread_body(pr_number, "gh's answer is not JSON")
     if not isinstance(data, dict):
         return _unread_body(pr_number, "gh's answer names no pull request")
-    return str(data.get("body") or "")
+    return _Description(
+        str(data.get("body") or ""),
+        number=pr_number,
+        head=str(data.get("headRefOid") or ""),
+        base=str(data.get("baseRefName") or ""),
+        branch=str(data.get("headRefName") or ""),
+        cross_repository=bool(data.get("isCrossRepository")),
+    )
 
 
 def _unread_body(pr_number: int, why: str) -> None:

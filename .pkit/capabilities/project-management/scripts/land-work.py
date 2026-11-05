@@ -64,7 +64,11 @@ there instead, and changes nothing else.
           `--wait-minutes` (default 30; `--no-wait` reads once). No check
           reported yet is never green. A failed check, and a PR that conflicts
           with its base (on which no `pull_request` workflow runs), stop the
-          run before the review.
+          run before the review. So does a PR the host reads as behind a base
+          it merges only up to date, with the merge of the base to make,
+          unless the base merges through a queue, read once a run; where
+          whether it does cannot be read, a line says so and the run goes on
+          ([project-management:DEC-064-base-merge-named] point 2).
   review  In agent review mode, `review-pr`'s review on the pinned head: a
           verdict judged fresh for that head is kept, a stale or missing one
           re-run. A CHANGES_REQUESTED, kept or new, stops the run before the
@@ -107,7 +111,10 @@ there instead, and changes nothing else.
           PR's base (`_lib.friction_answers`), each `updated` document with the
           sentence its author wrote under the description's `## What changed
           in each updated document` — each item there it cannot read draws a
-          `warn:` line naming its line and the form a sentence takes —
+          `warn:` line naming its line and the form a sentence takes, and
+          each sentence there on a document the list does not mark `updated`
+          draws one naming the edit that removes it, since the list never
+          shows it (DEC-055 point 3); neither refuses —
           printed in full, in the plain words of
           the description's `## Documentation this change affects` section,
           and written into the PR's description, last before its footer, where
@@ -168,7 +175,7 @@ there instead, and changes nothing else.
           on how its run ended (`done_work.run`), never on its exit code. A
           merge the host refused, on a PR it reads as behind a base it merges
           only a branch up to date with, stops the run with the merge of the
-          base to make.
+          base to make, unless the base merges through a queue.
 
 There is no flag that skips the checks or the review: the bypasses are
 `done-work`'s, with their audit. Run again, land-work resumes: green checks on
@@ -183,6 +190,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import functools
 import importlib.util
 import json
 import re
@@ -340,11 +348,35 @@ class _Head:
     remote: str
     #: The PR's base branch as GitHub names it; empty when it named none.
     base_branch: str = ""
+    #: The PR comes from a fork, so its head is fetched by the ref its base
+    #: repository keeps for it.
+    cross_repository: bool = False
     #: The earlier head `--expect-head` authorised, where its authorisation covers this
     #: one: every change since lies inside answer files the change adds, a clean merge
     #: of the base counting as none (DEC-055 point 3). Empty where the head
     #: is the one named.
     authorised: str = ""
+
+    @property
+    def source(self) -> friction_answers.Source:
+        """Where the head is fetched from, where this clone lacks it: for a PR from a
+        fork, the base's remote, which keeps a ref for it."""
+        return friction_answers.pull_request_source(
+            self.branch,
+            self.pr_number,
+            cross_repository=self.cross_repository,
+            base=self.base_branch,
+            remote=self.remote,
+        )
+
+    @property
+    def base_remote(self) -> str:
+        """The remote a merge of the base is made from, as a line names it: the base's
+        own for a PR from a fork, whose branch's remote is the fork's; else the
+        branch's."""
+        if self.cross_repository and self.base_branch:
+            return friction_answers.base_remote(self.base_branch)
+        return self.remote
 
     @property
     def covered(self) -> str:
@@ -433,6 +465,10 @@ class _AnswersEnd:
     #: The change check's document at the pinned head, which serves the check of the
     #: merge where the head holds the base's tip it read (`friction_answers.merged`).
     checked: Mapping[str, Any] | None = None
+    #: Each document the description gives a sentence for that the list does not mark
+    #: `updated`: the list never shows it, so a run authorised up front holds until the
+    #: author removes it (DEC-055 point 3).
+    unlisted: tuple[str, ...] = ()
 
     def phrase(self) -> str:
         """What the `ready:` line says of the lines above it —
@@ -652,11 +688,29 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
     if args.dry_run:
         return _merge(args, head, config, reading)
     uncovered = _uncovered(head, to_judge, answers)
-    if args.yes and (to_judge.held is not None or uncovered):
-        return _ready(args, head, review, config, answers, to_judge, reading, uncovered)
+    unlisted = _unlisted_hold(head, answers)
+    if args.yes and (to_judge.held is not None or uncovered or unlisted):
+        return _ready(args, head, review, config, answers, to_judge, reading, uncovered + unlisted)
     if not args.yes and not _interactive():
         return _ready(args, head, review, config, answers, to_judge, reading)
     return _merge(args, head, config, reading)
+
+
+def _unlisted_hold(head: _Head, answers: _AnswersEnd) -> str:
+    """Why a run authorised up front holds on the author's sentences, as the `ready:`
+    line says it, or "": the description gives a sentence on a document the list
+    does not mark `updated`, which the list never shows and no reviewer checks. The
+    person authorised before the warning was shown, so the run stops ready until the
+    author removes it, as a `[person]` finding holds it (DEC-055 point 3)."""
+    if not answers.unlisted:
+        return ""
+    names = ", ".join(answers.unlisted)
+    one = len(answers.unlisted) == 1
+    return (
+        f"; held for the sentence{'' if one else 's'} on {names}, which the list does not "
+        f"show (above): remove {'it' if one else 'them'} with `edit-pr {head.pr_number} "
+        "--body-file <file>`, then run the command below again"
+    )
 
 
 def _uncovered(head: _Head, to_judge: _FindingsEnd, answers: _AnswersEnd) -> str:
@@ -743,11 +797,12 @@ def _pin_head(
         branch,
         oid,
         base=str(pr.get("baseRefName") or "") or "the base branch",
-        remote=_branch_remote(branch),
+        remote=friction_answers.branch_remote(branch),
         base_branch=str(pr.get("baseRefName") or ""),
+        cross_repository=cross,
     )
     if args.expect_head and not oid.startswith(args.expect_head):
-        head = _covered(head, args.expect_head, cross_repository=cross)
+        head = _covered(head, args.expect_head)
     notes = _local_notes(head, cross_repository=cross)
     if head.covered:
         notes.insert(0, head.covered)
@@ -755,7 +810,7 @@ def _pin_head(
     return head
 
 
-def _covered(head: _Head, authorised: str, *, cross_repository: bool) -> _Head:
+def _covered(head: _Head, authorised: str) -> _Head:
     """The pinned head, where the authorisation for the earlier head `authorised` covers
     it: every change from that head to this one lies inside answer files the change
     adds, a clean merge of the base counting as none, as the backbone answers it
@@ -773,11 +828,12 @@ def _covered(head: _Head, authorised: str, *, cross_repository: bool) -> _Head:
             f"{moved}, and its base branch could not be read, so whether that authorisation "
             f"covers it cannot be told. {again}",
         )
-    if not _has_commit(head.oid):
-        # A PR from a fork is fetched by the ref its base repository keeps for it.
-        ref = f"refs/pull/{number}/head" if cross_repository else f"refs/heads/{head.branch}"
-        _git("fetch", "--quiet", head.remote, ref)
-    found = friction_answers.covers(authorised, head.oid, head.base_branch)
+    missing = friction_answers.fetch_head(head.oid, head.source)
+    found = (
+        friction_answers.covers(authorised, head.oid, head.base_branch)
+        if missing is None
+        else friction_answers.Coverage(problem=missing)
+    )
     if found.problem is None and (found.head != head.oid or not found.since.startswith(authorised)):
         found = replace(
             found,
@@ -803,17 +859,6 @@ def _covered(head: _Head, authorised: str, *, cross_repository: bool) -> _Head:
     return replace(head, authorised=found.since)
 
 
-def _branch_remote(branch: str) -> str:
-    """The remote `branch` is pushed to — its push remote, else the remote it
-    tracks — and `origin` when it names none, as start-work resolves a branch
-    (COR-054 point 2)."""
-    for atom in ("push:remotename", "upstream:remotename"):
-        remote = _git("for-each-ref", f"--format=%({atom})", f"refs/heads/{branch}").stdout
-        if remote.strip() and remote.strip() != ".":
-            return remote.strip()
-    return "origin"
-
-
 def _local_notes(head: _Head, *, cross_repository: bool) -> list[str]:
     """What the local checkout says about the pinned head; refuses a local
     branch holding commits the head lacks."""
@@ -821,9 +866,9 @@ def _local_notes(head: _Head, *, cross_repository: bool) -> list[str]:
     tip = _git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}").stdout.strip()
     notes: list[str] = []
     if tip and tip != oid:
-        if not _has_commit(oid) and not cross_repository:
+        if not friction_answers.has_commit(oid) and not cross_repository:
             _git("fetch", "--quiet", remote, f"refs/heads/{branch}")
-        if not _has_commit(oid):
+        if not friction_answers.has_commit(oid):
             raise _Stop(
                 EXIT_UNREADABLE,
                 f"head: cannot tell whether local {branch} (at {short_sha(tip)}) holds commits "
@@ -866,10 +911,6 @@ def _git(*argv: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["git", *argv], capture_output=True, text=True, check=False)
 
 
-def _has_commit(oid: str) -> bool:
-    return _git("cat-file", "-e", f"{oid}^{{commit}}").returncode == 0
-
-
 def _count_commits(revisions: str) -> int | None:
     proc = _git("rev-list", "--count", revisions)
     if proc.returncode != 0:
@@ -907,6 +948,8 @@ def _wait_for_checks(
     issue, number = head.issue, head.pr_number
     started = _monotonic()
     said = ""
+    # Whether a PR read as behind stops here, read once a run: the queue is the base's.
+    behind_stops = functools.cache(lambda: _behind_stops(head, config))
     while True:
         checks = _read_pr(number, config)
         if checks.problem:
@@ -934,6 +977,8 @@ def _wait_for_checks(
             )
         elif checks.conflicting:
             raise _Stop(EXIT_NEEDS_CHANGE, _conflict_line("ci", head))
+        elif checks.behind and behind_stops():
+            raise _Stop(EXIT_NEEDS_CHANGE, _behind_line("ci", head))
         else:
             gate = checks.gate
             assert gate is not None
@@ -1008,18 +1053,45 @@ def _conflict_line(step: str, head: _Head) -> str:
     return (
         f"{step}: stopped — PR #{head.pr_number} conflicts with {head.base}, and GitHub runs "
         "no pull_request workflow on a PR that conflicts with its base. Merge "
-        f"{head.base} into {head.branch} (`git merge {head.remote}/{head.base}`), resolve "
+        f"{head.base} into {head.branch} (`git merge {head.base_remote}/{head.base}`), resolve "
         f"the conflicts, push, and run `land-work {head.issue}` again"
     )
 
 
+def _queued_base(pr_number: int, config: dict[str, Any]) -> bool | None:
+    """Whether the PR's base merges through a queue, which builds the merge with the
+    base itself: None where that cannot be read."""
+    try:
+        return merge_queue.read(pr_number, config).has_queue
+    except merge_queue.Unreadable:
+        return None
+
+
+def _behind_stops(head: _Head, config: dict[str, Any]) -> bool:
+    """Whether a PR the host reads as behind a base it merges only up to date stops
+    at the `ci` step, before the review: where its base merges through no queue.
+    Where whether it does cannot be read, one line says so and the run goes on: the
+    merge step names the merge if the host refuses it
+    ([project-management:DEC-064-base-merge-named] point 2)."""
+    queued = _queued_base(head.pr_number, config)
+    if queued is None:
+        print(
+            f"  ci: PR #{head.pr_number} reads as behind {head.base}, and whether {head.base} "
+            "merges through a queue could not be read, so the run goes on: the merge step "
+            f"names the merge of {head.base} if the host refuses the merge for it",
+            flush=True,
+        )
+    return queued is False
+
+
 def _behind_line(step: str, head: _Head) -> str:
-    """The stop where the host refused the merge of a head behind its base: the
-    merge of the base to make, which the landing names (DEC-055 point 6)."""
+    """The stop on a head the host reads as behind a base it merges only up to date:
+    the merge of the base to make, which the landing names
+    ([project-management:DEC-064-base-merge-named] point 1)."""
     return (
         f"{step}: stopped — the host merges only a branch up to date with {head.base}, and "
         f"reads PR #{head.pr_number} as behind it. Merge {head.base} into {head.branch} "
-        f"(`git merge {head.remote}/{head.base}`), push, and run `land-work {head.issue}` "
+        f"(`git merge {head.base_remote}/{head.base}`), push, and run `land-work {head.issue}` "
         "again"
     )
 
@@ -1226,7 +1298,7 @@ def _answers(
             f"list has no base to be derived against. Nothing was merged; run `land-work "
             f"{issue}` again",
         )
-    derived = friction_answers.derive(head.oid, head.base_branch)
+    derived = friction_answers.derive(head.oid, head.base_branch, source=head.source)
     document = derived.document
     if document is None:
         raise _Stop(
@@ -1250,8 +1322,9 @@ def _answers(
     body = _read_body(head, config)
     if not derived.listed:
         _warn_unread(friction_answers.strip(body))
+        unlisted = _warn_unlisted(document, body, head)
         end = _no_answers(args, head, body, config, capability_root, grants, moved, apart)
-        return replace(end, checked=document)
+        return replace(end, checked=document, unlisted=unlisted)
     if derived.outdated:
         _refuse_moved_base(derived, head)
     settings = derived.settings
@@ -1297,6 +1370,7 @@ def _answers(
             )
     section = friction_answers.render(document, head.oid, settings, sentences)
     _warn_unread(body if friction_answers.current(body, section) else friction_answers.strip(body))
+    unlisted = _warn_unlisted(document, body, head)
     for line in friction_answers.lines(document, settings, sentences):
         print(f"  {line}")
     for line in (*apart, *(change.said() for change in grants)):
@@ -1319,6 +1393,7 @@ def _answers(
         grants_moved=moved,
         apart=len(apart),
         checked=document,
+        unlisted=unlisted,
     )
     if friction_answers.current(body, section):
         _say(f"{STEP}: {written}, {_LISTED}")
@@ -1530,7 +1605,7 @@ def _refuse_moved_base(derived: friction_answers.Derivation, head: _Head) -> Non
         EXIT_NEEDS_CHANGE,
         f"{STEP}: refused — {head.base} moved on after PR #{number}'s head left it, and "
         f"{which}, so its merge can land words the list at {sha} does not show. Merge "
-        f"{head.base} into {head.branch} (`git merge {head.remote}/{head.base}`), push, and "
+        f"{head.base} into {head.branch} (`git merge {head.base_remote}/{head.base}`), push, and "
         f"run `land-work {issue}` again",
     )
 
@@ -1589,6 +1664,20 @@ def _warn_unread(description: str) -> None:
         print(f"  warn: {friction_answers.unread_warning(item)}")
 
 
+def _warn_unlisted(document: Mapping[str, Any], description: str, head: _Head) -> tuple[str, ...]:
+    """A warning for each sentence the author gives in `description` on a document
+    the list derived at the pinned head, the change check's `document`, does not
+    mark `updated`: the list never shows it, so the author removes it with the
+    edit named (DEC-055 point 3). It refuses nothing; the documents it names hold
+    a run authorised up front (`_unlisted_hold`)."""
+    said = friction_answers.sentences(description)
+    found = tuple(friction_answers.unlisted(document, said))
+    for location in found:
+        warning = friction_answers.unlisted_warning(location, head.oid, head.pr_number)
+        print(f"  warn: {warning}")
+    return found
+
+
 def _stamped(body: str, section: str | None, capability_root: Path) -> str:
     """`body` with the list `section` — or none — last, and the provenance footer
     after it, as every body-writing script writes one (ADR-037)."""
@@ -1636,7 +1725,7 @@ def _merge_check(head: _Head, answers: _AnswersEnd) -> None:
             f"`land-work {issue}` again",
         )
     merge_into = (
-        f"Merge {base} into {head.branch} (`git merge {head.remote}/{base}`), "
+        f"Merge {base} into {head.branch} (`git merge {head.base_remote}/{base}`), "
         if found.merge != head.oid
         else ""
     )
@@ -1646,8 +1735,8 @@ def _merge_check(head: _Head, answers: _AnswersEnd) -> None:
             EXIT_NEEDS_CHANGE,
             f"{MERGE_CHECK}: refused — {sha} conflicts with {base} as it stands, at "
             f"{short_sha(found.tip)}, in {files}. Merge {base} into {head.branch} (`git merge "
-            f"{head.remote}/{base}`), resolve the conflicts, push, and run `land-work {issue}` "
-            "again. Nothing was merged",
+            f"{head.base_remote}/{base}`), resolve the conflicts, push, and run "
+            f"`land-work {issue}` again. Nothing was merged",
         )
     tip = short_sha(found.tip)
     where = (
@@ -2164,7 +2253,9 @@ def _judged(
 def _request_failed(head: _Head, reason: str, config: dict[str, Any]) -> tuple[int, str]:
     """done-work merged nothing, and a re-run may help: what GitHub reports of
     the PR now says which — a head that moved, a conflict, a head behind a base
-    the host merges only a branch up to date with, a merge meanwhile."""
+    the host merges only a branch up to date with, a merge meanwhile. A head behind
+    a base that merges through a queue names no merge, as at the `ci` step: the queue
+    builds the merge with the base itself (DEC-064 point 2)."""
     issue, number = head.issue, head.pr_number
     again = f"run `land-work {issue}` again"
     now = _read_pr(number, config)
@@ -2183,7 +2274,7 @@ def _request_failed(head: _Head, reason: str, config: dict[str, Any]) -> tuple[i
         )
     if now.conflicting:
         return EXIT_NEEDS_CHANGE, _conflict_line("merge", head)
-    if now.behind:
+    if now.behind and _queued_base(number, config) is not True:
         return EXIT_NEEDS_CHANGE, _behind_line("merge", head)
     return EXIT_RETRY, f"merge: not merged — {reason}; {again}"
 

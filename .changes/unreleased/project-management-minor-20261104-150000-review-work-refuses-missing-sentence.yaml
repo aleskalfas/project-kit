@@ -10,16 +10,30 @@ body: >
   requests reviewers or moves the issue. The refusal is a `hard-reject`: it
   names each such document, the one-line form a sentence takes,
   ``- `path`: sentence``, and each item under the sentences heading that is not
-  read as one, ends with `edit-pr <PR> --body-file <file>` as the next step,
-  and `--force` overrides it, as it overrides validate-at-ready. Where a later
-  fix round left a document the list marks `updated` unchanged, the refusal
-  says to write no sentence for it and to pass `--force`. A description
-  `review-work` cannot read stops it (exit 3) instead of passing. With every
-  sentence given it proceeds as before. `open-pr` and `edit-pr` warn of such a
-  document and refuse nothing; `edit-pr` gains that warning, a finding of its
-  validation. `land-work` stops at exit 1, naming the merge of the base to
-  make, where the host refused the merge of a pull request it reads as behind
-  its base, instead of exit 7. The pm skill's landing step and the capability
-  README say when a branch takes in its base, as DEC-055 point 6 decides: only
-  where the pull request conflicts with it, or where a command names that
-  merge.
+  read as one, and ends with `edit-pr <PR> --body-file <file>` as the next
+  step. Where the list is for another head than the pull request's, it
+  derives the list at the pull request's head, fetching that head where the
+  clone lacks it, and refuses exactly what that list marks `updated` with no
+  sentence. The list's head alone decides, so a pull request retargeted with
+  its head unmoved keeps the description's list. For a document only the description's list marks `updated` it
+  prints an `[info]` line naming both lists' commits. A list it cannot derive
+  at the head stops it (exit 2), and a description it cannot read stops it
+  (exit 3); neither refuses. Under `--force`, a list it cannot derive gives way
+  to the description's, with a warning. With every sentence given it proceeds
+  as before. `open-pr` and `edit-pr` warn of such a document and refuse
+  nothing; `edit-pr` gains that warning, a finding of its validation.
+  `open-pr`, `land-work`, and `review-work` where it derives the list, warn of
+  a sentence on a document the list does not mark `updated`, naming the edit
+  that removes it, and `land-work` holds a `--yes` run at `ready:` on it until
+  it is removed. `land-work` stops at exit 1, naming the merge of the base to
+  make, where GitHub reads the pull request as behind a base it merges only up
+  to date: at the `ci` step, and where the host refuses the merge for it,
+  instead of exit 7, unless the base merges through a queue. Where the queue
+  cannot be read, the `ci` step says so in one line and goes on. A pull request
+  from a fork is fetched, and its merge of the base named, from the base's
+  remote. DEC-064 says when a branch takes in its base: no command or skill
+  merges it only because it moved on, `land-work` names the merge in the cases
+  it lists, and the commands and skills tell the author to take it in only
+  there, where it conflicts, or where they judge that a check failing only on
+  the host's merge or the queue's needs it. The pm skill's landing step and the capability README
+  follow it.

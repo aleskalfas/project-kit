@@ -580,6 +580,34 @@ def test_the_list_gives_each_updated_document_its_author_s_sentence(
     ) in err
 
 
+@pytest.mark.parametrize("answers", [UPDATED, ()], ids=["a list", "no answers"])
+def test_a_sentence_on_a_document_the_list_does_not_mark_updated_is_warned_of(
+    op, monkeypatch, tmp_path, capsys, answers
+) -> None:
+    """The list never shows a sentence on a document it does not mark updated,
+    one left unchanged here, or any where the change wrote no answers: a warning
+    names each, and the edit that removes it. The PR opens all the same
+    (DEC-055 point 3)."""
+    body_file = tmp_path / "body.md"
+    body_file.write_text(
+        SAID.replace(
+            "\n\n## Doc impact", "\n- `docs/cli.md`: The page drops the old flag.\n\n## Doc impact"
+        ),
+        encoding="utf-8",
+    )
+    captured = _open(op, monkeypatch, derived=_derived(op, *answers), body_file=body_file)
+    assert op.main() == 3  # opened: the faked create was asked, and returns no URL
+    assert captured["body"]
+    err = capsys.readouterr().err
+    unlisted = ["docs/cli.md"] if answers else ["docs/guide.md", "docs/cli.md"]
+    assert [line for line in err.splitlines() if "does not show the sentence" in line] == [
+        f"warn: {location} has a sentence under `## What changed in each updated document`, "
+        "and the list at abcdef0 does not mark it updated, so the list does not show the "
+        "sentence — remove it from the description with `edit-pr`"
+        for location in unlisted
+    ]
+
+
 def test_a_ready_pr_opens_with_an_updated_document_given_no_sentence(
     op, monkeypatch, tmp_path, capsys
 ) -> None:
