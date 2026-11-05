@@ -1,5 +1,5 @@
 ---
-id: DEC-065
+id: DEC-066
 title: Tasks that share a file are built one at a time, and those of one parent may be planned as one
 status: proposed
 date: 2026-11-05
