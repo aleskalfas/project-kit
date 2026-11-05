@@ -61,6 +61,11 @@ in.
 - **The same cut in every slice.** It reads only the tests and the table, both
   fixed by the commit, so a slice run again by hand runs the same tests, with the
   same tests around them. A failing slice's summary says how.
+- **The same tests on every machine.** A folder lists its files in an order its
+  machine sets, and two of CI's runners list them differently. So a test
+  parametrized over a folder's files sorts them first.
+  `tests/test_collection_order.py` collects the suite with every listing sorted
+  and with every listing reversed, and fails where the two differ (#2668).
 - **What a slice reports.** It ends by printing its report: a digest of the tests
   collected, in order, with the table and the count of slices, how many tests it
   collected, and how many its share held. `checks` fails unless the slices report
