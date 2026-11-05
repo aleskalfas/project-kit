@@ -48,6 +48,8 @@ from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ACTORS,
     ANALYSIS,
+    ANALYSIS_SET,
+    ANALYSIS_SET_TEXT,
     CONSTRAINTS,
     DOMAIN_MODEL,
     FUNCTIONAL,
@@ -59,7 +61,6 @@ from tests.analysis_repo import (
     SETTINGS_TEXT,
     USE_CASES,
     VALIDATE,
-    accepting_san,
     fill,
     installed,
     link,
@@ -392,7 +393,7 @@ def test_a_section_s_link_to_its_term_is_no_content_of_its_explanation(
     """Where the format rule binds, a section whose explanation holds only its link to its
     term lacks its explanation (DEC-004 point 7)."""
     link(project)
-    project.write(accepting_san(project))
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     assert _validate(project) == []
     view = _read(project, VIEW).replace(
         "An order is what a [customer](../glossary.md#term-customer--customer) asks the shop "
@@ -1099,7 +1100,7 @@ def test_the_command_links_each_part_of_an_actor_a_use_case_a_journey_and_a_requ
         assert _body(kinds, rel) == body, rel
         assert _read(kinds, rel).split("\n---\n", 1)[0] == fronts[rel], rel
     assert _validate(kinds) == []
-    kinds.write(accepting_san(kinds))
+    kinds.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     assert _validate(kinds) == []
     assert link(kinds).stdout.strip() == "Every link is as it should be; nothing written."
 
@@ -1191,7 +1192,7 @@ def test_a_view_ends_with_where_its_concepts_are_used(kinds: AdopterRepo) -> Non
     assert _body(kinds, VIEW).endswith("**Always true:** None.\n\n" + KINDS_CLOSING)
     targets = re.findall(r"\]\(([^)]+)\)", KINDS_CLOSING)
     assert targets and all(re.fullmatch(links.CLOSING_TARGET, t) for t in targets), targets
-    kinds.write(accepting_san(kinds))
+    kinds.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     assert _validate(kinds) == []
 
 

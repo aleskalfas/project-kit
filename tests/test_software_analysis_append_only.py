@@ -28,13 +28,13 @@ import pytest
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo, sign_nothing
 from tests.analysis_repo import (
     ANALYSIS_SET,
+    ANALYSIS_SET_TEXT,
     MAIN,
     NUMBERS,
     SA,
     SAN_REL,
     USE_CASES,
     VALIDATE,
-    accepting_san,
     fill,
     installed,
     load_lib,
@@ -86,7 +86,7 @@ def _on_main(repo: AdopterRepo) -> None:
     stamped(repo, "use-case", "run-suite", "--actor", "ACT-tester")
     fill(repo)
     text = (repo.root / RUN).read_text(encoding="utf-8")
-    repo.write({**accepting_san(repo), RUN: with_steps(text, STEPS, VARIANTS)})
+    repo.write({ANALYSIS_SET: ANALYSIS_SET_TEXT, RUN: with_steps(text, STEPS, VARIANTS)})
     repo.commit("UC-001 on main")
     repo.checkout("topic", create=True)
 

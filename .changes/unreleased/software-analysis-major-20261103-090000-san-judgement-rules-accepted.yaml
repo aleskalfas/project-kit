@@ -5,8 +5,8 @@ custom:
 body: >
   `SAN` 2.0.0 accepts its twelve judgement rules, RS-SAN-003 to RS-SAN-014,
   together (#1727, software-analysis DEC-005). Its two diagram rules follow
-  in a later major, which you review apart (software-analysis DEC-008). They judge
-  a use case's actors and goal, what each artefact's anchors name, a
+  in a later major, which you review apart (software-analysis DEC-008). The
+  twelve judge a use case's actors and goal, what each artefact's anchors name, a
   requirement against its records, the source of each goal, minimal
   guarantee and requirement, the domain concepts the glossary defines, what
   makes each precondition true, which other analyses an analysis names, the

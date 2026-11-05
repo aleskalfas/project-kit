@@ -429,11 +429,10 @@ def test_a_candidate_is_previewed_and_stamped_again_with_the_project_s_own_part(
     project: AdopterRepo,
 ) -> None:
     """`choose-templates.md`: with a set of the project's own that inherits `SAN`, a
-    candidate stamped and filled is checked with the preview while the format rule is
-    proposed. A part the project adds under a proposed rule of its own is previewed on
-    the candidate, which lacks it. Set aside and stamped again, the candidate keeps its id
-    and holds the part, its hint naming the rule, and once filled the preview finds
-    nothing."""
+    candidate stamped and filled is checked with the preview. A part the project adds
+    under a proposed rule of its own is previewed on the candidate, which lacks it. Set
+    aside and stamped again, the candidate keeps its id and holds the part, its hint
+    naming the rule, and once filled the preview finds nothing."""
     project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     candidate = ("actor", "tester", "--name", "Test author", "--path", "src/run.py")
     stamped(project, *candidate)

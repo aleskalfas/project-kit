@@ -118,7 +118,7 @@ def test_the_migration_leaves_a_set_that_inherits_san_alone(
     own = project / "docs" / "rule-sets" / "ours.md"
     own.parent.mkdir(parents=True)
     own.write_text(
-        "---\nrule-set: OURS\nversion: 1.0.0\ninherits: [software-analysis:SAN@1]\n"
+        "---\nrule-set: OURS\nversion: 1.0.0\ninherits: [software-analysis:SAN@2]\n"
         "scope:\n  types: [software-analysis:actor]\nrules: {}\n---\n\n# OURS\n",
         encoding="utf-8",
     )
