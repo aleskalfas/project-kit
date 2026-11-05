@@ -391,8 +391,9 @@ def test_the_gate_shows_each_fold_and_the_filing_reads_its_task_again() -> None:
     filing = _flat(_section(text, "### 6. File via primitives"))
     widening = filing.split("**An open Task that takes in work**", 1)[1]
     first = widening.index("first file each planned Task it now depends on")
-    assert first < widening.index("Just before you write to it, read its state")
+    assert first < widening.index("Just before you write to it, read its lifecycle state")
     assert "Its `## Dependencies` section names all it now depends on" in widening
+    assert "`pkit pm detect-state <N>`" in filing
     assert '`git ls-remote --heads origin "*/<N>-*"`' in filing
     moved = "**Started since the gate,** or refused by the clash guard: write nothing to it"
     assert moved in filing
