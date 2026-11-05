@@ -33,6 +33,8 @@ pkit:
         - visual-communication:DEC-013#5
         - visual-communication:DEC-014#3
         - visual-communication:DEC-015#2
+        - visual-communication:DEC-015#4
+        - visual-communication:DEC-015#5
         - COR-017
         - COR-031
         - COR-055#3
@@ -148,7 +150,7 @@ A brand's values reach code the same way: a declaration under the location's `co
 
 ## Commands
 
-Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names ([How a command finds it](files.md#how-a-command-finds-it)). `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. `look` writes only in the clone's local folder, and records no location. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, puts back each folder it replaced, and takes back the location it recorded. It names each file it could not put back. Two commands write before they can refuse. `produce` hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)). `look` holds the fonts it hands its tool in a temporary folder there, which the run removes, and it may leave the local folder itself.
+Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names ([How a command finds it](files.md#how-a-command-finds-it)). `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. `look` writes only in the clone's local folder, and records no location. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, puts back each folder it replaced, and takes back the location it recorded. It names each file it could not put back. Two commands write before they can refuse. `produce` hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)). `look` holds the fonts it hands its tool in a temporary folder there, which the run removes, and it may leave the local folder itself ([The viewing step](outputs.md#the-viewing-step)).
 
 ### `pkit visual status`
 
@@ -242,7 +244,7 @@ Draws a piece's pages as images, for a person or an agent to read ([The viewing 
 - **Prints** the lock and what the report says ([What the report says](outputs.md#what-the-report-says)).
 - **Uses the lock** `piece.yaml` holds, and never moves it.
 - **Refuses** for each reason under [What refuses a run](outputs.md#what-refuses-a-run).
-- **Exits** 0 when it drew, whatever the report says; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
+- **Exits** 0 when it drew, whatever the report says; 1 when it refused, with `look/<piece>/` left as it was, or a write failed ([Commands](#commands)).
 
 ### `pkit visual pages <piece>`
 

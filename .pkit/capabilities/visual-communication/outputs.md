@@ -462,7 +462,7 @@ A run writes in `.pkit/capabilities/visual-communication/project/local/look/<pie
 
 ### What refuses a run
 
-A refused run writes nothing. Each of these refuses it:
+A refused run leaves `look/<piece>/` as it was. The fonts it held in a temporary folder of the local folder are gone, and that folder itself may remain. Each of these refuses a run:
 
 - a piece with no lock, naming the render that writes one;
 - a lock that does not hold, naming why;

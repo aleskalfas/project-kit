@@ -32,7 +32,7 @@ Usage:
 
 Exit codes:
   0  drawn; what the images cannot show, if anything, is printed and in the report
-  1  refused: nothing is written. Or a write failed: it names the file, and every file is
+  1  refused: look/<piece>/ is as it was. Or a write failed: it names the file, and every file is
      as it was before the run, or each it could not put back is named
 """
 
