@@ -138,7 +138,7 @@ Its Tasks are built one at a time. The first holds a record of each architectura
 
 - A first [batch plan](../glossary.md#term-batch-plan--batch-plan) files its Feature under the work's [EPIC](../glossary.md#term-epic--epic), and no slice ([DEC-060 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md#3-the-first-plan-files-the-foundation-and-the-second-plans-the-slices)).
 - A second batch plan slices the work, once its Feature has closed (DEC-060 point 3).
-- A Task not yet started that would make one of its choices waits, naming its Feature among that Task's dependencies ([DEC-060 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md#4-tasks-that-would-make-a-choice-the-foundation-settles-wait-for-it)).
+- A Task not yet started that would make one of the foundation's choices waits, naming the foundation's Feature among that Task's dependencies ([DEC-060 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md#4-tasks-that-would-make-a-choice-the-foundation-settles-wait-for-it)).
 
 **States:** A foundation is open until its Feature closes, which a person authorises. It is then done (DEC-060 point 3).
 

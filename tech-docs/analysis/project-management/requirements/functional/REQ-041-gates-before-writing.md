@@ -4,8 +4,8 @@ title: A command that writes checks the project's prerequisites and the person's
 status: active
 statement: "Before a command of project-management writes, it checks the project's prerequisites for the capability, and that whoever runs it is a team member."
 measure: "Where the project does not meet the prerequisites, or a list of members leaves out the person, the command refuses before its first write. It names the cause, and changes nothing."
-applies-to: "Every command of project-management that writes, whether a person runs it or an agent runs it for them. The exceptions are `bootstrap`, which makes the prerequisites, and `migrate`, which runs its own check. Where the team keeps no list of members, or an empty one, every person passes the second check."
-obligation: v1:sha256:3e816d9563c07d7e89300e99c806663b0e7bb6c07dfee635bc84a0489be6e33c
+applies-to: "Every command of project-management that writes, whether a person runs it or an agent runs it for them. Some are exempt from the first check, such as `bootstrap`, which makes the prerequisites, and `migrate`, which runs its own check. Where the team keeps no list of members, or an empty one, every person passes the second check."
+obligation: v1:sha256:98131187892cf670aa29f07f30c04dc694a2acc6d57e72b2d1f8f695e19a05b0
 actors:
   - core:ACT-developer
   - ACT-planner
