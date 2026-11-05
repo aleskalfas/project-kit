@@ -1,7 +1,7 @@
 ---
 id: ADR-080
 title: An anchor is over-broad by how often it asks its artefact for an answer
-status: proposed
+status: accepted
 date: 2026-11-04
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
