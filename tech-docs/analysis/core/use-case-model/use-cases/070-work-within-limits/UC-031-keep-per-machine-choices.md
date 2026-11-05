@@ -62,7 +62,7 @@ pkit:
 **Preconditions:**
 
 - **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
-- **From [UC-019](../010-develop/UC-019-adapt-harness.md) or UC-049:** An [adapter](../../../glossary.md#term-adapter--adapter) for the project's [harness](../../../glossary.md#term-harness--harness) declares where that harness enforces each dimension of the [permission model](../../../glossary.md#term-permission-model--permission-model) ([COR-028 point 3](../../../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
+- **From [UC-019](../010-develop/UC-019-adapt-harness.md) or UC-049:** An [adapter](../../../glossary.md#term-adapter--adapter) for the project's [harness](../../../glossary.md#term-harness--harness) declares where that harness enforces each [dimension](../../../glossary.md#term-dimension--dimension) of the [permission model](../../../glossary.md#term-permission-model--permission-model) ([COR-028 point 3](../../../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
 
 **Assumptions:**
 
@@ -79,7 +79,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no `pkit permissions` command runs such a check, and each writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-3. The system writes the socket's allowance to the [sandbox](../../../glossary.md#term-sandbox--sandbox)'s settings in the per-machine file, never in a committed one ([ADR-010 point 3](../../../../../architecture/decisions/ADR-010-host-environment-detection.md#3-per-machine-never-committed)). It says `socket accommodated (manual): allow-unix-socket <path> (narrowing, per-machine, NOT committed).`
+3. The system writes the socket's [allowance](../../../glossary.md#term-allowance--allowance) to the [sandbox](../../../glossary.md#term-sandbox--sandbox)'s settings in the per-machine file, never in a committed one ([ADR-010 point 3](../../../../../architecture/decisions/ADR-010-host-environment-detection.md#3-per-machine-never-committed)). It says `socket accommodated (manual): allow-unix-socket <path> (narrowing, per-machine, NOT committed).`
 4. The system records in `.pkit/permissions/project/sandbox-provenance.yaml` that the entry is its own. A later run then replaces only that entry ([ADR-010 point 4](../../../../../architecture/decisions/ADR-010-host-environment-detection.md#4-recompute-and-replace-each-run-keyed-by-logical-source--provenance)).
 5. The operator commits the [project](../../../glossary.md#term-project--project)'s work.
 6. Git leaves both files out. The project's `.gitignore` ignores the per-machine settings file. The `.pkit/.gitignore` that the system renders ignores the provenance file ([ADR-009 point 7](../../../../../architecture/decisions/ADR-009-git-footprint-visibility.md#7-runtime-local-ignore-lines-ship-through-a-pkit-owned-pkitgitignore-rendered-wholesale)).
@@ -97,7 +97,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `sandbox accommodate`, `sandbox enable`, `profile activate` and `setup autonomy` take no `--dry-run`. [COR-004](../../../../../../.pkit/decisions/core/COR-004-cli-surface.md) decides that each such command offers the flag, and #1884 tracks it.
 
-- **3a.** The installed [adapter](../../../glossary.md#term-adapter--adapter) is another [harness](../../../glossary.md#term-harness--harness)'s than Claude Code's. The system writes the allowance through that adapter, to its harness's per-machine settings ([COR-028 point 2](../../../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)). The path goes on at step 4.
+- **3a.** The installed [adapter](../../../glossary.md#term-adapter--adapter) is another [harness](../../../glossary.md#term-harness--harness)'s than Claude Code's. The system writes the [allowance](../../../glossary.md#term-allowance--allowance) through that adapter, to its harness's per-machine settings ([COR-028 point 2](../../../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)). The path goes on at step 4.
 
 > [!WARNING]
 > **Not built yet:** the system realises the [permission model](../../../glossary.md#term-permission-model--permission-model) for Claude Code's adapter alone. Without that adapter, it refuses with `the claude-code adapter is not installed; the sandbox is harness-specific.`, and writes nothing. COR-028 point 2 decides that each adapter realises the model, and #1909 tracks it.

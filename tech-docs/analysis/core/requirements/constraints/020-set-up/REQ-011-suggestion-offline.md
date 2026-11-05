@@ -23,8 +23,8 @@ pkit:
 
 # REQ-011 · Constraint · A suggestion of what to install never uses the network
 
-**Verified by:** A test runs `pkit status` with every network connection made to fail. It finds the suggestion of a [capability](../../../glossary.md#term-capability--capability) the local capability catalogue holds for a [data point](../../../glossary.md#term-data-point--data-point) nothing fills, and finds the [manifest](../../../glossary.md#term-manifest--manifest) unchanged.
+**Verified by:** A test runs `pkit status` with every network connection made to fail. It finds the suggestion of a [capability](../../../glossary.md#term-capability--capability) the local [capability catalogue](../../../glossary.md#term-capability-catalogue--capability-catalogue) holds for a [data point](../../../glossary.md#term-data-point--data-point) nothing fills, and finds the [manifest](../../../glossary.md#term-manifest--manifest) unchanged.
 
 **Imposed by:** [COR-053 point 8](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly) lets `pkit status` suggest an available [capability](../../../glossary.md#term-capability--capability) where a [data point](../../../glossary.md#term-data-point--data-point) is unfilled. The suggestion reads "only local catalogues and manifests already fetched, never the network", and it is never an action.
 
-The record imposes the limit on a suggestion for a data point. This requirement holds the suggestion for a [role](../../../glossary.md#term-role--role) nobody provides, or a capability a process depends on that is not installed, to the same limit.
+The record imposes the limit on a suggestion for a data point. This requirement holds the suggestion for a [role](../../../glossary.md#term-role--role) nobody provides, or a capability a [process](../../../glossary.md#term-process--process) depends on that is not installed, to the same limit.

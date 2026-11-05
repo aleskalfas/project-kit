@@ -247,7 +247,7 @@ The permission model states, in the [methodology](../glossary.md#term-methodolog
 
 - Each adapter realises it in its harness, by the most native mechanism that carries each intent faithfully ([COR-028 point 2](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#2-the-adapter-realizes-the-model)).
 - The [permission code](../glossary.md#term-permission-code--permission-code) decides each tool call from it ([ADR-003](../../../architecture/decisions/ADR-003-permission-core-code-home.md)).
-- An [enforcement declaration](../glossary.md#term-enforcement-declaration--enforcement-declaration) names, for each of its dimensions, the layer that enforces it in one harness ([COR-028 point 3](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
+- An [enforcement declaration](../glossary.md#term-enforcement-declaration--enforcement-declaration) names, for each of its [dimensions](../glossary.md#term-dimension--dimension), the layer that enforces it in one harness ([COR-028 point 3](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
 
 **States:** None.
 
@@ -313,9 +313,9 @@ The permission catalog is the data that names each [privilege](../glossary.md#te
 
 Defined in [TERM-grant](../glossary.md#term-grant--grant).
 
-**Why:** With what an agent may do spread across a [harness](../glossary.md#term-harness--harness)'s settings, a call wrongly allowed or blocked could not be traced to its cause ([COR-028](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). A grant is one statement of one permission model. So a fault traces to the permission model, to how an [adapter](../glossary.md#term-adapter--adapter) carried it out, or to the harness (COR-028).
+**Why:** With what an agent may do spread across a [harness](../glossary.md#term-harness--harness)'s settings, a call wrongly allowed or blocked could not be traced to its cause ([COR-028](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). A grant is one statement of one [permission model](../glossary.md#term-permission-model--permission-model). So a fault traces to the permission model, to how an [adapter](../glossary.md#term-adapter--adapter) carried it out, or to the harness (COR-028).
 
-A grant is an entry of the [permission model](../glossary.md#term-permission-model--permission-model). It allows or denies one or more privileges to a [grant subject](../glossary.md#term-grant-subject--grant-subject). Where it names a scope, such as the folders a command may run in, it holds only there.
+A grant is an entry of the permission model. It allows or denies one or more privileges to a [grant subject](../glossary.md#term-grant-subject--grant-subject). Where it names a scope, such as the folders a command may run in, it holds only there.
 
 **Attributes:**
 
@@ -370,13 +370,13 @@ A guardrail is a [privilege](../glossary.md#term-privilege--privilege) that ever
 **Relations:**
 
 - It is a kind of privilege.
-- The permission code denies it to `all`, beneath every [profile](../glossary.md#term-profile--profile)'s grants and the [project](../glossary.md#term-project--project)'s own ([ADR-005 point 2](../../../architecture/decisions/ADR-005-permission-profile-surface.md#2-contents--posture-plus-a-layered-grant-source-confinement-and-native-allow-referenced-not-owned)).
+- The [permission code](../glossary.md#term-permission-code--permission-code) denies it to `all`, beneath every [profile](../glossary.md#term-profile--profile)'s grants and the [project](../glossary.md#term-project--project)'s own ([ADR-005 point 2](../../../architecture/decisions/ADR-005-permission-profile-surface.md#2-contents--posture-plus-a-layered-grant-source-confinement-and-native-allow-referenced-not-owned)).
 
 **States:** None.
 
 **Always true:**
 
-- No [capability](../glossary.md#term-capability--capability) adds a guardrail: the backbone refuses a fragment of the permission catalog that marks one ([ADR-021 point 3](../../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#3-a-capability-contributed-privilege-may-never-be-a-guardrail--reject-do-not-strip)).
+- No [capability](../glossary.md#term-capability--capability) adds a guardrail: the [backbone](../glossary.md#term-backbone--backbone) refuses a fragment of the permission catalog that marks one ([ADR-021 point 3](../../../architecture/decisions/ADR-021-capability-contributed-privilege-definitions.md#3-a-capability-contributed-privilege-may-never-be-a-guardrail--reject-do-not-strip)).
 - Where its harness fails closed, its deny is held as a native deny as well as by the [permission hook](../glossary.md#term-permission-hook--permission-hook) (COR-028 point 2).
 
 ## Profile
@@ -567,7 +567,7 @@ Defined in [TERM-enforcement-declaration](../glossary.md#term-enforcement-declar
 
 **Why:** Harnesses differ in what they can enforce, and some intent, such as confining network traffic, no [harness](../glossary.md#term-harness--harness) can enforce ([COR-028](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). Such intent must be reported as a gap, never dropped in silence, so it can be closed outside the harness ([COR-028 point 3](../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#3-unenforceable-intent-is-reported-not-dropped)).
 
-An enforcement declaration is an [adapter](../glossary.md#term-adapter--adapter)'s statement of how its harness enforces each dimension of the [permission model](../glossary.md#term-permission-model--permission-model). For each, it names the layer, such as the harness's settings, the [permission hook](../glossary.md#term-permission-hook--permission-hook) or the [sandbox](../glossary.md#term-sandbox--sandbox). It also names how: `native`, `runtime` through the hook, or `none`.
+An enforcement declaration is an [adapter](../glossary.md#term-adapter--adapter)'s statement of how its harness enforces each [dimension](../glossary.md#term-dimension--dimension) of the [permission model](../glossary.md#term-permission-model--permission-model). For each, it names the layer, such as the harness's settings, the [permission hook](../glossary.md#term-permission-hook--permission-hook) or the [sandbox](../glossary.md#term-sandbox--sandbox). It also names how: `native`, `runtime` through the hook, or `none`.
 
 **Attributes:**
 
@@ -754,6 +754,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/070-work-within-limits/UC-028-keep-intermediate-files.md)
 - [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/070-work-within-limits/UC-030-work-unprompted.md)
 - [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md)
+- [REQ-016 · Constraint · The permission code needs only the operating system's `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
 
 **Native deny:**
 

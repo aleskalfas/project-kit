@@ -23,8 +23,8 @@ pkit:
 
 # REQ-015 · Functional · A declared documentation root that does not exist yet warns rather than fails
 
-**Verified by:** A test declares a documentation root whose folder is missing, and finds a warning and no error. Another pins the warning's words. A third finds that `pkit validate` exits 0 with the warning, and exits 1 once the [backbone configuration](../../glossary.md#term-backbone-configuration--backbone-configuration) holds an error.
+**Verified by:** A test declares a [documentation root](../../glossary.md#term-documentation-root--documentation-root) whose folder is missing, and finds a warning and no error. Another pins the warning's words. A third finds that `pkit validate` exits 0 with the warning, and exits 1 once the [backbone configuration](../../glossary.md#term-backbone-configuration--backbone-configuration) holds an error.
 
-**Rationale:** The adopter may declare the documentation roots before the [project](../../glossary.md#term-project--project) holds any document. [COR-049 point 7](../../../../../.pkit/decisions/core/COR-049-documentation-roots.md#7-visible-and-checked) decides that such a root "produces a warning, not a failure, since a fresh project may have no documentation folder".
+**Rationale:** The adopter may declare the [documentation roots](../../glossary.md#term-documentation-root--documentation-root) before the [project](../../glossary.md#term-project--project) holds any document. [COR-049 point 7](../../../../../.pkit/decisions/core/COR-049-documentation-roots.md#7-visible-and-checked) decides that such a root "produces a warning, not a failure, since a fresh project may have no documentation folder".
 
 The warning must say which root it means, that the folder is missing, and that the default applies to readers until the folder exists. So the adopter learns from the warning alone what a reader of the root gets meanwhile, and its citation says why this is no failure.

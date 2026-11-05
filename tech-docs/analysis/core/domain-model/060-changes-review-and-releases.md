@@ -489,7 +489,7 @@ A surface change is an alteration of the [system](../glossary.md#term-system--sy
 
 **Attributes:**
 
-- the [bump segment](../glossary.md#term-bump-segment--bump-segment) it moves its part's version by: patch for a fix, minor for new surface, major for a break ([PRJ-002 D2](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type))
+- the [bump segment](../glossary.md#term-bump-segment--bump-segment) it moves its part's version by: patch for a fix, minor for new [surface](../glossary.md#term-surface--surface), major for a break ([PRJ-002 D2](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type))
 
 **Relations:**
 
@@ -526,14 +526,14 @@ A changeset is a file naming the [backbone](../glossary.md#term-backbone--backbo
 
 **Always true:**
 
-- Its bump segment is a person's judgement of the change's surface, never read from the commit type (PRJ-002 D2).
+- Its bump segment is a person's judgement of the change's [surface](../glossary.md#term-surface--surface), never read from the commit type (PRJ-002 D2).
 - No feature branch edits a version number: a feature branch declares its change in a changeset (PRJ-002 D1).
 
 ## Bump segment
 
 Defined in [TERM-bump-segment](../glossary.md#term-bump-segment--bump-segment).
 
-**Why:** How far a [change](../glossary.md#term-change--change) moves a [version](../glossary.md#term-version--version) is a person's read of its surface ([PRJ-002](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md)). A study of 20 commits found that their type did not predict it (PRJ-002). Inferred from the commit type, it would produce wrong versions, so a [changeset](../glossary.md#term-changeset--changeset) makes the call explicit and reviewable (PRJ-002).
+**Why:** How far a [change](../glossary.md#term-change--change) moves a [version](../glossary.md#term-version--version) is a person's read of its [surface](../glossary.md#term-surface--surface) ([PRJ-002](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md)). A study of 20 commits found that their type did not predict it (PRJ-002). Inferred from the commit type, it would produce wrong versions, so a [changeset](../glossary.md#term-changeset--changeset) makes the call explicit and reviewable (PRJ-002).
 
 A bump segment is the measure of a change's surface that a changeset declares: `patch`, `minor`, `major` or `none`. A person judges it, and the commit type never sets it.
 
@@ -567,7 +567,7 @@ The changeset guard is a check that a change adds or edits a changeset naming th
 
 **Attributes:**
 
-- its escape hatch, which skips its surface check for a change that moves no surface (PRJ-002)
+- its escape hatch, which skips its [surface](../glossary.md#term-surface--surface) check for a change that moves no surface (PRJ-002)
 
 **Relations:**
 
@@ -693,7 +693,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
 - [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
 - [JRN-003 — Deliver a change](../use-case-model/journeys/JRN-003-deliver-change.md)
-- [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
+- [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 
 **Head:**
 
@@ -759,7 +759,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-040 — Have a drafted record or rule become binding only through my own review](../use-case-model/use-cases/030-change/UC-040-accept-through-review.md)
 - [UC-041 — Keep each core record true for any project that adopts it](../use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md)
 - [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
-- [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
+- [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-021 · Functional · A reviewer agent never changes the work it judges](../requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md)
 
 **Finding:**

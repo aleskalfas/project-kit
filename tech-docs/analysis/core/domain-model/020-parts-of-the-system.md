@@ -390,7 +390,7 @@ A project is a repository the system is installed into. It holds the methodology
 
 **Attributes:**
 
-- its own [decision records](../glossary.md#term-decision-record--decision-record), in the PRJ namespace, and the records of its architecture, in ADR ([COR-025](../../../../.pkit/decisions/core/COR-025-adr-decision-space.md))
+- its own [decision records](../glossary.md#term-decision-record--decision-record), in the PRJ [namespace](../glossary.md#term-namespace--namespace), and the records of its architecture, in ADR ([COR-025](../../../../.pkit/decisions/core/COR-025-adr-decision-space.md))
 - its own [operational rules](../glossary.md#term-operational-rule--operational-rule), in its own file (COR-014)
 - one [backbone](../glossary.md#term-backbone--backbone), and the [components](../glossary.md#term-component--component) installed in it ([COR-010](../../../../.pkit/decisions/core/COR-010-resource-lifecycle.md))
 
@@ -490,7 +490,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-008 — Release a breaking backbone change with its migration](../use-case-model/journeys/JRN-008-release-breaking-backbone-change.md)
 - [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/040-release/REQ-001-migration-runs-again.md)
 - [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
-- [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
+- [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-008 · Constraint · Until #1600 is done, the only area or adapter a change may add is `rule-sets`, and none may be removed](../requirements/constraints/010-develop/REQ-008-areas-held.md)
 - [REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`](../requirements/quality/REQ-009-preview-before-change.md)
 - [REQ-010 · Functional · A command that propagates content under another version than the project records stops](../requirements/functional/REQ-010-stop-under-another-version.md)
@@ -525,7 +525,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
 - [JRN-009 — Release a breaking change of my component with its migration](../use-case-model/journeys/JRN-009-release-breaking-component-change.md)
 - [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/040-release/REQ-001-migration-runs-again.md)
-- [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
+- [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`](../requirements/quality/REQ-009-preview-before-change.md)
 - [REQ-014 · Functional · A later edit of a documentation root moves no document](../requirements/functional/020-set-up/REQ-014-root-change-moves-nothing.md)
 - [REQ-018 · Quality · A reading command of `pkit friction` prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
@@ -558,6 +558,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
 - [JRN-006 — Start working on a project on a new machine](../use-case-model/journeys/JRN-006-start-on-new-machine.md)
 - [JRN-008 — Release a breaking backbone change with its migration](../use-case-model/journeys/JRN-008-release-breaking-backbone-change.md)
+- [REQ-030 · Functional · A choice in a version transition that needs a person is never taken silently](../requirements/functional/050-adopt/REQ-030-person-choice-never-silent.md)
 
 **Agent definition:**
 
@@ -581,6 +582,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
 - [JRN-006 — Start working on a project on a new machine](../use-case-model/journeys/JRN-006-start-on-new-machine.md)
 - [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/040-release/REQ-017-backbone-migration-safe.md)
+- [REQ-030 · Functional · A choice in a version transition that needs a person is never taken silently](../requirements/functional/050-adopt/REQ-030-person-choice-never-silent.md)
 
 **Storyboard:**
 

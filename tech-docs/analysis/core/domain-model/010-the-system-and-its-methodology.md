@@ -217,7 +217,7 @@ A decision record is a document that states one choice among alternatives, with 
 
 **Attributes:**
 
-- an id: its namespace's prefix and a number, such as [COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)
+- an id: its [namespace](../glossary.md#term-namespace--namespace)'s prefix and a number, such as [COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)
 - a status: `proposed`, `accepted` or `superseded`
 - its sections: the context, the decision, the reasons and what follows from it
 

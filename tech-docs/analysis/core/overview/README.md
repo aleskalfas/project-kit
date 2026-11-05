@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=5 fingerprint=sha256:1ea09bf7fd8191bd8be594b34e6664dc8df11f2ee6ff9729b4bb3901760aaabe -->
+<!-- pkit:overview reads=5 fingerprint=sha256:92774904b4c5c5ad40c52c4cfc7a7c26cac50e29e6ab8e3fef6003b32a9e9279 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -19,7 +19,7 @@ Develop the methodology in its own source repository, and extend it with capabil
 - [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
 - [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
 - [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
-- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [040 — Versions and synced copies](../domain-model/040-versions-and-copies.md)
 - [050 — A project's own files](../domain-model/050-a-projects-own-files.md)
 - [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
 - [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
@@ -54,7 +54,7 @@ Set up a project once, so its people and AI agents work with the same backbone c
 - [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
 - [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
 - [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
-- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [040 — Versions and synced copies](../domain-model/040-versions-and-copies.md)
 - [050 — A project's own files](../domain-model/050-a-projects-own-files.md)
 - [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
 - [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
@@ -93,7 +93,7 @@ Record a project's decisions and rules, and check, answer and land each change t
 - [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
 - [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
 - [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
-- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [040 — Versions and synced copies](../domain-model/040-versions-and-copies.md)
 - [050 — A project's own files](../domain-model/050-a-projects-own-files.md)
 - [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
 - [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
@@ -136,7 +136,7 @@ Release the backbone and each component on its own version, so projects can move
 - [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
 - [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
 - [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
-- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [040 — Versions and synced copies](../domain-model/040-versions-and-copies.md)
 - [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
 - [080 — Agents and permissions](../domain-model/080-agents-and-permissions.md)
 
@@ -168,7 +168,7 @@ Put the system on a machine and into another project, run each project at the ve
 - [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
 - [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
 - [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
-- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [040 — Versions and synced copies](../domain-model/040-versions-and-copies.md)
 - [050 — A project's own files](../domain-model/050-a-projects-own-files.md)
 - [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
 - [080 — Agents and permissions](../domain-model/080-agents-and-permissions.md)
@@ -232,7 +232,7 @@ Work within the system's limits, the permission model and the agent workspace, s
 - [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
 - [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
 - [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
-- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [040 — Versions and synced copies](../domain-model/040-versions-and-copies.md)
 - [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
 - [080 — Agents and permissions](../domain-model/080-agents-and-permissions.md)
 
@@ -259,7 +259,7 @@ Work within the system's limits, the permission model and the agent workspace, s
 | [ACT-ai-agent — AI agent](../use-case-model/actors/ACT-ai-agent.md) | An AI agent working under the methodology, acting on the system from outside. | [010-develop](#010-develop), [020-set-up](#020-set-up), [030-change](#030-change), [040-release](#040-release), [060-report](#060-report), [070-work-within-limits](#070-work-within-limits) |
 | [ACT-ci-pipeline — CI pipeline](../use-case-model/actors/ACT-ci-pipeline.md) | A project's continuous integration, acting on the system from outside. | [020-set-up](#020-set-up), [030-change](#030-change), [040-release](#040-release) |
 | [ACT-component-author — Component author](../use-case-model/actors/ACT-component-author.md) | Someone who extends the system with a component (a capability or an adapter) rather than only using it. | [010-develop](#010-develop), [040-release](#040-release) |
-| [ACT-developer — Developer](../use-case-model/actors/ACT-developer.md) | The person who builds: decisions, rules, notes, code and its documentation, one change at a time. | [010-develop](#010-develop), [030-change](#030-change) |
+| [ACT-developer — Developer](../use-case-model/actors/ACT-developer.md) | The person who builds: decisions, rules, scratchpad notes, code and its documentation, one change at a time. | [010-develop](#010-develop), [030-change](#030-change) |
 | [ACT-merge-authoriser — Merge authoriser](../use-case-model/actors/ACT-merge-authoriser.md) | The person who authorises a change's merge into the default branch. | [030-change](#030-change) |
 | [ACT-methodology-maintainer — Methodology maintainer](../use-case-model/actors/ACT-methodology-maintainer.md) | Whoever maintains a distribution of the methodology. | [010-develop](#010-develop), [030-change](#030-change), [040-release](#040-release), [060-report](#060-report) |
 | [ACT-operator — Operator](../use-case-model/actors/ACT-operator.md) | The person at the controls of a machine. | [010-develop](#010-develop), [020-set-up](#020-set-up), [030-change](#030-change), [040-release](#040-release), [050-adopt](#050-adopt), [060-report](#060-report), [070-work-within-limits](#070-work-within-limits) |
@@ -273,7 +273,7 @@ Each view of the domain model explains a group of related concepts:
 - [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
 - [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
 - [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
-- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [040 — Versions and synced copies](../domain-model/040-versions-and-copies.md)
 - [050 — A project's own files](../domain-model/050-a-projects-own-files.md)
 - [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
 - [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
@@ -286,7 +286,7 @@ Each view of the domain model explains a group of related concepts:
 - [REQ-004 · Quality · A check never reads a missing result as one that found nothing](../requirements/quality/REQ-004-missing-answer-never-clean.md)
 - [REQ-005 · Quality · A command that only reads or validates changes nothing in the project](../requirements/quality/REQ-005-reading-writes-nothing.md)
 - [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
-- [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
+- [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`](../requirements/quality/REQ-009-preview-before-change.md)
 - [REQ-010 · Functional · A command that propagates content under another version than the project records stops](../requirements/functional/REQ-010-stop-under-another-version.md)
 - [REQ-012 · Functional · The system asks the operator before its command changes another repository](../requirements/functional/REQ-012-ask-before-another-repository.md)

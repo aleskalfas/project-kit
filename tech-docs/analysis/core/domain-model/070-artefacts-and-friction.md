@@ -253,7 +253,7 @@ Defined in [TERM-dead-anchor](../glossary.md#term-dead-anchor--dead-anchor).
 
 **Why:** A glob that matches nothing brings no [friction](../glossary.md#term-friction--friction), ever, and that silence would look like health ([COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)).
 
-A dead anchor is an [anchor](../glossary.md#term-anchor--anchor) of an [artefact](../glossary.md#term-artefact--artefact) that resolves to nothing. A path whose glob matches no file is one, and so is a path that matches only excluded paths or [answer files](../glossary.md#term-answer-file--answer-file). A record anchor on a [point](../glossary.md#term-point--point) its record does not hold is one too.
+A dead anchor is an [anchor](../glossary.md#term-anchor--anchor) of an [artefact](../glossary.md#term-artefact--artefact) that resolves to nothing. A path whose glob matches no file is one, and so is a path that matches only [excluded paths](../glossary.md#term-excluded-path--excluded-path) or [answer files](../glossary.md#term-answer-file--answer-file). A record anchor on a [point](../glossary.md#term-point--point) its record does not hold is one too.
 
 **Attributes:**
 
@@ -304,7 +304,7 @@ Defined in [TERM-artefact](../glossary.md#term-artefact--artefact).
 
 **Why:** Descriptions of what the [system](../glossary.md#term-system--system) must do and documentation both go stale when what they rest on changes ([COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)). [Components](../glossary.md#term-component--component) that must not depend on each other keep them, so the mechanism that finds staleness is shared (COR-050). An artefact is the unit it works on, and carries its own anchors ([COR-050 point 1](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)).
 
-An artefact is a document with front matter, or a keyed entry of a collection file, in a declared [place](../glossary.md#term-place--place). It carries its own anchors. Each entry of this analysis's glossary is one.
+An artefact is a document with front matter, or a keyed entry of a [collection file](../glossary.md#term-collection-file--collection-file), in a declared [place](../glossary.md#term-place--place). It carries its own anchors. Each entry of this analysis's glossary is one.
 
 **Attributes:**
 
@@ -335,7 +335,7 @@ The declared surface is the paths that a [component](../glossary.md#term-compone
 
 **Attributes:**
 
-- its paths, which the excluded paths narrow (COR-050 points [7](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#7-dead-anchors-excluded-paths-and-over-broad-anchors) and [8](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#8-two-measures-not-failures))
+- its paths, which the [excluded paths](../glossary.md#term-excluded-path--excluded-path) narrow (COR-050 points [7](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#7-dead-anchors-excluded-paths-and-over-broad-anchors) and [8](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#8-two-measures-not-failures))
 
 **Relations:**
 
@@ -478,7 +478,7 @@ An answer file is a document that one change adds to the folder the [backbone](.
 **Relations:**
 
 - One change adds it, and may rewrite or remove it, since the change's [base](../glossary.md#term-base--base) does not hold it ([COR-062 point 3](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#3-a-change-adds-answer-files-and-rewrites-none-its-base-holds)).
-- The change check, the whole-repository check, the [debt](../glossary.md#term-debt--debt) listing and `pkit friction explain` read an artefact's answers from the answer files (COR-062 point 1).
+- The [change check](../glossary.md#term-change-check--change-check), the [whole-repository check](../glossary.md#term-whole-repository-check--whole-repository-check), the [debt](../glossary.md#term-debt--debt) listing and `pkit friction explain` read an artefact's answers from the answer files (COR-062 point 1).
 - The folder that holds it is never a [place](../glossary.md#term-place--place), so no place reads an answer file as an artefact ([COR-062 point 2](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#2-the-answer-folder)).
 
 **States:** None.
@@ -578,7 +578,7 @@ The whole-repository check compares every artefact, at the latest commit, with i
 
 **Relations:**
 
-- The stale, deferred and answered-apart findings it reports on the default branch are [debt](../glossary.md#term-debt--debt) ([COR-050 point 9](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
+- The stale, deferred and answered-apart [findings](../glossary.md#term-finding--finding) it reports on the default branch are [debt](../glossary.md#term-debt--debt) ([COR-050 point 9](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
 
 **States:** None.
 
@@ -592,14 +592,14 @@ Defined in [TERM-revalidation-point](../glossary.md#term-revalidation-point--rev
 
 **Why:** If formatting or a moved file could advance an [artefact](../glossary.md#term-artefact--artefact)'s revalidation point, [friction](../glossary.md#term-friction--friction) could be cleared without anyone revalidating ([COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)). So it moves only when someone writes a [revalidation answer](../glossary.md#term-revalidation-answer--revalidation-answer) on purpose (COR-050).
 
-A revalidation point is the commit where an artefact's answers first carried the timestamp `at` they carry now. The whole-repository check measures from it what the artefact's anchors stand on, as the change check does for an `at` a change writes back. A page last revalidated in one commit has that commit as its revalidation point.
+A revalidation point is the commit where an artefact's answers first carried the timestamp `at` they carry now. The [whole-repository check](../glossary.md#term-whole-repository-check--whole-repository-check) measures from it what the artefact's anchors stand on, as the [change check](../glossary.md#term-change-check--change-check) does for an `at` a [change](../glossary.md#term-change--change) writes back. A page last revalidated in one commit has that commit as its revalidation point.
 
 **Attributes:** None.
 
 **Relations:**
 
 - The latest revalidation answer on its artefact sets it, by that [answer](../glossary.md#term-answer--answer)'s `at` ([COR-050 point 3](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
-- The [whole-repository check](../glossary.md#term-whole-repository-check--whole-repository-check) compares each artefact, at the latest commit, with its revalidation point ([COR-050 point 6](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)).
+- The whole-repository check compares each artefact, at the latest commit, with its revalidation point ([COR-050 point 6](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)).
 - A value of `at` keeps its revalidation point when it moves to another home: an [answer file](../glossary.md#term-answer-file--answer-file), or an artefact's block ([COR-062 point 6](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#6-each-value-keeps-its-point-across-homes)).
 
 **States:** None.
@@ -617,7 +617,7 @@ Defined in [TERM-deferral-point](../glossary.md#term-deferral-point--deferral-po
 
 **Why:** A [deferral](../glossary.md#term-deferral--deferral) answers one edit to what an [anchor](../glossary.md#term-anchor--anchor) stands on, and a later edit there is a new question ([COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)). Read from git, the commit that introduced the deferral tells the two apart, with no ledger that could drift from git (COR-050).
 
-A deferral point is the commit that first introduced a deferral. The change check and the whole-repository check measure from it what the deferral's anchor stands on. So an edit there after that commit is new [friction](../glossary.md#term-friction--friction). Rewording the deferral's reason does not move it.
+A deferral point is the commit that first introduced a deferral. The [change check](../glossary.md#term-change-check--change-check) and the [whole-repository check](../glossary.md#term-whole-repository-check--whole-repository-check) measure from it what the deferral's anchor stands on. So an edit there after that commit is new [friction](../glossary.md#term-friction--friction). Rewording the deferral's reason does not move it.
 
 **Attributes:** None.
 
@@ -736,7 +736,7 @@ A trigger field is one of an [artefact](../glossary.md#term-artefact--artefact)'
 - These sources trigger nothing (COR-050 point 16):
   - a source new in the [change](../glossary.md#term-change--change)
   - a source the change removes
-  - a source under an excluded path at the head
+  - a source under an [excluded path](../glossary.md#term-excluded-path--excluded-path) at the head
 - A move alone triggers nothing either (COR-050 point 16).
 
 ## Revisit
@@ -779,7 +779,7 @@ Defined in [TERM-rule-set](../glossary.md#term-rule-set--rule-set).
 
 **Why:** Rules need the discovery, anchoring and drift detection that [artefacts](../glossary.md#term-artefact--artefact) already have ([COR-051](../../../../.pkit/decisions/core/COR-051-rule-sets.md)). Kept as a collection of artefacts, a rule set reuses that machinery, with no second copy of it (COR-051). A shared set says what to require, and each set that inherits it says where (COR-051).
 
-A rule set is a collection file of rules that artefacts must satisfy. It has its own `version`, the rule sets it inherits, and any scope that selects the artefacts its rules bind on. `ANA` is project-kit's rule set for its analysis.
+A rule set is a [collection file](../glossary.md#term-collection-file--collection-file) of rules that artefacts must satisfy. It has its own `version`, the rule sets it inherits, and any scope that selects the artefacts its rules bind on. `ANA` is project-kit's rule set for its analysis.
 
 **Attributes:**
 
@@ -805,7 +805,7 @@ Defined in [TERM-method-rule-set](../glossary.md#term-method-rule-set--method-ru
 
 **Why:** A scope on a shipped [rule set](../glossary.md#term-rule-set--rule-set) would bind every adopting [project](../glossary.md#term-project--project)'s [artefacts](../glossary.md#term-artefact--artefact), whether or not a set of the project's own inherits it ([COR-051](../../../../.pkit/decisions/core/COR-051-rule-sets.md)). That would take away a project's choice not to inherit the set (COR-051).
 
-A method rule set is a collection file of rules that the [backbone](../glossary.md#term-backbone--backbone) or a [component](../glossary.md#term-component--component) ships and owns with itself. It takes no scope, and a project never edits it. `software-analysis:SAN` is one, which binds on project-kit's analysis through `ANA`.
+A method rule set is a [collection file](../glossary.md#term-collection-file--collection-file) of rules that the [backbone](../glossary.md#term-backbone--backbone) or a [component](../glossary.md#term-component--component) ships and owns with itself. It takes no scope, and a project never edits it. `software-analysis:SAN` is one, which binds on project-kit's analysis through `ANA`.
 
 **Attributes:**
 
@@ -828,7 +828,7 @@ Defined in [TERM-loaded-rule-set](../glossary.md#term-loaded-rule-set--loaded-ru
 
 **Why:** [Operational rules](../glossary.md#term-operational-rule--operational-rule) were numbered, so a [rule](../glossary.md#term-rule--rule) inserted or removed renumbered those after it ([COR-068](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)). Each citation of a moved rule then named another rule, and nothing said so (COR-068). [Rule sets](../glossary.md#term-rule-set--rule-set) already give permanent ids, statuses and origins, so operational rules are kept in sets of their own (COR-068).
 
-A loaded rule set is a collection file of rules that bind on the work of sessions, never on an [artefact](../glossary.md#term-artefact--artefact). They bind on each session that loads its [loaded file](../glossary.md#term-loaded-file--loaded-file). It has no scope, inherits no set, and no set inherits it. The [backbone](../glossary.md#term-backbone--backbone)'s `OPS` is one, and `.pkit/rules/core.md` is its loaded file.
+A loaded rule set is a [collection file](../glossary.md#term-collection-file--collection-file) of rules that bind on the work of sessions, never on an [artefact](../glossary.md#term-artefact--artefact). They bind on each session that loads its [loaded file](../glossary.md#term-loaded-file--loaded-file). It has no scope, inherits no set, and no set inherits it. The [backbone](../glossary.md#term-backbone--backbone)'s `OPS` is one, and `.pkit/rules/core.md` is its loaded file.
 
 **Attributes:**
 
@@ -857,9 +857,9 @@ A loaded rule set is a collection file of rules that bind on the work of session
 
 Defined in [TERM-loaded-file](../glossary.md#term-loaded-file--loaded-file).
 
-**Why:** A session reads the whole file at every start ([COR-068](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)). Front matter, origins and retired rules would fill its context with data an agent does not act on (COR-068). A file kept by hand beside its loaded rule set would drift from it (COR-068).
+**Why:** A session reads the whole file at every start ([COR-068](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)). Front matter, origins and retired rules would fill its context with data an agent does not act on (COR-068). A file kept by hand beside its [loaded rule set](../glossary.md#term-loaded-rule-set--loaded-rule-set) would drift from it (COR-068).
 
-A loaded file is the document a session takes in, generated from a [loaded rule set](../glossary.md#term-loaded-rule-set--loaded-rule-set) where the set is authored. It holds the set's accepted rules, in the set's order and under its sections. It holds no front matter, no origin and no retired [rule](../glossary.md#term-rule--rule). `.pkit/rules/core.md` is the [backbone](../glossary.md#term-backbone--backbone)'s.
+A loaded file is the document a session takes in, generated from a loaded rule set where the set is authored. It holds the set's accepted rules, in the set's order and under its sections. It holds no front matter, no origin and no retired [rule](../glossary.md#term-rule--rule). `.pkit/rules/core.md` is the [backbone](../glossary.md#term-backbone--backbone)'s.
 
 **Attributes:**
 
@@ -869,7 +869,7 @@ A loaded file is the document a session takes in, generated from a [loaded rule 
 
 - It is generated from its loaded rule set, in each [change](../glossary.md#term-change--change) that accepts, edits, supersedes or withdraws one of the set's rules (COR-068 point 3).
 - A [project](../glossary.md#term-project--project) that receives the set by [sync](../glossary.md#term-sync--sync) receives its loaded file with it, and neither generates nor edits it (COR-068 point 3).
-- A [capability](../glossary.md#term-capability--capability)'s loaded file is kept among the capability's own files, and arrives with its set by sync, [install](../glossary.md#term-install--install) and version transition ([COR-070 point 1](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#1-a-capability-ships-at-most-one-loaded-set-and-its-loaded-file-travels-with-it)).
+- A [capability](../glossary.md#term-capability--capability)'s loaded file is kept among the capability's own files, and arrives with its set by sync, [install](../glossary.md#term-install--install) and [version transition](../glossary.md#term-version-transition--version-transition) ([COR-070 point 1](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#1-a-capability-ships-at-most-one-loaded-set-and-its-loaded-file-travels-with-it)).
 - The [adapter](../glossary.md#term-adapter--adapter) delivers each installed capability's loaded file by the route that carries the backbone's ([COR-070 point 2](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#2-the-adapter-delivers-the-loaded-file-by-the-route-that-carries-cores-rules)).
 
 **States:** None.
@@ -883,7 +883,7 @@ A loaded file is the document a session takes in, generated from a [loaded rule 
 
 Defined in [TERM-rules-index](../glossary.md#term-rules-index--rules-index).
 
-**Why:** The [backbone](../glossary.md#term-backbone--backbone)'s [loaded file](../glossary.md#term-loaded-file--loaded-file) reaches a session through one include in the [project](../glossary.md#term-project--project)'s [instruction file](../glossary.md#term-instruction-file--instruction-file) ([COR-070](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md)). A [capability](../glossary.md#term-capability--capability) is installed and uninstalled, so its loaded file must arrive and leave with it (COR-070).
+**Why:** The [backbone](../glossary.md#term-backbone--backbone)'s [loaded file](../glossary.md#term-loaded-file--loaded-file) reaches a session through one line in the [project](../glossary.md#term-project--project)'s [instruction file](../glossary.md#term-instruction-file--instruction-file) ([COR-070](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md)). A [capability](../glossary.md#term-capability--capability) is installed and uninstalled, so its loaded file must arrive and leave with it (COR-070).
 
 A rules index is a generated file that lists the loaded file of each installed capability. The [harness](../glossary.md#term-harness--harness)'s instruction file includes it, beside the backbone's loaded file. project-kit's is `.pkit/rules/capabilities.md`, which its `CLAUDE.md` includes after `.pkit/rules/core.md`.
 
@@ -895,7 +895,7 @@ A rules index is a generated file that lists the loaded file of each installed c
 **Relations:**
 
 - A capability's [operational rules](../glossary.md#term-operational-rule--operational-rule) reach the sessions that load the instruction file through it, from each session's start ([COR-070 point 2](../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#2-the-adapter-delivers-the-loaded-file-by-the-route-that-carries-cores-rules)).
-- The backbone renders it whole at first [install](../glossary.md#term-install--install), sync and version transition, and at a capability's install, registration, version transition and uninstall (ADR-076 point 2).
+- The backbone renders it whole at first [install](../glossary.md#term-install--install), [sync](../glossary.md#term-sync--sync) and [version transition](../glossary.md#term-version-transition--version-transition), and at a capability's install, registration, version transition and uninstall (ADR-076 point 2).
 - The [adapter](../glossary.md#term-adapter--adapter) keeps the one line that includes it present in the instruction file, and inserts that line wherever it is absent (COR-070 point 2).
 
 **States:** None.
@@ -910,9 +910,9 @@ A rules index is a generated file that lists the loaded file of each installed c
 
 Defined in [TERM-inheritance-pin](../glossary.md#term-inheritance-pin--inheritance-pin).
 
-**Why:** A rule set's rules are written against the rules it inherits as they were, and a breaking edit to those can silently invalidate them ([COR-051](../../../../.pkit/decisions/core/COR-051-rule-sets.md)). Pinning their major turns that into a visible review, not a silent drift (COR-051).
+**Why:** A [rule set](../glossary.md#term-rule-set--rule-set)'s rules are written against the rules it inherits as they were, and a breaking edit to those can silently invalidate them ([COR-051](../../../../.pkit/decisions/core/COR-051-rule-sets.md)). Pinning their major turns that into a visible review, not a silent drift (COR-051).
 
-An inheritance pin is the major [version](../glossary.md#term-version--version) a [rule set](../glossary.md#term-rule-set--rule-set) names for each set it inherits, after the set's name and `@`, as in `WRITE@2`. While it is behind the set's current major, no inherited [rule](../glossary.md#term-rule--rule) binds through it.
+An inheritance pin is the major [version](../glossary.md#term-version--version) a rule set names for each set it inherits, after the set's name and `@`, as in `WRITE@2`. While it is behind the set's current major, no inherited [rule](../glossary.md#term-rule--rule) binds through it.
 
 **Attributes:** None.
 
@@ -992,7 +992,7 @@ A [rule set](../glossary.md#term-rule-set--rule-set)'s scope may select by artef
 **Always true:**
 
 - An artefact has one type, or none (COR-056 point 1).
-- Neither the change check nor the whole-repository check reads a type, so giving a place a type flags nothing ([COR-056 point 5](../../../../.pkit/decisions/core/COR-056-artefact-types.md#5-limits)).
+- Neither the [change check](../glossary.md#term-change-check--change-check) nor the [whole-repository check](../glossary.md#term-whole-repository-check--whole-repository-check) reads a type, so giving a place a type flags nothing ([COR-056 point 5](../../../../.pkit/decisions/core/COR-056-artefact-types.md#5-limits)).
 - Every rule takes the type `backbone:rule`, whatever place holds it ([COR-056 point 3](../../../../.pkit/decisions/core/COR-056-artefact-types.md#3-how-the-backbone-resolves-it)).
 
 ## Package metadata
@@ -1013,7 +1013,7 @@ Package metadata is the file a component ships that declares its [version](../gl
 **Relations:**
 
 - A component ships it (COR-017).
-- Its `depends-on` connections are copied into it from each process definition by a command ([COR-053 point 4](../../../../.pkit/decisions/core/COR-053-connection-points.md#4-depends-on-is-generated-never-hand-written)).
+- Its `depends-on` connections are copied into it from each [process definition](../glossary.md#term-process-definition--process-definition) by a command ([COR-053 point 4](../../../../.pkit/decisions/core/COR-053-connection-points.md#4-depends-on-is-generated-never-hand-written)).
 - It is no [manifest](../glossary.md#term-manifest--manifest): a manifest is what the [project](../glossary.md#term-project--project) recorded when it installed the component.
 
 **States:** None.
@@ -1065,7 +1065,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md)
 - [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
 - [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
-- [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
+- [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-020 · Functional · A dead anchor is an error, never silence](../requirements/functional/030-change/REQ-020-dead-anchor-error.md)
 
 **Dead anchor:**
@@ -1105,7 +1105,6 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [REQ-004 · Quality · A check never reads a missing result as one that found nothing](../requirements/quality/REQ-004-missing-answer-never-clean.md)
 - [REQ-018 · Quality · A reading command of `pkit friction` prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
 - [REQ-020 · Functional · A dead anchor is an error, never silence](../requirements/functional/030-change/REQ-020-dead-anchor-error.md)
-- [REQ-030 · Functional · A choice in a version transition that needs a person is never taken silently](../requirements/functional/050-adopt/REQ-030-person-choice-never-silent.md)
 
 **Declared surface:**
 
@@ -1277,3 +1276,4 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md)
 - [UC-054 — Upgrade one capability on its own](../use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md)
 - [JRN-006 — Start working on a project on a new machine](../use-case-model/journeys/JRN-006-start-on-new-machine.md)
+- [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)

@@ -134,7 +134,7 @@ A capability is a [component](../glossary.md#term-component--component) that pac
 **Attributes:**
 
 - its own subtree, `.pkit/capabilities/<name>/`, with its `package.yaml`, its decision records and its skills (COR-017)
-- its own namespace of decision records, DEC, cited with its name, as in `software-analysis:DEC-001` (COR-017)
+- its own [namespace](../glossary.md#term-namespace--namespace) of decision records, DEC, cited with its name, as in `software-analysis:DEC-001` (COR-017)
 - the [roles](../glossary.md#term-role--role) it provides ([COR-053 point 1](../../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles))
 
 **Relations:**
@@ -219,7 +219,7 @@ A connection point is a declared interface that one installed capability defines
 - a kind (COR-053 point 2):
   - a [data point](../glossary.md#term-data-point--data-point), which takes data in
   - a [process](../glossary.md#term-process--process), offered for others to depend on
-  - an event, which signals that a writing command finished
+  - an [event](../glossary.md#term-event--event), which signals that a writing command finished
 - a <!-- pkit:not-the-term -->version, an integer that rises only where it breaks what connects to it ([COR-053 point 5](../../../../.pkit/decisions/core/COR-053-connection-points.md#5-versions-per-point-roles-unversioned))
 - a description, in prose ([COR-053 point 3](../../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality))
 
@@ -245,7 +245,7 @@ Defined in [TERM-connection](../glossary.md#term-connection--connection).
 A connection is a tie that a [component](../glossary.md#term-component--component) declares, under `extensions`, to a [connection point](../glossary.md#term-connection-point--connection-point) another [capability](../glossary.md#term-capability--capability) defines. `pkit connections graph` draws each one. A connection does one of three things:
 
 - it contributes to a [data point](../glossary.md#term-data-point--data-point)
-- it subscribes to an event
+- it subscribes to an [event](../glossary.md#term-event--event)
 - it makes a [process](../glossary.md#term-process--process) depend on another process
 
 **Attributes:**
@@ -258,8 +258,8 @@ A connection is a tie that a [component](../glossary.md#term-component--componen
 
 **Relations:**
 
-- A component declares it. The component's `depends-on` connections are copied from each process definition by a command, and never written by hand ([COR-053 point 4](../../../../.pkit/decisions/core/COR-053-connection-points.md#4-depends-on-is-generated-never-hand-written)).
-- The [backbone](../glossary.md#term-backbone--backbone) resolves each one against the connection points of each [role](../glossary.md#term-role--role)'s active provider, and checks it ([COR-053 point 7](../../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)).
+- A component declares it. The component's `depends-on` connections are copied from each [process definition](../glossary.md#term-process-definition--process-definition) by a command, and never written by hand ([COR-053 point 4](../../../../.pkit/decisions/core/COR-053-connection-points.md#4-depends-on-is-generated-never-hand-written)).
+- The [backbone](../glossary.md#term-backbone--backbone) resolves each one against the connection points of each [role](../glossary.md#term-role--role)'s active [provider](../glossary.md#term-provider--provider), and checks it ([COR-053 point 7](../../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)).
 - An [install plan](../glossary.md#term-install-plan--install-plan) lists the connections an [install](../glossary.md#term-install--install) would make, and the conflicts to resolve ([COR-053 point 8](../../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
 
 **States:** None.
@@ -335,7 +335,7 @@ A process is the course a capability declares for one kind of process subject of
 
 **Attributes:**
 
-- its address, `<capability>:<id>`, and its process definition, which the capability ships ([COR-033 P2](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p2--ownership))
+- its address, `<capability>:<id>`, and its [process definition](../glossary.md#term-process-definition--process-definition), which the capability ships ([COR-033 P2](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p2--ownership))
 - its states, each detected by a script the engine runs, in one mode for the whole process ([COR-033 P5](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p5--name-broad-ship-narrow))
 - its moves, each with a condition: a script that decides it, or an authorisation recorded by someone other than the one who moves ([COR-033 P4](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p4--gates-must-be-checkable))
 
@@ -536,7 +536,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-054 — Upgrade one capability on its own](../use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md)
 - [REQ-004 · Quality · A check never reads a missing result as one that found nothing](../requirements/quality/REQ-004-missing-answer-never-clean.md)
 - [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
-- [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
+- [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-011 · Constraint · A suggestion of what to install never uses the network](../requirements/constraints/020-set-up/REQ-011-suggestion-offline.md)
 
 **Process:**
@@ -545,11 +545,14 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
 - [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
+- [REQ-011 · Constraint · A suggestion of what to install never uses the network](../requirements/constraints/020-set-up/REQ-011-suggestion-offline.md)
 
 **Process subject:**
 
 - [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
 - [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
+
+**Event:** None.
 
 **Install plan:**
 
