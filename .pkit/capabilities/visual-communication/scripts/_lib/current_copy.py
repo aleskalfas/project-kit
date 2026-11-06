@@ -2,21 +2,34 @@
 DEC-017 points 5, 7 and 8).
 
 - **Where it lies.** In the folder `current-copy/` of the piece's folder, which no
-  fingerprint reads (DEC-016 point 3). An export of a published piece writes it (`made`),
-  and replaces the folder whole, so a file the new version does not write goes with it. A
-  piece in any other state writes none, so a copy is always made while its piece is
-  published (DEC-016, Implications), and one it holds already stays.
+  fingerprint reads (DEC-016 point 3), or at the place the piece names (`copy-place`). An
+  export of a published piece writes it (`made`), and in the piece's folder replaces the
+  folder whole, so a file the new version does not write goes with it. A piece in any other
+  state writes none, so a copy is always made while its piece is published (DEC-016,
+  Implications), and one it holds already stays.
+- **A place** (`writable`) is a rule on where a command may write, and a plain path: this
+  module reads no configuration of the documentation, and does not judge whether it suits
+  a page. It lies inside the repository where version control keeps it, outside the location
+  and the methodology's own folder, and no path through a link reaches it (DEC-017 point 8).
+  An export writes over only a file of the piece's own copy, with the hash the record keeps,
+  and any other file at a path it writes refuses the run.
+- **Left behind** (`left_behind`). No export removes a file at a place, or one in the
+  piece's folder once the piece names a place: it names each file of the last copy it did
+  not write again, and a person removes it (DEC-017 point 7).
 - **A file of the copy** (`file_of`). The name of its version's file with the number left
-  out, and the bytes of that file, so the two keep one hash: the SHA-256 of the whole file.
-  The accepted records leave what a name must hold and what the hash is taken of to the
-  record of a copy's form, project-kit#2700 (DEC-019 point 5, DEC-017, Implications). So
-  this function alone works out either, and another answer changes it alone.
+  out, and the bytes of that file, so the two keep one hash (`hash_of`): the SHA-256 of the
+  whole file. The accepted records leave what a name must hold and what the hash is taken
+  of to the record of a copy's form, project-kit#2700 (DEC-019 point 5, DEC-017,
+  Implications). So these functions alone work out either, and another answer changes them
+  alone.
 - **The record.** `exports.yaml` names, under `current-copy`, the piece and the version
-  that wrote the copy, and each file's path and hash (DEC-017 point 7). A path is read
-  from the piece's folder, so a rename or a move of the location leaves it true. An entry
-  is read one way (`recorded`), which refuses what the schema refuses, since an export in
-  another state writes it back. The commands that read it run with no `jsonschema`, so
-  the shape is held here, and the tests hold it to the schema.
+  that wrote the copy, and each file's path and hash (DEC-017 point 7). A path in the
+  piece's folder is read from that folder, so a rename or a move of the location leaves it
+  true, and a path at a place from the repository's root (`rooted`). A place of the folder's
+  own name is refused, so the two never read alike. An entry is read one way (`recorded`),
+  which refuses what the schema refuses, since an export in another state writes it back.
+  The commands that read it run with no `jsonschema`, so the shape is held here, and the
+  tests hold it to the schema.
 - **Whose it is** (`own`). A piece's own where the record names that piece, or a piece the
   location no longer holds. So a rename keeps it, and a folder copied by hand brings none
   while the original stands. Every rule on a piece's current copy reads it so.
@@ -30,13 +43,15 @@ from __future__ import annotations
 import re
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from _lib import fingerprint
+from _lib import location as loc
 from _lib import pipeline as pl
 from _lib.copies import PUBLISHED
 from _lib.files import Change
-from _lib.fingerprint import CURRENT_COPY
+from _lib.fingerprint import COPY_PLACE, CURRENT_COPY
 from _lib.libraries import Version
 from _lib.names import LANGUAGE, NAME, is_name
 from _lib.reading import is_sha256, sha256
@@ -54,9 +69,13 @@ _A_LANGUAGE = LANGUAGE.strip("^$")
 #: A segment of a key, which names a mode: `<axis>.<mode>` (DEC-004 point 3).
 _A_MODE = rf"{_A_NAME}\.{_A_NAME}"
 
+#: The folder a file of that entry lies in, as the schemas' `repository-path` holds a path:
+#: `current-copy`, or the place the piece names.
+_A_FOLDER = r"[^/.\\][^/\\]*(/[^/.\\][^/\\]*)*"
+
 #: A file's path in that entry, the pattern the schema of the record of exports holds.
 PATH = (
-    rf"^{CURRENT_COPY}/{_A_NAME}\.{_A_LANGUAGE}\.(default|{_A_MODE}(\+{_A_MODE})*)"
+    rf"^{_A_FOLDER}/{_A_NAME}\.{_A_LANGUAGE}\.(default|{_A_MODE}(\+{_A_MODE})*)"
     r"((\.[1-9][0-9]*)?\.svg|\.pdf)$"
 )
 
@@ -85,12 +104,18 @@ class Copy:
 
 def file_of(name: str, data: bytes) -> CopiedFile:
     """The file of a current copy that comes of a version's file `name`, which holds `data`:
-    the name with the number left out, and the SHA-256 of the whole file. Raises ValueError
-    for a name that carries no number. Nothing else works out either."""
+    the name with the number left out, and its hash (`hash_of`). Raises ValueError for a name
+    that carries no number. Nothing else works out a name."""
     unnumbered, found = _NUMBERED.subn(r"\1.", name)
     if not found:
         raise ValueError(f"`{name}` carries no version's number")
-    return CopiedFile(unnumbered, sha256(data))
+    return CopiedFile(unnumbered, hash_of(data))
+
+
+def hash_of(data: bytes) -> str:
+    """The hash of a file of a current copy that holds `data`: the SHA-256 of the whole file.
+    Nothing else works it out."""
+    return sha256(data)
 
 
 def keeps(piece: pl.Piece) -> bool:
@@ -103,18 +128,48 @@ def made(piece: pl.Piece, number: int, files: Mapping[str, bytes]) -> Copy | Non
     version by its name; None where its state keeps no copy."""
     if not keeps(piece):
         return None
+    folder = CURRENT_COPY if piece.copy_place is None else piece.copy_place
     held: dict[str, bytes] = {}
     hashes: dict[str, str] = {}
     for name, data in files.items():
         copied = file_of(name, data)
         held[copied.name] = data
-        hashes[f"{CURRENT_COPY}/{copied.name}"] = copied.sha256
+        hashes[f"{folder}/{copied.name}"] = copied.sha256
     return Copy(held, {"piece": piece.name, "version": number, "files": hashes})
 
 
-def writable(piece: pl.Piece, copy: Copy) -> None:
+def rooted(piece: pl.Piece, path: str) -> str:
+    """The path from the repository's root of the file a record names by `path`."""
+    return piece.file(path) if _in_folder(path) else path
+
+
+def _in_folder(path: str) -> bool:
+    """Whether a record's `path` lies in the piece's folder, and is read from it."""
+    return path.rpartition("/")[0] == CURRENT_COPY
+
+
+def left_behind(
+    piece: pl.Piece, own_copy: Mapping[str, Any] | None, copy: Copy | None
+) -> list[str]:
+    """Each file of `own_copy`, the piece's own copy before the run, that an export writing
+    `copy` leaves where it lies, by its path from the repository's root. A folder replaced
+    whole takes its files along, and a file a person removed lies nowhere to name."""
+    if own_copy is None or copy is None:
+        return []
+    written = {rooted(piece, path) for path in copy.entry["files"]}
+    replaced = piece.copy_place is None
+    stayed = (path for path in own_copy["files"] if not (replaced and _in_folder(path)))
+    kept = (rooted(piece, path) for path in stayed)
+    return [path for path in kept if path not in written and (piece.root / path).exists()]
+
+
+def writable(piece: pl.Piece, copy: Copy, own_copy: Mapping[str, Any] | None) -> None:
     """Raise Refused where `copy` could not be written: a file of it is reached through a
-    link, or a file lies where its folder goes."""
+    link, a file lies where its folder goes, or it could not lie at the place the piece
+    names, where `own_copy` is the piece's own copy before the run."""
+    if piece.copy_place is not None:
+        _writable_at_place(piece, piece.copy_place, copy, own_copy)
+        return
     folder = piece.folder / CURRENT_COPY
     for name in copy.files:
         pl.writable(piece.root, folder / name)
@@ -125,9 +180,85 @@ def writable(piece: pl.Piece, copy: Copy) -> None:
         )
 
 
+def _writable_at_place(
+    piece: pl.Piece, place: str, copy: Copy, own_copy: Mapping[str, Any] | None
+) -> None:
+    """Raise Refused, naming what stops it, where the piece's current copy cannot lie at
+    `place`, or a path of `copy` holds anything but a file of `own_copy` with the hash the
+    record keeps (DEC-017 point 8)."""
+    said = f"{piece.file(pl.PIECE_FILE)}: `{COPY_PLACE}: {place}`"
+    found = _place_problem(piece, place)
+    if found is not None:
+        raise pl.Refused(f"{said} {found}")
+    paths = list(copy.entry["files"])
+    for path in paths:
+        pl.writable(piece.root, piece.root / path)
+    found = _file_in_the_way(piece.root, place) or _unkept(piece.root, paths)
+    if found is not None:
+        raise pl.Refused(f"{said} {found}")
+    kept = {} if own_copy is None else own_copy["files"]
+    taken = [
+        path
+        for path in paths
+        if (piece.root / path).exists() and not _holds(piece.root / path, kept.get(path))
+    ]
+    if taken:
+        raise pl.Refused(
+            f"the export would write over {', '.join(taken)}, and writes over only a file of "
+            f"the piece's current copy with the hash the record keeps: name another place "
+            f"under `{COPY_PLACE}`, or remove a file you mean to replace"
+        )
+
+
+def _place_problem(piece: pl.Piece, place: str) -> str | None:
+    """Why `place` cannot hold the piece's current copy, read from its text alone, or None:
+    the rules of a path in the repository, and the location."""
+    found = loc.shape_problem(place)
+    if found is not None:
+        return found
+    if place == piece.location or place.startswith(f"{piece.location}/"):
+        return f"lies in the location `{piece.location}`: name a folder outside it"
+    if place == CURRENT_COPY:
+        return f"reads as the piece's own `{CURRENT_COPY}/` in the record: name another folder"
+    return None
+
+
+def _file_in_the_way(root: Path, place: str) -> str | None:
+    """What says a file lies where `place`, or a folder above it, goes, or None."""
+    target = root / place
+    for path in (target, *target.parents):
+        if path == root:
+            break
+        if path.exists() and not path.is_dir():
+            return f"is no folder: {path.relative_to(root).as_posix()} is a file"
+    return None
+
+
+def _unkept(root: Path, paths: Sequence[str]) -> str | None:
+    """What says version control does not keep one of `paths`, or None."""
+    try:
+        unkept = loc.ignored(root, paths)
+    except loc.GitFailed as exc:
+        return f"is no place git can say it keeps: {exc}"
+    return f"is no place version control keeps: git ignores {', '.join(unkept)}" if unkept else None
+
+
+def _holds(path: Path, hashed: str | None) -> bool:
+    """Whether `path` is a file whose hash is `hashed`, which None never is."""
+    try:
+        return hashed is not None and hash_of(path.read_bytes()) == hashed
+    except OSError:
+        return False
+
+
 def write(piece: pl.Piece, copy: Copy, change: Change) -> None:
-    """Add to `change`, as its next step, the folder that holds `copy`, in place of the
-    whole folder where one stands."""
+    """Add to `change`, as its next steps, each file of `copy` at the place the piece names,
+    or as its next step the folder that holds them, in place of the whole folder where one
+    stands."""
+    if piece.copy_place is not None:
+        for name, data in copy.files.items():
+            change.write(piece.root / piece.copy_place / name, data)
+        return
     folder = piece.folder / CURRENT_COPY
     place = change.replace_folder if folder.exists() else change.add_folder
     place(folder, copy.files)
