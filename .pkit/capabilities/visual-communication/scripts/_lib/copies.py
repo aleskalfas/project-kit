@@ -32,13 +32,14 @@ point 5, DEC-013 points 5 and 6).
   A version the list names whose folder is missing is a copy that no longer holds its
   files: it is brought in as a copy of its kind is, a released one restored, one not
   released replaced, under the same locks.
-- **The locks** (`locks`): each piece's, read from its `piece.yaml` alone, its `lock`,
-  `pinned` and `state`, so a fault in its content stops nothing; and each declaration's of
-  written code. A draft's lock that is not pinned follows its libraries, moving at each
-  render, and a final piece's no longer draws, so neither holds a copy (DEC-013 point 5). A
-  pinned draft's, a published piece's and written code's move only on purpose (DEC-003
-  point 8, DEC-005 point 7). `pinned` is read of a draft alone. A lock the command cannot
-  read counts as one that moves only on purpose, and may name any copy of the library.
+- **The locks** (`locks`): each piece's, read from its `piece.yaml`, its `lock`, `pinned`
+  and `state`, and from its record of exports, whether it is final, so a fault in its
+  content stops nothing; and each declaration's of written code. A draft's lock that is
+  not pinned follows its libraries, moving at each render, and a final piece's no longer
+  draws, so neither holds a copy (DEC-013 point 5). A pinned draft's, a published piece's
+  and written code's move only on purpose (DEC-003 point 8, DEC-005 point 7). `pinned` is
+  read of a draft alone. A lock the command cannot read counts as one that moves only on
+  purpose, and may name any copy of the library.
 
 Every check that can refuse runs in `plan`, before the first write. `write` writes the plan
 as one change (`files.Change`): each folder copied, or replaced whole, then the list, every
@@ -805,8 +806,9 @@ def no_lock(is_final: bool) -> str:
 
 
 def _piece_lock(root: Path, file: str, name: str, library: str) -> Lock:
-    """A piece's lock, from its `piece.yaml` alone: its `lock`, `state` and, of a draft,
-    `pinned`."""
+    """A piece's lock, from its `piece.yaml`: its `lock`, `state` and, of a draft, `pinned`.
+    Its record of exports says whether it is final, and one that cannot be read makes it so
+    (`why_final`), so that lock follows."""
     data, why = _bound(root / file, "piece")
     if data is not None:
         state, pinned = data.get("state"), data.get("pinned", False)

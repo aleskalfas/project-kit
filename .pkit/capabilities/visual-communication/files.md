@@ -109,6 +109,9 @@ pkit:
         - visual-communication:DEC-015#2
         - visual-communication:DEC-015#4
         - visual-communication:DEC-016#3
+        - visual-communication:DEC-017#1
+        - visual-communication:DEC-017#3
+        - visual-communication:DEC-017#5
         - visual-communication:DEC-017#6
         - visual-communication:DEC-017#7
         - visual-communication:DEC-017#8
@@ -307,7 +310,7 @@ A library moves no lower than the version the lock names while versions at or ab
 
 **A pinned draft,** `pinned: true`, keeps its lock: a render checks it and never changes it. The lock must name every library the piece uses, each a version the location holds and the installed capability reads, and they must fit together. A pinned piece with no lock is refused: unpin it for its first render. To move a pinned lock, change it by hand, or unpin the piece and render it.
 
-**A final piece** was handed out, and its lock never moves. **A published piece** stays in use where others rely on it. Its lock moves only through a change a person reviews, with a before-and-after of each page it changes (DEC-003 point 8). A render moves neither lock, whatever newer versions the location holds, and reads no `pinned` of either piece. It checks such a lock as it checks a pinned draft's, and its refusal says the piece's state. A published piece with no lock is refused: set it back to a draft for its first render. A final piece with no lock is refused too: write back the lock of the version handed out, which is no move of it.
+**A final piece** was handed out, and its lock never moves. **A published piece** stays in use where others rely on it. Its lock moves only through a change a person reviews, with a before-and-after of each page it changes, or when marked final (DEC-003 point 8). A render moves neither lock, whatever newer versions the location holds, and reads no `pinned` of either piece. It checks such a lock as it checks a pinned draft's, and its refusal says the piece's state. A published piece with no lock is refused: set it back to a draft for its first render. A final piece with no lock is refused too: write back the lock of the version handed out, which is no move of it.
 
 **Final to every command.** A piece is final where its `state` says so, or where its record of exports names a version handed out. Where that record cannot be read, as on a conflicted merge, every command takes the piece as final.
 
