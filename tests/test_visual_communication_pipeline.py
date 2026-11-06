@@ -177,6 +177,14 @@ def square() -> Any:
     seam.unregister(producer.NAME)
 
 
+def stamped(tmp_path: Path, shows: str = "files", **fields: Any) -> Path:
+    """The drawing project without its picture, its body the `tests` library's stamp, which
+    shows the facts `shows` asks for."""
+    root = drawing_project(tmp_path, picture=False, **fields)
+    write_content(root, body={"use": "tests/stamp", "shows": shows})
+    return root
+
+
 def piece_of(root: Path) -> Any:
     return pl.read_piece(root, "visual", PIECE)
 
@@ -1159,3 +1167,36 @@ def test_a_lock_entry_that_spells_no_version_reads_nothing_outside_the_library_f
     root = drawing_project(tmp_path, picture=False)
     side = before_after.drawing(root, "visual", PIECE, {**LOCK, library: version})
     assert side.why.startswith(f"the lock of {PIECE_FOLDER}/piece.yaml names `{library}: ")
+
+
+# --- the facts of an export ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("shows", "part", "text"),
+    [
+        ("files", "language", "en"),
+        ("files", "state", "published"),
+        ("number", "number", "v88"),
+        ("date", "date", "2088-08-28"),
+    ],
+)
+def test_each_scene_takes_the_pieces_language_and_state_and_the_stand_ins(
+    tmp_path: Path, shows: str, part: str, text: str
+) -> None:
+    root = stamped(tmp_path, shows, state="published")
+    piece = piece_of(root)
+    [(_, result)] = pl.Project(piece, piece.lock, pl.Held(root, "visual")).scenes()
+    element = result.scene.find(f"figure/body/{part}")
+    assert element is not None
+    assert element.properties["text"] == text
+
+
+def test_the_search_for_a_lock_places_a_piece_that_shows_a_fact(tmp_path: Path) -> None:
+    root = stamped(tmp_path, "number")
+    piece = piece_of(root)
+    held = pl.Held(root, "visual")
+    versions = {
+        name: held.library(name, pl.Version.parse(version)) for name, version in piece.lock.items()
+    }
+    assert pl.fit(piece, held)(versions) == []

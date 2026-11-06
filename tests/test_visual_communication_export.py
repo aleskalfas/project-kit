@@ -23,6 +23,8 @@ from tests.test_visual_communication_pipeline import (
     PIECE,
     PIECE_FOLDER,
     drawing_project,
+    stamped,
+    write_content,
     write_picture,
 )
 from tests.visual_communication_project import CONFIG, SCHEMAS, bound, importable, write, yaml_text
@@ -44,6 +46,7 @@ script, exports, svg, pdf, seam, framing, files, reading, fingerprint, pl = load
 
 FOLDER = ".pkit/capabilities/visual-communication/project/local/exports/flow"
 RECORD = f"{PIECE_FOLDER}/exports.yaml"
+TEXT = "{http://www.w3.org/2000/svg}text"
 
 
 @pytest.fixture(autouse=True)
@@ -317,6 +320,47 @@ def test_a_refusal_exits_1_and_writes_nothing(
     assert not (root / CONFIG).exists()
     assert not (root / FOLDER).exists()
     assert not (root / RECORD).exists()
+
+
+@pytest.mark.parametrize(
+    ("shows", "fact", "part"),
+    [("number", "version", "number"), ("date", "date", "date")],
+)
+def test_a_piece_that_shows_a_number_or_a_date_is_refused_naming_the_element(
+    tmp_path: Path, shows: str, fact: str, part: str
+) -> None:
+    root = stamped(tmp_path, shows)
+    before = (root / PIECE_FOLDER / "piece.yaml").read_bytes()
+    done = run(root, PIECE)
+    assert done.returncode == 1
+    assert (
+        f"`flow` shows a fact no export fills yet, so a file would hold a stand-in: "
+        f"`{fact}` at `figure/body/{part}`"
+    ) in done.stderr
+    assert not (root / FOLDER).exists()
+    assert not (root / RECORD).exists()
+    assert (root / PIECE_FOLDER / "piece.yaml").read_bytes() == before
+
+
+def test_every_run_through_the_plan_stops_on_a_number_or_a_date(tmp_path: Path) -> None:
+    root = stamped(tmp_path, "date", languages=["en", "cs"])
+    write_content(root, "cs", body={"use": "tests/stamp", "shows": "date"})
+    piece = pl.read_piece(root, "visual", PIECE)
+    project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+    with pytest.raises(pl.Refused) as refused:
+        exports.plan(project)
+    assert str(refused.value).count("`date` at `figure/body/date`") == 1
+
+
+def test_a_piece_that_shows_only_its_language_and_state_exports_their_real_text(
+    tmp_path: Path,
+) -> None:
+    root = stamped(tmp_path, "files", state="published")
+    done = run(root, PIECE)
+    assert done.returncode == 0, done.stderr
+    drawn = (root / FOLDER / "flow.v1.en.default.svg").read_text(encoding="utf-8")
+    shown = ["".join(text.itertext()) for text in ElementTree.fromstring(drawn).iter(TEXT)]
+    assert shown[:2] == ["en", "published"]
 
 
 def test_a_file_the_record_does_not_name_is_never_overwritten_and_refuses_nothing(

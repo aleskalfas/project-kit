@@ -32,7 +32,7 @@ from tests.test_visual_communication_pipeline import (
     write_content,
     write_picture,
 )
-from tests.visual_communication_project import CONFIG, importable, write_list
+from tests.visual_communication_project import CONFIG, importable, write, write_list
 from tests.visual_communication_writes import FULL, failing
 
 script, svg, seam, framing, files, reading, pl, checks, libraries = load(
@@ -71,6 +71,10 @@ def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 def run(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return run_main(script, *args, cwd=root)
+
+
+def findings_of(root: Path) -> str:
+    return (root / FINDINGS).read_text(encoding="utf-8")
 
 
 def previews(root: Path) -> dict[str, str]:
@@ -754,3 +758,23 @@ def test_a_pinned_lock_moved_by_hand_to_such_versions_shows_the_item_and_the_tie
     report = checks.check(clashing, only=PIECE)
     assert [f.where for f, _ in report.judged if f.code == "item-clash"] == ["lock"]
     assert "the end `cards[a]` is drawn 2 times below `figure/body`" in lost.stdout
+
+
+# --- the facts of an export ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("shows", ["number", "date", "narrow"])
+def test_two_clones_with_different_exports_keep_the_same_findings(
+    tmp_path: Path, shows: str
+) -> None:
+    """A render reads what no file holds from the stand-ins, so what either clone holds
+    locally, and the day it runs, change nothing the record keeps (DEC-016 point 5)."""
+    roots = [drawing_project(tmp_path / clone, picture=False) for clone in ("one", "two")]
+    for root in roots:
+        write_content(root, body={"use": "tests/stamp", "shows": shows})
+    exports = ".pkit/capabilities/visual-communication/project/local/exports/flow"
+    write(roots[1] / exports / "flow.v41.en.default.svg", "<svg/>")
+    for root in roots:
+        assert run(root, PIECE).returncode == 0
+    assert findings_of(roots[0]) == findings_of(roots[1])
+    assert ("text-overflow" in findings_of(roots[0])) == (shows == "narrow")

@@ -77,6 +77,7 @@ pkit:
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
+        - .pkit/capabilities/visual-communication/components.md#parts
         - .pkit/capabilities/visual-communication/components.md#primitives
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/components.md#what-a-scene-holds
@@ -256,6 +257,7 @@ An export run is refused, and writes nothing, when:
 - a produced picture is stale (*What makes an output stale* in *What the check reports*), unless `--use-stale <output>` names it;
 - `--use-stale` names an output the piece does not declare under `produced`: the refusal names those it declares;
 - the piece has no page in one of its languages, so the version would hold no file in it;
+- the piece shows a version's number or its date ([Parts](components.md#parts)): no export fills them yet, and the refusal names each element that shows one. A piece that shows only its language or its state exports, with their real text;
 - a file the run would write, `exports.yaml` among them, is reached through a link;
 - `exports.yaml` cannot be read, or holds no list of numbered versions.
 
