@@ -1045,17 +1045,37 @@ def test_a_fingerprint_the_gate_cannot_read_refuses_and_names_the_record(
     assert not any(".v2." in name for name in exported(root))
 
 
-def test_a_current_copy_of_no_shape_refuses_and_names_the_record(tmp_path: Path) -> None:
+@pytest.mark.parametrize("state", ["draft", "published"])
+@pytest.mark.parametrize(
+    "entry",
+    [
+        pytest.param(None, id="nothing"),
+        pytest.param({"piece": "../outside", "version": 1, "files": {}}, id="a-path-for-a-piece"),
+        pytest.param({"piece": PIECE, "version": 1}, id="no-files"),
+        pytest.param({"piece": PIECE, "version": 1, "files": {}}, id="no-file"),
+        pytest.param(
+            {"piece": PIECE, "version": 1, "files": {"current-copy/flow.en.default.svg": "0" * 64}}
+            | {"written": "2026"},
+            id="another-field",
+        ),
+    ],
+)
+def test_a_current_copy_of_no_shape_refuses_in_every_state_and_names_the_record(
+    tmp_path: Path, state: str, entry: Any
+) -> None:
     root = exported_once(tmp_path)
+    edit(root, "state: published", f"state: {state}")
     record = record_of(root)
-    record["current-copy"] = {"piece": "../outside", "version": 1, "files": {}}
+    record["current-copy"] = entry
     (root / RECORD).write_text(yaml_text(record), encoding="utf-8")
+    held = (root / RECORD).read_bytes()
     assert_refused_with_nothing_written(
         root,
         run(root, PIECE),
-        f"error: {RECORD} keeps a `current-copy` that names no piece, version and files: mend it "
-        f"before the next export\n",
+        f"error: {RECORD} keeps a `current-copy` that names no piece, version and files as its "
+        f"schema asks: mend it before the next export\n",
     )
+    assert (root / RECORD).read_bytes() == held
 
 
 def test_the_gate_lies_outside_what_a_proposed_move_of_the_lock_shares(tmp_path: Path) -> None:

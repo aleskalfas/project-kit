@@ -21,7 +21,9 @@ from tests.visual_communication_project import (
     TEST_PARTS,
 )
 
-files, reading, seam = load("visual-communication", "files", "reading", "plugins.seam")
+current_copy, files, reading, seam = load(
+    "visual-communication", "current_copy", "files", "reading", "plugins.seam"
+)
 
 COMPANIONS = sorted(SCHEMAS.glob("*.schema.json"))
 
@@ -180,6 +182,12 @@ def test_a_current_copys_file_lies_nowhere_else_and_carries_no_number(path: str)
 )
 def test_the_record_refuses_a_current_copy_of_another_shape(fields: dict[str, Any]) -> None:
     assert refused(exports_with_copy(**fields), "exports") != []
+
+
+def test_the_schema_holds_the_pattern_the_code_holds_of_a_current_copys_path() -> None:
+    schema = json.loads((SCHEMAS / "exports.schema.json").read_text(encoding="utf-8"))
+    held = schema["properties"]["current-copy"]["properties"]["files"]["propertyNames"]
+    assert held["pattern"] == current_copy.PATH
 
 
 def test_a_brand_names_its_dtcg_version_and_a_component_library_none() -> None:

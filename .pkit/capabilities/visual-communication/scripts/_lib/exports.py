@@ -24,9 +24,10 @@
   while stale (DEC-006 point 7).
 - **The current copy.** A published piece's run also makes a copy of each file of the
   version, and the record names the version that wrote it (`current_copy`). A piece in any
-  other state writes none, and the record keeps what it named. What stops an export a
-  person runs on a lock that differs from the copy's lies in `export.py`, outside `plan`
-  and `write`, since a run that proposes a move of the lock shares these.
+  other state writes none, and the record keeps what it named. `plan` refuses an entry the
+  schema refuses, in every state, so no run writes it back. What stops an export a person
+  runs on a lock that differs from the copy's lies in `export.py`, outside `plan` and
+  `write`, since a run that proposes a move of the lock shares these.
 - **Refused before any write.** Everything that can refuse a run, a file reached through
   a link included, is checked by `plan`, so a refused run writes nothing.
 - **Written as one change.** The files, the current copy, then the record (`write`): where
@@ -49,7 +50,7 @@ from _lib.env import MissingFont
 from _lib.files import Change
 from _lib.libraries import installed_release
 from _lib.plugins import seam
-from _lib.reading import sha256
+from _lib.reading import is_sha256, sha256
 from _lib.root import LOCAL
 from _lib.scene import SceneResult
 
@@ -71,10 +72,6 @@ HEADER = (
 )
 
 
-#: The value of a fingerprint: a SHA-256 in lower-case hexadecimal.
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
-
-
 @dataclass(frozen=True)
 class Planned:
     """An export computed and not yet written: its number, each file's name and bytes, the
@@ -89,14 +86,14 @@ class Planned:
     used_stale: list[str]
     not_stale: list[str]
     copy: current_copy.Copy | None
-    kept_copy: Any
+    kept_copy: Mapping[str, Any] | None
 
     @property
     def folder(self) -> Path:
         return self.piece.root / FOLDER / self.piece.name
 
     @property
-    def named_copy(self) -> Any:
+    def named_copy(self) -> Mapping[str, Any] | None:
         """What the record names of a current copy once this export is written."""
         return self.kept_copy if self.copy is None else self.copy.entry
 
@@ -206,6 +203,7 @@ def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None 
         )
     record = recorded(piece)
     versions = recorded_versions(piece, record)
+    kept_copy = current_copy.recorded(piece, record)
     number = next_number(piece, versions)
     files = _drawn(project, results, number)
     sources = pl.findings_key_sources(
@@ -241,7 +239,7 @@ def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None 
         used_stale,
         not_stale,
         current_copy.made(piece, number, files),
-        record.get(current_copy.FIELD),
+        kept_copy,
     )
     writable(planned)
     return planned
@@ -269,7 +267,7 @@ def used_versions(project: pl.Project) -> dict[str, str]:
     for output, record in sorted(project.env.records.items()):
         kept = record.get("fingerprint")
         value = kept.get("value") if isinstance(kept, Mapping) else None
-        if isinstance(value, str) and _SHA256.match(value):
+        if is_sha256(value):
             used[output] = value
     return used
 

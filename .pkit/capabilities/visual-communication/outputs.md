@@ -299,7 +299,8 @@ Each of these is found before the first write, so a refused run records no locat
 
 **A published piece's lock.** A state changed and changed back, or a lock written by hand, brings no new library version to a page (DEC-017 point 5).
 
-- **Two ways past.** The refusal names that lock and both ways: `pkit visual upgrade`, which proposes a move of the lock, and writing back that lock, which is no move of it.
+- **Two ways named.** The refusal names that lock and both ways past. One is `pkit visual upgrade`, to propose a move of the lock. The other is writing back that lock, which is no move of it.
+- **One runs today.** `pkit visual upgrade` is still to come ([project-kit#2572](https://github.com/aleskalfas/project-kit/issues/2572)). Until it comes, only writing back that lock gets past the gate, which fails closed.
 - **It reads the record, not the files,** so removing the copy changes nothing.
 - **No copy of its own.** Where the record holds no current copy of the piece's own, the export runs.
 - **A fingerprint it cannot read** refuses, and names the record.

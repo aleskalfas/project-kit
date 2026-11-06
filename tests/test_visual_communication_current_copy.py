@@ -14,10 +14,10 @@ import pytest
 
 from tests.in_process import load
 from tests.test_visual_communication_pipeline import PIECE, PIECE_FOLDER, drawing_project
-from tests.visual_communication_project import write_piece
+from tests.visual_communication_project import SCHEMAS, write_piece
 
-current_copy, fingerprint, reading, pl = load(
-    "visual-communication", "current_copy", "fingerprint", "reading", "pipeline"
+current_copy, files, fingerprint, reading, pl = load(
+    "visual-communication", "current_copy", "files", "fingerprint", "reading", "pipeline"
 )
 
 
@@ -130,20 +130,73 @@ def test_a_record_that_names_no_copy_holds_none_of_the_pieces(tmp_path: Path) ->
     assert current_copy.own(piece_in(root), {}) is None
 
 
+def test_a_record_that_names_no_copy_reads_as_none(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    assert current_copy.recorded(piece_in(root), {}) is None
+
+
+def test_an_entry_is_read_whichever_piece_it_names(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    write_piece(root, "flow-before")
+    assert current_copy.recorded(piece_in(root), record_naming("flow-before")) == (
+        entry_of("flow-before")
+    )
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "flow.en.default.svg",
+        "flow.en.colour-scheme.dark+contrast.high.2.svg",
+        "flow.pt-br.default.pdf",
+    ],
+)
+def test_an_entry_the_schema_takes_is_read_as_it_stands(tmp_path: Path, name: str) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    entry = {**entry_of(PIECE), "files": {f"current-copy/{name}": "0" * 64}}
+    record = {**reading.read_yaml(SCHEMAS / "exports.yaml"), current_copy.FIELD: entry}
+    assert files.shape_problems(record, "exports") == []
+    assert current_copy.recorded(piece_in(root), record) == entry
+
+
 @pytest.mark.parametrize(
     "entry",
     [
+        pytest.param(None, id="nothing"),
         pytest.param("flow", id="no-mapping"),
         pytest.param({"version": 1, "files": {}}, id="no-piece"),
-        pytest.param({"piece": "../outside", "version": 1, "files": {}}, id="a-path-for-a-piece"),
-        pytest.param({"piece": PIECE, "version": "1", "files": {}}, id="no-number"),
+        pytest.param(entry_of("../outside"), id="a-path-for-a-piece"),
+        pytest.param(entry_of("yes"), id="a-word-yaml-reads-for-a-piece"),
+        pytest.param({**entry_of(PIECE), "version": "1"}, id="no-number"),
+        pytest.param({**entry_of(PIECE), "version": True}, id="a-yes-for-a-number"),
+        pytest.param({**entry_of(PIECE), "version": 0}, id="a-number-before-1"),
         pytest.param({"piece": PIECE, "version": 1}, id="no-files"),
+        pytest.param({**entry_of(PIECE), "files": []}, id="no-mapping-of-files"),
+        pytest.param({**entry_of(PIECE), "files": {}}, id="no-file"),
+        pytest.param({**entry_of(PIECE), "written": "2026"}, id="another-field"),
+        pytest.param(
+            {**entry_of(PIECE), "files": {"current-copy/../x.en.default.svg": "0" * 64}},
+            id="a-path-outside-the-folder",
+        ),
+        pytest.param(
+            {**entry_of(PIECE), "files": {"current-copy/x.v1.en.default.svg": "0" * 64}},
+            id="a-path-that-carries-a-number",
+        ),
+        pytest.param(
+            {**entry_of(PIECE), "files": {"current-copy/x.en.default.svg": "0" * 63}},
+            id="no-hash",
+        ),
     ],
 )
-def test_an_entry_of_no_shape_is_refused(tmp_path: Path, entry: Any) -> None:
+def test_an_entry_the_schema_refuses_is_refused(tmp_path: Path, entry: Any) -> None:
     root = drawing_project(tmp_path, picture=False)
-    with pytest.raises(pl.Refused, match=f"{PIECE_FOLDER}/exports.yaml keeps a `current-copy`"):
-        current_copy.own(piece_in(root), {current_copy.FIELD: entry})
+    record = {**reading.read_yaml(SCHEMAS / "exports.yaml"), current_copy.FIELD: entry}
+    assert files.shape_problems(record, "exports") != []
+    said = f"{PIECE_FOLDER}/exports.yaml keeps a `current-copy`"
+    with pytest.raises(pl.Refused, match=said):
+        current_copy.recorded(piece_in(root), record)
+    with pytest.raises(pl.Refused, match=said):
+        current_copy.own(piece_in(root), record)
 
 
 # --- the lock of the version that wrote it ------------------------------------------------------
