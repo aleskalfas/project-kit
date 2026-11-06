@@ -24,9 +24,10 @@ matter that does not parse, a status its kind does not have. A rule-set file the
 cannot read counts as one proposal.
 
 **It gives no answer** (`NoAnswer`) only where it cannot compute what lands: no base is
-named, a name is no commit, the clone is shallow, the merge conflicts, git cannot compute
-a merge, or the synced-copy test cannot run. No answer is never an empty list and never
-the refusal off, and it exits apart from a refusal (`NO_ANSWER_EXIT`).
+named, a name is no commit or reads as one it does not name, the head and the base share
+no history, the clone is shallow, the merge conflicts, git cannot compute a merge, any
+other git command fails, or the synced-copy test cannot run. No answer is never an empty
+list and never the refusal off, and it exits apart from a refusal (`NO_ANSWER_EXIT`).
 
 **The list** (`_Walk`) reads each of the change's commits against the state before it
 (`commit_contributions`), and shows only what lands.

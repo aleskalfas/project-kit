@@ -6833,13 +6833,15 @@ def decisions_check_landing(base_ref: str | None, head_rev: str | None, as_json:
 
     The key `decisions.refuse-proposals`, read at the base's tip, decides whether a
     reported proposal fails the run, and only a landing on the default branch can fail.
-    Every other input is read at that tip too, so the change moves none of it.
+    The default branch's name is read at that tip too. Which files the project receives
+    and where the check looks are read at that tip and at the landing state.
 
     Exits 0 on a pass and 1 on a refusal. Where the check cannot compute what lands, it
-    gives no answer and exits 3, which is never a pass: the base is unnamed or names no
-    commit, the head names none, the clone is shallow, the merge conflicts, git cannot
-    compute a merge, or the synced-copy test cannot run. The check gate and the hooks
-    never run it. --json prints one document either way.
+    gives no answer and exits 3, which is never a pass. Among the causes: the base is
+    unnamed or names no commit, the head names none, the head and the base share no
+    history, the clone is shallow, the merge conflicts, a git command fails, or the
+    synced-copy test cannot run. The CLI reference lists every cause. The check gate and
+    the hooks never run it. --json prints one document either way.
     """
     from project_kit import decisions_landing as landing_mod
     from project_kit.friction_check import printable

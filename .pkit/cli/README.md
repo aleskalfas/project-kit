@@ -695,7 +695,7 @@ Only errors fail the command. The same repository state always yields the same f
   - `packages`, a component's places: a place naming a type its own registry does not declare, a tie between places only components declare, and one component's typed place taking precedence over another component's own place are reports. The project cannot mend a component's package metadata.
   - `rule-sets`, a rule set's scope: a type no owner declares is an error.
 
-**Writing — the consent rule** (COR-048 point 5). Every writer of this file — `pkit config set`, the `name` write-back of `pkit report`, and any capability that offers to record a value — goes through one primitive (`project_kit.project_config.write_config`): it re-reads the file, applies the change, validates the result against the schema (an invalid result is refused and nothing is written), asks for consent **once**, then writes atomically. The write changes only the lines of the keys it sets: a value on one line keeps its line, quoting and trailing comment; a block list that gains items at its end keeps its lines, comments included, and takes the new items after its last one; any other change of a list or mapping replaces its own key's lines, in its own layout; a new key goes after its last sibling, in the file's layout — so every other byte, the lists, comments, blank lines, indentation, key order and line endings, stays as written, and the diff of a one-key write is that key's line. A change that cannot be made that way — removing a key, a file that mixes line endings, a key shared through a YAML alias — is refused and nothing is written; a change that changes nothing writes nothing and asks nothing. Consent takes exactly three forms: an interactive confirmation; an explicit `--yes`; or an upgrade migration the owning record specifies. A **non-interactive run without `--yes` refuses** — exit non-zero, naming the exact command to run — rather than writing silently. Editing the file by hand is the project's own edit, always allowed.
+**Writing — the consent rule** (COR-048 point 5). Every writer of this file — `pkit config set`, `pkit connections providers set`, `pkit init --refuse-proposals`, the `name` write-back of `pkit report`, and any capability that offers to record a value — goes through one primitive (`project_kit.project_config.write_config`): it re-reads the file, applies the change, validates the result against the schema (an invalid result is refused and nothing is written), asks for consent **once**, then writes atomically. The write changes only the lines of the keys it sets: a value on one line keeps its line, quoting and trailing comment; a block list that gains items at its end keeps its lines, comments included, and takes the new items after its last one; any other change of a list or mapping replaces its own key's lines, in its own layout; a new key goes after its last sibling, in the file's layout — so every other byte, the lists, comments, blank lines, indentation, key order and line endings, stays as written, and the diff of a one-key write is that key's line. A change that cannot be made that way — removing a key, a file that mixes line endings, a key shared through a YAML alias — is refused and nothing is written; a change that changes nothing writes nothing and asks nothing. Consent takes exactly three forms: an interactive confirmation; an explicit confirmation flag, such as `--yes`, or `--refuse-proposals` on `pkit init`; or an upgrade migration the owning record specifies. A **non-interactive run with no such flag refuses** — exit non-zero, naming the exact command to run — rather than writing silently. Editing the file by hand is the project's own edit, always allowed.
 
 ### `config set <key> <value> [--yes]`
 
@@ -1451,11 +1451,14 @@ What a change's merge would land ([COR-066](../decisions/core/COR-066-accepted-b
 **No answer** comes only from these:
 
 - The run is outside a project.
-- The run names no base, the base resolves to no commit, or the head names none.
+- The run names no base, or the base resolves to no commit.
+- The head names no commit. A name that reads as a commit's id, and names another through a branch or tag, counts as none. Name the commit in full.
+- The head and the base share no history to compare.
 - The clone is shallow, so the change's commits may not all be here.
 - Git's merge of the head into the base's tip conflicts. The fix is to merge the base in.
 - The git at hand cannot compute a merge the check needs. It needs git 2.38.
-- The synced-copy test cannot run: the working tree's copy raises, or no stand-in root can be made.
+- Any other git command the check needs fails, or git cannot be run.
+- The synced-copy test cannot run: the working tree's copy raises, or no stand-in root can be made. Discovery runs that copy, so anything raised while it walks a state reads as this too.
 
 With no answer the human view prints `No answer:` and why on standard error. Warnings go to standard error too.
 
