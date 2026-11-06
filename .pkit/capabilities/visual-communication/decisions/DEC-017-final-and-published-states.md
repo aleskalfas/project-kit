@@ -1,7 +1,7 @@
 ---
 id: DEC-017
 title: A piece marked final takes back its version's lock, and no command writes it after
-status: proposed
+status: accepted
 date: 2026-11-05
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
