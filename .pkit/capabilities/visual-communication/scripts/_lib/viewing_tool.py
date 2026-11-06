@@ -71,7 +71,7 @@ STYLE = f"{{{SVG_NAMESPACE}}}style"
 TEXT = f"{{{SVG_NAMESPACE}}}text"
 SPAN = f"{{{SVG_NAMESPACE}}}tspan"
 
-#: A CSS string as `plugins/svg.py` writes one.
+#: A CSS string as the canvas (`canvas.py`) writes one.
 CSS_STRING = r'"(?:[^"\\]|\\.)*"'
 
 #: An `@font-face` rule of the SVG renderer's.
