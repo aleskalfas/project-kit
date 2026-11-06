@@ -85,6 +85,7 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#the-declaration
         - .pkit/capabilities/visual-communication/outputs.md#the-svg-renderer
         - .pkit/capabilities/visual-communication/outputs.md#the-pdf-renderer
+        - .pkit/capabilities/visual-communication/outputs.md#the-html-renderer
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-an-export
         - .pkit/capabilities/visual-communication/outputs.md#written-code
         - .pkit/capabilities/visual-communication/outputs.md#the-record-beside-the-code
@@ -117,7 +118,7 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 - **The foundations library,** under `libraries/foundations/`: a few shared roles, two axes, six colour families, and two top components: `figure`, for a figure, and `deck`, for a presentation ([The foundations](files.md#the-foundations)). Its version is not released yet, so it may change in any release of the capability ([The libraries the capability ships](files.md#the-libraries-the-capability-ships)).
 - **The starter library,** under `libraries/starter/`: patterns, such as `layers` and `network`, and blocks, such as `card` and `code`, each experimental. Its README lists them by the question each answers ([The starter](libraries/starter/README.md)). `pkit visual add starter` brings it in, and its version is not released yet either.
 - **The neutral brand,** under `libraries/neutral/`: a brand to start from, with a value for every shared role and the fonts it draws in ([The neutral brand](files.md#the-neutral-brand)). `pkit visual add neutral` brings it in, and its version is not released yet either.
-- **Four plugins:** the SVG renderer, which draws the previews and the SVG exports; the PDF renderer, which draws a piece as one PDF for each language and combination of modes; the CSS code writer, which writes a brand out as CSS variables; and the JSON code writer, which writes a brand's resolved values as one JSON document ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [The PDF renderer](outputs.md#the-pdf-renderer), [Written code](outputs.md#written-code), [The JSON code writer](outputs.md#the-json-code-writer)).
+- **Five plugins:** the SVG renderer, which draws the previews and the SVG exports; the PDF renderer, which draws a piece as one PDF for each language and combination of modes; the HTML renderer, which draws a piece's pages as real text over shapes, and which no command reaches yet; the CSS code writer, which writes a brand out as CSS variables; and the JSON code writer, which writes a brand's resolved values as one JSON document ([Plugins](outputs.md#plugins), [The SVG renderer](outputs.md#the-svg-renderer), [The PDF renderer](outputs.md#the-pdf-renderer), [The HTML renderer](outputs.md#the-html-renderer), [Written code](outputs.md#written-code), [The JSON code writer](outputs.md#the-json-code-writer)).
 - **The check,** the `visual-communication:check` member of `pkit validate` ([In `pkit validate`](checks.md#in-pkit-validate)).
 - **The agent** `graphic-design-reviewer`, which reads a piece's drawn pages and reports what no check measures ([The reviewer](#the-reviewer)).
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
