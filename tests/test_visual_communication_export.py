@@ -172,6 +172,26 @@ def test_an_export_draws_what_the_preview_draws(tmp_path: Path) -> None:
     assert "data:image/png;base64," in light
 
 
+def test_an_exports_inputs_name_its_whole_lock(tmp_path: Path) -> None:
+    """Marking a version final reads the lock back from these inputs (DEC-017 point 1). Each
+    library the lock names gives its files, since an export refuses a lock that does not
+    hold, so no pair is left out."""
+    root = ready(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    kept = reading.read_yaml(root / RECORD)["versions"][0]["fingerprint"]
+    assert fingerprint.lock_of(kept) == LOCK
+
+
+@pytest.mark.parametrize("library", sorted(LOCK))
+def test_an_export_refuses_a_lock_it_could_not_name_whole(tmp_path: Path, library: str) -> None:
+    root = ready(tmp_path)
+    shutil.rmtree(root / "visual" / "libraries" / library / "1.0.0")
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert f"{library}@1.0.0, which the project does not hold" in shown.stderr
+    assert not (root / RECORD).exists()
+
+
 def test_it_uses_the_lock_as_written_and_never_moves_it(tmp_path: Path) -> None:
     root = ready(tmp_path)
     before = (root / PIECE_FOLDER / "piece.yaml").read_text(encoding="utf-8")
@@ -288,7 +308,9 @@ def test_a_final_piece_takes_no_export_and_nothing_is_written(
     shown = run(root, PIECE)
     assert shown.returncode == 1
     assert shown.stdout == ""
-    assert shown.stderr == "error: the piece `flow` is final, and a final piece takes no export\n"
+    assert shown.stderr == (
+        "error: the piece `flow` is final (its state says so), and a final piece takes no export\n"
+    )
     assert not (root / FOLDER).exists()
     assert not (root / RECORD).exists()
     assert not (root / CONFIG).exists()
@@ -440,12 +462,15 @@ def test_a_file_of_a_number_under_another_name_moves_the_run_past_that_number(
     assert [entry["version"] for entry in reading.read_yaml(root / RECORD)["versions"]] == [2]
 
 
-def test_a_record_that_cannot_be_read_stops_the_next_export(tmp_path: Path) -> None:
+def test_a_record_that_cannot_be_read_stops_the_next_export_as_a_final_pieces(
+    tmp_path: Path,
+) -> None:
     root = ready(tmp_path)
     (root / RECORD).write_text("pkit_schema: visual-communication:exports\n[", encoding="utf-8")
     shown = run(root, PIECE)
     assert shown.returncode == 1
-    assert "mend it before the next export" in shown.stderr
+    assert "is final (its record of exports cannot be read: " in shown.stderr
+    assert str(root) not in shown.stderr
 
 
 def test_the_export_fingerprint_changes_with_what_the_scenes_were_computed_from(

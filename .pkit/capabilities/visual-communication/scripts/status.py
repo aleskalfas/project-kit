@@ -34,7 +34,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
 from _lib import location as loc
-from _lib.copies import DRAFT, lock_stays, no_lock
+from _lib.copies import DRAFT, final, lock_stays, no_lock
 from _lib.files import binding_problem
 from _lib.reading import ReadError, read_yaml
 from _lib.root import CONFIG, project_root
@@ -103,12 +103,11 @@ def _piece(path: Path) -> str:
         state += ", pinned"
     lock = data.get("lock")
     if isinstance(lock, dict) and lock:
-        locked = "lock " + ", ".join(f"{name} {lock[name]}" for name in sorted(lock))
-    elif lock_stays(data):
-        locked = f"no lock ({no_lock(data)})"
-    else:
-        locked = "no lock yet (its first render writes one)"
-    return f"{state}; {locked}"
+        return f"{state}; lock " + ", ".join(f"{name} {lock[name]}" for name in sorted(lock))
+    is_final = final(data, path.parent)
+    if lock_stays(data, is_final):
+        return f"{state}; no lock ({no_lock(is_final)})"
+    return f"{state}; no lock yet (its first render writes one)"
 
 
 if __name__ == "__main__":

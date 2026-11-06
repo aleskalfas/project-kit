@@ -34,8 +34,9 @@ DEC-017 points 5, 7 and 8).
   location no longer holds. So a rename keeps it, and a folder copied by hand brings none
   while the original stands. Every rule on a piece's current copy reads it so.
 - **The lock it was made under** (`written_lock`) is read from the fingerprint of the
-  version that wrote it, each library and version held to its shape, since a record may
-  be written by hand. The release that version recorded lies beside it (`written_release`).
+  version that wrote it, as any version's is (`version_lock`), each library and version
+  held to its shape, since a record may be written by hand. The release that version
+  recorded lies beside it (`written_release`).
 """
 
 from __future__ import annotations
@@ -325,11 +326,17 @@ def _are_files(held: Any) -> bool:
 
 def written_lock(entry: Mapping[str, Any], versions: Sequence[Mapping[str, Any]]) -> dict[str, str]:
     """The lock of the version that wrote the current copy `entry` names, among the record's
-    `versions`, read from its fingerprint (DEC-017 point 5). Raises
-    fingerprint.UnreadableFingerprint where none can be read: no version of that number
-    keeps one, or it names a library or a version of no such shape, which a lock never
-    holds."""
-    lock = fingerprint.lock_of(_writer(entry, versions).get("fingerprint"))
+    `versions` (`version_lock`, DEC-017 point 5). Raises fingerprint.UnreadableFingerprint
+    where none can be read, as where no version of that number keeps a fingerprint."""
+    return version_lock(_writer(entry, versions))
+
+
+def version_lock(kept: Mapping[str, Any]) -> dict[str, str]:
+    """The lock of a version the record of exports `kept`, read from its fingerprint (DEC-017
+    point 1), each library and version held to its shape. Raises
+    fingerprint.UnreadableFingerprint where none can be read: it keeps none, or it names a
+    library or a version of no such shape, which a lock never holds."""
+    lock = fingerprint.lock_of(kept.get("fingerprint"))
     for library, version in lock.items():
         if not is_name(library) or not _is_version(version):
             raise fingerprint.UnreadableFingerprint(

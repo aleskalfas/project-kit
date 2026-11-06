@@ -19,10 +19,12 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/look.py
         - .pkit/capabilities/visual-communication/scripts/pages.py
         - .pkit/capabilities/visual-communication/scripts/before-after.py
+        - .pkit/capabilities/visual-communication/scripts/mark-final.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
         - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
         - .pkit/capabilities/visual-communication/scripts/_lib/before_after.py
         - .pkit/capabilities/visual-communication/scripts/_lib/looks.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/marking.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
@@ -72,6 +74,7 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/starter/README.md#the-blocks
         - .pkit/capabilities/visual-communication/components.md#
         - .pkit/capabilities/visual-communication/components.md#how-the-engine-computes-a-scene
+        - .pkit/capabilities/visual-communication/components.md#the-facts-of-an-export
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/outputs.md#contents
         - .pkit/capabilities/visual-communication/outputs.md#exports
@@ -170,7 +173,7 @@ A brand's values reach code the same way: a declaration under the location's `co
 
 ## Commands
 
-Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names ([How a command finds it](files.md#how-a-command-finds-it)). `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. `look` and `before-after` write only in the clone's local folder, and record no location. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, puts back each folder it replaced, and takes back the location it recorded. It names each file it could not put back. Two commands write before they can refuse. `produce` hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)). `look` holds the fonts it hands its tool in a temporary folder there, which the run removes, and it may leave the local folder itself ([The viewing step](outputs.md#the-viewing-step)).
+Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce`, `export` and `mark-final` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names ([How a command finds it](files.md#how-a-command-finds-it)). `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. `look` and `before-after` write only in the clone's local folder, and record no location. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, puts back each folder it replaced, and takes back the location it recorded. It names each file it could not put back. Two commands write before they can refuse. `produce` hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)). `look` holds the fonts it hands its tool in a temporary folder there, which the run removes, and it may leave the local folder itself ([The viewing step](outputs.md#the-viewing-step)).
 
 ### `pkit visual status`
 
@@ -189,7 +192,7 @@ Copies a library the capability ships into the location's library folder, lists 
 - **Lists it** in `libraries/libraries.yaml`, released with its hash or not released ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)).
 - **Brings every copy of the library up to date** in the same run ([What the location holds](files.md#what-the-location-holds)):
   - A copy the list marks not released, of a number the capability ships, is replaced whole by what the capability ships under that number. Where that number is released, the list then marks the copy released ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)).
-  - Such a copy is replaced only where every lock that names it is the lock of a draft that is not pinned, which moves at each render, or of a final piece, or you name the lock ([The lock](files.md#the-lock)). Under a pinned draft's lock, a published piece's or written code's, left unnamed, the copy stays as it is. The command names each such piece or declaration, and goes on with the rest of the run. A lock it cannot read counts as one that moves only on purpose, and the command names its file. To tell which locks hold a copy, it reads only a piece's `lock`, `pinned` and `state`, so a fault in the piece's content stops nothing.
+  - Such a copy is replaced only where every lock that names it is the lock of a draft that is not pinned, which moves at each render, or of a final piece, or you name the lock ([The lock](files.md#the-lock)). Under a pinned draft's lock, a published piece's or written code's, left unnamed, the copy stays as it is. The command names each such piece or declaration, and goes on with the rest of the run. A lock it cannot read counts as one that moves only on purpose, and the command names its file. To tell which locks hold a copy, it reads only a piece's `lock`, `pinned` and `state`, and its record of exports. So a fault in the piece's content stops nothing. A record of exports that cannot be read makes the piece final ([The lock](files.md#the-lock)), so its lock holds no copy.
   - A released copy whose files no longer match its hash is restored as released. One that matches is not written.
   - A copy of a number the installed capability does not ship stays as it is, and so does a version folder the list does not name.
   - A version the list names whose folder is missing is brought in as a copy of its kind is: a released one restored, one not released replaced, under the same locks.
@@ -229,6 +232,7 @@ Draws a piece in each of its languages and each combination of modes it names.
 - **Writes `findings.yaml`** beside `piece.yaml` ([The findings record](checks.md#the-findings-record)).
 - **Draws the previews** with the SVG renderer, and replaces the piece's previews from before ([Previews](outputs.md#previews)).
 - **Prints** the lock, the facts it states, each finding, and each loss the renderer reports that the piece does not accept ([Accepting a loss](outputs.md#accepting-a-loss)).
+- **Of a final piece,** it writes no `findings.yaml`, and one left from before stays ([The findings record](checks.md#the-findings-record)). It still draws the previews and prints what it finds. Where the piece shows a version's number or its date, it says a stand-in shows ([The facts of an export](components.md#the-facts-of-an-export)).
 - **Exits** 0 when it drew the piece, findings or not; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
 ### `pkit visual check [<piece>]`
@@ -260,6 +264,19 @@ Makes a numbered export of a piece in each format it declares.
 - **Uses the lock** `piece.yaml` holds, and never moves it.
 - **Refuses** a final piece, which takes no export, and a published piece whose lock differs from the one its current copy was made under. It refuses for each other reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, and may repeat.
 - **Exits** 0 when it exported and recorded the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
+
+### `pkit visual mark-final <piece> <version>`
+
+Marks a piece final, and names the version handed out, whatever changed since ([The lock](files.md#the-lock)).
+
+- **Puts back the lock** that version was made under, and names it. It puts back nothing else.
+- **Says what else changed,** each input that still does not verify, and stops on none of it.
+- **Says what no longer holds of the lock,** and goes on.
+- **Moves every file of the version** from the clone's local folder into `handed-out/`, in the piece's folder. Commit them with the piece.
+- **Names the version** in `exports.yaml` ([The record of exports](outputs.md#the-record-of-exports)).
+- **Says so** where the version named did not write the piece's [current copy](outputs.md#the-current-copy), which stays.
+- **Refuses** a version with a file missing or changed, naming each, one with a fingerprint it cannot read, and a second version on a piece that has one handed out.
+- **Exits** 0 when it marked the piece, whatever it said; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)); 2 on a usage error.
 
 ### `pkit visual look <piece>`
 

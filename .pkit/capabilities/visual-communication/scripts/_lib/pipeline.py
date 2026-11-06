@@ -39,10 +39,11 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import cached_property
 from pathlib import Path
 from typing import Any
 
-from _lib import keys, layout, notations, records, tokens, values
+from _lib import copies, keys, layout, notations, records, tokens, values
 from _lib.copies import DRAFT
 from _lib.env import MissingFont, PictureInfo, UnknownConcept, UnreadableComponent
 from _lib.files import FileError, read_bound, refuse_links, without_binding, write_whole
@@ -153,6 +154,22 @@ class Piece:
     def pinned(self) -> bool:
         """Whether its lock is pinned, which is read of a draft alone (DEC-003 point 8)."""
         return self.state == DRAFT and self.data.get("pinned") is True
+
+    @cached_property
+    def why_final(self) -> str:
+        """Why it is final to every command, in words; empty where it is not (`copies.why_final`,
+        DEC-017 point 3). Its record of exports is read once."""
+        return copies.why_final(self.data, self.folder)
+
+    @property
+    def final(self) -> bool:
+        """Whether it is final to every command, by its state or by its record of exports."""
+        return bool(self.why_final)
+
+    @property
+    def lock_stays(self) -> bool:
+        """Whether no render moves its lock, whatever its `pinned` says (`copies.lock_stays`)."""
+        return copies.lock_stays(self.data, self.final)
 
     @property
     def lock(self) -> dict[str, str]:

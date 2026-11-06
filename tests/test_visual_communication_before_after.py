@@ -242,15 +242,14 @@ def test_what_the_search_states_of_a_name_is_each_clash_and_lost_end_it_goes_pas
     )
 
 
-def test_a_record_it_cannot_read_leaves_no_before_and_stops_nothing(tmp_path: Path) -> None:
+def test_a_record_it_cannot_read_takes_the_piece_as_final_so_its_two_locks_are_one(
+    tmp_path: Path,
+) -> None:
     root = published(tmp_path)
     write(root / RECORD, "not: [a record\n")
     said = lines(run(root, PIECE, "--ahead"))
-    assert said[0] == f"after: what a run would propose: {NEW}"
-    assert said[1].startswith(f"no before: {root / RECORD}: does not parse as YAML")
-    assert said[2] == f"drawn in {FOLDER}/after/: 2 files, and nothing to compare them with"
-    assert sorted(drawn(root, "after")) == FILES
-    assert drawn(root, "before") == {}
+    assert "the two locks are one" in said
+    assert sorted(drawn(root, "after")) == sorted(drawn(root, "before")) == FILES
 
 
 def test_a_fingerprint_it_cannot_read_leaves_no_before_and_names_the_record(tmp_path: Path) -> None:

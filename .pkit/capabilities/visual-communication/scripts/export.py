@@ -28,7 +28,8 @@ names it; the record keeps each picture used while stale, and the version of eac
 the export used. `--use-stale` naming an output the piece does not declare is refused; one
 that is not stale is used as it is, and the command says so. It stops on a picture that is
 missing, and on a piece with no lock yet, which `pkit visual render` writes of a draft. A
-final piece takes no export, whatever else holds of it (DEC-017 point 3).
+final piece takes no export, whatever else holds of it, final by its state or by a version
+handed out, or where its record of exports cannot be read (DEC-017 point 3).
 
 A published piece's run also writes its current copy, an unnumbered copy of each file of
 the version, in the piece's `current-copy/`, replacing that folder whole, and `exports.yaml`
@@ -69,7 +70,6 @@ sys.path.insert(0, str(_HERE))
 
 from _lib import (
     checks,
-    copies,
     current_copy,
     exports,
     files,
@@ -113,8 +113,10 @@ def main() -> int:
 def _export(root: Path, name: str, use_stale: list[str], given: str | None) -> int:
     where = location.for_writing(root, given)
     piece = pl.read_piece(root, where.path, name)
-    if copies.final(piece.data):
-        raise pl.Refused(f"the piece `{name}` is final, and a final piece takes no export")
+    if piece.final:
+        raise pl.Refused(
+            f"the piece `{name}` is final ({piece.why_final}), and a final piece takes no export"
+        )
     _refuse_a_lock_that_differs(piece)
     held = libraries.Held(root, where.path)
     faults = checks.lock_findings(held, piece)

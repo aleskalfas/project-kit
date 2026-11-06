@@ -430,7 +430,7 @@ The check holds a piece's [current copy](outputs.md#the-current-copy) to what it
 | `current-copy-file-missing` | A file of a published piece's copy is missing. | fails | the file | Run the export. |
 | `current-copy-file-changed` | A file of a published piece's copy holds another hash than the record's. | fails | the file | Run the export. At a place, remove the file first: [an export writes over no other file there](outputs.md#what-refuses-an-export). |
 | `current-copy-stale` | Something the version that wrote the copy read has changed ([what makes an output stale](#what-makes-an-output-stale)). The message names each change. | fails | `<piece>/exports.yaml#current-copy` | Run the export. |
-| `current-copy-unreadable` | A published piece's copy, or a draft's, cannot be judged. `exports.yaml` cannot be read, keeps no list of numbered versions, or holds a `current-copy` of no shape. Or it gives no lock of the version that wrote the copy. Not reported where a `file-unreadable` or `binding` finding names the file. | fails | `<piece>/exports.yaml`, or its `#current-copy` | Mend the record, then run the export. |
+| `current-copy-unreadable` | A published piece's copy, or a draft's, cannot be judged. `exports.yaml` keeps no list of numbered versions, or holds a `current-copy` of no shape. Or it gives no lock of the version that wrote the copy. Where `exports.yaml` cannot be read, [the piece reads as final](files.md#the-lock), so no such finding follows. | fails | `<piece>/exports.yaml`, or its `#current-copy` | Mend the record, then run the export. |
 | `current-copy-over-stale` | The version that wrote a published piece's copy used a produced picture while it was stale. The message names the output. | asks the piece's author for attention | `<piece>/exports.yaml#current-copy` | Run `pkit visual produce <piece> <output>`, then the export. |
 | `current-copy-standing` | A draft keeps a file of its current copy, at the path the record names. A page may rely on it. Its hash does not count, so changing a byte leaves the finding. | asks the piece's author for attention | the file | Remove it, or publish the piece again. |
 
@@ -442,7 +442,7 @@ The check reads no other file of an export. It checks the binding of a piece's `
 
 ## The findings record
 
-`findings.yaml` in the piece's folder keeps what computing the piece's scenes found (DEC-005 point 13). `pkit visual render` writes it at each render, replacing the one before. A refused render writes none. Commit it, so the check reads it on a fresh clone.
+`findings.yaml` in the piece's folder keeps what computing the piece's scenes found (DEC-005 point 13). `pkit visual render` writes it at each render of a piece that is not final, replacing the one before. Of a final piece it writes none, and one left from before stays. A refused render writes none. Commit it, so the check reads it on a fresh clone.
 
 It holds the scene findings, the losses among them. The findings on files, libraries, locks, brands, notations, content, produced pictures and written code are not in it: the check works them out at every run. Its fields:
 

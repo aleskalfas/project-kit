@@ -12,6 +12,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/produce.py
         - .pkit/capabilities/visual-communication/scripts/export.py
+        - .pkit/capabilities/visual-communication/scripts/mark-final.py
         - .pkit/capabilities/visual-communication/scripts/write-code.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
@@ -35,6 +36,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/framing.py
         - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
         - .pkit/capabilities/visual-communication/scripts/_lib/current_copy.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/marking.py
         - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
         - .pkit/capabilities/visual-communication/scripts/_lib/code.py
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
@@ -107,6 +109,10 @@ pkit:
         - visual-communication:DEC-015#2
         - visual-communication:DEC-015#4
         - visual-communication:DEC-016#3
+        - visual-communication:DEC-017#1
+        - visual-communication:DEC-017#2
+        - visual-communication:DEC-017#3
+        - visual-communication:DEC-017#5
         - visual-communication:DEC-017#6
         - visual-communication:DEC-017#7
         - visual-communication:DEC-017#8
@@ -173,13 +179,14 @@ The location holds four folders: `libraries/`, the library folder; `pieces/`, on
 | `libraries/<library>/<version>/notation.yaml` | `notation` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | `libraries/<library>/<version>/components/<component>.yaml` | `component` | the library's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
 | a brand's token files, Resolver document and fonts | none: DTCG, or a font's own format | the brand's owner; `pkit visual add` copies, replaces or restores a version the capability ships |
-| `pieces/<piece>/piece.yaml` | `piece` | a person; `pkit visual render` rewrites its `lock` alone |
+| `pieces/<piece>/piece.yaml` | `piece` | a person; `pkit visual render` rewrites its `lock` alone; `pkit visual mark-final` rewrites its `state` and `lock` alone |
 | `pieces/<piece>/content.<language>.yaml` | `content` | a person |
 | `pieces/<piece>/components/<component>.yaml` | `component` | a person, or a script of the project's own (DEC-001 point 8) |
 | `pieces/<piece>/produced/<output>/record.yaml`, and a PNG for each variant | `produced-record` | `pkit visual produce` |
-| `pieces/<piece>/findings.yaml` | `findings` | `pkit visual render` |
-| `pieces/<piece>/exports.yaml` | `exports` | `pkit visual export` |
+| `pieces/<piece>/findings.yaml` | `findings` | `pkit visual render`, of a piece that is not final |
+| `pieces/<piece>/exports.yaml` | `exports` | `pkit visual export`; `pkit visual mark-final` adds the version handed out |
 | `pieces/<piece>/current-copy/<file>` | none: a copy of a file an export made | `pkit visual export`, of a published piece |
+| `pieces/<piece>/handed-out/<file>` | none: a file an export made | `pkit visual mark-final`, which moves it there from the clone's local folder |
 | `code/<name>.yaml` | `code` | a person |
 | `fonts/<file>` | none | a person, who commits the font |
 
@@ -190,7 +197,7 @@ The code that `pkit visual write-code` writes lies where its declaration names, 
 `.pkit/capabilities/visual-communication/project/local/` holds what a command makes that is never committed (DEC-002 point 1). The capability's `package.yaml` declares the folder local to each clone, so git ignores it. It holds:
 
 - `previews/<piece>/`: the SVG previews `pkit visual render` draws;
-- `exports/<piece>/`: the files `pkit visual export` makes;
+- `exports/<piece>/`: the files `pkit visual export` makes, but for the version `pkit visual mark-final` moved into the piece's folder;
 - `before-after/<piece>/`: a piece's scenes drawn around a change to its lock's versions, in `before/` without the change and in `after/` with it;
 - `handover/<piece>/`: what `pkit visual produce` hands a producer, and what the producer writes, until the command keeps it in the piece's folder;
 - `look/<piece>/`: the images, the frames and the report `pkit visual look` writes.
@@ -276,7 +283,7 @@ lock:
 | `shown` | yes | Where the piece is shown, in words. |
 | `explains` | yes | `true` where the piece explains, rather than only shows. |
 | `exports` | yes | The formats an export makes (*Exports* in *What is made from a piece*). |
-| `state` | yes | The piece's stage of life, `draft`, `final` or `published`, which says who moves its lock ([The lock](#the-lock)). A published piece owes a current copy, which each of its exports writes (*The current copy* in *What is made from a piece*). |
+| `state` | yes | The piece's stage of life, `draft`, `final` or `published`, which says who moves its lock ([The lock](#the-lock)). `pkit visual mark-final` sets `final`. A published piece owes a current copy, which each of its exports writes (*The current copy* in *What is made from a piece*). |
 | `modes` | no | For each axis, the modes the piece is drawn in. An axis it leaves out is drawn in its default. |
 | `pinned` | no | `true` pins a draft's lock. No other state reads it. |
 | `produced` | no | Each picture a producer makes for the piece (*Declaring a produced output* in *What is made from a piece*). |
@@ -304,7 +311,24 @@ A library moves no lower than the version the lock names while versions at or ab
 
 **A pinned draft,** `pinned: true`, keeps its lock: a render checks it and never changes it. The lock must name every library the piece uses, each a version the location holds and the installed capability reads, and they must fit together. A pinned piece with no lock is refused: unpin it for its first render. To move a pinned lock, change it by hand, or unpin the piece and render it.
 
-**A final piece** was handed out, and its lock never moves. **A published piece** stays in use where others rely on it. Its lock moves only through a change a person reviews, with a before-and-after of each page it changes (DEC-003 point 8). A render moves neither lock, whatever newer versions the location holds, and reads no `pinned` of either piece. It checks such a lock as it checks a pinned draft's, and its refusal says the piece's state. A published piece with no lock is refused: set it back to a draft for its first render. A final piece with no lock is refused too: write back the lock of the version handed out, which is no move of it.
+**A final piece** was handed out, and its lock never moves. **A published piece** stays in use where others rely on it. Its lock moves only through a change a person reviews, with a before-and-after of each page it changes, or when marked final (DEC-003 point 8). A render moves neither lock, whatever newer versions the location holds, and reads no `pinned` of either piece. It checks such a lock as it checks a pinned draft's, and its refusal says the piece's state. A published piece with no lock is refused: set it back to a draft for its first render. A final piece with no lock is refused too: write back the lock of the version handed out, which is no move of it.
+
+**Final to every command.** A piece is final where its `state` says so, or where its record of exports names a version handed out. Where that record cannot be read, as on a conflicted merge, every command takes the piece as final.
+
+**Marking a piece final.** `pkit visual mark-final <piece> <version>` names the version handed out (DEC-017 points 1 and 2). No change since that version stops it.
+
+- **The lock.** It puts back the lock that version was made under, read from its fingerprint, whatever lock the piece holds. A published piece's lock goes back the same way, with no before-and-after.
+- **Only the lock.** To bring the sources back too, restore them from history first.
+- **What else changed.** It reads the piece as the version's fingerprint does, with the lock put back (*The input set of each kind* in *What the check reports*). It names each input that still does not verify.
+- **A version made before an export left fields out of `piece.yaml`.** It read that file whole, so a pin or a change of state reads as a change. The run says the file was read whole.
+- **The version's files.** Each moves from the clone's local folder into `handed-out/`, in the piece's folder, under the name it carries. Commit them with the piece. Every other version stays in the clone that made it.
+- **What it writes.** It writes `state` and `lock` as text, every other byte of `piece.yaml` kept, and the version in the record (*The record of exports* in *What is made from a piece*).
+- **A lock that no longer holds** stops nothing, such as one that names a version gone, changed or not released. The run says so, and the piece carries the finding its lock takes.
+- **A current copy** stays where it lies. The run says so where the version named did not write it.
+- **A piece set final by hand** takes the command, which names its version.
+- **It refuses** a file of the version that is missing from the clone's local folder, or whose hash differs from the record's, naming each. So a version is marked in the clone that made it.
+- **It refuses** a version whose fingerprint is missing or no longer matches its own inputs, a piece that has a version handed out, and anything else that lies at `handed-out/`.
+- **A mark made in error** is undone by reverting its change, and moving its files back to the clone's local folder by hand.
 
 A copy not yet released that a pinned or a published lock names may fall behind what the capability ships under its number. `pkit visual add` replaces it only where a person names each pinned draft, each published piece and each declaration that locks it (DEC-013 point 5). Naming it is the move on purpose: the lock keeps its number, and what it draws changes only then. The run that leaves the copy draws the piece both ways first, so the person sees what the move changes (DEC-003 point 8). Under a final piece's lock it replaces such a copy with no piece named, since that changes none of the piece's exports.
 
