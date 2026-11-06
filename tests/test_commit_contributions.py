@@ -17,6 +17,9 @@ from tests.adopter_repo import GitRepo
 A = "a.txt"
 B = "b.txt"
 
+#: What `str.splitlines` breaks on besides a newline, each of which a subject may hold.
+LINE_SEPARATORS = ("\r", "\x0b", "\x0c", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029")
+
 
 def _settled(_parent: str) -> bool:
     return True
@@ -71,6 +74,11 @@ def test_a_conflict_names_each_path_in_it(repo: GitRepo) -> None:
 def test_a_git_that_cannot_merge_raises_and_never_reads_as_clean(repo: GitRepo) -> None:
     with pytest.raises(FrictionCheckError, match="merge-tree"):
         contributions.merge(repo.root, "no-such-commit", repo.head())
+
+
+def test_a_failed_merge_gives_gits_last_line_whole(repo: GitRepo) -> None:
+    with pytest.raises(FrictionCheckError, match="no-such\u2028commit"):
+        contributions.merge(repo.root, "no-such\u2028commit", repo.head())
 
 
 # --- the state before a commit ---------------------------------------------------------
@@ -217,6 +225,20 @@ def test_a_change_is_what_the_head_reaches_and_the_tip_does_not(repo: GitRepo) -
     assert [commit.commit for commit in found] == [first, second]
     assert [commit.subject for commit in found] == ["first", "second"]
     assert found[1].parents == (first,)
+
+
+@pytest.mark.parametrize("separator", LINE_SEPARATORS, ids=ascii)
+def test_a_subject_holding_a_line_separator_stays_one_commit(repo: GitRepo, separator: str) -> None:
+    tip = repo.head()
+    repo.checkout("change", create=True)
+    subject = f"accept{separator}it"
+    first = repo.commit(subject, {A: "1\n"})
+    second = repo.commit("second", {A: "2\n"})
+
+    found = contributions.change_commits(repo.root, tip, second)
+
+    assert [commit.commit for commit in found] == [first, second]
+    assert found[0].subject == subject
 
 
 def test_a_change_holds_a_parallel_line_parents_before_children(repo: GitRepo) -> None:

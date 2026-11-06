@@ -23,6 +23,7 @@ from project_kit import decisions_landing as landing
 from project_kit import project_config as pc
 from project_kit.cli import main
 from project_kit.decisions import OVERLAY_RELPATH
+from project_kit.friction_check import printable
 from project_kit.friction_git import CommitTree, FrictionCheckError
 from tests.adopter_repo import GitRepo
 
@@ -375,6 +376,21 @@ def test_a_head_that_names_no_commit_gives_no_answer(repo: GitRepo) -> None:
     _no_answer(_run("--head", "nowhere"), "names no commit")
 
 
+def test_a_head_named_like_a_commits_id_through_a_branch_gives_no_answer(repo: GitRepo) -> None:
+    _branch(repo, {CONFIG: ON})
+    repo.git("branch", "abcdef1")
+
+    _no_answer(_run("--head", "abcdef1"), "reads as a commit's id")
+
+
+def test_a_head_that_shares_no_history_with_the_base_gives_no_answer(repo: GitRepo) -> None:
+    _branch(repo, {CONFIG: ON})
+    repo.git("checkout", "-q", "--orphan", "apart")
+    repo.commit("apart", {"a.txt": "a\n"})
+
+    _no_answer(_run(), "share no history")
+
+
 def test_no_project_tree_gives_no_answer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
 
@@ -433,6 +449,19 @@ def test_a_git_that_cannot_merge_gives_no_answer(
     monkeypatch.setattr(commit_contributions, "merge", cannot)
 
     _no_answer(_run(), "merge-tree")
+
+
+def test_a_git_command_that_fails_gives_no_answer(
+    repo: GitRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _branch(repo, {CONFIG: ON})
+
+    def fails(*_args: str) -> None:
+        raise FrictionCheckError("`git rev-parse` failed: a broken repository.")
+
+    monkeypatch.setattr(landing, "run_git", fails)
+
+    _no_answer(_run(), "a broken repository")
 
 
 def test_a_copy_of_the_test_that_raises_on_loading_gives_no_answer(repo: GitRepo) -> None:
@@ -933,6 +962,19 @@ def test_an_acceptance_alone_says_nothing_else_lands(repo: GitRepo) -> None:
 
     assert commit["paths"] == [] and commit["nothing_lands"] is True
     assert "nothing else of it lands" in _run().output
+
+
+@pytest.mark.parametrize("separator", ["\x0c", "\u2028"], ids=ascii)
+def test_a_subject_holding_a_line_separator_is_listed_whole(repo: GitRepo, separator: str) -> None:
+    _branch(repo, {RECORD: _record("proposed")})
+    subject = f"accept{separator}it"
+    accepting = repo.commit(subject, {RECORD: _record("accepted")})
+
+    (commit,) = _commits(_document(), "PRJ-001")
+    result = _run()
+
+    assert commit["commit"] == accepting and commit["subject"] == subject
+    assert result.exit_code == 0 and printable(subject) in result.stdout
 
 
 def test_the_list_shows_the_work_before_each_acceptance(repo: GitRepo) -> None:

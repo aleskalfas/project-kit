@@ -104,11 +104,11 @@ def merge(root: Path, first: str, second: str, *options: str) -> Merge:
     tree = written.split(b"\0", 1)[0].decode().strip()
     # Git also exits 1 for a name it cannot merge, and then writes no tree.
     if done.returncode not in _MERGED or not tree:
-        detail = done.stderr.decode("utf-8", "replace").strip().splitlines()
+        detail = done.stderr.decode("utf-8", "replace").strip().rpartition("\n")[2]
         needs = "a git whose `merge-tree` takes `-X`" if options else "git 2.38 or later"
         raise FrictionCheckError(
             f"`git merge-tree --write-tree {' '.join(options)}` failed — it needs {needs}"
-            + (f": {detail[-1]}" if detail else "")
+            + (f": {detail}" if detail else "")
             + "."
         )
     return Merge(done.returncode == 0, tree, () if done.returncode == 0 else _conflicted(written))
@@ -247,7 +247,8 @@ def change_commits(root: Path, tip: str, head: str) -> tuple[ChangeCommit, ...]:
         f"{tip}..{head}",
     ).stdout
     found: list[ChangeCommit] = []
-    for line in listed.decode("utf-8", "replace").splitlines():
+    # Only a newline ends a commit: a subject may hold what `str.splitlines` also breaks on.
+    for line in filter(None, listed.decode("utf-8", "replace").split("\n")):
         commit, parents, subject = line.split("\0", 2)
         found.append(ChangeCommit(commit, tuple(parents.split()), subject))
     return tuple(found)
