@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 
 from tests.in_process import load
-from tests.visual_communication_project import write
+from tests.visual_communication_project import CAPABILITY, write
 
 (fingerprint,) = load("visual-communication", "fingerprint")
 
@@ -71,6 +71,32 @@ def test_a_part_of_a_file_is_the_value_at_its_keys(tmp_path: Path) -> None:
     assert fingerprint.part_of(path, ["state", "deeper"]) is None
 
 
+def test_a_part_of_a_file_a_command_writes_is_read_from_what_it_will_hold(tmp_path: Path) -> None:
+    path = write(tmp_path / "piece.yaml", PIECE_YAML + "exports: [svg]\n")
+    data = (PIECE_YAML + "exports: [pdf]\n").encode()
+    assert fingerprint.part_of(path, ["exports"], data=data) == ["pdf"]
+
+
+def test_a_file_of_the_format_is_read_without_the_fields_named(tmp_path: Path) -> None:
+    path = write(tmp_path / "piece.yaml", PIECE_YAML + "pinned: true\n")
+    assert fingerprint.reading(path, without=("pinned", "audience")) == PIECE_CANONICAL
+
+
+@pytest.mark.parametrize(
+    ("name", "text", "read"),
+    [
+        ("notes.yaml", "state: draft\n", b"state: draft\n"),
+        ("broken.yaml", "state: [\n", b"state: [\n"),
+        ("a.json", '{"state": 1}', b'{"state":1}'),
+        ("scene.svg", "<svg/>\n", b"<svg/>\n"),
+    ],
+)
+def test_only_a_file_of_the_format_loses_a_field(
+    tmp_path: Path, name: str, text: str, read: bytes
+) -> None:
+    assert fingerprint.reading(write(tmp_path / name, text), without=("state",)) == read
+
+
 # --- each input ---------------------------------------------------------------------------------
 
 
@@ -79,6 +105,11 @@ def test_each_input_has_its_identity_and_the_hash_of_what_was_read(tmp_path: Pat
     font = write(tmp_path / "font.otf", "font bytes")
     cases = [
         (fingerprint.file_input("piece.yaml", piece), {"file": "piece.yaml"}, sha(PIECE_CANONICAL)),
+        (
+            fingerprint.file_input("piece.yaml", piece, without=("state", "audience")),
+            {"file": "piece.yaml", "without": ["audience", "state"]},
+            sha(b'{"pkit_schema":"visual-communication:piece","schema_version":1}'),
+        ),
         (
             fingerprint.part_input("piece.yaml", ["exports"], ["svg"]),
             {"file": "piece.yaml", "keys": ["exports"]},
@@ -314,6 +345,318 @@ def test_an_export_goes_stale_when_its_formats_change(tmp_path: Path) -> None:
         "`piece.yaml` at `exports` changed",
         "`piece.yaml` changed",
     ]
+
+
+# --- what an export reads (DEC-016) --------------------------------------------------------------
+
+#: A listed field of a piece, as a person sets it, each in its form in `piece.yaml`.
+LISTED = {
+    "accept-losses": "accept-losses:\n  - {plugin: svg, what: blur, reason: Seen.}\n",
+    "audience": "audience: Tests.\n",
+    "copy-place": "copy-place: docs/images\n",
+    "explains": "explains: true\n",
+    "pinned": "pinned: true\n",
+    "shown": "shown: Nowhere.\n",
+    "state": "state: published\n",
+}
+
+RECORD_YAML = (
+    "pkit_schema: visual-communication:produced-record\nschema_version: 1\n"
+    "points: {}\nrecorded: {time: '2026-01-01T00:00:00Z'}\n"
+)
+
+
+def rewrite(path: Path, old: str, new: str) -> None:
+    text = path.read_text(encoding="utf-8")
+    assert old in text
+    path.write_text(text.replace(old, new), encoding="utf-8")
+
+
+def add_field(piece: Path, text: str) -> None:
+    """`text` in the piece's `piece.yaml`, in place of the field's value where it holds one."""
+    path = piece / "piece.yaml"
+    field = text.split(":")[0]
+    held = [
+        line
+        for line in path.read_text(encoding="utf-8").splitlines(keepends=True)
+        if not line.startswith(f"{field}:")
+    ]
+    path.write_text("".join(held) + text, encoding="utf-8")
+
+
+def input_of(inputs: list[Any], file: str) -> Any:
+    """The input that reads `file` itself, apart from any part of it."""
+    (found,) = [
+        item for item in inputs if item.identity.get("file") == file and "keys" not in item.identity
+    ]
+    return found
+
+
+def test_an_export_names_each_listed_field_it_applied_whether_the_file_holds_it_or_not(
+    tmp_path: Path,
+) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    read = input_of(fingerprint.export_inputs(**sources), "piece.yaml")
+    assert dict(read.identity) == {
+        "file": "piece.yaml",
+        "without": [
+            "accept-losses",
+            "audience",
+            "copy-place",
+            "explains",
+            "pinned",
+            "shown",
+            "state",
+        ],
+    }
+    assert read.sha256 == sha(
+        b'{"exports":["svg"],"pkit_schema":"visual-communication:piece",'
+        b'"produced":{"diagram":{"producer":"svg"}},"schema_version":1}'
+    )
+
+
+@pytest.mark.parametrize("field", LISTED)
+def test_a_listed_field_leaves_an_exports_fingerprint_verifying(tmp_path: Path, field: str) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    recorded = fingerprint.fingerprint(fingerprint.export_inputs(**sources))
+    add_field(sources["piece"], LISTED[field])
+    assert fingerprint.verify(recorded, "export", **sources) == []
+
+
+@pytest.mark.parametrize(
+    ("field", "said"),
+    [
+        ("lock: {brand: 1.0.1}\n", ["`piece.yaml` changed"]),
+        ("exports: [pdf]\n", ["`piece.yaml` at `exports` changed", "`piece.yaml` changed"]),
+        ("a-later-field: 1\n", ["`piece.yaml` changed"]),
+    ],
+    ids=["the lock", "the formats", "a field added later"],
+)
+def test_a_field_not_listed_fails_an_exports_fingerprint(
+    tmp_path: Path, field: str, said: list[str]
+) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    recorded = fingerprint.fingerprint(fingerprint.export_inputs(**sources))
+    add_field(sources["piece"], field)
+    assert fingerprint.verify(recorded, "export", **sources) == said
+
+
+def test_a_produced_outputs_record_is_read_without_what_it_only_records(tmp_path: Path) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    record = write(sources["piece"] / "produced" / "diagram" / "record.yaml", RECORD_YAML)
+    made = fingerprint.export_inputs(**sources)
+    read = input_of(made, "produced/diagram/record.yaml")
+    assert dict(read.identity) == {"file": "produced/diagram/record.yaml", "without": ["recorded"]}
+    assert read.sha256 == sha(
+        b'{"pkit_schema":"visual-communication:produced-record","points":{},"schema_version":1}'
+    )
+    recorded = fingerprint.fingerprint(made)
+    rewrite(record, "2026-01-01", "2026-02-02")
+    assert fingerprint.verify(recorded, "export", **sources) == []
+    rewrite(record, "points: {}", "points: {a: 1}")
+    assert fingerprint.verify(recorded, "export", **sources) == [
+        "`produced/diagram/record.yaml` changed"
+    ]
+
+
+def test_a_kept_fingerprint_of_the_whole_file_verifies_as_it_was_written(tmp_path: Path) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    write(sources["piece"] / "produced" / "diagram" / "record.yaml", RECORD_YAML)
+    # What an export read before DEC-016: the key's inputs, then its formats.
+    whole = [
+        *fingerprint.findings_key_inputs(**sources),
+        fingerprint.part_input("piece.yaml", ["exports"], ["svg"]),
+    ]
+    recorded = fingerprint.fingerprint(whole)
+    assert fingerprint.verify(recorded, "export", **sources) == []
+    add_field(sources["piece"], LISTED["pinned"])
+    assert fingerprint.verify(recorded, "export", **sources) == ["`piece.yaml` changed"]
+
+
+def test_a_kept_input_reads_as_it_says_whatever_the_list_holds_today(tmp_path: Path) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    piece = sources["piece"]
+    made = fingerprint.export_inputs(
+        **sources, kept={"piece.yaml": ["retired", "state"], "produced/diagram/record.yaml": []}
+    )
+    assert dict(input_of(made, "piece.yaml").identity) == {
+        "file": "piece.yaml",
+        "without": ["retired", "state"],
+    }
+    recorded = fingerprint.fingerprint(made)
+    assert fingerprint.verify(recorded, "export", **sources) == []
+    # A field the input names stays left out, though no list holds it now.
+    add_field(piece, "retired: 1\n")
+    assert fingerprint.verify(recorded, "export", **sources) == []
+    # A field today's list holds counts where the input does not name it.
+    add_field(piece, LISTED["pinned"])
+    assert fingerprint.verify(recorded, "export", **sources) == ["`piece.yaml` changed"]
+
+
+def test_an_input_that_names_fields_in_no_list_does_not_verify(tmp_path: Path) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    recorded = fingerprint.fingerprint(fingerprint.export_inputs(**sources))
+    entries = [
+        {**entry, "without": "state"} if "without" in entry and "file" in entry else entry
+        for entry in recorded["inputs"]
+    ]
+    recorded = {**recorded, "inputs": entries, "value": sha(fingerprint.canonical_bytes(entries))}
+    problems = fingerprint.verify(recorded, "export", **sources)
+    assert "`piece.yaml` is no longer read" in problems
+    assert "`piece.yaml` is read now" in problems
+
+
+@pytest.mark.parametrize("folder", ["handed-out", "current-copy"])
+@pytest.mark.parametrize("kind", ["export", "findings-key"])
+def test_no_file_under_the_folders_of_files_handed_out_and_a_copy_is_read(
+    tmp_path: Path, folder: str, kind: str
+) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    reads = fingerprint.INPUT_SETS[1][kind]
+    without = fingerprint.fingerprint(reads(**sources))
+    piece = sources["piece"]
+    laid = [
+        write(piece / folder / "flow.v1.en.default.pdf", "%PDF"),
+        write(piece / folder / "deep" / "piece.yaml", PIECE_YAML),
+    ]
+    assert fingerprint.fingerprint(reads(**{**sources, "files": sources["files"] + laid})) == (
+        without
+    )
+
+
+@pytest.mark.parametrize("name", ["handed-out", "current-copy"])
+def test_a_file_named_as_such_a_folder_is_a_pieces_own_file(tmp_path: Path, name: str) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    file = write(sources["piece"] / name, "a person's file\n")
+    assert file in fingerprint.piece_files(sources["piece"], [*sources["files"], file])
+
+
+def test_an_export_takes_what_a_run_writes_in_place_of_the_file(tmp_path: Path) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    path = sources["piece"] / "piece.yaml"
+    moved = path.read_text(encoding="utf-8").replace("[svg]", "[pdf]") + "lock: {brand: 1.0.0}\n"
+    taken = fingerprint.fingerprint(
+        fingerprint.export_inputs(**sources, written={path: moved.encode()})
+    )
+    path.write_text(moved, encoding="utf-8")
+    assert taken == fingerprint.fingerprint(fingerprint.export_inputs(**sources))
+
+
+def test_only_an_export_leaves_a_field_out(tmp_path: Path) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    key = fingerprint.fingerprint(fingerprint.findings_key_inputs(**sources))
+    assert all("without" not in entry for entry in key["inputs"])
+    add_field(sources["piece"], LISTED["pinned"])
+    assert fingerprint.verify(key, "findings-key", **sources) == ["`piece.yaml` changed"]
+
+
+def test_a_produced_output_written_code_and_a_library_read_their_listed_names_whole(
+    tmp_path: Path,
+) -> None:
+    piece = lay_piece(tmp_path / "visual")["piece"]
+    produced: dict[str, Any] = {
+        "piece": piece,
+        "output": "diagram",
+        "values": {},
+        "pixels": {},
+        "producer": ("svg", "1.0.0"),
+    }
+    kept = fingerprint.fingerprint(fingerprint.produced_record_inputs(**produced))
+    rewrite(piece / "piece.yaml", "{producer: svg}", "{producer: svg, state: on}")
+    assert fingerprint.verify(kept, "produced-record", **produced) == [
+        "`piece.yaml` at `produced.diagram` changed"
+    ]
+    declaration = write(
+        tmp_path / "code.yaml",
+        "pkit_schema: visual-communication:code\nschema_version: 1\nrecorded: 1\n",
+    )
+    code: dict[str, Any] = {
+        "name": "css",
+        "declaration": declaration,
+        "values": {},
+        "writer": ("css", "1.0.0"),
+    }
+    kept = fingerprint.fingerprint(fingerprint.code_record_inputs(**code))
+    rewrite(declaration, "recorded: 1", "recorded: 2")
+    assert fingerprint.verify(kept, "code-record", **code) == ["the declaration `css` changed"]
+    version = library(tmp_path)
+    kept = fingerprint.fingerprint(fingerprint.library_version_inputs(**version))
+    assert all("without" not in entry for entry in kept["inputs"])
+    rewrite(version["folder"] / "library.yaml", "name: brand", "name: brand\nstate: draft")
+    assert fingerprint.verify(kept, "library-version", **version) == [
+        "`library.yaml` of brand@1.0.0 changed"
+    ]
+
+
+def test_the_reference_names_the_fields_an_export_leaves_out() -> None:
+    page = (CAPABILITY / "checks.md").read_text(encoding="utf-8")
+    section = page.split("### What an export leaves out\n")[1].split("\n#")[0]
+    for field in [*fingerprint.PIECE_FIELDS_LEFT_OUT, *fingerprint.RECORD_FIELDS_LEFT_OUT]:
+        assert f"`{field}`" in section, field
+    assert f"`{fingerprint.HANDED_OUT}/`" in page
+    assert f"`{fingerprint.CURRENT_COPY}/`" in page
+
+
+# --- a version's lock, read back (DEC-017 point 1) ------------------------------------------------
+
+
+def test_a_versions_lock_is_read_from_its_fingerprint(tmp_path: Path) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    folder = tmp_path / "visual" / "libraries" / "foundations" / "2.1.0"
+    held = [write(folder / "library.yaml", "name: foundations\n"), write(folder / "a.yaml", "a\n")]
+    sources["versions"]["foundations"] = ("2.1.0", folder, held)
+    recorded = fingerprint.fingerprint(fingerprint.export_inputs(**sources))
+    assert fingerprint.lock_of(recorded) == {"brand": "1.0.0", "foundations": "2.1.0"}
+
+
+def test_a_lock_reads_the_same_from_a_kept_fingerprint_of_the_whole_file(tmp_path: Path) -> None:
+    sources = lay_piece(tmp_path / "visual")
+    recorded = fingerprint.fingerprint(fingerprint.findings_key_inputs(**sources))
+    assert fingerprint.lock_of(recorded) == {"brand": "1.0.0"}
+
+
+def sealed(inputs: list[dict[str, Any]]) -> dict[str, Any]:
+    """A fingerprint of form 1 that holds `inputs`, its value their hash."""
+    return {
+        "form": 1,
+        "hash": "sha256",
+        "format": 1,
+        "value": sha(fingerprint.canonical_bytes(inputs)),
+        "inputs": inputs,
+    }
+
+
+FILE_OF_BRAND = {"library": "brand", "version": "1.0.0", "path": "a.yaml", "sha256": "0" * 64}
+
+
+@pytest.mark.parametrize(
+    ("recorded", "said"),
+    [
+        pytest.param(None, "no fingerprint is kept", id="missing"),
+        pytest.param({**sealed([FILE_OF_BRAND]), "form": 2}, "form 2", id="another-form"),
+        pytest.param({**sealed([FILE_OF_BRAND]), "hash": "md5"}, "hash 'md5'", id="another-hash"),
+        pytest.param({**sealed([]), "inputs": "x"}, "no list of inputs", id="no-inputs"),
+        pytest.param({**sealed([FILE_OF_BRAND]), "value": "0"}, "was edited", id="edited"),
+        pytest.param(sealed([]), "names no library version", id="no-library"),
+        pytest.param(
+            sealed([{**FILE_OF_BRAND, "version": 1}]), "names no library version", id="no-version"
+        ),
+        pytest.param(
+            sealed([FILE_OF_BRAND, {**FILE_OF_BRAND, "version": "2.0.0"}]),
+            "two versions of `brand`: 1.0.0 and 2.0.0",
+            id="two-versions",
+        ),
+    ],
+)
+def test_a_fingerprint_no_lock_can_be_read_from_raises_a_fault_that_says_why(
+    recorded: Any, said: str
+) -> None:
+    with pytest.raises(fingerprint.UnreadableFingerprint, match=said) as raised:
+        fingerprint.lock_of(recorded)
+    assert isinstance(raised.value, fingerprint.FingerprintError)
+
+
+# --- the other kinds ------------------------------------------------------------------------------
 
 
 def test_a_produced_record_goes_stale_when_its_producer_changes(tmp_path: Path) -> None:
