@@ -2429,7 +2429,7 @@ def test_a_named_head_runs_a_resolver_only_from_a_checkout_at_that_commit(
     feature = repo.head()
 
     repo.checkout("main")
-    refused = _cli("--base", "main", "--head", "feature", "--json")
+    refused = _cli("--base", "main", "--head", "feature", "--own-head", "feature", "--json")
     assert refused.exit_code == 1 and started == []
     assert "--head feature: the anchor source 'alpha' is resolved by its capability's command" in (
         refused.output
@@ -2450,7 +2450,12 @@ def test_a_named_head_runs_a_resolver_only_from_a_checkout_at_that_commit(
     }
     assert "Run from a checkout at feature" in told["refused"]["message"]
     # Without `--json` the run prints no document.
-    assert _cli("--base", "main", "--head", "feature").stdout == ""
+    assert _cli("--base", "main", "--head", "feature", "--own-head", "feature").stdout == ""
+    # Nor without `--own-head`: a reader older than the flag takes any document for a check
+    # that ran, and knows this refusal by nothing on standard output and the sentence.
+    older = _cli("--base", "main", "--head", "feature", "--json")
+    assert older.exit_code == 1 and older.stdout == "" and started == []
+    assert "Run from a checkout at feature" in " ".join(older.stderr.split())
 
     repo.checkout("feature")
     at_head = _cli("--base", "main", "--head", "feature", "--json")
@@ -2482,7 +2487,7 @@ def test_a_run_away_from_the_commit_named_starts_nothing_that_commit_holds(
     repo.write({"docs/planted.md": document("planted", anchors={"planted": ["x"]}, at=T1)})
     repo.commit("a kind and a page of the head's own", files=None)
     repo.checkout("main")
-    refused = _cli("--base", "main", "--head", "feature", "--json")
+    refused = _cli("--base", "main", "--head", "feature", "--own-head", "feature", "--json")
     assert refused.exit_code == 1 and started == []
     assert json.loads(refused.stdout)["refused"]["anchor"] == {"kind": "planted", "value": "x"}
 

@@ -55,8 +55,8 @@ cut is named (`history.cut`).
   is a command run in the working tree, never read from a commit, so one runs
   only where the working tree is that commit, and the check refuses anywhere
   else (`_NamedHeadKinds`). So a run away from the commit named starts nothing
-  that commit holds, and `--json` gives the refusal as a document
-  (`render_refusal_json`). What discovery reads from the working tree
+  that commit holds, and `--json` beside `--own-head` gives the refusal as a
+  document (`render_refusal_json`). What discovery reads from the working tree
   whichever state it walks — which files are synced copies, where a link
   leads — stays the running checkout's.
 - *The change's own head* (`own_head`; COR-062 point 4, ADR-068 point 6) is
@@ -3891,7 +3891,8 @@ def render_refusal_json(refused: ResolverElsewhere) -> str:
     """The check's refusal of a resolver away from the commit named, as a document (ADR-068
     point 6): a reader tells it from any other failure by `refused.kind`, not by a sentence.
     It holds no `answers`, so no reader takes it for a check that ran, and it says `failed`
-    as the run's exit code does."""
+    as the run's exit code does. It goes only to a caller that names `--own-head`: one
+    older than that flag would read a document with no `answers` as an older backbone's."""
     document = {
         "schema_version": CHANGE_SCHEMA_VERSION,
         "check": "change",

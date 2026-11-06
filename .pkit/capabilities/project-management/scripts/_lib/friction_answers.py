@@ -552,10 +552,11 @@ def _run_check(
     so exit 0 and 1 both carry one, and a refusal to run an anchor's resolver away
     from `head` prints a document of its own. `own_head`, given beside `head`, is the
     change's own head the check judges what each answer read against (`--own-head`):
-    a parent of `head`, such as a pull request's head under a merge."""
-    named = [] if head is None else ["--head", head]
-    own = [] if own_head is None else ["--own-head", own_head]
-    argv = [*PKIT, "friction", "check", "--json", "--base", base, *named, *own]
+    a parent of `head`, such as a pull request's head under a merge. Where none is
+    given it is `head` itself, and the flag is named all the same, since that is what
+    asks the backbone for its refusal as a document."""
+    named = [] if head is None else ["--head", head, "--own-head", own_head or head]
+    argv = [*PKIT, "friction", "check", "--json", "--base", base, *named]
     command = f"`{' '.join(argv)}`"
     try:
         proc = backbone.run(

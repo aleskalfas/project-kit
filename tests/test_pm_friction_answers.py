@@ -958,7 +958,18 @@ def test_enforcing_modes_exit_1_still_carries_the_document(
     monkeypatch.setattr(fa.subprocess, "run", run)
     assert fa._run_check(HEAD, "integration/7-x", cwd=None) == {"schema_version": 1, "answers": []}
     assert seen == [
-        ["pkit", "friction", "check", "--json", "--base", "integration/7-x", "--head", HEAD]
+        [
+            "pkit",
+            "friction",
+            "check",
+            "--json",
+            "--base",
+            "integration/7-x",
+            "--head",
+            HEAD,
+            "--own-head",
+            HEAD,
+        ]
     ]
 
 

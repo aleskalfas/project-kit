@@ -2322,7 +2322,8 @@ def friction_prune_command(dry_run: bool, yes: bool, as_json: bool) -> None:
     default=None,
     help=f"With --head: the change's own head, as ${_CHECK_HEAD_ENV} names it for a working "
     "tree: the commit --head names, or a parent of it, such as the change's head where "
-    "--head names its merge with the base.",
+    "--head names its merge with the base. With --json, a refusal to run a resolver away "
+    "from that commit is then a document too.",
 )
 @click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
@@ -2405,7 +2406,9 @@ def friction_check_command(
         )
     except friction_check.ResolverElsewhere as refused:
         # The sentence still reaches standard error, and the exit code stays the run's.
-        if as_json:
+        # Only a caller that names the own head gets the document: a reader older than
+        # the flag knows this refusal by an empty standard output and that sentence.
+        if as_json and own_rev is not None:
             click.echo(friction_check.render_refusal_json(refused), nl=False)
         raise
     if as_json:
