@@ -13,7 +13,8 @@ so:
   is the token's own issue with the marker or the label, whichever sign a hand
   removed put back; a person's issue is never taken for it; a second one, a
   listing that may be incomplete, a publication it cannot read or a call `gh`
-  refuses fails the run, saying why; outside a workflow it refuses;
+  refuses fails the run, saying why; outside a workflow it refuses; a prune
+  that is due has one open issue of its own, apart from the tracking issue;
 - one run goes **end to end** over a real history: the real check, the real
   renderer, the publisher;
 - the **workflow** is read as YAML: its triggers, that only project-kit's own
@@ -119,7 +120,7 @@ if command == ["issue", "list"]:
     done(json.dumps(listed[: int(opt("--limit") or 30)]))
 if command == ["issue", "create"]:
     label = opt("--label")
-    if label not in state["labels"]:
+    if label and label not in state["labels"]:
         done(code=1, err=f"could not add label: '{label}' not found\n")
     number = state["next"]
     state["next"] += 1
@@ -127,7 +128,8 @@ if command == ["issue", "create"]:
         body = f.read()
     state["issues"].append(
         {"number": number, "title": opt("--title"), "body": body, "state": "OPEN",
-         "labels": [label], "author": {"login": "app/github-actions", "is_bot": True}}
+         "labels": [label] if label else [],
+         "author": {"login": "app/github-actions", "is_bot": True}}
     )
     done(f"https://github.com/owner/repo/issues/{number}\n")
 if command == ["issue", "edit"]:
@@ -210,7 +212,9 @@ def gh(tmp_path: Path) -> FakeGh:
     return FakeGh(tmp_path)
 
 
-def _document(findings: list[dict[str, Any]], unanchored: tuple[str, ...] = ()) -> dict[str, Any]:
+def _document(
+    findings: list[dict[str, Any]], unanchored: tuple[str, ...] = (), prunable: int = 0
+) -> dict[str, Any]:
     """A whole-repository document, shaped as the backbone writes it."""
     return {
         "schema_version": 1,
@@ -228,6 +232,11 @@ def _document(findings: list[dict[str, Any]], unanchored: tuple[str, ...] = ()) 
             "accepted_unanchored": [],
             "unanchored": list(unanchored),
             "uncovered_surface": [],
+        },
+        "answers": {
+            "folder": ".pkit/project/friction/answers",
+            "files": prunable,
+            "prunable": [f"{n}.yaml" for n in range(prunable)],
         },
     }
 
@@ -392,6 +401,98 @@ def test_a_deferral_opens_no_issue_and_holds_none_open(gh: FakeGh) -> None:
     assert "**Nothing needs an answer.**" in issue["body"]
     deferred = issue["body"].split("### Deferred", 1)[1].split("###", 1)[0]
     assert "- `docs/guide.md`" in deferred and "- `docs/notes.md`" in deferred
+
+
+# --- a prune that is due (ADR-068 point 4) --------------------------------------------------
+
+
+def test_a_prune_that_is_due_opens_one_issue_and_its_landing_closes_it(gh: FakeGh) -> None:
+    _run(gh, _document([], prunable=99))
+    assert gh.issues() == {} and gh.writes() == []
+
+    opening = _run(gh, _document([], prunable=100))
+    (issue,) = gh.issues().values()
+    assert issue["state"] == "OPEN" and issue["title"] == publisher.PRUNE_TITLE
+    assert issue["body"] == publisher.PRUNE_BODY and issue["labels"] == []
+    assert "`uv run pkit friction prune --yes`" in issue["body"]
+    assert "ADR-068 point 4" in issue["body"]
+    assert "a prune is due: opened https://github.com/owner/repo/issues/1" in opening.stdout
+
+    gh.forget_calls()
+    again = _run(gh, _document([], prunable=150))
+    assert gh.writes() == [] and "a prune is due: #1 says so" in again.stdout
+
+    gh.forget_calls()
+    closing = _run(gh, _document([]))
+    (issue,) = gh.issues().values()
+    assert issue["state"] == "CLOSED"
+    assert [call[:2] for call in gh.writes()] == [["issue", "close"]]
+    assert "no prune is due: closed #1" in closing.stdout
+
+    gh.forget_calls()
+    _run(gh, _document([], prunable=100))
+    assert sorted(issue["state"] for issue in gh.issues().values()) == ["CLOSED", "OPEN"]
+    assert [call[:2] for call in gh.writes()] == [["issue", "create"]]  # a new one, not a reopen
+
+
+def test_a_prune_that_is_due_leaves_the_tracking_issue_to_the_findings(gh: FakeGh) -> None:
+    """It is no finding: the tracking issue neither opens for it nor is held open by it,
+    so its reopening goes on meaning that a finding needs an answer."""
+    tracking = gh.seed(f"{MARKER}\nold\n", labels=[LABEL], state="CLOSED")
+    _run(gh, _document([], prunable=100))
+    assert gh.issues()[tracking]["state"] == "CLOSED"
+    assert "A prune" not in gh.issues()[tracking]["body"]
+
+    reopening = _run(gh, _document([_stale("docs/guide.md")], prunable=100))
+    assert gh.issues()[tracking]["state"] == "OPEN"
+    assert "reopened it: a finding needs an answer" in reopening.stdout
+
+    closing = _run(gh, _document([], prunable=100))
+    assert gh.issues()[tracking]["state"] == "CLOSED"
+    assert "closed it: nothing needs an answer" in closing.stdout
+    assert len([i for i in gh.issues().values() if i["state"] == "OPEN"]) == 1
+
+
+def test_a_tracking_issue_quoting_the_sign_of_a_prune_issue_is_not_taken_for_one(
+    gh: FakeGh,
+) -> None:
+    """A deferral's reason may quote it, inert, in the tracking issue's body."""
+    reason = f"{MARKER}\n{publisher.PRUNE_MARKER}\n"
+    tracking = gh.seed(reason, labels=[LABEL])
+    _run(gh, _document([_stale("docs/guide.md")]))
+    assert gh.issues()[tracking]["state"] == "OPEN"
+    assert ["issue", "close"] not in [call[:2] for call in gh.writes()]
+
+
+def test_a_refused_call_for_the_prune_issue_fails_nothing_and_stops_nothing(gh: FakeGh) -> None:
+    """The run's failures are the tracking issue's (ADR-055 point 5), and the next run
+    tries again."""
+    tracking = gh.seed(f"{MARKER}\nold\n", labels=[LABEL])
+    publication = _render(gh.directory, _document([_stale("docs/guide.md")], prunable=100))
+
+    proc = _publish(gh, publication, FAKE_GH_FAIL="issue create")
+    assert proc.returncode == 0, proc.stderr
+    assert "was not kept in step, for the next run" in proc.stdout
+    assert "`docs/guide.md`" in gh.issues()[tracking]["body"]
+    assert len(gh.issues()) == 1
+
+    assert _publish(gh, publication).returncode == 0
+    assert len(gh.issues()) == 2
+
+
+def test_a_second_tracking_issue_does_not_stop_the_prune_issue(gh: FakeGh) -> None:
+    gh.seed(f"{MARKER}\nold\n", labels=[LABEL])
+    gh.seed(f"{MARKER}\nold\n", labels=[LABEL])
+    proc = _publish(gh, _render(gh.directory, _document([], prunable=100)))
+    assert proc.returncode == 1 and "more than one tracking issue" in proc.stderr
+    assert "a prune is due: opened" in proc.stdout
+
+
+def test_a_person_s_issue_with_the_sign_of_a_prune_issue_is_never_closed(gh: FakeGh) -> None:
+    theirs = gh.seed(f"{publisher.PRUNE_MARKER}\n", labels=[], author="someone")
+    env = {"FAKE_GH_LISTS_EVERY_AUTHOR": "1"}
+    assert _publish(gh, _render(gh.directory, _document([])), **env).returncode == 0
+    assert gh.issues()[theirs]["state"] == "OPEN" and gh.writes() == []
 
 
 def test_an_existing_label_is_kept_as_it_is(gh: FakeGh) -> None:
@@ -606,8 +707,12 @@ def test_outside_a_workflow_it_refuses_and_calls_nothing(gh: FakeGh, value: str 
         ("not json", "holds no publication of `scripts/friction_report_body.py --json`"),
         (json.dumps({"schema_version": 2, "needs_answer": 0, "body": ""}), "schema_version 2"),
         (
-            json.dumps({"schema_version": 1, "body": "x"}),
+            json.dumps({"schema_version": 1, "prune_due": False, "body": "x"}),
             "no count of findings that need an answer",
+        ),
+        (
+            json.dumps({"schema_version": 1, "needs_answer": 0, "body": "x"}),
+            "no word on whether a prune is due",
         ),
     ],
 )
@@ -624,7 +729,12 @@ def test_a_publication_it_cannot_read_fails_the_run_and_calls_nothing(
 def test_a_body_no_utf8_can_hold_is_published_escaped(gh: FakeGh) -> None:
     """A publication the renderer did not make, carrying a lone surrogate: no crash."""
     publication = gh.directory / "friction-report.json"
-    made = {"schema_version": 1, "needs_answer": 1, "body": "- docs/caf\udce9.md\n"}
+    made = {
+        "schema_version": 1,
+        "needs_answer": 1,
+        "prune_due": False,
+        "body": "- docs/caf\udce9.md\n",
+    }
     publication.write_text(json.dumps(made), encoding="utf-8")
     proc = _publish(gh, publication)
     assert proc.returncode == 0, proc.stderr
