@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=5 fingerprint=sha256:09da4b7668de77ef5d611f70ba9bca8c5162987ff07fe4c06f1012a71dc65627 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:76fe13d2e4a86a3412f5430e1ec976aa3e321119f1904ce188598f4881f28854 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -67,6 +67,7 @@ Have each pull request reviewed by the reviewers its change requires, and land i
 - [010 — Issues and their hierarchy](../domain-model/010-issues-and-their-hierarchy.md)
 - [030 — The issue lifecycle](../domain-model/030-the-issue-lifecycle.md)
 - [040 — Reviews and the merge](../domain-model/040-reviews-and-the-merge.md)
+- [060 — Parallel work](../domain-model/060-parallel-work.md)
 
 **Its requirements:** none.
 
