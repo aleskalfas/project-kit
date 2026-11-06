@@ -1,0 +1,20 @@
+pkit_schema: visual-communication:piece
+schema_version: 1
+
+# The connect slide's picture alone, as a figure, drawn by the same patterns as the slide.
+top: foundations/figure
+brand: neutral
+notations: [pkit]
+languages: [en, cs]
+audience: Readers of pkit's documentation.
+shown: Nowhere yet. A documentation page takes it once a piece can be published.
+explains: true
+exports: [svg]
+state: draft
+modes:
+  colour-scheme: [light, dark]
+lock:
+  foundations: 1.0.0
+  neutral: 1.0.0
+  pkit: 1.0.0
+  starter: 1.0.0

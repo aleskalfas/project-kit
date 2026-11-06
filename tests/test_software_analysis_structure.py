@@ -48,7 +48,6 @@ from tests.analysis_repo import (
     SA,
     SAN_REL,
     VALIDATE,
-    accepting_san,
     actor_at,
     field_hint,
     installed,
@@ -947,7 +946,7 @@ def test_accepted_a_departure_fails_and_an_entry_is_read_within_its_span(
     )
     project.write(
         {
-            **accepting_san(project),
+            ANALYSIS_SET: ANALYSIS_SET_TEXT,
             actor_at("ACT-tester"): ACTOR_FRONT + ACTOR_BODY + "\n\n## Notes\n\n**Seen:** daily.\n",
             GLOSSARY: glossary,
         }
@@ -975,6 +974,7 @@ def test_pkit_validate_reports_where_san_binds_on_none_and_warns_once_a_rule_is_
     analysis by its types makes the rule bind, and the check holds the actor to its
     structure. Neither the report nor the warning fails validation. `SAN` ships its rules
     accepted, so a proposed copy stands for the time before."""
+    shipped = (project.root / SAN_REL).read_text(encoding="utf-8")
     project.write(
         {actor_at("ACT-tester"): ACTOR_FRONT + WITHOUT_CONTEXT + "\n", **proposing_san(project)}
     )
@@ -985,8 +985,7 @@ def test_pkit_validate_reports_where_san_binds_on_none_and_warns_once_a_rule_is_
     assert "0 error(s), 0 warning(s), 0 info(s), 1 report(s)." in result.output
     unbound = "no rule of software-analysis:SAN binds on any of the analysis's 1 artefact(s)"
     assert f"{unbound}: none is accepted" in result.output
-    accepted = accepting_san(project)
-    project.write({SAN_REL: accepted[SAN_REL]})  # accepted, with no set of the project's own
+    project.write({SAN_REL: shipped})  # accepted, with no set of the project's own
     result = CliRunner().invoke(main, only)
     assert result.exit_code == 0, result.output
     assert "0 error(s), 1 warning(s), 0 info(s), 0 report(s)." in result.output
@@ -1157,7 +1156,7 @@ def test_every_kind_stamped_and_filled_carries_its_structure(
     # The journey's step lines name their use cases by id, which link to them, as the
     # authoring skill has `pkit analysis link` write (DEC-001 point 14).
     link(project)
-    project.write(accepting_san(project))
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     code, document = _validate(project, "--json")
     assert (code, _said(document)) == (0, [])
     assert any(

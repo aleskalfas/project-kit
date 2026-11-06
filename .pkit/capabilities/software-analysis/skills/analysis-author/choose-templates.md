@@ -28,7 +28,7 @@ A template read empty hides what each part asks of a writer. So judge the parts 
   - **A journey** needs two use cases of its actor, so stamp a second use case first. It can be your ordinary example.
   - **A revalidation record** has no hints, since its stamp writes every part from its command line. Stamp it for a revalidation of your own that has something to say, such as a change you plan to what a candidate describes.
 - **Commit nothing yet.** The kind's sub-procedure ends in a commit, but a candidate waits until step 6. Once committed, its id is taken for good.
-- **Check it** with `pkit analysis validate --preview`, and read what it says of your candidate. While the format rule is proposed, the preview shows an artefact against its kind's structure where the rule would bind.
+- **Check it** with `pkit analysis validate --preview`, and read what it says of your candidate. It holds an artefact to its kind's structure where the format rule binds, and each break is an error.
 
 ## 3. Judge each part
 
@@ -48,7 +48,7 @@ Choose one of these for the kind, or several. Nothing lets you drop, loosen or r
 - **Keep the shipped parts.** You write nothing for the kind.
 - **Relabel a part, or replace a hint and its example.** Write it under the kind's `relabel`, or its `front-matter` for a field. This needs no rule, since a label and a hint tighten nothing.
 - **Add a part of your own,** to an artefact kind. Write a group under the kind's `tighten`, naming the rule of your own set that asks for the part. Write the rule first, proposed.
-  - The part binds once its rule and the format rule are both accepted, where both bind.
+  - The part binds once its rule is accepted, where it and the format rule both bind.
   - An added part is stamped into every new artefact of the kind, with its hint. So add one only where your examples show it recurs.
   - A group may also close the kind's list of labels, where its parts hold no labels of their own.
   - A domain-model view takes labels, never a heading. A label after `opening` goes in its opening, and one after a part of a concept's section goes in each of its sections.

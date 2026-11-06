@@ -16,26 +16,16 @@ before writing. Membership gate per DEC-021 runs at startup.
 that lands a second Task closes it on merge too (#1049). A reference the
 body already carries is left alone.
 
-The `## Documentation this change affects` section (DEC-055) is carried
-across every edit: the edit is applied to the body without it, and the
-section the description carried is placed back, under that heading, last
-before the provenance footer — of several, the latest, the last one; one an
-earlier run left under `## Friction answers` is carried the same way, its
-words unchanged until land-work writes it again. Any other — inside a
-supplied body, a second list, or one typed by hand with no markers — is
-dropped with a warning: only open-pr and land-work write one, from the
-change check, and edit-pr derives nothing. Each `updated` document in the
-list carried gives the sentence on what changed in it as the edited body's
-`## What changed in each updated document` section now has it, or says
-there is none; the check's words are carried unchanged. A sentence that
-reads as a closing reference or holds an HTML comment's delimiter is not
-copied: the list keeps the sentences it had, with a warning, and land-work
-refuses until it is reworded. Each `updated` document the list gives no
-sentence for is a `warning` finding of the validation, naming the document
-and the form a sentence takes: review-work refuses it, and edit-pr writes
-the edit (DEC-055 point 3). So is each item under that heading the commands
-cannot read — the document in bold, say, or with no code span — named by its
-line.
+No list of the answers the change wrote is written or carried (DEC-065 point
+1): the region an earlier run left in the description, or one the supplied body
+carries, both its markers and the heading directly above, is dropped from the
+body written, with a warning. A start marker with no end marker after it draws a
+warning, and the text stays as it is. edit-pr derives nothing, so it warns of no
+missing sentence: review-work refuses one, and land-work holds a run authorised
+up front on one. Each item under the body's
+`## What changed in each updated document` heading that the commands cannot read
+— the document in bold, say, or with no code span — is a `warning` finding of
+the validation, named by its line.
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/edit-pr.py 99 --append "Additional notes..."
@@ -208,26 +198,23 @@ def main() -> int:
     current_title = str(pr.get("title", ""))
     # Strip the footer on read; the seam re-stamps one on write (ADR-037).
     carried_body = provenance.strip_footer(str(pr.get("body") or ""))
-    # The friction answers' section is set aside and placed back after the edit,
-    # so no edit lands inside it and none supplies one (DEC-055). Of several
-    # lists, the latest — the last — is kept.
-    answers = friction_answers.find(carried_body)
+    # No list of the answers is carried (DEC-065 point 1): one the description
+    # carries is dropped from the body written.
     current_body = friction_answers.strip(carried_body)
 
     new_title = args.title if args.title is not None else current_title
     new_body = _compute_new_body(current_body, args)
     if new_body is None:
         return 2
-    if not friction_answers.current(carried_body, answers) or not friction_answers.current(
-        new_body, None
-    ):
+    if any(friction_answers.has_list(body) for body in (carried_body, new_body)):
         print(
-            f"warn: edit-pr keeps only the latest list the description carried, and drops "
-            f"every other `{friction_answers.HEADING}` section — the description's or the "
-            "supplied body's: only open-pr and land-work write one, from the change check",
+            f"warn: the `{friction_answers.HEADING}` section is dropped — no command writes it "
+            "any longer: the answers are derived from the change check",
             file=sys.stderr,
         )
     new_body = friction_answers.strip(new_body)
+    if friction_answers.orphaned(new_body):
+        print(f"warn: {friction_answers.ORPHAN_WARNING}", file=sys.stderr)
 
     added_closes: list[int] = []
     if args.closes:
@@ -239,8 +226,6 @@ def main() -> int:
         already = set(pr_validation.extract_closing_issues(new_body))
         added_closes = [n for n in dict.fromkeys(args.closes) if n not in already]
         new_body = pr_validation.with_closing_references(new_body, args.closes)
-    if answers is not None:
-        new_body = friction_answers.stamp(new_body, _with_sentences(answers, new_body))
     current_body = carried_body
 
     print(f"edit-pr: #{args.pr_number}")
@@ -307,30 +292,6 @@ def main() -> int:
     return 0
 
 
-def _with_sentences(answers: str, body: str) -> str:
-    """The list `answers` carried, each `updated` document's sentence taken from
-    `body`'s `## What changed in each updated document` as it now stands (DEC-055
-    point 2). A sentence the list must not hold — one that reads as a closing
-    reference or holds an HTML comment's delimiter — leaves the list's sentences
-    as they were, with a warning: land-work refuses the list until it is
-    reworded."""
-    given = friction_answers.given_in(answers, friction_answers.sentences(body))
-    for found, why in (
-        (friction_answers.sentence_closing_reference(given), "reads as a closing reference"),
-        (friction_answers.sentence_comment_delimiter(given), "holds an HTML comment's delimiter"),
-    ):
-        if found is not None:
-            location, words = found
-            print(
-                f"warn: the sentence on what changed in {location} {why} ({words}), so the "
-                f"list's sentences are left as they were; reword it under "
-                f"`{friction_answers.SENTENCES_HEADING}` — land-work refuses the list until then",
-                file=sys.stderr,
-            )
-            return answers
-    return friction_answers.with_sentences(answers, given)
-
-
 def _compute_new_body(current_body: str, args: argparse.Namespace) -> str | None:
     if args.body is not None:
         if args.body == "-":
@@ -354,9 +315,7 @@ def _compute_new_body(current_body: str, args: argparse.Namespace) -> str | None
 
 def _validate(*, title: str, body: str, titles: dict) -> list[Finding]:
     findings: list[Finding] = []
-    # Read from the body with the list, before it is set aside (DEC-055 point 3).
-    unsaid = friction_answers.unsaid_in(body)
-    body = friction_answers.strip(body)  # the artefacts' words are never input (DEC-055)
+    body = friction_answers.strip(body)  # an earlier run's list is never input (DEC-055)
     pattern = _pr_title_pattern(titles)
     if pattern and not re.match(pattern, title):
         findings.append(
@@ -381,10 +340,6 @@ def _validate(*, title: str, body: str, titles: dict) -> list[Finding]:
                 "body.doc-impact",
                 "PR body is missing the `## Doc impact` section.",
             )
-        )
-    for location in unsaid:
-        findings.append(
-            Finding(SEVERITY_WARNING, "body.sentences", friction_answers.unsaid_message(location))
         )
     for item in friction_answers.unread(body):
         findings.append(

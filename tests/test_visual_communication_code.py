@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -29,15 +30,18 @@ from tests.visual_communication_project import (
 )
 from tests.visual_communication_writes import FULL, failing
 
-code, css, seam, files, fingerprint, reading, findings_ = load(
+code, css, json_writer, seam, files, fingerprint, reading, findings_, before_after, copies = load(
     "visual-communication",
     "code",
     "plugins.css",
+    "plugins.json",
     "plugins.seam",
     "files",
     "fingerprint",
     "reading",
     "findings",
+    "before_after",
+    "copies",
 )
 
 NAME = "brand-css"
@@ -48,9 +52,9 @@ TYPOGRAPHY = ("type.body", "type.code", "type.heading", "type.strong")
 
 @pytest.fixture(autouse=True)
 def _writer_importable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The writer stands in for the import a run makes when it runs it, for the length of
+    """The writers stand in for the import a run makes when it runs one, for the length of
     the test."""
-    importable(monkeypatch, css)
+    importable(monkeypatch, css, json_writer)
 
 
 def declare(root: Path, name: str = NAME, **fields: Any) -> Path:
@@ -526,3 +530,213 @@ def test_a_library_the_lock_names_that_the_project_does_not_hold_is_refused(root
     declare(root, lock={**LOCK, "test-parts": "1.0.0"})
     with pytest.raises(code.CodeRefused, match=r"test-parts@1\.0\.0, which the project does not"):
         run(root)
+
+
+# --- the json writer (DEC-005 points 7 to 9, DEC-006 points 4 and 8) ----------------------------
+
+JSON_OUT = "web/brand.json"
+
+
+def declare_json(root: Path, **fields: Any) -> Path:
+    """The declaration of the json writer, under the name the tests run."""
+    return declare(root, writer="json", out=JSON_OUT, **fields)
+
+
+def add_size_axis(root: Path) -> None:
+    """A size axis on the foundations the location holds, which the test brand leaves at its
+    default."""
+    roles = root / "visual/libraries/foundations/1.0.0/roles.yaml"
+    text = roles.read_text(encoding="utf-8")
+    text = text.replace(
+        "axes:\n", "axes:\n  density: {kind: size, modes: [normal, tight], default: normal}\n"
+    )
+    roles.write_text(text, encoding="utf-8")
+
+
+def test_a_json_declaration_holds_its_schema(root: Path) -> None:
+    data = reading.read_yaml(declare_json(root))
+    assert files.shape_problems(data, "code") == []
+
+
+def test_the_json_writer_writes_the_document_under_the_lock_with_its_record(root: Path) -> None:
+    declared = code.read(root, "visual", declare_json(root).stem)
+    document = code.plan(root, "visual", declared).document
+    written = run(root)
+    assert (written.code, written.record) == (JSON_OUT, f"{JSON_OUT}.record.yaml")
+    assert written.losses == ()
+    data = (root / JSON_OUT).read_bytes()
+    assert json.loads(data) == document
+    assert document["lock"] == LOCK
+    assert document["keys"] == [
+        "default",
+        "colour-scheme.dark",
+        "contrast.high",
+        "colour-scheme.dark+contrast.high",
+    ]
+    record = record_of(root, JSON_OUT)
+    assert files.shape_problems(record, "code-record") == []
+    assert record["sha256"] == reading.sha256(data)
+    assert record["recorded"]["plugins"] == {"json": "1.0.0"}
+
+
+def test_the_json_writer_loses_no_token_and_its_record_compares_every_value(root: Path) -> None:
+    declare_json(root)
+    planned = code.plan(root, "visual", code.read(root, "visual", NAME))
+    assert planned.losses == ()
+    run(root)
+    assert set(TYPOGRAPHY) <= set(json.loads((root / JSON_OUT).read_bytes())["tokens"])
+    entries = record_of(root, JSON_OUT)["fingerprint"]["inputs"]
+    assert {e["value"] for e in entries if "value" in e} >= set(TYPOGRAPHY)
+    assert len(entries) == 2 + (WRITTEN + len(TYPOGRAPHY)) * 4
+    assert code.findings(root, "visual") == []
+
+
+def test_the_json_writer_writes_a_brand_with_a_size_axis(root: Path) -> None:
+    add_size_axis(root)
+    declare_json(root)
+    run(root)
+    held = json.loads((root / JSON_OUT).read_bytes())
+    assert "density.tight" in held["keys"]
+    assert "colour-scheme.dark+contrast.high+density.tight" in held["keys"]
+    assert files.shape_problems(held, "values") == []
+    assert code.findings(root, "visual") == []
+
+
+def test_the_json_writer_refuses_a_prefix_naming_why(root: Path) -> None:
+    declare_json(root, prefix="brand")
+    with pytest.raises(code.CodeRefused) as refused:
+        run(root)
+    assert str(refused.value) == (
+        "visual/code/brand-css.yaml: the json writer takes no `prefix`, since a token path "
+        "stays as the brand exports it: remove `prefix: brand`"
+    )
+    assert not (root / "web").exists()
+
+
+def test_the_check_names_why_a_json_declaration_takes_no_prefix(root: Path) -> None:
+    declare_json(root, prefix="brand")
+    (finding,) = code.findings(root, "visual")
+    assert (finding.code, finding.level) == ("code-unchecked", "fails")
+    assert "a token path stays as the brand exports it" in finding.message
+
+
+def test_a_writer_that_says_nothing_of_a_prefix_takes_one(root: Path) -> None:
+    assert "prefix" not in seam.declaration("css")
+    declare(root, prefix="brand")
+    assert code.plan(root, "visual", code.read(root, "visual", NAME)).declaration.prefix == "brand"
+
+
+def test_json_code_with_neither_file_is_a_fact_naming_the_command(root: Path) -> None:
+    declare_json(root)
+    assert found(root) == [("code-not-written", "fact")]
+
+
+def test_json_code_without_its_record_fails(root: Path) -> None:
+    declare_json(root)
+    run(root)
+    (root / f"{JSON_OUT}.record.yaml").unlink()
+    assert found(root) == [("code-record-missing", "fails")]
+
+
+def test_a_record_naming_json_code_that_is_missing_fails(root: Path) -> None:
+    declare_json(root)
+    run(root)
+    (root / JSON_OUT).unlink()
+    assert found(root) == [("code-missing", "fails")]
+
+
+def test_json_code_stale_by_a_typography_value_fails_naming_the_value(root: Path) -> None:
+    declare_json(root)
+    run(root)
+    base = root / "visual/libraries/test-brand/1.0.0/tokens/base.tokens.json"
+    text = base.read_text(encoding="utf-8")
+    base.write_text(text.replace('"lineHeight": 1.4', '"lineHeight": 1.6', 1), encoding="utf-8")
+    (finding,) = code.findings(root, "visual")
+    assert (finding.code, finding.level) == ("code-stale", "fails")
+    assert "the value of `type.body` in `default` changed" in finding.message
+    assert finding.file == f"{JSON_OUT}.record.yaml"
+
+
+def test_json_code_edited_by_hand_fails_and_line_endings_alone_do_not(root: Path) -> None:
+    declare_json(root)
+    run(root)
+    file = root / JSON_OUT
+    data = file.read_bytes()
+    file.write_bytes(data.replace(b"\n", b"\r\n"))
+    assert found(root) == []
+    file.write_bytes(data.replace(b'"version": 1', b'"version": 2'))
+    assert found(root) == [("code-edited", "fails")]
+
+
+def test_json_code_stale_only_by_its_writers_version_asks_for_attention(root: Path) -> None:
+    declare_json(root)
+    run(root)
+    seam.register({**seam.declaration("json"), "version": "1.1.0"}, json_writer)
+    try:
+        (finding,) = code.findings(root, "visual")
+    finally:
+        seam.unregister("json")
+    assert (finding.code, finding.level) == ("code-stale-writer", "attention")
+    assert "1.0.0" in finding.message and "1.1.0" in finding.message
+
+
+# --- a side of a before-and-after (DEC-005 point 7, DEC-013 point 5) ----------------------------
+
+PARTS_LOCK = {**LOCK, "test-parts": "1.0.0"}
+
+
+def shipped_parts(tmp_path: Path) -> Any:
+    """What a capability ships under `test-parts`' number: its gap on another spacing."""
+    folder = tmp_path / "shipped"
+    shutil.copytree(TEST_PARTS, folder)
+    roles = folder / "roles.yaml"
+    text = roles.read_text(encoding="utf-8")
+    roles.write_text(text.replace("{space.2}", "{space.3}"), encoding="utf-8")
+    files = tuple(
+        path.relative_to(folder).as_posix() for path in folder.rglob("*") if path.is_file()
+    )
+    number = copies.Version.parse("1.0.0")
+    return copies.Source("test-parts", number, folder, files, {"released": False}, None)
+
+
+def test_a_side_is_the_code_the_writer_writes_under_the_lock(root: Path) -> None:
+    copy_library(root, TEST_PARTS, "test-parts", "1.0.0")
+    declare(root, lock=PARTS_LOCK)
+    side = before_after.writing(root, "visual", NAME, PARTS_LOCK)
+    assert side.why == ""
+    assert not (root / "web").exists()
+    run(root)
+    assert side.files == {"web/brand.css": (root / "web/brand.css").read_text(encoding="utf-8")}
+
+
+def test_a_version_given_stands_in_for_the_copy_and_changes_the_code(
+    root: Path, tmp_path: Path
+) -> None:
+    copy_library(root, TEST_PARTS, "test-parts", "1.0.0")
+    declare(root, lock=PARTS_LOCK)
+    before = before_after.writing(root, "visual", NAME, PARTS_LOCK)
+    after = before_after.writing(root, "visual", NAME, PARTS_LOCK, [shipped_parts(tmp_path)])
+    assert before_after.differing(before, after) == ["web/brand.css"]
+    assert "--test-parts--gap: 8px;" in before.files["web/brand.css"]
+    assert "--test-parts--gap: 16px;" in after.files["web/brand.css"]
+
+
+def test_the_difference_in_json_code_is_the_lines_of_the_values_that_changed(
+    root: Path, tmp_path: Path
+) -> None:
+    copy_library(root, TEST_PARTS, "test-parts", "1.0.0")
+    declare_json(root, lock=PARTS_LOCK)
+    before = before_after.writing(root, "visual", NAME, PARTS_LOCK)
+    after = before_after.writing(root, "visual", NAME, PARTS_LOCK, [shipped_parts(tmp_path)])
+    lines = zip(
+        before.files[JSON_OUT].splitlines(), after.files[JSON_OUT].splitlines(), strict=True
+    )
+    differing = [new for old, new in lines if old != new]
+    assert len(differing) == 4
+    assert all('{"unit":"px","value":16}' in line for line in differing)
+
+
+def test_a_side_that_cannot_be_written_says_why(root: Path) -> None:
+    side = before_after.writing(root, "visual", NAME, PARTS_LOCK)
+    assert side.files == {}
+    assert "test-parts@1.0.0, which the project does not hold" in side.why

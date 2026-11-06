@@ -37,11 +37,11 @@ from project_kit.friction_validate import validate_friction
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ANALYSIS_SET,
+    ANALYSIS_SET_TEXT,
     DOMAIN_MODEL,
     GLOSSARY,
     STRUCTURES,
     VALIDATE,
-    accepting_san,
     fill,
     front,
     installed,
@@ -155,7 +155,7 @@ def test_a_view_is_stamped_with_its_terms_their_sections_and_their_links(
     section = glossary.split("## TERM-customer — customer\n", 1)[1].split("\n## ", 1)[0]
     assert "Explained in" not in section  # a term no view explains carries no link
     # Filled, it passes the check with the format rule binding, and the core's friction pass.
-    project.write(accepting_san(project))
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     assert _found(_validate(project)) == []
     assert validate_friction(project.root).errors == ()
 
@@ -177,7 +177,7 @@ def test_the_stamp_heads_each_section_in_sentence_case(project: AdopterRepo) -> 
     assert "## TERM-line-item — line item\n" in glossary  # the name itself keeps its case
     fill(project)
     link(project)
-    project.write(accepting_san(project))
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     assert _found(_validate(project)) == []
 
 
@@ -369,7 +369,7 @@ def test_a_view_s_sections_match_explains_where_the_format_rule_binds(
     own selects the view, as the set install creates does."""
     _edit(project, VIEW, "## Payment\n", "## settlement\n")
     assert _found(_validate(project)) == []  # no set of the project's own selects it yet
-    project.write(accepting_san(project))
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     (found,) = _found(_validate(project))
     assert found[0] == VIEW
     assert (
@@ -387,7 +387,7 @@ def test_a_view_s_sections_match_explains_where_the_format_rule_binds(
 
 
 def test_a_view_s_parts_are_held_in_each_section(project: AdopterRepo) -> None:
-    project.write(accepting_san(project))
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     _edit(project, VIEW, "**Relations:**", "**Links:**")
     messages = [m for location, m in _found(_validate(project)) if location == VIEW]
     assert any(
@@ -404,7 +404,7 @@ def test_a_section_s_why_is_held_where_the_format_rule_binds(project: AdopterRep
     _edit(project, VIEW, f"{why}\n\n", "")
     link(project)  # the first mention of a term the *Why* held moves to the explanation
     assert _found(_validate(project)) == []  # no set of the project's own selects it yet
-    project.write(accepting_san(project))
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     messages = [m for location, m in _found(_validate(project)) if location == VIEW]
     assert len(messages) == 1, messages
     assert messages[0].startswith("`**Why:**` in the section `## Order` is missing"), messages
@@ -424,15 +424,14 @@ def test_a_project_s_own_label_goes_in_the_opening_or_each_section_never_a_headi
     """A project adds labels to a view's opening, or to each concept's section, and never a
     heading (DEC-004 point 2)."""
     rule = "RS-ANALYSIS-001"
-    sets = accepting_san(project)
     set_text = (
-        sets[ANALYSIS_SET].replace(
+        ANALYSIS_SET_TEXT.replace(
             "rules: {}\n",
             f'rules:\n  {rule}:\n    status: accepted\n    origin: {{why: "A reader asks."}}\n',
         )
         + f"\n## {rule} — A view says more\n\nA view says more.\n"
     )
-    project.write({**sets, ANALYSIS_SET: set_text})
+    project.write({ANALYSIS_SET: set_text})
     added = (
         "pkit_schema: software-analysis:structures\nschema_version: 1\nkinds:\n"
         "  domain-model-view:\n    tighten:\n      - rule: RS-ANALYSIS-001\n        add:\n"
@@ -458,7 +457,7 @@ def test_a_project_with_no_domain_model_fails_nothing(bare: AdopterRepo) -> None
     one (DEC-004 point 1)."""
     stamped(bare, "term", "order", "--name", "order", "--path", "src/run.py")
     fill(bare)
-    bare.write(accepting_san(bare))
+    bare.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     document = _validate(bare)
     assert _found(document) == []
     assert "0 domain-model view(s)" in document["summary"][0]

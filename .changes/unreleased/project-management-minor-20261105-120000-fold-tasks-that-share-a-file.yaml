@@ -1,0 +1,21 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  Tasks that share a file are built one at a time, and the planner plans those
+  of one parent, Milestone and priority as one Task, so they pay the per-change
+  cost once (#2640). DEC-066 records the rule batch planning applied with no
+  record behind it: two Tasks share a file when their implementation notes name
+  a file in which both change what is already there. A file each only adds to
+  does not count. It adds that such Tasks of one parent, Milestone and priority
+  are planned as one Task, within what one review can read and one build can
+  finish, with the estimate shown at the gate. A Task already filed takes in
+  such work only before it starts, with the person's approval, read again just
+  before its body is widened. That Task takes the work's dependencies, and the
+  work takes its classification, Milestone and state, with any difference shown
+  to the person. The critic's threshold counts the issues before the fold. The
+  pm skill's `batch-plan` slicing step, its
+  review, gate and filing steps, and `create-issue`'s intent recognition apply
+  the rule. The project-manager's storyboard gains Scenario 15, and DEC-025 and
+  DEC-029 point to DEC-066.

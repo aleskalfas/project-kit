@@ -261,7 +261,7 @@ def files(root: Path, folder: str) -> list[str]:
     untracked but not ignored; walked outside a git repository. In path order, without
     links, and without a tracked file the working tree no longer holds."""
     if not _in_repository(root):
-        return _walked(root, folder)
+        return walked(root, folder)
     argv = [
         "git",
         "--literal-pathspecs",
@@ -292,7 +292,9 @@ def _plain_file(path: Path) -> bool:
     return path.is_file() and not path.is_symlink()
 
 
-def _walked(root: Path, folder: str) -> list[str]:
+def walked(root: Path, folder: str) -> list[str]:
+    """The files under `folder`, relative to `root`, as they lie, whatever git ignores: in
+    path order, and without links."""
     top = root / folder
     if not top.is_dir() or top.is_symlink():
         return []

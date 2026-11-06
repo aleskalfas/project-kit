@@ -36,7 +36,7 @@ A new record decides nothing against a record the project receives from elsewher
 
 ### 2. A check of its own refuses to land a proposal
 
-A check of its own, apart from a change's other checks, reports each record or rule proposed at the change's head and not proposed at its base: an added proposal, or an accepted one set back to proposed. A record or rule moved to another path is not added. The check fails while it reports one.
+A check of its own, apart from a change's other checks, reads what the change would land. It reports each record or rule proposed there and not at the change's base: an added proposal, or an accepted one set back to proposed. A record or rule moved to another path is not added. The check fails while it reports one.
 
 - **Through a merge.** A component that carries out merges on a person's authority runs it before it merges, after the reviewers have judged the change, proposal included, and refuses to merge while it fails. A project without such a component has its host require the check for a merge, reported on a line of its own, so its failure while a proposal is discussed blocks no push and hides no other check.
 - **By a direct commit** to the default branch. The person accepts the record before the commit, and the check runs on the commit before it is pushed.
@@ -79,7 +79,7 @@ When a project turns the refusal on, the check lists each proposed record or rul
 ## Implications
 
 - **COR-025** gains a first line saying it is partially superseded by this record, for landing records proposed.
-- **The decision-record specification** says a record reaches the default branch accepted, after a person accepts it in its change. Its acceptance gate counts a record a person accepted in the change, or in a change it is built on. Its check of a change on records gains point 3's list, and point 2's refusal stands beside it as a check of its own; both read rules where their rule sets keep them.
+- **The decision-record specification** says a record reaches the default branch accepted, after a person accepts it in its change. Its acceptance gate counts a record a person accepted in the change, or in a change it is built on. Point 2's check stands beside the specification's check of a change on records. Point 2's check gives point 3's list too, and reads rules where their rule sets keep them.
 - **A component that carries out merges on a person's authority** runs the reviewers on a change that holds a proposal, shows the person one list of what the change decides (the records and rules it makes accepted, beside the edits to accepted records it already lists), and runs point 2's check before it merges. A status set to accepted after the reviewers judged a change is a new head they judge again, unless that component's own rules say otherwise.
 - **A project's checks run before a push**, and its decisions check on each change, leave point 2's check out; where no component carries out merges, the host requires it for a merge on a line of its own.
 - **The core operational rules, the authoring skill for records and the agent that authors architecture records** have a person accept a record in its change before work rests on it, and never land a record proposed.

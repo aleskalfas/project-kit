@@ -7,8 +7,9 @@ DEC-005 point 4, DEC-004 point 9, DEC-012 point 4).
   one font each, from the committed font file a family names, and the font's metrics are
   read with fontTools. A font role gives a list of families: the first measures each
   character it has, the next the rest. Never a font found on the machine.
-- **Refused before layout.** A family with no committed file raises `MissingFont`, and a
-  character no family measures raises `MissingGlyph`, each naming what is missing.
+- **Refused before layout.** A family with no committed file raises `MissingFont`, a file
+  that cannot be read as a font `UnreadableFont`, and a character no family measures
+  `MissingGlyph`, each naming what is missing.
 - **Lines.** Each paragraph (the text split at its line feeds, a run going on into the
   next paragraph) is broken across its runs at Unicode's break opportunities (UAX #14,
   through uniseg) and the language's own rules, kept as data here (`LANGUAGE_RULES`).
@@ -36,7 +37,7 @@ import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 from uniseg.linebreak import line_break_boundaries
 
-from _lib.env import MissingFont
+from _lib.env import MissingFont, UnreadableFont
 
 #: Lines are broken against the planned width minus this share of the em.
 BREAK_MARGIN = 0.02
@@ -62,21 +63,22 @@ class MissingGlyph(MissingFont):
 
 
 class Face:
-    """One committed font file, measured exactly."""
+    """One committed font file, measured exactly. Raises `UnreadableFont` where it cannot be
+    read as a font."""
 
     def __init__(self, family: str, path: Path) -> None:
         data = path.read_bytes()
         self.family = family
         self.path = path
         self.sha256 = hashlib.sha256(data).hexdigest()
-        font = TTFont(str(path), lazy=True)
         try:
-            self._cmap = frozenset(font.getBestCmap() or {})
-            self.upem = font["head"].unitsPerEm
-            self.ascender = font["hhea"].ascent / self.upem
-            self.descender = -font["hhea"].descent / self.upem
-        finally:
-            font.close()
+            with TTFont(str(path), lazy=True) as font:
+                self._cmap = frozenset(font.getBestCmap() or {})
+                self.upem = font["head"].unitsPerEm
+                self.ascender = font["hhea"].ascent / self.upem
+                self.descender = -font["hhea"].descent / self.upem
+        except Exception as exc:  # the font library has no one error for a file it cannot read
+            raise UnreadableFont(path, exc) from exc
         self._font = hb.Font(hb.Face(hb.Blob(data)))
         self._advances: dict[str, float] = {}
 
@@ -103,7 +105,8 @@ class Faces:
         self._faces: dict[str, Face] = {}
 
     def face(self, family: str) -> Face:
-        """A family's face. Raises `MissingFont` where it has no committed file."""
+        """A family's face. Raises `MissingFont` where it has no committed file, and
+        `UnreadableFont` where that file cannot be read as a font."""
         if family not in self._faces:
             path = self._font_file(family)
             if not path.is_file():

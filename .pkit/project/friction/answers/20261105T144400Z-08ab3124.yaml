@@ -1,0 +1,102 @@
+answers:
+  - artefact: .pkit/capabilities/doc-examples/README.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T152454Z-63ed08af.yaml
+      - 20261027T155443Z-e9552da8.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T114612Z-ece11007.yaml
+      - 20261031T033803Z-982f5fe6.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+    revalidated:
+      at: 2026-11-05T14:44:00Z
+      outcome: unchanged
+      unchanged-because: The change alters only how listing in run-examples.py builds its list, in plain strings rather than a Path for each path. It lists the same files and folders, with the same fields, after the same commands, and leaves out the same git directories, so 'The guards, and what the run confines' and every other section stand as written.
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T013912Z-adb73078.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113029Z-9dec9cb8.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T145906Z-a3781d7a.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T152404Z-888b608a.yaml
+      - 20261029T155317Z-2d90650e.yaml
+      - 20261029T155559Z-74f6b0d1.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T160608Z-f0e5731a.yaml
+      - 20261029T190551Z-85ee9700.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T204639Z-57b1f9b1.yaml
+      - 20261029T204651Z-6eb49a72.yaml
+      - 20261029T212322Z-bf411b6a.yaml
+      - 20261029T213250Z-52102acd.yaml
+      - 20261029T213830Z-1305dbb8.yaml
+      - 20261029T230516Z-0e59ab68.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261031T010906Z-47833d43.yaml
+      - 20261031T013603Z-dccf51ad.yaml
+      - 20261031T014558Z-c26fa007.yaml
+      - 20261031T021353Z-44474827.yaml
+      - 20261031T185157Z-7a2bd436.yaml
+      - 20261101T232054Z-d8df47fb.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T114153Z-1c96ae08.yaml
+      - 20261104T114549Z-1aae0da9.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T144102Z-ac6bce95.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T090549Z-25167097.yaml
+      - 20261105T091216Z-b5483b71.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+      - 20261105T110132Z-6e105dc4.yaml
+    revalidated:
+      at: 2026-11-05T14:44:02Z
+      outcome: unchanged
+      unchanged-because: tests/README.md gains the step that says which run to write the table of test times from, and tests.slices table says how far apart that run's runners were. 'Running checks' says how a full run is split and names the table only as what cuts the slices, so nothing it says changes.
+  - artefact: tech-docs/coding-conventions.md
+    read:
+      - 20261105T110132Z-6e105dc4.yaml
+    revalidated:
+      at: 2026-11-05T14:44:03Z
+      outcome: unchanged
+      unchanged-because: The change to tests/README.md lies in 'Running the suite', in how the maintainer keeps the table of test times. This page points to that README from its section 'Type checking' on for how a test is written, and that part did not change, so no convention moves.

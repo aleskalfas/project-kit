@@ -34,11 +34,12 @@ import pytest
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ACTORS,
+    ANALYSIS_SET,
+    ANALYSIS_SET_TEXT,
     JOURNEYS,
     QUALITY,
     USE_CASES,
     VALIDATE,
-    accepting_san,
     fill,
     installed,
     link,
@@ -225,16 +226,16 @@ def test_the_command_links_each_first_mention_of_an_id_with_no_domain_model(
     case, a seam's and a precondition's ids inside the bold, an actor and a requirement,
     each first in its part. A goal, code, a web link, an id naming nothing and the
     artefact's own stay plain. The analysis then passes the check, the format rule
-    accepted included, and a second run writes nothing (DEC-001 point 14)."""
+    binding included, and a second run writes nothing (DEC-001 point 14)."""
     fronts = {rel: _read(project, rel).split("\n---\n", 1)[0] for rel in BODIES}
     link(project)
     for rel, body in BODIES_LINKED.items():
         assert _body(project, rel) == body, rel
         assert _read(project, rel).split("\n---\n", 1)[0] == fronts[rel], rel
     assert _errors(project) == []
-    # The format rule accepted, the journey's steps and seams and the use case's parts
+    # The format rule binding, the journey's steps and seams and the use case's parts
     # still match their forms, the ids linked (the other use cases hold their examples).
-    project.write(accepting_san(project))
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     assert [f for f in _errors(project) if f[0] in BODIES] == []
     assert link(project).stdout.strip() == "Every link is as it should be; nothing written."
 

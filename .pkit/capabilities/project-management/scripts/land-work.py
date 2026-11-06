@@ -10,18 +10,21 @@
 
 Lands an issue's pull request in one command: waits for the checks on the PR's
 head, has the reviewers whose verdicts are not fresh review that head, shows
-the findings they left for a person to judge, lists the answers the change
-wrote, runs the change check on the merge with the base as it stands, and
-merges it through `done-work`. It composes
+the findings they left for a person to judge, reads the answers the change
+wrote from the change check, runs the change check on the merge with the base
+as it stands, and merges it through `done-work`. A project can name the checks
+that start the review: the reviewers then run beside the rest, and the merge
+still waits for every check. It composes
 the verbs' own functions — the CI gate's reading (`_lib.ci_checks`),
 `review-pr`'s review, `done-work`'s merge — and adds no review loop or merge
 mechanic of its own. The rules it adds are on the answers the change wrote
 and on the findings a reviewer left for a person to judge
-([project-management:DEC-055-pr-lists-answers]): it refuses a list it cannot
-read or must not write, and writes the list for the head it merges, each
-updated document's sentence from its author beside it; a change with answers
-merges under the same authorisation as any other, and a `ready:` line tells
-what changed and what is left out of date, as information. It prints each
+([project-management:DEC-055-pr-lists-answers],
+[project-management:DEC-065-answers-read-from-check]): it stops on answers it
+cannot read, writes no list of them into the description and removes one an
+earlier run left; a change with answers merges under the same authorisation
+as any other, and the lines above the `ready:` line, the prompt or the merge
+tell what changed and what is left out of date, as information. It prints each
 `[person]` finding whole, and a `--yes` run merges only on verdicts carrying
 them that it found when it started, standing for the head it merges.
 
@@ -68,12 +71,25 @@ there instead, and changes nothing else.
           it merges only up to date, with the merge of the base to make,
           unless the base merges through a queue, read once a run; where
           whether it does cannot be read, a line says so and the run goes on
-          ([project-management:DEC-064-base-merge-named] point 2).
+          ([project-management:DEC-064-base-merge-named] point 2). Where the
+          project names the checks that start the review
+          (`review.agents.start_after_checks`), this step ends once each has
+          passed and none has failed, and its line says the review starts
+          beside the rest. A name no check bears is read once more, then
+          warned of. The step then runs again once the review has ended,
+          waiting up to as long for the rest, and every stop above stops the
+          run before the merge ([project-management:DEC-063-task-builder]
+          point 8). A `--yes` run names none, so it runs no reviewer until
+          every check has passed: no stop can fall between a verdict it posts
+          and the findings' hold on it (DEC-055 point 3). A `--no-wait` run
+          names none either, since it only reads.
   review  In agent review mode, `review-pr`'s review on the pinned head: a
           verdict judged fresh for that head is kept, a stale or missing one
           re-run. A CHANGES_REQUESTED, kept or new, stops the run before the
           merge with the first line of each `[block]` finding; a reviewer
-          that could not be run stops it too. The advisories of the approvals
+          that could not be run stops it too. Where the review started beside
+          checks still running, that last line also names each that has failed
+          by then, so one fix round carries both. The advisories of the approvals
           are printed (DEC-028's finding tags, read by
           `_lib.agent_verdicts.findings`). `review-pr` works out the required
           set, so a reviewer a capability contributes runs though the project
@@ -91,7 +107,10 @@ there instead, and changes nothing else.
           verdict, and each stands for the pinned head; one posted by this
           run, or while it ran up to this step's read, stops it at `ready:`,
           and one that does not stand for the head stops every `--yes` run
-          there, naming the review it waits for (DEC-055 point 3). Verdicts
+          there, naming the review it waits for (DEC-055 point 3). Where the
+          review ran beside checks, this step runs before the wait for the
+          rest, so no way that wait ends hides a verdict the run posted, and
+          again after it, for one posted during it. Verdicts
           that cannot be read, or whose reviewers cannot be resolved, stop
           the run, and so does a remote reviewer's `[person]` finding on a PR
           whose author cannot be read, since its verdict cannot be told from
@@ -106,44 +125,51 @@ there instead, and changes nothing else.
           head's authorisation covers, a list other than the one at the head
           authorised, or one that cannot be read there, stops a `--yes` run
           at `ready:`. A list that cannot be read stops the run.
-  answers The change check's list of the answers the change wrote, and the
-          friction settings it alters, derived at the pinned head against the
-          PR's base (`_lib.friction_answers`), each `updated` document with the
-          sentence its author wrote under the description's `## What changed
-          in each updated document` — each item there it cannot read draws a
-          `warn:` line naming its line and the form a sentence takes, and
-          each sentence there on a document the list does not mark `updated`
-          draws one naming the edit that removes it, since the list never
-          shows it (DEC-055 point 3); neither refuses —
-          printed in full, in the plain words of
-          the description's `## Documentation this change affects` section,
-          and written into the PR's description, last before its footer, where
-          it is not there already; its lines begin `documents this change
-          affects:` (`STEP`). A section under that heading no command wrote is
-          removed. Refused: a derivation that cannot be read (nothing is merged
-          on a guess), a file the change touches whose front matter does not
-          parse, a word or an author's sentence that reads as a closing
-          reference or holds an HTML comment's delimiter, a list the
-          description cannot hold, and — where there is a list — a base whose
-          commits since the head left it changed a file the list's words are
-          on: the file the change check names for an answer, an answer file or
-          the artefact's own. A write the host answers with an error merges
-          nothing. Beside the list, never in it, the step prints each
-          revalidation on the base's tip that the change's answer on its
-          document did not read, which the check derived against the base it
-          fetched (`answered_apart_at_tip`, DEC-055 point 3): once merged,
-          each and the change's own are answered apart. It stops nothing.
-          The step also prints each grant and refusal the change adds to the
+  answers The answers the change wrote, and the friction settings it alters,
+          derived from the change check at the pinned head against the PR's
+          base (`_lib.friction_answers`, DEC-065 point 2). Its line begins
+          `documents this change affects:` (`STEP`) and counts the documents
+          the answers are on. What the person who authorises the merge is told
+          is kept for the lines just above the `ready:` line, the prompt or the
+          merge (DEC-065 point 4): what changed in each `updated` document, in
+          the sentence its author wrote under the description's `## What
+          changed in each updated document`; each document and each target of
+          a link left out of date, with the words naming its follow-up; each
+          answer the change check did not ask for, with its words; each
+          friction setting changed. No line is told for any other answer. Each
+          item under the sentences' heading it cannot read draws a `warn:` line
+          naming its line and the form a sentence takes, and each sentence there
+          on a document the change check does not mark `updated` draws one
+          naming the edit that removes it, since no reviewer checks it
+          (DEC-055 point 3); neither refuses. The description carries no list
+          of the answers: the region an earlier run left there, both its
+          markers and the heading directly above, is removed, and the line says
+          so. A start marker with no end marker after it draws a `warn:` line,
+          and the description stays as it is (DEC-065 point 1). Refused: answers
+          that cannot be read (nothing is merged on a guess), a file the change
+          touches whose front matter does not parse, a sentence that reads as a
+          closing reference, which the host would close an issue with at merge,
+          and — where there are answers or settings — a base whose commits since
+          the head left it changed a file the answers' words are on, the file
+          the change check names for an answer, an answer file or the
+          artefact's own, or the friction settings the change alters (DEC-065
+          point 5). A write the host answers with an error merges nothing.
+          Beside what is told, each revalidation on the base's tip that the
+          change's answer on its document did not read, which the check derived
+          against the base it fetched (`answered_apart_at_tip`, DEC-055 point
+          3): once merged, each and the change's own are answered apart. It
+          stops nothing. So is each grant and refusal the change adds to the
           fixers' grant list or removes from it, a line each: `fixers` in this
-          capability's project configuration, read where the head left its
-          base and at the pinned head (`fixers.answers_at`,
-          [project-management:DEC-056-drift-fixers] point 2). Those lines are
-          printed only, never written into the description. A grant list
-          that cannot be read stops the run, since what it cannot read it
-          cannot show. At a later head an earlier head's authorisation covers,
-          the change must be the one at the head authorised: any other, or
-          one that cannot be read there, stops a `--yes` run at `ready:`, as
-          an answer the change check did not ask for does.
+          capability's project configuration, read where the head left its base
+          and at the pinned head (`fixers.change_between`,
+          [project-management:DEC-056-drift-fixers] point 2). A grant list that
+          cannot be read stops the run, since what it cannot read it cannot
+          show. At a later head an earlier head's authorisation covers, the
+          change must be the one at the head authorised: any other, or one that
+          cannot be read there, stops a `--yes` run at `ready:`, as an answer the
+          change check did not ask for does. So does a document or a target left
+          out of date that the head authorised did not leave, or an answer the
+          run cannot read at that head.
   merge check
           The change check on the merge as it would land: the PR's base
           fetched, the merge of the pinned head with its tip built as a commit
@@ -163,14 +189,17 @@ there instead, and changes nothing else.
           merges it; the lines above it tell what changed in each updated
           document and which are left out of date, as information. At a
           terminal, `done-work`'s prompt asks, naming the head, after the
-          answers. A change
+          same lines. A change
           with answers merges under the same authorisation as any other; a
-          run the findings to judge hold stops at `ready:`. So does a run at
-          a later head an earlier head's authorisation covers, where it finds
-          a reviewer's finding to judge, an answer the change check did not
-          ask for, or a change to the fixers' grant list, or a list of the
-          accepted records the change alters, other than the one at the head
-          authorised; one that merges says which head and why it was covered. Its gates,
+          run the findings to judge hold stops at `ready:`. So does a `--yes`
+          run on a document the change check marks `updated` with no sentence,
+          or a sentence on a document it does not. So does a run at a later
+          head an earlier head's authorisation covers, where it finds a
+          reviewer's finding to judge, an answer the change check did not ask
+          for, or a document left out of date, a change to the fixers' grant
+          list or a list of the accepted records the change alters, other than
+          the one at the head authorised; one that merges says which head and
+          why it was covered. Its gates,
           refusals and queue handling are done-work's own; land-work decides
           on how its run ended (`done_work.run`), never on its exit code. A
           merge the host refused, on a PR it reads as behind a base it merges
@@ -211,6 +240,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import (
     accepted_records,
+    answers_told,
     bootstrap_gate,
     drift_queue,
     fixers,
@@ -239,7 +269,16 @@ from _lib.agent_verdicts import (
     tagged,
 )
 from _lib.audit import short_sha
-from _lib.ci_checks import FAILED, NO_RUN, PASSED, CiGateResult, evaluate_ci_gate
+from _lib.ci_checks import (
+    FAILED,
+    NO_RUN,
+    PASSED,
+    RUNNING,
+    CiGateResult,
+    evaluate_ci_gate,
+    named_checks_passed,
+    unreported_checks,
+)
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -292,13 +331,12 @@ DEFAULT_WAIT_MINUTES = 30.0
 #: How often the checks are read while they are waited for.
 POLL_SECONDS = 20.0
 
-#: How each line of the answers step begins: the description's section, named
-#: in plain words (DEC-055 point 1).
+#: How each line of the answers step begins: the documents the answers are on, in
+#: plain words.
 STEP = friction_answers.NAME
-#: Where the step's line says the list is, once it is in the description.
-_LISTED = "listed above and in the pull request's description"
-#: A section under the list's heading that no command wrote, as the step names it.
-_HAND_WRITTEN = "a list written by hand"
+#: The list of answers an earlier run wrote into the description, as the step names
+#: it when it removes it (DEC-065 point 1).
+_EARLIER_LIST = "the list of answers an earlier run left"
 #: What the answers step and the `ready:` line call a change to the fixers' grant
 #: list (DEC-056 point 2).
 GRANTS = "a change to which fixers may start"
@@ -431,8 +469,8 @@ class _ReviewEnd:
 @dataclass(frozen=True)
 class _AnswersEnd:
     """How the answers step ended, when it did not stop the run: what the person
-    who authorises the merge is told, as information, not a gate (DEC-055
-    point 3). A change with answers merges under the same authorisation as any
+    who authorises the merge is told, as information, not a gate (DEC-065
+    point 4). A change with answers merges under the same authorisation as any
     other."""
 
     #: How many documents the change updated, as `friction_answers.counted_told`
@@ -446,11 +484,12 @@ class _AnswersEnd:
     targets: int = 0
     #: How many of the project's friction settings the change alters.
     settings: int = 0
-    #: What the `ready:` line tells, a line each (`friction_answers.told`).
+    #: What the `ready:` line tells, a line each (`answers_told.at_head`).
     told: tuple[str, ...] = ()
-    #: How many answers the change check did not ask for: each needed the person's
-    #: acceptance, so a later head holding one is not covered by an earlier head's
-    #: authorisation (DEC-055 point 3).
+    #: How many answers the change check did not ask for, reasons for having no
+    #: anchors among them: each needed the person's acceptance, so a later head
+    #: holding one is not covered by an earlier head's authorisation (DEC-055
+    #: point 3). Their lines are in `told`.
     unasked: int = 0
     #: Each grant and refusal the change adds to the fixers' grant list or removes
     #: from it (DEC-056 point 2); its lines are in `told` too.
@@ -465,10 +504,18 @@ class _AnswersEnd:
     #: The change check's document at the pinned head, which serves the check of the
     #: merge where the head holds the base's tip it read (`friction_answers.merged`).
     checked: Mapping[str, Any] | None = None
-    #: Each document the description gives a sentence for that the list does not mark
-    #: `updated`: the list never shows it, so a run authorised up front holds until the
-    #: author removes it (DEC-055 point 3).
+    #: Each document the description gives a sentence for that the change check does
+    #: not mark `updated`: no reviewer checks it, so a run authorised up front holds
+    #: until the author removes it (DEC-055 point 3).
     unlisted: tuple[str, ...] = ()
+    #: Each document the change check marks `updated` that the description gives no
+    #: sentence for: a run authorised up front holds until the author writes it
+    #: (DEC-065 point 4).
+    unsaid: tuple[str, ...] = ()
+    #: Why an earlier head's authorisation does not cover what the pinned head leaves
+    #: out of date, as the `ready:` line says it, or "": it left less, or what it
+    #: left could not be read (`_left_moved`).
+    left_moved: str = ""
 
     def phrase(self) -> str:
         """What the `ready:` line says of the lines above it —
@@ -485,6 +532,9 @@ class _AnswersEnd:
         if self.targets:
             noun = "target of a link" if self.targets == 1 else "targets of a link"
             parts.append(f"{self.targets} {noun} left out of date")
+        if self.unasked:
+            noun = "answer" if self.unasked == 1 else "answers"
+            parts.append(f"{self.unasked} {noun} this change was not asked for")
         if self.settings:
             parts.append(friction_answers.CHECKED)
         if self.grants:
@@ -529,6 +579,7 @@ class _FindingsEnd:
 
 # How the ci step ended, when it did not stop the run.
 _CI_PASSED = "passed"
+_CI_FIRST_PASSED = "first-passed"
 _CI_WOULD_WAIT = "would-wait"
 _CI_PR_MERGED = "merged"
 
@@ -595,8 +646,9 @@ def _parser() -> argparse.ArgumentParser:
         metavar="MINUTES",
         help=(
             f"How long to wait for the checks on the PR's head (default "
-            f"{DEFAULT_WAIT_MINUTES:g}), and, where the base merges through a queue, "
-            "for the queue to merge it (passed to done-work)."
+            f"{DEFAULT_WAIT_MINUTES:g}), as long again for those still running once a "
+            "review started beside them has ended, and, where the base merges through a "
+            "queue, for the queue to merge it (passed to done-work)."
         ),
     )
     wait.add_argument(
@@ -666,12 +718,29 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
     # What a run authorised up front found when it started: the hold on the
     # `[person]` findings is what it found then (DEC-055 point 3).
     found = _found_at_start(head, config) if args.yes and not args.dry_run else None
-    ci = _wait_for_checks(
-        head, wait_seconds=_wait_seconds(args), dry_run=args.dry_run, config=config
+    wait_for_checks = functools.partial(
+        _wait_for_checks,
+        head,
+        wait_seconds=_wait_seconds(args),
+        dry_run=args.dry_run,
+        config=config,
+        # Whether a PR read as behind stops here, read once a run: the queue is the base's.
+        behind_stops=functools.cache(lambda: _behind_stops(head, config)),
     )
+    ci = wait_for_checks(first=_checks_that_start_review(args, config))
     if ci == _CI_PR_MERGED:
         return _merge(args, None, config, reading)
-    review = _review(args, head, config, reading)
+    beside_checks = ci == _CI_FIRST_PASSED
+    review = _review(args, head, config, reading, beside_checks=beside_checks)
+    if beside_checks:
+        # Before the wait: however it ends, this run shows the verdicts it posted, which
+        # a later `--yes` would find at its start (DEC-055 point 3). The step runs again
+        # below, for a verdict posted during the wait.
+        _findings(args, head, config, capability_root, found)
+        # The rest of the checks, which ran beside the review (DEC-063 point 8).
+        ci = wait_for_checks(reviewed=True)
+        if ci == _CI_PR_MERGED:
+            return _merge(args, None, config, reading)
     # Before the answers: this step stops on what it cannot read, and a stop
     # here has written nothing.
     to_judge = _findings(args, head, config, capability_root, found)
@@ -686,30 +755,49 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
     # with the base as it stands now (DEC-055 point 6).
     _merge_check(head, answers)
     if args.dry_run:
-        return _merge(args, head, config, reading)
-    uncovered = _uncovered(head, to_judge, answers)
-    unlisted = _unlisted_hold(head, answers)
-    if args.yes and (to_judge.held is not None or uncovered or unlisted):
-        return _ready(args, head, review, config, answers, to_judge, reading, uncovered + unlisted)
+        return _merge(args, head, config, reading, answers)
+    holds = (
+        _uncovered(head, to_judge, answers)
+        + _unlisted_hold(head, answers)
+        + _unsaid_hold(head, answers)
+    )
+    if args.yes and (to_judge.held is not None or holds):
+        return _ready(args, head, review, config, answers, to_judge, reading, holds)
     if not args.yes and not _interactive():
         return _ready(args, head, review, config, answers, to_judge, reading)
-    return _merge(args, head, config, reading)
+    return _merge(args, head, config, reading, answers)
 
 
 def _unlisted_hold(head: _Head, answers: _AnswersEnd) -> str:
     """Why a run authorised up front holds on the author's sentences, as the `ready:`
-    line says it, or "": the description gives a sentence on a document the list
-    does not mark `updated`, which the list never shows and no reviewer checks. The
-    person authorised before the warning was shown, so the run stops ready until the
-    author removes it, as a `[person]` finding holds it (DEC-055 point 3)."""
+    line says it, or "": the description gives a sentence on a document the change
+    check does not mark `updated`, which no reviewer checks. The person authorised
+    before the warning was shown, so the run stops ready until the author removes
+    it, as a `[person]` finding holds it (DEC-055 point 3)."""
     if not answers.unlisted:
         return ""
     names = ", ".join(answers.unlisted)
     one = len(answers.unlisted) == 1
     return (
-        f"; held for the sentence{'' if one else 's'} on {names}, which the list does not "
-        f"show (above): remove {'it' if one else 'them'} with `edit-pr {head.pr_number} "
+        f"; held for the sentence{'' if one else 's'} on {names}, which no reviewer "
+        f"checks (above): remove {'it' if one else 'them'} with `edit-pr {head.pr_number} "
         "--body-file <file>`, then run the command below again"
+    )
+
+
+def _unsaid_hold(head: _Head, answers: _AnswersEnd) -> str:
+    """Why a run authorised up front holds on a missing sentence, as the `ready:` line
+    says it, or "": the change check marks a document `updated` that the description
+    gives no sentence for. The move to review refused that, but an edit after the
+    verdict stales no verdict, and nothing else stops it here (DEC-065 point 4)."""
+    if not answers.unsaid:
+        return ""
+    names = ", ".join(answers.unsaid)
+    one = len(answers.unsaid) == 1
+    return (
+        f"; held for {names}, updated with no sentence on what changed (above): write "
+        f"{'it' if one else 'them'} with `edit-pr {head.pr_number} --body-file <file>`, then "
+        "run the command below again"
     )
 
 
@@ -717,9 +805,10 @@ def _uncovered(head: _Head, to_judge: _FindingsEnd, answers: _AnswersEnd) -> str
     """Why the authorisation for an earlier head does not cover the pinned head after
     all, as the `ready:` line says it, or "": the later head holds what needs the
     person — a reviewer's `[person]` finding, an answer the change check did not ask
-    for (DEC-055 point 3), a change to the fixers' grant list other than the one at
-    the head authorised (DEC-056 point 2), or a list of the accepted records the
-    change alters other than the one at the head authorised (`_records_moved`)."""
+    for (DEC-055 point 3), what it leaves out of date beyond the head authorised
+    (`_left_moved`), a change to the fixers' grant list other than the one at the head
+    authorised (DEC-056 point 2), or a list of the accepted records the change alters
+    other than the one at the head authorised (`_records_moved`)."""
     if not head.authorised:
         return ""
     needs: list[str] = []
@@ -730,6 +819,8 @@ def _uncovered(head: _Head, to_judge: _FindingsEnd, answers: _AnswersEnd) -> str
     if answers.unasked:
         one = answers.unasked == 1
         needs.append(f"{answers.unasked} answer{'' if one else 's'} this change was not asked for")
+    if answers.left_moved:
+        needs.append(answers.left_moved)
     if answers.grants_moved:
         needs.append(answers.grants_moved)
     if not needs:
@@ -935,21 +1026,51 @@ def _wait_seconds(args: argparse.Namespace) -> float:
     return minutes * 60
 
 
+def _checks_that_start_review(args: argparse.Namespace, config: dict[str, Any]) -> tuple[str, ...]:
+    """The checks whose pass starts the review, which the project names
+    (`review.agents.start_after_checks`); none where it names none, or where the
+    value is not a list of names, so the review waits for every check. `pkit data
+    validate` refuses such a value.
+
+    None for a run authorised up front: a stop between a verdict it posted and the
+    findings' step would leave the verdict found at the next run's start, unshown
+    (DEC-055 point 3). None for `--no-wait`, which only reads."""
+    if args.yes or args.no_wait:
+        return ()
+    review = config.get("review") if isinstance(config, dict) else None
+    agents = review.get("agents") if isinstance(review, dict) else None
+    named = agents.get("start_after_checks") if isinstance(agents, dict) else None
+    if not isinstance(named, list) or not all(isinstance(name, str) for name in named):
+        return ()
+    return tuple(named)
+
+
 def _wait_for_checks(
-    head: _Head, *, wait_seconds: float, dry_run: bool, config: dict[str, Any]
+    head: _Head,
+    *,
+    wait_seconds: float,
+    dry_run: bool,
+    config: dict[str, Any],
+    behind_stops: Callable[[], bool],
+    first: tuple[str, ...] = (),
+    reviewed: bool = False,
 ) -> str:
     """Wait for the checks on the pinned head, as long as `wait_seconds`.
 
-    Returns how it ended when the run goes on — the checks passed, a dry run
-    would wait for them, or the PR merged meanwhile — and stops the run
-    otherwise. The checks are read with the head they belong to, so a run on
-    another head never counts: a head that moved stops the run.
+    Returns how it ended when the run goes on — the checks passed, each of `first`
+    passed and none failed, a dry run would wait for them, or the PR merged
+    meanwhile — and stops the run otherwise. The checks are read with the head they
+    belong to, so a run on another head never counts: a head that moved stops the
+    run. `reviewed` says the review has ended, as a stop then says.
+
+    Every check reported can pass before one of `first` has started, so that reading
+    is read once more. A name still unreported then is warned of, and the run reads
+    the checks again once the review has ended.
     """
     issue, number = head.issue, head.pr_number
     started = _monotonic()
     said = ""
-    # Whether a PR read as behind stops here, read once a run: the queue is the base's.
-    behind_stops = functools.cache(lambda: _behind_stops(head, config))
+    read_again = False
     while True:
         checks = _read_pr(number, config)
         if checks.problem:
@@ -973,7 +1094,8 @@ def _wait_for_checks(
                 EXIT_HEAD_MOVED,
                 f"ci: stopped — PR #{number}'s head moved from {short_sha(head.oid)} to "
                 f"{short_sha(checks.head)} while its checks were awaited. Nothing was "
-                f"reviewed or merged; `land-work {issue}` checks and reviews the new head",
+                f"{'merged' if reviewed else 'reviewed or merged'}; `land-work {issue}` "
+                "checks and reviews the new head",
             )
         elif checks.conflicting:
             raise _Stop(EXIT_NEEDS_CHANGE, _conflict_line("ci", head))
@@ -982,33 +1104,82 @@ def _wait_for_checks(
         else:
             gate = checks.gate
             assert gate is not None
+            missing = unreported_checks(checks.rollup, first)
+            if gate.state == PASSED and (not missing or read_again or dry_run):
+                return _all_passed(head, checks.rollup, missing)
             if gate.state == PASSED:
-                _say(f"ci: passed on {short_sha(head.oid)}{_passed_detail(checks.rollup)}")
-                return _CI_PASSED
-            if gate.state == FAILED:
-                failed = "; ".join(
-                    f"{check.name} ({check.outcome})" + (f" {check.url}" if check.url else "")
-                    for check in gate.failed
-                )
+                read_again = True
+                progress = f"{', '.join(missing)} not reported for {short_sha(head.oid)} yet"
+            elif gate.state == FAILED:
                 raise _Stop(
                     EXIT_NEEDS_CHANGE,
-                    f"ci: failed on {short_sha(head.oid)} — {failed}. Review and merge not started",
+                    f"ci: failed on {short_sha(head.oid)} — {_failed_checks(gate)}. "
+                    f"{'Merge' if reviewed else 'Review and merge'} not started",
                 )
-            progress = (
-                f"no check has been reported for {short_sha(head.oid)} yet"
-                if gate.state == NO_RUN
-                else f"running on {short_sha(head.oid)}: {', '.join(gate.running)}"
-            )
-            if dry_run:
-                _say(f"ci: (dry-run) {progress} — would wait up to {_duration(wait_seconds)}")
-                return _CI_WOULD_WAIT
-            waited = _monotonic() - started
-            if waited >= wait_seconds:
-                raise _Stop(EXIT_CI_PENDING, _ran_out(head, gate, waited, wait_seconds))
+            elif gate.state == RUNNING and named_checks_passed(checks.rollup, first):
+                return _first_passed(head, first, gate, wait_seconds, dry_run=dry_run)
+            else:
+                progress = (
+                    f"no check has been reported for {short_sha(head.oid)} yet"
+                    if gate.state == NO_RUN
+                    else f"running on {short_sha(head.oid)}: {', '.join(gate.running)}"
+                )
+                if dry_run:
+                    _say(f"ci: (dry-run) {progress} — would wait up to {_duration(wait_seconds)}")
+                    return _CI_WOULD_WAIT
+                waited = _monotonic() - started
+                if waited >= wait_seconds:
+                    raise _Stop(EXIT_CI_PENDING, _ran_out(head, gate, waited, wait_seconds))
         if progress != said:
             print(f"  ci: {progress}", flush=True)
             said = progress
         _sleep(max(0.0, min(POLL_SECONDS, wait_seconds - (_monotonic() - started))))
+
+
+def _all_passed(head: _Head, rollup: list[dict[str, Any]], missing: tuple[str, ...]) -> str:
+    """Say that every check reported passed on the pinned head, and how the step ends.
+    Where `missing` holds a name no check bears, the configuration may be wrong or the
+    check may start late, so a warning says so and the checks are read again after the
+    review."""
+    if missing:
+        print(
+            f"  warn: no check on {short_sha(head.oid)} is named {', '.join(missing)}, which "
+            "review.agents.start_after_checks names, so the review waited for every check "
+            "reported",
+            flush=True,
+        )
+    _say(f"ci: passed on {short_sha(head.oid)}{_passed_detail(rollup)}")
+    return _CI_FIRST_PASSED if missing else _CI_PASSED
+
+
+def _first_passed(
+    head: _Head,
+    first: tuple[str, ...],
+    gate: CiGateResult,
+    wait_seconds: float,
+    *,
+    dry_run: bool,
+) -> str:
+    """Say that the checks that start the review passed on the pinned head and the
+    rest still run, and how the step ends: the review starts beside them, or a dry
+    run would start it (DEC-063 point 8)."""
+    passed, rest = f"{', '.join(first)} passed on {short_sha(head.oid)}", ", ".join(gate.running)
+    if dry_run:
+        _say(
+            f"ci: (dry-run) {passed} — would start the review, then wait up to "
+            f"{_duration(wait_seconds)} for the rest: {rest}"
+        )
+        return _CI_WOULD_WAIT
+    _say(f"ci: {passed} — the review starts beside the rest: {rest}")
+    return _CI_FIRST_PASSED
+
+
+def _failed_checks(gate: CiGateResult) -> str:
+    """Each check that failed and where to read it, as a line says it."""
+    return "; ".join(
+        f"{check.name} ({check.outcome})" + (f" {check.url}" if check.url else "")
+        for check in gate.failed
+    )
 
 
 def _read_pr(pr_number: int, config: dict[str, Any]) -> _Checks:
@@ -1166,6 +1337,8 @@ def _review(
     head: _Head,
     config: dict[str, Any],
     reading: issue_branch.Reading,
+    *,
+    beside_checks: bool,
 ) -> _ReviewEnd:
     """Have the reviewers whose verdicts are not fresh review the pinned head.
 
@@ -1173,7 +1346,9 @@ def _review(
     The stop is chosen in this order: the head moved; a CHANGES_REQUESTED;
     something could not be read; a reviewer could not be run — so one
     reviewer's block is reported even when another timed out. `review-pr` is
-    handed the issue's branch as this run read it (`reading`).
+    handed the issue's branch as this run read it (`reading`). `beside_checks`
+    says checks still ran as the review started, so a CHANGES_REQUESTED's stop
+    names each that has failed by then.
     """
     issue = head.issue
     labels = done_work._label_names(gh_get_issue(issue, config, fields="labels"))
@@ -1212,14 +1387,15 @@ def _review(
         raise _Stop(
             EXIT_HEAD_MOVED,
             f"review: stopped — PR #{head.pr_number}'s head is {short_sha(run.moved_to)}, "
-            f"not {short_sha(head.oid)}, the head whose checks passed. Nothing was merged; "
+            f"not {short_sha(head.oid)}, the head this run pinned. Nothing was merged; "
             f"`land-work {issue}` checks and reviews the new head",
         )
     if requested:
         raise _Stop(
             EXIT_NEEDS_CHANGE,
             f"review: changes requested by {', '.join(requested)} — the blocking findings "
-            "are above; merge not started",
+            f"are above{_failed_meanwhile(head, config) if beside_checks else ''}; merge not "
+            "started",
         )
     if run.reason:
         raise _Stop(EXIT_UNREADABLE, f"review: stopped — {run.reason}")
@@ -1253,6 +1429,16 @@ def _review(
     return agents
 
 
+def _failed_meanwhile(head: _Head, config: dict[str, Any]) -> str:
+    """What the stop on a CHANGES_REQUESTED adds where the review ran beside checks:
+    each that has failed by then, so one fix round carries both; "" where none has,
+    or the checks cannot be read, since the stop stands without them."""
+    checks = _read_pr(head.pr_number, config)
+    if checks.head != head.oid or checks.gate is None or not checks.gate.failed:
+        return ""
+    return f", and a check failed on {short_sha(head.oid)}: {_failed_checks(checks.gate)}"
+
+
 def _blocking_lines(body: str, pr_number: int) -> list[str]:
     """What a CHANGES_REQUESTED says blocks: the first line of each `[block]`
     finding, else the verdict's first lines and where to read it all."""
@@ -1283,187 +1469,136 @@ def _first_lines(body: str, tag: str) -> list[str]:
 def _answers(
     args: argparse.Namespace, head: _Head, config: dict[str, Any], capability_root: Path
 ) -> _AnswersEnd:
-    """The change check's list of the answers the change wrote, and the friction
-    settings it alters, derived at the pinned head against the PR's base, each
-    `updated` document with its author's sentence from the description, printed
-    in full, and written into the PR's description where it is not there already
-    (DEC-055). Stops the run on a list it cannot read or must not write, and on a
-    write the host answered with an error, which merges nothing; a dry run writes
-    nothing."""
+    """The answers the change wrote, and the friction settings it alters, derived
+    from the change check at the pinned head against the PR's base (DEC-065 point
+    2): what the person who authorises the merge is told, as information, kept for
+    the lines above the `ready:` line, the prompt or the merge (DEC-065 point 4).
+    The description carries no list of them: a region an earlier run left there is
+    removed (DEC-065 point 1).
+    Stops the run on answers it cannot read, on a file the change touches whose
+    front matter does not parse, on a base that changed a file the answers' words
+    are on or the friction settings the change alters, on a sentence that reads as a
+    closing reference (DEC-065 point 5), and on a write the host answered with an
+    error, which merges nothing; a dry run writes nothing."""
     issue, number, sha = head.issue, head.pr_number, short_sha(head.oid)
     if not head.base_branch:
         raise _Stop(
             EXIT_UNREADABLE,
-            f"{STEP}: PR #{number}'s base branch could not be read, so the change check's "
-            f"list has no base to be derived against. Nothing was merged; run `land-work "
-            f"{issue}` again",
+            f"{STEP}: PR #{number}'s base branch could not be read, so the change check "
+            f"has no base to be run against. Nothing was merged; run `land-work {issue}` "
+            "again",
         )
-    derived = friction_answers.derive(head.oid, head.base_branch, source=head.source)
+    fed = answers_told.at_head(
+        head.oid,
+        head.base_branch,
+        capability_root,
+        lambda: _read_body(head, config),
+        source=head.source,
+    )
+    derived = fed.derived
     document = derived.document
     if document is None:
         raise _Stop(
             EXIT_UNREADABLE,
-            f"{STEP}: the change check's list at {sha} could not be read — {derived.problem}. "
-            f"Nothing was merged; run `land-work {issue}` again",
+            f"{STEP}: the change check's answers at {sha} could not be read — "
+            f"{derived.problem}. Nothing was merged; run `land-work {issue}` again",
         )
     touched = _unreadable_in_change(derived)
     if touched:
         raise _Stop(
             EXIT_NEEDS_CHANGE,
             f"{STEP}: refused — front matter the change check cannot read, in "
-            f"{_files(touched)} this change touches, so its words cannot be listed. Fix it "
-            f"(`pkit validate` names the problem), push, and run `land-work {issue}` again",
+            f"{_files(touched)} this change touches, so the answers on it cannot be read. "
+            f"Fix it (`pkit validate` names the problem), push, and run `land-work {issue}` "
+            "again",
         )
-    grants = _grant_change(derived, head, capability_root)
+    grants = _grant_change(fed.grants, head)
     moved = _grants_moved(derived, head, capability_root, grants)
-    # Against the base's tip, which `derive` fetched for the run: printed beside the
-    # list, never in it, and stopping nothing (DEC-055 point 3).
-    apart = tuple(friction_answers.apart(document))
-    body = _read_body(head, config)
-    if not derived.listed:
-        _warn_unread(friction_answers.strip(body))
-        unlisted = _warn_unlisted(document, body, head)
-        end = _no_answers(args, head, body, config, capability_root, grants, moved, apart)
-        return replace(end, checked=document, unlisted=unlisted)
-    if derived.outdated:
-        _refuse_moved_base(derived, head)
-    settings = derived.settings
-    for found, why in (
-        (
-            friction_answers.closing_reference(document, settings),
-            "read as a closing reference ({words}): in the description and the squash commit "
-            "they would close an issue at merge",
-        ),
-        (
-            friction_answers.comment_delimiter(document, settings),
-            "hold an HTML comment's delimiter ({words}): in the description it could hide the "
-            "list or the markers that delimit it",
-        ),
-    ):
-        if found is not None:
-            location, words = found
-            raise _Stop(
-                EXIT_NEEDS_CHANGE,
-                f"{STEP}: refused — the words on {location} {why.format(words=words)}. Reword "
-                f"them there, push, and run `land-work {issue}` again. Nothing was written",
-            )
-    sentences = friction_answers.given(document, friction_answers.sentences(body))
-    for found, why in (
-        (
-            friction_answers.sentence_closing_reference(sentences),
-            "reads as a closing reference ({words}): in the list it would close an issue at merge",
-        ),
-        (
-            friction_answers.sentence_comment_delimiter(sentences),
-            "holds an HTML comment's delimiter ({words}): in the list it could hide the list or "
-            "the markers that delimit it",
-        ),
-    ):
-        if found is not None:
-            location, words = found
-            raise _Stop(
-                EXIT_NEEDS_CHANGE,
-                f"{STEP}: refused — the sentence on what changed in {location}, under "
-                f"`{friction_answers.SENTENCES_HEADING}` in PR #{number}'s description, "
-                f"{why.format(words=words)}. Reword it there (`edit-pr {number}`), and run "
-                f"`land-work {issue}` again. Nothing was written",
-            )
-    section = friction_answers.render(document, head.oid, settings, sentences)
-    _warn_unread(body if friction_answers.current(body, section) else friction_answers.strip(body))
+    body = fed.body
+    _warn_unread(friction_answers.strip(body))
     unlisted = _warn_unlisted(document, body, head)
-    for line in friction_answers.lines(document, settings, sentences):
-        print(f"  {line}")
-    for line in (*apart, *(change.said() for change in grants)):
-        print(f"  {line}")
-    count = friction_answers.documents(derived.answers)
-    written = _with_grants(friction_answers.affected(count, settings=bool(settings)), grants)
+    if derived.listed and derived.outdated:
+        _refuse_moved_base(derived, head)
+    _refuse_closing_references(fed.sentences, head)
+    settings = derived.settings
     counted = friction_answers.counted_told(document)
     end = _AnswersEnd(
         counted.updated,
         counted.left,
         counted.targets,
         settings=len(settings),
-        told=(
-            *friction_answers.told(document, settings, sentences),
-            *apart,
-            *(change.said() for change in grants),
-        ),
-        unasked=sum(1 for entry in derived.answers if entry.get("asked") is not True),
+        told=fed.told,
+        unasked=counted.unasked,
         grants=grants,
         grants_moved=moved,
-        apart=len(apart),
+        # Against the base's tip, which `derive` fetched for the run: they stop nothing
+        # (DEC-055 point 3).
+        apart=len(friction_answers.apart(document)),
         checked=document,
         unlisted=unlisted,
+        unsaid=tuple(friction_answers.unsaid(document, fed.sentences)),
+        left_moved=_left_moved(head, document),
     )
-    if friction_answers.current(body, section):
-        _say(f"{STEP}: {written}, {_LISTED}")
-        return end
-    new_body = _stamped(body, section, capability_root)
-    if not friction_answers.fits(new_body):
+    count = friction_answers.documents(derived.answers)
+    written = _with_grants(friction_answers.affected(count, settings=bool(settings)), grants)
+    _say(f"{STEP}: {written}{_remove_list(args, head, body, config, capability_root)}")
+    return end
+
+
+def _refuse_closing_references(sentences: Mapping[str, str], head: _Head) -> None:
+    """Refuse a sentence that reads as a closing reference, which nothing overrides:
+    it stays in the description and the squash commit, so the host would close an
+    issue with it at merge, past the checkbox gate and the cascade (DEC-065 point 5)."""
+    found = friction_answers.closing_references(sentences)
+    if found:
+        said = "; ".join(friction_answers.closing_message(*one) for one in found)
         raise _Stop(
             EXIT_NEEDS_CHANGE,
-            f"{STEP}: refused — PR #{number}'s description with the list is {len(new_body)} "
-            f"characters, past the {friction_answers.BODY_LIMIT} the host keeps. Shorten the "
-            "description's own text, split the change, or narrow the anchor, push, and run "
-            f"`land-work {issue}` again. Nothing was written. The only way past it is "
-            "`done-work`, which lands the PR without the list",
+            f"{STEP}: refused — {said}, with `edit-pr {head.pr_number} --body-file <file>`, "
+            f"and run `land-work {head.issue}` again. Nothing was written",
         )
-    removed = f"; removed {_HAND_WRITTEN}" if friction_answers.hand_written(body) else ""
+
+
+def _left_moved(head: _Head, document: Mapping[str, Any]) -> str:
+    """Where the head is a later one an earlier head's authorisation covers, why that
+    authorisation does not cover what the pinned head leaves out of date, or "": it
+    leaves something the head authorised did not, or that head's answers could not be
+    read. The person was told what that head leaves, so anything more is what nobody
+    told them (COR-050 point 3, DEC-065 point 4)."""
+    left = friction_answers.left_out(document)
+    if not head.authorised or not left:
+        return ""
+    earlier = short_sha(head.authorised)
+    found = friction_answers.checked(head.authorised, head.base_branch).document
+    if found is None:
+        return f"something left out of date, with the answers at {earlier} unread"
+    told = friction_answers.left_out(found)
+    new = any(line not in told for line in left)
+    return f"something left out of date that {earlier} did not leave" if new else ""
+
+
+def _remove_list(
+    args: argparse.Namespace, head: _Head, body: str, config: dict[str, Any], capability_root: Path
+) -> str:
+    """Remove from the PR's description the region of answers an earlier run wrote
+    (DEC-065 point 1): what the step's line says of it, or "" where the description
+    carries none. A start marker with no end marker draws a warning, and the
+    description stays as it is. A dry run removes nothing; a write the host answered
+    with an error stops the run, which merges nothing."""
+    if friction_answers.orphaned(body):
+        print(f"  warn: {friction_answers.ORPHAN_WARNING}")
+    if not friction_answers.has_list(body):
+        return ""
     if args.dry_run:
-        _say(f"{STEP}: (dry-run) {written}, {_LISTED} (would write){removed}")
-        return end
-    problem = _write_body(head, new_body, config)
+        return f" — would remove {_EARLIER_LIST} from the pull request's description"
+    problem = _write_body(head, _stamped(body, capability_root), config)
     if problem:
         raise _Stop(
             EXIT_RETRY,
-            f"{STEP}: {written}, listed above, but the list could not be written to PR "
-            f"#{number}'s description ({problem}), and the host may have kept it all the same. "
-            f"Nothing was merged; run `land-work {issue}` again",
+            f"{STEP}: {_EARLIER_LIST} could not be removed from PR #{head.pr_number}'s "
+            f"description: {problem}. Nothing was merged; run `land-work {head.issue}` again",
         )
-    _say(f"{STEP}: {written}, {_LISTED} (written now){removed}")
-    return end
-
-
-def _no_answers(
-    args: argparse.Namespace,
-    head: _Head,
-    body: str,
-    config: dict[str, Any],
-    capability_root: Path,
-    grants: tuple[fixers.GrantChange, ...] = (),
-    moved: str = "",
-    apart: tuple[str, ...] = (),
-) -> _AnswersEnd:
-    """A change that wrote no answers and alters no friction setting: the run goes
-    on as it would without the step, and a list an earlier head left in the
-    description — or a section under its heading no command wrote — is removed.
-    A revalidation the merge would leave answered apart from one the change moved,
-    and a change to the fixers' grant list, are printed all the same."""
-    said = (*apart, *(change.said() for change in grants))
-    for line in said:
-        print(f"  {line}")
-    none = _with_grants("none", grants)
-    end = _AnswersEnd(told=said, grants=grants, grants_moved=moved, apart=len(apart))
-    if friction_answers.current(body, None):
-        _say(f"{STEP}: {none}")
-        return end
-    left = [
-        *(["the list an earlier head left"] if friction_answers.has_list(body) else []),
-        *([_HAND_WRITTEN] if friction_answers.hand_written(body) else []),
-    ]
-    what = " and ".join(left)
-    if args.dry_run:
-        _say(f"{STEP}: (dry-run) {none} — would remove {what} from the pull request's description")
-    else:
-        problem = _write_body(head, _stamped(body, None, capability_root), config)
-        if problem:
-            raise _Stop(
-                EXIT_RETRY,
-                f"{STEP}: {none}, and {what} could not be removed from PR #{head.pr_number}'s "
-                f"description: {problem}. Nothing was merged; run `land-work {head.issue}` again",
-            )
-        _say(f"{STEP}: {none} — removed {what} from the pull request's description")
-    return end
+    return f" — removed {_EARLIER_LIST} from the pull request's description"
 
 
 def _with_grants(written: str, grants: tuple[fixers.GrantChange, ...]) -> str:
@@ -1475,16 +1610,15 @@ def _with_grants(written: str, grants: tuple[fixers.GrantChange, ...]) -> str:
 
 
 def _grant_change(
-    derived: friction_answers.Derivation, head: _Head, capability_root: Path
+    found: tuple[fixers.GrantChange, ...] | fixers.ChangeUnread, head: _Head
 ) -> tuple[fixers.GrantChange, ...]:
     """Each grant and refusal the change adds to the fixers' grant list or removes
-    from it: `fixers` in this capability's project configuration, read where the
-    head left its base and at the head (DEC-056 point 2). A list that cannot be
-    read stops the run, which merges nothing it could not show."""
-    issue, sha = head.issue, short_sha(head.oid)
-    found = _grants_between(derived.merge_base, head.oid, capability_root)
-    if not isinstance(found, _GrantsUnread):
+    from it: `fixers` in this capability's project configuration, as `found` read
+    it where the head left its base and at the head (DEC-056 point 2). A list that
+    cannot be read stops the run, which merges nothing it could not show."""
+    if not isinstance(found, fixers.ChangeUnread):
         return found
+    issue, sha = head.issue, short_sha(head.oid)
     if found.at_head:
         raise _Stop(
             EXIT_NEEDS_CHANGE,
@@ -1522,8 +1656,8 @@ def _grants_moved(
     left = derived.merge_base
     if not _left_base_at(left, head.authorised, derived.tip):
         return unread
-    found = _grants_between(left, head.authorised, capability_root)
-    if isinstance(found, _GrantsUnread):
+    found = fixers.change_between(left, head.authorised, capability_root)
+    if isinstance(found, fixers.ChangeUnread):
         return unread
     if found != grants:
         return f"a change to which fixers may start other than the one at {earlier}"
@@ -1543,46 +1677,14 @@ def _left_base_at(fork: str, oid: str, tip: str) -> bool:
     return beyond is not None and _count_commits(f"{oid}..{tip}") == beyond
 
 
-@dataclass(frozen=True)
-class _GrantsUnread:
-    """Why the grant list's change cannot be read, and whether the fault is at the
-    head, which the pull request can mend."""
-
-    why: str
-    at_head: bool = False
-
-
-def _grants_between(
-    merge_base: str, oid: str, capability_root: Path
-) -> tuple[fixers.GrantChange, ...] | _GrantsUnread:
-    """The grant list's change from `merge_base` to `oid`, or why it cannot be read.
-    A configuration the change does not touch makes no change, and is not read."""
-    if not merge_base:
-        return _GrantsUnread("the change check named no commit the head left its base at")
-    root = capability_root.parents[2]
-    path = (capability_root / fixers.CONFIG_RELATIVE).relative_to(root).as_posix()
-    if _git("diff", "--quiet", merge_base, oid, "--", path).returncode == 0:
-        return ()
-    try:
-        before = fixers.answers_at(merge_base, path)
-    except (fixers.Unreadable, fixers.Malformed) as exc:
-        return _GrantsUnread(f"where the head left its base, {short_sha(merge_base)}: {exc}")
-    try:
-        after = fixers.answers_at(oid, path)
-    except fixers.Malformed as exc:
-        return _GrantsUnread(str(exc), at_head=True)
-    except fixers.Unreadable as exc:
-        return _GrantsUnread(str(exc))
-    return fixers.grant_change(before, after)
-
-
 def _refuse_moved_base(derived: friction_answers.Derivation, head: _Head) -> None:
     """Where the base moved on after the head left it, refuse when its commits
-    since changed what the list's words are on — the file the change check names
-    for an answer, an answer file or the artefact's own (`listed_paths`), or the
-    friction settings the list shows: the merge could then land words the list
-    does not show. An outdated base that changed none of them stops nothing; one
-    whose changes cannot be read is refused, never guessed."""
+    since changed what the answers' words are on — the file the change check names
+    for an answer, an answer file or the artefact's own (`listed_paths`) — or the
+    friction settings the change alters: the merge could then land answers other
+    than those the reviewer checked (DEC-065 point 5). An outdated base that changed
+    none of them stops nothing; one whose changes cannot be read is refused, never
+    guessed."""
     paths = friction_answers.listed_paths(derived.document or {})
     changed: list[str] | None = None
     if derived.merge_base and derived.tip:
@@ -1596,15 +1698,17 @@ def _refuse_moved_base(derived: friction_answers.Derivation, head: _Head) -> Non
         return
     issue, number, sha = head.issue, head.pr_number, short_sha(head.oid)
     if changed is None or isinstance(settings, str):
-        which = "which of the list's files and settings its commits since changed could not be read"
+        which = (
+            "which of the answers' files and settings its commits since changed could not be read"
+        )
     else:
-        what = [f"{_files(changed)} the list's words are on"] if changed else []
-        what += [friction_answers.SETTINGS_WHERE + " the list shows"] if settings else []
+        what = [f"{_files(changed)} the answers' words are on"] if changed else []
+        what += [friction_answers.SETTINGS_WHERE + " the change alters"] if settings else []
         which = f"its commits since changed {' and '.join(what)}"
     raise _Stop(
         EXIT_NEEDS_CHANGE,
         f"{STEP}: refused — {head.base} moved on after PR #{number}'s head left it, and "
-        f"{which}, so its merge can land words the list at {sha} does not show. Merge "
+        f"{which}, so its merge can land answers other than those at {sha}. Merge "
         f"{head.base} into {head.branch} (`git merge {head.base_remote}/{head.base}`), push, and "
         f"run `land-work {issue}` again",
     )
@@ -1612,9 +1716,9 @@ def _refuse_moved_base(derived: friction_answers.Derivation, head: _Head) -> Non
 
 def _unreadable_in_change(derived: friction_answers.Derivation) -> list[str]:
     """The files whose front matter does not parse at the head that the change
-    touched: words on them may be answers the list cannot show. A file the
-    change did not touch holds no word of it. Where the change's files cannot
-    be read, every such file counts."""
+    touched: words on them may be answers the change check cannot read. A file
+    the change did not touch holds no answer of the change. Where the change's
+    files cannot be read, every such file counts."""
     if not derived.unreadable:
         return []
     proc = _git("diff", "--name-only", "-z", "--no-renames", derived.merge_base, derived.head)
@@ -1658,18 +1762,18 @@ def _read_body(head: _Head, config: dict[str, Any]) -> str:
 def _warn_unread(description: str) -> None:
     """A warning for each item under the description's sentences heading that gives
     no sentence, naming its line in `description` — the description as this run
-    leaves it, the list moved last where the run writes it — and the form a
-    sentence takes."""
+    leaves it, without a list an earlier run wrote — and the form a sentence
+    takes."""
     for item in friction_answers.unread(description):
         print(f"  warn: {friction_answers.unread_warning(item)}")
 
 
 def _warn_unlisted(document: Mapping[str, Any], description: str, head: _Head) -> tuple[str, ...]:
     """A warning for each sentence the author gives in `description` on a document
-    the list derived at the pinned head, the change check's `document`, does not
-    mark `updated`: the list never shows it, so the author removes it with the
-    edit named (DEC-055 point 3). It refuses nothing; the documents it names hold
-    a run authorised up front (`_unlisted_hold`)."""
+    the change check's `document` at the pinned head does not mark `updated`: no
+    reviewer checks it, so the author removes it with the edit named (DEC-055
+    point 3). It refuses nothing; the documents it names hold a run authorised up
+    front (`_unlisted_hold`)."""
     said = friction_answers.sentences(description)
     found = tuple(friction_answers.unlisted(document, said))
     for location in found:
@@ -1678,11 +1782,11 @@ def _warn_unlisted(document: Mapping[str, Any], description: str, head: _Head) -
     return found
 
 
-def _stamped(body: str, section: str | None, capability_root: Path) -> str:
-    """`body` with the list `section` — or none — last, and the provenance footer
-    after it, as every body-writing script writes one (ADR-037)."""
-    listed = friction_answers.stamp(provenance.strip_footer(body), section)
-    return provenance.stamp(listed, provenance.read_versions(capability_root))
+def _stamped(body: str, capability_root: Path) -> str:
+    """`body` without a list an earlier run wrote, and the provenance footer last, as
+    every body-writing script writes one (ADR-037)."""
+    stripped = friction_answers.strip(provenance.strip_footer(body))
+    return provenance.stamp(stripped, provenance.read_versions(capability_root))
 
 
 def _write_body(head: _Head, body: str, config: dict[str, Any]) -> str:
@@ -1712,9 +1816,8 @@ def _merge_check(head: _Head, answers: _AnswersEnd) -> None:
     fetched now (`friction_answers.merged`, DEC-055 point 6), said in one line. Stops the
     run, with nothing merged, where the check fails there, naming each document it
     fails on above the line; where the merge conflicts; and where the check cannot be
-    read. The answers step has written the list into the description by then, as it
-    stands for the head. A base the head already holds, at the tip the head's own check
-    read, is that check's: nothing is run again."""
+    read. A base the head already holds, at the tip the head's own check read, is that
+    check's: nothing is run again."""
     issue, sha, base = head.issue, short_sha(head.oid), head.base
     found = friction_answers.merged(head.oid, head.base_branch, checked=answers.checked)
     if found.problem is not None:
@@ -1947,7 +2050,7 @@ def _person_verdicts(
         raise _Stop(
             EXIT_HEAD_MOVED,
             f"{FINDINGS}: stopped — PR #{number}'s head is {short_sha(now) or 'unknown'}, "
-            f"not {short_sha(head.oid)}, the head whose checks passed. Nothing was merged; "
+            f"not {short_sha(head.oid)}, the head this run pinned. Nothing was merged; "
             f"`land-work {issue}` checks and reviews the new head",
         )
     comments = data.get("comments") or []
@@ -2096,11 +2199,13 @@ def _ready(
     pinned head, and say the head is ready, with the command that merges it —
     and, where a verdict carrying a finding to judge does not stand for the head,
     the review it waits for. Above the `ready:` line, what the person who
-    authorises the merge is told, as information, not a gate: what changed in
-    each updated document, in its author's sentence, which documents are left
-    out of date, with each deferral's words, which targets of a link are left out
-    of date, with each revisit entry's words, the friction settings changed, and
-    each grant and refusal the change adds to the fixers' grant list or removes."""
+    authorises the merge is told, as information, not a gate (DEC-065 point 4):
+    what changed in each updated document, in its author's sentence, which
+    documents are left out of date, with each deferral's words, which targets of
+    a link are left out of date, with each revisit entry's words, each answer the
+    change check did not ask for, the friction settings changed, each revalidation
+    the merge would leave answered apart, and each grant and refusal the change
+    adds to the fixers' grant list or removes."""
     argv = [str(head.issue), *_passed_through(args, review=False), "--dry-run"]
     try:
         end = done_work.run(argv, pinned_head=head.oid, branch_reading=reading)
@@ -2126,9 +2231,14 @@ def _merge(
     head: _Head | None,
     config: dict[str, Any],
     reading: issue_branch.Reading,
+    answers: _AnswersEnd | None = None,
 ) -> int:
     """Hand over to done-work — to land the pinned head, or, with no open PR,
-    only to complete a PR that has merged — and say in one line how it ended."""
+    only to complete a PR that has merged — and say in one line how it ended.
+    What the person who authorises the merge is told (`answers.told`) is printed
+    first, before done-work asks or merges (DEC-065 point 4)."""
+    for line in answers.told if answers is not None else ():
+        print(f"  {line}")
     argv = [str(args.issue_number), *_passed_through(args, review=False)]
     end = _run_done_work(argv, head, config, reading, merging=not args.dry_run)
     if end.kind == done_work.PLANNED:
