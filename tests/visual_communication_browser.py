@@ -93,7 +93,7 @@ class _Browser:
         with open(self.plan["log"], "a", encoding="utf-8") as log:
             log.write(json.dumps(message) + "\n")
 
-    def send(self, message: Mapping[str, Any]) -> None:
+    def send(self, message: Any) -> None:
         data = json.dumps(message).encode() + b"\0"
         while data:
             data = data[os.write(WRITES, data) :]
@@ -152,6 +152,10 @@ class _Browser:
             os.write(WRITES, b"this is no message\0")
         elif kind == "empty":
             self.send({"id": message["id"], "result": {}})
+        elif kind == "no object":
+            self.send([])
+        elif kind == "error of no object":
+            self.send({"id": message["id"], "error": "no"})
         elif kind == "refuse":
             self.send({"id": message["id"], "error": {"code": 1, "message": "not today"}})
         elif kind == "throw":

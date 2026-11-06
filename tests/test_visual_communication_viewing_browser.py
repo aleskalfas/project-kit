@@ -796,6 +796,12 @@ def test_an_answer_of_another_form_stops_the_drawing(tmp_path: Path, method: str
     assert "cannot be read" in stop.what
 
 
+@pytest.mark.parametrize("kind", ["no object", "error of no object"])
+def test_a_message_of_another_form_stops_the_drawing(tmp_path: Path, kind: str) -> None:
+    stop, _ = stopped(tmp_path, fault={"kind": kind, "method": "Browser.getVersion"})
+    assert "cannot be read" in stop.what
+
+
 def test_a_page_it_cannot_open_stops_the_drawing(tmp_path: Path) -> None:
     fault = {"kind": "error text", "method": "Page.navigate", "document": FILE}
     stop, _ = stopped(tmp_path, fault=fault)

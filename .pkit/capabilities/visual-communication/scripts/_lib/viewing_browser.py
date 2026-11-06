@@ -121,7 +121,7 @@ SAID_LENGTH = 2000
 SANDBOX = re.compile(r"sandbox|SingletonSocket: Operation not permitted", re.IGNORECASE)
 
 #: What reading an answer of another form than the protocol's raises.
-UNREADABLE = (KeyError, IndexError, TypeError, ValueError, struct.error)
+UNREADABLE = (AttributeError, KeyError, IndexError, TypeError, ValueError, struct.error)
 
 #: Why a span left nothing on the page.
 NO_INK = "no ink"
