@@ -662,6 +662,33 @@ def test_each_lock_is_read_from_its_piece_yaml_alone_and_says_whether_it_follows
     ]
 
 
+@pytest.mark.parametrize(
+    ("fields", "follows", "called"),
+    [
+        pytest.param({}, True, "draft", id="draft"),
+        pytest.param({"pinned": True}, False, "pinned draft", id="pinned-draft"),
+        pytest.param({"state": "final"}, True, "final piece", id="final"),
+        pytest.param({"state": "final", "pinned": True}, True, "final piece", id="final-pinned"),
+        pytest.param({"state": "final", "pinned": "no"}, True, "final piece", id="final-odd-pin"),
+        pytest.param({"state": "published"}, False, "published piece", id="published"),
+        pytest.param(
+            {"state": "published", "pinned": False},
+            False,
+            "published piece",
+            id="published-not-pinned",
+        ),
+    ],
+)
+def test_a_lock_follows_by_its_state_and_a_pin_is_read_of_a_draft_alone(
+    tmp_path: Path, fields: dict[str, Any], follows: bool, called: str
+) -> None:
+    root = project(tmp_path)
+    write_piece(root, "flow", lock={"foundations": "1.0.0"}, **fields)
+    (lock,) = copies.locks(root, "visual", "foundations")
+    assert lock.follows is follows
+    assert lock.described == f"the {called} `flow`"
+
+
 def test_what_the_capability_ships_under_a_number_is_its_release_before_its_version_being_built(
     tmp_path: Path,
 ) -> None:

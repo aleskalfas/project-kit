@@ -133,6 +133,20 @@ def test_a_pinned_pieces_lock_is_mended_by_hand(tmp_path: Path) -> None:
     )
 
 
+@pytest.mark.parametrize("state", ["final", "published"])
+@pytest.mark.parametrize("pinned", [True, False], ids=["pinned", "unpinned"])
+@pytest.mark.parametrize("lock", [{**LOCK, "tests": "1.2.0"}, None], ids=["fault", "no-lock"])
+def test_a_lock_no_render_moves_is_mended_by_its_state_and_reads_no_pin(
+    tmp_path: Path, state: str, pinned: bool, lock: dict[str, str] | None
+) -> None:
+    root = drawing_project(tmp_path, lock=lock, state=state, pinned=pinned)
+    [finding] = checks.lock_findings(pl.Held(root, "visual"), piece_of(root))
+    assert finding.fix == (
+        f"the piece is {state}, so no render moves its lock: set it back to a draft and run "
+        f"`pkit visual render flow`"
+    )
+
+
 def test_a_whole_lock_has_no_finding(tmp_path: Path) -> None:
     root = drawing_project(tmp_path)
     assert checks.lock_findings(pl.Held(root, "visual"), piece_of(root)) == []

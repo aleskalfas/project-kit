@@ -952,6 +952,20 @@ def test_a_piece_with_no_lock_is_refused_naming_render_its_files_left_as_they_we
     assert written(root) == before
 
 
+@pytest.mark.parametrize("state", ["final", "published"])
+def test_a_lock_no_render_moves_is_refused_and_told_of_its_state_and_of_no_pin(
+    tmp_path: Path, state: str
+) -> None:
+    root = drawing_project(tmp_path, state=state, pinned=True, lock=None)
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        f"error: the lock of visual/pieces/flow/piece.yaml cannot be drawn: the piece has no "
+        f"lock yet, so its scenes cannot be drawn — the piece is {state}, so no render moves "
+        f"its lock: set it back to a draft and run `pkit visual render flow`\n"
+    )
+
+
 def test_a_piece_the_location_lacks_is_refused(flow: Path) -> None:
     shown = run_look(flow, "no-such-piece")
     assert shown.returncode == 1

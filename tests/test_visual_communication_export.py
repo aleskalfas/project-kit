@@ -107,6 +107,24 @@ def test_each_run_takes_the_next_number_and_records_it(tmp_path: Path) -> None:
     assert "time: '" in (root / RECORD).read_text(encoding="utf-8")
 
 
+def test_each_version_keeps_the_state_it_was_made_in(tmp_path: Path) -> None:
+    root = ready(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    path = root / PIECE_FOLDER / "piece.yaml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("state: draft", "state: published"),
+        encoding="utf-8",
+    )
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    record = reading.read_yaml(root / RECORD)
+    assert files.shape_problems(record, "exports") == []
+    assert [version["recorded"]["state"] for version in record["versions"]] == [
+        "draft",
+        "published",
+    ]
+
+
 def test_the_record_names_each_produced_output_used_by_its_records_fingerprint(
     tmp_path: Path,
 ) -> None:
@@ -229,6 +247,45 @@ def test_a_missing_picture_stops_the_export_whatever_is_named(tmp_path: Path) ->
 
 
 # --- refusals -----------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        pytest.param({}, id="whose-lock-holds"),
+        pytest.param(
+            {"lock": {"foundations": "1.0.0", "test-brand": "2.0.0", "tests": "1.0.0"}},
+            id="whose-lock-does-not-hold",
+        ),
+    ],
+)
+def test_a_final_piece_takes_no_export_and_nothing_is_written(
+    tmp_path: Path, fields: dict[str, Any]
+) -> None:
+    root = drawing_project(tmp_path, state="final", picture=False, **fields)
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stdout == ""
+    assert shown.stderr == "error: the piece `flow` is final, and a final piece takes no export\n"
+    assert not (root / FOLDER).exists()
+    assert not (root / RECORD).exists()
+    assert not (root / CONFIG).exists()
+
+
+def test_a_published_pieces_lock_refused_is_told_of_its_state_and_of_no_pin(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(
+        tmp_path, state="published", pinned=True, lock={**LOCK, "tests": "1.2.0"}, picture=False
+    )
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        "error: the lock of visual/pieces/flow/piece.yaml cannot be exported: the lock names "
+        "tests@1.2.0, which the project does not hold — the piece is published, so no render "
+        "moves its lock: set it back to a draft and run `pkit visual render flow`\n"
+    )
+    assert not (root / FOLDER).exists()
 
 
 @pytest.mark.parametrize(

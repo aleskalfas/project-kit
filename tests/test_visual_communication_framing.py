@@ -718,6 +718,23 @@ def test_a_produced_folder_the_piece_does_not_declare_asks_for_attention(tmp_pat
     assert undeclared.file == f"{PIECE_FOLDER}/produced/old"
 
 
+def test_a_final_piece_refuses_a_run_and_what_only_reads_its_picture_still_runs(
+    tmp_path: Path,
+) -> None:
+    root = producing_project(tmp_path)
+    produce(root)
+    record = (root / RECORD).read_bytes()
+    piece = root / PIECE_FOLDER / "piece.yaml"
+    piece.write_text(
+        piece.read_text(encoding="utf-8").replace("state: draft", "state: final"), encoding="utf-8"
+    )
+    with pytest.raises(framing.Refused, match="a final piece takes no producer's run"):
+        produce(root)
+    assert (root / RECORD).read_bytes() == record
+    assert framing.plan(root, "visual", PIECE, OUTPUT).output == OUTPUT
+    assert framing.findings(root, "visual", PIECE) == []
+
+
 def test_a_piece_that_declares_nothing_produced_has_no_findings(tmp_path: Path) -> None:
     root = producing_project(tmp_path)
     write_piece(root, PIECE, lock=LOCK)

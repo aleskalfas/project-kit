@@ -245,6 +245,13 @@ def test_a_lock_that_would_lead_out_of_the_library_folder_is_refused_before_any_
         pl.Project(piece, lock, pl.Held(root, "visual"))
 
 
+@pytest.mark.parametrize(
+    ("state", "pinned"), [("draft", True), ("final", False), ("published", False)]
+)
+def test_a_pin_is_read_of_a_draft_alone(tmp_path: Path, state: str, pinned: bool) -> None:
+    assert piece_of(drawing_project(tmp_path, state=state, pinned=True)).pinned is pinned
+
+
 def test_a_piece_the_location_lacks_is_refused(tmp_path: Path) -> None:
     root = drawing_project(tmp_path)
     with pytest.raises(pl.Refused, match="holds no piece `other`"):

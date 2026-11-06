@@ -4,12 +4,15 @@
 A *producer* is a plugin of the capability that makes a picture while a piece is prepared.
 The engine never runs it: a person or an agent runs `pkit visual produce <piece> <output>`,
 and this module frames that run, step by step, so a later command that frames a project's
-own script reuses the same steps.
+own script reuses the same steps. A final piece takes no such run (DEC-017 point 3): making
+its pictures again would change it. `produce` refuses it, and `plan`, which an export and
+the check read too, does not.
 
 1. **The declaration.** `piece.yaml` declares each produced output under
    `produced.<output>`: the producer, its inputs, each naming a role by its token path,
    and the pixel size of each variant. The piece's lock says which brand version the
-   values come from. A piece with no lock yet is refused: its first render writes one.
+   values come from. A piece with no lock yet is refused: a draft's first render writes
+   one, and a final or a published piece is set back to a draft for it.
 2. **The values and the variants.** Each role the inputs name is resolved in every
    combination the piece names, and the combinations that give the same values share one
    *variant*, under the first key it serves (DEC-004 point 3, `values.variants`).
@@ -89,7 +92,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from _lib import fingerprint, keys, libraries, records, tokens, values
+from _lib import copies, fingerprint, keys, libraries, records, tokens, values
 from _lib import location as loc
 from _lib.files import (
     FORMAT,
@@ -250,6 +253,7 @@ def produce(root: Path, where: loc.ForWriting, piece: str, output: str) -> Produ
     its picture. Raises Refused, writing nothing in the location; loc.LocationRefused when
     the location cannot be recorded; WriteFailed where a write fails, every file in the
     location then as it was before the run, or named."""
+    _refuse_final(root, where.path, piece)
     before = plan(root, where.path, piece, output)
     runnable(before)
     handed = handover(before)
@@ -272,6 +276,15 @@ def produce(root: Path, where: loc.ForWriting, piece: str, output: str) -> Produ
     return Produced(before, record, removed, said, checked.losses)
 
 
+def _refuse_final(root: Path, location: str, piece: str) -> None:
+    """Refuse a piece that is final, before anything else is read of it. Raises Refused."""
+    if copies.final(_piece(root, _piece_folder(root, location, piece), piece)):
+        raise Refused(
+            f"the piece `{piece}` is final, and a final piece takes no producer's run: making "
+            f"its pictures again would change it"
+        )
+
+
 def plan(root: Path, location: str, piece: str, output: str) -> Plan:
     """Read, from the files as they are now, what a run of the producer that the piece
     `piece` declares for `output` reads. Raises Refused."""
@@ -281,6 +294,11 @@ def plan(root: Path, location: str, piece: str, output: str) -> Plan:
     plugin = producer(declaration.producer)
     lock = data.get("lock")
     if not isinstance(lock, Mapping) or not lock:
+        if copies.lock_stays(data):
+            raise Refused(
+                f"the piece `{piece}` is {data['state']} and has no lock: "
+                f"{copies.FIRST_RENDER}, then produce"
+            )
         raise Refused(
             f"the piece `{piece}` has no lock yet: run `{RENDER} {piece}` first, which writes "
             f"it, then produce"

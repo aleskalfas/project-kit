@@ -73,6 +73,7 @@ pkit:
         - visual-communication:DEC-015#4
         - visual-communication:DEC-015#5
         - visual-communication:DEC-015#6
+        - visual-communication:DEC-017#3
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -80,6 +81,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/components.md#what-a-scene-holds
         - .pkit/capabilities/visual-communication/files.md#keys-of-combinations
+        - .pkit/capabilities/visual-communication/files.md#pieceyaml
         - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#shapes
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
@@ -239,12 +241,13 @@ versions:
 | `version` | the version's number, from 1 |
 | `fingerprint` | the version's fingerprint, whose inputs *The input set of each kind* in *What the check reports* lists |
 | `files` | each file the run made, by name, with the SHA-256 of the file |
-| `recorded` | only recorded, never compared, so a new release of the capability makes no export stale: the `time` in UTC, the piece's `state` then (`draft`, the only state of format 1), the release of the `capability`, each of the `renderers` with its version, each produced output the run used with the version of its picture, the `value` of its record's fingerprint (`used`), and each of those it used while it was stale (`used-stale`) |
+| `recorded` | only recorded, never compared, so a new release of the capability makes no export stale: the `time` in UTC, the piece's `state` then ([`piece.yaml`](files.md#pieceyaml)), the release of the `capability`, each of the `renderers` with its version, each produced output the run used with the version of its picture, the `value` of its record's fingerprint (`used`), and each of those it used while it was stale (`used-stale`) |
 
 ### What refuses an export
 
 An export run is refused, and writes nothing, when:
 
+- the piece is final: a final piece takes no export (DEC-017 point 3);
 - the piece names no format under `exports`;
 - the piece has no lock yet, or its lock does not hold: a version the project does not hold or cannot read, a library the piece uses that the lock leaves out, or a major that does not fit what a library builds on;
 - the brand cannot be read, or the piece names a mode its brand lacks;
@@ -263,6 +266,8 @@ Each of these is found before the first write, so a refused run records no locat
 A *produced picture* is a picture a producer makes for one piece while it is prepared, such as a 3D render (DEC-006 point 1). It takes every value from the brand, and holds none of the piece's words: the piece places each label as its own text (DEC-006 point 2).
 
 No producer ships yet ([Plugins](#plugins)), so `pkit visual produce` refuses every producer a piece names, and no piece has a produced picture. What follows is the contract every producer meets. The capability's tests run a producer kept for them alone.
+
+`pkit visual produce` refuses a final piece before it reads anything else of it, and writes nothing. Making a final piece's pictures again would change it (DEC-017 point 3).
 
 ### Declaring a produced output
 

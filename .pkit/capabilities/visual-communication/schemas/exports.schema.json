@@ -66,7 +66,12 @@
                 "$ref": "defs.schema.json#/$defs/time"
               },
               "state": {
-                "const": "draft"
+                "description": "The piece's state when the version was made.",
+                "enum": [
+                  "draft",
+                  "final",
+                  "published"
+                ]
               },
               "capability": {
                 "$ref": "defs.schema.json#/$defs/release"

@@ -27,7 +27,8 @@ It stops on a produced picture that is stale, naming what changed, unless `--use
 names it; the record keeps each picture used while stale, and the version of each picture
 the export used. `--use-stale` naming an output the piece does not declare is refused; one
 that is not stale is used as it is, and the command says so. It stops on a picture that is
-missing, and on a piece with no lock yet, which `pkit visual render` writes.
+missing, and on a piece with no lock yet, which `pkit visual render` writes of a draft. A
+final piece takes no export, whatever else holds of it (DEC-017 point 3).
 
 It writes in the location, so where the configuration records none it takes `visual/` and
 records it before its first write, or the path `--location` names. Every check that can
@@ -53,7 +54,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import checks, exports, files, libraries, location, tokens
+from _lib import checks, copies, exports, files, libraries, location, tokens
 from _lib import pipeline as pl
 from _lib.root import project_root
 
@@ -89,6 +90,8 @@ def main() -> int:
 def _export(root: Path, name: str, use_stale: list[str], given: str | None) -> int:
     where = location.for_writing(root, given)
     piece = pl.read_piece(root, where.path, name)
+    if copies.final(piece.data):
+        raise pl.Refused(f"the piece `{name}` is final, and a final piece takes no export")
     held = libraries.Held(root, where.path)
     faults = checks.lock_findings(held, piece)
     if faults:
