@@ -19,6 +19,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/current_copy.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
         - .pkit/capabilities/visual-communication/scripts/_lib/framing.py
         - .pkit/capabilities/visual-communication/scripts/_lib/values.py
         - .pkit/capabilities/visual-communication/scripts/_lib/keys.py
@@ -73,7 +75,11 @@ pkit:
         - visual-communication:DEC-015#4
         - visual-communication:DEC-015#5
         - visual-communication:DEC-015#6
+        - visual-communication:DEC-016#3
         - visual-communication:DEC-017#3
+        - visual-communication:DEC-017#5
+        - visual-communication:DEC-017#7
+        - visual-communication:DEC-017#8
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -220,7 +226,18 @@ An *export* is a set of files a piece is handed out as. Each export run is one *
 - **What a run makes:** for `svg`, one file for each page, each language and each combination of modes the piece names; for `pdf`, one file for each language and combination, which holds every page in order. Each is drawn from the scenes under the lock `piece.yaml` holds.
 - **The number.** A run takes the number one higher than the highest version the piece's `exports.yaml` records or any file of its exports folder carries, or 1 where there is none. Every file of the run carries it, so version 3 in English matches version 3 in Czech. A file the record does not name, such as one a failed run could not remove, is never overwritten, and refuses no later run.
 - **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. An SVG file of a piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.svg`, such as `deck.v1.en.default.2.svg`. A PDF holds every page, so its name carries none: `deck.v1.en.default.pdf`.
-- **Where:** `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the clone and never committed. No export overwrites another. What is committed is the record of exports, in the piece's folder.
+- **Where:** `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the clone and never committed. No export overwrites another. What is committed lies in the piece's folder: the record of exports, and a published piece's [current copy](#the-current-copy).
+
+### The current copy
+
+A published piece keeps a *current copy*, an unnumbered copy of each file of an export. A page links to it, since a link cannot follow a number (DEC-006 point 7).
+
+- **Where:** `current-copy/`, in the piece's folder, committed with the piece.
+- **When.** Each export of a published piece writes it, in the same change as the numbered files. A piece in any other state writes none, and a copy it already holds stays. `pkit visual render` writes none.
+- **Replaced whole.** A run replaces the folder whole, so a file the new version does not write goes. The folder holds nothing else (DEC-017 point 7).
+- **A file's name** is its version's with the number left out: `flow.v3.en.colour-scheme.dark.svg` gives `flow.en.colour-scheme.dark.svg`.
+- **A file's bytes** are its version's, so the two keep one hash, the SHA-256 of the whole file.
+- **Whose it is.** A current copy is a piece's own where the record of exports names that piece, or a piece the location no longer holds. So a rename keeps it, and a folder copied by hand brings none while the original stands.
 
 ### The record of exports
 
@@ -244,11 +261,29 @@ versions:
 | `files` | each file the run made, by name, with the SHA-256 of the file |
 | `recorded` | only recorded, never compared, so a new release of the capability makes no export stale: the `time` in UTC, the piece's `state` then ([`piece.yaml`](files.md#pieceyaml)), the release of the `capability`, each of the `renderers` with its version, each produced output the run used with the version of its picture, the `value` of its record's fingerprint (`used`), and each of those it used while it was stale (`used-stale`) |
 
+Once a published piece is exported, the record also says who wrote its [current copy](#the-current-copy), above `versions`. An export in another state keeps these lines as they stand.
+
+```yaml
+current-copy:
+  piece: flow
+  version: 1
+  files:
+    current-copy/flow.en.default.svg: 59e59277986cb50595fbea07b1a4ee396639d94e4bea63570b70232d8f6816e6
+    current-copy/flow.en.colour-scheme.dark.svg: ed229c228ca2eaff8c0b5e30a09556b34010ed772f224a6fa54e3eb50fd13179
+```
+
+| Field | What it holds |
+|---|---|
+| `piece` | the piece that wrote the copy |
+| `version` | the version that wrote it |
+| `files` | each file of the copy, by its path from the piece's folder, with the SHA-256 of the file. So a rename, or a move of the location, leaves the path true |
+
 ### What refuses an export
 
 An export run is refused, and writes nothing, when:
 
 - the piece is final: a final piece takes no export (DEC-017 point 3);
+- the piece is published, and its lock differs from the lock of the version that wrote its current copy, or that lock cannot be read (below);
 - the piece names no format under `exports`;
 - the piece has no lock yet, or its lock does not hold: a version the project does not hold or cannot read, a library the piece uses that the lock leaves out, or a major that does not fit what a library builds on;
 - the brand cannot be read, or the piece names a mode its brand lacks;
@@ -259,9 +294,18 @@ An export run is refused, and writes nothing, when:
 - the piece has no page in one of its languages, so the version would hold no file in it;
 - the piece shows a version's number or its date ([Parts](components.md#parts)): no export fills them yet, and the refusal names each element that shows one. A piece that shows only its language or its state exports, with their real text;
 - a file the run would write, `exports.yaml` among them, is reached through a link;
-- `exports.yaml` cannot be read, or holds no list of numbered versions.
+- a file lies where a published piece's `current-copy/` goes;
+- `exports.yaml` cannot be read, holds no list of numbered versions, or holds a `current-copy` that names no piece, version and files.
 
 Each of these is found before the first write, so a refused run records no location either. `--use-stale` naming a declared output that is not stale refuses nothing: the run uses the picture as it is, and says it was not stale.
+
+**A published piece's lock.** A state changed and changed back, or a lock written by hand, brings no new library version to a page (DEC-017 point 5).
+
+- **Two ways named.** The refusal names that lock and both ways past. One is `pkit visual upgrade`, to propose a move of the lock. The other is writing back that lock, which is no move of it.
+- **One runs today.** `pkit visual upgrade` is still to come ([project-kit#2572](https://github.com/aleskalfas/project-kit/issues/2572)). Until it comes, only writing back that lock gets past the gate, which fails closed.
+- **It reads the record, not the files,** so removing the copy changes nothing.
+- **No copy of its own.** Where the record holds no current copy of the piece's own, the export runs.
+- **A fingerprint it cannot read** refuses, and names the record.
 
 ## Produced pictures
 

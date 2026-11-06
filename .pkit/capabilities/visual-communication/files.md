@@ -34,6 +34,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/checks.py
         - .pkit/capabilities/visual-communication/scripts/_lib/framing.py
         - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/current_copy.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
         - .pkit/capabilities/visual-communication/scripts/_lib/code.py
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
         - .pkit/capabilities/visual-communication/schemas/config.schema.json
@@ -104,6 +106,10 @@ pkit:
         - visual-communication:DEC-014#5
         - visual-communication:DEC-015#2
         - visual-communication:DEC-015#4
+        - visual-communication:DEC-016#3
+        - visual-communication:DEC-017#6
+        - visual-communication:DEC-017#7
+        - visual-communication:DEC-017#8
 ---
 
 # The files of the visual work
@@ -173,10 +179,11 @@ The location holds four folders: `libraries/`, the library folder; `pieces/`, on
 | `pieces/<piece>/produced/<output>/record.yaml`, and a PNG for each variant | `produced-record` | `pkit visual produce` |
 | `pieces/<piece>/findings.yaml` | `findings` | `pkit visual render` |
 | `pieces/<piece>/exports.yaml` | `exports` | `pkit visual export` |
+| `pieces/<piece>/current-copy/<file>` | none: a copy of a file an export made | `pkit visual export`, of a published piece |
 | `code/<name>.yaml` | `code` | a person |
 | `fonts/<file>` | none | a person, who commits the font |
 
-The code that `pkit visual write-code` writes lies where its declaration names, with its record beside it. A component's file is described in *Components*; produced pictures, exports, declarations of code and the code itself in *What is made from a piece*; `findings.yaml` in *What the check reports*.
+The code that `pkit visual write-code` writes lies where its declaration names, with its record beside it. A component's file is described in *Components*; produced pictures, exports, a current copy, declarations of code and the code itself in *What is made from a piece*; `findings.yaml` in *What the check reports*.
 
 ### The clone's local folder
 
@@ -269,7 +276,7 @@ lock:
 | `shown` | yes | Where the piece is shown, in words. |
 | `explains` | yes | `true` where the piece explains, rather than only shows. |
 | `exports` | yes | The formats an export makes (*Exports* in *What is made from a piece*). |
-| `state` | yes | The piece's stage of life, `draft`, `final` or `published`, which says who moves its lock ([The lock](#the-lock)). |
+| `state` | yes | The piece's stage of life, `draft`, `final` or `published`, which says who moves its lock ([The lock](#the-lock)). A published piece owes a current copy, which each of its exports writes (*The current copy* in *What is made from a piece*). |
 | `modes` | no | For each axis, the modes the piece is drawn in. An axis it leaves out is drawn in its default. |
 | `pinned` | no | `true` pins a draft's lock. No other state reads it. |
 | `produced` | no | Each picture a producer makes for the piece (*Declaring a produced output* in *What is made from a piece*). |

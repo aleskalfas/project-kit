@@ -21,7 +21,9 @@ from tests.visual_communication_project import (
     TEST_PARTS,
 )
 
-files, reading, seam = load("visual-communication", "files", "reading", "plugins.seam")
+current_copy, files, reading, seam = load(
+    "visual-communication", "current_copy", "files", "reading", "plugins.seam"
+)
 
 COMPANIONS = sorted(SCHEMAS.glob("*.schema.json"))
 
@@ -41,6 +43,12 @@ def exports_in(state: str) -> dict[str, Any]:
 
 def refused(data: Any, kind: str) -> list[str]:
     return files.shape_problems(data, kind)
+
+
+def exports_with_copy(**fields: Any) -> dict[str, Any]:
+    """The record of exports' instance, its current copy's `fields` replaced."""
+    record = instance("exports")
+    return {**record, "current-copy": {**record["current-copy"], **fields}}
 
 
 def test_each_kind_has_its_pair_and_the_shared_definitions_and_the_document_stand_alone() -> None:
@@ -127,6 +135,59 @@ def test_format_1_takes_each_state_of_a_piece_and_the_record_of_exports_keeps_it
 def test_format_1_takes_no_other_state() -> None:
     assert refused({**instance("piece"), "state": "retired"}, "piece") != []
     assert refused(exports_in("retired"), "exports") != []
+
+
+def test_the_record_of_exports_may_name_who_wrote_a_current_copy() -> None:
+    record = instance("exports")
+    assert refused(record, "exports") == []
+    assert (
+        refused({key: value for key, value in record.items() if key != "current-copy"}, "exports")
+        == []
+    )
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "current-copy/flow.en.default.svg",
+        "current-copy/flow.en.colour-scheme.dark.2.svg",
+        "current-copy/flow.pt-br.default.pdf",
+    ],
+)
+def test_a_current_copys_file_lies_in_its_folder_with_no_number(path: str) -> None:
+    assert refused(exports_with_copy(files={path: "0" * 64}), "exports") == []
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "flow.en.default.svg",
+        "current-copy/flow.v1.en.default.svg",
+        "current-copy/../flow.en.default.svg",
+        "current-copy/nested/flow.en.default.svg",
+    ],
+)
+def test_a_current_copys_file_lies_nowhere_else_and_carries_no_number(path: str) -> None:
+    assert refused(exports_with_copy(files={path: "0" * 64}), "exports") != []
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        pytest.param({"piece": "../outside"}, id="a-piece-of-no-name"),
+        pytest.param({"version": 0}, id="a-version-of-no-number"),
+        pytest.param({"files": {}}, id="no-file"),
+        pytest.param({"written": "2026"}, id="another-field"),
+    ],
+)
+def test_the_record_refuses_a_current_copy_of_another_shape(fields: dict[str, Any]) -> None:
+    assert refused(exports_with_copy(**fields), "exports") != []
+
+
+def test_the_schema_holds_the_pattern_the_code_holds_of_a_current_copys_path() -> None:
+    schema = json.loads((SCHEMAS / "exports.schema.json").read_text(encoding="utf-8"))
+    held = schema["properties"]["current-copy"]["properties"]["files"]["propertyNames"]
+    assert held["pattern"] == current_copy.PATH
 
 
 def test_a_brand_names_its_dtcg_version_and_a_component_library_none() -> None:

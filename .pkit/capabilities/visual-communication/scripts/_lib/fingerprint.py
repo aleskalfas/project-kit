@@ -319,7 +319,11 @@ def _inputs_fault(recorded: Mapping[str, Any]) -> str | None:
         isinstance(entry, Mapping) and isinstance(entry.get("sha256"), str) for entry in entries
     ):
         return "the fingerprint keeps no list of inputs"
-    if recorded.get("value") != sha256(canonical_bytes(entries)):
+    try:
+        value = sha256(canonical_bytes(entries))
+    except ReadError as exc:
+        return f"the fingerprint's inputs cannot be read: {exc}"
+    if recorded.get("value") != value:
         return "the fingerprint's value does not match its own inputs: it was edited"
     return None
 
@@ -542,7 +546,7 @@ def _form_fault(recorded: Mapping[str, Any]) -> str | None:
     """Why this capability reads no fingerprint of this form and hash, or None where it
     does."""
     form = recorded.get("form")
-    if isinstance(form, bool) or form not in INPUT_SETS:
+    if not isinstance(form, int) or isinstance(form, bool) or form not in INPUT_SETS:
         return f"the fingerprint's form {form!r} is not one this capability reads"
     if recorded.get("hash") != HASH:
         return f"the fingerprint's hash {recorded.get('hash')!r} is not one this form takes"
@@ -587,8 +591,9 @@ def lock_of(recorded: Any) -> dict[str, str]:
     """The lock a version was made under, read from its fingerprint (DEC-017 point 1): each
     input of a library version names its library and that version, and those pairs are
     the lock. Raises UnreadableFingerprint where no lock can be read: nothing is kept, the
-    form or hash is not read here, the value does not match the inputs, or the inputs name
-    no library version, or two of one library, which no lock holds."""
+    form or hash is not read here, the inputs cannot be read or the value does not match
+    them, or the inputs name no library version, or two of one library, which no lock
+    holds."""
     if not isinstance(recorded, Mapping):
         raise UnreadableFingerprint("no fingerprint is kept")
     fault = _form_fault(recorded) or _inputs_fault(recorded)
