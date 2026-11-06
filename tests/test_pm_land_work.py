@@ -4569,7 +4569,12 @@ def _base_with_a_kind(
     resolver's path returned."""
     work = run.work
     installed = make_adopter_repo(root=tmp_path / "installed", chdir=False)
-    shutil.copytree(installed.root / ".pkit", work / ".pkit", dirs_exist_ok=True)
+    shutil.copytree(
+        installed.root / ".pkit",
+        work / ".pkit",
+        dirs_exist_ok=True,
+        ignore=shutil.ignore_patterns("__pycache__"),
+    )
     _git(work, "switch", "-q", "main")
     capability = register_kinds(work, "kinds", kinds={"source": "resolve"}, script_body=RESOLVING)
     files = {CONFIG: friction_config(mode="enforcing"), **SOURCE, "sources/alpha.md": "alpha\n"}
