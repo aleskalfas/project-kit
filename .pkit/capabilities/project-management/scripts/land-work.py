@@ -88,9 +88,9 @@ there instead, and changes nothing else.
           waiting up to as long for the rest, and every stop above stops the
           run before the merge ([project-management:DEC-063-task-builder]
           point 8). A `--yes` run names none, so it runs no reviewer until
-          every check has passed: no stop can fall between a verdict it posts
-          and the findings' hold on it (DEC-055 point 3). A `--no-wait` run
-          names none either, since it only reads.
+          every check has passed: no stop of this step can fall between a
+          verdict it posts and the findings' hold on it (DEC-055 point 3). A
+          `--no-wait` run names none either, since it only reads.
   review  In agent review mode, `review-pr`'s review on the pinned head: a
           verdict judged fresh for that head is kept, a stale or missing one
           re-run. A CHANGES_REQUESTED, kept or new, stops the run before the
@@ -118,7 +118,11 @@ there instead, and changes nothing else.
           there, naming the review it waits for (DEC-055 point 3). Where the
           review ran beside checks, this step runs before the wait for the
           rest, so no way that wait ends hides a verdict the run posted, and
-          again after it, for one posted during it. Verdicts
+          again after it, for one posted during it. A stop inside the review
+          step prints them too, with this step's line, just above its last
+          line, so no way that step ends hides one. A verdict is judged there
+          for the head the PR has then, and what cannot be read draws a `warn:`
+          line and leaves the stop as it is. Verdicts
           that cannot be read, or whose reviewers cannot be resolved, stop
           the run, and so does a remote reviewer's `[person]` finding on a PR
           whose author cannot be read, since its verdict cannot be told from
@@ -758,7 +762,13 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
     if ci == _CI_PR_MERGED:
         return _merge(args, None, config, reading)
     beside_checks = ci == _CI_FIRST_PASSED
-    review = _review(args, head, config, reading, beside_checks=beside_checks)
+    try:
+        review = _review(args, head, config, reading, beside_checks=beside_checks)
+    except _Stop:
+        # However this step stops, the run shows the verdicts it leaves, which a later
+        # `--yes` would find at its start (DEC-055 point 3).
+        _findings_at_review_stop(head, config, capability_root)
+        raise
     if beside_checks:
         # Before the wait: however it ends, this run shows the verdicts it posted, which
         # a later `--yes` would find at its start (DEC-055 point 3). The step runs again
@@ -1134,9 +1144,9 @@ def _checks_that_start_review(args: argparse.Namespace, config: dict[str, Any]) 
     value is not a list of names, so the review waits for every check. `pkit data
     validate` refuses such a value.
 
-    None for a run authorised up front: a stop between a verdict it posted and the
-    findings' step would leave the verdict found at the next run's start, unshown
-    (DEC-055 point 3). None for `--no-wait`, which only reads."""
+    None for a run authorised up front: a stop in the wait for the rest would fall
+    between a verdict it posted and the findings' hold, leaving the verdict found at
+    the next run's start (DEC-055 point 3). None for `--no-wait`, which only reads."""
     if args.yes or args.no_wait:
         return ()
     review = config.get("review") if isinstance(config, dict) else None
@@ -2099,20 +2109,52 @@ def _findings(
     (`_records_moved`): a merge of the base can move where the head left it,
     and so the list, though the author changed nothing but answers."""
     judged = _person_verdicts(head, config, capability_root)
+    # Before the records, so a stop on them does not hide a finding read here.
+    for one in judged:
+        _print_findings(one)
     altered = _accepted_records(head)
     moved = _records_moved(head, altered)
     if not judged and not altered:
         return _FindingsEnd(records_moved=moved)
-    for one in judged:
-        _print_findings(one)
     for line in accepted_records.lines(altered):
         print(f"  {line}")
-    count = sum(len(one.findings) for one in judged)
-    stale = sum(len(one.findings) for one in judged if not one.freshness.fresh)
+    count = _findings_in(judged)
     held = _held(args, head, judged, found) if judged else None
-    shown = count + len(altered)
-    _say(f"{FINDINGS}: {shown}, above" + (f" ({stale} marked stale)" if stale else ""))
+    _say(_findings_line(count + len(altered), judged))
     return _FindingsEnd(count, held, records=len(altered), records_moved=moved)
+
+
+def _findings_at_review_stop(head: _Head, config: dict[str, Any], capability_root: Path) -> None:
+    """Print each `[person]` finding whole as the review step stops, with the step's
+    line, as `_findings` prints them. One reviewer's block, or one that failed, would
+    otherwise hide what another posted in this run, and a later `--yes` would find that
+    verdict at its start and merge on it (DEC-055 point 3).
+
+    The head may have moved, which is that stop's own, so a verdict is judged for the
+    head the PR has now. Nothing here changes the stop: what it cannot read draws a
+    `warn:` line."""
+    try:
+        judged = _person_verdicts(head, config, capability_root, any_head=True)
+    except _Stop as unread:
+        print(f"  warn: {unread.line}", flush=True)
+        return
+    if not judged:
+        return
+    for one in judged:
+        _print_findings(one)
+    _say(_findings_line(_findings_in(judged), judged))
+
+
+def _findings_in(judged: list[_PersonVerdict]) -> int:
+    """How many `[person]` findings `judged` carry."""
+    return sum(len(one.findings) for one in judged)
+
+
+def _findings_line(shown: int, judged: list[_PersonVerdict]) -> str:
+    """The step's line: how many findings are above, and how many of `judged`'s are
+    marked stale."""
+    stale = _findings_in([one for one in judged if not one.freshness.fresh])
+    return f"{FINDINGS}: {shown}, above" + (f" ({stale} marked stale)" if stale else "")
 
 
 def _accepted_records(head: _Head) -> tuple[accepted_records.Altered, ...]:
@@ -2158,13 +2200,14 @@ def _records_moved(head: _Head, records: tuple[accepted_records.Altered, ...]) -
 
 
 def _person_verdicts(
-    head: _Head, config: dict[str, Any], capability_root: Path
+    head: _Head, config: dict[str, Any], capability_root: Path, *, any_head: bool = False
 ) -> list[_PersonVerdict]:
     """Each latest verdict carrying a `[person]` finding, as the merge gate selects it,
     judged by the gate's freshness rule; none where no marked verdict carries one.
     Stops the run when the verdicts cannot be read, the head moved, or — with a
     `[person]` finding to show — the reviewers whose verdicts count cannot be
-    resolved."""
+    resolved. `any_head` reads them at whichever head the PR has, and judges them for
+    it, so a head that moved stops nothing."""
     issue, number = head.issue, head.pr_number
     data = _view(number, _FINDINGS_VIEW, config)
     if isinstance(data, str):
@@ -2174,7 +2217,7 @@ def _person_verdicts(
             f"merged; run `land-work {issue}` again",
         )
     now = head_sha(data)
-    if now != head.oid:
+    if now != head.oid and not any_head:
         raise _Stop(
             EXIT_HEAD_MOVED,
             f"{FINDINGS}: stopped — PR #{number}'s head is {short_sha(now) or 'unknown'}, "
@@ -2303,7 +2346,7 @@ def _whose(judged: list[_PersonVerdict]) -> str:
 
 def _them(judged: list[_PersonVerdict]) -> str:
     """How the findings of `judged` are named: `its finding`, `their findings`."""
-    count = sum(len(one.findings) for one in judged)
+    count = _findings_in(judged)
     owner = "its" if len(judged) == 1 else "their"
     return f"{owner} finding{'' if count == 1 else 's'}"
 
