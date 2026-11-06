@@ -389,7 +389,7 @@ def run_main(rw, monkeypatch):
             moves.append(target)
             return move_rc
 
-        def checked(at: str, base: str, *, source: object = None):
+        def checked(at: str, base: str, *, source: object = None, from_checkout: bool = True):
             (derives if derives is not None else []).append((at, base))
             (sources if sources is not None else []).append(source)
             if derived is not None:
@@ -419,6 +419,7 @@ def run_main(rw, monkeypatch):
         monkeypatch.setattr(rw.pr_validation, "validate_pr", lambda **k: list(findings))
         monkeypatch.setattr(rw, "gh_run", fake_gh_run)
         monkeypatch.setattr(rw.friction_answers, "checked", checked)
+        monkeypatch.setattr(rw.head_programs, "build_commits", lambda *a: frozenset())
         # The PR's base is fetched from `upstream`; the branch tracks no remote here.
         monkeypatch.setattr(rw.friction_answers, "base_remote", lambda _base: "upstream")
         if move is None:
@@ -1052,10 +1053,15 @@ def test_the_refusal_joins_the_body_validator_s_findings(rw, monkeypatch, capsys
     monkeypatch.setattr(
         rw.friction_answers,
         "checked",
-        lambda head, base, *, source=None: _derived(rw, _document("docs/guide.md"), at=head),
+        lambda head, base, *, source=None, from_checkout=True: _derived(
+            rw, _document("docs/guide.md"), at=head
+        ),
     )
-    description = rw._Description(_described(), number=PR_NUMBER, head=LISTED, base="main")
-    sentences = rw._sentence_findings(description)
+    description = rw._Description(
+        _described(), number=PR_NUMBER, head=LISTED, base="main", placed=False
+    )
+    monkeypatch.setattr(rw.head_programs, "build_commits", lambda *a: frozenset())
+    sentences = rw._sentence_findings(description, rw._Move(42, CAP_ROOT, {}))
     assert sentences is not None
     findings = rw._ready_findings(description.body, {}, CAP_ROOT) + sentences
     assert rw._body_ok(findings, False, next_step=rw.FILL_FIRST) is False

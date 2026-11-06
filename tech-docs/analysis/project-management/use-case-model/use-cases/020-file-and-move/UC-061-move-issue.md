@@ -64,6 +64,7 @@ pkit:
         - project-management:DEC-046#1
         - project-management:DEC-049
         - project-management:DEC-052
+        - project-management:DEC-067#3
         - COR-004
         - COR-017
         - COR-021
@@ -165,6 +166,8 @@ pkit:
 
 > [!WARNING]
 > **Not built yet:** `move-issue` writes the Done label without checking the checkboxes, and leaves the issue open. DEC-007 decides that an issue with an unticked checkbox cannot move to Done, and #1215 tracks it.
+
+- **7b.** The [head](../../../../core/glossary.md#term-head--head) comes from another repository, or holds a sandboxed build's commits, and the [change check](../../../../core/glossary.md#term-change-check--change-check) needs a program it holds. The system starts none of it. It asks the developer at a terminal to name the head for this run. With nobody there it moves nothing and exits `2`, and `--force` moves on with a warning, starting nothing ([DEC-067 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-067-heads-that-start-programs.md#3-what-a-head-from-elsewhere-gets)).
 
 **Postconditions:** The [Task](../../../glossary.md#term-task--task) is in Review, its [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open, and each [issue](../../../glossary.md#term-issue--issue) above it is in In Progress or later. An issue closed as won't do is in Done, and so is a Task closed as completed without a pull request. An issue moved back is in Backlog or Todo.
 

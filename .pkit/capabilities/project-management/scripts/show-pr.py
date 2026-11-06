@@ -75,6 +75,7 @@ from _lib.agent_verdicts import (
     reduce_latest_per_reviewer,
 )
 from _lib.author_delta import author_delta, base_kept
+from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -94,6 +95,7 @@ from _lib.verdict_freshness import FreshnessRule
 CLOSING_KEYWORD_RE = re.compile(r"\b(?:closes|fixes|resolves)\s+#(\d+)", re.IGNORECASE)
 
 
+@escaping
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -431,8 +433,8 @@ NOTHING_TOLD_MESSAGE = "nothing to tell the person who authorises the merge"
 HEAD_PROGRAMS_MESSAGE = (
     "An anchor at this head needs its resolver, a program the head holds, and this view "
     "starts none. Running this command from a checkout at {head}, with nothing "
-    "uncommitted, reads the answers. Such a run starts the head's own programs under "
-    "your account, so make it only on a head you trust."
+    "uncommitted, reads the answers. There the command is the head's own, and it starts "
+    "the head's programs under your account, so make such a run only on a head you trust."
 )
 
 # Appended to a shown verdict the freshness rule holds stale (#1179), naming

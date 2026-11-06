@@ -151,6 +151,7 @@ from _lib.audit import bypass_audit_key, render_ci_bypass_audit_body
 from _lib.checkbox_gate import unticked_boxes as _unticked_boxes
 from _lib.ci_checks import evaluate_ci_gate
 from _lib.comment import post_audit_once
+from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.hooks import fire_hooks
 from _lib.membership import (
@@ -179,6 +180,7 @@ CI_BYPASS_AUDIT_WRITER = "merge-pr-ci-bypass"
 EXIT_ACCEPTED = 4
 
 
+@escaping
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(

@@ -1,7 +1,0 @@
-component: project-management
-kind: none
-body: >
-  The capability gains a record that decides which pull request
-  heads its commands may start programs from. It designs ahead of the
-  build, so no command changes yet and no surface moves. The build's own
-  changesets declare what moves.
