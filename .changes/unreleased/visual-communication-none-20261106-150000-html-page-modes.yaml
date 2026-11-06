@@ -1,0 +1,6 @@
+component: visual-communication
+kind: none
+body: >
+  Design-ahead: a proposed record decides how an HTML page holds its modes and
+  how a reader switches them (#2738). It moves no surface: nothing is built, and
+  an adopter can observe nothing new until later Tasks build what it decides.
