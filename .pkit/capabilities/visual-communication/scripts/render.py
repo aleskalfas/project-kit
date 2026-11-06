@@ -173,12 +173,12 @@ def _moved(piece: pl.Piece, held: libraries.Held) -> libraries.Moved:
     piece's, `pinned` set or not: `move_lock` checks it as a pinned draft's, and a refusal
     says the piece's state. Such a piece with no lock has no pin to take off, so that
     refusal says what to do instead. Raises Refused."""
-    stays = copies.final(piece.data) or piece.state == copies.PUBLISHED
+    stays = copies.lock_stays(piece.data)
     shown = piece.file(pl.PIECE_FILE)
     if stays:
         shown += f": the piece is {piece.state}, so no render moves its lock"
         if not piece.lock:
-            raise pl.Refused(f"{shown}: set it back to a draft for its first render")
+            raise pl.Refused(f"{shown}: {copies.FIRST_RENDER}")
     try:
         return libraries.move_lock(
             held,

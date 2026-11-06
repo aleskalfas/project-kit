@@ -42,6 +42,7 @@ from pathlib import Path
 from typing import Any
 
 from _lib import keys, layout, notations, records, tokens, values
+from _lib.copies import DRAFT
 from _lib.env import MissingFont, PictureInfo, UnknownConcept, UnreadableComponent
 from _lib.files import FileError, read_bound, refuse_links, without_binding, write_whole
 from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, Misfit, Version
@@ -148,7 +149,8 @@ class Piece:
 
     @property
     def pinned(self) -> bool:
-        return self.data.get("pinned") is True
+        """Whether its lock is pinned, which is read of a draft alone (DEC-003 point 8)."""
+        return self.state == DRAFT and self.data.get("pinned") is True
 
     @property
     def lock(self) -> dict[str, str]:

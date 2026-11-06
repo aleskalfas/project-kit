@@ -163,7 +163,7 @@ Every command runs from anywhere in the project: it finds the project root as th
 
 Shows where the visual work lies, and each piece with its state and its lock.
 
-- **Prints** the location, and whether the configuration records it or it is the default, not recorded yet. Then each piece under `pieces/`, with its state, whether a draft is pinned, and the version of each library its lock names. A piece with no lock yet says that its first render writes one.
+- **Prints** the location, and whether the configuration records it or it is the default, not recorded yet. Then each piece under `pieces/`, with its state, whether a draft is pinned, and the version of each library its lock names. A draft with no lock yet says that its first render writes one. A final or a published piece with none says to set it back to a draft for that render ([The lock](files.md#the-lock)).
 - **Writes** nothing.
 - **Exits** 1 when the configuration cannot be read, or records a location that is refused or missing; 0 otherwise.
 
@@ -234,7 +234,7 @@ Runs the producer a piece declares for one of its produced outputs, and keeps it
 - **Works out the variants** the producer makes ([Variants](outputs.md#variants)), and hands it their values ([The hand-over](outputs.md#the-hand-over)).
 - **Keeps the picture** only when no input changed during the run and every variant is a PNG of the declared pixel size, exposing the same points. Then it writes each variant and the record in the piece's folder, under `produced/<output>/`, and removes a variant file left from before.
 - **Prints** each loss the producer reports that the piece does not accept ([Accepting a loss](outputs.md#accepting-a-loss)).
-- **Refuses** a final piece, and a piece with no lock yet (run `pkit visual render <piece>` first). Before it runs, it refuses a producer it cannot run here ([Plugins](outputs.md#plugins)). What a producer is handed and returns is under [Produced pictures](outputs.md#produced-pictures).
+- **Refuses** a final piece, and a piece with no lock yet. For a draft, run `pkit visual render <piece>` first. Set a published piece back to a draft for its first render ([The lock](files.md#the-lock)). Before it runs, it refuses a producer it cannot run here ([Plugins](outputs.md#plugins)). What a producer is handed and returns is under [Produced pictures](outputs.md#produced-pictures).
 - **Exits** 0 when it wrote the variants and their record; 1 when it refused, with nothing written in the location, or a write failed ([Commands](#commands)).
 
 ### `pkit visual export <piece>`

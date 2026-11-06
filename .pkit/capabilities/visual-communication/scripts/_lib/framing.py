@@ -11,7 +11,8 @@ the check read too, does not.
 1. **The declaration.** `piece.yaml` declares each produced output under
    `produced.<output>`: the producer, its inputs, each naming a role by its token path,
    and the pixel size of each variant. The piece's lock says which brand version the
-   values come from. A piece with no lock yet is refused: its first render writes one.
+   values come from. A piece with no lock yet is refused: a draft's first render writes
+   one, and a final or a published piece is set back to a draft for it.
 2. **The values and the variants.** Each role the inputs name is resolved in every
    combination the piece names, and the combinations that give the same values share one
    *variant*, under the first key it serves (DEC-004 point 3, `values.variants`).
@@ -293,6 +294,11 @@ def plan(root: Path, location: str, piece: str, output: str) -> Plan:
     plugin = producer(declaration.producer)
     lock = data.get("lock")
     if not isinstance(lock, Mapping) or not lock:
+        if copies.lock_stays(data):
+            raise Refused(
+                f"the piece `{piece}` is {data['state']} and has no lock: "
+                f"{copies.FIRST_RENDER}, then produce"
+            )
         raise Refused(
             f"the piece `{piece}` has no lock yet: run `{RENDER} {piece}` first, which writes "
             f"it, then produce"

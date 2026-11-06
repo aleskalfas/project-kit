@@ -272,6 +272,22 @@ def test_a_final_piece_takes_no_export_and_nothing_is_written(
     assert not (root / CONFIG).exists()
 
 
+def test_a_published_pieces_lock_refused_is_told_of_its_state_and_of_no_pin(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(
+        tmp_path, state="published", pinned=True, lock={**LOCK, "tests": "1.2.0"}, picture=False
+    )
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        "error: the lock of visual/pieces/flow/piece.yaml cannot be exported: the lock names "
+        "tests@1.2.0, which the project does not hold — the piece is published, so no render "
+        "moves its lock: set it back to a draft and run `pkit visual render flow`\n"
+    )
+    assert not (root / FOLDER).exists()
+
+
 @pytest.mark.parametrize(
     ("fields", "said"),
     [

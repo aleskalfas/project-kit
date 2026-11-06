@@ -61,6 +61,23 @@ def test_each_state_is_shown_and_a_pin_is_read_of_a_draft_alone(tmp_path: Path) 
     ]
 
 
+def test_a_piece_no_render_writes_a_lock_for_says_to_set_it_back_to_a_draft(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path)
+    write_list(root, {})
+    write_piece(root, "draft")
+    write_piece(root, "final", state="final")
+    write_piece(root, "published", state="published")
+    shown = run(root)
+    assert shown.returncode == 0, shown.stderr
+    assert shown.stdout.splitlines()[2:] == [
+        "  draft: draft; no lock yet (its first render writes one)",
+        "  final: final; no lock (set it back to a draft for its first render)",
+        "  published: published; no lock (set it back to a draft for its first render)",
+    ]
+
+
 def test_the_recorded_location_is_shown_with_where_it_is_recorded(tmp_path: Path) -> None:
     root = project(tmp_path)
     write(root / CONFIG, f"{BINDING}location: docs/art\n")

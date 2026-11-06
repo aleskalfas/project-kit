@@ -97,6 +97,9 @@ FINAL = "final"
 PUBLISHED = "published"
 STATES = (DRAFT, FINAL, PUBLISHED)
 
+#: What a piece whose lock no render moves (`lock_stays`) needs where it has no lock.
+FIRST_RENDER = "set it back to a draft for its first render"
+
 #: The kinds of lock, each what a person names one by in the command (`Lock.key`).
 PIECE = "piece"
 DECLARATION = "declaration"
@@ -747,6 +750,12 @@ def final(piece: Mapping[str, Any]) -> bool:
     moves its lock, and an export and a producer's run refuse it (DEC-017 point 3). This is
     the one place that says so."""
     return piece.get("state") == FINAL
+
+
+def lock_stays(piece: Mapping[str, Any]) -> bool:
+    """Whether no render moves a piece's lock, whatever its `pinned` says: it is final or
+    published (DEC-003 point 8)."""
+    return final(piece) or piece.get("state") == PUBLISHED
 
 
 def _piece_lock(root: Path, file: str, name: str, library: str) -> Lock:

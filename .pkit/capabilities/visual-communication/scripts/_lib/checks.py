@@ -796,13 +796,25 @@ def _code_findings(root: Path, location_path: str) -> list[Finding]:
 # --- the lock -----------------------------------------------------------------------------------
 
 
+def _lock_fix(piece: pl.Piece) -> str:
+    """What mends a fault at a piece's lock, by who moves that lock (DEC-003 point 8). No
+    render moves a final or a published piece's, so it says what `pkit visual render` says
+    of such a piece, and only a draft reads its pin."""
+    render = pl.render_command(piece.name)
+    if copies.lock_stays(piece.data):
+        return (
+            f"the piece is {piece.state}, so no render moves its lock: set it back to a draft "
+            f"and run {render}"
+        )
+    if piece.pinned:
+        return f"change the lock by hand, or unpin the piece and run {render}"
+    return f"run {render}, which moves a draft's lock"
+
+
 def lock_findings(held: Held, piece: pl.Piece) -> list[Finding]:
     """What is wrong with a piece's lock as its file holds it (DEC-003 point 9)."""
     file = piece.file(pl.PIECE_FILE)
-    if piece.pinned:
-        fix = "change the lock by hand, or unpin the piece and run " + pl.render_command(piece.name)
-    else:
-        fix = f"run {pl.render_command(piece.name)}, which moves a draft's lock"
+    fix = _lock_fix(piece)
 
     def fails(code: str, message: str) -> Finding:
         return Finding(code, FAILS, message, file=file, where="lock", fix=fix)

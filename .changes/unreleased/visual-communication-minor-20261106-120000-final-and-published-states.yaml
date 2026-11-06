@@ -11,4 +11,8 @@ body: >
   copy not yet released under a final piece's lock with no piece named, and
   under a published piece's only where the piece is named, after its
   before-and-after. `pkit visual export` and `pkit visual produce` refuse a
-  final piece, with nothing written. `pinned` is read of a draft alone.
+  final piece, with nothing written. `pinned` is read of a draft alone, so a
+  fault at a final or a published piece's lock no longer names the pin: the
+  check, an export and `pkit visual look` say to set the piece back to a
+  draft. `pkit visual status` and `pkit visual produce` say the same of such
+  a piece with no lock.

@@ -106,12 +106,29 @@ def test_a_refusal_exits_1_and_writes_nothing(tmp_path: Path) -> None:
     assert not (root / PRODUCED).exists()
 
 
-def test_a_final_piece_takes_no_run_and_nothing_is_written(tmp_path: Path) -> None:
-    root = producing_project(tmp_path)
+def set_state(root: Path, state: str) -> None:
     piece = root / "visual" / "pieces" / PIECE / "piece.yaml"
     piece.write_text(
-        piece.read_text(encoding="utf-8").replace("state: draft", "state: final"), encoding="utf-8"
+        piece.read_text(encoding="utf-8").replace("state: draft", f"state: {state}"),
+        encoding="utf-8",
     )
+
+
+def test_a_published_piece_with_no_lock_is_told_to_go_back_to_a_draft(tmp_path: Path) -> None:
+    root = producing_project(tmp_path, lock=None)
+    set_state(root, "published")
+    shown = run(root, PIECE, OUTPUT)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        "error: the piece `flow` is published and has no lock: set it back to a draft for its "
+        "first render, then produce\n"
+    )
+    assert not (root / PRODUCED).exists()
+
+
+def test_a_final_piece_takes_no_run_and_nothing_is_written(tmp_path: Path) -> None:
+    root = producing_project(tmp_path)
+    set_state(root, "final")
     shown = run(root, PIECE, OUTPUT)
     assert shown.returncode == 1
     assert shown.stdout == ""

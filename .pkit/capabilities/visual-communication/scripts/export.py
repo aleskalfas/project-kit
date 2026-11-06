@@ -27,8 +27,8 @@ It stops on a produced picture that is stale, naming what changed, unless `--use
 names it; the record keeps each picture used while stale, and the version of each picture
 the export used. `--use-stale` naming an output the piece does not declare is refused; one
 that is not stale is used as it is, and the command says so. It stops on a picture that is
-missing, and on a piece with no lock yet, which `pkit visual render` writes. A final piece
-takes no export, whatever else holds of it (DEC-017 point 3).
+missing, and on a piece with no lock yet, which `pkit visual render` writes of a draft. A
+final piece takes no export, whatever else holds of it (DEC-017 point 3).
 
 It writes in the location, so where the configuration records none it takes `visual/` and
 records it before its first write, or the path `--location` names. Every check that can
