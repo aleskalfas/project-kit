@@ -22,8 +22,10 @@ answers:
       - 20261106T043326Z-f74aaa9c.yaml
       - 20261106T043557Z-4ed48797.yaml
       - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
     revalidated:
-      at: 2026-11-06T06:01:43Z
+      at: 2026-11-06T10:07:02Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/outputs.md
     read:
@@ -46,8 +48,10 @@ answers:
       - 20261106T043326Z-f74aaa9c.yaml
       - 20261106T043557Z-4ed48797.yaml
       - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
     revalidated:
-      at: 2026-11-06T06:01:45Z
+      at: 2026-11-06T10:07:04Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/README.md
     read:
@@ -71,8 +75,10 @@ answers:
       - 20261105T224232Z-29552d89.yaml
       - 20261106T001934Z-0af931c1.yaml
       - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
     revalidated:
-      at: 2026-11-06T06:01:46Z
+      at: 2026-11-06T10:07:05Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/components.md
     read:
@@ -92,10 +98,11 @@ answers:
       - 20261106T043326Z-f74aaa9c.yaml
       - 20261106T043557Z-4ed48797.yaml
       - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
     revalidated:
-      at: 2026-11-06T06:01:48Z
+      at: 2026-11-06T10:07:07Z
       outcome: unchanged
-      unchanged-because: files.md gains a row for current-copy/ and a sentence on what a published piece owes under the state field. components.md links those two sections only for where a component's file lies and for a piece naming its top, and neither passage moved, so nothing here changes.
+      unchanged-because: files.md gains a row for current-copy/ and a sentence on what a published piece owes under the state field. components.md links those two sections only for where a component's file lies and for a piece naming its top, and neither passage moved. The facts of an export and their stand-ins, which this page now holds, are about a scene, and a current copy is a file an export writes, so the two do not meet here and nothing changes.
   - artefact: .pkit/capabilities/visual-communication/checks.md
     read:
       - 20261102T235145Z-1a0d93cb.yaml
@@ -123,10 +130,13 @@ answers:
       - 20261106T043557Z-4ed48797.yaml
       - 20261106T045753Z-f02f34f0.yaml
       - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T061853Z-ad99d5f3.yaml
     revalidated:
-      at: 2026-11-06T06:01:49Z
+      at: 2026-11-06T10:07:08Z
       outcome: unchanged
-      unchanged-because: "An export now writes current-copy/ and the record gains an optional current-copy entry, and the gate refuses a published lock that differs. No finding of the check changes: it still reads only the binding of exports.yaml, the schema takes the new entry at format 1, and this page's statement that no fingerprint reads current-copy/ stays true, which the export tests hold."
+      unchanged-because: "An export now writes current-copy/ and the record gains an optional current-copy entry, and the gate refuses a published lock that differs. No finding of the check changes: it still reads only the binding of exports.yaml, the schema takes the new entry at format 1, and this page's statement that no fingerprint reads current-copy/ stays true, which the export tests hold. The row on text-overflow that says a stand-in that overflows is a finding reads a scene, and a current copy is written after the scene, so that row stands as it is."
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-export
     read:
       - 20261103T170439Z-32fb6096.yaml
@@ -135,7 +145,8 @@ answers:
       - 20261105T210032Z-f3d993fd.yaml
       - 20261106T002156Z-812bc5cd.yaml
       - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
     revalidated:
-      at: 2026-11-06T06:01:51Z
+      at: 2026-11-06T10:07:10Z
       outcome: unchanged
       unchanged-because: "The change adds a current copy beside the numbered files and leaves what a numbered export is alone. The term's example of a third run in two languages, and its distinction that an export stays as it was made, still hold: a copy is a separate unnumbered file and no numbered file is rewritten."
