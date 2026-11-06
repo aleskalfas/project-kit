@@ -6,7 +6,8 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
 
 - **A piece** is a folder of the location's `pieces/`: its `piece.yaml`, a content file
   `content.<language>.yaml` for each language it lists, its local components, and what
-  a producer made for it under `produced/<output>/`. `read_piece` reads it.
+  a producer made for it under `produced/<output>/`. `read_piece` reads it, and
+  `read_piece_file` its `piece.yaml` alone, which is what the check reads of a final piece.
 - **Its lock** names the version of each library it uses. `needed` gives the libraries
   the piece names itself: its top's library, its brand, its notations and every library
   its content uses; `libraries.move_lock` adds what they build on, judging each whole
@@ -36,12 +37,13 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from _lib import keys, layout, notations, records, tokens, values
+from _lib.copies import DRAFT
 from _lib.env import MissingFont, PictureInfo, UnknownConcept, UnreadableComponent
 from _lib.files import FileError, read_bound, refuse_links, without_binding, write_whole
 from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, Misfit, Version
@@ -148,7 +150,8 @@ class Piece:
 
     @property
     def pinned(self) -> bool:
-        return self.data.get("pinned") is True
+        """Whether its lock is pinned, which is read of a draft alone (DEC-003 point 8)."""
+        return self.state == DRAFT and self.data.get("pinned") is True
 
     @property
     def lock(self) -> dict[str, str]:
@@ -175,15 +178,19 @@ class Piece:
 
 def piece_names(root: Path, location: str) -> list[str]:
     """The pieces of the location: each folder of its `pieces/` that holds a file."""
+    return pieces_in(location, listed_files(root, f"{location}/{PIECES}"))
+
+
+def pieces_in(location: str, listed: Iterable[str]) -> list[str]:
+    """The pieces of the location that `listed`, the files of its `pieces/`, hold."""
     prefix = f"{location}/{PIECES}/"
-    return sorted(
-        {rel[len(prefix) :].split("/")[0] for rel in listed_files(root, f"{location}/{PIECES}")}
-    )
+    return sorted({rel[len(prefix) :].split("/")[0] for rel in listed})
 
 
-def read_piece(root: Path, location: str, name: str) -> Piece:
-    """The piece `name` of the location, read. Raises Refused, naming the file and what to
-    change, when it cannot be read as a piece."""
+def read_piece_file(root: Path, location: str, name: str) -> Piece:
+    """The piece `name` of the location as its `piece.yaml` alone gives it, with no contents:
+    no content file is read, so a fault in one refuses nothing (DEC-017 point 4). Raises
+    Refused, naming the file and what to change, when that file cannot be read as a piece's."""
     if not is_name(name):
         raise Refused(f"`{name}` is not a piece's name: lower-case words joined by hyphens")
     rel = f"{location}/{PIECES}/{name}"
@@ -213,19 +220,27 @@ def read_piece(root: Path, location: str, name: str) -> Piece:
     )
     _require(_is_lock(data.get("lock", {})), shown, "lock", "a mapping of libraries to versions")
     _require(_is_modes(data.get("modes", {})), shown, "modes", "a mapping of axes to modes")
+    return Piece(root, location, name, data, {})
+
+
+def read_piece(root: Path, location: str, name: str) -> Piece:
+    """The piece `name` of the location, read: its `piece.yaml` and its content in each
+    language. Raises Refused, naming the file and what to change, when it cannot be read as a
+    piece."""
+    piece = read_piece_file(root, location, name)
     contents = {}
-    for language in languages:
-        content = root / rel / content_file(language)
+    for language in piece.languages:
+        content = piece.folder / content_file(language)
         if not content.is_file():
             raise Refused(
-                f"{rel}/{content_file(language)} does not exist: the piece lists the language "
-                f"`{language}`, so write its content there"
+                f"{piece.file(content_file(language))} does not exist: the piece lists the "
+                f"language `{language}`, so write its content there"
             )
         try:
             contents[language] = without_binding(read_bound(content, "content"))
         except (ReadError, FileError) as exc:
             raise Refused(str(exc)) from exc
-    return Piece(root, location, name, data, contents)
+    return Piece(root, location, name, piece.data, contents)
 
 
 def _require(holds: bool, file: str, key: str, shape: str) -> None:
@@ -412,8 +427,10 @@ class Project:
 
     def scenes(self, languages: Sequence[str] | None = None) -> list[tuple[str, SceneResult]]:
         """One scene for each language, or each of `languages`, at the key over the size
-        axes, in the piece's order of languages. Raises `env.MissingFont` (and so
-        `text.MissingGlyph`) before anything is laid out."""
+        axes, in the piece's order of languages. Each takes the piece's language and state,
+        and the stand-in for a version's number and its date (DEC-016 point 5). Raises
+        `env.MissingFont` (and so `text.MissingGlyph`) before anything is laid out."""
+        facts = layout.stand_ins(self.piece.state)
         return [
             (
                 language,
@@ -426,6 +443,7 @@ class Project:
                     size_key=SIZE_KEY,
                     seam_version=seam.SEAM_VERSION,
                     env=self.env,
+                    facts=facts,
                 ),
             )
             for language in self.piece.languages

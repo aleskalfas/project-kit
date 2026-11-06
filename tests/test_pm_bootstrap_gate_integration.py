@@ -173,7 +173,7 @@ def test_an_engine_driven_read_names_bootstrap_as_the_cause(tmp_path: Path) -> N
 
     cap = _project(tmp_path)
     repo_root = cap.parent.parent.parent
-    shutil.copytree(SCRIPTS, cap / "scripts")
+    shutil.copytree(SCRIPTS, cap / "scripts", ignore=shutil.ignore_patterns("__pycache__"))
     for script in (cap / "scripts").glob("detect-*.py"):
         body = script.read_text(encoding="utf-8").split("\n", 1)[1]
         script.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")

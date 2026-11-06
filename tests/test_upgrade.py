@@ -891,7 +891,7 @@ def _real_source_copy(tmp_path: Path) -> Path:
     """
     real_source = install.find_source_kit()
     dest = tmp_path / "source-copy" / ".pkit"
-    shutil.copytree(real_source, dest)
+    shutil.copytree(real_source, dest, ignore=shutil.ignore_patterns("__pycache__"))
     return dest
 
 

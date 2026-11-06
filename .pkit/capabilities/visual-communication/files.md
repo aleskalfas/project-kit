@@ -34,6 +34,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/checks.py
         - .pkit/capabilities/visual-communication/scripts/_lib/framing.py
         - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/current_copy.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
         - .pkit/capabilities/visual-communication/scripts/_lib/code.py
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
         - .pkit/capabilities/visual-communication/schemas/config.schema.json
@@ -104,6 +106,10 @@ pkit:
         - visual-communication:DEC-014#5
         - visual-communication:DEC-015#2
         - visual-communication:DEC-015#4
+        - visual-communication:DEC-016#3
+        - visual-communication:DEC-017#6
+        - visual-communication:DEC-017#7
+        - visual-communication:DEC-017#8
 ---
 
 # The files of the visual work
@@ -173,10 +179,11 @@ The location holds four folders: `libraries/`, the library folder; `pieces/`, on
 | `pieces/<piece>/produced/<output>/record.yaml`, and a PNG for each variant | `produced-record` | `pkit visual produce` |
 | `pieces/<piece>/findings.yaml` | `findings` | `pkit visual render` |
 | `pieces/<piece>/exports.yaml` | `exports` | `pkit visual export` |
+| `pieces/<piece>/current-copy/<file>` | none: a copy of a file an export made | `pkit visual export`, of a published piece |
 | `code/<name>.yaml` | `code` | a person |
 | `fonts/<file>` | none | a person, who commits the font |
 
-The code that `pkit visual write-code` writes lies where its declaration names, with its record beside it. A component's file is described in *Components*; produced pictures, exports, declarations of code and the code itself in *What is made from a piece*; `findings.yaml` in *What the check reports*.
+The code that `pkit visual write-code` writes lies where its declaration names, with its record beside it. A component's file is described in *Components*; produced pictures, exports, a current copy, declarations of code and the code itself in *What is made from a piece*; `findings.yaml` in *What the check reports*.
 
 ### The clone's local folder
 
@@ -184,7 +191,7 @@ The code that `pkit visual write-code` writes lies where its declaration names, 
 
 - `previews/<piece>/`: the SVG previews `pkit visual render` draws;
 - `exports/<piece>/`: the files `pkit visual export` makes;
-- `before-after/<piece>/`: a pinned draft's scenes as `pkit visual add` draws them both ways, in `before/` with the copy it locks and in `after/` with what the capability ships;
+- `before-after/<piece>/`: a piece's scenes drawn around a change to its lock's versions, in `before/` without the change and in `after/` with it;
 - `handover/<piece>/`: what `pkit visual produce` hands a producer, and what the producer writes, until the command keeps it in the piece's folder;
 - `look/<piece>/`: the images, the frames and the report `pkit visual look` writes.
 
@@ -269,12 +276,12 @@ lock:
 | `shown` | yes | Where the piece is shown, in words. |
 | `explains` | yes | `true` where the piece explains, rather than only shows. |
 | `exports` | yes | The formats an export makes (*Exports* in *What is made from a piece*). |
-| `state` | yes | The piece's stage of life. Format 1 takes `draft` alone. |
+| `state` | yes | The piece's stage of life, `draft`, `final` or `published`, which says who moves its lock ([The lock](#the-lock)). A published piece owes a current copy, which each of its exports writes (*The current copy* in *What is made from a piece*). |
 | `modes` | no | For each axis, the modes the piece is drawn in. An axis it leaves out is drawn in its default. |
-| `pinned` | no | `true` pins the lock. |
+| `pinned` | no | `true` pins a draft's lock. No other state reads it. |
 | `produced` | no | Each picture a producer makes for the piece (*Declaring a produced output* in *What is made from a piece*). |
 | `accept-losses` | no | The losses of a plugin a person accepted (*Accepting a loss* in *What is made from a piece*). |
-| `lock` | no | The version of each library the piece uses. A render writes it. |
+| `lock` | no | The version of each library the piece uses. A draft's render writes it. |
 
 ### The lock
 
@@ -296,7 +303,9 @@ A library moves no lower than the version the lock names while versions at or ab
 
 **A pinned draft,** `pinned: true`, keeps its lock: a render checks it and never changes it. The lock must name every library the piece uses, each a version the location holds and the installed capability reads, and they must fit together. A pinned piece with no lock is refused: unpin it for its first render. To move a pinned lock, change it by hand, or unpin the piece and render it.
 
-A copy not yet released that a pinned lock names may fall behind what the capability ships under its number. `pkit visual add` replaces it only where a person names each pinned draft and each declaration that locks it (DEC-013 point 5). Naming it is the move on purpose: the lock keeps its number, and what it draws changes only then. The run that leaves the copy draws the piece both ways first, so the person sees what the move changes (DEC-003 point 8).
+**A final piece** was handed out, and its lock never moves. **A published piece** stays in use where others rely on it. Its lock moves only through a change a person reviews, with a before-and-after of each page it changes (DEC-003 point 8). A render moves neither lock, whatever newer versions the location holds, and reads no `pinned` of either piece. It checks such a lock as it checks a pinned draft's, and its refusal says the piece's state. A published piece with no lock is refused: set it back to a draft for its first render. A final piece with no lock is refused too: write back the lock of the version handed out, which is no move of it.
+
+A copy not yet released that a pinned or a published lock names may fall behind what the capability ships under its number. `pkit visual add` replaces it only where a person names each pinned draft, each published piece and each declaration that locks it (DEC-013 point 5). Naming it is the move on purpose: the lock keeps its number, and what it draws changes only then. The run that leaves the copy draws the piece both ways first, so the person sees what the move changes (DEC-003 point 8). Under a final piece's lock it replaces such a copy with no piece named, since that changes none of the piece's exports.
 
 The render writes the lock into `piece.yaml` as text, as a top-level block mapping, one library a line, in the order of their names. Every other byte of the file stays: comments, order, line endings and a byte-order mark. Where the result would not read back as the file with that lock, the render refuses: write `lock:` as a block mapping, one library a line.
 

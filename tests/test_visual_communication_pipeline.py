@@ -1,8 +1,8 @@
 """The pipeline from a project's files to the engine (visual-communication DEC-002 point 5,
-DEC-003 point 9, DEC-004 point 10, DEC-005 point 13): a piece read with its content, the
-lock written into `piece.yaml` with every other byte kept, the `Env` over the locked
-libraries, the notations the piece names and its produced pictures, and the scenes of each
-language.
+DEC-003 point 9, DEC-004 point 10, DEC-005 point 13): a piece read with its content, or its
+own file alone, the lock written into `piece.yaml` with every other byte kept, the `Env` over
+the locked libraries, the notations the piece names and its produced pictures, and the
+scenes of each language.
 
 It also holds the projects the render, check and export tests draw: `drawing_project`, the
 piece `flow`, a figure of the `tests` library's steps whose last step is a callout over the
@@ -99,6 +99,35 @@ def drawing_project(tmp_path: Path, **given: Any) -> Path:
     return lay_out_drawing(project(tmp_path), **given)
 
 
+def released_entry(folder: Path, name: str) -> dict[str, Any]:
+    """The list's entry of a released version, its fingerprint over its folder as it is."""
+    files = sorted(path for path in folder.rglob("*") if path.is_file())
+    inputs = fingerprint.library_version_inputs(
+        library=name, version=folder.name, folder=folder, files=files
+    )
+    return {"released": True, "hash": fingerprint.fingerprint(inputs)}
+
+
+def list_drawing_libraries(root: Path, *, released: bool = False, **more: str) -> None:
+    """The list of the three libraries `lay_out_drawing` holds, the shipped foundations, the
+    test brand and the `tests` library, and each of `more`, from the source it gives: each
+    version the library folder holds of them, as `released` says."""
+    sources = {"foundations": "shipped", "test-brand": "project", "tests": "project", **more}
+    write_list(
+        root,
+        {
+            name: {
+                "source": {"kind": kind},
+                "versions": {
+                    folder.name: released_entry(folder, name) if released else {"released": False}
+                    for folder in sorted((root / "visual" / "libraries" / name).iterdir())
+                },
+            }
+            for name, kind in sources.items()
+        },
+    )
+
+
 def lay_out_drawing(
     root: Path,
     *,
@@ -106,26 +135,22 @@ def lay_out_drawing(
     modes: Mapping[str, list[str]] | None = None,
     head: str = "Plan the work.",
     picture: bool = True,
+    released: bool | None = None,
     **fields: Any,
 ) -> Path:
-    """The shipped foundations, the test brand and the `tests` library, listed unreleased,
-    and the draft `flow` laid out in the project at `root`: the figure of `content`, in
-    both colour schemes, exported as SVG, which declares the produced output `square`
-    (made by the test producer from `accent`, 100 × 100 pixels). Its picture is not
-    written yet (`write_picture`). With `picture` false, the piece declares no produced
-    output and its steps hold no callout, so no producer is needed to check it."""
+    """The shipped foundations, the test brand and the `tests` library, and the draft `flow`
+    laid out in the project at `root`: the figure of `content`, in both colour schemes,
+    exported as SVG, which declares the produced output `square` (made by the test producer
+    from `accent`, 100 × 100 pixels). Its picture is not written yet (`write_picture`). With
+    `picture` false, the piece declares no produced output and its steps hold no callout, so
+    no producer is needed to check it. The libraries are listed unreleased, but under a
+    final or a published piece's lock, which names released versions alone; `released` says
+    otherwise."""
     copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     copy_library(root, TESTS, "tests", "1.0.0")
-    unreleased = {"1.0.0": {"released": False}}
-    write_list(
-        root,
-        {
-            "foundations": {"source": {"kind": "shipped"}, "versions": unreleased},
-            "test-brand": {"source": {"kind": "project"}, "versions": unreleased},
-            "tests": {"source": {"kind": "project"}, "versions": unreleased},
-        },
-    )
+    stays = fields.get("state") in ("final", "published")
+    list_drawing_libraries(root, released=stays if released is None else released)
     piece: dict[str, Any] = {
         "modes": dict(modes if modes is not None else {"colour-scheme": ["light", "dark"]}),
         "exports": ["svg"],
@@ -175,6 +200,14 @@ def square() -> Any:
     producer.register(seam)
     yield
     seam.unregister(producer.NAME)
+
+
+def stamped(tmp_path: Path, shows: str = "files", **fields: Any) -> Path:
+    """The drawing project without its picture, its body the `tests` library's stamp, which
+    shows the facts `shows` asks for."""
+    root = drawing_project(tmp_path, picture=False, **fields)
+    write_content(root, body={"use": "tests/stamp", "shows": shows})
+    return root
 
 
 def piece_of(root: Path) -> Any:
@@ -229,6 +262,51 @@ def test_a_piece_that_cannot_be_read_is_refused_naming_the_file(
     assert said in str(refused.value)
 
 
+def test_a_pieces_own_file_is_read_with_no_contents_and_needs_no_content_file(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, languages=["en", "cs"])
+    piece = pl.read_piece_file(root, "visual", PIECE)
+    assert piece.contents == {}
+    assert (piece.top, piece.brand, piece.languages) == (
+        "foundations/figure",
+        "test-brand",
+        ["en", "cs"],
+    )
+    assert piece.lock == LOCK
+
+
+def test_a_pieces_own_file_names_the_libraries_it_names_itself_and_none_of_its_contents(
+    tmp_path: Path,
+) -> None:
+    root = system_project(tmp_path)
+    piece = pl.read_piece_file(root, "visual", "system")
+    assert pl.needed(piece) == ["foundations", "test-brand", "test-notation"]
+    root = drawing_project(tmp_path / "flow")
+    assert "tests" in pl.needed(piece_of(root))
+    assert pl.needed(pl.read_piece_file(root, "visual", PIECE)) == ["foundations", "test-brand"]
+
+
+@pytest.mark.parametrize(
+    ("fields", "said"),
+    [
+        pytest.param({"top": "figure"}, "`top` is not a use", id="top"),
+        pytest.param({"brand": "No"}, "`brand` is not a library's name", id="brand"),
+        pytest.param({"lock": {"foundations": 1}}, "`lock` is not a mapping", id="lock"),
+        pytest.param({"languages": []}, "`languages` is not a list", id="languages"),
+        pytest.param({"modes": {"a": "b"}}, "`modes` is not a mapping", id="modes"),
+        pytest.param({"notations": "x"}, "`notations` is not a list", id="notations"),
+    ],
+)
+def test_a_pieces_own_file_is_checked_as_the_whole_piece_is(
+    tmp_path: Path, fields: dict[str, Any], said: str
+) -> None:
+    root = drawing_project(tmp_path, **fields)
+    with pytest.raises(pl.Refused) as refused:
+        pl.read_piece_file(root, "visual", PIECE)
+    assert said in str(refused.value)
+
+
 @pytest.mark.parametrize(
     "lock",
     [
@@ -243,6 +321,13 @@ def test_a_lock_that_would_lead_out_of_the_library_folder_is_refused_before_any_
     piece = piece_of(root)
     with pytest.raises(pl.Refused, match="which is no library at a version"):
         pl.Project(piece, lock, pl.Held(root, "visual"))
+
+
+@pytest.mark.parametrize(
+    ("state", "pinned"), [("draft", True), ("final", False), ("published", False)]
+)
+def test_a_pin_is_read_of_a_draft_alone(tmp_path: Path, state: str, pinned: bool) -> None:
+    assert piece_of(drawing_project(tmp_path, state=state, pinned=True)).pinned is pinned
 
 
 def test_a_piece_the_location_lacks_is_refused(tmp_path: Path) -> None:
@@ -972,6 +1057,41 @@ def previews_of(root: Path) -> dict[str, str]:
     return found
 
 
+#: What a person may set each field an export's fingerprint leaves out to, unlike what
+#: `lay_out_drawing` writes. A field added to that list and not here fails the test below.
+LEFT_OUT_VALUES = {
+    "accept-losses": [{"plugin": "svg", "what": "accent", "reason": "Seen."}],
+    "audience": "Someone else.",
+    "copy-place": "docs/images",
+    "explains": True,
+    "pinned": True,
+    "shown": "On a page.",
+    "state": "published",
+}
+
+
+@pytest.mark.parametrize("field", fingerprint.PIECE_FIELDS_LEFT_OUT)
+def test_a_field_an_export_leaves_out_changes_no_scene(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, field: str
+) -> None:
+    """The list holds to what scenes read (DEC-016 point 1). This piece shows no fact of an
+    export, so its state, which only such a fact may show, changes nothing either."""
+    importable(monkeypatch, svg)
+    root = drawing_project(tmp_path)
+    write_picture(root, framing)
+
+    def scenes() -> list[tuple[str, dict[str, Any]]]:
+        return [(language, made.scene.to_dict()) for language, made in project_of(root).scenes()]
+
+    before, drawn = scenes(), previews_of(root)
+    path = root / PIECE_FOLDER / "piece.yaml"
+    data = reading.read_yaml(path)
+    assert data.get(field) != LEFT_OUT_VALUES[field]
+    path.write_text(yaml_text({**data, field: LEFT_OUT_VALUES[field]}), encoding="utf-8")
+    assert scenes() == before
+    assert previews_of(root) == drawn
+
+
 def changed_tests(folder: Path, version: str = "1.0.0") -> Path:
     """The `tests` library copied to `folder` at `version`, its card's head in another style."""
     shutil.copytree(TESTS, folder)
@@ -1117,3 +1237,36 @@ def test_a_lock_entry_that_spells_no_version_reads_nothing_outside_the_library_f
     root = drawing_project(tmp_path, picture=False)
     side = before_after.drawing(root, "visual", PIECE, {**LOCK, library: version})
     assert side.why.startswith(f"the lock of {PIECE_FOLDER}/piece.yaml names `{library}: ")
+
+
+# --- the facts of an export ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("shows", "part", "text"),
+    [
+        ("files", "language", "en"),
+        ("files", "state", "published"),
+        ("number", "number", "v88"),
+        ("date", "date", "2088-08-28"),
+    ],
+)
+def test_each_scene_takes_the_pieces_language_and_state_and_the_stand_ins(
+    tmp_path: Path, shows: str, part: str, text: str
+) -> None:
+    root = stamped(tmp_path, shows, state="published")
+    piece = piece_of(root)
+    [(_, result)] = pl.Project(piece, piece.lock, pl.Held(root, "visual")).scenes()
+    element = result.scene.find(f"figure/body/{part}")
+    assert element is not None
+    assert element.properties["text"] == text
+
+
+def test_the_search_for_a_lock_places_a_piece_that_shows_a_fact(tmp_path: Path) -> None:
+    root = stamped(tmp_path, "number")
+    piece = piece_of(root)
+    held = pl.Held(root, "visual")
+    versions = {
+        name: held.library(name, pl.Version.parse(version)) for name, version in piece.lock.items()
+    }
+    assert pl.fit(piece, held)(versions) == []

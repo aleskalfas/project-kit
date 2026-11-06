@@ -17,9 +17,11 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/write-code.py
         - .pkit/capabilities/visual-communication/scripts/look.py
         - .pkit/capabilities/visual-communication/scripts/pages.py
+        - .pkit/capabilities/visual-communication/scripts/before-after.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
         - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
         - .pkit/capabilities/visual-communication/scripts/_lib/before_after.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/looks.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
@@ -38,8 +40,12 @@ pkit:
         - visual-communication:DEC-015#4
         - visual-communication:DEC-015#5
         - visual-communication:DEC-015#7
+        - visual-communication:DEC-019#5
+        - visual-communication:DEC-019#7
         - COR-017
         - COR-031
+        - COR-054#3
+        - COR-054#5
         - COR-055#3
         - ADR-059#1
       artefact:
@@ -68,6 +74,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/outputs.md#contents
         - .pkit/capabilities/visual-communication/outputs.md#exports
+        - .pkit/capabilities/visual-communication/outputs.md#the-current-copy
         - .pkit/capabilities/visual-communication/outputs.md#the-record-of-exports
         - .pkit/capabilities/visual-communication/outputs.md#plugins
         - .pkit/capabilities/visual-communication/outputs.md#accepting-a-loss
@@ -151,19 +158,19 @@ A library the capability ships reaches the location only through [`pkit visual a
 4. **See it.** [`pkit visual look <piece>`](#pkit-visual-look-piece) draws each page as an image, with a report of what the images cannot show ([The viewing step](outputs.md#the-viewing-step)). [The reviewer](#the-reviewer) can read them for you.
 5. **Check it.** `pkit visual check <piece>`, or `pkit validate`, reports what the piece breaks ([What the check reports](checks.md)).
 6. **Commit the piece's folder:** `piece.yaml`, the content and `findings.yaml` ([The findings record](checks.md#the-findings-record)). The previews stay local to the clone ([The clone's local folder](files.md#the-clones-local-folder)).
-7. **Hand it out.** `pkit visual export <piece>` makes a numbered export in each format the piece declares, and records the version in the piece's `exports.yaml`. Commit `exports.yaml`; the exported files stay local until they are handed out ([Exports](outputs.md#exports)).
+7. **Hand it out.** `pkit visual export <piece>` makes a numbered export in each format the piece declares, and records the version in the piece's `exports.yaml`. Commit `exports.yaml`; the exported files stay local until they are handed out ([Exports](outputs.md#exports)). A published piece's export also writes its current copy, the unnumbered files a page links to. Commit that too ([The current copy](outputs.md#the-current-copy)).
 
 A brand's values reach code the same way: a declaration under the location's `code/` folder names the brand and where the code goes, and `pkit visual write-code <name>` writes it ([Written code](outputs.md#written-code)).
 
 ## Commands
 
-Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names ([How a command finds it](files.md#how-a-command-finds-it)). `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. `look` writes only in the clone's local folder, and records no location. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, puts back each folder it replaced, and takes back the location it recorded. It names each file it could not put back. Two commands write before they can refuse. `produce` hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)). `look` holds the fonts it hands its tool in a temporary folder there, which the run removes, and it may leave the local folder itself ([The viewing step](outputs.md#the-viewing-step)).
+Every command runs from anywhere in the project: it finds the project root as the nearest folder, from where it runs upwards, that holds the installed capability. `add`, `render`, `produce` and `export` write in the location, so where none is recorded they take `visual/` and record it, or the path `--location <path>` names ([How a command finds it](files.md#how-a-command-finds-it)). `release` writes in a location that holds the library already, and records none. With `--shipped` it writes in the capability's own folder and `.changes/unreleased/` instead. `look` and `before-after` write only in the clone's local folder, and record no location. A command prints `error: …` and exits 1 when it refuses, or when a write fails. Every check that can refuse runs before its first write, so a refused command has written nothing. Where a write fails, the error names the file the command could not write and why, and the command leaves every file as it was before the run: it removes each file the run made, writes back each file it changed, puts back each folder it replaced, and takes back the location it recorded. It names each file it could not put back. Two commands write before they can refuse. `produce` hands the producer its inputs in the capability's local folder, outside the location, and that hand-over stays as it was written ([Produced pictures](outputs.md#produced-pictures)). `look` holds the fonts it hands its tool in a temporary folder there, which the run removes, and it may leave the local folder itself ([The viewing step](outputs.md#the-viewing-step)).
 
 ### `pkit visual status`
 
 Shows where the visual work lies, and each piece with its state and its lock.
 
-- **Prints** the location, and whether the configuration records it or it is the default, not recorded yet. Then each piece under `pieces/`, with its state, whether it is pinned, and the version of each library its lock names. A piece with no lock yet says that its first render writes one.
+- **Prints** the location, and whether the configuration records it or it is the default, not recorded yet. Then each piece under `pieces/`, with its state, whether a draft is pinned, and the version of each library its lock names. A draft with no lock yet says that its first render writes one. A published piece with none says to set it back to a draft for that render. A final piece with none says to write back the lock of the version handed out ([The lock](files.md#the-lock)).
 - **Writes** nothing.
 - **Exits** 1 when the configuration cannot be read, or records a location that is refused or missing; 0 otherwise.
 
@@ -176,16 +183,16 @@ Copies a library the capability ships into the location's library folder, lists 
 - **Lists it** in `libraries/libraries.yaml`, released with its hash or not released ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)).
 - **Brings every copy of the library up to date** in the same run ([What the location holds](files.md#what-the-location-holds)):
   - A copy the list marks not released, of a number the capability ships, is replaced whole by what the capability ships under that number. Where that number is released, the list then marks the copy released ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)).
-  - Such a copy is replaced only where every lock that names it is the lock of a draft that is not pinned, which moves at each render, or you name the lock. Under a pinned draft's lock, or written code's, left unnamed, the copy stays as it is. The command names each such piece or declaration, and goes on with the rest of the run. A lock it cannot read counts as one that moves only on purpose, and the command names its file. To tell which locks hold a copy, it reads only a piece's `lock`, `pinned` and `state`, so a fault in the piece's content stops nothing.
+  - Such a copy is replaced only where every lock that names it is the lock of a draft that is not pinned, which moves at each render, or of a final piece, or you name the lock ([The lock](files.md#the-lock)). Under a pinned draft's lock, a published piece's or written code's, left unnamed, the copy stays as it is. The command names each such piece or declaration, and goes on with the rest of the run. A lock it cannot read counts as one that moves only on purpose, and the command names its file. To tell which locks hold a copy, it reads only a piece's `lock`, `pinned` and `state`, so a fault in the piece's content stops nothing.
   - A released copy whose files no longer match its hash is restored as released. One that matches is not written.
   - A copy of a number the installed capability does not ship stays as it is, and so does a version folder the list does not name.
   - A version the list names whose folder is missing is brought in as a copy of its kind is: a released one restored, one not released replaced, under the same locks.
 - **Shows a before-and-after** of each lock left on a copy it leaves, so you see what replacing the copy changes:
-  - For a pinned draft, it draws the piece's scenes with the copy as it is, in `before/`, and with what the capability ships, in `after/`. Both lie under `before-after/<piece>/` in [the clone's local folder](files.md#the-clones-local-folder), each file named as its [preview](outputs.md#previews).
+  - For a pinned draft or a published piece, it draws the piece's scenes with the copy as it is, in `before/`, and with what the capability ships, in `after/`. Both lie under `before-after/<piece>/` in [the clone's local folder](files.md#the-clones-local-folder), each file named as its [preview](outputs.md#previews).
   - For written code, it prints the difference in the code the declaration's writer writes with each ([The declaration](outputs.md#the-declaration)).
   - Where it cannot draw or write a side, as for a fault in the piece's content, it says why and goes on.
-- **Replaces the copy once you name each lock left on it.** `--piece <name>` names a pinned draft, and `--declaration <name>` a declaration of written code. Each may repeat. Naming it is the move on purpose: the lock keeps its number, and the command writes no `piece.yaml` and no declaration ([The lock](files.md#the-lock), [The declaration](outputs.md#the-declaration)). With any left unnamed, the copy stays, and the command prints the line that names them all. Where a lock on the copy cannot be read, it prints no such line: you mend that lock first.
-- **Prints** each copy it writes, as copied, replaced or restored, with each piece and declaration whose lock names it. Then each copy it leaves, with why, and each lock left with its before-and-after. Where it can read each lock left, it adds the line that replaces the copy. Then each version it lists.
+- **Replaces the copy once you name each lock left on it.** `--piece <name>` names a pinned draft or a published piece, and `--declaration <name>` a declaration of written code. Each may repeat. Naming it is the move on purpose: the lock keeps its number, and the command writes no `piece.yaml` and no declaration ([The lock](files.md#the-lock), [The declaration](outputs.md#the-declaration)). With any left unnamed, the copy stays, and the command prints the line that names them all. Where a lock on the copy cannot be read, it prints no such line: you mend that lock first.
+- **Prints** each copy it writes, as copied, replaced or restored, with each piece and declaration whose lock names it. It calls each piece by its state. Then each copy it leaves, with why, and each lock left with its before-and-after. Where it can read each lock left, it adds the line that replaces the copy. Then each version it lists.
 - **Refuses** a library the capability does not ship, naming the ones it ships, and a released version it does not ship. It refuses files the capability ships that no longer match the hash the library's record keeps, or whose files of the capability's format lack their binding ([The binding](files.md#the-binding)). It refuses a hash the list keeps for a released version that differs from the one the capability records, naming both. It refuses a version folder the list does not name, where the version is to be copied, and a library the list names from another source ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)). It refuses a piece or a declaration you name that locks no copy the run would replace, naming what it locks, and one whose lock it cannot read.
 - **Exits** 0 when it wrote each copy, or left it with why; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
@@ -210,7 +217,7 @@ Before you release a library for other projects, sync from a tagged install of t
 
 Draws a piece in each of its languages and each combination of modes it names.
 
-- **Moves the lock** of a draft and writes it into `piece.yaml`, or checks a pinned piece's lock ([The lock](files.md#the-lock)).
+- **Moves the lock** of a draft and writes it into `piece.yaml`. It only checks the lock of a pinned draft, a final piece or a published piece, and a refusal of a final or a published piece's lock says its state ([The lock](files.md#the-lock)).
 - **States** the facts of the lock's move ([The lock](files.md#the-lock)), which no `findings.yaml` keeps ([Content against components](checks.md#content-against-components)).
 - **Computes every scene,** or refuses where a font cannot measure the text ([How the engine computes a scene](components.md#how-the-engine-computes-a-scene)).
 - **Writes `findings.yaml`** beside `piece.yaml` ([The findings record](checks.md#the-findings-record)).
@@ -234,7 +241,7 @@ Runs the producer a piece declares for one of its produced outputs, and keeps it
 - **Works out the variants** the producer makes ([Variants](outputs.md#variants)), and hands it their values ([The hand-over](outputs.md#the-hand-over)).
 - **Keeps the picture** only when no input changed during the run and every variant is a PNG of the declared pixel size, exposing the same points. Then it writes each variant and the record in the piece's folder, under `produced/<output>/`, and removes a variant file left from before.
 - **Prints** each loss the producer reports that the piece does not accept ([Accepting a loss](outputs.md#accepting-a-loss)).
-- **Refuses** a piece with no lock yet (run `pkit visual render <piece>` first), and, before it runs, a producer it cannot run here ([Plugins](outputs.md#plugins)). What a producer is handed and returns is under [Produced pictures](outputs.md#produced-pictures).
+- **Refuses** a final piece, and a piece with no lock yet. For a draft, run `pkit visual render <piece>` first. Set a published piece back to a draft for its first render ([The lock](files.md#the-lock)). Before it runs, it refuses a producer it cannot run here ([Plugins](outputs.md#plugins)). What a producer is handed and returns is under [Produced pictures](outputs.md#produced-pictures).
 - **Exits** 0 when it wrote the variants and their record; 1 when it refused, with nothing written in the location, or a write failed ([Commands](#commands)).
 
 ### `pkit visual export <piece>`
@@ -242,9 +249,10 @@ Runs the producer a piece declares for one of its produced outputs, and keeps it
 Makes a numbered export of a piece in each format it declares.
 
 - **Makes the run's files,** each under the piece's next version number, in the clone's local folder ([Exports](outputs.md#exports)).
-- **Records the version** in `exports.yaml` ([The record of exports](outputs.md#the-record-of-exports)).
+- **Keeps a published piece's current copy,** replacing it whole in the piece's folder ([The current copy](outputs.md#the-current-copy)).
+- **Records the version** in `exports.yaml`, and the version that wrote a current copy ([The record of exports](outputs.md#the-record-of-exports)).
 - **Uses the lock** `piece.yaml` holds, and never moves it.
-- **Refuses** for each reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, and may repeat.
+- **Refuses** a final piece, which takes no export, and a published piece whose lock differs from the one its current copy was made under. It refuses for each other reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, and may repeat.
 - **Exits** 0 when it exported and recorded the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
 ### `pkit visual look <piece>`
@@ -265,6 +273,24 @@ Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 - **Prints** the piece's languages and keys, what it draws by default, each page by its number and trace id, and the tool. `--json` prints it as one document.
 - **Writes** nothing.
 - **Exits** 0 when it listed; 1 when the piece cannot be drawn, such as with no lock yet or a lock that does not hold.
+
+### `pkit visual before-after <piece>`
+
+Draws each of a piece's pages under two locks, and prints each page that differs. You ask for one of two looks.
+
+- **`--ahead` looks ahead, before a move of the lock.** The before is the lock of the version that wrote a published piece's [current copy](outputs.md#the-current-copy), and otherwise the lock the piece holds. The after is the newest released versions that fit, within the lock's majors. It prints each newer version it did not take, with why.
+- **`<library>@<version>` names versions for the after,** in the form `pkit visual add` takes, and may repeat. The after then moves what you name, and only what that needs. It prints each clash or lost end a version named goes past.
+- **Who takes a look ahead** ([The lock](files.md#the-lock)):
+  - A published piece, whose names must be released versions.
+  - A draft, only with versions named, which may be versions not yet released.
+  - A final piece, with none named. Its two locks are one.
+- **`--back` looks back, at a change.** The base is where your branch left the default branch, or the branch `--base <ref>` names. The before is the lock of the version that wrote the copy at that commit, or the lock held there where no version did. The after is the lock the piece holds now. A piece the base does not hold has no before, and the command says so.
+- **Draws** both sides with today's engine, from the piece's files and [produced pictures](outputs.md#produced-pictures) as they lie, and it runs no program. Both sides fill what a piece shows of its export in one way, so a number the piece shows does not differ.
+- **Writes** each page in `before/` and `after/`, under `before-after/<piece>/` in [the clone's local folder](files.md#the-clones-local-folder), each file named as its [preview](outputs.md#previews). It replaces what an earlier run left there, and writes nothing else.
+- **Prints** each lock, each page that differs, and each picture that is stale or missing. It says where the two locks are one, and where the engine's release differs from the one the copy's version recorded.
+- **Goes on** past a drawing it cannot make, such as where a library version left the project. It says why, and draws the other side.
+- **Refuses** a piece with no lock yet, a draft with no version named, and a final piece with one. It refuses a version a move cannot take, and a base that resolves to nothing.
+- **Exits** 0 when it drew a side or said why not; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)); 2 on a usage error.
 
 ### `pkit visual write-code <name>`
 

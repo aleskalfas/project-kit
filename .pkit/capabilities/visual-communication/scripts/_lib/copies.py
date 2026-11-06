@@ -35,9 +35,10 @@ point 5, DEC-013 points 5 and 6).
 - **The locks** (`locks`): each piece's, read from its `piece.yaml` alone, its `lock`,
   `pinned` and `state`, so a fault in its content stops nothing; and each declaration's of
   written code. A draft's lock that is not pinned follows its libraries, moving at each
-  render; a pinned draft's and written code's move only on purpose (DEC-003 point 8,
-  DEC-005 point 7). A lock the command cannot read counts as one that moves only on
-  purpose, and may name any copy of the library.
+  render, and a final piece's no longer draws, so neither holds a copy (DEC-013 point 5). A
+  pinned draft's, a published piece's and written code's move only on purpose (DEC-003
+  point 8, DEC-005 point 7). `pinned` is read of a draft alone. A lock the command cannot
+  read counts as one that moves only on purpose, and may name any copy of the library.
 
 Every check that can refuse runs in `plan`, before the first write. `write` writes the plan
 as one change (`files.Change`): each folder copied, or replaced whole, then the list, every
@@ -90,9 +91,18 @@ PIECE_FILE = "piece.yaml"
 #: The folder of the location that holds the declarations of written code (`code.FOLDER`).
 DECLARATIONS = "code"
 
-#: The state of a piece format 1 takes (DEC-003 point 8). A final or a published piece's
-#: lock is read once the format takes those states (#2572).
+#: The states of a piece (DEC-003 point 8).
 DRAFT = "draft"
+FINAL = "final"
+PUBLISHED = "published"
+STATES = (DRAFT, FINAL, PUBLISHED)
+
+#: What a published piece needs where it has no lock, since no render moves it.
+FIRST_RENDER = "set it back to a draft for its first render"
+
+#: What mends a final piece's lock that holds no version to move from: the lock its version
+#: was made under, which is no move of it (DEC-002 point 7, DEC-017 point 1).
+WRITE_BACK = "write back the lock of the version handed out, which is no move of it"
 
 #: The kinds of lock, each what a person names one by in the command (`Lock.key`).
 PIECE = "piece"
@@ -130,7 +140,9 @@ class Source:
 class Lock:
     """A lock of the location, by the file that holds it: a piece's or a declaration's of
     written code. `versions` is the lock as read, or None where it cannot be read, `why`
-    then saying why; `follows` says whether it moves at each render."""
+    then saying why; `follows` says whether a copy it names is replaced with no person
+    naming it, since it moves at each render or, a final piece's, no longer draws; `called`
+    is what a piece's state calls it, in words."""
 
     kind: str
     name: str
@@ -138,6 +150,7 @@ class Lock:
     follows: bool
     versions: Mapping[str, str] | None
     why: str = ""
+    called: str = ""
 
     @property
     def key(self) -> tuple[str, str]:
@@ -156,7 +169,7 @@ class Lock:
             return f"{self.file}, whose lock cannot be read: {self.why}"
         if self.kind == DECLARATION:
             return f"the declaration `{self.name}` of written code"
-        return f"the draft `{self.name}`" if self.follows else f"the pinned draft `{self.name}`"
+        return f"the {self.called} `{self.name}`"
 
 
 @dataclass(frozen=True)
@@ -736,19 +749,42 @@ def locks(root: Path, location: str, library: str) -> list[Lock]:
     return found
 
 
+def final(piece: Mapping[str, Any]) -> bool:
+    """Whether a piece, by what its `piece.yaml` holds, is final to every command: no render
+    moves its lock, and an export and a producer's run refuse it (DEC-017 point 3). This is
+    the one place that says so."""
+    return piece.get("state") == FINAL
+
+
+def lock_stays(piece: Mapping[str, Any]) -> bool:
+    """Whether no render moves a piece's lock, whatever its `pinned` says: it is final or
+    published (DEC-003 point 8)."""
+    return final(piece) or piece.get("state") == PUBLISHED
+
+
+def no_lock(piece: Mapping[str, Any]) -> str:
+    """What a piece whose lock no render moves (`lock_stays`) needs where it has no lock: a
+    published piece goes back to a draft, and no state leads out of final (DEC-017 point 5)."""
+    return WRITE_BACK if final(piece) else FIRST_RENDER
+
+
 def _piece_lock(root: Path, file: str, name: str, library: str) -> Lock:
-    """A piece's lock, from its `piece.yaml` alone: its `lock`, `pinned` and `state`."""
+    """A piece's lock, from its `piece.yaml` alone: its `lock`, `state` and, of a draft,
+    `pinned`."""
     data, why = _bound(root / file, "piece")
     if data is not None:
         state, pinned = data.get("state"), data.get("pinned", False)
-        if state != DRAFT:
+        if state not in STATES:
             why = f"its state `{state}` is not one format 1 takes"
-        elif not isinstance(pinned, bool):
+        elif state == DRAFT and not isinstance(pinned, bool):
             why = "its `pinned` is not true or false"
         else:
             versions, why = _versions(data, library)
             if versions is not None:
-                return Lock(PIECE, name, file, not pinned, versions)
+                draft = state == DRAFT
+                follows = final(data) or (draft and not pinned)
+                called = f"{'pinned ' if pinned else ''}draft" if draft else f"{state} piece"
+                return Lock(PIECE, name, file, follows, versions, called=called)
     return Lock(PIECE, name, file, False, None, why)
 
 

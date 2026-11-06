@@ -8,7 +8,8 @@ finding or takes a number, no helper or producer runs, and a produced picture is
 stands, stale or not.
 
 - **Under the lock.** It reads the piece's own file with its lock and computes the scenes
-  under it. A piece with no lock, or a lock that does not hold, is refused (`opened`).
+  under it. A piece with no lock, or a lock that does not hold, is refused (`opened`). A
+  version not yet released stops no drawing.
 - **What it draws.** The caller picks pages, languages and keys (`Asked`). By default it
   draws every page in the source language, in the first key in the order a picture's
   variant uses (`keys.variant_key`).
@@ -29,7 +30,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from _lib import checks, files, keys, libraries, location, tokens, viewing_tool
+from _lib import checks, copies, files, keys, libraries, location, tokens, viewing_tool
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.plugins import seam
@@ -73,13 +74,18 @@ class Viewed:
 
 def opened(root: Path, name: str) -> pl.Project:
     """The piece `name` under the lock its `piece.yaml` holds. Raises Refused where it has
-    no lock, its lock does not hold, or its brand cannot be read."""
+    no lock, its lock does not hold, or its brand cannot be read. A version not yet released
+    under a final or a published piece's lock holds, and draws."""
     found = location.for_reading(root)
     if found is None:
         raise pl.Refused(f"the project holds no visual work, so no piece `{name}`")
     piece = pl.read_piece(root, found.path, name)
     held = libraries.Held(root, found.path)
-    faults = checks.lock_findings(held, piece)
+    faults = [
+        finding
+        for finding in checks.lock_findings(held, piece)
+        if finding.code != checks.LOCK_NOT_RELEASED
+    ]
     if faults:
         said = "; ".join(checks.said(finding) for finding in faults)
         raise pl.Refused(f"the lock of {piece.file(pl.PIECE_FILE)} cannot be drawn: {said}")
@@ -219,10 +225,11 @@ class _Made:
                 drawn.pages[number - 1].svg, long_edge(page), faces, line_widths(page)
             )
         except viewing_tool.ToolFailed as exc:
-            raise pl.Refused(
-                f"the tool cannot draw page {page['id']} of `{piece}`: {exc}. "
-                f"`pkit visual check {piece}` names what the piece still owes"
-            ) from exc
+            said = f"the tool cannot draw page {page['id']} of `{piece}`: {exc}"
+            # The check reads no picture of a final piece (DEC-017 point 4).
+            if not copies.final(self.project.piece.data):
+                said += f". `pkit visual check {piece}` names what the piece still owes"
+            raise pl.Refused(said) from exc
         total = len(drawn.pages)
         stem = f"{piece}.{language}.{key}" + (f".{number}" if total > 1 else "")
         self.files[f"{stem}.png"] = image.image

@@ -1,0 +1,14 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  An export's fingerprint reads a piece's own file without the fields that can
+  change no exported file, or change one only as a fact of that export (#2747):
+  `state`, `pinned`, `audience`, `shown`, `explains`, `accept-losses` and
+  `copy-place`. It reads a produced output's record without `recorded`. Each
+  such input names what it left out, in the new shape `{file, without}`, and a
+  kept fingerprint verifies as it was written. No fingerprint reads a file under
+  a piece's `handed-out/` or `current-copy/`. A version's lock can be read back
+  from its fingerprint. The form stays 1, and the findings key still reads the
+  piece's file whole.

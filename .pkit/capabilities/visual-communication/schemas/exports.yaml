@@ -1,7 +1,9 @@
 # The record of a piece's exports, `pieces/<piece>/exports.yaml` (visual-communication
 # DEC-006 point 7): each numbered export, the fingerprint of what it was made from, each
 # file it made with its hash, and what is only recorded, among it each produced output the
-# version used, by its record's fingerprint. `pkit visual export` rewrites it.
+# version used, by its record's fingerprint; and who wrote a published piece's current copy
+# (DEC-017 point 7), each of its files by its path from the piece's folder. `pkit visual
+# export` rewrites it.
 #
 # The body below is the reference instance.
 
@@ -10,6 +12,11 @@ schema_version: 1
 
 # --- reference instance -------------------------------------------------
 
+current-copy:
+  piece: example
+  version: 1
+  files:
+    current-copy/example.en.default.svg: '0000000000000000000000000000000000000000000000000000000000000004'
 versions:
   - version: 1
     fingerprint:
@@ -36,7 +43,7 @@ versions:
       example.v1.en.default.svg: '0000000000000000000000000000000000000000000000000000000000000004'
     recorded:
       time: '2026-11-01T10:00:00Z'
-      state: draft
+      state: published
       capability: 0.1.0
       renderers:
         svg: 1.0.0

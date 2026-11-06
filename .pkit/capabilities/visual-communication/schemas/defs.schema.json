@@ -255,7 +255,7 @@
       }
     },
     "input": {
-      "description": "One input of a fingerprint: an identity, apart from where the work lies, and the hash of what was read.",
+      "description": "One input of a fingerprint: an identity, apart from where the work lies, and the hash of what was read. A file read without some of its fields names each of them in `without` (DEC-016 point 4).",
       "oneOf": [
         {
           "type": "object",
@@ -267,6 +267,30 @@
           "properties": {
             "file": {
               "$ref": "#/$defs/version-path"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "file",
+            "without",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "file": {
+              "$ref": "#/$defs/version-path"
+            },
+            "without": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
             },
             "sha256": {
               "$ref": "#/$defs/sha256"

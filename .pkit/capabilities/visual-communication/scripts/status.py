@@ -34,6 +34,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
 from _lib import location as loc
+from _lib.copies import DRAFT, lock_stays, no_lock
 from _lib.files import binding_problem
 from _lib.reading import ReadError, read_yaml
 from _lib.root import CONFIG, project_root
@@ -98,11 +99,13 @@ def _piece(path: Path) -> str:
     if problem is not None:
         return f"piece.yaml {problem}"
     state = str(data.get("state", "no state"))
-    if data.get("pinned") is True:
+    if state == DRAFT and data.get("pinned") is True:
         state += ", pinned"
     lock = data.get("lock")
     if isinstance(lock, dict) and lock:
         locked = "lock " + ", ".join(f"{name} {lock[name]}" for name in sorted(lock))
+    elif lock_stays(data):
+        locked = f"no lock ({no_lock(data)})"
     else:
         locked = "no lock yet (its first render writes one)"
     return f"{state}; {locked}"

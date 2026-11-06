@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "exports.schema.json",
   "title": "The record of a piece's exports — visual-communication capability",
-  "description": "Formal shape of a piece's `exports.yaml` (DEC-006 point 7): each numbered export, with the fingerprint of every file its scenes were computed from and the formats it made (form 1), each file it made with its hash, and what is only recorded, among it each produced output the version used and those used while stale. `pkit visual export` rewrites it. Document-shaped schema. Companion per COR-018.",
+  "description": "Formal shape of a piece's `exports.yaml` (DEC-006 point 7): each numbered export, with the fingerprint of every file its scenes were computed from and the formats it made (form 1), each file it made with its hash, and what is only recorded, among it each produced output the version used and those used while stale; and who wrote a published piece's current copy (DEC-017 point 7). `pkit visual export` rewrites it. Document-shaped schema. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
@@ -19,6 +19,38 @@
       "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
       "type": "integer",
       "const": 1
+    },
+    "current-copy": {
+      "description": "A published piece's current copy (DEC-017 point 7): the piece and the version that wrote it, and each of its files. Absent until an export of a published piece writes one, and kept by an export in another state.",
+      "type": "object",
+      "required": [
+        "piece",
+        "version",
+        "files"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "piece": {
+          "description": "The piece that wrote the copy, by its name (DEC-017 point 7).",
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        "version": {
+          "description": "The number of the version that wrote the copy.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "files": {
+          "description": "Each file of the copy, by its path read from the piece's folder, with its SHA-256. A file's name is its version's with the number left out.",
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^current-copy/[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z]{2,3}(-[a-z0-9]{2,8})*\\.(default|[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*(\\+[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*)*)((\\.[1-9][0-9]*)?\\.svg|\\.pdf)$"
+          },
+          "additionalProperties": {
+            "$ref": "defs.schema.json#/$defs/sha256"
+          },
+          "minProperties": 1
+        }
+      }
     },
     "versions": {
       "type": "array",
@@ -66,7 +98,12 @@
                 "$ref": "defs.schema.json#/$defs/time"
               },
               "state": {
-                "const": "draft"
+                "description": "The piece's state when the version was made.",
+                "enum": [
+                  "draft",
+                  "final",
+                  "published"
+                ]
               },
               "capability": {
                 "$ref": "defs.schema.json#/$defs/release"
