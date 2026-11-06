@@ -2439,6 +2439,8 @@ def test_a_named_head_runs_a_resolver_only_from_a_checkout_at_that_commit(
     # The refusal is a document too, told from any other failure by its kind, with no
     # `answers` a reader could take for a check that ran.
     told = json.loads(refused.stdout)
+    # Its keys are sorted, as every reading document's are: the bytes, which parsing hides.
+    assert refused.stdout == json.dumps(told, indent=2, sort_keys=True) + "\n"
     assert (told["schema_version"], told["failed"]) == (fc.CHANGE_SCHEMA_VERSION, True)
     assert "answers" not in told
     assert told["refused"] == {

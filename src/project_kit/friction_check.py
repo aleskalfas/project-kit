@@ -3905,7 +3905,7 @@ def render_refusal_json(refused: ResolverElsewhere) -> str:
             "message": refused.message,
         },
     }
-    return json.dumps(document, indent=2) + "\n"
+    return json.dumps(document, indent=2, sort_keys=True) + "\n"
 
 
 def render_json(result: ChangeCheck) -> str:
