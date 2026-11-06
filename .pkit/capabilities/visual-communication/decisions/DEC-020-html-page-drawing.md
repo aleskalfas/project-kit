@@ -1,7 +1,7 @@
 ---
 id: DEC-020
 title: An HTML page is real text over SVG shapes, and the viewing step draws it through a browser
-status: proposed
+status: accepted
 date: 2026-11-06
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
