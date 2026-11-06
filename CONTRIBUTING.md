@@ -23,7 +23,7 @@ pkit:
         - tests/README.md
         - src/project_kit/router.py
         - .pkit/rules/project.md
-      record: [COR-003, COR-004, COR-013, COR-014, COR-050, "COR-062#1", "COR-062#4", "COR-062#7", "COR-062#10", "COR-066#1", "COR-066#5", PRJ-001, PRJ-009, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, ADR-068, ADR-078, "project-management:DEC-053", "project-management:DEC-065", "software-engineering:DEC-002#1", "living-docs:DEC-002", "doc-examples:DEC-001"]
+      record: [COR-003, COR-004, COR-013, COR-014, COR-050, "COR-062#1", "COR-062#4", "COR-062#7", "COR-062#10", "COR-066#1", "COR-066#5", PRJ-001, PRJ-009, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, ADR-068, ADR-078, "ADR-080#5", "project-management:DEC-053", "project-management:DEC-065", "software-engineering:DEC-002#1", "living-docs:DEC-002", "doc-examples:DEC-001"]
       artefact:
         - RS-OPS-020
         - .pkit/capabilities/project-management/README.md#the-answers-a-change-wrote-in-its-pull-request-project-managementdec-055-pr-lists-answers
@@ -109,7 +109,7 @@ The findings go to **one tracking issue**, its body rewritten in place when they
 The issue is open exactly while a finding needs an answer (ADR-055 point 5). Every finding needs one except four kinds, which the body lists without holding the issue open:
 
 - a deferral, which is itself an answer, listed with its reason
-- a `left-out` finding, which owes nothing
+- a finding the check reports as owing nothing: a `left-out` finding, or a `whole-and-parts` anchor (ADR-080 point 5)
 - two revalidations of one artefact answered apart, debt that no change owes, counted in the headline apart from what needs an answer (COR-062 point 7, ADR-068 point 6)
 - an over-broad anchor, listed in a section of its own: its count moves as the window of commits slides with no anchor changed, and nothing records a person's judgement that an anchor is fine, so it would hold the issue open for good (ADR-055 point 5)
 

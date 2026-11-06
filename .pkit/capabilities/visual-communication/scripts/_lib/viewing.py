@@ -215,7 +215,9 @@ class _Made:
         page = pages_of(scene)[number - 1]
         at = {"language": language, "key": key, "page": page["id"]}
         try:
-            image = viewing_tool.draw(drawn.pages[number - 1].svg, long_edge(page), faces)
+            image = viewing_tool.draw(
+                drawn.pages[number - 1].svg, long_edge(page), faces, line_widths(page)
+            )
         except viewing_tool.ToolFailed as exc:
             raise pl.Refused(
                 f"the tool cannot draw page {page['id']} of `{piece}`: {exc}. "
@@ -314,6 +316,15 @@ def long_edge(page: Mapping[str, Any]) -> int:
     return math.ceil(edge * scale)
 
 
+def line_widths(page: Mapping[str, Any]) -> dict[str, list[float]]:
+    """The width the engine measured of each line of each text of `page`, by its trace id."""
+    return {
+        element["id"]: [float(line["width"]) for line in element["lines"]]
+        for element in _elements(page)
+        if element.get("lines")
+    }
+
+
 def _placed(page: Mapping[str, Any]) -> Iterator[tuple[Mapping[str, Any], float, float]]:
     """Each element of `page`, with where its frame's corner lies in the page: a scene
     holds a frame relative to its parent (`components.md`, What a scene holds)."""
@@ -363,8 +374,8 @@ def draws_ground(page: Mapping[str, Any], colours: Mapping[str, Mapping[str, Any
 
 def drawn_otherwise(page: Mapping[str, Any]) -> Iterator[dict[str, Any]]:
     """Each run of `page` the engine measured in more than one family, which the tool may
-    draw otherwise than a browser does (DEC-015 point 2): it may set the whole line in the
-    family that holds the character the first one lacks."""
+    draw otherwise than a browser does (DEC-015 point 2): it may set the whole run on a line
+    in the family that holds the character the first one lacks."""
     for element in _elements(page):
         for paragraph in element.get("paragraphs") or ():
             for run in paragraph:

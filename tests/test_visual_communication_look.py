@@ -12,6 +12,7 @@ import json
 import shutil
 import struct
 import subprocess
+import xml.etree.ElementTree as ET
 from collections.abc import Iterator, Mapping
 from pathlib import Path
 from typing import Any
@@ -145,7 +146,9 @@ def drawn_page(*children: dict[str, Any], **sizes: Any) -> str:
 
 
 def tool(tmp_path: Path, *children: dict[str, Any], long_edge: int = 800, **sizes: Any) -> Any:
-    return viewing_tool.draw(drawn_page(*children, **sizes), long_edge, tmp_path)
+    [page] = viewing.pages_of(scene(*children, **sizes))
+    drawn = drawn_page(*children, **sizes)
+    return viewing_tool.draw(drawn, long_edge, tmp_path, viewing.line_widths(page))
 
 
 def dropped_of(
@@ -224,6 +227,154 @@ def test_a_page_with_no_size_fails_naming_it(tmp_path: Path, width: int, height:
         tool(tmp_path, width=width, height=height)
 
 
+# --- each span shaped alone, as the engine measured it ------------------------------------------
+
+
+def strong_run(words: str) -> dict[str, Any]:
+    """A run in a semibold family of its own, as a brand gives a weight its own file."""
+    look = {"font-family": ["Source Sans Pro Semibold"], "font-weight": 600}
+    return run(words, fill="ink", **look)
+
+
+def page_handed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *children: dict[str, Any]
+) -> ET.Element:
+    """The page as the tool is asked to draw it."""
+    asked: list[str] = []
+    real = viewing_tool.resvg_py.svg_to_bytes
+
+    def asking(**given: Any) -> bytes:
+        asked.append(given["svg_string"])
+        return real(**given)
+
+    monkeypatch.setattr(viewing_tool.resvg_py, "svg_to_bytes", asking)
+    tool(tmp_path, *children)
+    return ET.fromstring(asked[0])
+
+
+def chunks_of(page: ET.Element) -> list[list[tuple[str, str | None]]]:
+    """The page's chunks in order, as SVG reads them, each its text and its font: a chunk
+    starts at each absolute `x` or `y`, and the tool shapes a chunk whole in each of its fonts."""
+    chunks: list[list[tuple[str, str | None]]] = []
+
+    def read(node: ET.Element, font: str | None, starts: bool) -> None:
+        starts = starts or "x" in node.attrib or "y" in node.attrib
+        font = node.get("font-family", font)
+        if node.text:
+            if starts:
+                chunks.append([])
+            chunks[-1].append((node.text, font))
+            starts = False
+        for child in node:
+            read(child, font, starts)
+            starts = False
+            if child.tail:
+                chunks[-1].append((child.tail, font))
+
+    for text in page.iter(viewing_tool.TEXT):
+        read(text, None, False)
+    return chunks
+
+
+def test_each_span_of_a_line_is_handed_over_as_a_chunk_of_its_own(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Shaped in one chunk, a strong run takes the weight of the face that holds its line's
+    other characters, and nothing says so: the fault of `showcase`, page 3 (#2712)."""
+    said = text_element("figure/said", strong_run("Say: "), run("every way", fill="accent"))
+    assert chunks_of(page_handed(monkeypatch, tmp_path, said)) == [
+        [("Say: ", "pkit-face-1")],
+        [("every way", "pkit-face-0")],
+    ]
+
+
+def test_a_plain_run_is_handed_over_apart_from_the_strong_run_before_and_after_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A strong first run is the text's own, so the renderer writes it bare, and again after
+    the plain run, where it lies in that run's tail."""
+    runs = [strong_run("One "), run("two ", fill="accent"), strong_run("three")]
+    assert chunks_of(page_handed(monkeypatch, tmp_path, text_element("figure/said", *runs))) == [
+        [("One ", "pkit-face-1")],
+        [("two ", "pkit-face-0")],
+        [("three", "pkit-face-1")],
+    ]
+
+
+def test_a_span_set_apart_keeps_its_line_s_baseline_and_the_pen_of_the_span_before_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    said = text_element("figure/said", strong_run("Say: "), run("it", fill="accent"), y=30)
+    page = page_handed(monkeypatch, tmp_path, said)
+    [line_handed] = next(page.iter(viewing_tool.TEXT)).findall(viewing_tool.SPAN)
+    second = list(line_handed)[1]
+    assert second.get("y") == line_handed.get("y") == "46"
+    assert second.get("x") is None
+
+
+def test_the_lines_of_a_text_are_each_set_apart(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    said = text_element("figure/said", strong_run("One "), run("two", fill="accent"))
+    said["lines"].append(line(0, 38, (0, "One ", 40), (1, "more", 40)))
+    assert [chunk[0][0] for chunk in chunks_of(page_handed(monkeypatch, tmp_path, said))] == [
+        "One ",
+        "two",
+        "One ",
+        "more",
+    ]
+
+
+def test_a_text_of_one_span_is_handed_over_as_the_renderer_set_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    said = text_element("figure/said", run("Say it", fill="ink"))
+    said["text-anchor"] = "end"
+    page = page_handed(monkeypatch, tmp_path, said)
+    assert chunks_of(page) == [[("Say it", "pkit-face-0")]]
+    [line_handed] = next(page.iter(viewing_tool.TEXT)).findall(viewing_tool.SPAN)
+    assert line_handed.get("x") == "190"
+    assert line_handed.get("text-anchor") is None
+
+
+@pytest.mark.parametrize(("anchor", "start"), [("middle", 60.0), ("end", 110.0)])
+def test_a_line_of_spans_starts_where_its_measured_width_puts_its_anchor(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, anchor: str, start: float
+) -> None:
+    """The tool anchors each chunk alone, so anchored spans would lie over each other. The
+    text is 180 wide from 10, and its two spans measure 40 each."""
+    runs = [strong_run("Say: "), run("it", fill="accent")]
+    said = text_element("figure/said", *runs)
+    said["text-anchor"] = anchor
+    page = page_handed(monkeypatch, tmp_path, said)
+    [line_handed] = next(page.iter(viewing_tool.TEXT)).findall(viewing_tool.SPAN)
+    assert float(line_handed.attrib["x"]) == start
+    assert line_handed.get("text-anchor") == "start"
+
+
+def test_each_line_s_width_is_the_engine_s_by_its_text() -> None:
+    said = text_element("figure/said", strong_run("One "), run("two", fill="accent"))
+    said["lines"].append(line(0, 38, (0, "more", 30)))
+    box = element("box", "figure/box", x=0, y=0, width=10, height=10)
+    [page] = viewing.pages_of(scene(box, said))
+    assert viewing.line_widths(page) == {"figure/said": [80.0, 30.0]}
+
+
+def test_a_run_of_the_step_hands_the_tool_the_page_s_measured_lines(
+    flow: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    given: list[Mapping[str, Any]] = []
+    real = viewing_tool.draw
+
+    def drawing(svg_page: str, edge: int, folder: Path, widths: Mapping[str, Any]) -> Any:
+        given.append(widths)
+        return real(svg_page, edge, folder, widths)
+
+    monkeypatch.setattr(viewing.viewing_tool, "draw", drawing)
+    assert run_look(flow, PIECE).returncode == 0
+    assert given[0]["figure/body/steps[plan]/head"][0] > 0
+
+
 # --- what the tool dropped (DEC-015 point 3) ----------------------------------------------------
 
 
@@ -253,7 +404,7 @@ def test_a_colour_with_no_opacity_drew_nothing(tmp_path: Path) -> None:
         pictures={},
     )
     [page] = drawn.pages
-    found = viewing_tool.draw(page.svg, 800, tmp_path).dropped
+    found = viewing_tool.draw(page.svg, 800, tmp_path, {}).dropped
     assert [(each.text, each.whole) for each in found] == [("clear", False)]
 
 
@@ -325,7 +476,7 @@ def test_a_text_over_a_picture_of_its_own_colour_was_drawn(tmp_path: Path) -> No
     [page] = drawn.pages
     faces = tmp_path / "faces"
     faces.mkdir()
-    assert viewing_tool.draw(page.svg, 800, faces).dropped == ()
+    assert viewing_tool.draw(page.svg, 800, faces, {}).dropped == ()
 
 
 def test_a_white_text_on_white_was_drawn(tmp_path: Path) -> None:
@@ -836,7 +987,7 @@ def test_a_font_with_no_file_refuses_before_anything_is_written(flow: Path) -> N
 def test_a_page_the_tool_cannot_draw_refuses_with_nothing_written(
     flow: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def failing(_svg: str, _edge: int, _folder: Path) -> Any:
+    def failing(_svg: str, _edge: int, _folder: Path, _widths: Any) -> Any:
         raise viewing_tool.ToolFailed("Failed to create pixmap")
 
     monkeypatch.setattr(viewing.viewing_tool, "draw", failing)

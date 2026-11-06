@@ -100,7 +100,7 @@ A *note* is anything else worth a look: a page that feels crowded, a rhythm that
 Some things look wrong and are not faults:
 
 - **A page on white.** Where `on-white` is true, the page draws no ground of its own, and the white is the image's, which the piece never set. A text over nothing that is faint on that white may read well where the piece is placed. Make that a note at most, and say so.
-- **`drawn-otherwise`.** The tool may set such a run's line in one family, where a browser sets only the characters the first family lacks. A font that differs in that run alone is a note.
+- **`drawn-otherwise`.** The tool may set the whole run on a line in one family, where a browser sets only the characters the first family lacks. A font that differs in that run alone is a note.
 - **An accepted loss.** Where `accepted` is true, a person accepted it in the piece, for a reason `piece.yaml` gives. Make it a note, with that reason. A loss not accepted that left a part out is a fault of the first kind.
 - **The tool's own drawing.** An image shows this tool's drawing, not a browser's, and it promises nothing about its pixels. Edge smoothing and small shifts of rendering are not findings.
 - **A choice of the piece.** A shade you would not choose, or an arrangement you would make otherwise, is taste. That is a note, or nothing.
