@@ -50,6 +50,11 @@ def test_a_copys_hash_is_the_sha_256_of_the_whole_file() -> None:
     )
 
 
+def test_a_copied_file_and_a_file_read_back_keep_one_hash() -> None:
+    data = b"<svg>\n</svg>\n"
+    assert current_copy.hash_of(data) == current_copy.file_of("flow.v1.en.default.svg", data).sha256
+
+
 @pytest.mark.parametrize("name", ["flow.en.default.svg", "flow.v0.en.default.svg", "flow.svg"])
 def test_a_name_that_carries_no_number_gives_no_copy(name: str) -> None:
     with pytest.raises(ValueError, match="carries no version's number"):
@@ -87,6 +92,21 @@ def test_a_published_piece_makes_a_copy_of_each_file_of_the_version(tmp_path: Pa
 def test_a_piece_in_any_other_state_makes_none(tmp_path: Path, state: str) -> None:
     root = drawing_project(tmp_path, state=state, picture=False)
     assert current_copy.made(piece_in(root), 2, VERSION) is None
+
+
+# --- where a file lies --------------------------------------------------------------------------
+
+
+def test_a_path_in_the_pieces_folder_is_read_from_that_folder(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    path = "current-copy/flow.en.default.svg"
+    assert current_copy.rooted(piece_in(root), path) == f"{PIECE_FOLDER}/{path}"
+
+
+def test_any_other_path_lies_at_a_place_read_from_the_root(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    path = "docs/figures/flow.en.default.svg"
+    assert current_copy.rooted(piece_in(root), path) == path
 
 
 # --- whose copy it is ---------------------------------------------------------------------------
@@ -269,3 +289,28 @@ def test_a_lock_no_library_folder_could_hold_is_read_as_no_lock(library: str, ve
     versions = [{"version": 1, "fingerprint": kept(library, version)}]
     with pytest.raises(fingerprint.UnreadableFingerprint, match="is no library version"):
         current_copy.written_lock(entry_of(PIECE), versions)
+
+
+# --- what the version that wrote it keeps -------------------------------------------------------
+
+
+def test_the_fingerprint_is_that_of_the_version_that_wrote_the_copy() -> None:
+    versions = [{"version": 1, "fingerprint": {"value": "a"}}, {"version": 2}]
+    assert current_copy.written_fingerprint({"version": 1}, versions) == {"value": "a"}
+
+
+@pytest.mark.parametrize(
+    ("kept", "stale"),
+    [
+        pytest.param({"recorded": {"used-stale": ["square"]}}, ["square"], id="named"),
+        pytest.param({"recorded": {"used-stale": []}}, [], id="none"),
+        pytest.param({"recorded": {}}, [], id="no-list"),
+        pytest.param({"recorded": "at noon"}, [], id="no-record"),
+        pytest.param({}, [], id="nothing-recorded"),
+    ],
+)
+def test_the_outputs_used_while_stale_are_those_of_the_version_that_wrote_the_copy(
+    kept: dict[str, Any], stale: list[str]
+) -> None:
+    versions = [{"version": 1, **kept}, {"version": 2, "recorded": {"used-stale": ["other"]}}]
+    assert current_copy.written_over_stale({"version": 1}, versions) == stale

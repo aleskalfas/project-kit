@@ -7,10 +7,11 @@ DEC-017 points 5, 7 and 8).
   piece in any other state writes none, so a copy is always made while its piece is
   published (DEC-016, Implications), and one it holds already stays.
 - **A file of the copy** (`file_of`). The name of its version's file with the number left
-  out, and the bytes of that file, so the two keep one hash: the SHA-256 of the whole file.
-  The accepted records leave what a name must hold and what the hash is taken of to the
-  record of a copy's form, project-kit#2700 (DEC-019 point 5, DEC-017, Implications). So
-  this function alone works out either, and another answer changes it alone.
+  out, and the bytes of that file, so the two keep one hash: the SHA-256 of the whole file
+  (`hash_of`). The accepted records leave what a name must hold and what the hash is taken
+  of to the record of a copy's form, project-kit#2700 (DEC-019 point 5, DEC-017,
+  Implications). So these two functions alone work out either, and another answer changes
+  them alone.
 - **The record.** `exports.yaml` names, under `current-copy`, the piece and the version
   that wrote the copy, and each file's path and hash (DEC-017 point 7). A path is read
   from the piece's folder, so a rename or a move of the location leaves it true. An entry
@@ -85,12 +86,18 @@ class Copy:
 
 def file_of(name: str, data: bytes) -> CopiedFile:
     """The file of a current copy that comes of a version's file `name`, which holds `data`:
-    the name with the number left out, and the SHA-256 of the whole file. Raises ValueError
-    for a name that carries no number. Nothing else works out either."""
+    the name with the number left out, and its hash (`hash_of`). Raises ValueError for a
+    name that carries no number. Nothing else works out the name."""
     unnumbered, found = _NUMBERED.subn(r"\1.", name)
     if not found:
         raise ValueError(f"`{name}` carries no version's number")
-    return CopiedFile(unnumbered, sha256(data))
+    return CopiedFile(unnumbered, hash_of(data))
+
+
+def hash_of(data: bytes) -> str:
+    """The hash the record keeps of a file of a current copy that holds `data`: the SHA-256
+    of the whole file. Nothing else works it out."""
+    return sha256(data)
 
 
 def keeps(piece: pl.Piece) -> bool:
@@ -110,6 +117,16 @@ def made(piece: pl.Piece, number: int, files: Mapping[str, bytes]) -> Copy | Non
         held[copied.name] = data
         hashes[f"{CURRENT_COPY}/{copied.name}"] = copied.sha256
     return Copy(held, {"piece": piece.name, "version": number, "files": hashes})
+
+
+def rooted(piece: pl.Piece, path: str) -> str:
+    """The path from the repository's root of the file a record names by `path`."""
+    return piece.file(path) if _in_folder(path) else path
+
+
+def _in_folder(path: str) -> bool:
+    """Whether a record's `path` lies in the piece's folder, and is read from it."""
+    return path.rpartition("/")[0] == CURRENT_COPY
 
 
 def writable(piece: pl.Piece, copy: Copy) -> None:
@@ -213,6 +230,24 @@ def written_release(entry: Mapping[str, Any], versions: Sequence[Mapping[str, An
     kept = _writer(entry, versions).get("recorded")
     release = kept.get("capability") if isinstance(kept, Mapping) else None
     return release if isinstance(release, str) else ""
+
+
+def written_fingerprint(
+    entry: Mapping[str, Any], versions: Sequence[Mapping[str, Any]]
+) -> Mapping[str, Any]:
+    """The fingerprint of the version that wrote the current copy `entry` names, among the
+    record's `versions`. `written_lock` says first whether one can be read."""
+    return _writer(entry, versions)["fingerprint"]
+
+
+def written_over_stale(
+    entry: Mapping[str, Any], versions: Sequence[Mapping[str, Any]]
+) -> list[str]:
+    """The produced outputs the version that wrote the current copy `entry` names used while
+    stale, among the record's `versions`; none where it keeps no such list."""
+    kept = _writer(entry, versions).get("recorded")
+    stale = kept.get("used-stale") if isinstance(kept, Mapping) else None
+    return [str(output) for output in stale] if isinstance(stale, list) else []
 
 
 def _writer(entry: Mapping[str, Any], versions: Sequence[Mapping[str, Any]]) -> Mapping[str, Any]:
