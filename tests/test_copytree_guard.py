@@ -54,6 +54,8 @@ HOLDS_NO_PYTHON = {
     "test_schemas_authoring.py": {"tmp_path / '.pkit'"},
     "test_visual_communication_add.py": {"FOUNDATIONS", "TEST_PARTS", "built"},
     "test_visual_communication_checks.py": {"root / PIECE_FOLDER", "root / 'visual/pieces/tags'"},
+    "test_visual_communication_current_copy.py": {"root / PIECE_FOLDER"},
+    "test_visual_communication_export.py": {"root / PIECE_FOLDER"},
     "test_visual_communication_code.py": {"TEST_PARTS"},
     "test_visual_communication_fingerprint.py": {"tmp_path / 'visual'"},
     "test_visual_communication_libraries.py": {"FOUNDATIONS", "built"},
