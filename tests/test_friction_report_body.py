@@ -13,7 +13,8 @@ Held to: stale debt with what changed and since when; deferrals listed with
 their reason and never counted; revalidations answered apart listed and counted
 apart from what needs an answer (COR-062 point 7, #2206); the other findings;
 over-broad anchors listed apart and never counted (ADR-055 point 5), the second
-bar's on one artefact as one entry (ADR-080 point 3); both
+bar's on one artefact as one entry (ADR-080 point 3); a whole anchor beside its parts
+listed as owing nothing and never counted (ADR-080 point 5); both
 measures, never counted; the same findings giving the same body; what the
 findings carry staying
 inert text, a path that is no UTF-8 included; the body within its size, cut by
@@ -38,7 +39,16 @@ from scripts import friction_report_body as report
 
 from project_kit import friction_repository as fr
 from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author
-from tests.friction_documents import T1, T2, Timeline, document, friction_config, guide
+from tests.friction_documents import (
+    MANUAL,
+    T1,
+    T2,
+    Timeline,
+    document,
+    friction_config,
+    guide,
+    manual,
+)
 from tests.shipped_rule_sets import without_shipped_rule_sets
 from tests.test_answer_files import GUIDE, answer_path, answers, bare_guide
 from tests.test_answer_files import entry as revalidation
@@ -393,6 +403,26 @@ def test_an_over_broad_anchor_is_listed_apart_and_holds_nothing_open(
     assert later["findings"][-1]["kind"] == "over-broad"
     assert alone["needs_answer"] == 0
     assert alone["body"].startswith("**Nothing needs an answer.**\n")
+
+
+def test_a_whole_anchor_beside_its_parts_is_listed_as_owing_nothing_and_holds_nothing_open(
+    timeline: Timeline,
+) -> None:
+    """It makes nothing untrue, and a person may keep it, which nothing records (ADR-055
+    point 5; ADR-080 point 5). So it is listed with what owes nothing, counted for nothing,
+    in the check's own words, which read HEAD alone and so keep the body."""
+    anchors = {"artefact": [MANUAL, f"{MANUAL}#using"]}
+    timeline.start({MANUAL: manual(), "docs/guide.md": guide(anchors=anchors)})
+    root = timeline.adopter.root
+    earlier = report.publication(_check(root))
+    timeline.commit("change the engine", {"src/core/engine.py": "ENGINE = 2\n"})
+
+    assert report.publication(_check(root)) == earlier
+    assert earlier["needs_answer"] == 0
+    assert earlier["body"].startswith("**Nothing needs an answer.**\n")
+    section = _section(earlier["body"], "Reported, nothing owed")
+    assert f"- `docs/guide.md` · `whole-and-parts` · `artefact:{MANUAL}`\n" in section
+    assert f"artefact {MANUAL}#using — removing them loses no flag" in section
 
 
 def test_the_second_bar_s_anchors_on_one_artefact_are_one_entry() -> None:

@@ -1637,6 +1637,7 @@ def test_json_document_shape(timeline: Timeline) -> None:
         "message": finding["message"],
         "bar": None,  # the bar an over-broad finding crossed, and none for another kind
         "share": None,  # a second bar's finding's share of its artefact's asks
+        "parts": None,  # the anchors on parts a whole-and-parts finding names
     }
     (report,) = doc["artefacts"]
     assert sorted(report) == [
