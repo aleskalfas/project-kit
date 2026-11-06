@@ -2,13 +2,15 @@
 the clone's local folder, never overwriting another; their record, `exports.yaml`; no stale
 or missing produced picture, unless the person names a stale one; a piece of several
 pages, one file for each page under one number; a piece exported as PDF, one file for each
-language and combination holding its pages in order; and what a write that fails
-leaves."""
+language and combination holding its pages in order; what a write that fails leaves; and a
+published piece's current copy, with the gate on its lock (DEC-017 points 5, 7 and 8)."""
 
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree
@@ -25,25 +27,31 @@ from tests.test_visual_communication_pipeline import (
     drawing_project,
     write_picture,
 )
+from tests.test_visual_communication_render import newer_tests
 from tests.visual_communication_project import CONFIG, SCHEMAS, bound, importable, write, yaml_text
 from tests.visual_communication_writes import FULL, failing
 
-script, exports, svg, pdf, seam, framing, files, reading, fingerprint, pl = load(
-    "visual-communication",
-    "export.py",
-    "exports",
-    "plugins.svg",
-    "plugins.pdf",
-    "plugins.seam",
-    "framing",
-    "files",
-    "reading",
-    "fingerprint",
-    "pipeline",
+script, render_script, exports, svg, pdf, seam, framing, files, reading, fingerprint, pl, checks = (
+    load(
+        "visual-communication",
+        "export.py",
+        "render.py",
+        "exports",
+        "plugins.svg",
+        "plugins.pdf",
+        "plugins.seam",
+        "framing",
+        "files",
+        "reading",
+        "fingerprint",
+        "pipeline",
+        "checks",
+    )
 )
 
 FOLDER = ".pkit/capabilities/visual-communication/project/local/exports/flow"
 RECORD = f"{PIECE_FOLDER}/exports.yaml"
+COPY = f"{PIECE_FOLDER}/current-copy"
 
 
 @pytest.fixture(autouse=True)
@@ -684,3 +692,430 @@ def test_a_file_a_failed_run_could_not_remove_is_named_and_refuses_no_later_expo
     assert shown.returncode == 0, shown.stderr
     assert shown.stdout.splitlines()[-1] == f"export: version 2 recorded in {RECORD}"
     assert [entry["version"] for entry in reading.read_yaml(root / RECORD)["versions"]] == [2]
+
+
+# --- a published piece's current copy -----------------------------------------------------------
+
+#: The files of the skeleton piece's current copy.
+COPIES = ["flow.en.colour-scheme.dark.svg", "flow.en.default.svg"]
+
+
+def published(tmp_path: Path, **fields: Any) -> Path:
+    """The skeleton piece, published, showing no produced picture, ready to export."""
+    return drawing_project(tmp_path, state="published", picture=False, **fields)
+
+
+def copied(root: Path, folder: str = COPY) -> list[str]:
+    return sorted(path.name for path in (root / folder).iterdir())
+
+
+def edit(root: Path, old: str, new: str) -> None:
+    """Replace `old` in the piece's own file, which must hold it."""
+    path = root / PIECE_FOLDER / "piece.yaml"
+    text = path.read_text(encoding="utf-8")
+    assert old in text
+    path.write_text(text.replace(old, new), encoding="utf-8")
+
+
+def record_of(root: Path, folder: str = PIECE_FOLDER) -> dict[str, Any]:
+    return reading.read_yaml(root / folder / "exports.yaml")
+
+
+def test_a_published_pieces_export_writes_its_copy_and_the_record_says_who_wrote_it(
+    tmp_path: Path,
+) -> None:
+    root = published(tmp_path)
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert shown.stdout.splitlines()[1:] == [
+        f"export: {FOLDER}/flow.v1.en.default.svg",
+        f"export: {FOLDER}/flow.v1.en.colour-scheme.dark.svg",
+        f"current copy: {COPY}/flow.en.default.svg",
+        f"current copy: {COPY}/flow.en.colour-scheme.dark.svg",
+        f"export: version 1 recorded in {RECORD}",
+    ]
+    assert copied(root) == COPIES
+    record = record_of(root)
+    assert files.shape_problems(record, "exports") == []
+    [version] = record["versions"]
+    assert record["current-copy"] == {
+        "piece": PIECE,
+        "version": 1,
+        "files": {
+            f"current-copy/{name.replace('flow.v1.', 'flow.')}": digest
+            for name, digest in version["files"].items()
+        },
+    }
+
+
+def test_each_file_of_the_copy_holds_its_versions_bytes(tmp_path: Path) -> None:
+    root = published(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    for name in exported(root):
+        copy = root / COPY / name.replace("flow.v1.", "flow.")
+        assert copy.read_bytes() == (root / FOLDER / name).read_bytes()
+
+
+def test_a_copy_takes_each_page_and_format_of_the_version(tmp_path: Path) -> None:
+    root = deck(tmp_path, THREE, exports=["svg", "pdf"], state="published")
+    assert run(root, PIECE).returncode == 0
+    assert copied(root) == sorted(name.replace("flow.v1.", "flow.") for name in exported(root))
+    assert "flow.en.default.2.svg" in copied(root)
+    assert "flow.cs.colour-scheme.dark.pdf" in copied(root)
+
+
+@pytest.mark.parametrize(("state", "code"), [("draft", 0), ("final", 1)])
+def test_a_piece_in_any_other_state_writes_no_copy(tmp_path: Path, state: str, code: int) -> None:
+    root = drawing_project(tmp_path, state=state, picture=False)
+    assert run(root, PIECE).returncode == code
+    assert not (root / COPY).exists()
+    assert not (root / RECORD).exists() or "current-copy" not in record_of(root)
+
+
+def test_a_render_writes_no_copy(tmp_path: Path) -> None:
+    root = published(tmp_path)
+    shown = run_main(render_script, PIECE, cwd=root)
+    assert shown.returncode == 0, shown.stderr
+    assert not (root / COPY).exists()
+    assert not (root / RECORD).exists()
+
+
+def test_a_later_export_replaces_the_copy_whole(tmp_path: Path) -> None:
+    root = published(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    left = root / COPY / "notes.txt"
+    left.write_text("mine\n", encoding="utf-8")
+    edit(root, "    - dark\n", "")
+    assert run(root, PIECE).returncode == 0
+    assert copied(root) == ["flow.en.default.svg"]
+    current = record_of(root)["current-copy"]
+    assert (current["version"], list(current["files"])) == (
+        2,
+        ["current-copy/flow.en.default.svg"],
+    )
+    assert exported(root) == [
+        "flow.v1.en.colour-scheme.dark.svg",
+        "flow.v1.en.default.svg",
+        "flow.v2.en.default.svg",
+    ]
+
+
+def test_a_copy_and_its_record_stay_through_a_drafts_export(tmp_path: Path) -> None:
+    root = published(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    before = record_of(root)["current-copy"]
+    held = {name: (root / COPY / name).read_bytes() for name in copied(root)}
+    edit(root, "state: published", "state: draft")
+    assert run(root, PIECE).returncode == 0
+    record = record_of(root)
+    assert files.shape_problems(record, "exports") == []
+    assert record["current-copy"] == before
+    assert [version["version"] for version in record["versions"]] == [1, 2]
+    assert {name: (root / COPY / name).read_bytes() for name in copied(root)} == held
+
+
+def test_no_fingerprint_reads_the_copy_and_the_findings_record_stays_valid(tmp_path: Path) -> None:
+    root = published(tmp_path)
+    assert run_main(render_script, PIECE, cwd=root).returncode == 0
+    assert run(root, PIECE).returncode == 0
+    (root / COPY / "flow.en.default.svg").write_text("changed\n", encoding="utf-8")
+    assert run(root, PIECE).returncode == 0
+    first, second = record_of(root)["versions"]
+    assert first["fingerprint"] == second["fingerprint"]
+    piece = pl.read_piece(root, "visual", PIECE)
+    assert checks.read_findings_record(root, pl.Held(root, "visual"), piece) is not None
+
+
+# --- what stops a copy being written ------------------------------------------------------------
+
+
+def test_a_file_where_the_copys_folder_goes_refuses_and_writes_nothing(tmp_path: Path) -> None:
+    root = published(tmp_path)
+    (root / COPY).write_text("mine\n", encoding="utf-8")
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        f"error: {COPY} is a file, and the piece's current copy lies in a folder of that name: "
+        f"move the file\n"
+    )
+    assert not (root / RECORD).exists()
+    assert not (root / FOLDER).exists()
+    assert not (root / CONFIG).exists()
+
+
+def test_a_link_in_the_copys_place_refuses_and_writes_nothing(tmp_path: Path) -> None:
+    root = published(tmp_path)
+    elsewhere = root / "elsewhere"
+    elsewhere.mkdir()
+    (root / COPY).symlink_to(elsewhere)
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert f"is reached through the link {COPY}" in shown.stderr
+    assert list(elsewhere.iterdir()) == []
+    assert not (root / RECORD).exists()
+
+
+# --- the gate on a published piece's lock -------------------------------------------------------
+
+#: What the export says of a lock that differs from that of the version that wrote its copy.
+DIFFERS = (
+    "error: the lock of visual/pieces/flow/piece.yaml differs from the lock of version 1, which "
+    "wrote the piece's current copy: foundations@1.0.0, test-brand@1.0.0, tests@1.0.0. Run "
+    "`pkit visual upgrade flow` to propose a move of the lock, or write that lock back, which "
+    "is no move of it\n"
+)
+
+
+def exported_once(tmp_path: Path) -> Path:
+    """A published piece exported once, and the `tests` library at 1.1.0 too."""
+    root = published(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    newer_tests(root)
+    return root
+
+
+def assert_refused_with_nothing_written(root: Path, shown: Any, said: str) -> None:
+    assert shown.returncode == 1
+    assert shown.stderr == said
+    assert [version["version"] for version in record_of(root)["versions"]] == [1]
+    assert not any(".v2." in name for name in exported(root))
+
+
+def test_a_lock_written_by_hand_refuses_and_writing_it_back_lets_the_export_run(
+    tmp_path: Path,
+) -> None:
+    root = exported_once(tmp_path)
+    edit(root, "tests: 1.0.0", "tests: 1.1.0")
+    assert_refused_with_nothing_written(root, run(root, PIECE), DIFFERS)
+    edit(root, "tests: 1.1.0", "tests: 1.0.0")
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert record_of(root)["current-copy"]["version"] == 2
+
+
+def test_a_state_changed_and_changed_back_brings_no_new_library_version(tmp_path: Path) -> None:
+    root = exported_once(tmp_path)
+    edit(root, "state: published", "state: draft")
+    assert run_main(render_script, PIECE, cwd=root).returncode == 0
+    assert reading.read_yaml(root / PIECE_FOLDER / "piece.yaml")["lock"]["tests"] == "1.1.0"
+    assert run(root, PIECE).returncode == 0
+    edit(root, "state: draft", "state: published")
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == DIFFERS
+    assert record_of(root)["current-copy"]["version"] == 1
+
+
+def test_the_gate_reads_the_record_so_removing_the_copy_changes_nothing(tmp_path: Path) -> None:
+    root = exported_once(tmp_path)
+    shutil.rmtree(root / COPY)
+    edit(root, "tests: 1.0.0", "tests: 1.1.0")
+    assert_refused_with_nothing_written(root, run(root, PIECE), DIFFERS)
+    assert not (root / COPY).exists()
+
+
+def test_a_copy_removed_under_the_same_lock_is_written_again(tmp_path: Path) -> None:
+    root = exported_once(tmp_path)
+    shutil.rmtree(root / COPY)
+    assert run(root, PIECE).returncode == 0
+    assert copied(root) == COPIES
+
+
+def test_the_gate_holds_a_published_piece_alone(tmp_path: Path) -> None:
+    root = exported_once(tmp_path)
+    edit(root, "state: published", "state: draft")
+    edit(root, "tests: 1.0.0", "tests: 1.1.0")
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+
+
+def test_a_piece_with_no_copy_in_its_record_compares_nothing(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    assert run(root, PIECE).returncode == 0
+    newer_tests(root)
+    edit(root, "state: draft", "state: published")
+    edit(root, "tests: 1.0.0", "tests: 1.1.0")
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert record_of(root)["current-copy"]["version"] == 2
+
+
+def test_a_folder_copied_by_hand_brings_no_copy_of_its_own_so_nothing_compares(
+    tmp_path: Path,
+) -> None:
+    root = exported_once(tmp_path)
+    hand = "visual/pieces/flow-two"
+    shutil.copytree(root / PIECE_FOLDER, root / hand)
+    path = root / hand / "piece.yaml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("tests: 1.0.0", "tests: 1.1.0"), encoding="utf-8"
+    )
+    original = record_of(root)
+    shown = run(root, "flow-two")
+    assert shown.returncode == 0, shown.stderr
+    assert copied(root, f"{hand}/current-copy") == [
+        "flow-two.en.colour-scheme.dark.svg",
+        "flow-two.en.default.svg",
+    ]
+    current = record_of(root, hand)["current-copy"]
+    assert (current["piece"], current["version"]) == ("flow-two", 2)
+    assert record_of(root) == original
+    assert copied(root) == COPIES
+
+
+def test_a_renamed_piece_keeps_its_copy_and_the_gate_still_holds_it(tmp_path: Path) -> None:
+    root = exported_once(tmp_path)
+    renamed = "visual/pieces/flow-renamed"
+    os.rename(root / PIECE_FOLDER, root / renamed)
+    written = record_of(root, renamed)["current-copy"]["files"]
+    assert all((root / renamed / path).is_file() for path in written)
+    path = root / renamed / "piece.yaml"
+    text = path.read_text(encoding="utf-8")
+    path.write_text(text.replace("tests: 1.0.0", "tests: 1.1.0"), encoding="utf-8")
+    shown = run(root, "flow-renamed")
+    assert shown.returncode == 1
+    assert shown.stderr == DIFFERS.replace("pieces/flow/", "pieces/flow-renamed/").replace(
+        "upgrade flow", "upgrade flow-renamed"
+    )
+    path.write_text(text, encoding="utf-8")
+    shown = run(root, "flow-renamed")
+    assert shown.returncode == 0, shown.stderr
+    assert record_of(root, renamed)["current-copy"]["piece"] == "flow-renamed"
+    assert copied(root, f"{renamed}/current-copy") == [
+        "flow-renamed.en.colour-scheme.dark.svg",
+        "flow-renamed.en.default.svg",
+    ]
+
+
+def sealed(fingerprint_kept: dict[str, Any], library: str, version: str) -> None:
+    """Make the first library's input of a kept fingerprint name `library` at `version`,
+    its value taken again, so its own inputs still match."""
+    entry = next(item for item in fingerprint_kept["inputs"] if "library" in item)
+    entry.update(library=library, version=version)
+    fingerprint_kept["value"] = reading.sha256(
+        fingerprint.canonical_bytes(fingerprint_kept["inputs"])
+    )
+
+
+def edited_value(record: dict[str, Any]) -> None:
+    record["versions"][0]["fingerprint"]["value"] = "0" * 64
+
+
+def no_fingerprint(record: dict[str, Any]) -> None:
+    del record["versions"][0]["fingerprint"]
+
+
+def no_such_version(record: dict[str, Any]) -> None:
+    record["current-copy"]["version"] = 7
+
+
+def a_library_outside_the_folder(record: dict[str, Any]) -> None:
+    sealed(record["versions"][0]["fingerprint"], "../../outside", "1.0.0")
+
+
+def a_version_outside_the_folder(record: dict[str, Any]) -> None:
+    sealed(record["versions"][0]["fingerprint"], "tests", "../../outside")
+
+
+@pytest.mark.parametrize(
+    ("spoil", "said"),
+    [
+        pytest.param(edited_value, "it was edited", id="edited"),
+        pytest.param(no_fingerprint, "no fingerprint is kept", id="none-kept"),
+        pytest.param(no_such_version, "no fingerprint is kept", id="no-such-version"),
+        pytest.param(a_library_outside_the_folder, "../../outside", id="no-library"),
+        pytest.param(a_version_outside_the_folder, "../../outside", id="no-version"),
+    ],
+)
+def test_a_fingerprint_the_gate_cannot_read_refuses_and_names_the_record(
+    tmp_path: Path, spoil: Callable[[dict[str, Any]], None], said: str
+) -> None:
+    root = exported_once(tmp_path)
+    record = record_of(root)
+    spoil(record)
+    (root / RECORD).write_text(yaml_text(record), encoding="utf-8")
+    number = record["current-copy"]["version"]
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr.startswith(
+        f"error: {RECORD} gives no lock of version {number}, which wrote the piece's current copy: "
+    )
+    assert said in shown.stderr
+    assert shown.stderr.endswith("Mend it before the next export\n")
+    assert not any(".v2." in name for name in exported(root))
+
+
+def test_a_current_copy_of_no_shape_refuses_and_names_the_record(tmp_path: Path) -> None:
+    root = exported_once(tmp_path)
+    record = record_of(root)
+    record["current-copy"] = {"piece": "../outside", "version": 1, "files": {}}
+    (root / RECORD).write_text(yaml_text(record), encoding="utf-8")
+    assert_refused_with_nothing_written(
+        root,
+        run(root, PIECE),
+        f"error: {RECORD} keeps a `current-copy` that names no piece, version and files: mend it "
+        f"before the next export\n",
+    )
+
+
+def test_the_gate_lies_outside_what_a_proposed_move_of_the_lock_shares(tmp_path: Path) -> None:
+    root = exported_once(tmp_path)
+    edit(root, "tests: 1.0.0", "tests: 1.1.0")
+    piece = pl.read_piece(root, "visual", PIECE)
+    project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+    exports.write(exports.plan(project), files.Change(root))
+    current = record_of(root)["current-copy"]
+    assert current["version"] == 2
+    assert run(root, PIECE).returncode == 0
+
+
+# --- what a failed export of a published piece leaves -------------------------------------------
+
+
+def test_a_first_copy_that_cannot_be_written_leaves_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = published(tmp_path)
+    with monkeypatch.context() as patch:
+        failing(patch, write={"current-copy"})
+        shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == f"error: {COPY} could not be written: {FULL}\n"
+    assert not (root / COPY).exists()
+    assert not (root / RECORD).exists()
+    assert not (root / FOLDER).exists()
+    assert not (root / CONFIG).exists()
+
+
+def test_a_failed_export_puts_the_copy_back_whole(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = published(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    record = (root / RECORD).read_bytes()
+    held = {name: (root / COPY / name).read_bytes() for name in copied(root)}
+    edit(root, "    - dark\n", "")
+    with monkeypatch.context() as patch:
+        failing(patch, write={"exports.yaml"})
+        shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == f"error: {RECORD} could not be written: {FULL}\n"
+    assert {name: (root / COPY / name).read_bytes() for name in copied(root)} == held
+    assert (root / RECORD).read_bytes() == record
+    assert not any(".v2." in name for name in exported(root))
+    assert not list((root / PIECE_FOLDER).glob(".*"))
+
+
+def test_a_failed_export_names_each_file_it_could_not_put_back(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = published(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    with monkeypatch.context() as patch:
+        failing(patch, write={"exports.yaml"}, remove={"flow.v2.en.default.svg"})
+        shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        f"error: {RECORD} could not be written: {FULL}; these could not be put back as they "
+        f"were before the run: {FOLDER}/flow.v2.en.default.svg\n"
+    )

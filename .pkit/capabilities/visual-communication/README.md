@@ -68,6 +68,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/outputs.md#contents
         - .pkit/capabilities/visual-communication/outputs.md#exports
+        - .pkit/capabilities/visual-communication/outputs.md#the-current-copy
         - .pkit/capabilities/visual-communication/outputs.md#the-record-of-exports
         - .pkit/capabilities/visual-communication/outputs.md#plugins
         - .pkit/capabilities/visual-communication/outputs.md#accepting-a-loss
@@ -151,7 +152,7 @@ A library the capability ships reaches the location only through [`pkit visual a
 4. **See it.** [`pkit visual look <piece>`](#pkit-visual-look-piece) draws each page as an image, with a report of what the images cannot show ([The viewing step](outputs.md#the-viewing-step)). [The reviewer](#the-reviewer) can read them for you.
 5. **Check it.** `pkit visual check <piece>`, or `pkit validate`, reports what the piece breaks ([What the check reports](checks.md)).
 6. **Commit the piece's folder:** `piece.yaml`, the content and `findings.yaml` ([The findings record](checks.md#the-findings-record)). The previews stay local to the clone ([The clone's local folder](files.md#the-clones-local-folder)).
-7. **Hand it out.** `pkit visual export <piece>` makes a numbered export in each format the piece declares, and records the version in the piece's `exports.yaml`. Commit `exports.yaml`; the exported files stay local until they are handed out ([Exports](outputs.md#exports)).
+7. **Hand it out.** `pkit visual export <piece>` makes a numbered export in each format the piece declares, and records the version in the piece's `exports.yaml`. Commit `exports.yaml`; the exported files stay local until they are handed out ([Exports](outputs.md#exports)). A published piece's export also writes its current copy, the unnumbered files a page links to. Commit that too ([The current copy](outputs.md#the-current-copy)).
 
 A brand's values reach code the same way: a declaration under the location's `code/` folder names the brand and where the code goes, and `pkit visual write-code <name>` writes it ([Written code](outputs.md#written-code)).
 
@@ -242,9 +243,10 @@ Runs the producer a piece declares for one of its produced outputs, and keeps it
 Makes a numbered export of a piece in each format it declares.
 
 - **Makes the run's files,** each under the piece's next version number, in the clone's local folder ([Exports](outputs.md#exports)).
-- **Records the version** in `exports.yaml` ([The record of exports](outputs.md#the-record-of-exports)).
+- **Keeps a published piece's current copy,** replacing it whole in the piece's folder ([The current copy](outputs.md#the-current-copy)).
+- **Records the version** in `exports.yaml`, and the version that wrote a current copy ([The record of exports](outputs.md#the-record-of-exports)).
 - **Uses the lock** `piece.yaml` holds, and never moves it.
-- **Refuses** a final piece, which takes no export, and for each other reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, and may repeat.
+- **Refuses** a final piece, which takes no export, and a published piece whose lock differs from the one its current copy was made under. It refuses for each other reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, and may repeat.
 - **Exits** 0 when it exported and recorded the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
 ### `pkit visual look <piece>`
