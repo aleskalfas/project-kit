@@ -614,7 +614,7 @@ The change check's report of an outdated base names no merge, since the merge ch
   - **What it leaves.** A comment on the PR names the commit, the command and who named it. It is posted before anything starts, and with no comment nothing starts.
   - **What it leaves standing.** Every other stop, each reviewer's verdict and the authorisation to merge.
   - **An agent** runs with no terminal, so the question stops it, and the person directing it runs the command themselves. A program that fakes a terminal could still answer, so this guards a routine run and is no boundary.
-- **The local branch.** `land-work` finds a PR through a local branch named `<type>/<N>-<slug>`. For a fork's PR, make that branch with no checkout: `git fetch <base remote> refs/pull/<PR>/head:refs/heads/<type>/<N>-<slug>`.
+- **The local branch.** `land-work` finds a PR through a local branch named `<type>/<N>-<slug>`, and only where that name is also the PR's head branch. For a fork's PR, make that branch with no checkout, under the fork's own branch name: `git fetch <base remote> refs/pull/<PR>/head:refs/heads/<head-branch>`. Where the fork's branch has another shape, such as `patch-1`, `land-work` finds no PR. Merge it on the host, then run `done-work`, which finds a merged PR from the issue's closing references.
 - **Your working tree.** Land such a head from a tree of your own. A tree that holds the head's files, an older commit of its branch included, runs the head's own copy of the command, before any test.
 - **The other merge commands.** A merge through `done-work` or `merge-pr` runs no change check and tells no answer. So they are no neutral way past the stop.
 
