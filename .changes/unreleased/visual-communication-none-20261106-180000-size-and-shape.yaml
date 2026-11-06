@@ -1,0 +1,6 @@
+component: visual-communication
+kind: none
+body: >
+  A proposed record decides how a size reaches a component, and how a size
+  changes a component's shape (#2780). It designs ahead of the Tasks that build
+  it. No command, path or file format changes, so no surface moves.
