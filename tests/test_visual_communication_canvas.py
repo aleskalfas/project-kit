@@ -209,12 +209,28 @@ def test_a_subclass_reports_its_losses_under_its_own_name_and_draws_what_it_decl
     assert "figure/dot" not in written
 
 
+def test_a_number_takes_the_places_a_renderer_asks_of_it() -> None:
+    assert canvas.number(1.23456789, 5) == "1.23457"
+    assert canvas.number(1.5, 5) == "1.5"
+    assert canvas.number(-0.000001, 5) == "0"
+    assert canvas.number(1.23456789) == "1.23"
+
+
+def test_it_finds_an_element_anywhere_in_the_tree_by_its_trace_id() -> None:
+    children = SHAPES["children"]
+    found = canvas.find(children, "figure/mark/dot")
+    assert found is not None
+    assert found["type"] == "ellipse"
+    assert canvas.find(children, "figure/gone") is None
+
+
 def test_the_canvas_is_read_as_no_renderer() -> None:
     assert not canvas.__name__.startswith("_lib.plugins")
     assert "canvas" not in seam.names()
     assert {seam.declaration(name)["module"] for name in seam.names(seam.RENDERER)} == {
         "svg",
         "pdf",
+        "html",
     }
     with pytest.raises(seam.PluginError):
         seam.implementation("canvas")

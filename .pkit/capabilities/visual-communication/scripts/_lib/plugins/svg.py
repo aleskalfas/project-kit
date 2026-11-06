@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from _lib.canvas import Canvas
+from _lib.canvas import Canvas, find
 from _lib.plugins import seam
 from _lib.plugins.svg_declaration import DECLARATION
 
@@ -57,17 +57,7 @@ def render(
     canvas = Canvas(DECLARATION, scene, key, colours, font_file, pictures)
     pages = []
     for trace in scene.get("pages", []):
-        element = _find(scene.get("children", []), trace)
+        element = find(scene.get("children", []), trace)
         if element is not None:
             pages.append(Page(trace, canvas.page(element)))
     return Drawn(pages, canvas.losses)
-
-
-def _find(elements: list[Mapping[str, Any]], trace: str) -> Mapping[str, Any] | None:
-    stack = list(reversed(elements))
-    while stack:
-        element = stack.pop()
-        if element.get("id") == trace:
-            return element
-        stack.extend(reversed(element.get("children", [])))
-    return None
