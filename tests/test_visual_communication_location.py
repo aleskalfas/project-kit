@@ -317,6 +317,27 @@ def test_outside_a_repository_the_folder_is_walked_without_links(tmp_path: Path)
     assert location.files(root, "missing") == []
 
 
+def test_a_commit_is_read_as_it_stood_whatever_the_working_tree_holds(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    git(root, "init", "-q")
+    write(root / "visual" / "a" / "kept.yaml", "then\n")
+    write(root / "visual" / "[x].yaml", "")
+    write(root / "visualise" / "other.yaml", "")
+    git(root, "add", ".")
+    identity = ("-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false")
+    git(root, *identity, "commit", "-q", "-m", "held")
+    commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, text=True
+    ).stdout.strip()
+    write(root / "visual" / "a" / "kept.yaml", "now\n")
+    write(root / "visual" / "new.yaml", "")
+    assert location.files_at(root, commit, "visual") == ["visual/[x].yaml", "visual/a/kept.yaml"]
+    assert location.files_at(root, commit, "missing") == []
+    assert location.file_at(root, commit, "visual/a/kept.yaml") == b"then\n"
+    with pytest.raises(location.GitFailed):
+        location.file_at(root, commit, "visual/new.yaml")
+
+
 def test_in_a_repository_the_files_are_listed_as_git_sees_them(tmp_path: Path) -> None:
     root = project(tmp_path)
     git(root, "init", "-q")

@@ -36,7 +36,7 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -177,10 +177,13 @@ class Piece:
 
 def piece_names(root: Path, location: str) -> list[str]:
     """The pieces of the location: each folder of its `pieces/` that holds a file."""
+    return pieces_in(location, listed_files(root, f"{location}/{PIECES}"))
+
+
+def pieces_in(location: str, listed: Iterable[str]) -> list[str]:
+    """The pieces of the location that `listed`, the files of its `pieces/`, hold."""
     prefix = f"{location}/{PIECES}/"
-    return sorted(
-        {rel[len(prefix) :].split("/")[0] for rel in listed_files(root, f"{location}/{PIECES}")}
-    )
+    return sorted({rel[len(prefix) :].split("/")[0] for rel in listed})
 
 
 def read_piece(root: Path, location: str, name: str) -> Piece:

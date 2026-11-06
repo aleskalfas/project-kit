@@ -22,13 +22,13 @@ DEC-017 points 5, 7 and 8).
   while the original stands. Every rule on a piece's current copy reads it so.
 - **The lock it was made under** (`written_lock`) is read from the fingerprint of the
   version that wrote it, each library and version held to its shape, since a record may
-  be written by hand.
+  be written by hand. The release that version recorded lies beside it (`written_release`).
 """
 
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -148,16 +148,20 @@ def recorded(piece: pl.Piece, record: Mapping[str, Any]) -> Mapping[str, Any] | 
     return entry
 
 
-def own(piece: pl.Piece, record: Mapping[str, Any]) -> Mapping[str, Any] | None:
+def own(
+    piece: pl.Piece, record: Mapping[str, Any], pieces: Collection[str] | None = None
+) -> Mapping[str, Any] | None:
     """The entry of the record of exports `record` that names the piece's own current copy
     (DEC-017 point 7), or None: the record names no copy, or one of a piece the location
-    still holds. Every rule on a piece's current copy reads it. Raises Refused where the
-    schema refuses the entry (`recorded`)."""
+    still holds. `pieces` gives the pieces of the location, for a record read as it stood
+    at a commit, and otherwise they are those it holds now. Every rule on a piece's current
+    copy reads it. Raises Refused where the schema refuses the entry (`recorded`)."""
     entry = recorded(piece, record)
     if entry is None:
         return None
     named = entry["piece"]
-    if named == piece.name or named not in pl.piece_names(piece.root, piece.location):
+    held = pl.piece_names(piece.root, piece.location) if pieces is None else pieces
+    if named == piece.name or named not in held:
         return entry
     return None
 
@@ -194,14 +198,27 @@ def written_lock(entry: Mapping[str, Any], versions: Sequence[Mapping[str, Any]]
     fingerprint.UnreadableFingerprint where none can be read: no version of that number
     keeps one, or it names a library or a version of no such shape, which a lock never
     holds."""
-    wrote = next((kept for kept in versions if kept["version"] == entry["version"]), {})
-    lock = fingerprint.lock_of(wrote.get("fingerprint"))
+    lock = fingerprint.lock_of(_writer(entry, versions).get("fingerprint"))
     for library, version in lock.items():
         if not is_name(library) or not _is_version(version):
             raise fingerprint.UnreadableFingerprint(
                 f"the fingerprint names {library!r} at {version!r}, which is no library version"
             )
     return lock
+
+
+def written_release(entry: Mapping[str, Any], versions: Sequence[Mapping[str, Any]]) -> str:
+    """The capability's release the version that wrote the current copy `entry` names
+    recorded, among the record's `versions`; empty where it keeps none."""
+    kept = _writer(entry, versions).get("recorded")
+    release = kept.get("capability") if isinstance(kept, Mapping) else None
+    return release if isinstance(release, str) else ""
+
+
+def _writer(entry: Mapping[str, Any], versions: Sequence[Mapping[str, Any]]) -> Mapping[str, Any]:
+    """What the record's `versions` keep of the version that wrote the current copy `entry`
+    names; nothing where none is of that number."""
+    return next((kept for kept in versions if kept["version"] == entry["version"]), {})
 
 
 def _is_version(text: str) -> bool:

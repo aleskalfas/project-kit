@@ -19,7 +19,8 @@ pieces (DEC-002 points 1 and 2).
   refused too, by reading and writing commands alike, rather than read as no location.
 
 The files of a folder are listed as git sees them: tracked, and untracked but not ignored.
-Outside a git repository, the folder is walked. A link is never listed.
+Outside a git repository, the folder is walked. A link is never listed. What a commit holds
+is read from git alone (`files_at`, `file_at`).
 """
 
 from __future__ import annotations
@@ -262,26 +263,37 @@ def files(root: Path, folder: str) -> list[str]:
     links, and without a tracked file the working tree no longer holds."""
     if not _in_repository(root):
         return walked(root, folder)
-    argv = [
-        "git",
-        "--literal-pathspecs",
-        "ls-files",
-        "-z",
-        "--cached",
-        "--others",
-        "--exclude-standard",
-        "--",
-        folder,
-    ]
+    found = _git(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", folder)
+    listed = {entry for entry in found.decode("utf-8").split("\0") if entry}
+    return sorted(rel for rel in listed if _plain_file(root / rel))
+
+
+def files_at(root: Path, commit: str, folder: str) -> list[str]:
+    """The files under `folder` at `commit`, relative to `root`, in path order: none where
+    that commit holds no such folder. Raises GitFailed."""
+    found = _git(root, "ls-tree", "-r", "-z", "--name-only", commit, "--", folder)
+    return sorted(entry for entry in found.decode("utf-8").split("\0") if entry)
+
+
+def file_at(root: Path, commit: str, rel: str) -> bytes:
+    """The bytes of the file `rel`, relative to `root`, at `commit`. Raises GitFailed where
+    that commit holds no such file."""
+    return _git(root, "cat-file", "blob", f"{commit}:./{rel}")
+
+
+def _git(root: Path, *args: str) -> bytes:
+    """What git prints of `args`, run at `root`, a path read as it is written. Raises
+    GitFailed."""
     try:
-        proc = subprocess.run(argv, cwd=root, capture_output=True, check=False)
+        proc = subprocess.run(
+            ["git", "--literal-pathspecs", *args], cwd=root, capture_output=True, check=False
+        )
     except OSError as exc:
         raise GitFailed(f"git could not be run ({exc})") from exc
     if proc.returncode != 0:
         detail = [line for line in proc.stderr.decode("utf-8", "replace").splitlines() if line]
-        raise GitFailed(detail[-1] if detail else f"git ls-files exited {proc.returncode}")
-    listed = {entry for entry in proc.stdout.decode("utf-8").split("\0") if entry}
-    return sorted(rel for rel in listed if _plain_file(root / rel))
+        raise GitFailed(detail[-1] if detail else f"git {args[0]} exited {proc.returncode}")
+    return proc.stdout
 
 
 def _in_repository(root: Path) -> bool:
