@@ -1,0 +1,13 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-operator.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261104T170342Z-a3aeb099.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261106T003428Z-6de85d99.yaml
+    revalidated:
+      at: 2026-11-06T01:36:42Z
+      outcome: unchanged
+      unchanged-because: Judged together with 20261105T100241Z-2ce909e8 and 20261105T115925Z-6c703c63. The first added an over-broad anchor to the tracking issue's kinds that hold nothing open. The second, at 96ab08b0, rewrote the end of the paragraph on the friction gate in enforcing mode, taking out the sentences on open-pr writing the list of answers, and left that paragraph's sentence saying this is a repository setting the operator holds. This change edits how CI splits a run. None of the three touches that sentence, so CONTRIBUTING.md still calls whoever holds those settings the operator, as the actor's note says.
