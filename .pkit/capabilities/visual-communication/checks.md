@@ -511,7 +511,7 @@ An export reads two files without some of their fields. Each field can change no
 - **What this leaves verifying.** Pinning a draft or setting its state changes no export's fingerprint. Nor does running a producer again with the same pixels.
 - **What still counts.** Every other field counts, the lock and the formats among them. A field added later counts until a change adds it to this list.
 - **What the input says.** It names each field of the list it applied, whether the file held that field or not. So a field set later stays left out.
-- **Only an export.** Every other kind of fingerprint reads these files whole (DEC-016 point 2). So a listed field can still change a piece's findings.
+- **Only an export.** Every other kind of fingerprint leaves no field out (DEC-016 point 2). So a listed field can still change a piece's findings.
 
 ### How a fingerprint verifies
 
