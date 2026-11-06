@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "exports.schema.json",
   "title": "The record of a piece's exports — visual-communication capability",
-  "description": "Formal shape of a piece's `exports.yaml` (DEC-006 point 7): each numbered export, with the fingerprint of every file its scenes were computed from and the formats it made (form 1), each file it made with its hash, and what is only recorded, among it each produced output the version used and those used while stale; and who wrote a published piece's current copy (DEC-017 point 7). `pkit visual export` rewrites it. Document-shaped schema. Companion per COR-018.",
+  "description": "Formal shape of a piece's `exports.yaml` (DEC-006 point 7): each numbered export, with the fingerprint of every file its scenes were computed from and the formats it made (form 1), each file it made with its hash, and what is only recorded, among it each produced output the version used and those used while stale; who wrote a published piece's current copy (DEC-017 point 7); and which version was handed out (DEC-017 point 2). `pkit visual export` rewrites it, and `pkit visual mark-final` adds its last line. Document-shaped schema. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
@@ -51,6 +51,11 @@
           "minProperties": 1
         }
       }
+    },
+    "handed-out": {
+      "description": "The number of the version handed out (DEC-017 point 2), one of those `versions` holds. Absent until `pkit visual mark-final` names it, and no input of any fingerprint.",
+      "type": "integer",
+      "minimum": 1
     },
     "versions": {
       "type": "array",

@@ -278,10 +278,12 @@ def produce(root: Path, where: loc.ForWriting, piece: str, output: str) -> Produ
 
 def _refuse_final(root: Path, location: str, piece: str) -> None:
     """Refuse a piece that is final, before anything else is read of it. Raises Refused."""
-    if copies.final(_piece(root, _piece_folder(root, location, piece), piece)):
+    folder = _piece_folder(root, location, piece)
+    why = copies.why_final(_piece(root, folder, piece), folder)
+    if why:
         raise Refused(
-            f"the piece `{piece}` is final, and a final piece takes no producer's run: making "
-            f"its pictures again would change it"
+            f"the piece `{piece}` is final ({why}), and a final piece takes no producer's run: "
+            f"making its pictures again would change it"
         )
 
 
@@ -298,10 +300,11 @@ def plan(
     plugin = producer(declaration.producer)
     lock = data.get("lock")
     if not isinstance(lock, Mapping) or not lock:
-        if copies.lock_stays(data):
+        final = copies.final(data, folder)
+        if copies.lock_stays(data, final):
             raise Refused(
                 f"the piece `{piece}` is {data['state']} and has no lock: "
-                f"{copies.no_lock(data)}, then produce"
+                f"{copies.no_lock(final)}, then produce"
             )
         raise Refused(
             f"the piece `{piece}` has no lock yet: run `{RENDER} {piece}` first, which writes "

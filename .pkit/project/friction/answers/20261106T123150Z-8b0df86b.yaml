@@ -1,0 +1,245 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+    revalidated:
+      at: 2026-11-06T12:31:50Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T035615Z-a1d5b3e3.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+    revalidated:
+      at: 2026-11-06T12:31:53Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T212314Z-4c67bf0c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+    revalidated:
+      at: 2026-11-06T12:31:55Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+    revalidated:
+      at: 2026-11-06T12:31:59Z
+      outcome: unchanged
+      unchanged-because: "pipeline.py gains the reading of whether a piece is final, checks.py asks it and gives changed_versions a name of its own, and files.md gains the folder handed-out, the state row and how a piece is marked final. This page names no state of a piece, and a final piece takes the same scene, stand-ins included. Judged with the two answers this replaces, both unchanged, whose commits left this page alone: 20261106T110521Z-7534b186.yaml, on listing the pieces of a commit by a split of piece_names, and 20261106T113238Z-7d61497a.yaml, on keeping a final piece out of the component passes and on what a piece with no lock is told. Those two and this change leave how a component is read and a scene computed as it was, so the page holds of all three together."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-export
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+    revalidated:
+      at: 2026-11-06T12:32:02Z
+      outcome: unchanged
+      unchanged-because: "exports.schema.json gains the field handed-out, which names one recorded version. An export stays numbered and as it was made: marking final moves its files into the piece folder under the same names, bytes unchanged. The definition, which already says a piece is handed out as a file, its example and its distinction hold."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-local-component
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261106T045753Z-f02f34f0.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+    revalidated:
+      at: 2026-11-06T12:32:05Z
+      outcome: unchanged
+      unchanged-because: "pipeline.py gains the reading of whether a piece is final, from its state and its record of exports. Judged with the two answers this replaces, whose commits left this term alone: 20261106T110521Z-7534b186.yaml, on listing the pieces of a location by a split of piece_names, and 20261106T110932Z-3b040a83.yaml, on reading the file of a piece alone. The three change how a piece is listed, read or judged final, and none changes where a component lies or who uses it, so a local component is still made inside one piece and used by it alone."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-piece
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+    revalidated:
+      at: 2026-11-06T12:32:07Z
+      outcome: unchanged
+      unchanged-because: "pipeline.py gains the reading of whether a piece is final, from its state and its record of exports. Judged with the two answers this replaces, whose commits left this term alone: 20261106T110521Z-7534b186.yaml, on listing the pieces of a location by a split of piece_names, and 20261106T110932Z-3b040a83.yaml, on reading the file of a piece alone. The three change how a piece is listed, read or judged final, and none changes what a piece is, so it still keeps its content as data and takes its look from libraries, and the example and distinctions hold."
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T181511Z-6cf22051.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T045753Z-f02f34f0.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T061853Z-ad99d5f3.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: artefact
+            value: .pkit/capabilities/visual-communication/files.md#the-lock
+          reason: "That passage gains how a piece is marked final. This page holds nothing yet of the version handed out. Open #2765 rewrites what this page says of a final piece and judges this anchor with it."
+        - anchor:
+            kind: artefact
+            value: .pkit/capabilities/visual-communication/files.md#what-the-location-holds
+          reason: "That passage gains the folder handed-out, whose files this page does not yet check. Open #2765 rewrites what this page says of a final piece and judges this anchor with it."
+        - anchor:
+            kind: artefact
+            value: .pkit/capabilities/visual-communication/outputs.md#the-record-of-exports
+          reason: "That passage gains the field handed-out, which this page does not yet read. Open #2765 rewrites what this page says of a final piece and judges this anchor with it."
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/visual-communication/package.yaml
+          reason: "The commands gain mark-final, and the help of render a sentence on a final piece. No line of this page names either. Open #2765 rewrites what this page says of a final piece and judges this anchor with it."
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/visual-communication/scripts/_lib/checks.py
+          reason: "The check now asks the piece whether it is final, and changed_versions takes a name of its own, reading as it did. Open #2765 rewrites what this page says of a final piece and judges this anchor with it."
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/visual-communication/scripts/_lib/copies.py
+          reason: "A piece is now final by its state, by a version handed out, or by a record of exports that cannot be read. This page names neither of the last two. Open #2765 rewrites what this page says of a final piece and judges this anchor with it."
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
+          reason: "It gains read_whole, which only marking final reads. Open #2765 rewrites what this page says of a final piece and judges this anchor with it."
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/visual-communication/scripts/_lib/framing.py
+          reason: "Its refusal of a final piece now says why the piece is final. Open #2765 rewrites what this page says of a final piece and judges this anchor with it."
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
+          reason: "A piece now says whether it is final and why, which the check reads in place of copies.final. Open #2765 rewrites what this page says of a final piece and judges this anchor with it."
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/visual-communication/scripts/render.py
+          reason: "A render of a final piece now writes no findings record, so the sentence of The findings record that it writes one at each render is out of date. No verdict changes, since the check reads no record of a final piece. Open #2765 rewrites what this page says of a final piece and judges this anchor with it."

@@ -94,7 +94,7 @@ def ahead(piece: pl.Piece, held: Held, names: Sequence[str]) -> Look:
     `<library>@<version>`, or with none what a run would propose. Raises Refused where the
     piece takes none, or the search refuses."""
     _refuse_no_lock(piece)
-    if copies.final(piece.data):
+    if piece.final:
         if names:
             raise pl.Refused(
                 f"the piece `{piece.name}` is final, so no version moves its lock: take the look "
@@ -233,11 +233,8 @@ def _refuse_no_lock(piece: pl.Piece) -> None:
     """Raise Refused where the piece has no lock yet, naming what writes one."""
     if piece.lock:
         return
-    way = (
-        copies.FIRST_RENDER
-        if copies.lock_stays(piece.data)
-        else f"run {pl.render_command(piece.name)} first"
-    )
+    stays = piece.lock_stays
+    way = copies.no_lock(piece.final) if stays else f"run {pl.render_command(piece.name)} first"
     raise pl.Refused(f"the piece `{piece.name}` has no lock yet, so no look draws it: {way}")
 
 

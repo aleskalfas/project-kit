@@ -1,9 +1,10 @@
 # The record of a piece's exports, `pieces/<piece>/exports.yaml` (visual-communication
 # DEC-006 point 7): each numbered export, the fingerprint of what it was made from, each
 # file it made with its hash, and what is only recorded, among it each produced output the
-# version used, by its record's fingerprint; and who wrote a published piece's current copy
-# (DEC-017 point 7), each of its files by its path from the piece's folder. `pkit visual
-# export` rewrites it.
+# version used, by its record's fingerprint; who wrote a published piece's current copy
+# (DEC-017 point 7), each of its files by its path from the piece's folder; and which version
+# was handed out (DEC-017 point 2). `pkit visual export` rewrites it, and `pkit visual
+# mark-final` adds its last line.
 #
 # The body below is the reference instance.
 
@@ -50,3 +51,4 @@ versions:
       used:
         marker: 10b959245e41d549969b8a3619a083c45212ff88540b8bc68f69cf794401df2b
       used-stale: []
+handed-out: 1

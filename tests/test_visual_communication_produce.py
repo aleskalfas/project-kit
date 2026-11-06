@@ -133,8 +133,8 @@ def test_a_final_piece_takes_no_run_and_nothing_is_written(tmp_path: Path) -> No
     assert shown.returncode == 1
     assert shown.stdout == ""
     assert shown.stderr == (
-        "error: the piece `flow` is final, and a final piece takes no producer's run: making "
-        "its pictures again would change it\n"
+        "error: the piece `flow` is final (its state says so), and a final piece takes no "
+        "producer's run: making its pictures again would change it\n"
     )
     assert not (root / PRODUCED).exists()
     assert not (root / HANDOVER).exists()

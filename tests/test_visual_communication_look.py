@@ -953,7 +953,10 @@ def test_a_piece_with_no_lock_is_refused_naming_render_its_files_left_as_they_we
     tmp_path: Path,
 ) -> None:
     root = drawing_project(tmp_path, lock=None)
-    (root / PIECE_FOLDER / "exports.yaml").write_text("versions: []\n", encoding="utf-8")
+    (root / PIECE_FOLDER / "exports.yaml").write_text(
+        "pkit_schema: visual-communication:exports\nschema_version: 1\nversions: []\n",
+        encoding="utf-8",
+    )
     before = written(root)
     shown = run_look(root, PIECE)
     assert shown.returncode == 1

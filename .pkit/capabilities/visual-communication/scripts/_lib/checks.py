@@ -385,7 +385,7 @@ class _Run:
         rel = f"{self.location}/{pl.PIECES}/{name}"
         try:
             piece = pl.read_piece_file(self.root, self.location, name)
-            if copies.final(piece.data):
+            if piece.final:
                 self._final(piece)
                 return
             piece = pl.read_piece(self.root, self.location, name)
@@ -424,19 +424,11 @@ class _Run:
         """A final piece, read from its own file alone: its lock as it stands, and no more
         (DEC-002 point 7, DEC-017 point 4). `piece` holds no contents, so no lock is held to
         them. Only a run over the location reads `Held.findings`, so this reads each version
-        the lock names against what was released, and `_once` keeps the finding to one. A
-        version the list does not mark released, or cannot, has nothing to compare."""
+        the lock names against what was released, and `_once` keeps the finding to one."""
         self.counts["final"] += 1
         self.found.extend(lock_findings(self.held, piece))
-        for name, text in sorted(piece.lock.items()):
-            try:
-                version = Version.parse(text)
-            except ValueError:
-                continue  # `lock-version`
-            if version in self.held.folders.get(name, {}) and self.held.released(name, version):
-                changes = self.held.hash_changes(name, version)
-                if changes:
-                    self._once(self.held.changed(name, version, changes, self.compared.restored))
+        for finding in changed_versions(self.held, piece.lock, self.compared.restored):
+            self._once(finding)
 
     def _lock_found(self, piece: pl.Piece, found: Sequence[Finding]) -> None:
         """What the libraries a piece locks show under its lock: the own roles of each
@@ -849,9 +841,9 @@ def _lock_fix(piece: pl.Piece, mend: str) -> str:
     published piece's, so it says what `pkit visual render` says of such a piece, and only a
     draft reads its pin."""
     render = pl.render_command(piece.name)
-    if copies.final(piece.data):
+    if piece.final:
         return mend
-    if copies.lock_stays(piece.data):
+    if piece.lock_stays:
         return (
             f"the piece is {piece.state}, so no render moves its lock: set it back to a draft "
             f"and run {render}"
@@ -878,7 +870,7 @@ def lock_findings(held: Held, piece: pl.Piece) -> list[Finding]:
     - `lock-incomplete`, `lock-majors`: only a move mends them, so each states a fact.
     - `lock-not-released` takes the level `_not_released` gives it."""
     file = piece.file(pl.PIECE_FILE)
-    final = copies.final(piece.data)
+    final = piece.final
 
     def fails(code: str, message: str, mend: str = "") -> Finding:
         return Finding(code, FAILS, message, file=file, where="lock", fix=_lock_fix(piece, mend))
@@ -920,7 +912,7 @@ def lock_findings(held: Held, piece: pl.Piece) -> list[Finding]:
                 found.append(fails("lock-unreadable", said, mend))
             continue
         read[name] = held.library(name, version)
-        if copies.lock_stays(piece.data) and not held.released(name, version):
+        if piece.lock_stays and not held.released(name, version):
             found.append(_not_released(held, piece, name, version))
     for name in pl.needed(piece):
         if name not in lock:
@@ -953,6 +945,25 @@ def lock_findings(held: Held, piece: pl.Piece) -> list[Finding]:
     return found
 
 
+def changed_versions(
+    held: Held, lock: Mapping[str, str], restored: Collection[str] = ()
+) -> list[Finding]:
+    """The finding on each version `lock` names that no longer matches what was released
+    (`Held.changed`, which takes `restored`). A version the project does not hold, or the
+    list does not mark released, has nothing to compare."""
+    found = []
+    for name, text in sorted(lock.items()):
+        try:
+            version = Version.parse(text)
+        except ValueError:
+            continue  # `lock-version`
+        if version in held.folders.get(name, {}) and held.released(name, version):
+            changes = held.hash_changes(name, version)
+            if changes:
+                found.append(held.changed(name, version, changes, restored))
+    return found
+
+
 def _not_released(held: Held, piece: pl.Piece, name: str, version: Version) -> Finding:
     """The finding on a version not yet released that a final or a published piece's lock
     names, naming the piece, the library and the version (DEC-003 points 8 and 9). It fails,
@@ -966,7 +977,7 @@ def _not_released(held: Held, piece: pl.Piece, name: str, version: Version) -> F
     - a copy of a number the capability does not ship: no release, so on a final piece it
       states a fact, and `copy-not-shipped` keeps asking (DEC-013 point 5)."""
     label = f"{name}@{version}"
-    final = copies.final(piece.data)
+    final = piece.final
     finding = Finding(
         LOCK_NOT_RELEASED,
         FAILS,

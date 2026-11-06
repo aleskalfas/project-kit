@@ -587,6 +587,19 @@ def verify(recorded: Mapping[str, Any], kind: str, **sources: Any) -> list[str]:
     return changes(recorded, inputs)
 
 
+def read_whole(recorded: Mapping[str, Any]) -> list[str]:
+    """Each file a kept export fingerprint read whole, in path order, of those an export now
+    reads without some of its fields: so its version was made before that reading (DEC-016
+    point 4)."""
+    return sorted(
+        entry["file"]
+        for entry in recorded["inputs"]
+        if isinstance(entry.get("file"), str)
+        and not {"keys", "without"} & entry.keys()
+        and export_fields(entry["file"])
+    )
+
+
 def lock_of(recorded: Any) -> dict[str, str]:
     """The lock a version was made under, read from its fingerprint (DEC-017 point 1): each
     input of a library version names its library and that version, and those pairs are
