@@ -536,9 +536,11 @@ class _Started:
     def _start(self, flags: Sequence[str], reads: int, writes: int) -> subprocess.Popen[bytes]:
         """Start the program in a process group of its own, its messages on the descriptors the
         protocol names. Python cannot set them itself, so a shell puts them there first. The
-        pipes took the lowest free descriptors, so a copy of an end lies above those two."""
+        pipes took the lowest free descriptors, so a copy of an end lies above those two. It
+        opens each by its path, since a redirect of the form `3<&12` takes one digit in some
+        shells, dash among them."""
         handed = [os.dup(reads), os.dup(writes)]
-        redirected = f"{BROWSER_READS}<&{handed[0]} {BROWSER_WRITES}>&{handed[1]}"
+        redirected = f"{BROWSER_READS}</dev/fd/{handed[0]} {BROWSER_WRITES}>/dev/fd/{handed[1]}"
         try:
             with self._said.open("wb") as said:
                 return subprocess.Popen(
