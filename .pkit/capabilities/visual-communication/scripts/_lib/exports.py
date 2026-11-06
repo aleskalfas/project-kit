@@ -50,7 +50,7 @@ from _lib import current_copy, fingerprint, framing, layout, records
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.files import Change
-from _lib.libraries import installed_release
+from _lib.libraries import Held, installed_release
 from _lib.plugins import seam
 from _lib.reading import is_sha256, sha256
 from _lib.root import LOCAL
@@ -136,17 +136,18 @@ def recorded_versions(piece: pl.Piece, record: Mapping[str, Any]) -> list[dict[s
     return [dict(entry) for entry in versions]
 
 
-def stale_outputs(project: pl.Project) -> dict[str, list[str]]:
+def stale_outputs(project: pl.Project, held: Held | None = None) -> dict[str, list[str]]:
     """Each produced picture the piece's scenes read whose record no longer verifies, with
     what changed (DEC-006 point 5): its fingerprint, worked out again from the current
     files under its form by the producer's framing, and every combination the piece names
-    that the record maps to no variant."""
+    that the record maps to no variant. `held`, where it is given, is what the framing
+    reads the library versions from (`framing.plan`)."""
     piece = project.piece
     stale: dict[str, list[str]] = {}
     for output in sorted(project.env.records):
         record = project.env.records[output]
         try:
-            sources = framing.plan(piece.root, piece.location, piece.name, output).sources
+            sources = framing.plan(piece.root, piece.location, piece.name, output, held).sources
         except framing.Refused as exc:
             stale[output] = [str(exc)]
             continue

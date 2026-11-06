@@ -634,6 +634,39 @@ def test_a_picture_is_read_as_stale_under_each_sides_own_lock(tmp_path: Path) ->
     assert len(said) == 1 and said[0].startswith("stale, after: `square`: ")
 
 
+def ignoring_local(root: Path) -> Path:
+    """`root` a git repository that ignores the local folder, as every clone does, where git
+    lists nothing a side's location holds."""
+    (root / ".gitignore").write_text(f"{before_after.LOCAL}/\n", encoding="utf-8")
+    committed(root)
+    return root
+
+
+def test_a_fresh_picture_is_not_stale_where_git_ignores_the_local_folder(tmp_path: Path) -> None:
+    root = ignoring_local(pictured(tmp_path))
+    assert not [line for line in lines(run(root, PIECE, "--ahead")) if line.startswith("stale")]
+
+
+def test_a_stale_picture_keeps_its_real_change_where_git_ignores_the_local_folder(
+    tmp_path: Path,
+) -> None:
+    root = ignoring_local(pictured(tmp_path))
+    edit(root, "width: 100", "width: 120")
+    said = [line for line in lines(run(root, PIECE, "--ahead")) if line.startswith("stale")]
+    assert len(said) == 1 and said[0].startswith(
+        "stale, before and after: `square`: `piece.yaml` at `produced.square` changed"
+    )
+
+
+def test_each_side_is_read_under_its_own_lock_where_git_ignores_the_local_folder(
+    tmp_path: Path,
+) -> None:
+    root = ignoring_local(pictured(tmp_path))
+    other_brand(root, "base.tokens.json", "{palette.blue.600}", "{palette.blue.800}")
+    said = [line for line in lines(run(root, PIECE, "--ahead")) if line.startswith("stale")]
+    assert len(said) == 1 and said[0].startswith("stale, after: `square`: ")
+
+
 def test_a_picture_that_is_missing_is_reported_with_why(tmp_path: Path) -> None:
     root = drawing_project(tmp_path, state="published")
     listed(root)

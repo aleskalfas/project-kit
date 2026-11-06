@@ -285,9 +285,13 @@ def _refuse_final(root: Path, location: str, piece: str) -> None:
         )
 
 
-def plan(root: Path, location: str, piece: str, output: str) -> Plan:
+def plan(
+    root: Path, location: str, piece: str, output: str, held: libraries.Held | None = None
+) -> Plan:
     """Read, from the files as they are now, what a run of the producer that the piece
-    `piece` declares for `output` reads. Raises Refused."""
+    `piece` declares for `output` reads. The library versions come from `held` where it
+    is given, as for a location git ignores, and otherwise as git lists them. Raises
+    Refused."""
     folder = _piece_folder(root, location, piece)
     data = _piece(root, folder, piece)
     declaration = _declaration(data, piece, output)
@@ -303,7 +307,7 @@ def plan(root: Path, location: str, piece: str, output: str) -> Plan:
             f"the piece `{piece}` has no lock yet: run `{RENDER} {piece}` first, which writes "
             f"it, then produce"
         )
-    brand, chain = _brand(root, location, piece, data.get("brand"), lock)
+    brand, chain = _brand(root, location, piece, data.get("brand"), lock, held)
     _check_inputs(declaration, plugin, brand)
     modes = data.get("modes", {})
     if not isinstance(modes, Mapping):
@@ -773,14 +777,19 @@ def _check_inputs(declaration: Declaration, plugin: Mapping[str, Any], brand: to
 
 
 def _brand(
-    root: Path, location: str, piece: str, name: Any, lock: Mapping[str, Any]
+    root: Path,
+    location: str,
+    piece: str,
+    name: Any,
+    lock: Mapping[str, Any],
+    held: libraries.Held | None,
 ) -> tuple[tokens.Brand, dict[str, str]]:
     """The brand version the piece's lock names, read against the shared roles the locked
     foundations declare, as the pipeline reads them; with the lock of the two, which is
     the brand and what it builds on in format 1. Raises Refused."""
     if not isinstance(name, str) or not is_name(name):
         raise Refused(f"the piece `{piece}` names no `brand`")
-    held = libraries.Held(root, location)
+    held = libraries.Held(root, location) if held is None else held
     found: dict[str, libraries.Library] = {}
     for library in (name, FOUNDATIONS):
         text = lock.get(library)
