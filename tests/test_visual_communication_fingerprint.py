@@ -634,8 +634,15 @@ FILE_OF_BRAND = {"library": "brand", "version": "1.0.0", "path": "a.yaml", "sha2
     [
         pytest.param(None, "no fingerprint is kept", id="missing"),
         pytest.param({**sealed([FILE_OF_BRAND]), "form": 2}, "form 2", id="another-form"),
+        pytest.param({**sealed([FILE_OF_BRAND]), "form": [1]}, r"form \[1\]", id="a-list-form"),
+        pytest.param({**sealed([FILE_OF_BRAND]), "form": {"a": 1}}, "form {'a'", id="a-map-form"),
         pytest.param({**sealed([FILE_OF_BRAND]), "hash": "md5"}, "hash 'md5'", id="another-hash"),
         pytest.param({**sealed([]), "inputs": "x"}, "no list of inputs", id="no-inputs"),
+        pytest.param(
+            {**sealed([FILE_OF_BRAND]), "inputs": [{**FILE_OF_BRAND, "size": 2**60}]},
+            "inputs cannot be read",
+            id="a-number-past-json",
+        ),
         pytest.param({**sealed([FILE_OF_BRAND]), "value": "0"}, "was edited", id="edited"),
         pytest.param(sealed([]), "names no library version", id="no-library"),
         pytest.param(

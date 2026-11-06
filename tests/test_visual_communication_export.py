@@ -1061,10 +1061,20 @@ def a_version_outside_the_folder(record: dict[str, Any]) -> None:
     sealed(record["versions"][0]["fingerprint"], "tests", "../../outside")
 
 
+def a_form_of_no_number(record: dict[str, Any]) -> None:
+    record["versions"][0]["fingerprint"]["form"] = [1]
+
+
+def a_number_past_json(record: dict[str, Any]) -> None:
+    record["versions"][0]["fingerprint"]["inputs"][0]["size"] = 2**60
+
+
 @pytest.mark.parametrize(
     ("spoil", "said"),
     [
         pytest.param(edited_value, "it was edited", id="edited"),
+        pytest.param(a_form_of_no_number, "form [1]", id="a-list-form"),
+        pytest.param(a_number_past_json, "inputs cannot be read", id="a-number-past-json"),
         pytest.param(no_fingerprint, "no fingerprint is kept", id="none-kept"),
         pytest.param(no_such_version, "no fingerprint is kept", id="no-such-version"),
         pytest.param(a_library_outside_the_folder, "../../outside", id="no-library"),
