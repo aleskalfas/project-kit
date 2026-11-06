@@ -28,9 +28,17 @@ publication to this script, which keeps **one** GitHub issue in step with it
   listing shows more than one, the oldest is kept in step, nothing is changed
   on the others, and the run fails saying which to close and strip of their
   signs. Nothing is closed for anyone.
+- **A prune that is due has an issue of its own** (ADR-068 point 4): opened when
+  the publication says one is due and none is open, and closed when it no longer
+  says so. It is no finding, so it leaves the tracking issue alone. A new issue is
+  added to the project's board, where a reopen moves nothing, and the tracking
+  issue's reopening goes on meaning that a finding needs an answer. The issue is
+  the token's with `PRUNE_MARKER` opening its body. A call `gh` refuses for it
+  fails nothing: the log says so, and the next run tries again.
 
-It decides nothing about friction: what needs an answer is the renderer's. It
-exits 0 whatever the check found, and 1, saying why, only when it is run
+It decides nothing about friction: what needs an answer, and whether a prune is
+due, are the renderer's. It exits 0 whatever the check found, and 1, saying why,
+only when it is run
 outside the workflow, the publication cannot be read, `gh` refuses, the listing
 may be incomplete, or there is more than one tracking issue — the check reports
 and never fails (COR-050 point 12), and the workflow is no required status.
@@ -40,8 +48,9 @@ summary; never into the issue.
 The body reaches `gh` as a file (`--body-file`), and every call is an argument
 list, never a shell line, so nothing the findings carry is run. It calls `gh`
 directly rather than project-management's verbs: those file work items for
-people — a type, a parent, an owner, a lifecycle — which this report is not, and
-their gates ask for a member's identity a workflow's token does not have.
+people — a type, a parent, an owner, a lifecycle — which neither this report nor
+the word that a prune is due is, and their gates ask for a member's identity a
+workflow's token does not have.
 
 Only the workflow runs it, on `main`, from a checkout where `gh` reaches the
 repository's remote:
@@ -94,6 +103,19 @@ AUTHOR = "app/github-actions"
 
 TITLE = "Friction: what the whole-repository check finds"
 
+#: The issue that says a prune is due: the line its body opens with, invisible when
+#: rendered, its title and its body.
+PRUNE_MARKER = "<!-- pkit-prune-due -->"
+PRUNE_TITLE = "A prune of the answer files is due"
+PRUNE_BODY = (
+    f"{PRUNE_MARKER}\n"
+    "_Automation opened this issue, and closes it once no prune is due._\n\n"
+    "Enough answer files hold no live answer that a prune is due (ADR-068 point 4). On a "
+    "branch from `main`, run `uv run pkit friction prune --yes`, and land the removal "
+    "alone, as a `chore` pull request of its own. No check fails for this, and no change "
+    "owes an answer for it.\n"
+)
+
 #: The version of `scripts/friction_report_body.py --json` this script reads.
 PUBLICATION_VERSION = 1
 
@@ -120,6 +142,7 @@ class Issue:
 @dataclass(frozen=True)
 class Publication:
     needs_answer: int
+    prune_due: bool
     body: str
 
 
@@ -139,10 +162,19 @@ def read_publication(text: str, source: str) -> Publication:
             f"this script reads {PUBLICATION_VERSION}"
         )
     needs_answer = publication.get("needs_answer")
+    prune_due = publication.get("prune_due")
     body = publication.get("body")
-    if not isinstance(needs_answer, int) or needs_answer < 0 or not isinstance(body, str):
-        raise Refused(f"{source} gives no count of findings that need an answer and no body")
-    return Publication(needs_answer, body)
+    if (
+        not isinstance(needs_answer, int)
+        or needs_answer < 0
+        or not isinstance(prune_due, bool)
+        or not isinstance(body, str)
+    ):
+        raise Refused(
+            f"{source} gives no count of findings that need an answer, no word on whether a "
+            f"prune is due and no body"
+        )
+    return Publication(needs_answer, prune_due, body)
 
 
 class Gh:
@@ -166,9 +198,9 @@ class Gh:
         return proc.stdout or ""
 
 
-def tracking_issues(gh: Gh) -> list[Issue]:
-    """Every tracking issue, oldest first: the issues the token opened that carry
-    the marker or the label. Raises Refused when the listing may be incomplete."""
+def token_issues(gh: Gh) -> list[Issue]:
+    """The issues the token opened, open and closed, oldest first. Raises Refused when
+    the listing may be incomplete."""
     listed = gh(
         "issue",
         "list",
@@ -194,13 +226,12 @@ def tracking_issues(gh: Gh) -> list[Issue]:
             f"the listing may be incomplete and a tracking issue may be missing from it; "
             f"nothing was opened or changed"
         )
-    found = [issue for issue in map(_tracking_issue, entries) if issue is not None]
+    found = [issue for issue in map(_token_issue, entries) if issue is not None]
     return sorted(found, key=lambda issue: issue.number)
 
 
-def _tracking_issue(raw: Any) -> Issue | None:
-    """The tracking issue a listed entry is, or `None`: another author's, or one
-    of the token's with neither sign."""
+def _token_issue(raw: Any) -> Issue | None:
+    """The token's issue a listed entry is, or `None`: another author's."""
     if not isinstance(raw, Mapping):
         raise Refused("`gh issue list` answered an entry that is no issue")
     entry = cast("Mapping[str, Any]", raw)
@@ -220,16 +251,36 @@ def _tracking_issue(raw: Any) -> Issue | None:
         isinstance(label, Mapping) and cast("Mapping[str, Any]", label).get("name") == LABEL
         for label in cast("list[Any]", labels)
     )
-    if not labelled and MARKER not in body:
-        return None
     return Issue(number, state == "OPEN", body, labelled)
 
 
-def publish(publication: Publication, gh: Gh) -> str:
-    """Bring the tracking issue in step with `publication`; say what was done.
-    Raises Refused, having kept the oldest in step, when there is more than one."""
+def keep_prune_issue(publication: Publication, issues: list[Issue], gh: Gh) -> str:
+    """Open the issue that says a prune is due, or close it once none is; say what was
+    done. Its marker opens its body, so a tracking issue quoting it is not taken for it.
+    A refused call is said and fails nothing: the run's failures are the tracking
+    issue's (ADR-055 point 5), and the next run tries again."""
+    found = [issue for issue in issues if issue.open and issue.body.startswith(PRUNE_MARKER)]
+    try:
+        if publication.prune_due:
+            if found:
+                return f"a prune is due: #{found[0].number} says so"
+            with _body_file(PRUNE_BODY) as path:
+                url = gh("issue", "create", "--title", PRUNE_TITLE, "--body-file", path)
+            return f"a prune is due: opened {url.strip()}"
+        for issue in found:
+            gh("issue", "close", str(issue.number), "--reason", "completed")
+    except Refused as exc:
+        return f"the issue that says a prune is due was not kept in step, for the next run: {exc}"
+    closed = ", ".join(f"#{issue.number}" for issue in found)
+    return f"no prune is due: closed {closed}" if found else "no prune is due"
+
+
+def publish(publication: Publication, issues: list[Issue], gh: Gh) -> str:
+    """Bring the tracking issue, one of the token's `issues` that carries the marker or
+    the label, in step with `publication`; say what was done. Raises Refused, having
+    kept the oldest in step, when there is more than one."""
     body = f"{MARKER}\n{NOTICE}\n\n{publication.body}"
-    found = tracking_issues(gh)
+    found = [issue for issue in issues if issue.labelled or MARKER in issue.body]
     if not found:
         if not publication.needs_answer:
             return "nothing needs an answer and there is no tracking issue: nothing to do"
@@ -334,8 +385,12 @@ def main(argv: list[str] | None = None, run: Runner = subprocess.run) -> int:
             text = handle.read()
     except (OSError, ValueError) as exc:
         return _fail(f"{args.publication} cannot be read ({exc}); nothing was published")
+    gh = Gh(run)
     try:
-        print(publish(read_publication(text, args.publication), Gh(run)))
+        publication = read_publication(text, args.publication)
+        issues = token_issues(gh)
+        print(keep_prune_issue(publication, issues, gh))
+        print(publish(publication, issues, gh))
     except Refused as exc:
         return _fail(str(exc))
     return 0
