@@ -433,7 +433,7 @@ def test_a_shipped_copy_of_a_number_being_built_asks_for_attention_on_a_final_pi
     assert finding.fix == (
         "once the capability releases foundations@1.0.0, run `pkit visual add foundations`"
     )
-    assert not report.failed()
+    assert [f.code for f, lv in report.judged if lv == "fails"] == [checks.HANDED_OUT_NONE]
 
 
 def test_a_shipped_copy_of_a_number_no_longer_shipped_states_a_fact_on_a_final_piece(
@@ -476,9 +476,11 @@ def made_final(root: Path) -> Path:
 
 
 def piece_labels(root: Path, *, only: str | None = None) -> set[str]:
-    """Each label the check raises in the piece's folder."""
+    """Each label the check raises in the piece's folder, but the one a piece set final by hand
+    takes for its version handed out, which `test_visual_communication_check.py` holds."""
     report = checks.check(root, only=only)
-    return {f.code for f, _ in report.judged if f.file.startswith(f"{PIECE_FOLDER}/")}
+    found = {f.code for f, _ in report.judged if f.file.startswith(f"{PIECE_FOLDER}/")}
+    return found - {checks.HANDED_OUT_NONE}
 
 
 FINAL_SUMMARY = (
