@@ -919,7 +919,7 @@ def published(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     folder = capability(tmp_path, monkeypatch)
     changed(folder / "libraries/foundations/components/figure.yaml", CAPTION, CHANGED_CAPTION)
     importable(monkeypatch, svg)
-    return lay_out_drawing(project(tmp_path), picture=False, state="published")
+    return lay_out_drawing(project(tmp_path), picture=False, state="published", released=False)
 
 
 @pytest.fixture

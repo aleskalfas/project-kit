@@ -25,6 +25,7 @@ from tests.test_visual_communication_pipeline import (
     PIECE,
     PIECE_FOLDER,
     drawing_project,
+    list_drawing_libraries,
     stamped,
     write_content,
     write_picture,
@@ -121,6 +122,7 @@ def test_each_run_takes_the_next_number_and_records_it(tmp_path: Path) -> None:
 def test_each_version_keeps_the_state_it_was_made_in(tmp_path: Path) -> None:
     root = ready(tmp_path)
     assert run(root, PIECE).returncode == 0
+    list_drawing_libraries(root, released=True)
     path = root / PIECE_FOLDER / "piece.yaml"
     path.write_text(
         path.read_text(encoding="utf-8").replace("state: draft", "state: published"),
@@ -281,6 +283,25 @@ def test_a_final_piece_takes_no_export_and_nothing_is_written(
     assert not (root / FOLDER).exists()
     assert not (root / RECORD).exists()
     assert not (root / CONFIG).exists()
+
+
+def test_a_published_piece_on_a_version_not_yet_released_is_refused_and_writes_nothing(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, state="published", released=False, picture=False)
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert "the published piece `flow` locks tests@1.0.0, which is not yet released" in shown.stderr
+    assert "release it: `pkit visual release tests`" in shown.stderr
+    assert not (root / FOLDER).exists()
+    assert not (root / RECORD).exists()
+
+
+@pytest.mark.parametrize("pinned", [False, True], ids=["draft", "pinned"])
+def test_a_drafts_export_takes_a_version_not_yet_released(tmp_path: Path, pinned: bool) -> None:
+    root = drawing_project(tmp_path, pinned=pinned, picture=False)
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
 
 
 def test_a_published_pieces_lock_refused_is_told_of_its_state_and_of_no_pin(
@@ -914,7 +935,7 @@ def exported_once(tmp_path: Path) -> Path:
     """A published piece exported once, and the `tests` library at 1.1.0 too."""
     root = published(tmp_path)
     assert run(root, PIECE).returncode == 0
-    newer_tests(root)
+    newer_tests(root, released=True)
     return root
 
 
@@ -976,7 +997,7 @@ def test_the_gate_holds_a_published_piece_alone(tmp_path: Path) -> None:
 def test_a_piece_with_no_copy_in_its_record_compares_nothing(tmp_path: Path) -> None:
     root = drawing_project(tmp_path, picture=False)
     assert run(root, PIECE).returncode == 0
-    newer_tests(root)
+    newer_tests(root, released=True)
     edit(root, "state: draft", "state: published")
     edit(root, "tests: 1.0.0", "tests: 1.1.0")
     shown = run(root, PIECE)

@@ -29,6 +29,7 @@ from tests.test_visual_communication_pipeline import (
     drawing_project,
     lab_lock,
     lab_project,
+    list_drawing_libraries,
     write_content,
     write_picture,
 )
@@ -175,8 +176,8 @@ def _texts(element: dict[str, Any]) -> Iterator[dict[str, Any]]:
 # --- the lock -----------------------------------------------------------------------------------
 
 
-def newer_tests(root: Path) -> None:
-    """The `tests` library at 1.1.0 too, listed."""
+def newer_tests(root: Path, *, released: bool = False) -> None:
+    """The `tests` library at 1.1.0 too, every version listed as `released` says."""
     folder = root / "visual" / "libraries" / "tests" / "1.1.0"
     shutil.copytree(TESTS, folder)
     library = folder / "library.yaml"
@@ -184,18 +185,7 @@ def newer_tests(root: Path) -> None:
         library.read_text(encoding="utf-8").replace("version: 1.0.0", "version: 1.1.0"),
         encoding="utf-8",
     )
-    unreleased = {"released": False}
-    write_list(
-        root,
-        {
-            "foundations": {"source": {"kind": "shipped"}, "versions": {"1.0.0": unreleased}},
-            "test-brand": {"source": {"kind": "project"}, "versions": {"1.0.0": unreleased}},
-            "tests": {
-                "source": {"kind": "project"},
-                "versions": {"1.0.0": unreleased, "1.1.0": unreleased},
-            },
-        },
-    )
+    list_drawing_libraries(root, released=released)
 
 
 def test_a_drafts_lock_moves_to_the_newest_in_its_major_keeping_every_other_byte(

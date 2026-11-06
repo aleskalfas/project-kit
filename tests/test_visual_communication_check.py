@@ -156,6 +156,19 @@ def test_past_the_validations_bound_a_piece_without_a_record_fails_as_not_checke
     assert "not-checked" not in [f["label"] for f in found["findings"]]
 
 
+def test_a_final_piece_with_only_a_fact_at_its_lock_exits_0(tmp_path: Path) -> None:
+    lock = {"foundations": "1.0.0", "tests": "1.0.0"}
+    root = drawing_project(tmp_path, state="final", picture=False, lock=lock)
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stdout
+    lines = shown.stdout.splitlines()
+    assert lines[0] == (
+        "the piece `flow` in `visual`: the scenes of 0 read from their findings record, of 0 "
+        "computed now, of 0 not checked, of 1 left out as final."
+    )
+    assert any("[lock-incomplete]" in line and line.startswith("  info") for line in lines)
+
+
 def test_it_checks_the_skeleton_piece_within_a_few_seconds(tmp_path: Path) -> None:
     """The validation runs it on every `pkit validate`: computing the skeleton piece's
     scenes, and reading them from its record, each take well under its bound."""
