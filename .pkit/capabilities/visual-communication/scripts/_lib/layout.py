@@ -57,8 +57,9 @@ DEC-012).
 
 - a primitive, `box`, `ellipse`, `text`, `line` or `image`, whose own mapping holds its
   properties under SVG's names: `fill`, `stroke`, `stroke-width`, `rx`, `text-anchor`;
-  a text's `content` (a field) and `style` (a typography role); an image's `produced` (a
-  field naming a produced output). Only a text part shows a field of runs: its `style`
+  a text's `content` (a field), or `fact` (a fact of its export, one of `FACTS`, which
+  takes no switch), and `style` (a typography role); an image's `produced` (a field
+  naming a produced output). Only a text part shows a field of runs: its `style`
   and `fill` may switch on the run styles of the field it shows, `{by: <field>, <word>:
   <value>, ...}`, naming every word, and give each run the role and the paint its word
   chooses;
@@ -178,12 +179,12 @@ ENDS_OF_LINE = ("x1", "y1", "x2", "y2")
 PROPERTIES: Mapping[str, tuple[str, ...]] = {
     "box": ("fill", "stroke", "stroke-width", "rx"),
     "ellipse": ("fill", "stroke", "stroke-width"),
-    "text": ("content", "style", "fill", "text-anchor"),
+    "text": ("content", "fact", "style", "fill", "text-anchor"),
     "line": ("stroke", "stroke-width", "marker-start", "marker-end"),
     "image": ("produced",),
 }
 REQUIRED_PROPERTIES: Mapping[str, tuple[str, ...]] = {
-    "text": ("content", "style"),
+    "text": ("style",),
     "line": ("stroke",),
     "image": ("produced",),
 }
@@ -206,6 +207,15 @@ WORDS: Mapping[str, tuple[str, ...]] = {
     "connect": ("straight", "corners"),
 }
 OPERATOR_WORDS = ("align-items", "justify-content", "sizes")
+
+#: The facts of its export a text part may show (DEC-006 point 7). They are no entry of
+#: `WORDS`, since a fact takes no switch.
+FACTS = ("version", "date", "language", "state")
+
+#: The text a scene takes for each fact no file holds (DEC-016 point 5). One form serves
+#: every language: a number as an exported file's name writes it, and a date as
+#: `YYYY-MM-DD`. Each digit is one that sets wide, so a usual real value fits.
+STAND_INS: Mapping[str, str] = {"version": "v88", "date": "2088-08-28"}
 
 COMPONENT_KEYS = (
     "pkit_schema", "schema_version", "status", "about", "fields", "options", "states",
@@ -253,6 +263,9 @@ FAMILY = ":colour."
 
 #: The start of the source of a value the content gave.
 CONTENT = "content:"
+
+#: The start of the source of a text that shows a fact of its export.
+FACT = "fact:"
 
 #: A size this much less than the size asked for is not short of it: half the scene's
 #: rounding step.
@@ -836,6 +849,8 @@ class Component:
         for key in REQUIRED_PROPERTIES.get(part.kind, ()):
             if key not in part.props:
                 self._shape(where, f"the {part.kind} `{part.name}` needs `{key}`")
+        if part.kind == "text" and ("content" in part.props) == ("fact" in part.props):
+            self._shape(where, f"the text `{part.name}` names one of `content` and `fact`")
         # A text part that shows a field of runs may choose its role and paint by the
         # field's run styles (DEC-012 point 2).
         shown = part.props.get("content") if part.kind == "text" else None
@@ -852,6 +867,9 @@ class Component:
                 self._switched(at, value, self._words(WORDS[key]))
             elif key == "style":
                 self._switched(at, value, self._role, runs=runs)
+            elif key == "fact":
+                if value not in FACTS:
+                    self._shape(at, f"`fact` takes {', '.join(FACTS)}, and no `{value}`")
             elif not _is_field(value, self.fields):  # content, produced
                 self._shape(at, f"`{key}` names no field `{value}`")
             elif key == "produced" and value in self.runs:
@@ -1465,13 +1483,33 @@ class Component:
 # --- one scene's context ------------------------------------------------------------------
 
 
-class Context:
-    """What computing one scene shares: the environment, its language, the faces, the
-    components read, the findings, and the cells being computed."""
+@dataclass(frozen=True)
+class Facts:
+    """What fills the facts of an export in a scene, as the scene shows them: the version's
+    number, its date and the piece's state. The fourth fact, the language, is the scene's
+    own (DEC-006 point 7, DEC-016 point 5)."""
 
-    def __init__(self, env: Env, language: str) -> None:
+    version: str
+    date: str
+    state: str
+
+
+def stand_ins(state: str) -> Facts:
+    """The facts of a scene no export fills: the piece's state as its file holds it, and the
+    stand-in for each fact no file holds (DEC-016 point 5)."""
+    return Facts(STAND_INS["version"], STAND_INS["date"], state)
+
+
+class Context:
+    """What computing one scene shares: the environment, its language, what fills the facts
+    of its export, the faces, the components read, the findings, and the cells being
+    computed. A context that computes no scene takes the stand-ins and no state: what it
+    judges reads no text."""
+
+    def __init__(self, env: Env, language: str, facts: Facts | None = None) -> None:
         self.env = env
         self.language = language
+        self.facts = facts if facts is not None else stand_ins("")
         self.faces = Faces(env.font_file)
         self.findings: list[Finding] = []
         self.stack: list[tuple[Instance, tuple[str, ...]]] = []
@@ -1482,6 +1520,10 @@ class Context:
         self._roles: dict[str, Any] = {}
         self._families: dict[str, Mapping[str, str] | None] = {}
         self._concepts: dict[str, str | UnknownConcept | None] = {}
+
+    def fact(self, word: str) -> str:
+        """The text of the fact `word`, one of `FACTS`."""
+        return self.language if word == "language" else getattr(self.facts, word)
 
     def finding(self, code: str, message: str, *, where: str, use: str = "") -> Finding:
         """A finding that fails, at `where`: in the file of the component `use`, which it
@@ -1859,6 +1901,12 @@ class Instance:
             return _join(self.content_path, name)
         return self._paths.get(name)
 
+    def source_of_text(self, part: Part) -> str:
+        """Where what a text part shows comes from: the fact it names, else its field."""
+        if "fact" in part.props:
+            return f"{FACT}{part.props['fact']}"
+        return self.source_of_field(part.props["content"])
+
     def source_of_field(self, name: str) -> str:
         """Where the field or option `name` comes from: the source the part that placed
         this instance gave it, else the field's key path in the content file. A field no key
@@ -2043,11 +2091,18 @@ class Instance:
         return node
 
     def _build_text(self, node: Node, trace: str) -> None:
-        """The text a text part shows: its field's text, one run, or, in a field of runs,
-        its runs (DEC-012 point 1). Each run takes the typography role its word chooses.
-        A field given as text is one run of the field's first word."""
+        """The text a text part shows: a fact of its export (`_build_fact`), or its field's
+        text, one run, or, in a field of runs, its runs (DEC-012 point 1). Each run takes the
+        typography role its word chooses. A field given as text is one run of the field's
+        first word. A part that names neither is recorded when the component was read."""
         props = node.part.props
-        content = props.get("content", "")
+        if "fact" in props:
+            self._build_fact(node, trace)
+            return
+        if "content" not in props:
+            node.present = False
+            return
+        content = props["content"]
         words = self.component.runs.get(content)
         value = self.given.get(content)
         if isinstance(value, (int, float)) and not isinstance(value, bool):
@@ -2065,29 +2120,66 @@ class Instance:
             given = [(value or "", words[0] if words else None, False, None, None)]
         styles: dict[str, Style] = {}
         for text, word, named, concept, place in given:
-            _, role, _ = self.pick(f"parts.{node.part.name}.text.style", props.get("style"), word)
-            if not isinstance(role, str):
-                node.present = False  # recorded when the component was read
+            style = self._style_of(node, word, styles, trace)
+            if style is None:
                 return
-            if role not in styles:
-                try:
-                    styles[role] = Style.of_role(role, self.ctx.role(role), self.ctx.faces)
-                except UnvaluedRole as unvalued:
-                    use = self.component.use
-                    self.ctx.unvalued_at_lock(unvalued, f"the text `{trace}` of `{use}`")
-                    node.present = False
-                    return
-                except KeyError:
-                    message = f"{trace}: the brand gives the role @{role} no value"
-                    self._lose(node, "unknown-role", message, trace)
-                    return
-                except ValueError as error:
-                    self._lose(node, "role-type", f"{trace}: {error}", trace)
-                    return
             node.runs.append(
-                self._text_run(content, text, word, named, concept, place, styles[role], trace)
+                self._text_run(content, text, word, named, concept, place, style, trace)
             )
         node.text = "".join(run.text for run in node.runs)
+
+    def _build_fact(self, node: Node, trace: str) -> None:
+        """The text of a fact of the export, as what fills it gives it: one run, in the role
+        `style` names, which takes no run styles (DEC-006 point 7). A word no fact takes is
+        recorded when the component was read."""
+        word = node.part.props["fact"]
+        if word not in FACTS:
+            node.present = False
+            return
+        style = self._style_of(node, None, {}, trace)
+        if style is None:
+            return
+        node.text = self.ctx.fact(word)
+        node.runs.append(
+            TextRun(
+                node.text,
+                None,
+                style,
+                None,
+                self.family,
+                self.family_source,
+                self.source_of_text(node.part),
+                f"default:{self.component.use}",
+                trace,
+            )
+        )
+
+    def _style_of(
+        self, node: Node, word: str | None, styles: dict[str, Style], trace: str
+    ) -> Style | None:
+        """The style of a run of `word` in a text part, each role read once into `styles`.
+        None where the role cannot be read, and the part is then not drawn."""
+        name, props = node.part.name, node.part.props
+        _, role, _ = self.pick(f"parts.{name}.text.style", props.get("style"), word)
+        if not isinstance(role, str):
+            node.present = False  # recorded when the component was read
+            return None
+        if role not in styles:
+            try:
+                styles[role] = Style.of_role(role, self.ctx.role(role), self.ctx.faces)
+            except UnvaluedRole as unvalued:
+                use = self.component.use
+                self.ctx.unvalued_at_lock(unvalued, f"the text `{trace}` of `{use}`")
+                node.present = False
+                return None
+            except KeyError:
+                message = f"{trace}: the brand gives the role @{role} no value"
+                self._lose(node, "unknown-role", message, trace)
+                return None
+            except ValueError as error:
+                self._lose(node, "role-type", f"{trace}: {error}", trace)
+                return None
+        return styles[role]
 
     def _given_runs(
         self, content: str, words: tuple[str, ...] | None, value: list[Any]

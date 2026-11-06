@@ -39,6 +39,8 @@ pkit:
         - visual-communication:DEC-005#3
         - visual-communication:DEC-005#4
         - visual-communication:DEC-005#5
+        - visual-communication:DEC-005#14
+        - visual-communication:DEC-006#7
         - visual-communication:DEC-007#1
         - visual-communication:DEC-008#1
         - visual-communication:DEC-008#4
@@ -60,6 +62,7 @@ pkit:
         - visual-communication:DEC-012#2
         - visual-communication:DEC-012#3
         - visual-communication:DEC-012#4
+        - visual-communication:DEC-016#5
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#shapes
@@ -232,6 +235,19 @@ The figure draws its caption only when the content gives one:
     y: "=body.bottom + min(caption.height, @space.2)"
     width: "=body.width"
 ```
+
+A text part may show a fact of the export it is drawn for, where it would show a field. It names the fact by `fact`, in place of `content`:
+
+```yaml
+  line:
+    text: {fact: version, style: type.body, fill: text-secondary}
+    width: "=:width"
+```
+
+- **`fact`** takes `version`, the version's number, `date`, its date, `language`, or `state`, the piece's state. It takes no switch.
+- **One of the two.** A text part names `content` or `fact`, never both and never neither.
+- **A fact's text** is one run, in the role `style` names. It takes no run styles.
+- **What a scene shows for each fact** is in [The facts of an export](#the-facts-of-an-export).
 
 ### Switches
 
@@ -411,12 +427,12 @@ A primitive's properties lie in its own mapping, under SVG's names.
 |---|---|---|
 | `box` | `fill`, `stroke`, `stroke-width`, `rx` | a rectangle in its frame |
 | `ellipse` | `fill`, `stroke`, `stroke-width` | an ellipse in its frame |
-| `text` | `content`, `style` (both required), `fill`, `text-anchor` | the text of a field, in lines, each run in its own role and paint |
+| `text` | `content` or `fact` (one of the two required), `style` (required), `fill`, `text-anchor` | the text of a field or of a fact of its export, in lines, each run in its own role and paint |
 | `line` | `stroke` (required), `stroke-width`, `marker-start`, `marker-end` | a straight line from `x1 y1` to `x2 y2`, or a connector between its component's ends |
 | `image` | `produced` (required) | the picture of a produced output of the piece |
 
 - **A paint,** `fill` or `stroke`, is a colour role's token path, `:colour.<member>`, or a switch. `stroke-width` and `rx` are formulas that give a length.
-- **A text** shows the field `content` names, in the typography role `style` names. A text that shows a field of runs draws each run in the role and the paint its style chooses ([Switches](#switches)). Its height is always its measured text's: a text that gives a `height` is reported as a value with two owners. With a `width`, its lines are broken to that width; without one, each paragraph is one line, and the text is as wide as its widest. `text-anchor` is `start`, the default, `middle` or `end`: where each line stands in the text's width.
+- **A text** shows the field `content` names, or the fact `fact` names ([Parts](#parts)), in the typography role `style` names. A text that shows a field of runs draws each run in the role and the paint its style chooses ([Switches](#switches)). Its height is always its measured text's: a text that gives a `height` is reported as a value with two owners. With a `width`, its lines are broken to that width; without one, each paragraph is one line, and the text is as wide as its widest. `text-anchor` is `start`, the default, `middle` or `end`: where each line stands in the text's width.
 - **A line's frame** comes from its ends: it starts at the lesser of the two `x` and of the two `y`, and is as wide and as tall as the distance between them. A connector's frame holds every point of its route.
 - **An arrowhead,** `marker-start` or `marker-end`, is `none`, the default, or `arrow`, or a switch. It is drawn at that end of the line, pointing away from it, in the line's stroke.
 - **An image** shows the produced output that the field `produced` names (*outputs*). It needs a `width`. Where it gives no `height`, its height keeps the picture's proportions. The picture is drawn whole, centred, as large as its frame allows, and its points are mapped into the frame the same way. The variants of one picture share one pixel size and the same points, and the engine reads the first variant key in order. An output the piece lacks is not drawn, and is reported.
@@ -498,12 +514,29 @@ links:
 
 ## How the engine computes a scene
 
-The *scene* is every element's final frame, values and source, for one language. The engine computes it from the piece's content, the components that draw it, the roles of its brand, and the fonts and produced pictures they name. The commands compute one scene for each language of the piece, or each one asked for, at the size key `default`, since format 1 has no size axis ([Keys of combinations](files.md#keys-of-combinations)). A scene is computed, never committed. Under one release of the capability, the same files give the same scene on every machine.
+The *scene* is every element's final frame, values and source, for one language. The engine computes it from the piece's content, the components that draw it, the roles of its brand, and the fonts and produced pictures they name. The commands compute one scene for each language of the piece, or each one asked for, at the size key `default`, since format 1 has no size axis ([Keys of combinations](files.md#keys-of-combinations)). A scene is computed, never committed. Under one release of the capability, the same files and facts give the same scene on every machine.
 
 - **Built from the content.** The engine places the top component with the content, then builds each part, item and placed component below it.
 - **Fonts first.** Before it computes any place or size, a font family with no file, or a character no family measures, refuses the scene ([Text](#text)).
 - **Value by value.** Each size, place, value, list arrangement and text's lines is computed on first use, in the order the references give, as a spreadsheet computes its cells. So a parent's width and a child's measured height form no loop.
 - **A loop** is refused, naming every element in it. Each problem is a finding, and a value that cannot be computed is zero. A tie's connector whose ends cannot be computed is left out instead ([Ties and connectors](#ties-and-connectors)).
+
+### The facts of an export
+
+A component may show the facts of its export ([Parts](#parts)). A scene takes them as inputs, beside the files.
+
+- **`language` and `state`** come from the piece's files. A scene shows them as the files hold them, such as `en` and `draft`.
+- **`version` and `date`** come from no file, so a scene takes a fixed *stand-in* for each. So the same files give the same answer on every machine, on any day.
+
+Each fact takes one form in every language. Each stand-in is wide enough that a usual real value fits:
+
+| Fact | Its form | Its stand-in |
+|---|---|---|
+| `version` | `v<N>`, the number as an exported file's name carries it | `v88` |
+| `date` | `YYYY-MM-DD` | `2088-08-28` |
+
+- **A stand-in that overflows** is a finding at the element that shows it, and it names the component. It fails where the project can correct that component, and asks for attention in a released library.
+- **A new stand-in** reaches a piece as a new engine does, at a render.
 
 ### What a scene holds
 
@@ -556,6 +589,7 @@ Every element carries its *trace*, an id that comes from the path of instances, 
 Each drawn property names its source in `sources`:
 
 - **`content:<field path>`:** a field of the content, such as `content:body.steps[plan].head`. The path names the keys the content file writes, joined by `.`, an item of a list as `[<id>]`, or as `#<place>` from 1 where it has no id. It names the list field, where a trace id names the `repeat` part. Under a `use` part that passes a field on under another name, at any depth, it keeps the name the content file writes. A value an item takes from its list's component field names that field, such as `content:body.kind.tone`. A run of a list of runs is named by its place among its field's runs, as an item with no id: `content:body.say#2`. The run's style comes from `<its source>.style` where it names one, and its family from `<its source>.concept`.
+- **`fact:<word>`:** a fact of the export a text shows, such as `fact:version`, a stand-in included.
 - **`option:<name>`:** a value a switch on that option chose.
 - **`default:<library>/<component>`:** the component's own value. A field that a `use` part does not pass on is the placing component's, which gives it nothing.
 - **`role:<token path>`:** a formula that reads one role and nothing else, such as `"=@space.2"`, a run's typography role, or the role whose line height a text takes.

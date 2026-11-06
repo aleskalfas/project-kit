@@ -975,17 +975,37 @@
       }
     },
     "text": {
-      "description": "A text's properties: the field it shows, its typography role, and SVG's names. Where the field it shows is a field of runs, its `style` and `fill` may switch on the field's run styles, and each run takes the role and paint its style chooses.",
+      "description": "A text's properties: the field or the fact of its export it shows, one of the two, its typography role, and SVG's names. Where the field it shows is a field of runs, its `style` and `fill` may switch on the field's run styles, and each run takes the role and paint its style chooses.",
       "type": "object",
       "required": [
-        "content",
         "style"
+      ],
+      "oneOf": [
+        {
+          "required": [
+            "content"
+          ]
+        },
+        {
+          "required": [
+            "fact"
+          ]
+        }
       ],
       "additionalProperties": false,
       "properties": {
         "content": {
           "description": "The field of text it shows, a field of runs included.",
           "$ref": "defs.schema.json#/$defs/name"
+        },
+        "fact": {
+          "description": "The fact of its export it shows: the version's number, its date, its language or the piece's state. It takes no switch and no run styles.",
+          "enum": [
+            "version",
+            "date",
+            "language",
+            "state"
+          ]
         },
         "style": {
           "$ref": "#/$defs/role-value"

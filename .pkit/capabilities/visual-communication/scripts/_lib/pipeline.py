@@ -414,8 +414,10 @@ class Project:
 
     def scenes(self, languages: Sequence[str] | None = None) -> list[tuple[str, SceneResult]]:
         """One scene for each language, or each of `languages`, at the key over the size
-        axes, in the piece's order of languages. Raises `env.MissingFont` (and so
-        `text.MissingGlyph`) before anything is laid out."""
+        axes, in the piece's order of languages. Each takes the piece's language and state,
+        and the stand-in for a version's number and its date (DEC-016 point 5). Raises
+        `env.MissingFont` (and so `text.MissingGlyph`) before anything is laid out."""
+        facts = layout.stand_ins(self.piece.state)
         return [
             (
                 language,
@@ -428,6 +430,7 @@ class Project:
                     size_key=SIZE_KEY,
                     seam_version=seam.SEAM_VERSION,
                     env=self.env,
+                    facts=facts,
                 ),
             )
             for language in self.piece.languages

@@ -33,6 +33,7 @@ from tests.test_visual_communication_pipeline import (
     LOCK,
     PIECE,
     PIECE_FOLDER,
+    TESTS,
     drawing_project,
     parts_project,
     system_project,
@@ -235,6 +236,47 @@ def test_a_released_version_that_changed_fails_as_the_projects_to_restore(
     levels = {f.code: (level, f.who) for f, level in report.judged}
     assert levels["library-changed"] == ("fails", "")
     assert levels["library-name"] == ("fails", "")
+
+
+def overflowing_stamp(root: Path, use: str) -> list[tuple[Any, str]]:
+    """What the check says of the stand-in the piece's stamp shows, too wide for its text."""
+    write_content(root, body={"use": use, "shows": "narrow"})
+    report = checks.check(root)
+    return [(f, level) for f, level in report.judged if f.code == "text-overflow"]
+
+
+def test_a_stand_in_that_overflows_in_a_library_the_project_corrects_fails(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    [(finding, level)] = overflowing_stamp(root, "tests/stamp")
+    assert level == "fails"
+    assert finding.where == "figure/body/narrow"
+    assert finding.file == "visual/libraries/tests/1.0.0/components/stamp.yaml"
+    assert finding.library == "tests@1.0.0"
+    assert "fact:version in `tests/stamp`" in finding.message
+
+
+def test_a_stand_in_that_overflows_in_the_pieces_own_component_fails(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    own = root / PIECE_FOLDER / "components" / "stamp.yaml"
+    stamp = TESTS / "components" / "stamp.yaml"
+    write(own, stamp.read_text(encoding="utf-8"))
+    [(finding, level)] = overflowing_stamp(root, "piece/stamp")
+    assert level == "fails"
+    assert finding.file == f"{PIECE_FOLDER}/components/stamp.yaml"
+    assert finding.library == ""
+
+
+def test_a_stand_in_that_overflows_in_a_released_library_asks_its_owner_for_attention(
+    tmp_path: Path,
+) -> None:
+    root = held_as(drawing_project(tmp_path, picture=False), "stamps", released=True)
+    [(finding, level)] = overflowing_stamp(root, "stamps/stamp")
+    assert level == "attention"
+    assert finding.where == "figure/body/narrow"
+    assert finding.file == "visual/libraries/stamps/1.0.0/components/stamp.yaml"
+    assert finding.who == "the owner of `stamps`, who corrects it in a new release"
 
 
 def test_a_finding_lowered_in_a_released_version_names_the_owner_and_is_never_stored() -> None:

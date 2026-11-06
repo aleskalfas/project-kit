@@ -779,6 +779,7 @@ def test_a_component_whose_file_cannot_be_read_is_a_finding_in_that_file_alone()
         return scene.compute_scene(
             piece="test-piece", top=use, content={}, language="en", lock=dict(VERSIONS),
             size_key="default", seam_version=3, env=_Unreadable(components=lab(**components)),
+            facts=layout.stand_ins("draft"),
         )  # fmt: skip
 
     placed = drawn("lab/top", top=top({"p": {"use": "lab/broken"}}))
@@ -928,6 +929,20 @@ def test_an_item_of_a_list_passed_on_under_another_name_is_named_by_the_content_
         "rows[a]/p/items#2": ("accent", "content:steps[a].subs#2.state"),
         "rows#2/p/items#1": ("line", "content:steps#2.subs#1.override.b"),
     }
+
+
+def test_a_fact_takes_no_run_styles() -> None:
+    fields = {"say": {"type": "string", "x-pkit-runs": ["plain", "strong"]}}
+    style = {"by": "say", "plain": "type.body", "strong": "type.heading"}
+    parts = {"t": {"text": {"fact": "state", "style": style}}}
+    result = draw(components=lab(top=top(parts, fields=fields)))
+    message = finding(result, "component-shape").message
+    assert "chooses by the run styles of `say`" in message
+
+
+def test_a_context_that_computes_no_scene_takes_the_stand_ins_and_no_state() -> None:
+    placing = layout.Context(FakeEnv(), "en")
+    assert [placing.fact(word) for word in layout.FACTS] == ["v88", "2088-08-28", "en", ""]
 
 
 # --- a top whose layouts are its pages' forms (#2558) ------------------------------------------
