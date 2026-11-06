@@ -469,7 +469,7 @@ More on the order:
 
 ### Why copies, not symlinks
 
-A deployed definition is a resolved copy of its source, never a symlink to it. Skills deploy as symlinks, since a skill's deployed text is its source's. If a skill ever grows placeholders, it would switch to the same copy-based mechanism at that point.
+A deployed definition is a resolved copy of its source, never a symlink to it. Skills deploy as symlinks, since a skill's deployed text is its source's, which gives authors live-edit during development. If a skill ever grows placeholders, it would switch to the same copy-based mechanism at that point.
 
 - **Why:** the copy differs from its source. Its front matter holds the overlay's paths for the placeholders, the model and effort, each storyboard's path and the deploy mark. Its body ends with the workspace sentence.
 - **What follows:** an edit of a source in `.pkit/agents/` reaches the harness only once the deploy runs again, such as at the next sync.
