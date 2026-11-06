@@ -2,11 +2,11 @@
 
 `.github/workflows/checks.yml` runs this decider in its deciding job, before any part
 of the aggregator starts (ADR-078 point 2). It answers `full` or `short`, and that
-job names the form by the answer. In the full form, the remainder's job runs
-`scripts/check.sh --rest` beside two slices of the suite, `--shard 1/2` and
-`--shard 2/2`. In the short form, it runs `scripts/check.sh --short`, and no slice
-starts. The short check is the aggregator without its test suite. A run takes it
-only on a pull request, and only where:
+job names the form by the answer. The quick checks' job runs in both forms. In the
+full form, the remainder's job runs `scripts/check.sh --rest` beside two slices of
+the suite, `--shard 1/2` and `--shard 2/2`. In the short form, it runs
+`scripts/check.sh --short`, and no slice starts. The short check is the aggregator
+without its test suite. A run takes it only on a pull request, and only where:
 
 - **a passing full run is the basis.** GitHub's own record of this workflow's
   runs is read through the Actions API, with the token the workflow holds. The
