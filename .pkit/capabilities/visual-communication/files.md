@@ -191,7 +191,7 @@ The code that `pkit visual write-code` writes lies where its declaration names, 
 
 - `previews/<piece>/`: the SVG previews `pkit visual render` draws;
 - `exports/<piece>/`: the files `pkit visual export` makes;
-- `before-after/<piece>/`: what a change to the versions a piece's lock names would change, its scenes drawn both ways, in `before/` as they are and in `after/` with the change;
+- `before-after/<piece>/`: a piece's scenes drawn around a change to its lock's versions, in `before/` without the change and in `after/` with it;
 - `handover/<piece>/`: what `pkit visual produce` hands a producer, and what the producer writes, until the command keeps it in the piece's folder;
 - `look/<piece>/`: the images, the frames and the report `pkit visual look` writes.
 

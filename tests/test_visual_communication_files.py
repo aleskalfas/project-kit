@@ -50,6 +50,17 @@ def test_without_binding_leaves_the_content() -> None:
     assert files.without_binding(bound("piece", state="draft")) == {"state": "draft"}
 
 
+def test_load_bound_reads_bytes_as_read_bound_reads_a_file() -> None:
+    good = yaml_text(bound("piece", state="draft")).encode("utf-8")
+    assert files.load_bound(good, "at/a/commit", "piece")["state"] == "draft"
+    with pytest.raises(files.FileError, match=r"^at/a/commit: names the schema"):
+        files.load_bound(good, "at/a/commit", "exports")
+    with pytest.raises(reading.ReadError, match=r"^at/a/commit: does not parse as YAML"):
+        files.load_bound(b"not: [yaml\n", "at/a/commit", "piece")
+    with pytest.raises(reading.ReadError, match=r"^at/a/commit: is not UTF-8"):
+        files.load_bound(b"\xff", "at/a/commit", "piece")
+
+
 def test_read_bound_reads_a_bound_file_and_refuses_another(tmp_path: Path) -> None:
     good = write(tmp_path / "piece.yaml", yaml_text(bound("piece", state="draft")))
     assert files.read_bound(good, "piece")["state"] == "draft"

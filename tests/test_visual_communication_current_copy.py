@@ -125,6 +125,17 @@ def test_a_folder_copied_by_hand_brings_a_copy_once_the_original_goes(tmp_path: 
     assert current_copy.own(copy, record_naming(PIECE)) == entry_of(PIECE)
 
 
+def test_the_pieces_given_decide_whose_a_copy_is_in_place_of_those_the_location_holds(
+    tmp_path: Path,
+) -> None:
+    """A record read as it stood at a commit reads the pieces of that commit."""
+    root = drawing_project(tmp_path, picture=False)
+    named = record_naming("flow-before")
+    assert current_copy.own(piece_in(root), named, ["flow", "flow-before"]) is None
+    write_piece(root, "flow-before")
+    assert current_copy.own(piece_in(root), named, ["flow"]) == entry_of("flow-before")
+
+
 def test_a_record_that_names_no_copy_holds_none_of_the_pieces(tmp_path: Path) -> None:
     root = drawing_project(tmp_path, picture=False)
     assert current_copy.own(piece_in(root), {}) is None
@@ -220,6 +231,23 @@ def test_the_lock_comes_from_the_version_that_wrote_the_copy() -> None:
         {"version": 2, "fingerprint": kept("tests", "1.1.0")},
     ]
     assert current_copy.written_lock(entry_of(PIECE), versions) == {"tests": "1.0.0"}
+
+
+def test_the_release_comes_from_the_version_that_wrote_the_copy() -> None:
+    versions = [
+        {"version": 1, "recorded": {"capability": "0.1.0"}},
+        {"version": 2, "recorded": {"capability": "0.2.0"}},
+    ]
+    assert current_copy.written_release(entry_of(PIECE), versions) == "0.1.0"
+
+
+@pytest.mark.parametrize(
+    "versions",
+    [[], [{"version": 1}], [{"version": 1, "recorded": {"capability": 1}}]],
+    ids=["no-version", "no-record", "not-text"],
+)
+def test_a_version_that_records_no_release_gives_none(versions: list[dict[str, Any]]) -> None:
+    assert current_copy.written_release(entry_of(PIECE), versions) == ""
 
 
 def test_a_version_the_record_does_not_hold_gives_no_lock() -> None:

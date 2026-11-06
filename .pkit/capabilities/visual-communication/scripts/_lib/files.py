@@ -24,7 +24,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from _lib.reading import read_yaml
+from _lib.reading import ReadError, load_yaml, read_yaml
 from _lib.root import CAPABILITY, SHIPPED
 
 #: The format number, shared by every schema of the capability (DEC-003 point 1).
@@ -99,10 +99,27 @@ def without_binding(data: Mapping[str, Any]) -> dict[str, Any]:
 def read_bound(path: Path, kind: str) -> dict[str, Any]:
     """The value of the file of `kind` at `path`. Raises FileError when it cannot be read
     or is not bound to `kind` at format 1; ReadError from reading passes through."""
-    data = read_yaml(path)
+    return _bound(read_yaml(path), kind, str(path))
+
+
+def load_bound(data: bytes, source: str, kind: str) -> dict[str, Any]:
+    """The value of a file of `kind` that holds `data`, read as `read_bound` reads one that
+    lies on disk, such as a file at a commit. `source` names it in a refusal. Raises as
+    `read_bound` does."""
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ReadError(f"{source}: is not UTF-8: {exc}") from exc
+    return _bound(load_yaml(text, source), kind, source)
+
+
+def _bound(data: Any, kind: str, source: str) -> dict[str, Any]:
+    """`data`, the value of the file `source`, as a file of `kind`. Every reading of a bound
+    file comes here, so a converter that a later format number ships reads each of them
+    (DEC-003 point 2). Format 1 has none, so a file at another number is refused."""
     problem = binding_problem(data, kind)
     if problem is not None:
-        raise FileError(f"{path}: {problem}")
+        raise FileError(f"{source}: {problem}")
     return dict(data)
 
 
