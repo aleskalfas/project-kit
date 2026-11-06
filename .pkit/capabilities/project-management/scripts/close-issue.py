@@ -191,6 +191,7 @@ from _lib import lifecycle_inference as infer
 from _lib.checkbox_gate import refusal_message as _checkbox_refusal
 from _lib.checkbox_gate import unticked_boxes as _unticked_boxes
 from _lib.comment import post_audit_once
+from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_get_pr, gh_run, load_adopter_config
 from _lib.hooks import fire_hooks
 from _lib.labels import reconcile_state_labels_to_done
@@ -238,6 +239,7 @@ PR_MERGE_CLOSE_WRITER = "close-issue-pr-merge"
 COMPLETED_CLOSE_WRITER = "close-issue-completed"
 
 
+@escaping
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(

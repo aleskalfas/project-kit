@@ -61,7 +61,15 @@ there instead, and changes nothing else.
           from it. A local branch behind the head, or a checkout on another
           branch, is noted: land-work lands the head on GitHub, never the
           working tree. With no open PR it hands over to `done-work` only to
-          complete a PR that has merged.
+          complete a PR that has merged. Two open PRs that share the branch's
+          name stop the run, naming both, since one may be a fork's. The pinned
+          head then takes the test of which heads may start programs
+          (`_lib.head_programs`, DEC-067); one that passes runs as any head
+          does, and nothing is said of it. For a head from elsewhere the change
+          check runs here, from git objects, before the run waits for checks or
+          starts a reviewer. Where it needs a resolver, the person at a terminal
+          can name the head for this run. Off a terminal, under `--yes` or in a
+          dry run, the run stops (exit 9), and no flag goes on.
   ci      The PR's checks on the pinned head, read with the head they belong
           to and judged by the CI gate `done-work` applies, waited for up to
           `--wait-minutes` (default 30; `--no-wait` reads once). No check
@@ -173,10 +181,13 @@ there instead, and changes nothing else.
   merge check
           The change check on the merge as it would land: the PR's base
           fetched, the merge of the pinned head with its tip built as a commit
-          on no branch, and `pkit friction check --json` run from a temporary
-          checkout of it against the tip, the head named as the change's own
-          head (`PKIT_CHECK_HEAD`), as the checks on a PR run it
-          (`friction_answers.merged`, DEC-055 point 6). Where the head holds
+          on no branch, and `pkit friction check --json` run against the tip,
+          the head named as the change's own head (`--own-head`), as the checks
+          on a PR run it (`friction_answers.merged`, DEC-055 point 6). It reads
+          the merge from git objects first, and only the backbone's refusal to
+          run an anchor's resolver away from it takes a temporary checkout: a
+          head from elsewhere nobody named asks or stops there, as above
+          (DEC-067 point 3). Where the head holds
           the tip its own check read, that check serves and nothing runs
           again. A check that fails there stops the run, with nothing merged,
           naming each document it fails on, a line each; in warning mode its
@@ -245,6 +256,7 @@ from _lib import (
     drift_queue,
     fixers,
     friction_answers,
+    head_programs,
     issue_branch,
     merge_queue,
     pr_merge,
@@ -279,6 +291,7 @@ from _lib.ci_checks import (
     named_checks_passed,
     unreported_checks,
 )
+from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -325,6 +338,9 @@ EXIT_REVIEW_INCOMPLETE = 6
 EXIT_RETRY = 7
 #: Ready to merge, and not authorised to: nothing was merged.
 EXIT_READY = 8
+#: A head from elsewhere needs a person at a terminal: nothing was merged, and a second
+#: run off a terminal changes nothing (DEC-067 point 3).
+EXIT_PERSON = 9
 
 #: How long the checks are waited for when `--wait-minutes` does not say.
 DEFAULT_WAIT_MINUTES = 30.0
@@ -394,6 +410,13 @@ class _Head:
     #: of the base counting as none (DEC-055 point 3). Empty where the head
     #: is the one named.
     authorised: str = ""
+    #: The host's word on where the head lies (`isCrossRepository`), as the reading
+    #: that named the head gave it: only False places it in the base's repository.
+    placed: object = None
+    #: The repository the head comes from, as the host names it.
+    repository: str = ""
+    #: What the test found of the head, and whether a person named it (DEC-067).
+    standing: head_programs.Standing = head_programs.UNTAKEN
 
     @property
     def source(self) -> friction_answers.Source:
@@ -584,6 +607,7 @@ _CI_WOULD_WAIT = "would-wait"
 _CI_PR_MERGED = "merged"
 
 
+@escaping
 def main(argv: list[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
@@ -715,6 +739,9 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
     head = _pin_head(args, config, reading)
     if head is None:
         return _merge(args, None, config, reading)
+    # Before any wait, review or temporary checkout: a head from elsewhere that needs
+    # a person stops here, with nothing spent on it (DEC-067 point 3).
+    head = _take_test(args, head, config, capability_root)
     # What a run authorised up front found when it started: the hold on the
     # `[person]` findings is what it found then (DEC-055 point 3).
     found = _found_at_start(head, config) if args.yes and not args.dry_run else None
@@ -753,7 +780,7 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
         return EXIT_MERGED
     # Last before the ready stop, the prompt or the merge: the merge as it would land,
     # with the base as it stands now (DEC-055 point 6).
-    _merge_check(head, answers)
+    _merge_check(args, head, answers, config, capability_root)
     if args.dry_run:
         return _merge(args, head, config, reading, answers)
     holds = (
@@ -868,7 +895,10 @@ def _pin_head(
             f"head: whether {branch} has an open PR could not be read: {lookup.problem}. "
             f"Nothing was done; run `land-work {issue}` again once gh answers",
         )
-    pr = lookup.first
+    try:
+        pr = head_programs.one_open(lookup.prs, branch)
+    except head_programs.TwoOpen as exc:
+        raise _Stop(EXIT_UNREADABLE, f"head: stopped — {exc}") from exc
     if pr is None:
         _say(f"head: no open PR for {branch} — done-work completes a PR that has merged already")
         return None
@@ -891,6 +921,8 @@ def _pin_head(
         remote=friction_answers.branch_remote(branch),
         base_branch=str(pr.get("baseRefName") or ""),
         cross_repository=cross,
+        placed=pr.get("isCrossRepository"),
+        repository=head_programs.repository(pr),
     )
     if args.expect_head and not oid.startswith(args.expect_head):
         head = _covered(head, args.expect_head)
@@ -899,6 +931,76 @@ def _pin_head(
         notes.insert(0, head.covered)
     _say(f"head: {short_sha(oid)} (PR #{number}, {branch})" + "".join(f"; {n}" for n in notes))
     return head
+
+
+def _take_test(
+    args: argparse.Namespace, head: _Head, config: dict[str, Any], capability_root: Path
+) -> _Head:
+    """The pinned head with what the test of DEC-067 found of it. A head that passes
+    runs as it always has, and nothing is said of it. For a head from elsewhere the
+    change check runs now, from git objects, before the run waits for checks or starts
+    a reviewer: where it needs a resolver, a person names the head or the run stops."""
+    standing = head_programs.take_test(
+        head.oid,
+        head.placed,
+        issue=head.issue,
+        base=head.base_branch,
+        source=head.source,
+        capability_root=capability_root,
+        config=config,
+    )
+    head = replace(head, standing=standing)
+    if standing.passes:
+        return head
+    _say(f"head: {short_sha(head.oid)} is from elsewhere — {standing.elsewhere}")
+    if not head.base_branch:
+        # The answers step stops on it, with nothing started.
+        return head
+    found = friction_answers.checked(
+        head.oid, head.base_branch, source=head.source, from_checkout=False
+    )
+    if found.needs_checkout:
+        return _named_or_stopped(args, head, config, capability_root, step="head")
+    return head
+
+
+def _named_or_stopped(
+    args: argparse.Namespace,
+    head: _Head,
+    config: dict[str, Any],
+    capability_root: Path,
+    *,
+    step: str,
+) -> _Head:
+    """A head from elsewhere whose check needs a resolver, named by the person at this
+    terminal, or the stop: no flag gives that word, so a dry run and a run authorised
+    up front stop here, even at a terminal (DEC-067 points 3 and 4)."""
+    if _interactive() and not args.yes and not args.dry_run:
+        named = head_programs.ask(
+            head.standing,
+            command="land-work",
+            number=head.pr_number,
+            source_repository=head.repository,
+            capability_root=capability_root,
+            config=config,
+        )
+        if named.may_start:
+            return replace(head, standing=named)
+    raise _person_stop(head, step)
+
+
+def _person_stop(head: _Head, step: str) -> _Stop:
+    """The stop on a head from elsewhere whose check needs a resolver. Its line says
+    why, that a second run changes nothing, how a person goes on, and what a merge
+    through the other merge commands would leave out (DEC-067 points 3 and 9)."""
+    return _Stop(
+        EXIT_PERSON,
+        f"{step}: stopped — PR #{head.pr_number}'s head {short_sha(head.oid)} is from "
+        f"elsewhere ({head.standing.elsewhere}), and its change check needs a resolver, a "
+        "program this run may not start. Nothing was merged. A second run changes nothing: "
+        f"a person at a terminal can run `land-work {head.issue}` and name the head. A merge "
+        "through `done-work` or `merge-pr` runs no change check and tells no answer",
+    )
 
 
 def _covered(head: _Head, authorised: str) -> _Head:
@@ -1364,7 +1466,9 @@ def _review(
     # included where the project registers no local reviewer of its own (#1934).
     argv = [str(issue), *_passed_through(args, review=True)]
     try:
-        run = review_pr.review(argv, pinned_head=head.oid, branch_reading=reading)
+        run = review_pr.review(
+            argv, pinned_head=head.oid, branch_reading=reading, standing=head.standing
+        )
     except (Exception, SystemExit) as exc:
         raise _Stop(
             EXIT_REVIEW_INCOMPLETE,
@@ -1494,9 +1598,13 @@ def _answers(
         capability_root,
         lambda: _read_body(head, config),
         source=head.source,
+        from_checkout=head.standing.may_start,
     )
     derived = fed.derived
     document = derived.document
+    if derived.needs_checkout:
+        # Only a base that moved since `_take_test` read it comes here.
+        raise _person_stop(head, STEP)
     if document is None:
         raise _Stop(
             EXIT_UNREADABLE,
@@ -1564,12 +1672,16 @@ def _left_moved(head: _Head, document: Mapping[str, Any]) -> str:
     authorisation does not cover what the pinned head leaves out of date, or "": it
     leaves something the head authorised did not, or that head's answers could not be
     read. The person was told what that head leaves, so anything more is what nobody
-    told them (COR-050 point 3, DEC-065 point 4)."""
+    told them (COR-050 point 3, DEC-065 point 4). A person's word covers the commit they
+    named and no earlier one, so that head is read from a checkout only where the head
+    passed the test (DEC-067 points 1 and 4)."""
     left = friction_answers.left_out(document)
     if not head.authorised or not left:
         return ""
     earlier = short_sha(head.authorised)
-    found = friction_answers.checked(head.authorised, head.base_branch).document
+    found = friction_answers.checked(
+        head.authorised, head.base_branch, from_checkout=head.standing.passes
+    ).document
     if found is None:
         return f"something left out of date, with the answers at {earlier} unread"
     told = friction_answers.left_out(found)
@@ -1811,15 +1923,31 @@ def _write_body(head: _Head, body: str, config: dict[str, Any]) -> str:
 # ---- the merge as it would land ----------------------------------------------
 
 
-def _merge_check(head: _Head, answers: _AnswersEnd) -> None:
+def _merge_check(
+    args: argparse.Namespace,
+    head: _Head,
+    answers: _AnswersEnd,
+    config: dict[str, Any],
+    capability_root: Path,
+) -> None:
     """The change check on the merge of the pinned head with the PR's base as it stands,
     fetched now (`friction_answers.merged`, DEC-055 point 6), said in one line. Stops the
     run, with nothing merged, where the check fails there, naming each document it
     fails on above the line; where the merge conflicts; and where the check cannot be
     read. A base the head already holds, at the tip the head's own check read, is that
-    check's: nothing is run again."""
+    check's: nothing is run again. A merge can need a resolver its head did not, so for
+    a head from elsewhere nobody named, that asks or stops as the head's own check does
+    (DEC-067 point 3)."""
     issue, sha, base = head.issue, short_sha(head.oid), head.base
-    found = friction_answers.merged(head.oid, head.base_branch, checked=answers.checked)
+    found = friction_answers.merged(
+        head.oid,
+        head.base_branch,
+        checked=answers.checked,
+        from_checkout=head.standing.may_start,
+    )
+    if found.needs_checkout:
+        _named_or_stopped(args, head, config, capability_root, step=MERGE_CHECK)
+        found = friction_answers.merged(head.oid, head.base_branch, checked=answers.checked)
     if found.problem is not None:
         raise _Stop(
             EXIT_UNREADABLE,

@@ -108,6 +108,7 @@ import pathspec
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate, default_branch, doc_check, friction_answers
+from _lib.escaped_output import escaping
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -245,6 +246,7 @@ def _ask_host(follow_up: doc_check.FollowUp, config: dict) -> bool | None:
     return None
 
 
+@escaping
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(

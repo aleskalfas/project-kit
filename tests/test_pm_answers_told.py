@@ -94,12 +94,14 @@ def test_a_temporary_checkout_stays_the_default_and_a_caller_gives_it_up(monkeyp
     assert reads.from_checkout == [True, False]
 
 
-def test_only_the_read_only_view_gives_up_the_temporary_checkout() -> None:
-    """`show-pr --field answers` starts no program the head holds. Every other reader
-    keeps the checkout, so a head that needs its resolver still lands and moves."""
-    assert "from_checkout=False" in (SCRIPTS_DIR / "show-pr.py").read_text(encoding="utf-8")
-    for name in ("land-work.py", "review-work.py", "open-pr.py"):
-        assert "from_checkout" not in (SCRIPTS_DIR / name).read_text(encoding="utf-8")
+def test_each_reader_says_whether_it_keeps_the_temporary_checkout() -> None:
+    """The view and the command that opens a pull request give it up for any head. The
+    commands that keep it do so by what the head's test found, never by default
+    (DEC-067 point 2)."""
+    for name in ("show-pr.py", "open-pr.py"):
+        assert "from_checkout=False" in (SCRIPTS_DIR / name).read_text(encoding="utf-8")
+    for name in ("land-work.py", "review-work.py"):
+        assert "may_start" in (SCRIPTS_DIR / name).read_text(encoding="utf-8")
 
 
 def test_the_grant_list_is_read_from_where_the_head_left_its_base(monkeypatch) -> None:

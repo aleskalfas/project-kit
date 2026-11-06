@@ -290,7 +290,9 @@ def _stub_main(
     `captured["checked"]` holds each (head, base) they were derived for."""
     calls: list[tuple[str, str | None]] = []
 
-    def checked(head: str, base: str | None) -> Any:
+    def checked(head: str, base: str | None, *, from_checkout: bool = True) -> Any:
+        # No temporary checkout for any head: a refusal costs a warning line (DEC-067).
+        assert from_checkout is False
         calls.append((head, base))
         return derived if derived is not None else _derived(op)
 
