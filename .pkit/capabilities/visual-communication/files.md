@@ -281,6 +281,7 @@ lock:
 | `pinned` | no | `true` pins a draft's lock. No other state reads it. |
 | `produced` | no | Each picture a producer makes for the piece (*Declaring a produced output* in *What is made from a piece*). |
 | `accept-losses` | no | The losses of a plugin a person accepted (*Accepting a loss* in *What is made from a piece*). |
+| `copy-place` | no | The folder a published piece's current copy lies in, in place of the piece's folder. It is a path from the repository's root (*The current copy* in *What is made from a piece*). |
 | `lock` | no | The version of each library the piece uses. A draft's render writes it. |
 
 ### The lock

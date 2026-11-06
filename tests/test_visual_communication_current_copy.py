@@ -1,7 +1,7 @@
-"""A published piece's current copy (visual-communication DEC-006 point 7, DEC-017 points 5
-and 7): the one function that gives a copy's file its name and its hash, whose copy a record
-names, and the lock read from the version that wrote it. What an export writes and refuses
-is tested in `test_visual_communication_export.py`."""
+"""A published piece's current copy (visual-communication DEC-006 point 7, DEC-017 points 5,
+7 and 8): the one function that gives a copy's file its name and its hash, how a record's
+path reads, whose copy a record names, and the lock read from the version that wrote it.
+What an export writes and refuses is tested in `test_visual_communication_export.py`."""
 
 from __future__ import annotations
 
@@ -50,9 +50,9 @@ def test_a_copys_hash_is_the_sha_256_of_the_whole_file() -> None:
     )
 
 
-def test_a_copied_file_and_a_file_read_back_keep_one_hash() -> None:
-    data = b"<svg>\n</svg>\n"
-    assert current_copy.hash_of(data) == current_copy.file_of("flow.v1.en.default.svg", data).sha256
+def test_a_file_at_a_place_takes_the_hash_of_the_file_it_was_copied_from() -> None:
+    data = b"<svg>a file that carries no number</svg>\n"
+    assert current_copy.hash_of(data) == current_copy.file_of("flow.v1.svg", data).sha256
 
 
 @pytest.mark.parametrize("name", ["flow.en.default.svg", "flow.v0.en.default.svg", "flow.svg"])
@@ -94,19 +94,47 @@ def test_a_piece_in_any_other_state_makes_none(tmp_path: Path, state: str) -> No
     assert current_copy.made(piece_in(root), 2, VERSION) is None
 
 
-# --- where a file lies --------------------------------------------------------------------------
+def test_a_piece_that_names_a_place_records_each_path_from_the_repositorys_root(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(
+        tmp_path, state="published", picture=False, **{"copy-place": "docs/images"}
+    )
+    made = current_copy.made(piece_in(root), 2, VERSION)
+    assert list(made.files) == ["flow.en.default.svg", "flow.en.colour-scheme.dark.svg"]
+    assert made.entry["files"] == {
+        "docs/images/flow.en.default.svg": reading.sha256(b"light"),
+        "docs/images/flow.en.colour-scheme.dark.svg": reading.sha256(b"dark"),
+    }
 
 
-def test_a_path_in_the_pieces_folder_is_read_from_that_folder(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("path", "from_the_root"),
+    [
+        ("current-copy/flow.en.default.svg", f"{PIECE_FOLDER}/current-copy/flow.en.default.svg"),
+        ("docs/images/flow.en.default.svg", "docs/images/flow.en.default.svg"),
+        ("current-copy/nested/flow.en.default.svg", "current-copy/nested/flow.en.default.svg"),
+    ],
+)
+def test_a_path_in_the_pieces_folder_is_read_from_it_and_any_other_from_the_root(
+    tmp_path: Path, path: str, from_the_root: str
+) -> None:
     root = drawing_project(tmp_path, picture=False)
-    path = "current-copy/flow.en.default.svg"
-    assert current_copy.rooted(piece_in(root), path) == f"{PIECE_FOLDER}/{path}"
+    assert current_copy.rooted(piece_in(root), path) == from_the_root
 
 
-def test_any_other_path_lies_at_a_place_read_from_the_root(tmp_path: Path) -> None:
+def test_a_piece_that_names_no_place_has_none(tmp_path: Path) -> None:
     root = drawing_project(tmp_path, picture=False)
-    path = "docs/figures/flow.en.default.svg"
-    assert current_copy.rooted(piece_in(root), path) == path
+    assert piece_in(root).copy_place is None
+
+
+@pytest.mark.parametrize("place", [3, None, ["docs"]], ids=["number", "nothing", "list"])
+def test_a_place_that_is_no_text_is_refused_as_the_piece_is_read(
+    tmp_path: Path, place: Any
+) -> None:
+    root = drawing_project(tmp_path, picture=False, **{"copy-place": place})
+    with pytest.raises(pl.Refused, match="`copy-place` is not a path"):
+        piece_in(root)
 
 
 # --- whose copy it is ---------------------------------------------------------------------------
@@ -182,9 +210,12 @@ def test_an_entry_is_read_whichever_piece_it_names(tmp_path: Path) -> None:
         "flow.pt-br.default.pdf",
     ],
 )
-def test_an_entry_the_schema_takes_is_read_as_it_stands(tmp_path: Path, name: str) -> None:
+@pytest.mark.parametrize("folder", ["current-copy", "docs/images"])
+def test_an_entry_the_schema_takes_is_read_as_it_stands(
+    tmp_path: Path, folder: str, name: str
+) -> None:
     root = drawing_project(tmp_path, picture=False)
-    entry = {**entry_of(PIECE), "files": {f"current-copy/{name}": "0" * 64}}
+    entry = {**entry_of(PIECE), "files": {f"{folder}/{name}": "0" * 64}}
     record = {**reading.read_yaml(SCHEMAS / "exports.yaml"), current_copy.FIELD: entry}
     assert files.shape_problems(record, "exports") == []
     assert current_copy.recorded(piece_in(root), record) == entry
@@ -208,6 +239,18 @@ def test_an_entry_the_schema_takes_is_read_as_it_stands(tmp_path: Path, name: st
         pytest.param(
             {**entry_of(PIECE), "files": {"current-copy/../x.en.default.svg": "0" * 64}},
             id="a-path-outside-the-folder",
+        ),
+        pytest.param(
+            {**entry_of(PIECE), "files": {"../x.en.default.svg": "0" * 64}},
+            id="a-path-outside-the-repository",
+        ),
+        pytest.param(
+            {**entry_of(PIECE), "files": {".pkit/x.en.default.svg": "0" * 64}},
+            id="a-path-in-the-methodologys-folder",
+        ),
+        pytest.param(
+            {**entry_of(PIECE), "files": {"x.en.default.svg": "0" * 64}},
+            id="a-path-at-the-repositorys-top",
         ),
         pytest.param(
             {**entry_of(PIECE), "files": {"current-copy/x.v1.en.default.svg": "0" * 64}},

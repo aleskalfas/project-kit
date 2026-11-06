@@ -338,6 +338,37 @@ def test_a_commit_is_read_as_it_stood_whatever_the_working_tree_holds(tmp_path: 
         location.file_at(root, commit, "visual/new.yaml")
 
 
+def test_git_says_which_paths_it_ignores_whether_or_not_a_file_lies_there(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    git(root, "init", "-q")
+    write(root / ".gitignore", "docs/out/\n*.png\n")
+    write(root / "docs" / "out" / "held.svg", "")
+    assert location.ignored(
+        root, ["docs/out/held.svg", "docs/out/none.svg", "docs/in/a.svg", "docs/in/a.png"]
+    ) == ["docs/out/held.svg", "docs/out/none.svg", "docs/in/a.png"]
+    assert location.ignored(root, ["docs/in/a.svg"]) == []
+
+
+def test_a_tracked_file_is_one_git_keeps_in_a_folder_it_ignores(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    git(root, "init", "-q")
+    write(root / ".gitignore", "docs/\n")
+    write(root / "docs" / "kept.svg", "")
+    git(root, "add", "-f", "docs/kept.svg")
+    assert location.ignored(root, ["docs/kept.svg", "docs/other.svg"]) == ["docs/other.svg"]
+
+
+def test_outside_a_repository_git_ignores_nothing(tmp_path: Path) -> None:
+    assert location.ignored(project(tmp_path), ["docs/a.svg"]) == []
+
+
+def test_a_path_git_cannot_read_fails(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    git(root, "init", "-q")
+    with pytest.raises(location.GitFailed, match="outside repository"):
+        location.ignored(root, ["../outside.svg"])
+
+
 def test_in_a_repository_the_files_are_listed_as_git_sees_them(tmp_path: Path) -> None:
     root = project(tmp_path)
     git(root, "init", "-q")
