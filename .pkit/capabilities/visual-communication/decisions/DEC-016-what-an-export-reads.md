@@ -95,7 +95,7 @@ Four facts of an export may show in a scene (DEC-006 point 7). A *stand-in* is o
 - **The language and the state** come from files, so the check measures them as they stand, and nothing here stops on them.
 - **An overflow measured from a table or by an estimate** stops nothing. The run says it in its output, since the check only asks attention for it (DEC-005 point 14).
 - **What stays unseen.** A longer text may wrap within its box and move what lies beside it, with nothing overflowing and no component getting less. Neither the check nor the export sees that, so it is left to a person or a reviewer looking at the page ([visual-communication:DEC-015-viewing-step-and-reviewer]).
-- **A final piece.** Its drawing is not judged (DEC-005 point 14). What its export does is left to [project-kit#2699](https://github.com/aleskalfas/project-kit/issues/2699)'s record.
+- **A final piece** takes no export (refinement per [visual-communication:DEC-017-final-and-published-states] point 3), so nothing here reaches it.
 
 ## Rationale
 
@@ -161,6 +161,6 @@ Four facts of an export may show in a scene (DEC-006 point 7). A *stand-in* is o
 - **The change that builds the reading** carries out points 1, 3 and 4. It fixes the names of the two folders and of the copy's field, and writes the list in the capability's reference. The fingerprint's schema takes the new shape of an input, an addition the format allows (DEC-003 point 3). The check takes what the kept inputs name, and what the reference and the code say of a form fixing an input set changes with it. A test holds the list to what scenes read: changing a listed field, the state as a fact aside, changes no scene.
 - **The change that shows an export's facts** carries out points 5 and 6. It fixes each stand-in's text, wide enough that a usual real value fits. What fills the facts is a required argument of computing a scene, so no caller takes one by default. A before-and-after works out one filling and gives it to both sides.
 - **The changes that write and hold a published piece's copy** owe that it is made while the piece is published, which no fingerprint enforces.
-- **[project-kit#2699](https://github.com/aleskalfas/project-kit/issues/2699)'s record** decides what marking final does with a version the piece changed after, reading "changed" as point 1 says. It also decides what marking final does with a version that let a number or a date through, and with one made before this reading, which reads as changed after a pin.
+- **[visual-communication:DEC-017-final-and-published-states] point 1** decides what marking final does with a version the piece changed after, reading "changed" as point 1 here says. It also decides what marking final does with a version that let a number or a date through, and with one made before this reading, which reads as changed after a pin.
 - **A renderer that draws into a lasting medium** comes later (DEC-005 point 11). Its record is rewritten at each render, so the change that builds it leaves that record out of every fingerprint, and decides which text it fills.
 - **A later reading of content** may write under the methodology's container key in a content file (DEC-002 point 4). Content files are read whole, so that write reads as a change until a record leaves the key out.
