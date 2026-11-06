@@ -3,7 +3,8 @@ the clone's local folder, never overwriting another; their record, `exports.yaml
 or missing produced picture, unless the person names a stale one; a piece of several
 pages, one file for each page under one number; a piece exported as PDF, one file for each
 language and combination holding its pages in order; what a write that fails leaves; and a
-published piece's current copy, with the gate on its lock (DEC-017 points 5, 7 and 8)."""
+published piece's current copy, in its folder or at a place, with the gate on its lock
+(DEC-017 points 5, 7 and 8)."""
 
 from __future__ import annotations
 
@@ -31,7 +32,15 @@ from tests.test_visual_communication_pipeline import (
     write_picture,
 )
 from tests.test_visual_communication_render import newer_tests
-from tests.visual_communication_project import CONFIG, SCHEMAS, bound, importable, write, yaml_text
+from tests.visual_communication_project import (
+    CONFIG,
+    SCHEMAS,
+    bound,
+    importable,
+    write,
+    write_piece,
+    yaml_text,
+)
 from tests.visual_communication_writes import FULL, failing
 
 script, render_script, exports, svg, pdf, seam, framing, files, reading, fingerprint, pl, checks = (
@@ -918,6 +927,431 @@ def test_a_link_in_the_copys_place_refuses_and_writes_nothing(tmp_path: Path) ->
     assert f"is reached through the link {COPY}" in shown.stderr
     assert list(elsewhere.iterdir()) == []
     assert not (root / RECORD).exists()
+
+
+# --- a current copy at a place ------------------------------------------------------------------
+
+PLACE = "docs/images"
+
+#: The files of the skeleton piece's current copy at the place, by the path the record holds.
+PLACED = [f"{PLACE}/{name}" for name in reversed(COPIES)]
+
+#: What the export says of a file of the last copy it did not write again.
+LEFT = "the run did not write it again, and only a person removes it"
+
+
+def at_place(tmp_path: Path, place: str = PLACE, **fields: Any) -> Path:
+    """The published skeleton piece, naming `place` for its current copy."""
+    return published(tmp_path, **{"copy-place": place}, **fields)
+
+
+def placed_once(tmp_path: Path) -> Path:
+    """A published piece exported once, its copy at the place."""
+    root = at_place(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    return root
+
+
+def reworded(root: Path) -> None:
+    """Change what the piece draws, so the next version's files differ."""
+    path = root / PIECE_FOLDER / "content.en.yaml"
+    text = path.read_text(encoding="utf-8")
+    assert "Build it." in text
+    path.write_text(text.replace("Build it.", "Build it well."), encoding="utf-8")
+
+
+def git(root: Path, *args: str) -> None:
+    subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
+
+
+def assert_nothing_written(root: Path, shown: Any, said: str) -> None:
+    """The first export was refused for `said`, and left no trace."""
+    assert shown.returncode == 1
+    assert said in shown.stderr, shown.stderr
+    assert not (root / RECORD).exists()
+    assert not (root / FOLDER).exists()
+    assert not (root / CONFIG).exists()
+    assert not (root / COPY).exists()
+
+
+def assert_later_run_refused(root: Path, shown: Any, record: bytes, said: str) -> None:
+    """A later export was refused for `said`: no new version, the record as it stood."""
+    assert shown.returncode == 1
+    assert said in shown.stderr, shown.stderr
+    assert (root / RECORD).read_bytes() == record
+    assert not any(".v2." in name for name in exported(root))
+
+
+def test_a_piece_that_names_a_place_takes_its_copy_there_in_place_of_its_folder(
+    tmp_path: Path,
+) -> None:
+    root = at_place(tmp_path)
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert shown.stdout.splitlines()[3:5] == [f"current copy: {path}" for path in PLACED]
+    assert "left behind" not in shown.stdout
+    assert copied(root, PLACE) == COPIES
+    assert not (root / COPY).exists()
+    for name in exported(root):
+        copy = root / PLACE / name.replace("flow.v1.", "flow.")
+        assert copy.read_bytes() == (root / FOLDER / name).read_bytes()
+
+
+def test_the_record_holds_each_path_at_a_place_from_the_repositorys_root(tmp_path: Path) -> None:
+    record = record_of(placed_once(tmp_path))
+    assert files.shape_problems(record, "exports") == []
+    [version] = record["versions"]
+    assert record["current-copy"] == {
+        "piece": PIECE,
+        "version": 1,
+        "files": {
+            f"{PLACE}/{name.replace('flow.v1.', 'flow.')}": digest
+            for name, digest in version["files"].items()
+        },
+    }
+
+
+def test_a_change_of_the_place_leaves_the_exports_fingerprint_as_it_was(tmp_path: Path) -> None:
+    root = placed_once(tmp_path)
+    edit(root, f"copy-place: {PLACE}", "copy-place: docs/figures")
+    assert run(root, PIECE).returncode == 0
+    first, second = record_of(root)["versions"]
+    assert first["fingerprint"] == second["fingerprint"]
+
+
+def test_a_piece_in_another_state_writes_nothing_at_its_place(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False, **{"copy-place": "../outside"})
+    assert run(root, PIECE).returncode == 0
+    assert not (root.parent / "outside").exists()
+
+
+@pytest.mark.parametrize(
+    ("place", "said"),
+    [
+        pytest.param("../outside", "lies outside the repository", id="outside"),
+        pytest.param("/outside/images", "is absolute", id="absolute"),
+        pytest.param(".", "is the repository's top itself", id="the-top"),
+        pytest.param(".pkit/images", "lies under `.pkit/`", id="the-methodologys-folder"),
+        pytest.param("docs/.images", "lies under a hidden folder", id="hidden"),
+        pytest.param("visual", "lies in the location `visual`", id="the-location"),
+        pytest.param("visual/images", "lies in the location `visual`", id="in-the-location"),
+        pytest.param("current-copy", "reads as the piece's own `current-copy/`", id="its-own-name"),
+    ],
+)
+def test_a_place_the_rules_refuse_refuses_and_writes_nothing(
+    tmp_path: Path, place: str, said: str
+) -> None:
+    root = at_place(tmp_path, place)
+    assert_nothing_written(root, run(root, PIECE), f"`copy-place: {place}` {said}")
+    assert not (root.parent / "outside").exists()
+
+
+def test_a_place_version_control_does_not_keep_refuses_and_writes_nothing(tmp_path: Path) -> None:
+    root = at_place(tmp_path)
+    git(root, "init", "-q")
+    write(root / ".gitignore", "docs/images/\n")
+    assert_nothing_written(
+        root,
+        run(root, PIECE),
+        f"is no place version control keeps: git ignores {', '.join(PLACED)}",
+    )
+    assert not (root / "docs").exists()
+
+
+def test_a_file_version_control_would_not_keep_refuses_at_a_place_it_keeps(tmp_path: Path) -> None:
+    root = at_place(tmp_path)
+    git(root, "init", "-q")
+    write(root / ".gitignore", "*.svg\n")
+    assert_nothing_written(root, run(root, PIECE), "is no place version control keeps")
+
+
+def test_a_place_version_control_keeps_takes_the_copy(tmp_path: Path) -> None:
+    root = at_place(tmp_path)
+    git(root, "init", "-q")
+    write(root / ".gitignore", "docs/other/\n")
+    assert run(root, PIECE).returncode == 0
+    assert copied(root, PLACE) == COPIES
+
+
+def test_a_place_in_a_submodule_refuses_and_writes_nothing(tmp_path: Path) -> None:
+    """Git keeps no such file in this repository, and says so by failing."""
+    root = at_place(tmp_path)
+    git(root, "init", "-q")
+    inner = root / "docs"
+    inner.mkdir()
+    git(inner, "init", "-q")
+    identity = ("-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false")
+    git(inner, *identity, "commit", "-q", "--allow-empty", "-m", "held")
+    git(root, "add", "docs")
+    assert_nothing_written(root, run(root, PIECE), "is no place git can say it keeps")
+
+
+def test_a_link_on_the_way_to_a_place_refuses_and_writes_nothing(tmp_path: Path) -> None:
+    root = at_place(tmp_path)
+    elsewhere = root / "elsewhere"
+    elsewhere.mkdir()
+    (root / "docs").symlink_to(elsewhere)
+    assert_nothing_written(root, run(root, PIECE), "is reached through the link docs")
+    assert list(elsewhere.iterdir()) == []
+
+
+def test_a_link_at_a_path_it_writes_refuses_and_writes_nothing(tmp_path: Path) -> None:
+    root = at_place(tmp_path)
+    held = write(root / "elsewhere.svg", "mine\n")
+    (root / PLACE).mkdir(parents=True)
+    (root / PLACED[0]).symlink_to(held)
+    assert_nothing_written(root, run(root, PIECE), f"is reached through the link {PLACED[0]}")
+    assert held.read_text(encoding="utf-8") == "mine\n"
+
+
+@pytest.mark.parametrize("file", ["docs", PLACE], ids=["above-the-place", "the-place-itself"])
+def test_a_file_where_a_place_goes_refuses_and_writes_nothing(tmp_path: Path, file: str) -> None:
+    root = at_place(tmp_path)
+    write(root / file, "mine\n")
+    assert_nothing_written(root, run(root, PIECE), f"is no folder: {file} is a file")
+
+
+def test_an_export_writes_over_the_files_of_its_own_copy(tmp_path: Path) -> None:
+    root = placed_once(tmp_path)
+    before = {path: (root / path).read_bytes() for path in PLACED}
+    reworded(root)
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert "left behind" not in shown.stdout
+    assert all((root / path).read_bytes() != held for path, held in before.items())
+    current = record_of(root)["current-copy"]
+    assert current["version"] == 2
+    assert current["files"] == {path: reading.sha256((root / path).read_bytes()) for path in PLACED}
+
+
+def test_a_file_with_another_hash_refuses_and_is_named_before_any_write(tmp_path: Path) -> None:
+    root = placed_once(tmp_path)
+    record = (root / RECORD).read_bytes()
+    reworded(root)
+    changed = root / PLACED[0]
+    changed.write_text("changed\n", encoding="utf-8")
+    other = (root / PLACED[1]).read_bytes()
+    assert_later_run_refused(
+        root,
+        run(root, PIECE),
+        record,
+        f"the export would write over {PLACED[0]}, and writes over only a file of the piece's "
+        f"current copy with the hash the record keeps: name another place under `copy-place`, "
+        f"or remove a file you mean to replace",
+    )
+    assert changed.read_text(encoding="utf-8") == "changed\n"
+    assert (root / PLACED[1]).read_bytes() == other
+
+
+def test_each_file_that_stops_the_run_is_named(tmp_path: Path) -> None:
+    root = placed_once(tmp_path)
+    record = (root / RECORD).read_bytes()
+    for path in PLACED:
+        (root / path).write_text("changed\n", encoding="utf-8")
+    said = f"the export would write over {', '.join(PLACED)}, and"
+    assert_later_run_refused(root, run(root, PIECE), record, said)
+
+
+def test_a_file_removed_is_written_again(tmp_path: Path) -> None:
+    root = placed_once(tmp_path)
+    (root / PLACED[0]).unlink()
+    assert run(root, PIECE).returncode == 0
+    assert copied(root, PLACE) == COPIES
+
+
+def test_a_file_no_record_names_refuses_the_first_export(tmp_path: Path) -> None:
+    root = at_place(tmp_path)
+    write(root / PLACED[0], "mine\n")
+    assert_nothing_written(root, run(root, PIECE), f"would write over {PLACED[0]}, and")
+    assert (root / PLACED[0]).read_text(encoding="utf-8") == "mine\n"
+
+
+def test_a_folder_at_a_path_it_writes_refuses_and_writes_nothing(tmp_path: Path) -> None:
+    root = at_place(tmp_path)
+    (root / PLACED[0]).mkdir(parents=True)
+    assert_nothing_written(root, run(root, PIECE), f"would write over {PLACED[0]}, and")
+
+
+def test_a_file_of_another_piece_refuses_though_its_hash_holds(tmp_path: Path) -> None:
+    """The record names a piece the location holds, so its copy is that piece's."""
+    root = placed_once(tmp_path)
+    write_piece(root, "other")
+    record = record_of(root)
+    record["current-copy"]["piece"] = "other"
+    (root / RECORD).write_text(yaml_text(record), encoding="utf-8")
+    held = (root / RECORD).read_bytes()
+    assert_later_run_refused(
+        root, run(root, PIECE), held, f"would write over {PLACED[0]}, {PLACED[1]}, and"
+    )
+
+
+def test_a_copy_of_another_piece_is_not_named_as_left_behind(tmp_path: Path) -> None:
+    root = placed_once(tmp_path)
+    write_piece(root, "other")
+    record = record_of(root)
+    record["current-copy"]["piece"] = "other"
+    (root / RECORD).write_text(yaml_text(record), encoding="utf-8")
+    edit(root, f"copy-place: {PLACE}", "copy-place: docs/figures")
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert "left behind" not in shown.stdout
+
+
+def test_a_place_changed_names_each_old_file_and_leaves_it(tmp_path: Path) -> None:
+    root = placed_once(tmp_path)
+    held = {path: (root / path).read_bytes() for path in PLACED}
+    edit(root, f"copy-place: {PLACE}", "copy-place: docs/figures")
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert [line for line in shown.stdout.splitlines() if line.startswith("left behind")] == [
+        f"left behind: {path}: {LEFT}" for path in PLACED
+    ]
+    assert {path: (root / path).read_bytes() for path in PLACED} == held
+    assert copied(root, "docs/figures") == COPIES
+    assert list(record_of(root)["current-copy"]["files"]) == [
+        path.replace(PLACE, "docs/figures") for path in PLACED
+    ]
+
+
+def test_an_old_file_named_once_is_named_no_more(tmp_path: Path) -> None:
+    root = placed_once(tmp_path)
+    edit(root, f"copy-place: {PLACE}", "copy-place: docs/figures")
+    assert run(root, PIECE).returncode == 0
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert "left behind" not in shown.stdout
+
+
+def test_a_file_the_new_version_does_not_write_at_a_place_is_named_and_stays(
+    tmp_path: Path,
+) -> None:
+    root = placed_once(tmp_path)
+    edit(root, "    - dark\n", "")
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    dark = f"{PLACE}/flow.en.colour-scheme.dark.svg"
+    assert f"left behind: {dark}: {LEFT}" in shown.stdout.splitlines()
+    assert (root / dark).is_file()
+    assert list(record_of(root)["current-copy"]["files"]) == [f"{PLACE}/flow.en.default.svg"]
+
+
+def test_a_file_a_person_removed_is_not_named(tmp_path: Path) -> None:
+    root = placed_once(tmp_path)
+    (root / PLACED[1]).unlink()
+    edit(root, f"copy-place: {PLACE}", "copy-place: docs/figures")
+    shown = run(root, PIECE)
+    assert [line for line in shown.stdout.splitlines() if line.startswith("left behind")] == [
+        f"left behind: {PLACED[0]}: {LEFT}"
+    ]
+
+
+def test_a_piece_that_comes_to_name_a_place_names_its_folders_files_and_leaves_them(
+    tmp_path: Path,
+) -> None:
+    root = published(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    edit(root, "state: published", f"state: published\ncopy-place: {PLACE}")
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert [line for line in shown.stdout.splitlines() if line.startswith("left behind")] == [
+        f"left behind: {COPY}/{name}: {LEFT}" for name in reversed(COPIES)
+    ]
+    assert copied(root) == COPIES
+    assert copied(root, PLACE) == COPIES
+
+
+def test_a_piece_that_stops_naming_a_place_writes_its_folder_and_names_the_old_files(
+    tmp_path: Path,
+) -> None:
+    root = placed_once(tmp_path)
+    edit(root, f"copy-place: {PLACE}\n", "")
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert [line for line in shown.stdout.splitlines() if line.startswith("left behind")] == [
+        f"left behind: {path}: {LEFT}" for path in PLACED
+    ]
+    assert copied(root) == COPIES
+    assert copied(root, PLACE) == COPIES
+    assert list(record_of(root)["current-copy"]["files"]) == [
+        f"current-copy/{name}" for name in reversed(COPIES)
+    ]
+
+
+def test_a_file_that_goes_with_the_pieces_folder_is_not_named(tmp_path: Path) -> None:
+    root = published(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    edit(root, "    - dark\n", "")
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert "left behind" not in shown.stdout
+    assert copied(root) == ["flow.en.default.svg"]
+
+
+def test_a_renamed_piece_names_each_file_of_its_old_name_at_the_place(tmp_path: Path) -> None:
+    root = placed_once(tmp_path)
+    renamed = "visual/pieces/flow-renamed"
+    os.rename(root / PIECE_FOLDER, root / renamed)
+    shown = run(root, "flow-renamed")
+    assert shown.returncode == 0, shown.stderr
+    assert [line for line in shown.stdout.splitlines() if line.startswith("left behind")] == [
+        f"left behind: {path}: {LEFT}" for path in PLACED
+    ]
+    assert copied(root, PLACE) == sorted(
+        [*COPIES, "flow-renamed.en.default.svg", "flow-renamed.en.colour-scheme.dark.svg"]
+    )
+    current = record_of(root, renamed)["current-copy"]
+    assert current["piece"] == "flow-renamed"
+    assert list(current["files"]) == [
+        f"{PLACE}/flow-renamed.en.default.svg",
+        f"{PLACE}/flow-renamed.en.colour-scheme.dark.svg",
+    ]
+
+
+def test_a_renamed_piece_in_its_folder_names_nothing(tmp_path: Path) -> None:
+    root = published(tmp_path)
+    assert run(root, PIECE).returncode == 0
+    os.rename(root / PIECE_FOLDER, root / "visual/pieces/flow-renamed")
+    shown = run(root, "flow-renamed")
+    assert shown.returncode == 0, shown.stderr
+    assert "left behind" not in shown.stdout
+
+
+def test_a_run_that_proposes_a_move_shares_the_rules_of_a_place(tmp_path: Path) -> None:
+    root = placed_once(tmp_path)
+    (root / PLACED[0]).write_text("changed\n", encoding="utf-8")
+    piece = pl.read_piece(root, "visual", PIECE)
+    project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+    with pytest.raises(pl.Refused, match="the export would write over"):
+        exports.plan(project)
+
+
+def test_a_failed_first_export_leaves_no_folder_at_the_place(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = at_place(tmp_path)
+    with monkeypatch.context() as patch:
+        failing(patch, write={"exports.yaml"})
+        shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == f"error: {RECORD} could not be written: {FULL}\n"
+    assert not (root / "docs").exists()
+    assert not (root / RECORD).exists()
+
+
+def test_a_failed_export_puts_each_file_at_the_place_back(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = placed_once(tmp_path)
+    held = {path: (root / path).read_bytes() for path in PLACED}
+    record = (root / RECORD).read_bytes()
+    reworded(root)
+    with monkeypatch.context() as patch:
+        failing(patch, write={"exports.yaml"})
+        shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert {path: (root / path).read_bytes() for path in PLACED} == held
+    assert (root / RECORD).read_bytes() == record
+    assert copied(root, PLACE) == COPIES
 
 
 # --- the gate on a published piece's lock -------------------------------------------------------

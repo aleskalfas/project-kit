@@ -23,11 +23,12 @@
   (the `value` of its record's fingerprint, by which the check knows it), and those used
   while stale (DEC-006 point 7).
 - **The current copy.** A published piece's run also makes a copy of each file of the
-  version, and the record names the version that wrote it (`current_copy`). A piece in any
-  other state writes none, and the record keeps what it named. `plan` refuses an entry the
-  schema refuses, in every state, so no run writes it back. What stops an export a person
-  runs on a lock that differs from the copy's lies in `export.py`, outside `plan` and
-  `write`, since a run that proposes a move of the lock shares these.
+  version, in its folder or at the place it names, and the record names the version that
+  wrote it (`current_copy`). The run names each file of the last copy it left behind. A
+  piece in any other state writes none, and the record keeps what it named. `plan` refuses
+  an entry the schema refuses, in every state, so no run writes it back. What stops an
+  export a person runs on a lock that differs from the copy's lies in `export.py`, outside
+  `plan` and `write`, since a run that proposes a move of the lock shares these.
 - **Refused before any write.** Everything that can refuse a run, a file reached through
   a link included, is checked by `plan`, so a refused run writes nothing. A piece that
   shows a version's number or its date is one: an export does not fill them yet, so no
@@ -78,8 +79,9 @@ HEADER = (
 class Planned:
     """An export computed and not yet written: its number, each file's name and bytes, the
     record's versions with the new one last, the produced outputs used while stale, those
-    named to be used while stale that were not, the current copy it writes, if any, and
-    what the record held of one before the run."""
+    named to be used while stale that were not, the current copy it writes, if any, what
+    the record held of one before the run, and the piece's own among it, where it writes
+    one."""
 
     piece: pl.Piece
     number: int
@@ -89,6 +91,7 @@ class Planned:
     not_stale: list[str]
     copy: current_copy.Copy | None
     kept_copy: Mapping[str, Any] | None
+    own_copy: Mapping[str, Any] | None
 
     @property
     def folder(self) -> Path:
@@ -98,6 +101,11 @@ class Planned:
     def named_copy(self) -> Mapping[str, Any] | None:
         """What the record names of a current copy once this export is written."""
         return self.kept_copy if self.copy is None else self.copy.entry
+
+    @property
+    def left_behind(self) -> list[str]:
+        """Each file of the last current copy this export leaves where it lies."""
+        return current_copy.left_behind(self.piece, self.own_copy, self.copy)
 
 
 def file_name(
@@ -240,6 +248,7 @@ def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None 
         },
     }
     not_stale = sorted(set(use_stale) - set(stale))
+    copy = current_copy.made(piece, number, files)
     planned = Planned(
         piece,
         number,
@@ -247,8 +256,9 @@ def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None 
         [*versions, entry],
         used_stale,
         not_stale,
-        current_copy.made(piece, number, files),
+        copy,
         kept_copy,
+        None if copy is None else current_copy.own(piece, record),
     )
     writable(planned)
     return planned
@@ -325,7 +335,7 @@ def _drawn(
 
 def writable(planned: Planned) -> None:
     """Raise Refused where a planned export could not be written: a file it writes is
-    reached through a link, or a file lies where its current copy's folder goes."""
+    reached through a link, or its current copy could not lie where it goes."""
     piece = planned.piece
     for path in (
         *(planned.folder / name for name in planned.files),
@@ -333,7 +343,7 @@ def writable(planned: Planned) -> None:
     ):
         pl.writable(piece.root, path)
     if planned.copy is not None:
-        current_copy.writable(piece, planned.copy)
+        current_copy.writable(piece, planned.copy, planned.own_copy)
 
 
 def write(planned: Planned, change: Change) -> None:

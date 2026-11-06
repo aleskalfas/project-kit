@@ -152,9 +152,12 @@ def test_the_record_of_exports_may_name_who_wrote_a_current_copy() -> None:
         "current-copy/flow.en.default.svg",
         "current-copy/flow.en.colour-scheme.dark.2.svg",
         "current-copy/flow.pt-br.default.pdf",
+        "docs/images/flow.en.default.svg",
+        "docs/flow.en.colour-scheme.dark.2.svg",
+        "current-copy/nested/flow.en.default.svg",
     ],
 )
-def test_a_current_copys_file_lies_in_its_folder_with_no_number(path: str) -> None:
+def test_a_current_copys_file_lies_in_its_folder_or_at_a_place_with_no_number(path: str) -> None:
     assert refused(exports_with_copy(files={path: "0" * 64}), "exports") == []
 
 
@@ -164,7 +167,12 @@ def test_a_current_copys_file_lies_in_its_folder_with_no_number(path: str) -> No
         "flow.en.default.svg",
         "current-copy/flow.v1.en.default.svg",
         "current-copy/../flow.en.default.svg",
-        "current-copy/nested/flow.en.default.svg",
+        "../docs/flow.en.default.svg",
+        "/docs/flow.en.default.svg",
+        ".pkit/docs/flow.en.default.svg",
+        "docs/.hidden/flow.en.default.svg",
+        "docs//flow.en.default.svg",
+        "docs\\images/flow.en.default.svg",
     ],
 )
 def test_a_current_copys_file_lies_nowhere_else_and_carries_no_number(path: str) -> None:
@@ -182,6 +190,23 @@ def test_a_current_copys_file_lies_nowhere_else_and_carries_no_number(path: str)
 )
 def test_the_record_refuses_a_current_copy_of_another_shape(fields: dict[str, Any]) -> None:
     assert refused(exports_with_copy(**fields), "exports") != []
+
+
+def test_a_piece_may_name_the_place_of_its_current_copy() -> None:
+    piece = instance("piece")
+    assert "copy-place" in piece
+    assert refused(piece, "piece") == []
+    assert (
+        refused({key: value for key, value in piece.items() if key != "copy-place"}, "piece") == []
+    )
+
+
+@pytest.mark.parametrize(
+    "place",
+    ["", ".", "..", "../docs", "/docs", ".pkit/docs", "docs/.hidden", "docs/", "a//b", "a\\b", 3],
+)
+def test_a_place_is_a_path_within_the_repository(place: Any) -> None:
+    assert refused({**instance("piece"), "copy-place": place}, "piece") != []
 
 
 def test_the_schema_holds_the_pattern_the_code_holds_of_a_current_copys_path() -> None:

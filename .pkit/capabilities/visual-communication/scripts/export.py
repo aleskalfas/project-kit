@@ -32,7 +32,11 @@ final piece takes no export, whatever else holds of it (DEC-017 point 3).
 
 A published piece's run also writes its current copy, an unnumbered copy of each file of
 the version, in the piece's `current-copy/`, replacing that folder whole, and `exports.yaml`
-names the version that wrote it. A piece in any other state writes none. It refuses a
+names the version that wrote it. A piece that names a place under `copy-place` takes the
+copy there instead: the run refuses a place the rules refuse, and any file at a path it
+writes but one of the piece's own copy, with the hash the record keeps (DEC-017 point 8). It
+removes nothing there: it names each file of the last copy it did not write again, which
+stays where it lies (DEC-017 point 7). A piece in any other state writes none. It refuses a
 published piece whose lock differs from the lock of the version that wrote its current copy,
 and names both ways past (DEC-017 point 5): the gate reads the record, not the files, and
 holds only this command, so it lies here, outside what `exports.plan` and `exports.write`
@@ -132,7 +136,9 @@ def _export(root: Path, name: str, use_stale: list[str], given: str | None) -> i
         print(f"export: {exports.FOLDER}/{name}/{file}")
     if planned.copy is not None:
         for path in planned.copy.entry["files"]:
-            print(f"current copy: {piece.file(path)}")
+            print(f"current copy: {current_copy.rooted(piece, path)}")
+    for path in planned.left_behind:
+        print(f"left behind: {path}: the run did not write it again, and only a person removes it")
     for output in planned.used_stale:
         print(f"used while stale: {output}")
     for output in planned.not_stale:

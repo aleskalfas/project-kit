@@ -40,10 +40,10 @@
           "minimum": 1
         },
         "files": {
-          "description": "Each file of the copy, by its path read from the piece's folder, with its SHA-256. A file's name is its version's with the number left out.",
+          "description": "Each file of the copy, by its path with its SHA-256: under `current-copy/`, read from the piece's folder, and at the place the piece names, read from the repository's root (DEC-017 point 7). A file's name is its version's with the number left out.",
           "type": "object",
           "propertyNames": {
-            "pattern": "^current-copy/[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z]{2,3}(-[a-z0-9]{2,8})*\\.(default|[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*(\\+[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*)*)((\\.[1-9][0-9]*)?\\.svg|\\.pdf)$"
+            "pattern": "^[^/.\\\\][^/\\\\]*(/[^/.\\\\][^/\\\\]*)*/[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z]{2,3}(-[a-z0-9]{2,8})*\\.(default|[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*(\\+[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*)*)((\\.[1-9][0-9]*)?\\.svg|\\.pdf)$"
           },
           "additionalProperties": {
             "$ref": "defs.schema.json#/$defs/sha256"
