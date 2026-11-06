@@ -1,0 +1,13 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit friction check` gains `--own-head <rev>`, which names the change's own
+  head beside `--head`, under the rule `$PKIT_CHECK_HEAD` keeps: the commit
+  checked, or a parent of it. So a merge read from git objects is judged
+  against its head. `--head` alone still reads no variable. A run away from the
+  commit `--head` names now promises to start nothing that commit holds, and
+  under `--json` its refusal to run a resolver is a document, with a `refused`
+  key whose `kind` is `resolver-elsewhere` (project-management DEC-067, ADR-068
+  point 6).

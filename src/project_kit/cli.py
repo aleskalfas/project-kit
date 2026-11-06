@@ -2312,14 +2312,27 @@ def friction_prune_command(dry_run: bool, yes: bool, as_json: bool) -> None:
     default=None,
     help="Check commit REV instead of the working tree: its files read from git objects, "
     "nothing checked out, the merge-base taken against REV. Uncommitted work is not read. "
-    f"REV is the change's own head too, and ${_CHECK_HEAD_ENV} is not read. "
-    "Not with --all.",
+    f"REV is the change's own head too, unless --own-head names another, and "
+    f"${_CHECK_HEAD_ENV} is not read. Not with --all.",
+)
+@click.option(
+    "--own-head",
+    "own_rev",
+    metavar="REV",
+    default=None,
+    help=f"With --head: the change's own head, as ${_CHECK_HEAD_ENV} names it for a working "
+    "tree: the commit --head names, or a parent of it, such as the change's head where "
+    "--head names its merge with the base.",
 )
 @click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
 def friction_check_command(
-    base_ref: str | None, whole_repository: bool, head_rev: str | None, as_json: bool
+    base_ref: str | None,
+    whole_repository: bool,
+    head_rev: str | None,
+    own_rev: str | None,
+    as_json: bool,
 ) -> None:
     """The change check (COR-050 point 6): every artefact whose anchor changed in the diff
     carries an answer — updated, unchanged with why, or deferred.
@@ -2365,6 +2378,11 @@ def friction_check_command(
             "--head and --all exclude each other: the whole-repository check reads HEAD and "
             "its history."
         )
+    if own_rev is not None and head_rev is None:
+        raise click.UsageError(
+            f"--own-head names the change's own head beside --head; for a working tree, "
+            f"${_CHECK_HEAD_ENV} names it."
+        )
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -2375,15 +2393,21 @@ def friction_check_command(
         else:
             click.echo(friction_repository.render_human(report), nl=False)
         return
-    named = None if head_rev is None else friction_check.named_head(target_root, head_rev)
+    named = None if head_rev is None else friction_check.named_head(target_root, head_rev, own_rev)
     # The fork is taken against the commit the name gave, which the diff reads too.
     settled = default_branch.settled(
         target_root, base_ref, head_rev="HEAD" if named is None else named.commit
     )
     _warn_settled(settled)
-    result = friction_check.run_change_check(
-        target_root, base_ref, resolved=settled.base, named=named
-    )
+    try:
+        result = friction_check.run_change_check(
+            target_root, base_ref, resolved=settled.base, named=named
+        )
+    except friction_check.ResolverElsewhere as refused:
+        # The sentence still reaches standard error, and the exit code stays the run's.
+        if as_json:
+            click.echo(friction_check.render_refusal_json(refused), nl=False)
+        raise
     if as_json:
         click.echo(friction_check.render_json(result), nl=False)
     else:
