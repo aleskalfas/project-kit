@@ -18,6 +18,7 @@ pkit:
         - .pkit/lifecycle/ownership.py
         - .pkit/adapters/claude-code/deploy-agents.sh
         - .pkit/adapters/claude-code/_resolve_agent.py
+        - .pkit/adapters/claude-code/deploy-skills.sh
         - .pkit/agents/core/rule-set-reviewer.md
         - .pkit/agents/core/methodology-reviewer.md
         - .pkit/adapters/claude-code/harness-support.yaml
@@ -72,7 +73,7 @@ The area holds the definitions core ships and those the project writes, each in 
 
 ```
 .pkit/agents/
-├── README.md                    # this file
+├── README.md                    # this file (core-owned; propagated by sync)
 ├── hooks.md                     # a page beside it ("The pages beside this one")
 ├── storyboards.md               # a page beside it
 ├── core/                        # core's definitions, refreshed by every sync
@@ -87,7 +88,7 @@ The area holds the definitions core ships and those the project writes, each in 
         └── <name>.md
 ```
 
-- **The flat form** is the default. A definition takes the folder form once a helper sits beside it.
+- **The flat form** is the default for a new definition. Promote it to the folder form only when a helper materialises.
 - **`core/`** is core's. Sync refreshes it, and the project never edits it (COR-001).
 - **`project/`** is the project's own. Sync reads it to deploy the definitions, and never writes it.
 - **Both `core/` and `project/`** follow COR-003's universal pattern.
@@ -109,11 +110,11 @@ reads:
   paths:                              # files and folders
     - .pkit/decisions/README.md
     - CLAUDE.md
-  records:                            # decision records, by id
+  records:                            # decision records, resolved by id, not slug
     - COR-013
-  patterns:                           # overlay categories, each an optional read
+  patterns:                           # overlay placeholders, resolved at deploy; each an optional read
     - <project-conventions>
-owns:                                 # the paths the agent answers for
+owns:                                 # paths whose modification is the agent's responsibility
   - <release-notes>
 needs:                                # the hooks the agent invokes (hooks.md)
   - project.render-notes
@@ -130,14 +131,15 @@ What each field holds:
 - **`tools`:** the tools the harness grants the agent, by the harness's names, such as Claude Code's `Read`, `Edit` and `Bash`. The adapter writes them in the harness's form at deploy.
 - **`model`, `effort`:** the model the agent runs on, and the effort it reasons at. Both are optional, and absent means inherit ("Model and effort" below). Agents only.
 - **`reads`:** what the agent consults at task time, in three channels:
-  - **`paths`** names files and folders, and **`records`** names decision records by id, such as `COR-013`. A category named in either is a required read: while the overlay leaves it undefined, the deploy skips the agent.
+  - **`paths`** names files and folders, and **`records`** names decision records by id, such as `COR-NNN` or `PRJ-NNN`. A category named in either is a required read: while the overlay leaves it undefined, the deploy skips the agent.
   - **`patterns`** names overlay categories, each written as its placeholder, `<category>`. A category named only here is an optional read: while it is undefined, the deploy drops the item and deploys the agent without it.
-  - **Which to use:** a read the agent cannot work without goes in `paths` or `records`. A read whose absence is a normal early state goes in `patterns`, such as a corpus of the project's conventions.
-- **`owns`:** the paths the agent answers for, each a literal path or a `<category>` placeholder the overlay resolves. Agents only.
-  - Each path is meant to have one owning agent, and `pkit refs validate` reports two ("Exactly-one-owner over `owns:`" below).
+  - **Which to use:** a read the agent cannot work without goes in `paths` or `records`. A read whose absence is a normal early state goes in `patterns`, such as a corpus of the project's conventions. The split is a load-bearing authoring lever, not just a filing convention, and the optional-read contract fixes its semantics ("An undefined category" below).
+- **`owns`:** the paths whose modification is the agent's responsibility, each a literal path or a `<category>` placeholder the overlay resolves. Agents only, since skills own no path.
+  - Each path that matters to the methodology is meant to have exactly one owning agent. `pkit refs validate` enforces that by reporting overlaps between agents over resolved paths ("Exactly-one-owner over `owns:`" below).
   - A category core declares write-carrying, which a core definition writes and the project names, follows four more rules ("Write-carrying categories" below).
-  - A definition whose `owns:` resolves to decision records cites the rule for editing them, the decisions README's "Refining an accepted record". It does not restate the rule, since agents reference rather than embed (COR-006).
-  - **A command's writes** are the command's, where one of the methodology's mutating commands makes them, and `owns:` does not declare them. The agent's body, or a skill it hands the work to, names the command and when to run it (COR-013 point 2). A write the agent makes itself, with a file tool or any program through a shell, is never a command's write.
+  - A definition whose `owns:` resolves to decision records cites the rule for editing them where it describes editing records: `.pkit/decisions/README.md`, "Refining an accepted record". It does not restate the rule, since agents reference rather than embed (COR-006).
+  - **A command's writes** are the command's, where one of the methodology's own mutating commands makes them, and `owns:` does not declare them. That holds for the backbone's commands and an installed capability's. The agent's body, or a skill it hands the work to, names the command and the conditions for running it.
+  - **A write the agent makes itself,** with a file tool or any program through a shell, is never a command's write (COR-013). For the friction writers, see "Friction writers" below.
 - **`needs`:** the hooks the agent invokes ([`hooks.md`](hooks.md)).
 - **`answers`:** the hooks a skill provides. Skills only.
 - **`gates`:** the records whose acceptance a skill needs before it runs. Skills only, and each entry counts as a `reads.records` entry too.
@@ -147,21 +149,25 @@ What each field holds:
 
 A body cites what its front matter declares, in forms the validator reads without parsing free prose (COR-013 point 3). What counts as a citation:
 
-- **A path** in backticks, where it holds a `/` or a known file extension, such as `` `.pkit/decisions/README.md` ``. A Markdown link's target counts too, unless it is a URL.
+- **A path** in backticks, where it holds a `/`, does not end in one and carries no placeholder, such as `` `.pkit/decisions/README.md` ``. A bare file name, such as `README.md`, does not count. A Markdown link's target counts too, unless it is a URL or holds a placeholder.
 - **A record id** as a bare token: `COR-NNN`, `PRJ-NNN` or `ADR-NNN`.
 - **A capability's decision** in brackets, `[<capability>:DEC-NNN-<slug>]`. It is not declared in the front matter, and must name a decision file of an installed capability.
-- **A rule id,** `RS-<SET>-NNN`, an extension point, `RS-<SET>-NNN#<point>`, or a component's rule with its component, `[<component>:RS-<SET>-NNN]` (COR-051). It is not declared in the front matter either, and must name a rule of an installed rule set.
-- **A role or point address** in brackets, such as `[pkit::documentation]` or `[pkit::documentation:readers]` (COR-019, COR-053). It must name a role or point an installed capability declares. A bracketed token that holds `::` and is no address is reported as malformed.
+- **A rule id,** `RS-<SET>-NNN`, an extension point, `RS-<SET>-NNN#<point>`, or a method rule set's rule with its component, `[<component>:RS-<SET>-NNN]` (COR-051). It is not declared in the front matter either. It must name a rule of an installed rule set, and `pkit refs validate` reports one that does not.
+- **A role or point address** in brackets, such as `[pkit::documentation]` or `[pkit::documentation:readers]` (COR-019, COR-053). It is not declared in the front matter either. It must name a role or point an installed capability declares, and `pkit refs validate` reports one that does not. It also reports a bracketed token that holds `::` and is no address as malformed.
 - **A hook name:** `<topic>.<operation>` or `<topic>.<provider>.<operation>` ([`hooks.md`](hooks.md)).
 - **An operational rule** by its layer and number, such as "core rule 16", or by its id in a loaded set, such as `RS-OPS-NNN` (COR-068). `pkit refs validate` warns, without failing, of one that is missing or retired.
-- **A point of a record,** such as `COR-NNN point N`, `COR-NNN#N` or `[<capability>:DEC-NNN] point N` (COR-058). `pkit refs validate` warns, without failing, of a point its record neither holds nor retires ([the decisions README, "Citing"](../decisions/README.md#citing)).
+- **A point of a record** is held to its record, such as `COR-NNN point N`, `PRJ-NNN DN`, `COR-NNN#N` or `[<capability>:DEC-NNN] point N` (COR-058). `pkit refs validate` warns, without failing, of a point its record neither holds nor retires ([the decisions README, "Citing"](../decisions/README.md#citing)).
 - **Not counted:** anything inside a fenced code block, an HTML comment or strikethrough.
 
-So cite a path in backticks, a record by its id and a hook by its name.
+The discipline:
 
-**Intermediate files.** Every shipped definition's body ends with the same section, `## Intermediate files`, which the authoring command stamps ("Authoring a definition" below). It tells the agent to keep its intermediate files in the agent workspace, `.agent-workspace/` at the repository root, and nowhere else outside the repository. It says to write them with the file tools, since a shell redirect there is judged like any shell write (the workspace rule in `.pkit/rules/core.md`). Keep its words the same in every body, so that one search finds every definition that carries it.
+- cite paths in backticks
+- cite records by id
+- mention hooks by name
 
-**Reviewers.** A reviewer is an agent that judges work and returns a verdict or findings, such as COR-024's reviewers or a capability's review panel. What its read-only means:
+**Intermediate files.** Every shipped definition's body ends with the same one-sentence section, `## Intermediate files`, which `pkit new agent` stamps ("Authoring a definition" below). It tells the agent to keep its intermediate files in the agent workspace, `.agent-workspace/` at the repository root, and nowhere else outside the repository. It says to write them with the file tools: a shell redirect there is judged like any other shell write (the workspace rule in `.pkit/rules/core.md`). Keep its words the same in every body, so that one search finds every definition that carries it.
+
+**Reviewers.** A reviewer is an agent that judges work and returns a verdict or findings, such as COR-024's reviewer stack or a capability's review panel. What its read-only means:
 
 - **It changes nothing it judges.** It never changes the work under review or the repository the work lives in. It edits no tracked file, and stages, commits and pushes nothing, since its verdict is worth only its independence. That is the whole claim.
 - **It may still write.** A reviewer with a shell among its tools may need working files to review well, such as these:
@@ -174,7 +180,7 @@ So cite a path in backticks, a record by its id and a hook by its name.
 
 **Friction writers.** An answer on an artefact is decided as COR-050 point 3 sets out. It is a revalidation, a deferral, or a revisit entry for a target of the artefact's links (COR-050 point 16). The writers put it in an answer file of the change's own (COR-062 point 1).
 
-A project's existing answers move out of the artefacts' blocks once (COR-062 point 11). The CLI reference's "Friction checks" says where the writers write until then.
+A project's existing answers move out of the artefacts' blocks once (COR-062 point 11). The CLI reference's ["Friction checks"](../cli/README.md#friction-checks) <!-- unanchored: named as the section that says where the writers write, whose meaning rests on COR-062, which the page anchors --> says where the writers write until then.
 
 An answer a change owes may be written by the agent making the change, and is then checked by a reviewer other than that agent. Where a person skipped that review on record, or the project chose no such reviewer, it stands unchecked.
 
@@ -245,23 +251,24 @@ Commands an agent returns are run by one of these:
 **What the backward check leaves out.** It is meant for reads whose place an overlay can move, so three kinds of path in a body need no declaration:
 
 - **A path that opens with `#` or `./`,** such as a link to a section or to a file beside the body.
-- **A path to a decision record,** one under a `decisions/` folder or named as a record's file, such as `[COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md)`. The record's id is the reference, checked through `reads.records`, and `refs rot` still checks that the file exists.
-- **A path inside the citing capability,** in a capability's agent or skill, such as `scripts/move-issue.py` or a sibling sub-procedure. A path outside the capability, or into another tier, is still reported.
-- **Never exempt:** a record id or a hook name, even inside a link.
+- **A path to a decision record,** one under a `decisions/` folder or named as a record's file, such as `[COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md)`. The record's id is the load-bearing reference, checked through `reads.records` or the capability-citation graph, so the link is exempt. `pkit refs rot` still checks that the file exists.
+- **A path inside the citing capability,** in a capability's agent or skill, such as `scripts/move-issue.py`, a sibling sub-procedure `create-issue.md` or `project/config.yaml`. These are implementation pointers, not external reads. A path outside the capability, or an absolute or target-root-relative path into another tier, is still reported.
+- **Never exempt:** a record id or a hook name, even inside a link. An undeclared one is still reported.
 
-The CLI reference describes the other commands of the `refs` family, which read or rewrite the graph.
+The other graph operations live in the `pkit refs` family, which reads or rewrites the graph. See `.pkit/cli/README.md` <!-- unanchored: named as the reference that lists the family's commands, a pointer and no statement of them --> for the full surface.
 
 <a id="the-matrix"></a>
 ### Exactly-one-owner over `owns:`
 
-`pkit refs validate` also checks who answers for each path. It compares the resolved paths of each agent's `owns:`, with each placeholder expanded through the overlay as the deploy expands it (COR-013 point 5):
+`pkit refs validate` also checks write authority. Per COR-013's overlay rule, it compares the resolved paths of each agent's `owns:`, not its placeholders. Each placeholder is expanded through the overlay exactly as the deploy expands it, a per-agent `overrides:` entry replacing the top-level value:
 
 - **Overlap** is one path containing another, or two equal paths, between two distinct agents. Nesting inside one agent's own set is fine, such as a folder and a file in it.
-- **Reported, never settled.** The finding names both agents, both paths, and the overlay category a resolved path came from. No precedence picks a winner. Resolve it by reassigning an `owns:`, or by pointing the category elsewhere.
-- **Clean:** an entry that resolves to no path, such as one of `code-paths: []`. An entry whose category the overlay does not define is clean too, since the deploy skips that agent and `pkit agents` names the category.
-- **One owner for each name.** Only the definition that deploys counts as an owner ("Name-collision precedence" below).
-- **What it leaves out:** whether a resolved path exists, which `refs rot` checks. Nothing at run time stops an agent from editing outside its `owns:`. Ownership is checked at validation, and kept as discipline at run time.
-- **Placeholders in the body.** The bidirectional check finds a `<category>` entry by its placeholder in the body, not by its resolved paths. A core definition that cited a project's real paths would break project-neutrality, so its body carries the placeholder.
+- **Reported, never settled.** The finding names both agents, both paths, and the overlay category a resolved path came from. No precedence picks a winner, since no ordering makes two owners of one path correct. Resolve it by reassigning an `owns:`, or by pointing the category elsewhere.
+- **Clean:** an entry that resolves to no path, such as one of `code-paths: []`. A category the project has not filled yet is a normal state, not a validation failure.
+- **Clean too:** an entry whose category the overlay does not define. That gap already shows loudly: the deploy skips the agent, and `pkit agents` names the category. So validation does not fail an install upgraded but not yet repaired a second time for the same gap.
+- **One owner for each name.** Only the definition that deploys counts as an owner ("Name-collision precedence" below). A shadowed source of the same name is no second owner of its paths.
+- **What it leaves out:** the check covers `owns:` overlap only, not whether a resolved path exists, which `pkit refs rot` checks. Nothing at run time stops an agent from editing outside its `owns:`. Resolved ownership is methodology metadata, enforced at validation and honoured as discipline at run time.
+- **Placeholders in the body.** Resolution applies to the ownership comparison, not to citation coverage. The bidirectional check finds a `<category>` entry by its placeholder in the body, deliberately. A core definition that cited a project's real paths would break project-neutrality, so its body carries the placeholder.
 
 ## Adopter overlay
 
@@ -300,8 +307,8 @@ overrides:
 **How a value resolves:**
 
 1. Start from the top-level categories.
-2. For the agent named under `overrides.<agent>:`, each category there replaces the top-level value whole, not merged with it. To extend a value, copy the top-level entries into the override. (Merge semantics are deferred per COR-007 until concrete needs surface.) Two keys there are not categories: `model` and `effort` ("Model and effort" below).
-3. Write the resolved paths in place of each placeholder in the front matter, and the deployed copy into the harness's place. The body keeps its placeholders as written.
+2. For the agent named under `overrides.<agent>:`, each category there replaces the top-level value whole, not merged with it. To extend a value, copy the top-level entries into the override. Merge semantics are deferred per COR-007 until concrete needs surface. Two keys there are reserved and are not categories: `model` and `effort` set the agent's execution policy ("Model and effort" below).
+3. Write the resolved paths in place of each placeholder in the front matter, and the deployed copy into the harness's place. The body keeps its placeholders as written. The deployed copy is what every downstream tool reads.
 
 **An unknown override** is ignored: a category under `overrides:` for an agent no source ships, or one no definition of that agent names. Nothing reports it. A `model` or `effort` there that the harness does not accept is still reported ("Model and effort" below).
 
@@ -309,47 +316,48 @@ overrides:
 
 ### An undefined category
 
-What the deploy does with a category the overlay does not define depends on the channel that names it:
+Every category a definition names resolves through the overlay, at the top level or in `overrides.<agent>:`. What the deploy does with one the overlay does not define depends on the channel that names it:
 
 - **In a required channel,** `owns`, `needs`, `answers`, `reads.paths` or `reads.records`, the deploy skips the agent, loudly, and deploys the rest.
-- **Only in `reads.patterns`,** an optional read: the deploy drops the item, and deploys the agent without it. A category named in both channels is required.
+- **Only in `reads.patterns`,** an optional read: the deploy drops the item, and deploys the agent anyway, as a generalist working without that corpus. A category named in both channels is required: the required reference wins.
 - **A bare key,** `category:` with no value, is undefined. An explicit empty list, `category: []`, resolves to no path. A bare optional key still deploys its agent, with a warning, since it is usually a stub left unfilled.
 
 ### Write-carrying categories
 
-Core declares a category write-carrying where a core definition edits its paths and only the project can list them. The architect's categories are not among them, since each has a conventional folder. A write-carrying category follows four rules. One ships today:
+Most categories name paths an agent reads. Core declares a category write-carrying where a core definition edits its paths and only the project can list them. The architect's categories are not among them, since each has a conventional folder. One such category ships today:
 
 | Category | Consumer | Meaning |
 |---|---|---|
 | `process-authoring-targets` | the core `process-author` agent | the project's own process-definition files and predicate-script locations, the paths that agent may edit |
 
-The four rules:
+Four rules apply to a write-carrying category:
 
 1. **It ships as an explicit empty list,** `process-authoring-targets: []`.
-   - `[]` resolves to an empty `owns:`, so the agent deploys inert, owning nothing. A bare or absent key does not resolve, so the agent is skipped.
-   - The first install writes the `[]`. An install from before the category upgrades into the skipped state, since sync adds no key to the project's overlay. `pkit agents reconcile --write` fills the `[]` ("Diagnosing + repairing the overlay" below).
-2. **Files, not subtrees.** List definition files and predicate-script folders, not a capability's whole subtree. Never list a capability's `package.yaml`, since registering a predicate is the process commands' stamp.
-3. **Nothing sync manages.** No entry may resolve into content the next sync overwrites, which is the no-shared-files invariant at the agent's surface (core rule 1). The deploy's resolver refuses such an entry, names the path, and skips the agent. `.pkit/lifecycle/ownership.py` decides what sync manages, and every adapter's resolver imports it:
+   - The difference from a bare or absent key is mechanical, not cosmetic. `[]` resolves to an empty `owns:`, so the agent deploys inert, owning nothing. A bare or absent key does not resolve at all, so the agent is skipped.
+   - The first install writes the `[]`. An install from before the category upgrades into the skipped state, since sync cannot add a key to the project's overlay. `pkit agents reconcile --write` fills the `[]` to restore parity ("Diagnosing + repairing the overlay" below).
+2. **File granularity, not subtree grants.** List definition files and predicate-script folders, not a capability's whole subtree. Never list a capability's `package.yaml`, since registering a predicate belongs to the `pkit process` commands, which own that stamp.
+3. **Nothing sync manages.** No entry may resolve into content the next sync overwrites, which is the no-shared-files invariant at the agent's surface (core rule 1). An agent must never be granted write authority over that content. The deploy's resolver refuses such an entry, names the path, and skips the agent rather than deploy an invalid grant. `.pkit/lifecycle/ownership.py` decides once what sync manages, and every adapter's resolver imports it, so a second harness cannot silently skip the check:
    - core's areas, and a shipped capability's own subtree: managed
    - that capability's `project/` folder: the project's
    - an incubated or unregistered capability's subtree: the project's
-   - every other declared project-tier position, such as an adapter's `settings/project/`: the project's
-4. **One consumer.** A category a core record introduces is named by exactly the agent that record names. A core definition naming a write-carrying category another record introduced is a red flag in review. Categories the project defines are its own to share across its agents.
+   - every other declared project-tier position: the project's, such as an adapter's `settings/project/`, which holds the project's harness permission additions, so a category may name it
+4. **One consumer, by convention.** A category a core record introduces is named by exactly the agent that record names. A core definition naming a write-carrying category another record introduced is a red flag in review. Categories the project defines are its own to share across its agents.
 
-The `adopt` command cannot serve a write-carrying category, since core cannot know the project's paths, and it says so. Run `reconcile --write`, then name the project's paths.
+`pkit agents adopt` cannot serve a write-carrying category, since there is no conventional folder to create for paths core cannot enumerate. It says so rather than fail obscurely. Run `pkit agents reconcile --write`, then name the project's paths.
 
 ### Diagnosing + repairing the overlay
 
 Three commands diagnose and repair the overlay, each described below (COR-013). The two that write fill a category with its conventional folder where it has one.
 
-**Where a conventional folder lies.** It is a sub-path of the project's internal documentation root (COR-049 point 4):
+**Where a conventional folder lies.** It is a sub-path of the project's internal documentation root ([COR-049](../decisions/core/COR-049-documentation-roots.md) point 4):
 
-- `architecture-docs` is `<root>/architecture`, and `adr-records` is `<root>/architecture/decisions`. With the default root, `docs/`, they are `docs/architecture/` and `docs/architecture/decisions/`.
+- `architecture-docs` is `<root>/architecture`, and `adr-records` is `<root>/architecture/decisions`. With the default root, `docs/`, they are `docs/architecture/` and `docs/architecture/decisions/`. A project that set `docs.internal: tech-docs` gets `tech-docs/architecture/…` instead.
+- **A new category.** Adding a sub-path for it, in `src/project_kit/docs_roots.py`, is the authoring step that enables `reconcile`'s fill and `adopt` for that category.
 - **A recorded path stays.** `reconcile --write` and `adopt` write the path uncommented, with a `recorded by` note, and a later change of the root never moves it (COR-049 point 5).
 
 #### `pkit agents`
 
-`pkit agents` reports each definition as deployable or skipped, with each category it lacks, and its effective model and effort. It writes nothing, since the deploy is the sync's.
+`pkit agents` reports each definition as deployable or skipped, with each category it lacks, and its effective model and effort. It is the discoverable surface for "why didn't my agent show up?". It writes nothing, since the deploy is the sync's.
 
 #### `pkit agents adopt <agent> [--yes]`
 
@@ -359,43 +367,43 @@ Three commands diagnose and repair the overlay, each described below (COR-013). 
 2. It writes the category into the overlay, uncommented, with that path, and never over a value the project set.
 3. It runs the adapter's deploy, so the agent lands in `.claude/agents/` at once.
 
-**What it asks.** A category recorded over a folder that holds documents puts them within the reach of the category's agents. So it takes consent (COR-049 point 5):
+**What it asks.** A category recorded over a folder that already holds documents, any entry at all, puts them within reach of every agent that names the category. They may read them, or write them where the category grants that. So it takes consent ([COR-049](../decisions/core/COR-049-documentation-roots.md) point 5):
 
-- **Before it writes,** `adopt` reads which folders already hold documents, for every category at once.
+- **Before it writes,** `adopt` reads which folders already hold documents, for every category at once, since `adr-records` lies inside `architecture-docs`.
 - **Where one does,** a terminal is asked once for the run. The question lists each `category = path` with the agents that reach it, and the rest of the run beside it. `--yes` consents without a prompt.
-- **Off a terminal without `--yes`,** the run refuses with exit 1. It names the command with `--yes`, and `reconcile` to see the change first.
+- **Off a terminal without `--yes`,** the run refuses with exit 1. It names the command with `--yes`, and `pkit agents reconcile` to see the change first.
 - **A "no" or a refusal** writes nothing at all: no folder, no overlay line and no deploy. A folder `adopt` creates, or one that holds nothing, is recorded without asking.
 - **Each recording** prints these:
   - what it recorded
   - the root its path came from
   - where to change it
 
-**When it stops.** A second run on an adopted agent changes nothing, asks nothing, and deploys again. It errs on these:
+**When it stops.** It is idempotent: a second run on an adopted agent changes nothing, asks nothing, and deploys again. It errs clearly on these:
 
 - an unknown agent
 - an agent that names no overlay category
 - a required category with no conventional folder, for which it names `reconcile`
-- a write-carrying category, since core cannot list the project's paths for it
+- a write-carrying category, where the refusal is structural and says so: core cannot enumerate the project's paths, so `adopt` has nothing to create
 
 An optional category with no conventional folder is no prerequisite: `adopt` leaves it undefined, names it as optional, and deploys the agent.
 
 #### `pkit agents reconcile [--write]`
 
-`pkit agents reconcile` surfaces each category a definition names and the overlay leaves undefined. It is a dry run by default, and `--write` writes. For each category, it acts by state:
+`pkit agents reconcile` surfaces each category a definition names and the overlay leaves undefined into `overlay.yaml`. It is a dry run by default, and `--write` writes. It uses detect-then-fill logic, with six states for each missing category:
 
-1. **Missing and write-carrying:** written uncommented as `<category>: []`. The agent then deploys inert rather than being skipped, as on a fresh install.
-2. **Missing, with its conventional folder present:** written uncommented with that path, so the next sync deploys the agent. An example is `adr-records` with `docs/architecture/decisions/`.
-3. **Missing, only an optional read, with no conventional folder:** a commented stub is appended, framed as an optional read. The agent deploys without it, so uncomment it only to give the agent the project's corpus.
-4. **Missing, required, with no conventional folder:** a commented stub is appended, such as `# architecture-docs:`, with guidance on the path to give. The agent stays skipped until a path is set and sync runs, or until `adopt` creates the conventional folder.
-5. **A commented stub already there:** nothing is appended again. For a required stub it reports that a path is needed, and for an optional one it reports that the agent deploys already.
+1. **Missing and write-carrying:** written uncommented as `<category>: []`. The agent then deploys inert rather than being skipped, as on a fresh install. The project names real paths when ready.
+2. **Missing, with its conventional folder present:** written uncommented with that path, so the next sync deploys the agent with no manual step. Examples are `architecture-docs` with `docs/architecture/`, and `adr-records` with `docs/architecture/decisions/`.
+3. **Missing, only an optional read, with no conventional folder:** a commented stub is appended, framed as an optional read. The agent deploys without it, so uncomment it only to give the agent the project's corpus, never as a prerequisite.
+4. **Missing, required, with no conventional folder:** a commented stub is appended, such as `# architecture-docs:`, with `<path/relative/to/project/root>` guidance. The agent stays skipped until a path is set and sync runs, or until `adopt` creates the conventional folder.
+5. **A commented stub already there:** nothing is appended again, and the guidance splits by channel. A required stub is reported as action needed, since the agent is skipped until a path is set or `adopt` creates the conventional layout. An optional stub gets the same guidance framed as optional, since the agent deploys already.
 6. **Defined,** with paths or an explicit `[]`: nothing is written, and no value the project set is overwritten.
 
 More of `reconcile`:
 
-- **A missing overlay.** With `--write`, `reconcile` creates the overlay from the seed the first install writes, and writes nothing else in that run. The next dry run shows each category the seed leaves undefined.
-- **Only it writes a seed path.** Sync creates no seed path, so a deleted overlay otherwise returns only at the next upgrade to a new release ([the lifecycle README, "Seed paths"](../lifecycle/README.md#seed-paths)). `adopt` names this repair where the overlay is missing.
-- **When to run it:** for an overlay older than a newly shipped agent's categories. The repair is an explicit command, never a write by sync.
-- **`--write` is the consent.** The dry run lists each fill as `category = path`, with the agents that reach it, as `adopt`'s question does. A command that shows what it would record until told to write takes `--write` as its consent (COR-049 point 5). So `--write` records over a folder that holds documents without a prompt.
+- **A missing overlay.** With `--write`, `reconcile` creates the overlay from the seed the first install writes, and writes nothing else in that run. The dry run says it would. The next dry run shows each category the seed leaves undefined, so `--write` never records one the person was not shown.
+- **Outside the lifecycle, only it writes a seed path.** Sync creates no seed path, so a deleted overlay otherwise returns only at the next `pkit upgrade` to a new release ([the lifecycle README, "Seed paths"](../lifecycle/README.md#seed-paths)). `pkit agents adopt` names this repair where the overlay is missing.
+- **When to run it:** for an overlay older than a newly shipped agent's categories. The repair is an explicit, idempotent command, never an automatic write by sync.
+- **`--write` is the confirmation.** The dry run lists each fill as `category = path`, with the agents that reach it once recorded, as `adopt`'s question does. A command that shows what it would record until told to write takes `--write` as its confirmation (COR-049 point 5). So `--write` records over a folder that holds documents without a prompt. Each recording prints the root its path was derived from and where to change it.
 
 ## Model and effort
 
@@ -406,7 +414,7 @@ An agent runs on its caller's model and effort, unless its definition or the ove
 | `model` | `inherit`, a harness alias or a full model name. The aliases are `sonnet`, `opus`, `haiku`, `fable`, `best`, `opusplan`, `sonnet[1m]`, `opus[1m]` and `fable[1m]`. A full name is `claude-…`, and may name its provider first, such as `us.anthropic.claude-…`. | inherit |
 | `effort` | `inherit`, `low`, `medium`, `high`, `xhigh` or `max` | inherit |
 
-The values are those of Claude Code, the one harness an adapter ships for today.
+The values are those of Claude Code, the one harness an adapter ships for today. The effort levels are the same list `review-pr --effort` accepts. The backbone holds the vocabulary in `src/project_kit/agent_policy.py`, and the adapter's resolver carries the same constants.
 
 **Precedence,** for each key on its own:
 
@@ -417,18 +425,18 @@ The values are those of Claude Code, the one harness an adapter ships for today.
 **What is written.**
 
 - **`inherit`,** like an absent or bare key, writes no key into the deployed copy, so the harness's default applies. An override of `inherit` is how a project resets a shipped value.
-- **The shipped definitions** set neither key. This is the mechanism, not a policy.
+- **The shipped definitions** set neither key. This is the mechanism, not a policy, and nothing changes for a project that sets nothing.
 - **A value outside the vocabulary** is never written:
   - The deploy drops it, and the agent deploys and inherits.
   - The run prints a `warning` line naming the value.
-  - The reference graph's checks report it as an error in both commands ("The reference graph" above). They report it at the agent's file for a front-matter value, and at `overlay.yaml` for an override.
+  - `pkit validate`, in its `refs` member, reports it as an error, and so does `pkit refs validate` ("The reference graph" above). They report it at the agent's file for a front-matter value, and at `overlay.yaml` for an override, so a typo cannot pass silently.
 - **Reported by `pkit agents`.** Each row shows the effective value and where it came from, such as `model inherit`, `model sonnet` or `effort high (overlay)`, and a refused value as refused.
 
 ## Deploy mechanics
 
-Each adapter deploys the definitions its own way (COR-005). For Claude Code, `.pkit/adapters/claude-code/deploy-agents.sh` does it, and `pkit init` and `pkit sync` run it:
+Each adapter handles its own deploy (COR-005), and future adapters for other harnesses ship their own deploy primitives. For Claude Code, `.pkit/adapters/claude-code/deploy-agents.sh` does it, and `pkit init` and `pkit sync` run it:
 
-1. It lists each name in `.pkit/agents/core/`, `.pkit/agents/project/` and each capability's `agents/` folder, in either form.
+1. It lists each name in `.pkit/agents/core/`, `.pkit/agents/project/` and each installed capability's `agents/` folder ([COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md)), in either form.
 2. It takes one source for each name ("Name-collision precedence" below).
 3. It resolves the source's front matter through the overlay ("Adopter overlay" above), and carries its model and effort ("Model and effort" above).
 4. It rewrites each storyboard the source names by its file name to the storyboard's path from the project's root ([`storyboards.md`](storyboards.md)).
@@ -444,8 +452,8 @@ What it reports, a line for each definition, such as `created`, `updated`, `exis
 
 Beside the deploy:
 
-- **The undeploy.** The adapter's `undeploy-capability.sh <name>` removes one capability's deployed agents and skills, where the capability is unregistered and its files stay. The lifecycle calls it by name, and knows no harness path ([the adapters README, "Primitives the lifecycle calls"](../adapters/README.md#primitives-the-lifecycle-calls)).
-- **Grants.** Where the adapter's permission hook is registered, the permission model decides each call of a dispatched agent for the subject `agent:<name>`. It applies that subject's grants and those to `all` (COR-028). The permissions reference says how a call's subject is found.
+- **The undeploy.** The adapter's `undeploy-capability.sh <name>` removes one capability's deployed agents and skills, where the capability is unregistered but its files stay. A deploy re-run cannot see that case. The lifecycle calls it by name, and knows no harness path ([the adapters README, "Primitives the lifecycle calls"](../adapters/README.md#primitives-the-lifecycle-calls)).
+- **Grants.** Where the adapter's permission hook is registered, the permission model decides each call of a dispatched agent. It applies the agent's own grants and the shared baseline (COR-028). The permissions reference says how a call's subject is found.
 - **Dispatching.** A session dispatches an agent by its definition's name, and gives it no name of its own. While Claude Code's agent teams are on, a named one's result arrives cut at 4064 characters, as [the adapter declares](../adapters/claude-code/README.md#harness-support-harness-supportyaml).
 
 ### Name-collision precedence
@@ -453,35 +461,35 @@ Beside the deploy:
 Three places can ship a definition of one name, and the deploy takes one, in this order:
 
 1. **The project's,** in `.pkit/agents/project/`, wins over every other. The project keeps the last word on its agents.
-2. **A capability's,** in `.pkit/capabilities/<name>/agents/`, wins over core's. A capability ships a core agent's name on purpose, as its discipline's specialisation of the core default.
-3. **Core's,** in `.pkit/agents/core/`, is the fallback.
+2. **A capability's,** in `.pkit/capabilities/<name>/agents/`, wins over core's. A capability that ships a core agent's name opts to override core for the projects that install it. It ships the name on purpose, as its discipline's specialisation of the universal core default.
+3. **Core's,** in `.pkit/agents/core/`, is the fallback, used when no project or capability ships the name.
 
 More on the order:
 
-- **Read the same way** by each command that names the definition that deploys. These are `pkit agents`, the ownership check of `pkit refs validate`, and `pkit new storyboard` without `--namespace` ([`storyboards.md`](storyboards.md#authoring)). So where a capability ships a core agent's name, the capability's is the one deployed.
-- **Between two capabilities** there is no precedence. A capability's install names each agent another capability ships under the same name, and asks for each: `override`, `skip` or `inspect`. `skip` keeps the installed agent.
+- **Read the same way** by each command that names the definition that deploys. These are `pkit agents`, the ownership check of `pkit refs validate`, and `pkit new storyboard` without `--namespace` ([`storyboards.md`](storyboards.md#authoring)). So where a capability ships a core agent's name, the capability's is the one deployed. That holds whether it was installed with `override` at the collision prompt, or a core agent arrived later under its name.
+- **Between two capabilities** there is no precedence to appeal to. `pkit capabilities install` names each agent another capability already ships under the same name, and asks for each: `override`, `skip` or `inspect`. `skip` keeps the installed agent.
 - **A collision that reaches the deploy** is not refused: the first capability by name wins. Resolve it in one of these ways:
   - rename an agent
   - skip it at install
   - uninstall a capability
   - ship a project agent of that name
-- **Rare by design.** An agent that implies a discipline belongs in its capability, not in core (COR-026). A capability and core share a name only to override on purpose.
+- **Rare by design.** An agent that implies a discipline belongs in its capability, not in core ([COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md)). A capability and core share a name only to override on purpose.
 
 ### Why copies, not symlinks
 
-A deployed definition is a resolved copy of its source, never a symlink to it. Skills deploy as symlinks, since a skill's deployed text is its source's, which gives authors live-edit during development. If a skill ever grows placeholders, it would switch to the same copy-based mechanism at that point.
+A deployed definition is a resolved copy of its source, never a symlink to it. Skills under `.claude/skills/` deploy as symlinks, and agents cannot. A skill's front matter holds no placeholder today, so a symlink works there and gives authors live-edit during development. If a skill ever grows placeholders, it would switch to the same copy-based mechanism at that point.
 
 - **Why:** the copy differs from its source. Its front matter holds the overlay's paths for the placeholders, the model and effort, each storyboard's path and the deploy mark. Its body ends with the workspace sentence.
-- **What follows:** an edit of a source in `.pkit/agents/` reaches the harness only once the deploy runs again, such as at the next sync.
+- **What follows:** an edit of a source in `.pkit/agents/` reaches the harness only once the deploy runs again, such as at the next sync. Nothing keeps the copy in step with its source automatically without running the deploy again.
 
 ## The rule-set reviewer
 
-The core agent `rule-set-reviewer` judges one change against the accepted rules that bind on each artefact the change alters or brings under a rule ([COR-057](../decisions/core/COR-057-rule-set-reviewer.md)). It reviews the diff, beside `convention-compliance-reviewer` in the reviewer stack (COR-024).
+The core agent `rule-set-reviewer` judges one change against the accepted rules that bind on each artefact the change alters or brings under a rule. It reviews the diff, beside `convention-compliance-reviewer` in the reviewer stack (COR-024). Its contract, including the kinds of finding it gives, is [COR-057](../decisions/core/COR-057-rule-set-reviewer.md).
 
-- **What it judges.** It reads the rules only from the rule sets, through the command that lists what a change alters and brings under a rule. It judges only the text the change owns, and only the parts of a rule that no check enforces. Its body holds no rule.
+- **What it judges.** It reads the rules only from the rule sets, through `pkit rule-sets altered` (the CLI reference, "Rule-set commands"). It judges only the text the change owns, and only the parts of a rule that no check is there to enforce. Its body holds no rule.
 - **What a change brings under a rule.** A change that makes a rule bind on an artefact owns the whole artefact for that rule. It may do so by widening a set's scope, accepting a rule, updating a pin or typing a place. The reviewer judges all of the artefact under that rule, even where the change edits none of it.
-- **A break there** is a settled break where the rule's text settles it, whatever brought the artefact under the rule. [COR-060](../decisions/core/COR-060-brought-under-breaks.md) names the author's ways out of one. The reviewer's answer names those rules on each artefact, and lists apart each artefact brought under a rule unaltered.
-- **Its form** comes from whoever dispatches it: the verdict line, and the mark of each kind of finding. With none named, it states its verdict and each finding's kind in words.
+- **A break there** is a settled break where the rule's text settles it, whatever brought the artefact under the rule. [COR-060](../decisions/core/COR-060-brought-under-breaks.md) names the author's ways out of one. The command's answer names those rules on each artefact, and lists apart each artefact the change brings under a rule without altering it.
+- **Its form** comes from whoever invokes it: the verdict line, and the mark of each kind of finding. With none named, it states its verdict and each finding's kind in words.
 - **Advisory.** Its verdict holds a change only where a gate requires it.
 - **Dispatching it** on a change from a base to a head: run the command below to see what it will judge. Then dispatch it, naming the same base and head and the form. An artefact no rule binds on leaves it nothing to judge.
 
@@ -502,13 +510,13 @@ The namespace says where the definition lives, by the universal-applicability te
 
 | Namespace | Stamps at | For |
 |---|---|---|
-| `core` | `.pkit/agents/core/<name>.md` | a role any project can use, whatever it installs, such as reviewing records or conventions |
-| `project` | `.pkit/agents/project/<name>.md` | a role tied to the project's own stack, such as a QA engineer or a domain reviewer |
-| a capability's name | `.pkit/capabilities/<capability>/agents/<name>.md` | a role that implies the capability's discipline (COR-026), such as `software-engineering`'s `software-engineer` |
+| `core` | `.pkit/agents/core/<name>.md` | a universal role useful to any project, such as record review, citation audit, convention-compliance review or a coordinator template specialised through the overlay |
+| `project` | `.pkit/agents/project/<name>.md` | a domain-specific role tied to the project's stack, such as an implementer (`ui-ux-designer`, `qa-engineer`), a domain reviewer or a customised coordinator |
+| a capability's name | `.pkit/capabilities/<capability>/agents/<name>.md` | a role that implies the capability's discipline ([COR-026](../decisions/core/COR-026-agent-placement-by-discipline.md)), such as the code-authoring `software-engineer`, which ships opt-in in `software-engineering` |
 
 What the command does:
 
-- **Refuses an unknown capability,** listing those that exist. It creates the capability's `agents/` folder on first use.
+- **Refuses a capability that does not exist under `.pkit/capabilities/`,** listing those that do, the same refusal `pkit new decision <capability>` gives. It creates the capability's `agents/` folder on first use.
 - **Refuses a taken name,** in core, the project or any capability, since the deploy keeps one definition for each name.
 - **Refuses a namespace the project receives by sync:** `core`, outside the methodology's source, and a capability that is not the project's own. Such an agent is authored where its source is kept, since the next sync would overwrite it (core rule 1). The refusal names the `project` namespace instead.
 - **Refuses a name that is not kebab-case,** and writes nothing.

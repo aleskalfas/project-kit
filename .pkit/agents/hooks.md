@@ -64,10 +64,10 @@ A hook takes positional string arguments, and writes text to standard output. It
 
 A hook's name says whether any provider of its topic may answer it, or one provider alone:
 
-- **`<topic>.<operation>`,** two segments, names a contract hook, which several providers of one topic are expected to implement. The topic is usually a capability's name. An agent that needs only such hooks works with any provider of the topic.
+- **`<topic>.<operation>`,** two segments, names a contract hook, which several providers of one topic are expected to implement. The topic is usually a capability's name. An agent that needs only such hooks stays portable across capability variants.
 - **`<topic>.<provider>.<operation>`,** three segments, names an extension that one provider implements. An agent that needs one is tied to that provider, and the name says so.
 - **The form:** lowercase kebab-case segments joined by dots, matching `^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*){1,2}$`.
-- **The project's own hooks** use the topic `project`, which is kept for them.
+- **The project's own hooks** use the reserved `project.*` topic.
 
 ## Provider precedence
 
@@ -87,7 +87,7 @@ The order mirrors the skill-deploy precedence, where the project's skill wins ov
 
 ## Unsatisfied needs
 
-Every `needs:` entry is required (COR-013 point 4). The two validations that fail a same-tier collision also fail a need that no skill answers and no package provides. COR-013 point 4 has install and sync check it too, and today neither does.
+Every `needs:` entry is required by default (COR-013 point 4). The two validations that fail a same-tier collision also fail a need that no skill answers and no package provides. COR-013 point 4 has install and sync check it too, and today neither does.
 
 - **Listed:** `pkit hooks list` shows such a hook as `(no provider)`.
 - **Resolved:** `pkit hooks resolve` refuses it, and says that no provider declares it.
