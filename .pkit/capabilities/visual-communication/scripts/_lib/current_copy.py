@@ -346,6 +346,24 @@ def written_release(entry: Mapping[str, Any], versions: Sequence[Mapping[str, An
     return release if isinstance(release, str) else ""
 
 
+def written_fingerprint(
+    entry: Mapping[str, Any], versions: Sequence[Mapping[str, Any]]
+) -> Mapping[str, Any]:
+    """The fingerprint of the version that wrote the current copy `entry` names, among the
+    record's `versions`. `written_lock` says first whether one can be read."""
+    return _writer(entry, versions)["fingerprint"]
+
+
+def written_over_stale(
+    entry: Mapping[str, Any], versions: Sequence[Mapping[str, Any]]
+) -> list[str]:
+    """The produced outputs the version that wrote the current copy `entry` names used while
+    stale, among the record's `versions`; none where it keeps no such list."""
+    kept = _writer(entry, versions).get("recorded")
+    stale = kept.get("used-stale") if isinstance(kept, Mapping) else None
+    return [str(output) for output in stale] if isinstance(stale, list) else []
+
+
 def _writer(entry: Mapping[str, Any], versions: Sequence[Mapping[str, Any]]) -> Mapping[str, Any]:
     """What the record's `versions` keep of the version that wrote the current copy `entry`
     names; nothing where none is of that number."""

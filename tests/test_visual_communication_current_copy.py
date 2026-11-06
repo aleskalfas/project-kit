@@ -332,3 +332,28 @@ def test_a_lock_no_library_folder_could_hold_is_read_as_no_lock(library: str, ve
     versions = [{"version": 1, "fingerprint": kept(library, version)}]
     with pytest.raises(fingerprint.UnreadableFingerprint, match="is no library version"):
         current_copy.written_lock(entry_of(PIECE), versions)
+
+
+# --- what the version that wrote it keeps -------------------------------------------------------
+
+
+def test_the_fingerprint_is_that_of_the_version_that_wrote_the_copy() -> None:
+    versions = [{"version": 1, "fingerprint": {"value": "a"}}, {"version": 2}]
+    assert current_copy.written_fingerprint({"version": 1}, versions) == {"value": "a"}
+
+
+@pytest.mark.parametrize(
+    ("kept", "stale"),
+    [
+        pytest.param({"recorded": {"used-stale": ["square"]}}, ["square"], id="named"),
+        pytest.param({"recorded": {"used-stale": []}}, [], id="none"),
+        pytest.param({"recorded": {}}, [], id="no-list"),
+        pytest.param({"recorded": "at noon"}, [], id="no-record"),
+        pytest.param({}, [], id="nothing-recorded"),
+    ],
+)
+def test_the_outputs_used_while_stale_are_those_of_the_version_that_wrote_the_copy(
+    kept: dict[str, Any], stale: list[str]
+) -> None:
+    versions = [{"version": 1, **kept}, {"version": 2, "recorded": {"used-stale": ["other"]}}]
+    assert current_copy.written_over_stale({"version": 1}, versions) == stale
