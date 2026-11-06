@@ -15,7 +15,7 @@ import sys
 import time
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any
 
 import pytest
 from click.testing import CliRunner
@@ -35,24 +35,18 @@ from tests.test_visual_communication_pipeline import (
     write_picture,
 )
 from tests.test_visual_communication_render import newer_tests
-from tests.visual_communication_project import importable, write, yaml_text
+from tests.visual_communication_project import importable, yaml_text
 
-check, render, export, svg, seam, framing, checks, exports, fingerprint, libraries, pl, reading = (
-    load(
-        "visual-communication",
-        "check.py",
-        "render.py",
-        "export.py",
-        "plugins.svg",
-        "plugins.seam",
-        "framing",
-        "checks",
-        "exports",
-        "fingerprint",
-        "libraries",
-        "pipeline",
-        "reading",
-    )
+check, render, export, svg, seam, framing, fingerprint, reading = load(
+    "visual-communication",
+    "check.py",
+    "render.py",
+    "export.py",
+    "plugins.svg",
+    "plugins.seam",
+    "framing",
+    "fingerprint",
+    "reading",
 )
 
 # The picture the piece declares and nobody made: the producer's check reports it once,
@@ -236,6 +230,11 @@ RECORD = f"{PIECE_FOLDER}/exports.yaml"
 LIGHT = f"{PIECE_FOLDER}/current-copy/flow.en.default.svg"
 DARK = f"{PIECE_FOLDER}/current-copy/flow.en.colour-scheme.dark.svg"
 AT_THE_RECORD = f"{RECORD}#current-copy"
+
+#: The place the piece names for its copy in some tests, and the copy's files there.
+PLACE = "docs/figures"
+PLACED_LIGHT = f"{PLACE}/flow.en.default.svg"
+PLACED_DARK = f"{PLACE}/flow.en.colour-scheme.dark.svg"
 
 #: What each finding on a current copy says of the export that mends it.
 EXPORT_AGAIN = "run `pkit visual export flow`, which makes the copy again"
@@ -475,73 +474,71 @@ def test_a_file_of_the_copy_changed_fails_naming_it_and_the_export_mends_it(
     assert owed(exported(root)) == []
 
 
-class AtAPlace(NamedTuple):
-    """A published piece whose copy lies at a place, as an export writes one there."""
-
-    held: Any
-    piece: Any
-    entry: dict[str, Any]
-    versions: list[dict[str, Any]]
-    dark: str
-    light: str
-
-    def findings(self) -> list[Any]:
-        return checks.published_findings(self.held, self.piece, self.entry, self.versions)
-
-
-def at_a_place(root: Path) -> AtAPlace:
-    """The piece, its copy moved to a place, its record's entry naming each file from the
-    root."""
-    piece = pl.read_piece(root, "visual", PIECE)
-    record = exports.recorded(piece)
-    files = {}
-    for path, digest in record["current-copy"]["files"].items():
-        place = f"docs/figures/{Path(path).name}"
-        write(root / place, "")
-        (root / PIECE_FOLDER / path).replace(root / place)
-        files[place] = digest
-    dark, light = sorted(files)
-    entry = {**record["current-copy"], "files": files}
-    return AtAPlace(libraries.Held(root, "visual"), piece, entry, record["versions"], dark, light)
-
-
-def test_a_file_at_a_place_missing_fails_naming_it_and_the_export(tmp_path: Path) -> None:
-    copy = at_a_place(published(tmp_path))
-    (copy.piece.root / copy.light).unlink()
-    assert copy.findings() == [
-        checks.Finding(
-            "current-copy-file-missing",
-            "fails",
-            "a file of the current copy of `flow` is missing",
-            file=copy.light,
-            fix=EXPORT_AGAIN,
-        )
-    ]
-
-
-def test_a_file_at_a_place_changed_fails_and_a_person_removes_it_first(tmp_path: Path) -> None:
-    copy = at_a_place(published(tmp_path))
-    (copy.piece.root / copy.dark).write_bytes(b"another figure")
-    assert copy.findings() == [
-        checks.Finding(
-            "current-copy-file-changed",
-            "fails",
-            "a file of the current copy of `flow` is not the one its export wrote",
-            file=copy.dark,
-            fix=f"remove it, then {EXPORT_AGAIN}",
-        )
-    ]
+def at_a_place(tmp_path: Path) -> Path:
+    """The piece, published and exported, its copy at the place it names."""
+    return published(tmp_path, **{"copy-place": PLACE})
 
 
 def test_a_copy_at_a_place_that_is_whole_owes_nothing(tmp_path: Path) -> None:
-    assert at_a_place(published(tmp_path)).findings() == []
+    root = at_a_place(tmp_path)
+    assert (root / PLACED_LIGHT).is_file()
+    assert not (root / LIGHT).exists()
+    assert owed(root) == []
+    assert owed(root, PIECE) == []
+    assert run(root).returncode == 0
+
+
+def test_a_file_at_a_place_missing_fails_naming_it_and_the_export_mends_it(tmp_path: Path) -> None:
+    root = at_a_place(tmp_path)
+    (root / PLACED_LIGHT).unlink()
+    [finding] = owed(root)
+    assert finding == {
+        "severity": "error",
+        "location": PLACED_LIGHT,
+        "message": f"a file of the current copy of `flow` is missing — {EXPORT_AGAIN}",
+        "label": "current-copy-file-missing",
+    }
+    assert run(root).returncode == 1
+    assert owed(exported(root)) == []
+
+
+def test_a_file_at_a_place_changed_fails_and_the_export_mends_it_once_a_person_removes_it(
+    tmp_path: Path,
+) -> None:
+    root = at_a_place(tmp_path)
+    (root / PLACED_DARK).write_bytes(b"another figure")
+    [finding] = owed(root)
+    assert finding == {
+        "severity": "error",
+        "location": PLACED_DARK,
+        "message": (
+            "a file of the current copy of `flow` is not the one its export wrote — remove it, "
+            f"then {EXPORT_AGAIN}"
+        ),
+        "label": "current-copy-file-changed",
+    }
+    refused = run_main(export, PIECE, cwd=root)
+    assert refused.returncode == 1
+    assert f"the export would write over {PLACED_DARK}" in refused.stderr
+    (root / PLACED_DARK).unlink()
+    assert owed(exported(root)) == []
+
+
+def test_each_file_is_read_at_the_path_the_record_names_not_the_place_the_piece_names(
+    tmp_path: Path,
+) -> None:
+    root = at_a_place(tmp_path)
+    set_fields(root, copy_place="docs/other")
+    assert owed(root) == []
+    (root / PLACED_LIGHT).unlink()
+    assert said(owed(root)) == [("current-copy-file-missing", "error", PLACED_LIGHT)]
 
 
 def test_a_drafts_file_at_a_place_stands_as_one_in_its_folder(tmp_path: Path) -> None:
-    copy = at_a_place(published(tmp_path))
-    (copy.piece.root / copy.light).unlink()
-    [finding] = checks.standing_findings(copy.piece, copy.entry)
-    assert (finding.code, finding.file) == ("current-copy-standing", copy.dark)
+    root = at_a_place(tmp_path)
+    set_fields(root, state="draft")
+    (root / PLACED_LIGHT).unlink()
+    assert said(owed(root)) == [("current-copy-standing", "warning", PLACED_DARK)]
 
 
 def test_a_published_piece_with_no_format_fails_and_the_fix_names_declaring_one(
