@@ -59,7 +59,7 @@ The same aggregator runs in two places, so the gate can't drift:
 
 **How CI splits a full run** ([ADR-078](tech-docs/architecture/decisions/ADR-078-ci-suite-parallel-jobs.md)). CI runs the aggregator as four parts side by side, each a job on a runner of its own, and the aggregator defines them:
 - **two slices,** `./scripts/check.sh --shard 1/2` and `--shard 2/2`. Each runs its share of the suite's parallel pass, cut where a committed table of measured test times balances the two.
-- **the quick checks,** `./scripts/check.sh --quick`: every line but the test step and the console fences. They end within a few minutes, and `land-work` starts the reviewers on them.
+- **the quick checks,** `./scripts/check.sh --quick`: every line but the test step and the console fences. They end within a few minutes, and the reviewers start on them.
 - **the remainder,** `./scripts/check.sh --rest`: the console fences, with the tests marked `serial`.
 
 A job before them decides the form and pins the base every part reads. One job named `checks`, the status `main` requires, runs last and passes only when every part said that it passed. Its summary lists each part, with how it ended and how long it took.
