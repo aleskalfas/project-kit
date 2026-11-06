@@ -511,7 +511,7 @@ A run writes in `.pkit/capabilities/visual-communication/project/local/look/<pie
 - **`images`:** each image, with its frames' file and its pixels. `on-white` is true where the page draws no ground of its own.
 - **`dropped`:** each text or run the tool drew nothing of, whatever the cause, with its element and its characters. `whole` is true for a whole text, and false for a run lost from a line. A text in the colour of what lies beneath it, or under a later element, was drawn, so it is not here.
 - **`losses`:** each [loss](#the-loss-report) the renderer reports. `accepted` is true for one the piece [accepts](#accepting-a-loss), which the report names all the same.
-- **`drawn-otherwise`:** each run measured in more than one family, with its element, its characters and the families. The tool may set its whole line in one of them, where a browser sets only the characters the first family lacks.
+- **`drawn-otherwise`:** each run measured in more than one family, with its element, its characters and the families. The tool may set the whole run on a line in one of them, where a browser sets only the characters the first family lacks.
 
 ### What refuses a run
 

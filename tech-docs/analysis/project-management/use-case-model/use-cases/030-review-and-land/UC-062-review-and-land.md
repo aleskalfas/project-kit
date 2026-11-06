@@ -18,9 +18,15 @@ shortfalls:
   - at: "1b"
     issue: "#1938"
     record: COR-004
+  - at: 8
+    issue: "#2666"
+    record: COR-066#3
   - at: 9
     issue: "#2122"
     record: COR-064#2
+  - at: 13
+    issue: "#2666"
+    record: COR-066#2
 pkit:
   friction:
     anchors:
@@ -136,7 +142,11 @@ pkit:
 5. The system works out the [required reviewers](../../../glossary.md#term-required-reviewer--required-reviewer): those the project's settings name, and each a [capability](../../../../core/glossary.md#term-capability--capability) contributes whose condition the [change](../../../../core/glossary.md#term-change--change) meets ([DEC-032 point D1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d1--the-required-local-reviewer-set-resolves-from-the-prs-closing-issues)). It prints them, with each contributed [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) the project declined and its reason ([DEC-032 point D2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d2--capabilities-contribute-reviewer-requirements-pm-collects-them-by-walking-the-manifest)).
 6. For each required reviewer whose latest [verdict](../../../glossary.md#term-verdict--verdict) still stands for the head, the system keeps the verdict. It runs the others at once, through `review-pr`, each on the change at that head ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md) and [DEC-032 point D4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d4--review-pr-invokes-the-resolved-set)).
 7. Each reviewer posts its verdict, whose first line approves the change or requests changes, and whose marker names the head and the [base](../../../../core/glossary.md#term-base--base) it reviewed. Its [findings](../../../../core/glossary.md#term-finding--finding) follow, each tagged `[block]`, `[person]` or `[advisory]` (DEC-028).
-8. The system prints each `[person]` finding whole, and marks one whose verdict no longer stands for the head ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)). Beside them, it prints each accepted [decision record](../../../../core/glossary.md#term-decision-record--decision-record) the change alters, with the points the change edits, for the merge authoriser to judge (`accepted_records.py`).
+8. The system prints each `[person]` finding whole, and marks one whose verdict no longer stands for the head ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)). Beside them, it prints each accepted [decision record](../../../../core/glossary.md#term-decision-record--decision-record) the change alters, with the points the change edits, for the merge authoriser to judge (`accepted_records.py`). It also prints what `pkit decisions check-landing` lists of what the change makes accepted ([COR-066 point 3](../../../../../../.pkit/decisions/core/COR-066-accepted-before-landing.md#3-the-person-sees-what-the-change-makes-accepted)).
+
+> [!WARNING]
+> **Not built yet:** `land-work` does not show what the change makes accepted. COR-066 point 3 decides that the merge authoriser is shown it, and #2666 tracks it.
+
 9. The system derives the answers the change wrote from the [change check](../../../../core/glossary.md#term-change-check--change-check) at the head ([DEC-065 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-065-answers-read-from-check.md#2-the-answers-are-derived-from-the-change-check)). It runs the change check on the head merged with the base as it stands, and the check passes ([DEC-055 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#6-the-merge-as-it-would-land)). It then prints what the merge authoriser is told ([DEC-065 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-065-answers-read-from-check.md#4-what-the-landing-command-prints)):
    - what changed in each updated document
    - what is left out of date
@@ -151,7 +161,11 @@ pkit:
 10. With no [authorisation](../../../glossary.md#term-authorisation--authorisation) yet, the system stops ready and exits `8`. It names the command that merges: `pkit pm land-work <N> --yes --expect-head <sha>`.
 11. The merge authoriser reads the findings and what the system printed, and authorises the merge of the pull request at that head (DEC-055 point 3).
 12. The developer runs `pkit pm land-work <N> --yes --expect-head <sha>`, and the system runs steps 2 to 9 again at that head.
-13. The system holds the pull request to the [merge gate](../../../glossary.md#term-merge-gate--merge-gate). Each required reviewer's latest verdict must be a standing approval, and each [checkbox](../../../glossary.md#term-checkbox--checkbox) of each [issue](../../../glossary.md#term-issue--issue) the pull request closes must be ticked. The pull request's checks must have passed ([DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md), DEC-028 and `done-work.py`).
+13. The system holds the pull request to the [merge gate](../../../glossary.md#term-merge-gate--merge-gate). Each required reviewer's latest verdict must be a standing approval, and each [checkbox](../../../glossary.md#term-checkbox--checkbox) of each [issue](../../../glossary.md#term-issue--issue) the pull request closes must be ticked. The pull request's checks must have passed ([DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md), DEC-028 and `done-work.py`). The system then runs `pkit decisions check-landing`, and refuses the merge while that command fails ([COR-066 point 2](../../../../../../.pkit/decisions/core/COR-066-accepted-before-landing.md#2-a-check-of-its-own-refuses-to-land-a-proposal)).
+
+> [!WARNING]
+> **Not built yet:** `land-work` does not run `pkit decisions check-landing`, and so refuses no merge on it. COR-066 point 2 decides that a [component](../../../../core/glossary.md#term-component--component) that merges runs it, and #2666 tracks it.
+
 14. The system has the [backbone](../../../../core/glossary.md#term-backbone--backbone) merge the pull request, pinned to the head the gate judged. The system then moves to Done, and closes, each issue the pull request closes, and has the branch deleted. It prints `[ok] merged + closed #<N>` ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md) and DEC-028).
 
 **Variants:**

@@ -1,0 +1,579 @@
+answers:
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T030614Z-db9a0a3b.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T134448Z-e94c9244.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261103T003147Z-452efc9b.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T005444Z-7994390f.yaml
+      - 20261103T014109Z-bd846f15.yaml
+      - 20261103T020421Z-0bcddb3a.yaml
+      - 20261103T023611Z-a9448c1a.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T164712Z-7633a915.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+    revalidated:
+      at: 2026-11-05T21:53:09Z
+      outcome: updated
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T013912Z-adb73078.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113029Z-9dec9cb8.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T145906Z-a3781d7a.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T152404Z-888b608a.yaml
+      - 20261029T155317Z-2d90650e.yaml
+      - 20261029T155559Z-74f6b0d1.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T160608Z-f0e5731a.yaml
+      - 20261029T190551Z-85ee9700.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T204639Z-57b1f9b1.yaml
+      - 20261029T204651Z-6eb49a72.yaml
+      - 20261029T212322Z-bf411b6a.yaml
+      - 20261029T213250Z-52102acd.yaml
+      - 20261029T213830Z-1305dbb8.yaml
+      - 20261029T230516Z-0e59ab68.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261031T010906Z-47833d43.yaml
+      - 20261031T013603Z-dccf51ad.yaml
+      - 20261031T014558Z-c26fa007.yaml
+      - 20261031T021353Z-44474827.yaml
+      - 20261031T185157Z-7a2bd436.yaml
+      - 20261101T232054Z-d8df47fb.yaml
+      - 20261102T144833Z-029e5110.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T114153Z-1c96ae08.yaml
+      - 20261104T114549Z-1aae0da9.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T144102Z-ac6bce95.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T090549Z-25167097.yaml
+      - 20261105T091216Z-b5483b71.yaml
+      - 20261105T100229Z-ff47f43f.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T110132Z-6e105dc4.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T144400Z-08ab3124.yaml
+    revalidated:
+      at: 2026-11-05T21:53:20Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-005-anchor-document.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:53:27Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-dead-anchor
+    read:
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+    revalidated:
+      at: 2026-11-05T21:53:41Z
+      outcome: unchanged
+      unchanged-because: The check gains a warning on a whole anchor beside anchors on its parts. A dead anchor stays out of that reading and is reported as before, so the term holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-debt
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T21:53:47Z
+      outcome: unchanged
+      unchanged-because: The new whole-and-parts finding owes no answer and is no debt kind, so what debt is and what `pkit friction debt` lists stand as the term says.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-declared-surface
+    read:
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T21:53:56Z
+      outcome: unchanged
+      unchanged-because: The change adds a finding on anchors. What declares the surface and the uncovered-surface measure are untouched.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-friction
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+    revalidated:
+      at: 2026-11-05T21:54:02Z
+      outcome: unchanged
+      unchanged-because: A whole anchor beside its parts flags nothing new and owes nothing, so friction stays what the term says it is.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-whole-repository-check
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261102T130630Z-ec50771c.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+    revalidated:
+      at: 2026-11-05T21:54:07Z
+      outcome: unchanged
+      unchanged-because: The check gains one more reported finding, read from HEAD. It still compares each artefact with its revalidation point and never fails, as the definition says.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-005-reading-writes-nothing.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T152404Z-888b608a.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+    revalidated:
+      at: 2026-11-05T21:54:14Z
+      outcome: unchanged
+      unchanged-because: test_friction_report.py only adds `parts` to an explained finding's expected keys, and the new reading writes nothing, so a reading command still writes nothing.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-019-reading-document-versioned.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T211920Z-6d6ac91d.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T164712Z-7633a915.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+    revalidated:
+      at: 2026-11-05T21:54:20Z
+      outcome: unchanged
+      unchanged-because: The documents gain one key, `parts`, and `schema_version` stays 1 under this requirement's rule. The report script reads the same version and refuses others as before.
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-018-same-json-same-state.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T211920Z-6d6ac91d.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T164712Z-7633a915.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+    revalidated:
+      at: 2026-11-05T21:54:30Z
+      outcome: unchanged
+      unchanged-because: "`parts` is read from HEAD's anchors in their written order, so the same state still gives the same document."
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-004-missing-answer-never-clean.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - moved-97da208f5979.yaml
+    revalidated:
+      at: 2026-11-05T21:54:41Z
+      outcome: unchanged
+      unchanged-because: The added tests read a resolver's answer as a part. An anchor whose resolver gave no answer stays out of that reading, and its artefact stays unresolved.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-006-command-time-bound.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - moved-4695bf771ed9.yaml
+    revalidated:
+      at: 2026-11-05T21:54:47Z
+      outcome: unchanged
+      unchanged-because: The new reading uses the answers the run already holds and starts no resolver of its own, so the time bound stands.
+  - artefact: tech-docs/analysis/core/requirements/constraints/REQ-007-offline-same-answer.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261030T101221Z-1eafbd45.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - moved-c65929ef6b08.yaml
+    revalidated:
+      at: 2026-11-05T21:54:56Z
+      outcome: unchanged
+      unchanged-because: The new reading asks a resolver nothing new and reads HEAD alone, so a run offline gives the same answer.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-020-dead-anchor-error.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T211920Z-6d6ac91d.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T164712Z-7633a915.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115109Z-58e99185.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:55:01Z
+      outcome: unchanged
+      unchanged-because: A dead anchor stays out of the new reading and is reported as an error as before. The test's expected finding only gains the `parts` key.
+  - artefact: .pkit/schemas/backbone-files.md
+    read:
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T110104Z-48d747c9.yaml
+    revalidated:
+      at: 2026-11-05T21:55:06Z
+      outcome: unchanged
+      unchanged-because: The CLI reference's friction sections gain a finding kind and a key. This page's summary of the check lists no kinds this makes untrue, and the block's schema is untouched.
+  - artefact: .pkit/capabilities/living-docs/agent.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T21:55:12Z
+      outcome: unchanged
+      unchanged-because: The agent reads `explain` for a page's stale anchors and each document's `schema_version`, which stays 1. A reported kind that owes nothing asks nothing of it.
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T214030Z-7cd17739.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T120747Z-7de02ad2.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T144053Z-34ba002b.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T21:55:19Z
+      outcome: unchanged
+      unchanged-because: The doc check reads each page's state and its stale findings. A whole-and-parts finding leaves the state alone, so what this page says holds.
+  - artefact: docs/capabilities/living-docs/050-fix-a-stale-page.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T21:55:28Z
+      outcome: unchanged
+      unchanged-because: The guide's `explain` output and answers for a stale page stand as written. The new finding owes nothing, and shows only on a whole anchor beside its parts.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-operator.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261031T002700Z-a5e97adf.yaml
+      - 20261031T010906Z-47833d43.yaml
+      - 20261031T013603Z-dccf51ad.yaml
+      - 20261104T114549Z-1aae0da9.yaml
+      - 20261104T170342Z-a3aeb099.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+    revalidated:
+      at: 2026-11-05T21:55:38Z
+      outcome: unchanged
+      unchanged-because: The section this anchors gains a fifth kind that holds no tracking issue open. What the operator does there is as the actor says.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-05T21:55:47Z
+      outcome: unchanged
+      unchanged-because: A whole-and-parts finding is no debt and owes no answer, so the debt the developer lists and resolves stands as the use case says.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T031906Z-416856cf.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T115331Z-ebf86220.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261031T022026Z-006436af.yaml
+      - 20261101T123506Z-dc6ee532.yaml
+      - 20261102T131056Z-68c92027.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T141900Z-6c2cc6b8.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T164837Z-85c02b0e.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T125441Z-87b370f0.yaml
+    revalidated:
+      at: 2026-11-05T21:55:56Z
+      outcome: unchanged
+      unchanged-because: The journey's steps rest on what a change owes and on debt, and the new finding is neither.
+  - artefact: tech-docs/coding-conventions.md
+    read:
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T110132Z-6e105dc4.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T144400Z-08ab3124.yaml
+    revalidated:
+      at: 2026-11-05T21:56:08Z
+      outcome: unchanged
+      unchanged-because: It points to the section on running the checks. That section's added kind changes no way of running them.
+  - artefact: docs/capabilities/living-docs/README.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T001505Z-b29ae89b.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T153330Z-09619aee.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+    revalidated:
+      at: 2026-11-05T21:56:17Z
+      outcome: unchanged
+      unchanged-because: "`explain` gains only a key and a finding that owes nothing, so the comparison row on what it names for a stale page holds."

@@ -1,9 +1,13 @@
-"""Tests for how demo-recording's `record.sh` reads a recording configuration (#2707).
+"""Tests for how demo-recording's `record.sh` reads a recording configuration (#2707, #2709).
 
 A key the configuration lacks reads as empty, under the script's
 `set -euo pipefail`. So `recordings_dir` falls back to `./recordings`, the font
 keys to their defaults, and a missing `cwd` or window's bounds stops the script
 with its message, never with no message at all.
+
+A key it has reads as YAML reads it: a comment after a scalar or a window's
+bounds is not part of the value, and neither are a scalar's quotes. A `#` inside
+the quotes stays, and so does one with no space before it.
 
 The script runs for real, from a copy of the capability's scripts, and no test
 opens a window. The copy's `setup-windows.sh` only notes how it was called, and
@@ -18,13 +22,18 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+from ruamel.yaml import YAML
 
 REPO = Path(__file__).resolve().parents[1]
-SCRIPTS = REPO / ".pkit" / "capabilities" / "demo-recording" / "scripts"
+CAPABILITY = REPO / ".pkit" / "capabilities" / "demo-recording"
+SCRIPTS = CAPABILITY / "scripts"
+SCHEMA = CAPABILITY / "schemas" / "record-config.yaml"
+NEW_BUNDLE = CAPABILITY / "skills" / "demo-recording" / "new-bundle.md"
 
 MISSING_FIELDS = (
     "record.sh: config missing required fields (cwd / windows.recording / windows.control)"
@@ -34,6 +43,7 @@ CWD = "cwd: /the/demo/drives\n"
 RECORDING_BOUNDS = "  recording: [50, 50, 1330, 850]\n"
 CONTROL_BOUNDS = "  control: [50, 880, 750, 1150]\n"
 CONFIGURATION = f"{CWD}windows:\n{RECORDING_BOUNDS}{CONTROL_BOUNDS}"
+COMMENT = "   # iTerm bounds: [left, top, right, bottom]"
 
 NOTE_WINDOW_CALL = 'printf "%s\\n" "$DCR_CWD" "$DCR_FONT_SIZE" "$DCR_FONT_NAME" "$1" "$2"'
 
@@ -50,6 +60,21 @@ ls
 def _stub(path: Path, body: str) -> None:
     path.write_text(f"#!/bin/sh\n{body}\n", encoding="utf-8")
     path.chmod(0o755)
+
+
+def _with_cwd(written: str) -> str:
+    """The whole configuration, with `written` after its `cwd:`."""
+    return CONFIGURATION.replace(CWD, f"cwd: {written}\n")
+
+
+def _schema_example() -> str:
+    return SCHEMA.read_text(encoding="utf-8")
+
+
+def _new_bundle_template() -> str:
+    fence = re.search(r"```yaml\n(.*?)```", NEW_BUNDLE.read_text(encoding="utf-8"), re.DOTALL)
+    assert fence is not None
+    return fence.group(1)
 
 
 @dataclass
@@ -177,3 +202,112 @@ class TestWindowsAction:
         result = engine.run(CONFIGURATION, "windows")
         assert result.returncode == 0, result.stderr
         assert engine.window_call()[0] == "/the/demo/drives"
+
+
+class TestTrailingComments:
+    def test_a_comment_after_a_scalar_is_not_part_of_it(self, engine: Engine) -> None:
+        result = engine.record(
+            f"{_with_cwd(f'/the/demo/drives{COMMENT}')}"
+            f"font_size: 14{COMMENT}\nfont_name: Monaco{COMMENT}\n"
+        )
+        assert result.returncode == 0, result.stderr
+        assert engine.window_call()[:3] == ["/the/demo/drives", "14", "Monaco"]
+
+    def test_a_comment_after_recordings_dir_is_not_part_of_the_folder(self, engine: Engine) -> None:
+        result = engine.record(f"{CONFIGURATION}recordings_dir: ./takes{COMMENT}\n")
+        assert result.returncode == 0, result.stderr
+        assert engine.video_folder() == engine.bundle / "takes"
+
+    def test_a_key_with_only_a_comment_falls_back_to_its_default(self, engine: Engine) -> None:
+        result = engine.record(f"{CONFIGURATION}recordings_dir:{COMMENT}\n")
+        assert result.returncode == 0, result.stderr
+        assert engine.video_folder() == engine.bundle / "recordings"
+
+    def test_a_required_key_with_only_a_comment_stops_with_the_message(
+        self, engine: Engine
+    ) -> None:
+        result = engine.record(CONFIGURATION.replace(CWD, f"cwd:{COMMENT}\n"))
+        assert result.returncode == 2
+        assert MISSING_FIELDS in result.stderr
+
+    @pytest.mark.parametrize(
+        ("written", "read"),
+        [
+            ("/the/demo#1", "/the/demo#1"),
+            (f"/the/demo#1{COMMENT}", "/the/demo#1"),
+            ('/the/"demo # a comment', '/the/"demo'),
+        ],
+        ids=["no space before it", "and a comment after it", "a quote inside a plain value"],
+    )
+    def test_a_plain_value_ends_at_a_hash_with_a_space_before_it(
+        self, engine: Engine, written: str, read: str
+    ) -> None:
+        result = engine.record(_with_cwd(written))
+        assert result.returncode == 0, result.stderr
+        assert engine.window_call()[0] == read
+
+    @pytest.mark.parametrize(
+        ("written", "read"),
+        [
+            ('"/the/demo #1"', "/the/demo #1"),
+            ("'/the/demo #1'", "/the/demo #1"),
+            ('"/the/demo #1"   # the "demo" folder', "/the/demo #1"),
+            ("'/the/demo #1'   # the 'demo' folder", "/the/demo #1"),
+            ('"/the/\\" demo #1"', '/the/\\" demo #1'),
+            ("'/the/'' demo #1'", "/the/'' demo #1"),
+        ],
+        ids=[
+            "double",
+            "single",
+            "double with a comment",
+            "single with a comment",
+            "double with an escaped quote",
+            "single with an escaped quote",
+        ],
+    )
+    def test_a_quoted_value_ends_at_its_closing_quote(
+        self, engine: Engine, written: str, read: str
+    ) -> None:
+        result = engine.record(_with_cwd(written))
+        assert result.returncode == 0, result.stderr
+        assert engine.window_call()[0] == read
+
+    def test_a_comment_after_a_windows_bounds_is_not_part_of_them(self, engine: Engine) -> None:
+        result = engine.record(
+            f"{CWD}windows:{COMMENT}\n"
+            f"  recording: [50, 50, 1330, 850]{COMMENT}\n"
+            f"  control: [50, 880, 750, 1150]{COMMENT} and more\n"
+        )
+        assert result.returncode == 0, result.stderr
+        assert engine.window_call()[3:] == ["50,50,1330,850", "50,880,750,1150"]
+        assert "--rect 50,50,1280,800 " in engine.dispatched.read_text(encoding="utf-8")
+
+    def test_the_windows_action_reads_them_the_same_way(self, engine: Engine) -> None:
+        result = engine.run(
+            f"cwd: /the/demo/drives{COMMENT}\nwindows:\n"
+            f"  recording: [50, 50, 1330, 850]{COMMENT}\n{CONTROL_BOUNDS}",
+            "windows",
+        )
+        assert result.returncode == 0, result.stderr
+        call = engine.window_call()
+        assert call[0] == "/the/demo/drives"
+        assert call[3] == "50,50,1330,850"
+
+    @pytest.mark.parametrize(
+        "example", [_schema_example, _new_bundle_template], ids=["schema", "new-bundle"]
+    )
+    def test_a_shipped_example_runs_with_the_values_yaml_reads_from_it(
+        self, engine: Engine, example: Callable[[], str]
+    ) -> None:
+        written = example()
+        result = engine.record(written)
+        assert result.returncode == 0, result.stderr
+        values = YAML(typ="safe").load(written)
+        assert engine.window_call() == [
+            values["cwd"],
+            str(values["font_size"]),
+            values["font_name"],
+            ",".join(str(edge) for edge in values["windows"]["recording"]),
+            ",".join(str(edge) for edge in values["windows"]["control"]),
+        ]
+        assert engine.video_folder() == engine.bundle / values["recordings_dir"]

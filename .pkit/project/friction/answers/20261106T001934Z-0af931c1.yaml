@@ -1,0 +1,337 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T234348Z-1f64d843.yaml
+    revalidated:
+      at: 2026-11-06T00:19:34Z
+      outcome: unchanged
+      unchanged-because: "Judged with the three answers it replaces and the merge that brought them together. 20261105T215849Z-25d2581b found that review-work's audit comment comes only on a `--force` the journey does not take, and that `--force` is no bypass of the merge gate. 20261105T220122Z-9823200c found that UC-062's variant 4d and its sentence on variant 7a state no order of checks and review the journey relies on. 20261105T234348Z-1f64d843 found that the journey reads neither of this change's additions to UC-062: the list at step 8 and the run of `pkit decisions check-landing` at step 13. The merge puts those in one UC-062 with main's step 9, which derives the answers, and with variant 8b, which takes step 8 before the wait of 4d. None of it moves what the journey names. The hand-off by the Task in Review and the closing keyword stand, and variant 2a still rejoins on a verdict that requests changes. A refusal at step 13 merges nothing, so the postcondition's head is still the one the gate judged, and the guarantee on a bypass stands."
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T181511Z-6cf22051.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224140Z-08730f0d.yaml
+    revalidated:
+      at: 2026-11-06T00:19:38Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers it replaces. 20261105T224140Z-08730f0d found that json code gets the findings css code gets, and that a refused prefix reaches the check as code-unchecked. 20261105T221812Z-ca40c14b found that the CLI reference's `validate` section only gains a bullet saying the landing check is no validator. The two meet at no passage: the writer's findings and input sets are this page's own, and the bullet stands in the section this page cites for what fails `pkit validate`. That bullet leaves the rule as it was, so the page's findings, its severities and its line that only an `error` fails `pkit validate` hold against both changes."
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T212314Z-4c67bf0c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+    revalidated:
+      at: 2026-11-06T00:19:43Z
+      outcome: unchanged
+      unchanged-because: "Judged with the four answers it replaces, each made apart from the others. 20261105T223507Z-f2a91f5d found that the manual's new sentences on a top bar change no summary here, since the page only names card as a block of the starter. 20261105T224140Z-08730f0d updated the page for the json code writer, its fourth plugin. 20261105T224232Z-29552d89 found that the reworded sentence under `drawn-otherwise` moves nothing the `pkit visual look` section says. 20261105T221812Z-ca40c14b found that the CLI reference's `validate` section only gains a bullet saying the landing check is no validator. They reach four different passages: the starter's line, the plugins' line, the look section and what the page says of `pkit validate`. The json writer adds no block and no flag of `look`, and neither of those changes what a plugin writes. The bullet leaves the check's place as a member of `pkit validate` as it was, so all four hold together."
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T00:19:46Z
+      outcome: unchanged
+      unchanged-because: Judged with the two answers it replaces and this change's last edit of `init`. 20261105T115925Z-6c703c63 found that `show-pr` gaining its answers field leaves this document, which names `show-pr` only as the verb an agent's read is routed to. 20261105T221812Z-ca40c14b found that the surface table only gains the landing check's row and `init` only gains `--refuse-proposals`. Since that answer, the flag's bullet has only lost its citation of ADR-081. Together they add a view that changes no branch, a read-only check, and a flag that writes one configuration key. None is a verb this document denies, routes or grants. So what it says of the `project-manager` agent's reads, and of the folder `init` creates, stands against both.
+  - artefact: .pkit/capabilities/doc-examples/README.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T144400Z-08ab3124.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T00:22:35Z
+      outcome: unchanged
+      unchanged-because: Judged with the three answers it replaces. 20261104T204935Z-0fa72585 found that COR-050 point 7 adds only a warning of over-broad anchors, and that a page's anchors still flag it only when what they name changes. 20261105T144400Z-08ab3124 found that run-examples.py lists the same files with the same fields, so 'The guards, and what the run confines' stands. 20261105T221812Z-ca40c14b found that the CLI reference's `validate` section only gains a bullet saying the landing check is no validator. One moves a warning, one how the program builds a list, and one the reference this page anchors for `pkit validate`, and none reaches what another moved. So the contract on a page's anchors stands, `pkit doc-examples validate` stays a member of `pkit validate`, and the guards and every other section hold against all three.
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T144400Z-08ab3124.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T00:22:38Z
+      outcome: unchanged
+      unchanged-because: Judged with the four answers it replaces, each made apart from the others. 20261105T100241Z-2ce909e8 updated the tracking issue's list, adding an over-broad anchor to the kinds of finding that do not hold it open. 20261105T115925Z-6c703c63 updated the friction gate's paragraph, so that no command writes a list of the answers into the description and each reader takes them from the change check. 20261105T144400Z-08ab3124 found that the new step on the table of test times leaves 'Running checks' as it was. 20261105T221812Z-ca40c14b found that the decisions README only adds the landing check's section and narrows its `Not enforced yet` bullet, and the rewording of that section since adds no claim this page reads. The four reach different passages, and none contradicts another. This page names no landing check and lists it as no line of the aggregator, which the decisions README says it never is. Its step that a record opens as `proposed` and reaches the default branch accepted stands too, so all four hold together.
+  - artefact: .pkit/capabilities/living-docs/agent.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T00:22:42Z
+      outcome: unchanged
+      unchanged-because: Judged with the three answers it replaces. 20261104T204935Z-0fa72585 found that COR-050 point 7 and the CLI sections the agent reads change only the over-broad warning and what an excluded artefact shows, and that the documents it reads gain `bar` and `share` and keep version 1. 20261105T115925Z-6c703c63 found that DEC-056 changes only two citations, so the agent still only proposes friction fixes in a run the project granted. 20261105T221812Z-ca40c14b found that the CLI reference's `validate` section only gains a bullet saying the landing check is no validator. A warning's two keys, a citation in a record and a bullet in the reference share nothing, and neither later change moves those documents' version. What the agent is told of a fixer run, how it reads those documents, and what it leaves to `pkit validate` rather than judging again, hold against all three.
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T00:22:46Z
+      outcome: unchanged
+      unchanged-because: Judged with the three answers it replaces. 20261104T204935Z-0fa72585 found that the documents gain `bar` and `share` and keep version 1, and that the documentation check reads its stale pages and surface as before. 20261105T115925Z-6c703c63 found that DEC-053 point 2 changes only where a page's answers are read, and DEC-056 only two citations, so a page's answer in the diff still meets its obligation. 20261105T221812Z-ca40c14b found that the CLI reference's `validate` section only gains a bullet saying the landing check is no validator. The landing check reads no answer and raises no obligation, and neither other change moves what the documentation check reads. So the doc-check and fixers contributions this page describes hold against all three.
+  - artefact: README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T00:19:57Z
+      outcome: unchanged
+      unchanged-because: Judged with the two answers it replaces and this change's last edit of `init`. 20261105T160121Z-275b654a found that resvg-py joins the dev dependency group alone, so how pkit is installed stands, and that agents still build only on accepted decisions. 20261105T221812Z-ca40c14b found that cli.py, install.py, decisions.py and default_branch.py only gain the landing check, its opt-in flag and what they read for it, that an install without the flag runs as before, and that the acceptance gate only narrows its `Not enforced yet` bullet. Since that answer, the flag's bullet has only lost its citation of ADR-081. One change moves a dev dependency and the other the command surface, so neither reaches the other. The prerequisites stay `uv` and `jq`, and what the page says of `pkit init` and of accepted decisions holds against both.
+  - artefact: .pkit/decisions/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T00:20:00Z
+      outcome: updated
+  - artefact: docs/decisions/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T00:20:01Z
+      outcome: updated
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224232Z-29552d89.yaml
+    revalidated:
+      at: 2026-11-06T00:20:03Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-005-anchor-document.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T00:22:50Z
+      outcome: unchanged
+      unchanged-because: "Judged with the three answers it replaces. 20261104T172329Z-94c162f9 updated variant 5a, which now says an anchor asks the document for an answer too often, alone or with its other anchors. 20261105T132805Z-5c89a281 found that the same anchors are read from the same front matter into the same values, and that REQ-020's measure names the friction mode and the query command by their terms. 20261105T221812Z-ca40c14b found that friction_discovery.py only gains `read_mapping_at`, a public name for a reading it already had. The three hold together: the warning of 5a counts what the anchors declare, those anchors read as they did, and the new name reads no anchor. A dead anchor is still an error, and declaring what a document rests on works as the steps and variants say."
+  - artefact: tech-docs/analysis/core/domain-model/070-artefacts-and-friction.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T00:22:56Z
+      outcome: unchanged
+      unchanged-because: "Judged with the three answers it replaces. 20261104T204935Z-0fa72585 found that COR-050 point 7 adds only a warning, never failed, which the view does not name. 20261105T125441Z-87b370f0 updated what the view says of package metadata, of a process's `depends-on` connections and of a loaded file. 20261105T221812Z-ca40c14b found that ADR-057 point 2 only gains the landing check's homes and two caller sentences. They reach different concepts, and none moves another: the warning, what a component declares, and where the engines' computations live. The landing check adds no artefact type, place or kind of anchor, and what the view says of a command a capability supplies rests on ADR-057 point 3, which is untouched. So each concept the view explains holds against all three."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T00:23:01Z
+      outcome: unchanged
+      unchanged-because: "Judged with the three answers it replaces. 20261105T100241Z-2ce909e8 found that the over-broad warning leaves the change check a delivered change answers untouched, and that a record is still accepted before the change builds on it. 20261105T125441Z-87b370f0 found that UC-037's and UC-040's variants have a new record's edits made once it is accepted in its change, and that UC-049's step 13 only names a capability's loaded file by its term. 20261105T221812Z-ca40c14b found that UC-034, UC-040, UC-049 and UC-006 only gain the landing check's run and list, the install's opt-in flag and the host check. Together they keep the order the journey asks for: a record is accepted in its change, and the landing check then reports one that would land proposed. That check judges what lands, not what a change builds on, so the step's sentence that no check of the backbone fails a change for what it builds on stands. The steps, their hand-offs and the postconditions hold against all three."

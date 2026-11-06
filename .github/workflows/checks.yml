@@ -8,12 +8,15 @@ name: checks
 # The whole-repository friction report, which gates nothing, is its own
 # workflow: friction-report.yml.
 #
-# A full run runs the aggregator as three parts side by side, each a job of its
+# A full run runs the aggregator as four parts side by side, each a job of its
 # own (ADR-078): two slices of the suite's parallel pass, `check.sh --shard 1/2`
-# and `--shard 2/2`, cut where the committed times balance them, and the
-# remainder, `check.sh --rest`: every other line, with the tests marked
-# `serial`. The aggregator defines the parts, so the hook's whole run is their
-# union. A job before them decides the form and pins the base, and nothing
+# and `--shard 2/2`, cut where the committed times balance them, the quick
+# checks, `check.sh --quick`: every line but the test step and the console
+# fences, and the remainder, `check.sh --rest`: the console fences, with the
+# tests marked `serial`. The aggregator defines the parts, so the hook's whole
+# run is their union. The reviewers start on the quick checks, which end within
+# a few minutes (`review.agents.start_after_checks`). A job before the parts
+# decides the form and pins the base, and nothing
 # else. One job named `checks`, the status `main` requires, runs last, whatever
 # became of the others, and passes only when every part its form requires
 # said that it passed. Each part names its own failures in its job's summary,
@@ -21,8 +24,9 @@ name: checks
 #
 # On a pull request whose only changes since its most recent full run, which
 # passed, are answers, the remainder's job runs the short check instead: the
-# aggregator without its test suite, and no slice starts (ADR-067). Every other
-# run, and every doubt, is full.
+# aggregator without its test suite, and no slice starts (ADR-067). The quick
+# checks run beside it, so a review starts as soon in that form, and their lines
+# run twice. Every other run, and every doubt, is full.
 
 on:
   pull_request:
@@ -152,24 +156,23 @@ jobs:
             echo form=full >> "$GITHUB_OUTPUT"
           fi
 
-  # The remainder: in the full form, every line of the aggregator but the suite's
-  # parallel pass, with the tests marked `serial` (`check.sh --rest`), beside the
-  # slices; in the short form, the short check (`check.sh --short`). And on a
-  # pull request, in both forms, the changeset guard. Each step that runs the
+  # The quick checks, in both forms: every line of the aggregator but the test
+  # step and the console fences (`check.sh --quick`), and on a pull request the
+  # changeset guard. They end within a few minutes, and the reviewers start on
+  # this job, by the name project-management's configuration holds, so a review
+  # starts on no head these lines or the guard fail. The step that runs the
   # aggregator times it, names its failures in the job's summary and says that
   # it passed, last (`scripts/ci_parts.py`).
-  rest:
-    name: the remainder
+  quick:
+    name: the quick checks
     needs: decide
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
     outputs:
-      # Exactly one of the two steps runs. Were both to run, their two
-      # attestations side by side would match neither form, and `checks` fails.
-      passed: ${{ steps.rest.outputs.passed }}${{ steps.short.outputs.passed }}
-      seconds: ${{ steps.rest.outputs.seconds || steps.short.outputs.seconds }}
+      passed: ${{ steps.quick.outputs.passed }}
+      seconds: ${{ steps.quick.outputs.seconds }}
       guard: ${{ steps.guard.outputs.passed }}
     steps:
       - name: Checkout (full history so the migration-diff base ref resolves)
@@ -198,9 +201,8 @@ jobs:
         id: sync
         run: uv run pkit sync
 
-      - name: Run the remainder of the aggregator
-        id: rest
-        if: github.event_name != 'pull_request' || needs.decide.outputs.form != 'short'
+      - name: Run the quick checks of the aggregator
+        id: quick
         env:
           # The base the deciding job pinned, which the diff-scoped checks read.
           PKIT_CHECK_BASE: ${{ needs.decide.outputs.base }}
@@ -209,17 +211,7 @@ jobs:
           # tree it was written in (ADR-068 point 6). Empty on a merge queue and
           # on a push, which the check reads as unset: HEAD.
           PKIT_CHECK_HEAD: ${{ github.event.pull_request.head.sha }}
-        run: python scripts/ci_parts.py run --rest
-
-      # Every line of the aggregator but the test suite, of which it runs only
-      # the tests marked `answers` (ADR-067).
-      - name: Run the aggregator's short check
-        id: short
-        if: github.event_name == 'pull_request' && needs.decide.outputs.form == 'short'
-        env:
-          PKIT_CHECK_BASE: ${{ needs.decide.outputs.base }}
-          PKIT_CHECK_HEAD: ${{ github.event.pull_request.head.sha }}
-        run: python scripts/ci_parts.py run --short
+        run: python scripts/ci_parts.py run --quick
 
       # Changeset guard (PRJ-002). PR-scoped: it needs the PR base ref and the
       # PR labels (the `skip-changeset` escape hatch), neither of which a local
@@ -255,6 +247,62 @@ jobs:
         run: |
           uv run pkit release check --base "$PKIT_CHECK_BASE"
           echo "passed=changeset guard" >> "$GITHUB_OUTPUT"
+
+  # The remainder: in the full form, the console fences, with the tests marked
+  # `serial` (`check.sh --rest`), beside the slices; in the short form, the short
+  # check (`check.sh --short`). Each step that runs the aggregator times it,
+  # names its failures in the job's summary and says that it passed, last
+  # (`scripts/ci_parts.py`).
+  rest:
+    name: the remainder
+    needs: decide
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      # Exactly one of the two steps runs. Were both to run, their two
+      # attestations side by side would match neither form, and `checks` fails.
+      passed: ${{ steps.rest.outputs.passed }}${{ steps.short.outputs.passed }}
+      seconds: ${{ steps.rest.outputs.seconds || steps.short.outputs.seconds }}
+    steps:
+      - name: Checkout (full history, as the whole run has it)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install project (clean resolve)
+        run: uv sync
+
+      - name: Sync (provisions the query commands)
+        run: uv run pkit sync
+
+      - name: Run the remainder of the aggregator
+        id: rest
+        if: github.event_name != 'pull_request' || needs.decide.outputs.form != 'short'
+        env:
+          PKIT_CHECK_BASE: ${{ needs.decide.outputs.base }}
+          PKIT_CHECK_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/ci_parts.py run --rest
+
+      # Every line of the aggregator but the test suite, of which it runs only
+      # the tests marked `answers` (ADR-067).
+      - name: Run the aggregator's short check
+        id: short
+        if: github.event_name == 'pull_request' && needs.decide.outputs.form == 'short'
+        env:
+          PKIT_CHECK_BASE: ${{ needs.decide.outputs.base }}
+          PKIT_CHECK_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/ci_parts.py run --short
 
   # The slices: each runs its share of the suite's parallel pass, and nothing
   # else, only in the full form (ADR-078 points 1 and 5). Each reports its cut —
@@ -381,7 +429,7 @@ jobs:
   # every case but a pull request's short form, a deciding job that named no
   # form included, and fails there, since the parts it requires never started.
   checks:
-    needs: [decide, rest, slice-1, slice-2]
+    needs: [decide, quick, rest, slice-1, slice-2]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

@@ -1,0 +1,12 @@
+component: demo-recording
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit demo-recording record` now reads a value of `record.yaml` as YAML reads
+  it (#2709). A comment after `cwd`, `recordings_dir`, a font key or a window's
+  bounds is no longer part of the value. So a file written as the schema's
+  example and the `new-bundle` operation show it runs with the values it means.
+  A `#` inside a quoted value stays, and so does one with no space before it.
+  The quotes around `cwd`, `recordings_dir` or a font key are no longer part of
+  its value either.
