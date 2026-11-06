@@ -1,7 +1,7 @@
 ---
 id: DEC-019
 title: A lock's proposed move is the diff one run leaves, and pruning removes only what lies behind
-status: proposed
+status: accepted
 date: 2026-11-06
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
