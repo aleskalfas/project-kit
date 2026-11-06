@@ -120,6 +120,7 @@ Each command below is the writer of what it names (DEC-002 point 9).
 - **An export:** the current copy, in its folder or at the place the piece names.
   - A place lies inside the repository where version control keeps it, outside the location and the methodology's own folder. A path through a link refuses.
   - It writes over only a file of that piece's current copy (point 7), with the hash the record keeps. Any other file at a path it writes refuses the run. The run names it, and a person names another place, or removes a file they mean to replace.
+- **The command that proposes a move of the lock** writes the current copy too, under the same rules (refinement per [visual-communication:DEC-019-lock-moves-and-pruning]).
 
 ## Rationale
 
@@ -232,7 +233,7 @@ Each command below is the writer of what it names (DEC-002 point 9).
 - **The change that judges a final piece** carries out point 4, point 6's findings on a version handed out, and point 3's refusals. It sorts the lock's findings by DEC-002 point 7. Its refusals land before marking final does, or with it.
 - **The change that copies a final piece** carries out point 8's second bullet. It names the command.
 - **The changes that write and hold a current copy** carry out point 5's gate, point 7's first four bullets and point 8's third bullet. They also carry out point 6's findings on a published piece. The record of a copy's form, [project-kit#2700](https://github.com/aleskalfas/project-kit/issues/2700), is to say what the hash is taken of.
-- **A proposed move of a lock** must leave no difference at point 5's gate. The plainest way carries the new copy and its version in the change itself. Until its command exists a published lock cannot move, which fails closed.
-- **[project-kit#2701](https://github.com/aleskalfas/project-kit/issues/2701)'s record** decides what a proposal carries, and names its command a writer of the copy. It also decides a move of a piece none of whose copy's files stand, which has only an after to show.
-- **What removing a library version no lock names spares** is #2701's question too (DEC-003 point 4). A library version only a kept fingerprint names is no lock's. So marking final an export made under it leaves a finding until it is back. A before-and-after at point 5's gate may need it too.
+- **[visual-communication:DEC-019-lock-moves-and-pruning]** decides what a proposal carries, which leaves no difference at point 5's gate. Until its command exists a published lock cannot move, which fails closed.
+- **[visual-communication:DEC-019-lock-moves-and-pruning]** names that command a writer of the copy, and decides a move of a piece none of whose copy's files stand.
+- **What removing a library version no lock names spares.** That is decided by [visual-communication:DEC-019-lock-moves-and-pruning] point 9. A library version named only by kept fingerprints, other than that of the version that wrote a current copy, is no lock's, so marking final an export made under it leaves a finding until it is back.
 - **A check that follows a page's image path** is living-docs' to weigh, and nothing here waits for it.
