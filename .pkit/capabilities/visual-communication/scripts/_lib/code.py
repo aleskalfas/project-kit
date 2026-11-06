@@ -4,7 +4,8 @@
 - **The declaration** is `code/<name>.yaml` in the location (format `code`): the code
   writer, the form of its spelling, the brand, a lock of the brand and what it builds on,
   where the code goes (`out`), and optionally a `prefix` and the losses a person
-  accepted. Its name is the file's name.
+  accepted. Its name is the file's name. A writer whose declaration says `prefix: False`
+  keeps each token path as the brand exports it, and a declaration naming one is refused.
 - **Where the code goes.** `out` is a file of the project's tree. It is refused outside
   the repository, under `.pkit/`, under a hidden folder, reached through a link, as a
   folder, in the location's library folder, whose copies only the command that brings a
@@ -287,6 +288,11 @@ def plan(
         raise CodeRefused(
             f"{declaration.file}: the {writer['name']} writer {writer['version']} writes "
             f"form {forms}, not form {declaration.form}"
+        )
+    if declaration.prefix is not None and not writer.get("prefix", True):
+        raise CodeRefused(
+            f"{declaration.file}: the {writer['name']} writer takes no `prefix`, since a token "
+            f"path stays as the brand exports it: remove `prefix: {declaration.prefix}`"
         )
     brand = _brand(root, location, declaration, held)
     axes = {

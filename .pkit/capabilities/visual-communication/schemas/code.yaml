@@ -1,6 +1,8 @@
 # A declaration of written code, `code/<name>.yaml` in the location
 # (visual-communication DEC-002 point 1, DEC-005 point 7): the code writer, the version
-# of its spelling, the brand and its lock, and where the code goes.
+# of its spelling, the brand and its lock, and where the code goes. The writer is `css`
+# or `json`. Only `css` takes a `prefix`: a token path stays as the brand exports it in
+# the `json` writer's document.
 #
 # The body below is the reference instance.
 
