@@ -628,7 +628,7 @@ The change check's report of an outdated base names no merge, since the merge ch
 
 A project with writers it does not trust this far confines the run where it runs it (COR-050 point 2). A container holding a token for that one repository is such a place.
 
-**What these commands print** ([project-management:DEC-067-heads-that-start-programs] point 7). `land-work`, `review-work`, `review-pr`, `show-pr`, `open-pr`, `done-work`, `merge-pr` and the documentation check print each control character, bidirectional override and zero-width character as its escape. So a head cannot rewrite what you read. Lines keep their ends, and `--json` output keeps its bytes.
+**What these commands print** ([project-management:DEC-067-heads-that-start-programs] point 7). `land-work`, `review-work`, `review-pr`, `show-pr`, `open-pr`, `done-work`, `merge-pr` and the documentation check print each control character, bidirectional override and zero-width character as its escape. So do `move-issue` and `close-issue`, which `review-work` and `done-work` run. So a head cannot rewrite what you read there. Lines keep their ends, and `--json` output keeps its bytes. The other commands' output waits for a sweep ([project-kit#2718](https://github.com/aleskalfas/project-kit/issues/2718)), so they print such text as it came.
 
 #### The answers a change wrote, in its pull request ([project-management:DEC-055-pr-lists-answers])
 

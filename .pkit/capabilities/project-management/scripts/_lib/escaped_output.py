@@ -7,6 +7,8 @@ follows. So each command [project-management:DEC-067-heads-that-start-programs]
 names, and the documentation check, prints through `escaping`: every line it writes
 to standard output or standard error passes through `friction_answers.shown`, as the
 change check's human-readable report does, so no print of such a text can be missed.
+`move-issue` and `close-issue` do too. `review-work` and `done-work` run them as
+children, which write to the terminal past their parent's streams.
 
 - A line end stays a line end, so a finding printed whole keeps its lines. A carriage
   return alone moves the cursor, so it is escaped, and one before a newline is kept,
@@ -17,6 +19,8 @@ change check's human-readable report does, so no print of such a text can be mis
   as an escape of its own, so its text has nothing to escape here.
 - `input` writes its prompt through the stream, since the stream names no file
   descriptor for it to take the prompt past.
+- An exception no command caught can quote such a text too, and Python reports it only
+  after the streams are restored, so `_report` takes that report over.
 """
 
 from __future__ import annotations
@@ -25,8 +29,10 @@ import functools
 import io
 import re
 import sys
+import traceback
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
+from types import TracebackType
 from typing import Any, ParamSpec, TextIO, TypeVar
 
 from _lib.friction_answers import shown
@@ -82,12 +88,21 @@ def _escaped() -> Iterator[None]:
         sys.stdout, sys.stderr = before
 
 
+def _report(kind: type[BaseException], value: BaseException, trace: TracebackType | None) -> None:
+    """Python's report of an exception that left a command, escaped."""
+    sys.stderr.write(lines("".join(traceback.format_exception(kind, value, trace))))
+
+
 def escaping(main: Callable[_P, _R]) -> Callable[_P, _R]:
     """`main`, with all it prints escaped: how a command's entry point is wrapped."""
 
     @functools.wraps(main)
     def run(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         with _escaped():
-            return main(*args, **kwargs)
+            try:
+                return main(*args, **kwargs)
+            except Exception:
+                sys.excepthook = _report
+                raise
 
     return run

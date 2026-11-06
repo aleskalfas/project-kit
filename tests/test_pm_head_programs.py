@@ -11,6 +11,7 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
+import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -359,6 +360,25 @@ def test_a_command_that_exits_leaves_the_streams_restored() -> None:
     assert (sys.stdout, sys.stderr) == before
 
 
+def test_an_exception_no_command_caught_is_reported_escaped() -> None:
+    """Python reports it once the streams are restored, so a real run shows what it
+    prints, and it can quote outside text as any line can."""
+    program = (
+        f"import sys; sys.path.insert(0, {str(SCRIPTS_DIR)!r})\n"
+        "from _lib.escaped_output import escaping\n"
+        "@escaping\n"
+        "def main():\n"
+        "    raise ValueError('a' + chr(27) + '[2Kb')\n"
+        "main()\n"
+    )
+    run = subprocess.run(
+        [sys.executable, "-c", program], capture_output=True, text=True, check=False
+    )
+    assert run.returncode == 1
+    assert "ValueError: a\\x1b[2Kb\n" in run.stderr
+    assert "\x1b" not in run.stderr
+
+
 def test_machine_readable_output_keeps_its_bytes(capsys) -> None:
     told = {"title": "a\x1b[2Kb\nc\ttabbed‮", "n": 1}
     text = json.dumps(told, indent=2)
@@ -400,10 +420,14 @@ def test_a_prompt_is_escaped_with_the_rest(monkeypatch, capsys) -> None:
         "done-work.py",
         "merge-pr.py",
         "check-doc-mapping.py",
+        "move-issue.py",
+        "close-issue.py",
     ],
 )
 def test_each_command_the_record_names_prints_through_the_escaping(name) -> None:
-    """DEC-067 point 7's list: a command left out would print a head's words as they came."""
+    """DEC-067 point 7's list: a command left out would print a head's words as they came.
+    The last two are `review-work`'s and `done-work`'s children, which write to the
+    terminal past their parent's streams, so each escapes what it prints itself."""
     source = (SCRIPTS_DIR / name).read_text(encoding="utf-8")
     assert "@escaping\ndef main(" in source
 

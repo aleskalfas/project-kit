@@ -15,5 +15,7 @@ body: >
   head to start nothing, and two open pull requests sharing a branch's name
   stop these commands. The merge check now reads git objects first for every
   head. `open-pr` takes no temporary checkout for any head. These commands,
-  `show-pr`, `done-work`, `merge-pr` and the documentation check print text
-  from outside them with control characters escaped.
+  `show-pr`, `done-work`, `merge-pr`, the documentation check, and `move-issue`
+  and `close-issue`, which two of them run, print text from outside them with
+  control characters escaped. The other commands' output waits for a sweep
+  (#2718).
