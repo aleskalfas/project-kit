@@ -57,15 +57,16 @@ The same aggregator runs in two places, so the gate can't drift:
 - **Pre-push hook** (`.githooks/pre-push`) — runs it before every push for fast local feedback. Opt in once per clone: `git config core.hooksPath .githooks` (bypass in a pinch with `git push --no-verify`).
 - **CI** (`.github/workflows/checks.yml`) — runs `pkit sync`, then the same aggregator, on clean Linux runners for every PR, every merge the merge queue is about to make, and every push to `main`: the unbypassable backstop plus the platform / clean-install / post-merge coverage a local hook can't give.
 
-**How CI splits a full run** ([ADR-078](tech-docs/architecture/decisions/ADR-078-ci-suite-parallel-jobs.md)). CI runs the aggregator as three parts side by side, each a job on a runner of its own, and the aggregator defines them:
+**How CI splits a full run** ([ADR-078](tech-docs/architecture/decisions/ADR-078-ci-suite-parallel-jobs.md)). CI runs the aggregator as four parts side by side, each a job on a runner of its own, and the aggregator defines them:
 - **two slices,** `./scripts/check.sh --shard 1/2` and `--shard 2/2`. Each runs its share of the suite's parallel pass, cut where a committed table of measured test times balances the two.
-- **the remainder,** `./scripts/check.sh --rest`: every other line, with the tests marked `serial`.
+- **the quick checks,** `./scripts/check.sh --quick`: every line but the test step and the console fences. They end within a few minutes, and `land-work` starts the reviewers on them.
+- **the remainder,** `./scripts/check.sh --rest`: the console fences, with the tests marked `serial`.
 
 A job before them decides the form and pins the base every part reads. One job named `checks`, the status `main` requires, runs last and passes only when every part said that it passed. Its summary lists each part, with how it ended and how long it took.
 
 Each part names its own failures in its job's summary, and a slice names each failing test and how to run the slice again. Run any part by hand with the same argument. The hook runs the aggregator whole, so it runs what the parts run. [`tests/README.md`](tests/README.md), "Running the suite", says how the suite is cut and how the table of times is kept.
 
-**When CI runs the short check.** On a pull request, CI runs `scripts/check.sh --short` in the remainder's job, and no slice, instead of the full run's parts in one case ([ADR-067](tech-docs/architecture/decisions/ADR-067-answers-only-short-check.md)):
+**When CI runs the short check.** On a pull request, CI runs `scripts/check.sh --short` in the remainder's job, beside the quick checks, and no slice, instead of the full run's parts in one case ([ADR-067](tech-docs/architecture/decisions/ADR-067-answers-only-short-check.md)):
 - **The most recent full run on the pull request passed.** CI reads that from GitHub's own record of the workflow's runs.
 - **Only answers changed since.** `pkit friction since` says every change from that run's head lies in the answer files the change adds, where its answers to friction live (COR-062 point 1). A merge of the base counts only for what differs from git's merge of it.
 
