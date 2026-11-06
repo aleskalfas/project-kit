@@ -812,7 +812,7 @@ def test_the_query_commands_are_provisioned_before_the_check_as_the_required_che
         for step in job["steps"]
         if step.get("name", "").startswith("Sync")
     ]
-    assert len(theirs) == 3
+    assert len(theirs) == 4
     sync = _index(workflow, RENDER, "Sync")
     for step in theirs:
         assert _steps(workflow, RENDER)[sync] == step
