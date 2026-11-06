@@ -105,7 +105,8 @@ consumers:
 # Storyboard: ...
 ```
 
-- **`consumers:`** is a non-empty list, each entry one artefact that drives the storyboard's scenarios. Today each is an agent, `kind: agent`, with its `name` and its `namespace`: `core`, `project`, or a capability's name.
+- **`consumers:`** is a non-empty list, each entry one artefact that drives the storyboard's scenarios. Today each is an agent, `kind: agent`, with its `name` and its `namespace`: `core`, `project`, or a capability's name. Future application classes (CLI flows, migrations) will add their own kinds.
+- **The list form,** rather than a single `agent:` scalar, is intentional. Today every storyboard has exactly one consumer, but the shape supports future shared cases without schema change.
 
 What the reference graph's check, `refs validate`, checks, failing on each finding:
 
@@ -129,7 +130,7 @@ pkit new storyboard agent <agent-name> --namespace <ns>    # where the agent liv
 
 - **Which agent.** The command finds the agent in the deploy's order: the project, the capabilities by name, then core. So it stamps beside the agent that deploys. `--namespace`, `core`, `project` or a capability's name, looks in that one place instead.
 - **An unknown capability** gets the refusal a new agent's stamp gives.
-- **A synced copy is refused.** The command stamps nothing beside an agent the project receives by sync, and says where such an agent is authored.
+- **A synced copy is refused.** The command stamps nothing beside an agent the project receives by sync, and leaves a flat definition flat. It says where such an agent is authored.
 - **A flat definition** moves into a folder of its own, named after it, first.
 - **Not listed for you.** The command fills the storyboard's `consumers:`, but adds nothing to the agent's `storyboards:`. List the entry there, and cite it in the body, or `refs validate` fails.
 - **The skill.** The paired `storyboard-author` skill walks the author through the framing, the tone and each scenario.

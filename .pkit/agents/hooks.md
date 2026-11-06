@@ -11,6 +11,8 @@ pkit:
         - src/project_kit/sync.py
       record:
         - COR-013#4
+      artefact:
+        - .pkit/adapters/claude-code/README.md#deploy-skillssh
 ---
 
 # Hooks
@@ -74,6 +76,8 @@ One provider binds each hook, taken by tier in this order:
 ```
 project > capability > adapter > core
 ```
+
+The order mirrors the skill-deploy precedence, where the project's skill wins over core's ([the Claude Code adapter's README, `deploy-skills.sh`](../adapters/claude-code/README.md#deploy-skillssh)).
 
 - **The tiers:** a skill in `.pkit/skills/project/` is of the `project` tier. A capability's `provides:` is of the `capability` tier, and an adapter's is of the `adapter` tier. Every other skill is of the `core` tier, a skill a capability ships among them.
 - **Two providers at one tier:** COR-013 point 4 decides that the collision is refused, never settled by picking one. The record has the project disambiguate them by uninstalling one, or by adding a provider of its own. What the code does today:

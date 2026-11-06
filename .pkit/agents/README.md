@@ -22,7 +22,8 @@ pkit:
         - .pkit/agents/core/methodology-reviewer.md
         - .pkit/adapters/claude-code/harness-support.yaml
         - .pkit/agents/project/overlay.yaml
-      record: [COR-001, COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-017, COR-019, COR-024, COR-026, COR-028, COR-049, COR-050, COR-051, COR-053, COR-057, COR-058, COR-060, COR-062, COR-064, COR-068, ADR-051, ADR-052, "ADR-065#11"]
+        - .pkit/rules/core.md
+      record: [COR-001, COR-003, COR-005, COR-006, COR-007, COR-011, COR-013, COR-014, COR-015, COR-017, COR-019, COR-024, COR-026, COR-028, COR-049, COR-050, COR-051, COR-053, COR-057, COR-058, COR-060, COR-062, COR-064, COR-068, ADR-051, ADR-052, "ADR-065#11"]
       artefact:
         - .pkit/agents/hooks.md#
         - .pkit/agents/storyboards.md#
@@ -40,6 +41,7 @@ pkit:
         - .pkit/lifecycle/README.md#seed-paths
         - .pkit/decisions/README.md#citing
         - .pkit/adapters/README.md#primitives-the-lifecycle-calls
+        - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
 ---
 
 <a id="agents"></a>
@@ -88,6 +90,7 @@ The area holds the definitions core ships and those the project writes, each in 
 - **The flat form** is the default. A definition takes the folder form once a helper sits beside it.
 - **`core/`** is core's. Sync refreshes it, and the project never edits it (COR-001).
 - **`project/`** is the project's own. Sync reads it to deploy the definitions, and never writes it.
+- **Both `core/` and `project/`** follow COR-003's universal pattern.
 - **`overlay.yaml`** stands at the top of `project/`. Its per-agent overrides sit inside it, under `overrides:`.
 - **A capability's definitions** take the same two forms in its own `agents/` folder, `.pkit/capabilities/<capability>/agents/` (COR-017, COR-026).
 
@@ -156,7 +159,7 @@ A body cites what its front matter declares, in forms the validator reads withou
 
 So cite a path in backticks, a record by its id and a hook by its name.
 
-**Intermediate files.** Every shipped definition's body ends with the same section, `## Intermediate files`, which the authoring command stamps ("Authoring a definition" below). It tells the agent to keep its intermediate files in the agent workspace, `.agent-workspace/` at the repository root, and nowhere else outside the repository. It says to write them with the file tools, since a shell redirect there is judged as any shell write is (core rule 16). Keep its words the same in every body, so that one search finds every definition that carries it.
+**Intermediate files.** Every shipped definition's body ends with the same section, `## Intermediate files`, which the authoring command stamps ("Authoring a definition" below). It tells the agent to keep its intermediate files in the agent workspace, `.agent-workspace/` at the repository root, and nowhere else outside the repository. It says to write them with the file tools, since a shell redirect there is judged like any shell write (the workspace rule in `.pkit/rules/core.md`). Keep its words the same in every body, so that one search finds every definition that carries it.
 
 **Reviewers.** A reviewer is an agent that judges work and returns a verdict or findings, such as COR-024's reviewers or a capability's review panel. What its read-only means:
 
@@ -297,7 +300,7 @@ overrides:
 **How a value resolves:**
 
 1. Start from the top-level categories.
-2. For the agent named under `overrides.<agent>:`, each category there replaces the top-level value whole, never merged with it. To extend a value, copy the top-level entries into the override. Two keys there are not categories: `model` and `effort` ("Model and effort" below).
+2. For the agent named under `overrides.<agent>:`, each category there replaces the top-level value whole, not merged with it. To extend a value, copy the top-level entries into the override. (Merge semantics are deferred per COR-007 until concrete needs surface.) Two keys there are not categories: `model` and `effort` ("Model and effort" below).
 3. Write the resolved paths in place of each placeholder in the front matter, and the deployed copy into the harness's place. The body keeps its placeholders as written.
 
 **An unknown override** is ignored: a category under `overrides:` for an agent no source ships, or one no definition of that agent names. Nothing reports it. A `model` or `effort` there that the harness does not accept is still reported ("Model and effort" below).
@@ -384,7 +387,7 @@ An optional category with no conventional folder is no prerequisite: `adopt` lea
 2. **Missing, with its conventional folder present:** written uncommented with that path, so the next sync deploys the agent. An example is `adr-records` with `docs/architecture/decisions/`.
 3. **Missing, only an optional read, with no conventional folder:** a commented stub is appended, framed as an optional read. The agent deploys without it, so uncomment it only to give the agent the project's corpus.
 4. **Missing, required, with no conventional folder:** a commented stub is appended, such as `# architecture-docs:`, with guidance on the path to give. The agent stays skipped until a path is set and sync runs, or until `adopt` creates the conventional folder.
-5. **A commented stub already there:** nothing is appended again. For a required stub it reports that a path is needed, and for an optional one that the agent deploys already.
+5. **A commented stub already there:** nothing is appended again. For a required stub it reports that a path is needed, and for an optional one it reports that the agent deploys already.
 6. **Defined,** with paths or an explicit `[]`: nothing is written, and no value the project set is overwritten.
 
 More of `reconcile`:
@@ -443,7 +446,7 @@ Beside the deploy:
 
 - **The undeploy.** The adapter's `undeploy-capability.sh <name>` removes one capability's deployed agents and skills, where the capability is unregistered and its files stay. The lifecycle calls it by name, and knows no harness path ([the adapters README, "Primitives the lifecycle calls"](../adapters/README.md#primitives-the-lifecycle-calls)).
 - **Grants.** Where the adapter's permission hook is registered, the permission model decides each call of a dispatched agent for the subject `agent:<name>`. It applies that subject's grants and those to `all` (COR-028). The permissions reference says how a call's subject is found.
-- **Dispatching.** A session dispatches an agent by its definition's name, and gives it no name of its own. While Claude Code's agent teams are on, a named one's result arrives cut at 4064 characters, as the adapter declares.
+- **Dispatching.** A session dispatches an agent by its definition's name, and gives it no name of its own. While Claude Code's agent teams are on, a named one's result arrives cut at 4064 characters, as [the adapter declares](../adapters/claude-code/README.md#harness-support-harness-supportyaml).
 
 ### Name-collision precedence
 
@@ -466,7 +469,7 @@ More on the order:
 
 ### Why copies, not symlinks
 
-A deployed definition is a resolved copy of its source, never a symlink to it. Skills deploy as symlinks, since a skill's deployed text is its source's.
+A deployed definition is a resolved copy of its source, never a symlink to it. Skills deploy as symlinks, since a skill's deployed text is its source's. If a skill ever grows placeholders, it would switch to the same copy-based mechanism at that point.
 
 - **Why:** the copy differs from its source. Its front matter holds the overlay's paths for the placeholders, the model and effort, each storyboard's path and the deploy mark. Its body ends with the workspace sentence.
 - **What follows:** an edit of a source in `.pkit/agents/` reaches the harness only once the deploy runs again, such as at the next sync.
@@ -507,7 +510,7 @@ What the command does:
 
 - **Refuses an unknown capability,** listing those that exist. It creates the capability's `agents/` folder on first use.
 - **Refuses a taken name,** in core, the project or any capability, since the deploy keeps one definition for each name.
-- **Refuses a namespace the project receives by sync:** `core`, outside the methodology's source, and a capability that is not the project's own. Such an agent is authored where its source is kept, since the next sync would overwrite it (core rule 1).
+- **Refuses a namespace the project receives by sync:** `core`, outside the methodology's source, and a capability that is not the project's own. Such an agent is authored where its source is kept, since the next sync would overwrite it (core rule 1). The refusal names the `project` namespace instead.
 - **Refuses a name that is not kebab-case,** and writes nothing.
 - **Stamps** the front matter, with `tools: [Read, Glob, Grep, Bash]` and empty lists, the body's sections, and the `## Intermediate files` section ("Body conventions" above).
 - **`--with-storyboard`** stamps the folder form, with a storyboard beside the definition, each declaring the other ([`storyboards.md`](storyboards.md)).
