@@ -51,6 +51,7 @@ pkit:
         - visual-communication:DEC-001#2
         - visual-communication:DEC-002#1
         - visual-communication:DEC-002#8
+        - visual-communication:DEC-003#9
         - visual-communication:DEC-005#4
         - visual-communication:DEC-005#5
         - visual-communication:DEC-005#7
@@ -286,6 +287,7 @@ An export run is refused, and writes nothing, when:
 - the piece is published, and its lock differs from the lock of the version that wrote its current copy, or that lock cannot be read (below);
 - the piece names no format under `exports`;
 - the piece has no lock yet, or its lock does not hold: a version the project does not hold or cannot read, a library the piece uses that the lock leaves out, or a major that does not fit what a library builds on;
+- the piece is published, and its lock names a version not yet released (DEC-003 point 9);
 - the brand cannot be read, or the piece names a mode its brand lacks;
 - a font has no file, or a character has no font family that can measure it;
 - a produced picture the piece shows is missing: it has no record, or its record names a variant file that is missing;
@@ -569,9 +571,11 @@ A run writes in `.pkit/capabilities/visual-communication/project/local/look/<pie
 
 A refused run leaves `look/<piece>/` as it was. The fonts it held in a temporary folder of the local folder are gone, and that folder itself may remain. Any fault that stops a piece being drawn refuses a run, such as:
 
-- a piece with no lock, naming the render that writes one;
+- a piece with no lock, naming the render that writes one, or, for a final piece, the lock to write back ([The lock](files.md#the-lock));
 - a lock that does not hold, naming why;
 - a page, a language or a key the piece does not have, naming those it has;
 - a brand that cannot be read;
 - a font with no file, or a character no font holds;
-- a page with no size, or one past 134217728 pixels at [its size](#the-viewing-step). `pkit visual check <piece>` names what such a piece still owes, such as a picture never produced.
+- a page with no size, or one past 134217728 pixels at [its size](#the-viewing-step). Unless the piece is final, `pkit visual check <piece>` names what it still owes, such as a picture never produced.
+
+A version not yet released under a final or a published piece's lock refuses no run: the lock holds, and the piece draws.

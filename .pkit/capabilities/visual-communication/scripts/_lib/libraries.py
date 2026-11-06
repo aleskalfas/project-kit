@@ -440,6 +440,23 @@ class Held:
             files=self.files(name, version),
         )
 
+    def changed(
+        self, name: str, version: Version, changes: Sequence[str], restored: Collection[str]
+    ) -> Finding:
+        """The finding on a released version that no longer matches what was released, by
+        its `hash_changes`. `restored` is as `findings` takes it."""
+        label = f"{name}@{version}"
+        return Finding(
+            "library-changed",
+            FAILS,
+            f"{label} no longer matches what was released: " + "; ".join(changes),
+            file=f"{self.location}/{FOLDER}/{name}/{version}",
+            library=label,
+            fix=f"run `pkit visual add {name}`, which restores it as released"
+            if label in restored
+            else "restore the version folder as it was released",
+        )
+
     def findings(self, restored: Collection[str] = ()) -> list[Finding]:
         """What is wrong with the library folder and its list (DEC-003 point 9): a version
         the list does not name or the folder does not hold, a version the capability
@@ -518,21 +535,7 @@ class Held:
                     )
                 changes = self.hash_changes(name, version)
                 if changes:
-                    fix = (
-                        f"run `pkit visual add {name}`, which restores it as released"
-                        if label in restored
-                        else "restore the version folder as it was released"
-                    )
-                    found.append(
-                        Finding(
-                            "library-changed",
-                            FAILS,
-                            f"{label} no longer matches what was released: " + "; ".join(changes),
-                            file=f"{self.location}/{FOLDER}/{where}",
-                            library=label,
-                            fix=fix,
-                        )
-                    )
+                    found.append(self.changed(name, version, changes, restored))
         for name, library in listed.items():
             versions = library.get("versions") if isinstance(library, Mapping) else None
             for text in versions or {}:

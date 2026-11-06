@@ -29,6 +29,7 @@ from tests.test_visual_communication_pipeline import (
     drawing_project,
     lab_lock,
     lab_project,
+    list_drawing_libraries,
     write_content,
     write_picture,
 )
@@ -175,8 +176,8 @@ def _texts(element: dict[str, Any]) -> Iterator[dict[str, Any]]:
 # --- the lock -----------------------------------------------------------------------------------
 
 
-def newer_tests(root: Path) -> None:
-    """The `tests` library at 1.1.0 too, listed."""
+def newer_tests(root: Path, *, released: bool = False) -> None:
+    """The `tests` library at 1.1.0 too, every version listed as `released` says."""
     folder = root / "visual" / "libraries" / "tests" / "1.1.0"
     shutil.copytree(TESTS, folder)
     library = folder / "library.yaml"
@@ -184,18 +185,7 @@ def newer_tests(root: Path) -> None:
         library.read_text(encoding="utf-8").replace("version: 1.0.0", "version: 1.1.0"),
         encoding="utf-8",
     )
-    unreleased = {"released": False}
-    write_list(
-        root,
-        {
-            "foundations": {"source": {"kind": "shipped"}, "versions": {"1.0.0": unreleased}},
-            "test-brand": {"source": {"kind": "project"}, "versions": {"1.0.0": unreleased}},
-            "tests": {
-                "source": {"kind": "project"},
-                "versions": {"1.0.0": unreleased, "1.1.0": unreleased},
-            },
-        },
-    )
+    list_drawing_libraries(root, released=released)
 
 
 def test_a_drafts_lock_moves_to_the_newest_in_its_major_keeping_every_other_byte(
@@ -264,16 +254,26 @@ def test_a_final_or_a_published_lock_that_cannot_be_drawn_refuses_and_says_the_s
     assert not (root / FINDINGS).exists()
 
 
-@pytest.mark.parametrize("state", ["final", "published"])
+@pytest.mark.parametrize(
+    ("state", "fix"),
+    [
+        pytest.param(
+            "final",
+            "write back the lock of the version handed out, which is no move of it",
+            id="final",
+        ),
+        pytest.param("published", "set it back to a draft for its first render", id="published"),
+    ],
+)
 def test_a_final_or_a_published_piece_with_no_lock_is_refused_and_told_of_no_pin(
-    tmp_path: Path, state: str
+    tmp_path: Path, state: str, fix: str
 ) -> None:
     root = drawing_project(tmp_path, state=state, lock=None)
     shown = run(root, PIECE)
     assert shown.returncode == 1
     assert shown.stderr == (
         f"error: visual/pieces/flow/piece.yaml: the piece is {state}, so no render moves its "
-        f"lock: set it back to a draft for its first render\n"
+        f"lock: {fix}\n"
     )
     assert not (root / FINDINGS).exists()
 

@@ -72,6 +72,9 @@ pkit:
         - visual-communication:DEC-016#3
         - visual-communication:DEC-016#4
         - visual-communication:DEC-016#5
+        - visual-communication:DEC-017#2
+        - visual-communication:DEC-017#4
+        - visual-communication:DEC-017#5
         - visual-communication:DEC-017#6
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
@@ -175,6 +178,8 @@ Without a piece named, each run judges, in order: the configuration, the locatio
 
 **Under a lock.** A piece's lock combines versions, so each version it names is judged at that lock too (DEC-008 point 9). A fault the version shows alone as well lies in the version, and is reported once. A fault only the lock's combination of versions shows lies at the lock, `<piece>/piece.yaml#lock`. It names no version, so its level stands, and its message names the version and the place it was seen in. A fault of the lock itself, such as a base the lock names at another major, names no version either.
 
+**A final piece.** The check reads its files and its lock, and no more (DEC-002 point 7, DEC-017 point 4). It reads the binding of each of its files, and what its lock names. It computes no scene and reads no findings record. It leaves out the piece's ids, its content against its components, the libraries read under its lock, its brand, its notations and its produced pictures. So a content file may be missing, or hold what its components refuse, and no finding follows. A library its content came to use is no finding either. A content file that cannot be read, or whose binding is broken, takes its finding as any file does, and the lock is still read. A version its lock names that no longer matches what was released fails as `library-changed`, once, in a run on the piece alone too. A finding at its lock fails only where something other than a move mends it (*At a final piece's lock*, under [Libraries and locks](#libraries-and-locks)). The summary counts the piece apart, as left out as final.
+
 `pkit visual check <piece>` judges that piece alone: the binding of its own files, and all of the above for it. It judges neither the library folder, nor its list, nor written code. It runs no pass of versions checked alone: it checks alone only the versions its lock names, to tell where each finding under the lock lies, and reports only what the lock shows.
 
 Some findings stop a piece. A piece that cannot be read is judged no further. A lock with a finding stops it before its brand. A brand that cannot be read, or a mode the brand lacks, stops it before its notations, its content, its produced pictures and its scenes. A notation's findings stop nothing. An error the check does not expect stops the piece where it arises (`unexpected-error`), and the check goes on to the next piece. The summary counts such a piece as not checked.
@@ -200,7 +205,7 @@ In the tables, `<piece>/` is the piece's folder, `<location>/pieces/<piece>/`, a
 
 ### Libraries and locks
 
-These follow DEC-003 point 9, `library-name` DEC-004 point 7, `arrangement-clash` DEC-010 point 9, and `end-clash` and `tie-default` DEC-011 point 8. A lock finding never names a library version, so it always fails.
+These follow DEC-003 point 9, `library-name` DEC-004 point 7, `arrangement-clash` DEC-010 point 9, and `end-clash` and `tie-default` DEC-011 point 8. A lock finding never names a library version, so its level stands. It fails, but on a final piece, and for a version not yet released (below the table).
 
 | Label | What it means | Level | Where it points | What to do |
 |---|---|---|---|---|
@@ -214,13 +219,32 @@ These follow DEC-003 point 9, `library-name` DEC-004 point 7, `arrangement-clash
 | `copy-not-shipped` | A copy the list marks not released, of a library the capability ships, is not what the installed capability ships under its number. It holds other files, the capability has released that number, or the capability ships no version of it. A draft that locks it draws what the capability no longer ships. Where the capability ships that number and has not released it, the message names each file that differs. | asks the project for attention | `<version>/` | Run `pkit visual add <library>`, which replaces the copy with what the capability ships. Where it ships no version of that number, move each draft that locks the copy, on purpose, to a version it ships. Pin the draft to that version, or take a new major. Once no lock names the copy, take it out of the library folder and off the list. |
 | `copy-hash-differs` | A copy the list marks released, of a library the capability ships, keeps another hash than the one the capability records for that version. Two contents carry one released number. The message names both hashes. | asks the project for attention | the list, `#libraries.<library>.versions.<version>.hash` | Choose which content the version holds. `pkit visual add <library>` refuses while the two hashes differ. |
 | `library-name` | A library a piece's lock names takes a reserved word, or the name of a top group of the shared roles of the foundations that lock names (DEC-004 points 7 and 11). Reported once for each version. | fails, or asks for attention where the project does not correct the version ([why](#severities)) | `<version>/library.yaml#name` | Rename the library, in a version of its own, and lock that version ([reserved words](files.md#reserved-words)). |
-| `lock-missing` | The piece has no lock yet. | fails | `<piece>/piece.yaml#lock` | Run `pkit visual render <piece>`. First unpin a pinned draft, or set a final or a published piece back to a draft ([the lock](files.md#the-lock)). |
+| `lock-missing` | The piece has no lock yet. | fails | `<piece>/piece.yaml#lock` | Run `pkit visual render <piece>`. First unpin a pinned draft, or set a published piece back to a draft ([the lock](files.md#the-lock)). |
 | `alone-majors` | A version cannot be checked alone: two of the versions it is resolved with build on two majors of one library, or one builds on it at another major. The message names both. | fails, or asks for attention where the project does not correct the version ([why](#severities)) | `<version>/library.yaml#builds-on` | Name majors that fit together, in a version of its own. |
 | `alone-missing` | A version cannot be checked alone: the project holds no version the capability reads of a major that it, or a library it is resolved with, builds on. | fails | the list, `#libraries.<library>` | Bring in a version of that major, or take the version out. |
 | `arrangement-clash` | A pattern of a version checked alone declares an arrangement field for a list, and the list's default component, which the part that repeats over it names in `draw`, declares a field or an option of that name ([lists](components.md#lists)). Neither reads the key on an item. | fails, or asks for attention where the project does not correct the version ([why](#severities)) | `<version>/components/<pattern>.yaml#lists.<list>.arrangement.<field>` | Rename the arrangement field, or draw the list with another component, in a version of its own. |
 | `end-clash` | A pattern of a version checked alone declares an end field for a list of ties, and the list's default component declares a field or an option of that name ([lists](components.md#lists)). Neither reads it, so no tie that component draws has that end. | fails, or asks for attention where the project does not correct the version ([why](#severities)) | `<version>/components/<pattern>.yaml#lists.<list>.ends`; in a drawing of a top's layout, `#layouts.<layout>.lists.<list>.ends` | Rename the end field, or draw the list with another component, in a version of its own. |
 | `tie-default` | The default component of a list of ties takes no ends, so it draws no tie ([ties and connectors](components.md#ties-and-connectors)). A library's pattern is judged when its version is checked alone. A piece's own is judged where its scenes are computed. | fails, or asks for attention where the project does not correct the version ([why](#severities)) | `<version>/components/<pattern>.yaml#parts.<part>.draw`; in a drawing of a top's layout, `#layouts.<layout>.parts.<part>.draw`; a piece's own pattern, its file | Draw the list with a component that takes ends, in a version of its own. |
-| `lock-version`, `lock-not-held`, `lock-unreadable`, `lock-incomplete`, `lock-majors` | A lock entry is no version; or the lock names a version the project does not hold, or one the installed capability cannot read; or it leaves out a library the piece uses, or one a locked library builds on; or a locked library builds on another major of a library than the lock names. | fails | `<piece>/piece.yaml#lock` | Run `pkit visual render <piece>`, which moves a draft's lock. For a pinned draft, change the lock by hand, or unpin it and render it. No render moves a final or a published piece's lock, so set the piece back to a draft and render it ([the lock](files.md#the-lock)). |
+| `lock-version`, `lock-not-held`, `lock-unreadable`, `lock-incomplete`, `lock-majors` | A lock entry is no version; or the lock names a version the project does not hold, or one the installed capability cannot read; or it leaves out a library the piece uses, or one a locked library builds on; or a locked library builds on another major of a library than the lock names. | fails, but on a final piece | `<piece>/piece.yaml#lock` | Run `pkit visual render <piece>`, which moves a draft's lock. For a pinned draft, change the lock by hand, or unpin it and render it. No render moves a published piece's lock, so set it back to a draft and render it ([the lock](files.md#the-lock)). |
+| `lock-not-released` | A final or a published piece's lock names a version not yet released (DEC-003 point 9). The message names the piece, the library and the version. A draft's lock may name one, pinned or not. | by the version and the piece's state, below | `<piece>/piece.yaml#lock` | As below. |
+
+**At a final piece's lock.** The piece's state forbids a move of its lock, and no state leads out of final. So a finding there fails only where something other than a move mends it (DEC-002 point 7). One only a move would mend states a fact, and its fix says a copy of the piece takes it up again.
+
+| Label | Level on a final piece | What mends it |
+|---|---|---|
+| `lock-missing`, `lock-version` | fails | Write back the lock of the version handed out, which is no move of it. |
+| `lock-not-held` | fails | Restore the version in the library folder. |
+| `lock-unreadable` | fails; states a fact for a fault in a released version that still matches its release | Upgrade the capability, or mend or restore the version's `library.yaml`. Only a move would reach a new release of a version that still matches. |
+| `lock-incomplete`, `lock-majors` | states a fact | Only a move. |
+
+**A version not yet released.** Its level follows whose release mends it (DEC-013 point 5, DEC-017 point 2):
+
+| The version | On a published piece | On a final piece | What mends it |
+|---|---|---|---|
+| The project's own | fails | fails | Run `pkit visual release <library>`. |
+| A copy of a number the capability released | fails | fails | Run `pkit visual add <library>`. A published piece is named too, with `--piece <piece>`. |
+| A copy of a number still being built | fails | asks whoever maintains the capability for attention | The capability's release, then `pkit visual add <library>`. A published piece can also go back to a draft and be rendered. |
+| A copy of a number the capability does not ship | fails | states a fact, and `copy-not-shipped` goes on asking | No release. A published piece goes back to a draft and is rendered. |
 
 ### Content against components
 
@@ -358,7 +382,7 @@ A loss of written code is `code-loss`, below. What a renderer finds only while i
 
 ### Produced pictures
 
-A produced picture and its record are described in [What is made from a piece](outputs.md#produced-pictures). These follow DEC-006 point 8. The fix is `pkit visual produce <piece> <output>`, unless a row says otherwise. That command refuses a final piece ([Produced pictures](outputs.md#produced-pictures)), so set the piece back to a draft first.
+A produced picture and its record are described in [What is made from a piece](outputs.md#produced-pictures). These follow DEC-006 point 8. The fix is `pkit visual produce <piece> <output>`, unless a row says otherwise. The check reports none of these on a final piece ([What each run judges](#what-each-run-judges)).
 
 | Label | What it means | Level | Where it points |
 |---|---|---|---|
@@ -434,7 +458,7 @@ findings:
 
 ### When the check reads it
 
-For each piece whose lock and brand let its scenes be computed:
+For each piece that is not final, and whose lock and brand let its scenes be computed:
 
 - **The record verifies.** Its key verifies against the files as they are now, so its findings are the piece's scene findings. The summary counts the piece as read from its findings record.
 - **It is missing, or does not verify.** The check computes the piece's scenes in that run, from the files alone, and counts the piece as computed now. A record that cannot be read, or is not bound, does not verify.

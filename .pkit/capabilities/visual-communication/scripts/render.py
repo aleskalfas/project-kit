@@ -178,7 +178,7 @@ def _moved(piece: pl.Piece, held: libraries.Held) -> libraries.Moved:
     if stays:
         shown += f": the piece is {piece.state}, so no render moves its lock"
         if not piece.lock:
-            raise pl.Refused(f"{shown}: {copies.FIRST_RENDER}")
+            raise pl.Refused(f"{shown}: {copies.no_lock(piece.data)}")
     try:
         return libraries.move_lock(
             held,
