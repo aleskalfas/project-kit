@@ -2,8 +2,8 @@ component: visual-communication
 kind: none
 body: >
   DEC-020 decides how the HTML renderer draws a page and how the capability
-  sees it (#2737): SVG drawings in one web document for each language, each
-  face once in the file, a line written from its start, and a viewing step
-  that reads that file with no browser. The record designs ahead: the renderer
-  and the step's reading of its file land in later pull requests, so no
+  sees it (#2737): real HTML text placed at the engine's coordinates over SVG
+  shapes, one web document for each language, and a viewing step that draws
+  that file through a browser found on the machine. The record designs ahead:
+  the renderer and the step's browser land in later pull requests, so no
   surface moves yet.
