@@ -14,5 +14,5 @@ body: >
   final piece, with nothing written. `pinned` is read of a draft alone, so a
   fault at a final or a published piece's lock no longer names the pin: the
   check, an export and `pkit visual look` say to set the piece back to a
-  draft. `pkit visual status` and `pkit visual produce` say the same of such
-  a piece with no lock.
+  draft. `pkit visual status` says the same of such a piece with no lock, and
+  `pkit visual produce` of a published one.
