@@ -3643,6 +3643,147 @@ def test_a_person_finding_for_another_head_holds_every_run_until_a_review(world,
     assert [merge[-1] for merge in run.github.merges] == [new]
 
 
+def _shown_above_the_stop(out: str, shown: list[str], line: str) -> None:
+    """`shown` and the step's `line` are printed just above the stop, the run's last line."""
+    lines = out.splitlines()
+    at = lines.index(shown[0])
+    assert lines[at:-1] == [*shown, line]
+
+
+@pytest.mark.parametrize("authorised", [False, True], ids=["ready-first", "authorised"])
+@pytest.mark.parametrize(
+    ("other", "code"),
+    [
+        pytest.param(("CHANGES_REQUESTED", _BLOCKING), 1, id="a reviewer's block"),
+        pytest.param(None, 6, id="a reviewer that failed"),
+    ],
+)
+def test_a_stop_inside_the_review_shows_the_finding_another_reviewer_posted(
+    world, capsys, other: tuple[str, str] | None, code: int, authorised: bool
+) -> None:
+    """A later `--yes` would find this verdict at its start and merge on it, so the run
+    that posted it shows it, whichever reviewer stopped the run (DEC-055 point 3)."""
+    run = world()
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    run.answers["reviewer"] = other
+    rc, out, _err = run.authorised(capsys=capsys) if authorised else run.run(capsys=capsys)
+    assert rc == code
+    _shown_above_the_stop(out, _person_lines("code-reviewer"), f"{_FINDINGS}: 1, above")
+    assert out.splitlines()[-1].startswith("review: ")
+    assert run.github.merges == []
+
+
+def test_a_block_beside_the_checks_shows_the_finding_and_names_the_check_that_failed(
+    world, capsys
+) -> None:
+    run = world(checks=[_SUITE_RUNNING, _parts("SUCCESS", "FAILURE")], start_after=_FIRST)
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    run.answers["reviewer"] = ("CHANGES_REQUESTED", _BLOCKING)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    _shown_above_the_stop(out, _person_lines("code-reviewer"), f"{_FINDINGS}: 1, above")
+    assert f"a check failed on {_short(run.github.head)}" in out.splitlines()[-1]
+
+
+def test_a_block_that_carries_a_finding_to_judge_shows_it_too(world, capsys) -> None:
+    run = world()
+    run.answers["reviewer"] = ("CHANGES_REQUESTED", f"{_BLOCKING}\n{_PERSON}")
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    _shown_above_the_stop(out, _person_lines("reviewer"), f"{_FINDINGS}: 1, above")
+
+
+def test_review_pr_raising_shows_the_finding_of_a_verdict_standing_for_the_head(
+    world, capsys, monkeypatch
+) -> None:
+    run = world()
+    run.github.comments.append(_verdict(run, "code-reviewer", _PERSON, sha=run.github.head))
+
+    def boom(argv: list[str], **kwargs: Any) -> Any:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(run.land.review_pr, "review", boom)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_REVIEW_INCOMPLETE
+    _shown_above_the_stop(out, _person_lines("code-reviewer"), f"{_FINDINGS}: 1, above")
+
+
+def test_a_stale_verdict_left_by_a_reviewer_that_failed_is_shown_marked_stale(
+    world, capsys
+) -> None:
+    """Its reviewer's new run posted nothing, so its latest verdict is the old one, and
+    the stop prints it as the findings' step would."""
+    run = world()
+    old = run.github.head
+    run.github.comments.append(_verdict(run, "code-reviewer", _PERSON, sha=old))
+    new = run.push_new_head("fix.txt")
+    run.github.checks[new] = [_GREEN]
+    run.answers["code-reviewer"] = None
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_REVIEW_INCOMPLETE
+    stale = f"(stale: reviewed {_short(old)}; changed since: fix.txt) "
+    _shown_above_the_stop(
+        out, _person_lines("code-reviewer", stale), f"{_FINDINGS}: 1, above (1 marked stale)"
+    )
+
+
+def test_a_head_that_moved_during_the_review_shows_the_finding_the_run_posted(
+    world, capsys
+) -> None:
+    """The stop stays the moved head's, and the verdict is judged for the head the PR
+    has now."""
+    run = world()
+    pinned = run.github.head
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+
+    def tips(argv: list[str]) -> bool:
+        return argv[:2] == ["pr", "view"] and argv[-1] == "headRefOid,baseRefOid"
+
+    run.github.before(_nth(tips, 2), lambda: run.push_new_head("during.txt"))
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_HEAD_MOVED
+    stale = f"(stale: reviewed {_short(pinned)}; changed since: during.txt) "
+    _shown_above_the_stop(
+        out, _person_lines("code-reviewer", stale), f"{_FINDINGS}: 1, above (1 marked stale)"
+    )
+    assert out.splitlines()[-1].startswith(f"review: stopped — PR #{PR}'s head is ")
+
+
+def test_verdicts_that_cannot_be_read_at_a_stop_warn_and_the_stop_stands(world, capsys) -> None:
+    run = world()
+    run.answers["reviewer"] = ("CHANGES_REQUESTED", _BLOCKING)
+    run.github.fails.append(_findings_read(run))
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    assert out.splitlines()[-2:] == [
+        f"  warn: {_FINDINGS}: PR #{PR}'s verdicts could not be read: HTTP 502: Bad Gateway. "
+        f"Nothing was merged; run `land-work {ISSUE}` again",
+        "review: changes requested by reviewer — the blocking findings are above; merge not "
+        "started",
+    ]
+
+
+def test_a_stop_inside_the_review_with_no_finding_to_judge_prints_no_line_for_them(
+    world, capsys
+) -> None:
+    run = world()
+    run.answers["reviewer"] = ("CHANGES_REQUESTED", _BLOCKING)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    assert _FINDINGS not in out
+
+
+def test_a_stop_on_the_accepted_records_shows_the_finding_read_before_it(world, capsys) -> None:
+    run = world()
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    run.altered_problem = "`pkit decisions check-diff --json …`: it exited 2"
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE
+    lines = out.splitlines()
+    assert lines[-3:-1] == _person_lines("code-reviewer")
+    assert lines[-1].startswith(f"{_FINDINGS}: the accepted records this change alters")
+
+
 def test_verdicts_that_could_not_be_read_at_the_start_hold_the_run(world, capsys) -> None:
     """What the run found at its start is what it read then: a read that failed
     found nothing, so the finding is new to it — the hold fails toward a stop."""
@@ -4428,7 +4569,12 @@ def _base_with_a_kind(
     resolver's path returned."""
     work = run.work
     installed = make_adopter_repo(root=tmp_path / "installed", chdir=False)
-    shutil.copytree(installed.root / ".pkit", work / ".pkit", dirs_exist_ok=True)
+    shutil.copytree(
+        installed.root / ".pkit",
+        work / ".pkit",
+        dirs_exist_ok=True,
+        ignore=shutil.ignore_patterns("__pycache__"),
+    )
     _git(work, "switch", "-q", "main")
     capability = register_kinds(work, "kinds", kinds={"source": "resolve"}, script_body=RESOLVING)
     files = {CONFIG: friction_config(mode="enforcing"), **SOURCE, "sources/alpha.md": "alpha\n"}

@@ -30,6 +30,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/__init__.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/seam.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/svg.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/canvas.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/svg_declaration.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf_declaration.py

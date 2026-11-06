@@ -1,0 +1,74 @@
+answers:
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-009-preview-before-change.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261104T173413Z-2852fd21.yaml
+    revalidated:
+      at: 2026-11-06T04:20:59Z
+      outcome: unchanged
+      unchanged-because: The only change in tests/test_upgrade.py is that `_real_source_copy` leaves `__pycache__` out of its throwaway copy of the source, compiled files no test there reads. So the upgrade's --dry-run tests still find nothing written, as the requirement says.
+  - artefact: tech-docs/analysis/core/requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T04:21:00Z
+      outcome: unchanged
+      unchanged-because: The only change in tests/test_upgrade.py is that `_real_source_copy` leaves `__pycache__` out of its throwaway copy of the source, compiled files no test there reads. So the tests of the step that updates the CLI still find the same `uv tool install --force`.
+  - artefact: tech-docs/analysis/core/requirements/functional/050-adopt/REQ-029-compatibility-before-write.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-06T04:21:02Z
+      outcome: unchanged
+      unchanged-because: The only change in tests/test_upgrade.py is that `_real_source_copy` leaves `__pycache__` out of its throwaway copy of the source, compiled files no test there reads. So the tests of the range check and the dependency gates still refuse the same components, with every file as it was.
+  - artefact: tech-docs/analysis/core/requirements/functional/050-adopt/REQ-030-person-choice-never-silent.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261105T132805Z-5c89a281.yaml
+    revalidated:
+      at: 2026-11-06T04:21:03Z
+      outcome: unchanged
+      unchanged-because: The only change in tests/test_upgrade.py is that `_real_source_copy` leaves `__pycache__` out of its throwaway copy of the source, compiled files no test there reads. So the test of a new collision with no terminal, and those of a gate's warning, still find no choice taken silently.
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-010-stop-under-another-version.md
+    read:
+      - 20261027T133722Z-42862485.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261103T031723Z-22d553b2.yaml
+    revalidated:
+      at: 2026-11-06T04:21:05Z
+      outcome: unchanged
+      unchanged-because: The only change in tests/test_upgrade.py is that `_real_source_copy` leaves `__pycache__` out of its throwaway copy of the source, compiled files no test there reads. So the tests that a transition refuses content newer than the running CLI still find it writes nothing.
+  - artefact: tech-docs/analysis/core/requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-06T04:21:06Z
+      outcome: unchanged
+      unchanged-because: The only change in tests/test_upgrade.py is that `_real_source_copy` leaves `__pycache__` out of its throwaway copy of the source, compiled files no test there reads. So the tests that stop an upgrade on a failing migration still find the completion behind, and the next upgrade finishing it.
+  - artefact: tech-docs/analysis/core/requirements/quality/050-adopt/REQ-027-pin-whole-written-last.md
+    read:
+      - 20261027T133722Z-42862485.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+    revalidated:
+      at: 2026-11-06T04:21:08Z
+      outcome: unchanged
+      unchanged-because: The only change in tests/test_upgrade.py is that `_real_source_copy` leaves `__pycache__` out of its throwaway copy of the source, compiled files no test there reads. So the tests that a failing sync writes no version pin, and that a raise writes it after the content, still hold.

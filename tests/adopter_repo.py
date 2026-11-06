@@ -512,8 +512,8 @@ def copy_tree(source: Path, dest: Path) -> None:
     Every file is the copy's own — a test may write any of them and neither the
     source nor another copy sees it — so nothing is hard-linked. A clone where
     the platform has `clonefile(2)`, which costs a few calls whatever the size
-    of the tree; a file-by-file copy where it has not, or where the filesystem
-    refuses a clone."""
+    of the tree; a file-by-file copy, which leaves out `__pycache__`, where it
+    has not, or where the filesystem refuses a clone."""
     dest.mkdir(parents=True, exist_ok=True)
     for entry in sorted(source.iterdir()):
         target = dest / entry.name
@@ -523,7 +523,9 @@ def copy_tree(source: Path, dest: Path) -> None:
         ):
             continue
         if entry.is_dir() and not entry.is_symlink():
-            shutil.copytree(entry, target, symlinks=True)
+            shutil.copytree(
+                entry, target, symlinks=True, ignore=shutil.ignore_patterns("__pycache__")
+            )
         else:
             shutil.copy2(entry, target, follow_symlinks=False)
 

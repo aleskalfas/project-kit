@@ -324,7 +324,7 @@ def test_wrapper_diverged_refuses_without_threading_override_to_leaf(tmp_path):
     # spy. The wrapper composes its sibling move-issue.py, so the copy's spy is
     # what would run if the guard let it through.
     scripts_copy = tmp_path / "scripts"
-    shutil.copytree(CAP_SRC / "scripts", scripts_copy)
+    shutil.copytree(CAP_SRC / "scripts", scripts_copy, ignore=shutil.ignore_patterns("__pycache__"))
     marker = tmp_path / "move-issue-was-invoked.txt"
     (scripts_copy / "move-issue.py").write_text(
         "import sys, pathlib\n"
