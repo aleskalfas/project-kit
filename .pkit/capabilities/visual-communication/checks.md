@@ -71,6 +71,7 @@ pkit:
         - visual-communication:DEC-016#2
         - visual-communication:DEC-016#3
         - visual-communication:DEC-016#4
+        - visual-communication:DEC-016#5
         - visual-communication:DEC-017#6
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
