@@ -61,7 +61,7 @@ def test_each_state_is_shown_and_a_pin_is_read_of_a_draft_alone(tmp_path: Path) 
     ]
 
 
-def test_a_piece_no_render_writes_a_lock_for_says_to_set_it_back_to_a_draft(
+def test_a_piece_no_render_writes_a_lock_for_says_what_its_state_needs(
     tmp_path: Path,
 ) -> None:
     root = project(tmp_path)
@@ -73,7 +73,8 @@ def test_a_piece_no_render_writes_a_lock_for_says_to_set_it_back_to_a_draft(
     assert shown.returncode == 0, shown.stderr
     assert shown.stdout.splitlines()[2:] == [
         "  draft: draft; no lock yet (its first render writes one)",
-        "  final: final; no lock (set it back to a draft for its first render)",
+        "  final: final; no lock (write back the lock of the version handed out, which is no "
+        "move of it)",
         "  published: published; no lock (set it back to a draft for its first render)",
     ]
 

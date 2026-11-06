@@ -155,10 +155,6 @@ BLACK = {"colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1}
 #: stops no drawing (`viewing.opened`).
 LOCK_NOT_RELEASED = "lock-not-released"
 
-#: What mends a final piece's lock that holds no version to move from: the lock its version
-#: was made under, which is no move of it (DEC-002 point 7, DEC-017 point 1).
-WRITE_BACK = "write back the lock of the version handed out, which is no move of it"
-
 #: What a finding on a final piece says where only a move of its lock would mend it.
 NO_MOVE = "no move reaches a final piece's lock: a copy of the piece takes it up again"
 
@@ -428,7 +424,8 @@ class _Run:
         """A final piece, read from its own file alone: its lock as it stands, and no more
         (DEC-002 point 7, DEC-017 point 4). `piece` holds no contents, so no lock is held to
         them. Only a run over the location reads `Held.findings`, so this reads each version
-        the lock names against what was released, and `_once` keeps the finding to one."""
+        the lock names against what was released, and `_once` keeps the finding to one. A
+        version the list does not mark released, or cannot, has nothing to compare."""
         self.counts["final"] += 1
         self.found.extend(lock_findings(self.held, piece))
         for name, text in sorted(piece.lock.items()):
@@ -436,7 +433,7 @@ class _Run:
                 version = Version.parse(text)
             except ValueError:
                 continue  # `lock-version`
-            if version in self.held.folders.get(name, {}):
+            if version in self.held.folders.get(name, {}) and self.held.released(name, version):
                 changes = self.held.hash_changes(name, version)
                 if changes:
                     self._once(self.held.changed(name, version, changes, self.compared.restored))
@@ -873,7 +870,7 @@ def lock_findings(held: Held, piece: pl.Piece) -> list[Finding]:
     one fails only where something other than a move mends it (DEC-002 point 7):
 
     - `lock-missing`, `lock-version`: writing back the lock of the version handed out. There
-      is no version to move from, and that lock is no move (`WRITE_BACK`).
+      is no version to move from, and that lock is no move (`copies.WRITE_BACK`).
     - `lock-not-held`: restoring the version.
     - `lock-unreadable`: upgrading the capability, or restoring the version's `library.yaml`.
       A fault in a released version still as it was released is its owner's to correct, in
@@ -895,7 +892,7 @@ def lock_findings(held: Held, piece: pl.Piece) -> list[Finding]:
     lock = piece.lock
     if not lock:
         missing = "the piece has no lock yet, so its scenes cannot be drawn"
-        return [fails("lock-missing", missing, WRITE_BACK)]
+        return [fails("lock-missing", missing, copies.WRITE_BACK)]
     found = []
     read = {}
     for name, text in sorted(lock.items()):
@@ -903,7 +900,7 @@ def lock_findings(held: Held, piece: pl.Piece) -> list[Finding]:
             version = Version.parse(text)
         except ValueError:
             said = f"the lock names `{name}: {text}`, which is no version"
-            found.append(fails("lock-version", said, WRITE_BACK))
+            found.append(fails("lock-version", said, copies.WRITE_BACK))
             continue
         label = f"{name}@{text}"
         if version not in held.folders.get(name, {}):

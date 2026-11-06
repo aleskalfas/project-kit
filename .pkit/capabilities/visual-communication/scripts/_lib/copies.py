@@ -97,8 +97,12 @@ FINAL = "final"
 PUBLISHED = "published"
 STATES = (DRAFT, FINAL, PUBLISHED)
 
-#: What a piece whose lock no render moves (`lock_stays`) needs where it has no lock.
+#: What a published piece needs where it has no lock, since no render moves it.
 FIRST_RENDER = "set it back to a draft for its first render"
+
+#: What mends a final piece's lock that holds no version to move from: the lock its version
+#: was made under, which is no move of it (DEC-002 point 7, DEC-017 point 1).
+WRITE_BACK = "write back the lock of the version handed out, which is no move of it"
 
 #: The kinds of lock, each what a person names one by in the command (`Lock.key`).
 PIECE = "piece"
@@ -756,6 +760,12 @@ def lock_stays(piece: Mapping[str, Any]) -> bool:
     """Whether no render moves a piece's lock, whatever its `pinned` says: it is final or
     published (DEC-003 point 8)."""
     return final(piece) or piece.get("state") == PUBLISHED
+
+
+def no_lock(piece: Mapping[str, Any]) -> str:
+    """What a piece whose lock no render moves (`lock_stays`) needs where it has no lock: a
+    published piece goes back to a draft, and no state leads out of final (DEC-017 point 5)."""
+    return WRITE_BACK if final(piece) else FIRST_RENDER
 
 
 def _piece_lock(root: Path, file: str, name: str, library: str) -> Lock:

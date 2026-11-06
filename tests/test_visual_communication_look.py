@@ -829,6 +829,18 @@ def test_a_page_with_no_size_refuses_naming_the_check_with_nothing_written(tmp_p
     assert written(root) == before
 
 
+def test_a_final_page_with_no_size_refuses_naming_no_check(tmp_path: Path) -> None:
+    """The check reads no picture of a final piece, so it could name nothing the piece owes."""
+    root = drawing_project(tmp_path, state="final")
+    before = written(root)
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        "error: the tool cannot draw page figure of `flow`: the page measures 960 by 0 px\n"
+    )
+    assert written(root) == before
+
+
 def test_a_page_of_no_width_and_no_height_refuses_naming_the_check(tmp_path: Path) -> None:
     """A page 0 by 0 reaches the same refusal, not a division by its long edge."""
     root = drawing_project(tmp_path)

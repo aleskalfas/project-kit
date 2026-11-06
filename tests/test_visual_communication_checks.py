@@ -204,9 +204,9 @@ def test_a_lock_finding_fails_on_a_piece_that_is_not_final_and_names_its_states_
 @pytest.mark.parametrize(
     ("lock", "code", "level", "fix"),
     [
-        pytest.param(None, "lock-missing", "fails", checks.WRITE_BACK, id="no-lock"),
+        pytest.param(None, "lock-missing", "fails", copies.WRITE_BACK, id="no-lock"),
         pytest.param(
-            {**LOCK, "tests": "one"}, "lock-version", "fails", checks.WRITE_BACK, id="text"
+            {**LOCK, "tests": "one"}, "lock-version", "fails", copies.WRITE_BACK, id="text"
         ),
         pytest.param(
             {**LOCK, "tests": "1.2.0"},
@@ -607,6 +607,23 @@ def test_a_version_a_final_piece_locks_that_no_longer_matches_fails_once(
     assert finding.library == "tests@1.0.0"
     assert finding.message.startswith("tests@1.0.0 no longer matches what was released: ")
     assert finding.fix == "restore the version folder as it was released"
+
+
+@pytest.mark.parametrize("only", [None, PIECE], ids=["location", "alone"])
+def test_a_final_piece_under_a_list_that_cannot_be_read_is_read_as_on_no_released_version(
+    tmp_path: Path, only: str | None
+) -> None:
+    """No version can be read against what was released, so none is, and the piece is no
+    fault of the capability: it is left out as final like any other."""
+    root = drawing_project(tmp_path, state="final", picture=False)
+    write(root / "visual/libraries/libraries.yaml", "libraries: [\n")
+    report = checks.check(root, only=only)
+    codes = [f.code for f, _ in report.judged]
+    assert "unexpected-error" not in codes
+    assert "library-changed" not in codes
+    assert ("list-unreadable" in codes) == (only is None)
+    assert {level for f, level in report.judged if f.code == "lock-not-released"} == {"fails"}
+    assert report.summary[0].endswith("of 0 not checked, of 1 left out as final.")
 
 
 def test_two_final_pieces_on_a_version_that_no_longer_matches_report_it_once(

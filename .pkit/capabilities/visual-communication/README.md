@@ -164,7 +164,7 @@ Every command runs from anywhere in the project: it finds the project root as th
 
 Shows where the visual work lies, and each piece with its state and its lock.
 
-- **Prints** the location, and whether the configuration records it or it is the default, not recorded yet. Then each piece under `pieces/`, with its state, whether a draft is pinned, and the version of each library its lock names. A draft with no lock yet says that its first render writes one. A final or a published piece with none says to set it back to a draft for that render ([The lock](files.md#the-lock)).
+- **Prints** the location, and whether the configuration records it or it is the default, not recorded yet. Then each piece under `pieces/`, with its state, whether a draft is pinned, and the version of each library its lock names. A draft with no lock yet says that its first render writes one. A published piece with none says to set it back to a draft for that render. A final piece with none says to write back the lock of the version handed out ([The lock](files.md#the-lock)).
 - **Writes** nothing.
 - **Exits** 1 when the configuration cannot be read, or records a location that is refused or missing; 0 otherwise.
 

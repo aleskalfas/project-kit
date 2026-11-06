@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from _lib import checks, files, keys, libraries, location, tokens, viewing_tool
+from _lib import checks, copies, files, keys, libraries, location, tokens, viewing_tool
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.plugins import seam
@@ -225,10 +225,11 @@ class _Made:
                 drawn.pages[number - 1].svg, long_edge(page), faces, line_widths(page)
             )
         except viewing_tool.ToolFailed as exc:
-            raise pl.Refused(
-                f"the tool cannot draw page {page['id']} of `{piece}`: {exc}. "
-                f"`pkit visual check {piece}` names what the piece still owes"
-            ) from exc
+            said = f"the tool cannot draw page {page['id']} of `{piece}`: {exc}"
+            # The check reads no picture of a final piece (DEC-017 point 4).
+            if not copies.final(self.project.piece.data):
+                said += f". `pkit visual check {piece}` names what the piece still owes"
+            raise pl.Refused(said) from exc
         total = len(drawn.pages)
         stem = f"{piece}.{language}.{key}" + (f".{number}" if total > 1 else "")
         self.files[f"{stem}.png"] = image.image

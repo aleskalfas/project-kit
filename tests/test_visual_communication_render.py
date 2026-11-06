@@ -254,16 +254,26 @@ def test_a_final_or_a_published_lock_that_cannot_be_drawn_refuses_and_says_the_s
     assert not (root / FINDINGS).exists()
 
 
-@pytest.mark.parametrize("state", ["final", "published"])
+@pytest.mark.parametrize(
+    ("state", "fix"),
+    [
+        pytest.param(
+            "final",
+            "write back the lock of the version handed out, which is no move of it",
+            id="final",
+        ),
+        pytest.param("published", "set it back to a draft for its first render", id="published"),
+    ],
+)
 def test_a_final_or_a_published_piece_with_no_lock_is_refused_and_told_of_no_pin(
-    tmp_path: Path, state: str
+    tmp_path: Path, state: str, fix: str
 ) -> None:
     root = drawing_project(tmp_path, state=state, lock=None)
     shown = run(root, PIECE)
     assert shown.returncode == 1
     assert shown.stderr == (
         f"error: visual/pieces/flow/piece.yaml: the piece is {state}, so no render moves its "
-        f"lock: set it back to a draft for its first render\n"
+        f"lock: {fix}\n"
     )
     assert not (root / FINDINGS).exists()
 
