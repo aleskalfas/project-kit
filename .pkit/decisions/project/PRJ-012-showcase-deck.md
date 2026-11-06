@@ -36,6 +36,7 @@ The deck's items take their colour from a notation of project-kit's own concepts
 
 - **The same commands and files.** The deck, and every other piece project-kit draws, is drawn, checked and exported by the capability's commands, from files in its format. A shipped library reaches them as it reaches any project, through the capability's command ([visual-communication:DEC-003-change-over-time] point 5).
 - **Nothing made for them alone.** The capability holds no code, option or file made for project-kit's pieces alone. Their needs are met as any project's are. A need that recurs gets a general tool or a library component. A need of one piece gets a local component or a helper ([visual-communication:DEC-001-visual-communication-discipline] points 4 and 8).
+- **A builder's tool.** A tool of project-kit's own may show what the capability wrote. It draws no piece, and nothing the capability ships rests on it.
 
 ### 3. project-kit's own libraries, its notation first, are never shipped
 
