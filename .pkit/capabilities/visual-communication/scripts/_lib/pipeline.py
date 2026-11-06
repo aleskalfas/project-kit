@@ -47,6 +47,7 @@ from _lib import copies, keys, layout, notations, records, tokens, values
 from _lib.copies import DRAFT
 from _lib.env import MissingFont, PictureInfo, UnknownConcept, UnreadableComponent
 from _lib.files import FileError, read_bound, refuse_links, without_binding, write_whole
+from _lib.fingerprint import COPY_PLACE
 from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, Misfit, Version
 from _lib.location import files as listed_files
 from _lib.names import PIECE, is_language, is_name, split_use
@@ -187,6 +188,12 @@ class Piece:
         return list(self.data.get("exports") or [])
 
     @property
+    def copy_place(self) -> str | None:
+        """The folder it names for its current copy, a path from the repository's root, or
+        None, so the copy lies in the piece's folder (DEC-017 point 8)."""
+        return self.data.get(COPY_PLACE)
+
+    @property
     def accepted_losses(self) -> list[Mapping[str, Any]]:
         return [
             entry for entry in self.data.get("accept-losses") or [] if isinstance(entry, Mapping)
@@ -237,6 +244,7 @@ def read_piece_file(root: Path, location: str, name: str) -> Piece:
     )
     _require(_is_lock(data.get("lock", {})), shown, "lock", "a mapping of libraries to versions")
     _require(_is_modes(data.get("modes", {})), shown, "modes", "a mapping of axes to modes")
+    _require(isinstance(data.get(COPY_PLACE, ""), str), shown, COPY_PLACE, "a path")
     return Piece(root, location, name, data, {})
 
 

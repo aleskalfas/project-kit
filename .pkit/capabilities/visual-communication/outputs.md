@@ -229,18 +229,20 @@ An *export* is a set of files a piece is handed out as. Each export run is one *
 - **What a run makes:** for `svg`, one file for each page, each language and each combination of modes the piece names; for `pdf`, one file for each language and combination, which holds every page in order. Each is drawn from the scenes under the lock `piece.yaml` holds.
 - **The number.** A run takes the number one higher than the highest version the piece's `exports.yaml` records or any file of its exports folder carries, or 1 where there is none. Every file of the run carries it, so version 3 in English matches version 3 in Czech. A file the record does not name, such as one a failed run could not remove, is never overwritten, and refuses no later run.
 - **The name:** `<piece>.v<N>.<language>.<key>.<format>`, such as `flow.v1.en.colour-scheme.dark.svg`. It carries the piece and the version, since an exported file travels alone. An SVG file of a piece of more than one page adds the page's number, from 1, as a [preview](#previews) does: `<piece>.v<N>.<language>.<key>.<n>.svg`, such as `deck.v1.en.default.2.svg`. A PDF holds every page, so its name carries none: `deck.v1.en.default.pdf`.
-- **Where:** `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the clone and never committed. No export overwrites another. What is committed lies in the piece's folder: the record of exports, a published piece's [current copy](#the-current-copy), and the files of the version handed out ([The lock](files.md#the-lock)).
+- **Where:** `.pkit/capabilities/visual-communication/project/local/exports/<piece>/`, local to the clone and never committed. No export overwrites another. What is committed lies in the piece's folder: the record of exports, a published piece's [current copy](#the-current-copy), but for a copy at a place it names, and the files of the version handed out ([The lock](files.md#the-lock)).
 
 ### The current copy
 
 A published piece keeps a *current copy*, an unnumbered copy of each file of an export. A page links to it, since a link cannot follow a number (DEC-006 point 7).
 
-- **Where:** `current-copy/`, in the piece's folder, committed with the piece.
+- **Where:** `current-copy/`, in the piece's folder, committed with the piece, unless the piece names a place.
 - **When.** Each export of a published piece writes it, in the same change as the numbered files. A piece in any other state writes none, and a copy it already holds stays. `pkit visual render` writes none.
 - **Replaced whole.** A run replaces the folder whole, so a file the new version does not write goes. The folder holds nothing else (DEC-017 point 7).
 - **A file's name** is its version's with the number left out: `flow.v3.en.colour-scheme.dark.svg` gives `flow.en.colour-scheme.dark.svg`.
 - **A file's bytes** are its version's, so the two keep one hash, the SHA-256 of the whole file.
 - **Whose it is.** A current copy is a piece's own where the record of exports names that piece, or a piece the location no longer holds. So a rename keeps it, and a folder copied by hand brings none while the original stands.
+- **At a place.** A piece that names `copy-place` ([`piece.yaml`](files.md#pieceyaml)) takes its copy in that folder, in place of `current-copy/`. Where a documentation page shows the copy, name the folder the documentation's rules give that page's produced images. The export takes the path as you write it, and reads no rule of the documentation. Commit the copy there (DEC-006 point 7, DEC-017 point 8).
+- **Left behind.** An export removes no file at a place. It names each file of the last copy it did not write again. That file may lie at the place, at a place the piece stopped naming, or in `current-copy/` once the piece names a place. It stays where it lies, so remove it once no page shows it (DEC-017 point 7).
 
 ### The record of exports
 
@@ -285,7 +287,7 @@ current-copy:
 |---|---|
 | `piece` | the piece that wrote the copy |
 | `version` | the version that wrote it |
-| `files` | each file of the copy, by its path from the piece's folder, with the SHA-256 of the file. So a rename, or a move of the location, leaves the path true |
+| `files` | each file of the copy, by its path, with the SHA-256 of the file. A path in `current-copy/` is read from the piece's folder, so a rename, or a move of the location, leaves it true. A path at a place is read from the repository's root |
 
 ### What refuses an export
 
@@ -305,6 +307,12 @@ An export run is refused, and writes nothing, when:
 - the piece shows a version's number or its date ([Parts](components.md#parts)): no export fills them yet, and the refusal names each element that shows one. A piece that shows only its language or its state exports, with their real text;
 - a file the run would write, `exports.yaml` among them, is reached through a link;
 - a file lies where a published piece's `current-copy/` goes;
+- a published piece's `copy-place` is a place the rules refuse (DEC-017 point 8):
+  - it lies outside the repository, at its top, under `.pkit/` or under a hidden folder;
+  - it lies in the location, or is `current-copy`, which the record would read as the piece's own folder;
+  - version control does not keep a file the run would write there;
+  - a link leads to it, or a file lies where a folder of it goes;
+- a path the run writes at a place holds anything but a file of the piece's own current copy, with the hash the record keeps. The refusal names each one: name another place, or remove a file you mean to replace;
 - `exports.yaml` cannot be read, holds no list of numbered versions, or holds a `current-copy` that names no piece, version and files.
 
 Each of these is found before the first write, so a refused run records no location either. `--use-stale` naming a declared output that is not stale refuses nothing: the run uses the picture as it is, and says it was not stale.

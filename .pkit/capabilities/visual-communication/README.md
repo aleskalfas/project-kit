@@ -253,7 +253,7 @@ Runs the producer a piece declares for one of its produced outputs, and keeps it
 Makes a numbered export of a piece in each format it declares.
 
 - **Makes the run's files,** each under the piece's next version number, in the clone's local folder ([Exports](outputs.md#exports)).
-- **Keeps a published piece's current copy,** replacing it whole in the piece's folder ([The current copy](outputs.md#the-current-copy)).
+- **Keeps a published piece's current copy,** replacing it whole in the piece's folder, or writing it at the place the piece names, and naming each file it leaves behind ([The current copy](outputs.md#the-current-copy)).
 - **Records the version** in `exports.yaml`, and the version that wrote a current copy ([The record of exports](outputs.md#the-record-of-exports)).
 - **Uses the lock** `piece.yaml` holds, and never moves it.
 - **Refuses** a final piece, which takes no export, and a published piece whose lock differs from the one its current copy was made under. It refuses for each other reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, and may repeat.

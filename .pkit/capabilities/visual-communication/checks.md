@@ -22,6 +22,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/libraries.py
         - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/current_copy.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/notations.py
         - .pkit/capabilities/visual-communication/scripts/_lib/values.py
@@ -76,6 +77,8 @@ pkit:
         - visual-communication:DEC-017#4
         - visual-communication:DEC-017#5
         - visual-communication:DEC-017#6
+        - visual-communication:DEC-017#7
+        - visual-communication:DEC-017#8
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
         - .pkit/capabilities/visual-communication/components.md#breaking-lines
@@ -106,6 +109,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/outputs.md#accepting-a-loss
         - .pkit/capabilities/visual-communication/outputs.md#produced-pictures
+        - .pkit/capabilities/visual-communication/outputs.md#the-current-copy
         - .pkit/capabilities/visual-communication/outputs.md#the-loss-report
         - .pkit/capabilities/visual-communication/outputs.md#the-record-beside-the-code
         - .pkit/capabilities/visual-communication/outputs.md#the-record-of-a-produced-output
@@ -145,6 +149,8 @@ Each finding takes one of three levels (DEC-002 point 7). Validation reads each 
 
 Only an `error` fails `pkit validate` ([CLI reference](../../cli/README.md#validate)).
 
+**An output that goes stale.** An output people or other software read directly fails when something it read changed: a published piece's current copy, and written code. One that reaches a reader only through a piece asks for attention, since the piece's exports guard it (DEC-006 point 8).
+
 **A library version the project does not correct.** A finding the project cannot correct in its own files never fails (DEC-002 point 7). A finding that lies in a library version names that version. Where the project does not correct the version, a finding that would fail there asks for attention instead, and names who does:
 
 - **A released version,** which the project's list of libraries marks released, and which still matches its release. The finding names the library's owner: only the owner corrects it, in a new release.
@@ -170,7 +176,7 @@ A few findings that lie in a library folder name no version, so their level stan
 
 ## What each run judges
 
-Without a piece named, each run judges, in order: the configuration, the location, the binding of each file of the capability's format in the location, the library folder and its list, then each library version checked alone, then each piece, then each declaration of written code. For each piece it judges, in order, the ids of its content, its lock, the libraries its lock names read under it (its brand and the own roles of each library of components), the names of those libraries, its notations, its content against the components it fills, its produced pictures and its scenes.
+Without a piece named, each run judges, in order: the configuration, the location, the binding of each file of the capability's format in the location, the library folder and its list, then each library version checked alone, then each piece, then each declaration of written code. For each piece it judges, in order, the ids of its content, its lock, what its state owes of its current copy, the libraries its lock names read under it (its brand and the own roles of each library of components), the names of those libraries, its notations, its content against the components it fills, its produced pictures and its scenes.
 
 **A version checked alone.** The newest version the project holds of each major of each library is checked alone, once (DEC-005 point 7, DEC-008 point 1). It is resolved with the newest version the project holds of each major it names, and of each major those name. A brand is read over its base, and the foundations' declarations are read. A component library's own roles are judged against the libraries it builds on. So is each of its patterns against the default component of each list it declares fields for, a drawing of a top's layout included. Its findings are `arrangement-clash`, `end-clash` and `tie-default` (DEC-010 point 9, DEC-011 point 8). Its components are read as a piece's are, from the versions it is resolved with, with no piece and no brand behind them, so each role stands for the type it declares. What a version shows alone lies in that version. A version that names majors no versions fit, or one of which the project holds no version, cannot be checked alone: that is its finding (`alone-majors`, `alone-missing`). An older version of a major is checked only under the locks that name it.
 
@@ -178,11 +184,11 @@ Without a piece named, each run judges, in order: the configuration, the locatio
 
 **Under a lock.** A piece's lock combines versions, so each version it names is judged at that lock too (DEC-008 point 9). A fault the version shows alone as well lies in the version, and is reported once. A fault only the lock's combination of versions shows lies at the lock, `<piece>/piece.yaml#lock`. It names no version, so its level stands, and its message names the version and the place it was seen in. A fault of the lock itself, such as a base the lock names at another major, names no version either.
 
-**A final piece.** The check reads its files and its lock, and no more (DEC-002 point 7, DEC-017 point 4). It reads the binding of each of its files, and what its lock names. It computes no scene and reads no findings record. It leaves out the piece's ids, its content against its components, the libraries read under its lock, its brand, its notations and its produced pictures. So a content file may be missing, or hold what its components refuse, and no finding follows. A library its content came to use is no finding either. A content file that cannot be read, or whose binding is broken, takes its finding as any file does, and the lock is still read. A version its lock names that no longer matches what was released fails as `library-changed`, once, in a run on the piece alone too. A finding at its lock fails only where something other than a move mends it (*At a final piece's lock*, under [Libraries and locks](#libraries-and-locks)). The summary counts the piece apart, as left out as final.
+**A final piece.** The check reads its files and its lock, and no more (DEC-002 point 7, DEC-017 point 4). It reads the binding of each of its files, and what its lock names. It computes no scene and reads no findings record. It leaves out the piece's ids, its content against its components, the libraries read under its lock, its brand, its notations, its produced pictures and its current copy. So a content file may be missing, or hold what its components refuse, and no finding follows. A library its content came to use is no finding either. A content file that cannot be read, or whose binding is broken, takes its finding as any file does, and the lock is still read. A version its lock names that no longer matches what was released fails as `library-changed`, once, in a run on the piece alone too. A finding at its lock fails only where something other than a move mends it (*At a final piece's lock*, under [Libraries and locks](#libraries-and-locks)). The summary counts the piece apart, as left out as final.
 
 `pkit visual check <piece>` judges that piece alone: the binding of its own files, and all of the above for it. It judges neither the library folder, nor its list, nor written code. It runs no pass of versions checked alone: it checks alone only the versions its lock names, to tell where each finding under the lock lies, and reports only what the lock shows.
 
-Some findings stop a piece. A piece that cannot be read is judged no further. A lock with a finding stops it before its brand. A brand that cannot be read, or a mode the brand lacks, stops it before its notations, its content, its produced pictures and its scenes. A notation's findings stop nothing. An error the check does not expect stops the piece where it arises (`unexpected-error`), and the check goes on to the next piece. The summary counts such a piece as not checked.
+Some findings stop a piece. A piece that cannot be read is judged no further. A lock with a finding stops it after its current copy and before its brand, so a stale copy stands beside that finding. A brand that cannot be read, or a mode the brand lacks, stops it before its notations, its content, its produced pictures and its scenes. A notation's findings stop nothing. An error the check does not expect stops the piece where it arises (`unexpected-error`), and the check goes on to the next piece. The summary counts such a piece as not checked.
 
 Where the configuration records no location and the default folder holds no visual work, the summary says so, and only the configuration is judged. Where the configuration records a location that is refused or missing, or an empty `location:`, the check reports `location`, and judges nothing but the configuration.
 
@@ -415,7 +421,24 @@ Written code, its declaration and its record are described in [What is made from
 
 ### Exports
 
-The check reports no finding on exports. It checks the binding of a piece's `exports.yaml`, under [Files and binding](#files-and-binding). An export refuses a stale or missing produced picture itself ([what refuses an export](outputs.md#what-refuses-an-export)).
+The check holds a piece's [current copy](outputs.md#the-current-copy) to what its state owes, from the files alone (DEC-006 point 8, DEC-017 points 5 to 7). Each rule reads a copy only where it is the piece's own ([whose it is](outputs.md#the-current-copy)). It reads each file at the path the record of exports names, so a file in the piece's folder and one at a place read alike.
+
+| Label | What it means | Level | Where it points | What to do |
+|---|---|---|---|---|
+| `published-no-format` | A published piece declares no format under `exports`. | fails | `<piece>/piece.yaml#exports` | Declare one. |
+| `current-copy-none` | A published piece has no current copy of its own: the record of exports names none, or names one of a piece the location still holds. | fails | `<piece>/exports.yaml#current-copy` | Run `pkit visual export <piece>`. |
+| `current-copy-file-missing` | A file of a published piece's copy is missing. | fails | the file | Run the export. |
+| `current-copy-file-changed` | A file of a published piece's copy holds another hash than the record's. | fails | the file | Run the export. At a place, remove the file first: [an export writes over no other file there](outputs.md#what-refuses-an-export). |
+| `current-copy-stale` | Something the version that wrote the copy read has changed ([what makes an output stale](#what-makes-an-output-stale)). The message names each change. | fails | `<piece>/exports.yaml#current-copy` | Run the export. |
+| `current-copy-unreadable` | A published piece's copy, or a draft's, cannot be judged. `exports.yaml` cannot be read, keeps no list of numbered versions, or holds a `current-copy` of no shape. Or it gives no lock of the version that wrote the copy. Not reported where a `file-unreadable` or `binding` finding names the file. | fails | `<piece>/exports.yaml`, or its `#current-copy` | Mend the record, then run the export. |
+| `current-copy-over-stale` | The version that wrote a published piece's copy used a produced picture while it was stale. The message names the output. | asks the piece's author for attention | `<piece>/exports.yaml#current-copy` | Run `pkit visual produce <piece> <output>`, then the export. |
+| `current-copy-standing` | A draft keeps a file of its current copy, at the path the record names. A page may rely on it. Its hash does not count, so changing a byte leaves the finding. | asks the piece's author for attention | the file | Remove it, or publish the piece again. |
+
+**Where the lock differs.** An export refuses a published piece whose lock differs from the one its copy was made under ([what refuses an export](outputs.md#what-refuses-an-export)). So the fix for a copy the piece holds then names that lock, and both ways past the refusal.
+
+**A final piece** takes none of these. No export can mend its copy, so no check holds it (DEC-017 point 5).
+
+The check reads no other file of an export. It checks the binding of a piece's `exports.yaml`, under [Files and binding](#files-and-binding). An export refuses a stale or missing produced picture itself ([what refuses an export](outputs.md#what-refuses-an-export)).
 
 ## The findings record
 
@@ -548,6 +571,7 @@ The check works out the input set again from the files as they are now, under th
 - **A produced picture** is stale when its fingerprint does not verify, or when a combination the piece names maps to no variant in its record. Its inputs are values, not the engine's version, so a release of the capability makes no picture stale; the producer's version is compared (DEC-006 point 5).
 - **Written code** is stale when its fingerprint does not verify. Where it verifies with the writer's version the fingerprint names, the code is stale only by its writer's version, and asks for attention (`code-stale-writer`). Otherwise it fails (`code-stale`).
 - **An export** has changed since it was made when its fingerprint does not verify (DEC-016 point 1). One made before [What an export leaves out](#what-an-export-leaves-out) read `piece.yaml` whole, so a pin reads as a change since it. Each later export writes the new reading.
+- **A published piece's current copy** is stale when the fingerprint of the version that wrote it does not verify (DEC-016 point 1). That version is not always the last. A draft's export writes no copy, so a piece set back to published is held to the older version (DEC-017 point 5).
 - **Never compared:** the outside programs a producer called, the machine, the time and the capability's release. A record keeps them beside the fingerprint (DEC-006 point 5).
 
 ## In `pkit validate`
