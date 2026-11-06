@@ -1,0 +1,37 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  The facts of the export a piece is drawn for: what the piece's files hold, by default;
+  a version's number or its date, where `shows` asks for one; or the number in a width too
+  narrow for it.
+
+options:
+  shows: [files, number, date, narrow]
+
+parts:
+  language:
+    when: {shows: [files]}
+    text: {fact: language, style: type.body, fill: text-primary}
+    width: "=:width"
+  state:
+    when: {shows: [files]}
+    text: {fact: state, style: type.body, fill: text-primary}
+    y: "=language.bottom"
+    width: "=:width"
+  number:
+    when: {shows: [number]}
+    text: {fact: version, style: type.body, fill: text-primary}
+    width: "=:width"
+  date:
+    when: {shows: [date]}
+    text: {fact: date, style: type.body, fill: text-primary}
+    width: "=:width"
+  narrow:
+    when: {shows: [narrow]}
+    text: {fact: version, style: type.body, fill: text-primary}
+    width: "=@space.1"
+
+preferred:
+  height: "=@space.4 * 2"

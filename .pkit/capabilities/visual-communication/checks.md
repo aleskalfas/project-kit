@@ -71,6 +71,7 @@ pkit:
         - visual-communication:DEC-016#2
         - visual-communication:DEC-016#3
         - visual-communication:DEC-016#4
+        - visual-communication:DEC-016#5
         - visual-communication:DEC-017#6
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
@@ -336,7 +337,7 @@ Each fails, unless its row says otherwise.
 | `concept-uncoloured` | A run names a concept, and is painted with a role, by its style or by an `override` on its part, so its concept shows in no colour ([values, states and colour](components.md#values-states-and-colour)). The message names the run, and its style or the override. Asks the piece's author for attention: choose a style its component paints from its colour family, or drop the override; or ask the owner of what paints the style to paint it from a family. | the content, `#<trace>` |
 | `unknown-role`, `role-type` | A typography role a text's style chooses, for any of its runs, has no value under the brand, or is no typography. A library's role with no value is found as a formula's is, above. | the component, `#<trace>`; a library's role with no value, `<piece>/piece.yaml#lock` |
 | `gets-less` | A component gets less width or height than it asks for ([what an element asks for](components.md#what-an-element-asks-for-and-what-it-gets)). | the content, `#<trace>` |
-| `text-overflow` | A word is wider than its text's width. Text never shrinks to fit ([breaking lines](components.md#breaking-lines)). Where some run of the text is measured otherwise than from a font file, such as from a table or by an estimate, it asks the piece's author for attention instead, and the message names how (DEC-005 point 14). | the content, `#<trace>` |
+| `text-overflow` | A word is wider than its text's width. Text never shrinks to fit ([breaking lines](components.md#breaking-lines)). Where some run of the text is measured otherwise than from a font file, such as from a table or by an estimate, it asks the piece's author for attention instead, and the message names how (DEC-005 point 14). A stand-in for a fact that overflows [is told apart](components.md#the-facts-of-an-export): it fails where the project can correct the component, and asks for attention in a released library. | the content, `#<trace>`; a fact's text, the component that shows it |
 | `missing-picture` | The piece has no produced output the content names. Left out where a produced-picture finding already reports that output. The fix is `pkit visual produce <piece> <output>`, [which refuses a final piece](outputs.md#produced-pictures). | the content, or the component whose part gave it, `#<trace>` |
 | `picture-variants` | The variants of a picture differ in pixel size or in the places of their points, and one scene holds them all. | as above |
 | `font-missing` | A font family has no committed file, the engine cannot measure from that file, or no family measures a character ([text](components.md#text)). Nothing is laid out (DEC-004 point 9). The check reports it where it computes the scenes. `pkit visual render` refuses instead, and writes no record. | `<piece>/piece.yaml#brand` |

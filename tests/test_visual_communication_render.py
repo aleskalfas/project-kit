@@ -32,7 +32,7 @@ from tests.test_visual_communication_pipeline import (
     write_content,
     write_picture,
 )
-from tests.visual_communication_project import CONFIG, importable, write_list
+from tests.visual_communication_project import CONFIG, importable, write, write_list
 from tests.visual_communication_writes import FULL, failing
 
 script, svg, seam, framing, files, reading, pl, checks, libraries = load(
@@ -71,6 +71,10 @@ def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 def run(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return run_main(script, *args, cwd=root)
+
+
+def findings_of(root: Path) -> str:
+    return (root / FINDINGS).read_text(encoding="utf-8")
 
 
 def previews(root: Path) -> dict[str, str]:
@@ -252,7 +256,7 @@ def test_a_final_or_a_published_lock_that_cannot_be_drawn_refuses_and_says_the_s
     assert shown.stdout == ""
     assert shown.stderr == (
         f"error: visual/pieces/flow/piece.yaml: the piece is {state}, so no render moves its "
-        f"lock: the pinned lock names test-brand@2.0.0, which the project does not hold: "
+        f"lock: the lock names test-brand@2.0.0, which the project does not hold: "
         f"restore it\n"
     )
     assert (root / PIECE_FOLDER / "piece.yaml").read_bytes() == before
@@ -330,7 +334,7 @@ def test_the_previews_of_before_are_replaced(tmp_path: Path) -> None:
     [
         pytest.param(
             {"lock": {"foundations": "1.0.0", "test-brand": "2.0.0", "tests": "1.0.0"}},
-            "visual/pieces/flow/piece.yaml: the pinned lock names test-brand@2.0.0, which the "
+            "visual/pieces/flow/piece.yaml: the lock names test-brand@2.0.0, which the "
             "project does not hold",
             id="brand-not-held",
         ),
@@ -661,6 +665,71 @@ def test_past_its_bound_of_combinations_judged_the_render_keeps_the_lock_and_say
     assert locked(root) == lab_lock("1.0.0", "1.0.0")
 
 
+def proposed(root: Path, **given: Any) -> Any:
+    """The move proposed for the piece, every version the list names marked released."""
+    listed = reading.read_yaml(root / "visual" / "libraries" / "libraries.yaml")["libraries"]
+    for library in listed.values():
+        library["versions"] = {version: {"released": True} for version in library["versions"]}
+    write_list(root, listed)
+    piece = pl.read_piece(root, "visual", PIECE)
+    held = libraries.Held(root, "visual")
+    return libraries.propose_lock(
+        held, pl.needed(piece), piece.lock, judge=pl.fit(piece, held), **given
+    )
+
+
+#: What a draft's render says under a version that clashes, and that loses an end.
+CLASH = (
+    f"the item `body.items[a]` carries `size`, which both its component `{BLOCKS}/sized` and "
+    "its list declare"
+)
+LOST = [f"the end `{end}` of the tie `body.links[ab]` would not be found" for end in ("from", "to")]
+
+
+def clashing(tmp_path: Path) -> Path:
+    """A lab piece under a lock a newer version of the patterns would clash with."""
+    lock = lab_lock("1.0.0", "1.0.0")
+    return lab_project(
+        tmp_path, ROW, lock, {"1.0.0": False}, {"1.0.0": {}, "1.1.0": {"size": True}}
+    )
+
+
+def losing(tmp_path: Path) -> Path:
+    """A lab piece under a lock a newer version of the blocks would lose an end under."""
+    lock = lab_lock("1.0.0", "1.0.0")
+    blocks = {"1.0.0": False, "1.1.0": True}
+    return lab_project(tmp_path, NET, lock, blocks, {"1.0.0": {"frame": True}})
+
+
+def test_a_move_holds_back_a_clash_and_a_lost_end_in_the_words_a_render_uses(
+    tmp_path: Path,
+) -> None:
+    clash = proposed(clashing(tmp_path / "clash"))
+    lost = proposed(losing(tmp_path / "loss"))
+
+    assert clash.lock == lost.lock == lab_lock("1.0.0", "1.0.0")
+    [held_clash], [held_end] = clash.held_back, lost.held_back
+    assert held_clash.label == f"{PATTERNS}@1.1.0"
+    assert [(reason.rule, reason.said) for reason in held_clash.reasons] == [("clash", CLASH)]
+    assert held_end.label == f"{BLOCKS}@1.1.0"
+    assert [(reason.rule, reason.said) for reason in held_end.reasons] == [
+        ("end", said) for said in LOST
+    ]
+
+
+def test_a_name_goes_past_a_clash_and_a_lost_end_and_the_check_still_finds_them(
+    tmp_path: Path,
+) -> None:
+    clash = proposed(clashing(tmp_path / "clash"), names=[f"{PATTERNS}@1.1.0"])
+    lost = proposed(losing(tmp_path / "loss"), names=[f"{BLOCKS}@1.1.0"])
+
+    assert clash.lock == lab_lock("1.0.0", "1.1.0")
+    assert lost.lock == lab_lock("1.1.0", "1.0.0")
+    assert (clash.held_back, lost.held_back) == ((), ())
+    assert [(misfit.rule, misfit.said) for misfit in clash.past] == [("clash", CLASH)]
+    assert [(misfit.rule, misfit.said) for misfit in lost.past] == [("end", said) for said in LOST]
+
+
 def test_a_pinned_lock_moved_by_hand_to_such_versions_shows_the_item_and_the_tie(
     tmp_path: Path,
 ) -> None:
@@ -689,3 +758,23 @@ def test_a_pinned_lock_moved_by_hand_to_such_versions_shows_the_item_and_the_tie
     report = checks.check(clashing, only=PIECE)
     assert [f.where for f, _ in report.judged if f.code == "item-clash"] == ["lock"]
     assert "the end `cards[a]` is drawn 2 times below `figure/body`" in lost.stdout
+
+
+# --- the facts of an export ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("shows", ["number", "date", "narrow"])
+def test_two_clones_with_different_exports_keep_the_same_findings(
+    tmp_path: Path, shows: str
+) -> None:
+    """A render reads what no file holds from the stand-ins, so what either clone holds
+    locally, and the day it runs, change nothing the record keeps (DEC-016 point 5)."""
+    roots = [drawing_project(tmp_path / clone, picture=False) for clone in ("one", "two")]
+    for root in roots:
+        write_content(root, body={"use": "tests/stamp", "shows": shows})
+    exports = ".pkit/capabilities/visual-communication/project/local/exports/flow"
+    write(roots[1] / exports / "flow.v41.en.default.svg", "<svg/>")
+    for root in roots:
+        assert run(root, PIECE).returncode == 0
+    assert findings_of(roots[0]) == findings_of(roots[1])
+    assert ("text-overflow" in findings_of(roots[0])) == (shows == "narrow")

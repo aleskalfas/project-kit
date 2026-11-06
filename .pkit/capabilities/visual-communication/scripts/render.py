@@ -206,9 +206,9 @@ def _stated(piece: pl.Piece, moved: libraries.Moved) -> list[Finding]:
     found = []
     for held in moved.held_back:
         for rule, code in HELD.items():
-            said = [misfit.said for misfit in held.misfits if misfit.rule == rule]
+            said = [reason.said for reason in held.reasons if reason.rule == rule]
             if said:
-                message = f"the render held back {held.library.label}: under it, {'; '.join(said)}"
+                message = f"the render held back {held.label}: under it, {'; '.join(said)}"
                 found.append(Finding(code, FACT, message, file=file, where="lock"))
     found.extend(Finding("lock-below", FACT, said, file=file, where="lock") for said in moved.below)
     if moved.kept:

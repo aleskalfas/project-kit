@@ -99,6 +99,11 @@ def test_each_property_of_words_takes_the_engines_words(prop: str) -> None:
     assert words["enum"] == list(engine.WORDS[prop])
 
 
+def test_a_text_takes_the_engines_facts() -> None:
+    assert DEFS["text"]["properties"]["fact"]["enum"] == list(engine.FACTS)
+    assert DEFS["text"]["oneOf"] == [{"required": ["content"]}, {"required": ["fact"]}]
+
+
 def test_a_part_is_exactly_one_kind_of_the_engines() -> None:
     assert [one["required"] for one in DEFS["part"]["oneOf"]] == [[kind] for kind in engine.KINDS]
 
@@ -129,6 +134,7 @@ def test_the_shipped_and_fixture_components_hold_the_schema_and_the_engine(path:
         ("parts.label.text.text-anchor", {"by": "emphasis", "normal": "start", "strong": "end"}),
         ("states", {"done": {"colour": "success"}, "idle": {}}),
         ("options.at", {"item": "tags"}),
+        *(("parts.stamp.text.fact", word) for word in engine.FACTS),
     ],
 )
 def test_the_format_takes_each_way_of_writing_a_value(path: str, value: Any) -> None:
@@ -149,6 +155,14 @@ REFUSED: list[tuple[str, str, Any]] = [
     ("a text's height, which its measured text owns", "parts.label.height", "=0"),
     ("a box without its size", "parts.box.height", ...),
     ("a text without its style", "parts.label.text.style", ...),
+    ("a text that names neither a field nor a fact", "parts.label.text.content", ...),
+    ("a text that names a field and a fact", "parts.label.text.fact", "version"),
+    ("a word no fact takes", "parts.stamp.text.fact", "number"),
+    (
+        "a fact chosen by a switch",
+        "parts.stamp.text.fact",
+        {"by": "emphasis", "normal": "version", "strong": "date"},
+    ),
     ("a property its primitive does not take", "parts.label.text.rx", "=@space.1"),
     ("a length that is no formula", "parts.box.width", 120),
     ("a formula's switch on no option", "values.pad", {"normal": "=@space.1"}),

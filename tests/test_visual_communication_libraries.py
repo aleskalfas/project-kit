@@ -1,10 +1,10 @@
 """The library folder, its list, versions, and a piece's lock (DEC-001 point 5, DEC-003
-points 1, 4, 8 and 9, DEC-004 point 6); the level of a version the installed capability
-cannot read, released or not (DEC-002 point 7, DEC-014 point 5); what the command that
-brings a shipped library in reads of the locks and of the capability's folder (DEC-013
-point 5); and what the check finds of a copy of a library the capability ships, against a
-capability's folder the test controls (DEC-013 point 6). Each project is laid in the test's
-own folder, outside git, so its files are listed by walking."""
+points 1, 4, 8 and 9, DEC-004 point 6); a lock's proposed move (DEC-019 point 7); the level
+of a version the installed capability cannot read, released or not (DEC-002 point 7, DEC-014
+point 5); what the command that brings a shipped library in reads of the locks and of the
+capability's folder (DEC-013 point 5); and what the check finds of a copy of a library the
+capability ships, against a capability's folder the test controls (DEC-013 point 6). Each
+project is laid in the test's own folder, outside git, so its files are listed by walking."""
 
 from __future__ import annotations
 
@@ -375,7 +375,7 @@ def test_a_brands_lock_names_its_base(tmp_path: Path) -> None:
     lock = libraries.move_lock(held(root), roots).lock
     assert lock == {"foundations": "1.0.0", "test-brand": "1.0.0", "test-edition": "1.0.0"}
     without_base = {"foundations": "1.0.0", "test-edition": "1.0.0"}
-    with pytest.raises(libraries.LockRefused, match="needs `test-brand`, which its pinned lock"):
+    with pytest.raises(libraries.LockRefused, match="needs `test-brand`, which the lock"):
         libraries.move_lock(held(root), roots, without_base, pinned=True)
 
 
@@ -529,9 +529,15 @@ def test_a_pinned_lock_that_fits_never_moves(tmp_path: Path) -> None:
     ("lock", "said"),
     [
         (None, "has no lock yet"),
-        ({"charts": "1.0.0"}, "needs `base`, which its pinned lock does not name"),
-        ({"base": "1.0.0", "charts": "1.1.0"}, "charts@1.1.0, which the project does not hold"),
-        ({"base": "2.0.0", "charts": "1.0.0"}, "base@2.0.0, which the project does not hold"),
+        ({"charts": "1.0.0"}, "needs `base`, which the lock does not name"),
+        (
+            {"base": "1.0.0", "charts": "1.1.0"},
+            "the lock names charts@1.1.0, which the project does not hold",
+        ),
+        (
+            {"base": "2.0.0", "charts": "1.0.0"},
+            "the lock names base@2.0.0, which the project does not hold",
+        ),
         ({"base": "x", "charts": "1.0.0"}, "`base: x`, which is no version"),
     ],
 )
@@ -549,8 +555,23 @@ def test_a_pinned_lock_whose_libraries_do_not_build_on_each_other_is_refused(
     root = pinned_project(tmp_path)
     add_library(root, "base", "2.0.0")
     lock = {"base": "2.0.0", "charts": "1.0.0"}
-    with pytest.raises(libraries.LockRefused, match="builds on `base` 1"):
+    with pytest.raises(libraries.LockRefused) as refused:
         libraries.move_lock(held(root), ["charts"], lock, pinned=True)
+    assert str(refused.value) == (
+        "the lock does not fit: charts@1.0.0 builds on `base` 1, but the lock names base@2.0.0"
+    )
+
+
+def test_a_lock_on_a_version_it_cannot_read_is_refused_as_the_lock(tmp_path: Path) -> None:
+    root = pinned_project(tmp_path)
+    add_library(root, "base", "1.6.0", needs_release="9.0.0")
+    lock = {"base": "1.6.0", "charts": "1.0.0"}
+    with pytest.raises(libraries.LockRefused) as refused:
+        libraries.move_lock(held(root), ["charts"], lock, pinned=True)
+    assert str(refused.value) == (
+        "the lock names base@1.6.0, which cannot be read: it needs release 9.0.0 of the "
+        "capability, and 0.1.0 is installed: upgrade the capability"
+    )
 
 
 # --- a version checked alone (DEC-005 point 7, DEC-008 point 1) ----------------------------------
@@ -759,8 +780,8 @@ def test_a_judged_search_backs_off_the_library_a_misfit_implicates_first(tmp_pat
     # `b`, chosen last, is not backed off: the misfit does not implicate it.
     assert judge.judged == [{"a": "1.1.0", "b": "1.1.0"}, {"a": "1.0.0", "b": "1.1.0"}]
     [held_back] = moved.held_back
-    assert held_back.library.label == "a@1.1.0"
-    assert [misfit.said for misfit in held_back.misfits] == [
+    assert held_back.label == "a@1.1.0"
+    assert [reason.said for reason in held_back.reasons] == [
         "a loss under {'a': '1.1.0', 'b': '1.1.0'}"
     ]
     assert (moved.below, moved.kept) == ((), "")
@@ -776,7 +797,7 @@ def test_a_loss_only_both_newest_versions_show_backs_off_the_later_library(
     moved = libraries.move_lock(held(root), ["a", "b"], {"a": "1.0.0", "b": "1.0.0"}, judge=judge)
 
     assert moved.lock == {"a": "1.1.0", "b": "1.0.0"}
-    assert [each.library.label for each in moved.held_back] == ["b@1.1.0"]
+    assert [each.label for each in moved.held_back] == ["b@1.1.0"]
 
 
 def test_a_library_moves_no_lower_than_its_lock_while_versions_at_or_above_fit(
@@ -790,7 +811,7 @@ def test_a_library_moves_no_lower_than_its_lock_while_versions_at_or_above_fit(
     moved = libraries.move_lock(held(root), ["a", "b"], {"a": "1.0.0", "b": "1.1.0"}, judge=judge)
 
     assert moved.lock == {"a": "1.0.0", "b": "1.1.0"}
-    assert [each.library.label for each in moved.held_back] == ["a@1.1.0"]
+    assert [each.label for each in moved.held_back] == ["a@1.1.0"]
     assert moved.below == ()
 
 
@@ -807,7 +828,7 @@ def test_a_library_moves_below_its_lock_only_where_nothing_at_or_above_fits_and_
         "`a` moves below 1.1.0, the version the lock named, to 1.0.0: no versions at or "
         "above those the lock names fit together",
     )
-    assert [each.library.label for each in moved.held_back] == ["a@1.2.0", "a@1.1.0"]
+    assert [each.label for each in moved.held_back] == ["a@1.2.0", "a@1.1.0"]
 
     missing = libraries.move_lock(held(root), ["a"], {"a": "1.4.0"})
     assert missing.lock == {"a": "1.2.0"}
@@ -846,6 +867,425 @@ def test_a_pinned_lock_is_never_judged(tmp_path: Path) -> None:
     lock = {"base": "1.0.0", "charts": "1.0.0"}
     judge = Judging(lambda chosen: pytest.fail(f"{chosen} judged"))
     assert libraries.move_lock(held(root), ["charts"], lock, pinned=True, judge=judge).lock == lock
+
+
+# --- a lock's proposed move (DEC-019 point 7) -----------------------------------------------------
+
+
+def listing(root: Path, *unreleased: str) -> None:
+    """The list of every version the library folder holds, each released but those
+    `unreleased` names, by label."""
+    listed: dict[str, Any] = {}
+    for folder in sorted((root / "visual" / "libraries").glob("*/*")):
+        if folder.is_dir():
+            name, version = folder.parent.name, folder.name
+            entry = UNRELEASED if f"{name}@{version}" in unreleased else {"released": True}
+            listed.setdefault(name, {"source": PROJECT, "versions": {}})["versions"][version] = (
+                entry
+            )
+    write_list(root, listed)
+
+
+def reasons(moved: Any) -> dict[str, list[str]]:
+    """The rule of each reason the search gives for each version it held back."""
+    return {each.label: [reason.rule for reason in each.reasons] for each in moved.held_back}
+
+
+def said(moved: Any, label: str) -> list[str]:
+    """The words of each reason the search gives for a version it held back."""
+    [held_back] = [each for each in moved.held_back if each.label == label]
+    return [reason.said for reason in held_back.reasons]
+
+
+def test_a_move_offers_only_released_versions_it_can_read_within_the_locks_major(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path)
+    for version in ("1.0.0", "1.1.0", "1.2.0", "2.0.0"):
+        add_library(root, "base", version)
+    add_library(root, "base", "1.3.0", needs_release="9.0.0")
+    listing(root, "base@1.2.0")
+
+    moved = libraries.propose_lock(held(root), ["base"], {"base": "1.0.0"})
+
+    assert moved.lock == {"base": "1.1.0"}
+    assert reasons(moved) == {
+        "base@2.0.0": ["later-major"],
+        "base@1.3.0": ["unreadable"],
+        "base@1.2.0": ["not-released"],
+    }
+    assert said(moved, "base@2.0.0") == ["it is of major 2, and the move stays within major 1"]
+    assert said(moved, "base@1.3.0") == [
+        "it needs release 9.0.0 of the capability, and 0.1.0 is installed: upgrade the capability"
+    ]
+    assert said(moved, "base@1.2.0") == ["it is not released"]
+    assert [each.label for each in moved.held_back] == ["base@2.0.0", "base@1.3.0", "base@1.2.0"]
+    assert (moved.below, moved.kept, moved.past) == ((), "", ())
+
+
+def test_a_version_held_back_gives_each_reason_that_holds(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    add_library(root, "base", "1.0.0")
+    add_library(root, "base", "2.0.0", needs_release="9.0.0")
+    listing(root, "base@2.0.0")
+
+    moved = libraries.propose_lock(held(root), ["base"], {"base": "1.0.0"})
+
+    assert reasons(moved) == {"base@2.0.0": ["unreadable", "not-released", "later-major"]}
+
+
+def test_a_version_whose_library_yaml_cannot_be_read_is_held_back_by_its_name(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path)
+    add_library(root, "base", "1.0.0")
+    write(version_folder(root, "base", "1.1.0") / "library.yaml", "name: [")
+    listing(root)
+
+    moved = libraries.propose_lock(held(root), ["base"], {"base": "1.0.0"})
+
+    assert moved.lock == {"base": "1.0.0"}
+    assert reasons(moved) == {"base@1.1.0": ["unreadable"]}
+
+
+def test_a_move_keeps_to_versions_that_fit_and_names_each_it_held_back(tmp_path: Path) -> None:
+    root = two_libraries(tmp_path, "1.0.0", "1.1.0")
+    listing(root)
+    judge = Judging(lambda chosen: {"a"} if chosen["a"] == "1.1.0" else set())
+
+    moved = libraries.propose_lock(
+        held(root), ["a", "b"], {"a": "1.0.0", "b": "1.0.0"}, judge=judge
+    )
+
+    assert moved.lock == {"a": "1.0.0", "b": "1.1.0"}
+    assert reasons(moved) == {"a@1.1.0": ["end"]}
+    assert said(moved, "a@1.1.0") == ["a loss under {'a': '1.1.0', 'b': '1.1.0'}"]
+
+
+def test_a_version_of_the_locks_major_that_needs_a_later_major_of_another_is_held_back(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path)
+    add_library(root, "base", "1.0.0")
+    add_library(root, "base", "2.0.0")
+    add_library(root, "charts", "1.0.0", builds_on={"base": 1})
+    add_library(root, "charts", "1.1.0", builds_on={"base": 2})
+    listing(root)
+    lock = {"base": "1.0.0", "charts": "1.0.0"}
+
+    for roots in (["charts"], ["base", "charts"]):
+        moved = libraries.propose_lock(held(root), roots, lock)
+
+        assert moved.lock == lock
+        assert reasons(moved) == {"base@2.0.0": ["later-major"], "charts@1.1.0": ["later-major"]}
+        assert said(moved, "charts@1.1.0") == [
+            "charts@1.1.0 builds on `base` 2, and the lock names base@1.0.0: only a name moves a "
+            "lock to another major"
+        ]
+
+
+def test_a_version_whose_base_the_project_lacks_is_held_back_in_the_searchs_words(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path)
+    add_library(root, "charts", "1.0.0")
+    add_library(root, "charts", "1.1.0", builds_on={"missing": 1})
+    listing(root)
+
+    moved = libraries.propose_lock(held(root), ["charts"], {"charts": "1.0.0"})
+
+    assert moved.lock == {"charts": "1.0.0"}
+    assert reasons(moved) == {"charts@1.1.0": ["no-fit"]}
+    assert said(moved, "charts@1.1.0") == ["the project holds no version of `missing`: bring it in"]
+
+
+def test_a_lock_on_a_version_not_released_moves_to_a_released_one_and_says_why(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path)
+    add_library(root, "base", "1.0.0")
+    add_library(root, "base", "1.1.0")
+    listing(root, "base@1.1.0")
+
+    moved = libraries.propose_lock(held(root), ["base"], {"base": "1.1.0"})
+
+    assert moved.lock == {"base": "1.0.0"}
+    assert moved.below == (
+        "`base` moves below 1.1.0, the version the lock named, to 1.0.0: 1.1.0 is not released",
+    )
+
+
+def test_a_move_refuses_a_line_with_no_released_version(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    add_library(root, "base", "1.0.0")
+    listing(root, "base@1.0.0")
+    with pytest.raises(libraries.LockRefused) as refused:
+        libraries.propose_lock(held(root), ["base"], {"base": "1.0.0"})
+    assert str(refused.value) == (
+        "the project holds no released version of `base` of major 1, the line the lock names "
+        "that the installed capability reads"
+    )
+
+
+def test_a_move_refuses_libraries_that_build_on_two_majors_of_one_library(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    add_library(root, "base", "1.0.0")
+    add_library(root, "base", "2.0.0")
+    add_library(root, "a", "1.0.0", builds_on={"base": 2})
+    add_library(root, "b", "1.0.0", builds_on={"base": 1})
+    listing(root)
+    lock = {"a": "1.0.0", "b": "1.0.0", "base": "1.0.0"}
+    with pytest.raises(libraries.LockRefused) as refused:
+        libraries.propose_lock(held(root), ["a", "b"], lock)
+    said = str(refused.value)
+    assert "a@1.0.0 builds on `base` 2" in said
+    assert "b@1.0.0 builds on `base` 1" in said
+
+
+def test_a_move_refuses_a_list_it_cannot_read(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    add_library(root, "base", "1.0.0")
+    write(root / "visual" / "libraries" / "libraries.yaml", "libraries: [")
+    with pytest.raises(libraries.LockRefused, match=r"libraries\.yaml"):
+        libraries.propose_lock(held(root), ["base"], {"base": "1.0.0"})
+
+
+def test_past_its_bound_a_move_keeps_the_lock_and_gives_only_what_it_knows(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = two_libraries(tmp_path, "1.0.0", "1.1.0", "1.2.0")
+    add_library(root, "a", "2.0.0")
+    listing(root, "a@1.2.0")
+    monkeypatch.setattr(libraries, "SEARCH_JUDGED", 1)
+    judge = Judging(lambda chosen: {"a"})
+
+    moved = libraries.propose_lock(held(root), ["a"], {"a": "1.0.0"}, judge=judge)
+
+    assert moved.lock == {"a": "1.0.0"}
+    assert moved.kept.startswith("the search for versions that fit together stopped at its bound")
+    assert reasons(moved) == {"a@2.0.0": ["later-major"], "a@1.2.0": ["not-released"]}
+
+
+def test_a_name_moves_what_it_names_and_leaves_the_rest(tmp_path: Path) -> None:
+    root = two_libraries(tmp_path, "1.0.0", "1.1.0", "1.2.0")
+    listing(root)
+    lock = {"a": "1.0.0", "b": "1.0.0"}
+
+    moved = libraries.propose_lock(held(root), ["a", "b"], lock, names=["a@1.1.0"])
+
+    assert moved.lock == {"a": "1.1.0", "b": "1.0.0"}
+    assert moved.held_back == ()
+
+
+def test_several_names_each_move_their_library(tmp_path: Path) -> None:
+    root = two_libraries(tmp_path, "1.0.0", "1.1.0", "1.2.0")
+    listing(root)
+    lock = {"a": "1.0.0", "b": "1.0.0"}
+    names = ["a@1.1.0", "b@1.2.0", "b@1.2.0"]
+    moved = libraries.propose_lock(held(root), ["a", "b"], lock, names=names)
+    assert moved.lock == {"a": "1.1.0", "b": "1.2.0"}
+
+
+def test_a_name_may_lie_below_the_lock_and_is_no_move_the_search_explains(tmp_path: Path) -> None:
+    root = two_libraries(tmp_path, "1.0.0", "1.1.0")
+    listing(root)
+    lock = {"a": "1.1.0", "b": "1.1.0"}
+
+    moved = libraries.propose_lock(held(root), ["a", "b"], lock, names=["a@1.0.0"])
+
+    assert moved.lock == {"a": "1.0.0", "b": "1.1.0"}
+    assert moved.below == ()
+
+
+def test_a_name_takes_a_new_major_and_what_it_newly_needs(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    add_library(root, "charts", "1.0.0")
+    add_library(root, "charts", "2.0.0", builds_on={"extra": 1})
+    add_library(root, "extra", "1.0.0")
+    add_library(root, "extra", "1.1.0")
+    add_library(root, "extra", "1.2.0")
+    listing(root, "extra@1.2.0")
+
+    moved = libraries.propose_lock(
+        held(root), ["charts"], {"charts": "1.0.0"}, names=["charts@2.0.0"]
+    )
+
+    assert moved.lock == {"charts": "2.0.0", "extra": "1.1.0"}
+
+
+def majors_project(tmp_path: Path) -> Path:
+    """`base` at two majors, `charts` on each, and a `tail` the libraries do not build on."""
+    root = project(tmp_path)
+    add_library(root, "base", "1.0.0")
+    add_library(root, "base", "2.0.0")
+    add_library(root, "charts", "1.0.0", builds_on={"base": 1})
+    add_library(root, "charts", "2.0.0", builds_on={"base": 2})
+    add_library(root, "tail", "1.0.0")
+    add_library(root, "tail", "1.1.0")
+    listing(root)
+    return root
+
+
+MAJORS_LOCK = {"base": "1.0.0", "charts": "1.0.0", "tail": "1.0.0"}
+
+
+@pytest.mark.parametrize("roots", [["charts", "tail"], ["base", "charts", "tail"]])
+def test_a_name_that_needs_a_new_major_of_another_library_refuses_naming_it(
+    tmp_path: Path, roots: list[str]
+) -> None:
+    root = majors_project(tmp_path)
+    with pytest.raises(libraries.LockRefused) as refused:
+        libraries.propose_lock(held(root), roots, MAJORS_LOCK, names=["charts@2.0.0"])
+    assert str(refused.value) == (
+        "charts@2.0.0 builds on `base` 2, and the lock names base@1.0.0: only a name moves a "
+        "lock to another major"
+    )
+
+
+def test_naming_that_major_too_moves_both_and_leaves_the_rest(tmp_path: Path) -> None:
+    root = majors_project(tmp_path)
+    names = ["charts@2.0.0", "base@2.0.0"]
+    moved = libraries.propose_lock(held(root), ["charts", "tail"], MAJORS_LOCK, names=names)
+    assert moved.lock == {"base": "2.0.0", "charts": "2.0.0", "tail": "1.0.0"}
+
+
+@pytest.mark.parametrize("roots", [["charts", "tail"], ["base", "charts", "tail"]])
+def test_a_name_that_leaves_two_majors_of_a_library_refuses_naming_both(
+    tmp_path: Path, roots: list[str]
+) -> None:
+    root = majors_project(tmp_path)
+    with pytest.raises(libraries.LockRefused) as refused:
+        libraries.propose_lock(held(root), roots, MAJORS_LOCK, names=["base@2.0.0"])
+    assert str(refused.value) == "charts@1.0.0 builds on `base` 1, and base@2.0.0 is named"
+
+
+def test_a_library_a_name_leaves_on_another_major_moves_within_its_own(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    add_library(root, "base", "1.0.0")
+    add_library(root, "base", "2.0.0")
+    add_library(root, "charts", "1.0.0", builds_on={"base": 2})
+    add_library(root, "charts", "1.1.0", builds_on={"base": 1})
+    add_library(root, "charts", "1.2.0", builds_on={"base": 2})
+    add_library(root, "charts", "1.3.0", builds_on={"base": 1})
+    listing(root)
+    lock = {"base": "1.0.0", "charts": "1.1.0"}
+
+    moved = libraries.propose_lock(held(root), ["charts"], lock, names=["base@2.0.0"])
+
+    assert moved.lock == {"base": "2.0.0", "charts": "1.2.0"}
+    assert moved.below == ()
+
+    down = {"base": "1.0.0", "charts": "1.3.0"}
+    moved = libraries.propose_lock(held(root), ["charts"], down, names=["base@2.0.0"])
+    assert moved.lock == {"base": "2.0.0", "charts": "1.2.0"}
+    assert moved.below == (
+        "`charts` moves below 1.3.0, the version the lock named, to 1.2.0: no versions at or "
+        "above those the lock names fit together",
+    )
+
+
+def test_a_library_stays_at_its_lock_below_a_later_library_that_had_to_move(
+    tmp_path: Path,
+) -> None:
+    """`a` could move up, and `b` must go below its lock: `a` stays all the same."""
+    root = project(tmp_path)
+    add_library(root, "base", "1.0.0")
+    add_library(root, "base", "2.0.0")
+    add_library(root, "a", "1.0.0", builds_on={"base": 2})
+    add_library(root, "a", "1.1.0", builds_on={"base": 2})
+    add_library(root, "b", "1.0.0", builds_on={"base": 2})
+    add_library(root, "b", "1.1.0", builds_on={"base": 1})
+    listing(root)
+    lock = {"a": "1.0.0", "b": "1.1.0", "base": "1.0.0"}
+
+    moved = libraries.propose_lock(held(root), ["a", "b"], lock, names=["base@2.0.0"])
+
+    assert moved.lock == {"a": "1.0.0", "b": "1.0.0", "base": "2.0.0"}
+
+
+@pytest.mark.parametrize("rule", ["clash", "end"])
+def test_a_name_goes_past_a_clash_or_a_lost_end_and_the_result_names_it(
+    tmp_path: Path, rule: str
+) -> None:
+    root = two_libraries(tmp_path, "1.0.0", "1.1.0")
+    listing(root)
+    misfit = libraries.Misfit(rule, "what the render says", frozenset({"a"}))
+    judged: list[dict[str, str]] = []
+
+    def judge(versions: Any) -> list[Any]:
+        judged.append({name: str(library.version) for name, library in versions.items()})
+        return [misfit]
+
+    lock = {"a": "1.0.0", "b": "1.0.0"}
+    moved = libraries.propose_lock(held(root), ["a", "b"], lock, names=["a@1.1.0"], judge=judge)
+
+    assert moved.lock == {"a": "1.1.0", "b": "1.0.0"}
+    assert moved.past == (misfit,)
+    assert moved.held_back == ()
+    assert judged == [{"a": "1.1.0", "b": "1.0.0"}]
+
+
+@pytest.mark.parametrize(
+    ("names", "refusal"),
+    [
+        (["a"], "`a` is no `<library>@<version>`"),
+        (["a@latest"], "`a@latest` is no `<library>@<version>`"),
+        (["a@1.1.0", "a@1.0.0"], "`a` is named at 1.1.0 and at 1.0.0"),
+        (["a@1.9.0"], "the project does not hold a@1.9.0: bring it in"),
+        (["missing@1.0.0"], "the project does not hold missing@1.0.0: bring it in"),
+        (
+            ["a@1.2.0"],
+            "a@1.2.0 cannot be read: it needs release 9.0.0 of the capability, and 0.1.0 is "
+            "installed: upgrade the capability",
+        ),
+        (["a@1.3.0"], "a@1.3.0 is not released, and this move takes released versions"),
+        (["other@1.0.0"], "the piece does not use `other`, so no lock of it names one"),
+    ],
+)
+def test_a_name_goes_past_nothing_else(tmp_path: Path, names: list[str], refusal: str) -> None:
+    root = project(tmp_path)
+    add_library(root, "a", "1.0.0")
+    add_library(root, "a", "1.1.0")
+    add_library(root, "a", "1.2.0", needs_release="9.0.0")
+    add_library(root, "a", "1.3.0")
+    add_library(root, "other", "1.0.0")
+    listing(root, "a@1.3.0")
+    with pytest.raises(libraries.LockRefused, match=re.escape(refusal)):
+        libraries.propose_lock(held(root), ["a"], {"a": "1.0.0"}, names=names)
+
+
+def test_a_caller_may_allow_a_name_not_yet_released(tmp_path: Path) -> None:
+    root = two_libraries(tmp_path, "1.0.0", "1.1.0")
+    listing(root, "a@1.1.0", "b@1.0.0")
+    lock = {"a": "1.0.0", "b": "1.0.0"}
+
+    moved = libraries.propose_lock(held(root), ["a", "b"], lock, names=["a@1.1.0"], unreleased=True)
+
+    assert moved.lock == {"a": "1.1.0", "b": "1.0.0"}
+
+
+def test_a_name_leaves_no_version_not_yet_released_where_no_caller_allows_one(
+    tmp_path: Path,
+) -> None:
+    root = two_libraries(tmp_path, "1.0.0", "1.1.0")
+    listing(root, "b@1.0.0")
+    lock = {"a": "1.0.0", "b": "1.0.0"}
+
+    moved = libraries.propose_lock(held(root), ["a", "b"], lock, names=["a@1.1.0"])
+
+    assert moved.lock == {"a": "1.1.0", "b": "1.1.0"}
+
+
+def test_a_drafts_search_is_as_it_was(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    for version in ("1.0.0", "1.1.0", "1.2.0", "2.0.0"):
+        add_library(root, "base", version)
+    add_library(root, "base", "1.3.0", needs_release="9.0.0")
+    listing(root, "base@1.2.0")
+
+    moved = libraries.move_lock(held(root), ["base"], {"base": "1.0.0"})
+
+    assert moved == libraries.Moved({"base": "1.2.0"})
 
 
 # --- a copy of a library the capability ships, against what it ships (DEC-013 point 6) ---------

@@ -29,7 +29,9 @@
   runs on a lock that differs from the copy's lies in `export.py`, outside `plan` and
   `write`, since a run that proposes a move of the lock shares these.
 - **Refused before any write.** Everything that can refuse a run, a file reached through
-  a link included, is checked by `plan`, so a refused run writes nothing.
+  a link included, is checked by `plan`, so a refused run writes nothing. A piece that
+  shows a version's number or its date is one: an export does not fill them yet, so no
+  file ever holds a stand-in (DEC-016 point 5).
 - **Written as one change.** The files, the current copy, then the record (`write`): where
   a write fails, every file is put back as it was before the run, the files the run wrote
   removed, or each it could not put back is named.
@@ -44,7 +46,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from _lib import current_copy, fingerprint, framing, records
+from _lib import current_copy, fingerprint, framing, layout, records
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.files import Change
@@ -185,6 +187,12 @@ def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None 
         results = project.scenes()
     except MissingFont as exc:
         raise pl.Refused(f"the scenes of `{piece.name}` cannot be drawn: {exc}") from exc
+    shown = shown_stand_ins(results)
+    if shown:
+        raise pl.Refused(
+            f"`{piece.name}` shows a fact no export fills yet, so a file would hold a stand-in: "
+            f"{'; '.join(shown)}. Draw the piece without it to export it"
+        )
     if project.env.missing:
         why = "; ".join(
             f"`{output}`: {reason} — run {pl.produce_command(piece.name, output)}"
@@ -243,6 +251,19 @@ def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None 
     )
     writable(planned)
     return planned
+
+
+def shown_stand_ins(results: Sequence[tuple[str, SceneResult]]) -> list[str]:
+    """Each element the scenes show a stand-in at, with the fact it shows, in order."""
+    return sorted(
+        {
+            f"`{word}` at `{trace}`"
+            for _, result in results
+            for word, traces in result.facts.items()
+            if word in layout.STAND_INS
+            for trace in traces
+        }
+    )
 
 
 def next_number(piece: pl.Piece, versions: Sequence[Mapping[str, Any]]) -> int:
