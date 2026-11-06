@@ -482,11 +482,13 @@ pkit decisions check-landing --base <ref> [--head <rev>] [--json]
     - a file that is not text
     - front matter that does not parse
     - a status its kind lacks
-    - a rule-set file the reader cannot read, which counts as one proposal
+    - a rule-set file the reader cannot read, or one with no mapping of rules or a key written twice, which counts as one proposal
+    - an overlay at the landing state whose ADR folder cannot be read, which counts as one proposal even where the tip's cannot be read either
 - **It skips** a record or rule set the project receives by sync, which is judged where it is kept. The synced-copy test tells such a file, not the kind of set, so a method rule set a project authors is judged.
   - **Two readings.** The test is asked of the tip and of the landing state. A file either skips is skipped, and each file they disagree on is reported for the person to see.
   - **A state that cannot tell** skips no capability's file, and the check says why. A manifest that does not read is one such state.
-- **The refusal.** `decisions.refuse-proposals` at the base's tip decides whether a reported proposal fails the landing. Only a landing on the default branch can fail, told by the name the run gives its base. A base named only by a commit counts as the default branch. Otherwise the check passes and says why.
+- **The refusal.** `decisions.refuse-proposals` at the base's tip decides whether a reported proposal fails the landing. Only a landing on the default branch can fail, told by the name the run gives its base. Otherwise the check passes and says why.
+  - **A doubt counts as the default branch.** A base named by anything but a branch counts, such as a commit or `origin/HEAD`. So does any base while the default branch's declared name does not read.
 - **A change to the key** is reported, with its value at each state, and counts once it has landed. On the run whose landing turns it on, the check also lists the proposals the tip holds. They block nothing, and a person settles each.
 - **The list** gives, for each record and rule the change makes accepted:
   - each commit that accepted it, with the rest of that commit's work

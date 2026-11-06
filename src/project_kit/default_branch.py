@@ -483,28 +483,34 @@ def _named(target_root: Path, ref: str, source: str, head_rev: str = "HEAD") -> 
 
 def branch_named(target_root: Path, ref: str) -> str | None:
     """The branch a base named for a run names, or `None` where it names none, such as a
-    commit or a tag. A remote's copy counts by its branch's name, so `origin/main` and
-    `refs/remotes/origin/main` name `main`. It is read from the name as given and resolves
-    no branch, so a reader that must tell a branch by its name alone asks here (ADR-081
-    point 3)."""
+    commit, a tag, `origin/HEAD` or `origin/main~0`. A remote's copy counts by its branch's
+    name, so `origin/main` and `refs/remotes/origin/main` name `main`. What is left of a
+    name counts only as a branch name (`is_branch_name`), so a doubt gives `None`. It is
+    read from the name as given and resolves no branch, so a reader that must tell a
+    branch by its name alone asks here (ADR-081 point 3)."""
+    name = _branch_part(target_root, ref)
+    return name if is_branch_name(name) else None
+
+
+def _branch_part(target_root: Path, ref: str) -> str | None:
+    """What is left of a base's name once its reference's prefix or its remote is taken off."""
     if ref.startswith("refs/heads/"):
         return ref.removeprefix("refs/heads/")
     tracking = ref.removeprefix("refs/remotes/")
     if tracking != ref or commit_of(target_root, f"refs/remotes/{ref}") is not None:
         return _without_remote(target_root, tracking)
-    if is_branch_name(ref) and _branch_refs(target_root, ref).known:
-        return ref
-    return None
+    return ref if is_branch_name(ref) and _branch_refs(target_root, ref).known else None
 
 
-def _without_remote(target_root: Path, tracking: str) -> str:
-    """A remote-tracking name without its remote, which may hold a slash of its own."""
+def _without_remote(target_root: Path, tracking: str) -> str | None:
+    """A remote-tracking name without its remote, which may hold a slash of its own, or
+    `None` where no remote git lists holds it, so where the branch's name starts is unknown."""
     listed = _git(target_root, "remote")
     remotes = listed.stdout.split() if listed is not None and listed.returncode == 0 else []
     for remote in sorted(remotes, key=len, reverse=True):
         if tracking.startswith(f"{remote}/"):
             return tracking.removeprefix(f"{remote}/")
-    return tracking.partition("/")[2] or tracking
+    return None
 
 
 def _compared(

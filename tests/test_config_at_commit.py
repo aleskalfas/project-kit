@@ -85,3 +85,15 @@ def test_what_does_not_read_warns_and_gives_the_default(
     assert found.value is False and not found.written
     assert found.warning is not None and said in found.warning
     assert "`pkit validate` fails on it" in found.warning
+
+
+def test_a_link_warns_and_gives_the_default(repo: GitRepo) -> None:
+    (repo.root / CONFIG).parent.mkdir(parents=True)
+    (repo.root / CONFIG).symlink_to("../../a.txt")
+    repo.commit("link")
+
+    found = _read(repo)
+
+    assert found.value is False and not found.written
+    assert found.warning is not None and "link" in found.warning
+    assert "`pkit validate`" not in found.warning

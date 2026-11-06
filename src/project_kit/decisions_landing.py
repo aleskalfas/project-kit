@@ -12,7 +12,9 @@ and not at the tip, and lists each accepted there and not at the tip.
 **Everything else is read at the base's tip,** which the change cannot move: the
 refusal's key, the default branch's name, and, with the landing state, which files the
 project receives and where the ADR folder is. Only a landing on the default branch is
-refused, told by the name the run gave its base (`default_branch.branch_named`).
+refused, told by the name the run gave its base (`default_branch.branch_named`). A
+doubt counts as the default branch: a name that is no branch's, or a declared name
+that does not read.
 
 **Which files the project receives** is asked of the working tree's copy of the
 synced-copy test, once per state, against a *stand-in root* holding the test's three
@@ -21,7 +23,9 @@ the two disagree on is reported. A state that cannot tell skips nothing, and say
 
 **What it cannot read counts as proposed,** with why: a file that is not text, front
 matter that does not parse, a status its kind does not have. A rule-set file the reader
-cannot read counts as one proposal.
+cannot read counts as one proposal, and so does one with no mapping of rules, or with a
+key written twice, whose reading is in doubt. So does an overlay at the landing state
+that does not give the ADR folder, whatever the tip's does: an ADR behind it may be new.
 
 **It gives no answer** (`NoAnswer`) only where it cannot compute what lands: no base is
 named, a name is no commit or reads as one it does not name, the head and the base share
@@ -54,6 +58,7 @@ from project_kit import friction_discovery as fd
 from project_kit import rule_sets as rs
 from project_kit.backbone_schemas import CONTAINER_KEY
 from project_kit.config_at_commit import KeyAtCommit, key_at
+from project_kit.decisions import OVERLAY_RELPATH
 from project_kit.decisions_validate import record_space
 from project_kit.friction_check import printable
 from project_kit.friction_git import SHORT, CommitTree, FrictionCheckError, run_git
@@ -259,17 +264,31 @@ class _State:
     @cached_property
     def unread_rule_files(self) -> dict[str, str]:
         """Each rule-set file the reader could not read, with why. A link is claimed and
-        never read, so it is one of them."""
+        never read, so it is one of them, and so is a file whose rules are in doubt."""
         found = {unread.path: f"the file {unread.problem}" for unread in self.rule_sets.unreadable}
         read = {rule_set.path for rule_set in self.rule_sets.rule_sets}
         for rel in self.rule_files - read - found.keys():
             found[rel] = "the file is a link, which the reader never reads"
+        for rule_set in self.rule_sets.rule_sets:
+            why = _rules_in_doubt(rule_set)
+            if why is not None:
+                found[rule_set.path] = why
         return found
 
     @property
     def paths(self) -> frozenset[str]:
         """Every record and rule-set file the state holds."""
         return frozenset({*self.read.records, *self.read.unreadable, *self.rule_files})
+
+
+def _rules_in_doubt(rule_set: rs.RuleSet) -> str | None:
+    """Why a file the reader read gives no sure reading of its rules: it holds no mapping
+    of them, so the reader finds none, or it writes a key twice, so one value goes unread."""
+    if not isinstance(rule_set.front_matter.get(fd.RULES_KEY), Mapping):
+        return f"the file holds no mapping of `{fd.RULES_KEY}`"
+    if rule_set.duplicate_keys:
+        return f"the file writes {rule_set.duplicate_keys[0].key!r} twice, and reads the first"
+    return None
 
 
 def _read_state(root: Path, tree: CommitTree, adrs: Sequence[str | None]) -> _State:
@@ -282,6 +301,15 @@ def _read_state(root: Path, tree: CommitTree, adrs: Sequence[str | None]) -> _St
         discovery = fd.discover_artefacts(root, settings, tree)
         rule_files = frozenset(fd.rule_set_files(root, rule_sets.places, tree))
     return _State(tree, read, discovery, rule_sets, rule_files)
+
+
+def _overlay_proposal(unread: str | None, was: str | None = None) -> tuple[Proposal, ...]:
+    """The overlay as one proposal, where a state's does not give the ADR folder. Unlike a
+    file unread at both states, it counts whatever the tip's does: what it hides may be new."""
+    if unread is None:
+        return ()
+    why = f"the overlay {unread}, so an ADR may go unread"
+    return (Proposal(RECORD, OVERLAY_RELPATH, OVERLAY_RELPATH, was, why),)
 
 
 # --- which files the project receives --------------------------------------------------
@@ -821,7 +849,9 @@ def _check(root: Path, base_ref: str | None, head_rev: str | None) -> Landing:
     assert base.tip is not None and base.fork is not None  # `_head_and_base` refuses without
     landing_tree = _landing_tree(root, base.tip, head)
     at_tip, at_landing = CommitTree(root, base.tip), CommitTree(root, landing_tree)
-    adrs = (numbering.adr_folder_at(root, at_tip), numbering.adr_folder_at(root, at_landing))
+    tip_adrs, _tip_unread = numbering.adr_folder_at(root, at_tip)
+    landing_adrs, overlay_unread = numbering.adr_folder_at(root, at_landing)
+    adrs = (tip_adrs, landing_adrs)
     tip, landing = _read_state(root, at_tip, adrs), _read_state(root, at_landing, adrs)
 
     paths = tip.paths | landing.paths
@@ -833,16 +863,21 @@ def _check(root: Path, base_ref: str | None, head_rev: str | None) -> Landing:
         *_judged_records(landing, tip, skip),
         *_judged_rules(landing, tip, skip, pairing),
     ]
-    proposals = tuple(
-        Proposal(item.kind, item.name, item.path, item.was, item.why)
-        for item in judged
-        if item.status == rs.PROPOSED and item.was != rs.PROPOSED
+    proposals = (
+        *_overlay_proposal(overlay_unread),
+        *(
+            Proposal(item.kind, item.name, item.path, item.was, item.why)
+            for item in judged
+            if item.status == rs.PROPOSED and item.was != rs.PROPOSED
+        ),
     )
     listed = [item for item in judged if item.status == rs.ACCEPTED and item.was != rs.ACCEPTED]
 
     declared_branch = _declared_branch(root, at_tip)
     branch = default_branch.branch_named(root, named)
-    is_default = branch is None or branch == declared_branch.value
+    is_default = (
+        branch is None or declared_branch.warning is not None or branch == declared_branch.value
+    )
     key, key_at_landing = _refusal_key(root, at_tip), _refusal_key(root, at_landing)
     turned_on = is_default and key.value is not True and key_at_landing.value is True
 
@@ -925,9 +960,10 @@ def proposals_at(root: Path, commit: str) -> tuple[Proposal, ...]:
 
 def _proposals_at(root: Path, commit: str) -> tuple[Proposal, ...]:
     tree = CommitTree(root, commit)
-    state = _read_state(root, tree, (numbering.adr_folder_at(root, tree),))
+    adrs, overlay_unread = numbering.adr_folder_at(root, tree)
+    state = _read_state(root, tree, (adrs,))
     (skip,) = _received(root, (("the state", tree),), state.paths).skipped
-    found: list[Proposal] = []
+    found = list(_overlay_proposal(overlay_unread, rs.PROPOSED))
     for rel, record in sorted(state.read.records.items()):
         status, why = _record_status(record)
         if rel not in skip and status == rs.PROPOSED:

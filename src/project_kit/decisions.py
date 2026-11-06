@@ -247,6 +247,16 @@ def adr_folder_named(overlay: Mapping[str, Any]) -> str | None:
     return None if outside or not folder.parts else folder.as_posix()
 
 
+def adr_folder_unread(overlay: Mapping[str, Any]) -> str | None:
+    """Why an overlay's mapping writes an ADR folder `adr_folder_named` does not take, or
+    `None` where it takes it or nothing is written. So a reader told of no folder can tell
+    a project with none from a folder it could not read."""
+    written = overlay.get(_ADR_CATEGORY)
+    if written is None or written == [] or adr_folder_named(overlay) is not None:
+        return None
+    return f"writes `{_ADR_CATEGORY}` as {written!r}, which names no folder a state could hold"
+
+
 def _load_overlay(target_root: Path) -> dict[str, Any]:
     """The agents overlay's top-level mapping, refusing a missing or malformed file."""
     overlay_path = target_root / _OVERLAY_PATH

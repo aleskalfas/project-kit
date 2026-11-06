@@ -10,9 +10,10 @@ other module reads one so.
 It stands on artefact discovery's reading of a file at a state
 (`friction_discovery.read_mapping_at`), and reads forgivingly (COR-048 point 4): a
 file that does not parse, or a value the key does not take, gives a warning and the
-default, and `pkit validate` is what fails on either. A key, its block or the file
-absent gives the default with nothing to say (COR-048 point 3), so a misspelt key
-reads as absent.
+default, and `pkit validate` is what fails on either. A link gives both too, since no
+reading at a commit follows it, though validation reads what it leads to. A key, its
+block or the file absent gives the default with nothing to say (COR-048 point 3), so a
+misspelt key reads as absent.
 """
 
 from __future__ import annotations
@@ -55,9 +56,11 @@ def key_at(
     value is one the key takes, and `expected` names what it takes, for the warning."""
     config, unread = fd.read_mapping_at(target_root, tree, PROJECT_CONFIG_RELPATH.as_posix())
     here = f"{PROJECT_CONFIG_RELPATH.as_posix()} at {tree.commit[:SHORT]}"
-    reads = f"{key} reads as {default!r}, and `pkit validate` fails on it"
+    said = f"{key} reads as {default!r}"
+    reads = f"{said}, and `pkit validate` fails on it"
     if unread is not None:
-        return KeyAtCommit(key, tree.commit, default, warning=f"{here} {unread}; {reads}")
+        told = said if unread == fd.UNFOLLOWED_LINK else reads
+        return KeyAtCommit(key, tree.commit, default, warning=f"{here} {unread}; {told}")
     node: Mapping[str, Any] = config
     *blocks, leaf = key.split(".")
     for block in blocks:

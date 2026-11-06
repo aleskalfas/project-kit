@@ -1470,7 +1470,7 @@ With no answer the human view prints `No answer:` and why on standard error. War
 - `default_branch`: `declared`, the name the tip declares; `is_base`, whether the base counts as the default branch; `warning`, why a declared name was not read, else `null`.
 - `key`: `name`; `value`, as the tip holds it; `read_at`, the tip; `warning`, why the value was read as the default, else `null`; `refusal_on`, whether a proposal fails this landing; `change`, the value at each state as `{tip, landing}`, else `null`.
 - `proposals`: each `{kind, name, path, was, why}`.
-  - `kind` is `record`, `rule` or `rule-set-file`.
+  - `kind` is `record`, `rule` or `rule-set-file`. An overlay whose ADR folder cannot be read is a `record`, named by its path.
   - `was` is its status at the tip, `null` where the tip holds none.
   - `why` says what could not be read of it, which is why it counts as proposed, else `null`.
 - `refuses`: whether the check refuses on them.

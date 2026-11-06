@@ -333,6 +333,56 @@ def test_a_remotes_copy_counts_by_its_branchs_name(repo: GitRepo) -> None:
     assert _run(base="origin/integration").exit_code == 0
 
 
+@pytest.mark.parametrize(
+    "named",
+    [
+        "origin/HEAD",
+        "refs/remotes/origin/HEAD",
+        "origin/main~0",
+        "origin/main^{commit}",
+        "refs/heads/main~0",
+        "origin/integration~0",
+    ],
+)
+def test_a_base_whose_name_is_no_branchs_counts_as_the_default_branch(
+    repo: GitRepo, named: str
+) -> None:
+    tip = _branch(repo, {CONFIG: ON})
+    repo.commit("add", {RECORD: _record("proposed")})
+    _remote(repo, "main", tip)
+    _remote(repo, "integration", tip)
+    repo.git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+
+    assert _run(base=named).exit_code == 1
+    assert _document(base=named)["default_branch"]["is_base"] is True
+
+
+@pytest.mark.parametrize(
+    "reference",
+    ["refs/remotes/gone/sub/feature", "refs/remotes/solo"],
+    ids=["a remote not listed", "no remote at all"],
+)
+def test_a_tracking_name_no_remote_holds_counts_as_the_default_branch(
+    repo: GitRepo, reference: str
+) -> None:
+    tip = _branch(repo, {CONFIG: ON})
+    repo.commit("add", {RECORD: _record("proposed")})
+    repo.git("update-ref", reference, tip)
+
+    assert _run(base=reference).exit_code == 1
+
+
+def test_a_declared_name_that_does_not_read_leaves_no_base_told_apart(repo: GitRepo) -> None:
+    _branch(repo, {CONFIG: f"{ON}repository:\n  default-branch: origin/trunk\n"})
+    repo.git("branch", "trunk", "main")
+    repo.commit("add", {RECORD: _record("proposed")})
+
+    result = _run(base="trunk")
+
+    assert result.exit_code == 1, result.output
+    assert "'origin/trunk' is not a branch name" in result.stderr
+
+
 def test_the_name_of_the_default_branch_is_the_tips(repo: GitRepo) -> None:
     _branch(repo, {CONFIG: f"{ON}repository:\n  default-branch: trunk\n"})
     repo.git("branch", "trunk", "main")
@@ -582,6 +632,59 @@ def test_a_rule_set_file_the_reader_cannot_read_counts_as_one_proposal(repo: Git
     (proposal,) = found["proposals"]
     assert proposal["kind"] == landing.RULE_SET_FILE and proposal["path"] == RULES
     assert found["refuses"] is True
+
+
+@pytest.mark.parametrize(
+    "held",
+    [{}, {RULES: _rules({FIRST: "accepted"})}],
+    ids=["a new file", "over an accepted rule"],
+)
+@pytest.mark.parametrize(
+    "written",
+    [f"rules:\n  - {FIRST}\n", "rules:\n", ""],
+    ids=["a list", "no value", "no key"],
+)
+def test_a_rule_set_file_with_no_mapping_of_rules_counts_as_one_proposal(
+    repo: GitRepo, held: Mapping[str, str], written: str
+) -> None:
+    _branch(repo, {CONFIG: ON, **held})
+    body = f"## {FIRST} — A rule\n\nThe statement.\n"
+    repo.commit("add", {RULES: f"---\nrule-set: CMN\nversion: 1.0.0\n{written}---\n\n{body}"})
+
+    found = _document()
+
+    (proposal,) = found["proposals"]
+    assert proposal["kind"] == landing.RULE_SET_FILE and proposal["path"] == RULES
+    assert "no mapping" in proposal["why"] and found["refuses"] is True
+
+
+def test_an_empty_mapping_of_rules_holds_no_proposal(repo: GitRepo) -> None:
+    _branch(repo, {CONFIG: ON})
+    repo.commit("add", {RULES: "---\nrule-set: CMN\nversion: 1.0.0\nrules: {}\n---\n"})
+
+    assert _document()["proposals"] == []
+
+
+@pytest.mark.parametrize(
+    "written",
+    [
+        f"  {FIRST}:\n    status: accepted\n    status: proposed\n",
+        f"  {FIRST}:\n    status: accepted\n  {FIRST}:\n    status: proposed\n",
+    ],
+    ids=["a status", "a rule"],
+)
+def test_a_rule_set_file_that_writes_a_key_twice_counts_as_one_proposal(
+    repo: GitRepo, written: str
+) -> None:
+    _branch(repo, {CONFIG: ON})
+    text = _rules({FIRST: "accepted"}).replace(f"  {FIRST}:\n    status: accepted\n", written)
+    repo.commit("add", {RULES: text})
+
+    found = _document()
+
+    (proposal,) = found["proposals"]
+    assert proposal["kind"] == landing.RULE_SET_FILE and proposal["path"] == RULES
+    assert "twice" in proposal["why"] and found["refuses"] is True
 
 
 def test_a_rule_set_file_that_is_a_link_counts_as_one_proposal(repo: GitRepo) -> None:
@@ -936,6 +1039,63 @@ def test_a_record_in_the_folder_the_change_names_is_judged_too(repo: GitRepo) ->
     )
 
     assert _names(_document()["proposals"]) == ["ADR-001"]
+
+
+@pytest.mark.parametrize(
+    "overlay",
+    [
+        "adr-records: [\n",
+        "- docs/adr\n",
+        "adr-records: docs/adr\n",
+        "adr-records:\n  - 1\n",
+        "adr-records:\n  - ../adr\n",
+    ],
+    ids=["no parse", "no mapping", "no list", "no text", "outside the repository"],
+)
+def test_an_overlay_that_gives_no_adr_folder_counts_as_one_proposal(
+    repo: GitRepo, overlay: str
+) -> None:
+    _branch(repo, {CONFIG: ON, OVERLAY_RELPATH: overlay})
+    repo.commit("add", {"docs/adr/ADR-001-a.md": _record("proposed", record_id="ADR-001")})
+
+    found = _document()
+
+    (proposal,) = found["proposals"]
+    assert proposal["path"] == OVERLAY_RELPATH and "an ADR may go unread" in proposal["why"]
+    assert found["refuses"] is True
+
+
+def test_an_overlay_that_is_a_link_counts_as_one_proposal(repo: GitRepo) -> None:
+    _branch(repo, {CONFIG: ON, "overlay.yaml": _overlay("docs/adr")})
+    link = repo.root / OVERLAY_RELPATH
+    link.parent.mkdir(parents=True)
+    link.symlink_to("../../../overlay.yaml")
+    repo.commit("link")
+
+    (proposal,) = _document()["proposals"]
+
+    assert proposal["path"] == OVERLAY_RELPATH and "link" in proposal["why"]
+
+
+def test_a_change_that_mends_the_overlay_is_not_refused_for_it(repo: GitRepo) -> None:
+    _branch(repo, {CONFIG: ON, OVERLAY_RELPATH: "adr-records: [\n"})
+    repo.commit("mend", {OVERLAY_RELPATH: _overlay("docs/adr")})
+
+    assert _run().exit_code == 0
+
+
+@pytest.mark.parametrize(
+    "files",
+    [{}, {OVERLAY_RELPATH: "other: 1\n"}, {OVERLAY_RELPATH: "adr-records: []\n"}],
+    ids=["no overlay", "no entry", "an empty entry"],
+)
+def test_an_overlay_that_names_no_adr_folder_holds_no_proposal(
+    repo: GitRepo, files: Mapping[str, str]
+) -> None:
+    _branch(repo, {CONFIG: ON, **files})
+    repo.commit("add", {"docs/adr/ADR-001-a.md": _record("proposed", record_id="ADR-001")})
+
+    assert _document()["proposals"] == []
 
 
 # --- the list --------------------------------------------------------------------------
@@ -1321,6 +1481,14 @@ def test_a_read_of_the_proposals_a_state_holds(repo: GitRepo) -> None:
         (landing.RECORD, OTHER),
         (landing.RULE, FIRST),
     ]
+
+
+def test_a_read_of_a_state_counts_an_overlay_that_does_not_read(repo: GitRepo) -> None:
+    _branch(repo, {OVERLAY_RELPATH: "adr-records: [\n"})
+
+    (found,) = landing.proposals_at(repo.root, repo.head())
+
+    assert (found.path, found.was) == (OVERLAY_RELPATH, "proposed")
 
 
 def test_a_read_of_a_state_that_cannot_be_read_gives_no_answer(repo: GitRepo) -> None:

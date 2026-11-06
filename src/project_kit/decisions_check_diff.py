@@ -110,8 +110,8 @@ shows the list, such as a landing command.
 point 2), and the landing check calls it too. `read_records` reads what a state
 holds and names each record file it cannot read, which the numbering check
 leaves to validation. `pair_records` pairs a record at its path, else by its
-id-space and id. `adr_folder_at` gives the ADR folder at a state, and
-`accepted_change` reads how an accepted record's points changed.
+id-space and id. `adr_folder_at` gives the ADR folder at a state, with why it may
+not read, and `accepted_change` reads how an accepted record's points changed.
 """
 
 from __future__ import annotations
@@ -360,11 +360,12 @@ def _read(tree: _Tree, adr: str | None) -> dict[str, Record]:
     return read_records(tree, adr).records
 
 
-def adr_folder_at(target_root: Path, tree: fd.RepositoryTree) -> str | None:
+def adr_folder_at(target_root: Path, tree: fd.RepositoryTree) -> tuple[str | None, str | None]:
     """The folder of the ADR id-space at the state `tree` holds, read forgivingly from
-    that state's overlay: `None` where it names none."""
-    overlay, _unread = fd.read_mapping_at(target_root, tree, decisions.OVERLAY_RELPATH)
-    return decisions.adr_folder_named(overlay)
+    that state's overlay, `None` where it names none, and why the overlay does not read,
+    where it may name one."""
+    overlay, unread = fd.read_mapping_at(target_root, tree, decisions.OVERLAY_RELPATH)
+    return decisions.adr_folder_named(overlay), unread or decisions.adr_folder_unread(overlay)
 
 
 def pair_records(head: Mapping[str, Record], other: Mapping[str, Record]) -> dict[str, Record]:
