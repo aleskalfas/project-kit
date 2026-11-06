@@ -25,7 +25,7 @@ answers:
       - 20261106T060339Z-9b329e2d.yaml
       - 20261106T060745Z-98733159.yaml
     revalidated:
-      at: 2026-11-06T10:07:02Z
+      at: 2026-11-06T10:19:26Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/outputs.md
     read:
@@ -51,7 +51,7 @@ answers:
       - 20261106T060339Z-9b329e2d.yaml
       - 20261106T060745Z-98733159.yaml
     revalidated:
-      at: 2026-11-06T10:07:04Z
+      at: 2026-11-06T10:19:28Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/README.md
     read:
@@ -78,7 +78,7 @@ answers:
       - 20261106T060339Z-9b329e2d.yaml
       - 20261106T060745Z-98733159.yaml
     revalidated:
-      at: 2026-11-06T10:07:05Z
+      at: 2026-11-06T10:19:29Z
       outcome: updated
   - artefact: .pkit/capabilities/visual-communication/components.md
     read:
@@ -100,7 +100,7 @@ answers:
       - 20261106T051034Z-13da0f09.yaml
       - 20261106T060339Z-9b329e2d.yaml
     revalidated:
-      at: 2026-11-06T10:07:07Z
+      at: 2026-11-06T10:19:31Z
       outcome: unchanged
       unchanged-because: files.md gains a row for current-copy/ and a sentence on what a published piece owes under the state field. components.md links those two sections only for where a component's file lies and for a piece naming its top, and neither passage moved. The facts of an export and their stand-ins, which this page now holds, are about a scene, and a current copy is a file an export writes, so the two do not meet here and nothing changes.
   - artefact: .pkit/capabilities/visual-communication/checks.md
@@ -134,9 +134,9 @@ answers:
       - 20261106T060745Z-98733159.yaml
       - 20261106T061853Z-ad99d5f3.yaml
     revalidated:
-      at: 2026-11-06T10:07:08Z
+      at: 2026-11-06T10:19:33Z
       outcome: unchanged
-      unchanged-because: "An export now writes current-copy/ and the record gains an optional current-copy entry, and the gate refuses a published lock that differs. No finding of the check changes: it still reads only the binding of exports.yaml, the schema takes the new entry at format 1, and this page's statement that no fingerprint reads current-copy/ stays true, which the export tests hold. The row on text-overflow that says a stand-in that overflows is a finding reads a scene, and a current copy is written after the scene, so that row stands as it is."
+      unchanged-because: "Three changes meet on this page, and it holds against each. An export now writes current-copy/ and the record gains an optional current-copy entry, and the gate refuses a published lock that differs: no finding changes, the check still reads only the binding of exports.yaml, the schema takes the new entry at format 1, and the statement that no fingerprint reads current-copy/ stays true, as the export tests hold. The change that added the stand-ins wrote the text-overflow row for a scene, and a copy is written after the scene, so the row stands. The search that works out a published lock's move added propose_lock and reworked libraries.py: held-clash, held-end, lock-below and lock-kept keep their words and levels, move_lock still gives a render only the versions a misfit held back, render.py reads held.reasons and held.label with its messages unchanged, and the refusals that now say the lock are a render's, which this page does not quote. fingerprint.py now names a form that is no number and an input JSON cannot hold as a fault where it raised: this page's section on how a fingerprint verifies says what a kept input does when it matches, and no row here quotes either fault, so nothing changes."
   - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-export
     read:
       - 20261103T170439Z-32fb6096.yaml
@@ -147,6 +147,6 @@ answers:
       - 20261106T043557Z-4ed48797.yaml
       - 20261106T060339Z-9b329e2d.yaml
     revalidated:
-      at: 2026-11-06T10:07:10Z
+      at: 2026-11-06T10:19:34Z
       outcome: unchanged
       unchanged-because: "The change adds a current copy beside the numbered files and leaves what a numbered export is alone. The term's example of a third run in two languages, and its distinction that an export stays as it was made, still hold: a copy is a separate unnumbered file and no numbered file is rewritten."
