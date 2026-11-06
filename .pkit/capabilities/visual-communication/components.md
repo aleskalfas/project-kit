@@ -532,7 +532,7 @@ Each fact takes one form in every language. Each stand-in is wide enough that a 
 
 | Fact | Its form | Its stand-in |
 |---|---|---|
-| `version` | `v<N>`, the number as an exported file's name carries it | `v88` |
+| `version` | `v<N>`, with `<N>` the version's number | `v88` |
 | `date` | `YYYY-MM-DD` | `2088-08-28` |
 
 - **A stand-in that overflows** is a finding at the element that shows it, and it names the component. It fails where the project can correct that component, and asks for attention in a released library.
