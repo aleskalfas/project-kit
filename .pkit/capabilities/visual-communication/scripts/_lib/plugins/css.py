@@ -286,10 +286,9 @@ def _number(value: Any) -> str:
 def _quoted(family: str) -> str:
     """A family name as a CSS string: `"` and `\\` escaped, and a control character as its
     code point."""
-    # The SVG renderer's `css_string` (`plugins/svg.py`) writes a name the same way, and
-    # escapes more for a style element. It is kept apart so that this writer's output and
-    # version do not move: a change to how either writes a CSS string is weighed for the
-    # other too.
+    # The canvas's `css_string` (`_lib/canvas.py`) writes a name the same way, and escapes
+    # more for a style element. It is kept apart so that this writer's output and version
+    # do not move: a change to how either writes a CSS string is weighed for the other too.
     out = []
     for char in family:
         if char in ('"', "\\"):
