@@ -67,6 +67,10 @@ pkit:
         - visual-communication:DEC-013#6
         - visual-communication:DEC-014#1
         - visual-communication:DEC-014#5
+        - visual-communication:DEC-016#1
+        - visual-communication:DEC-016#2
+        - visual-communication:DEC-016#3
+        - visual-communication:DEC-016#4
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
         - .pkit/capabilities/visual-communication/components.md#breaking-lines
@@ -451,6 +455,8 @@ A *fingerprint* says what an output was read from, so the check can tell when th
 | `value` | The SHA-256 of the canonical text of `inputs`, in lower-case hexadecimal. |
 | `inputs` | Each input: its identity, and the `sha256` of what was read. They are sorted by the canonical text of their identity, and no identity appears twice. |
 
+A form fixes how each kind of thing is read, apart from the fields an input names (DEC-006 point 6). So a change of those fields takes no new form.
+
 ### An input's identity
 
 An identity says what was read, apart from where the work lies. So moving the location, or copying a piece, makes nothing stale.
@@ -458,6 +464,7 @@ An identity says what was read, apart from where the work lies. So moving the lo
 | Identity | What was read | Its `sha256` is the hash of |
 |---|---|---|
 | `{file}` | A file of the piece, by its path within the piece's folder. | the file's reading |
+| `{file, without}` | A file of the piece, read without the fields `without` names. | the file's reading, without those fields |
 | `{file, keys}` | A part of a file of the piece, by the keys that lead to it. | the part's canonical text |
 | `{library, version, path}` | A file of a library version, by its path within the version's folder. | the file's reading |
 | `{font}` | A font of the location's `fonts/`, by its SHA-256. | the font's bytes |
@@ -472,6 +479,7 @@ An identity says what was read, apart from where the work lies. So moving the lo
 A file is read once, one way, so the same file gives the same hash on every machine. YAML and JSON are read as [How the files are read](files.md#how-the-files-are-read) says.
 
 - **A YAML file of the capability's format** is read as its value, at the format number the fingerprint names. Its hash is taken of the value's canonical text. So a comment, the order of keys or the quoting changes nothing. Format 1 has no converter: a file at another number cannot be read, and the fingerprint does not verify.
+- **A file read without fields** loses them from its value, at its top level, before the hash is taken. Only a YAML file of the capability's format loses a field. Any other file is read as this list says, whatever its input names.
 - **A JSON file** is read as its value, and hashed as its canonical text.
 - **Any other file,** a YAML file not of the format or one that does not parse included, is hashed as its bytes.
 - **A brand's value** is hashed in its resolved form. A colour is `colorSpace`, `components` and `alpha`, the alpha `1` where the token gives none, and its `hex` left out. A dimension is `value` and `unit`, a font family a list of names. So a value written another way gives the same hash.
@@ -484,19 +492,36 @@ A file is read once, one way, so the same file gives the same hash on every mach
 | A piece's findings | `findings.yaml`, as `key` | The piece's own files. Every file of each version the lock names. Each font of the location's `fonts/` that its scenes read. |
 | A produced picture | the output's `record.yaml` ([its record](outputs.md#the-record-of-a-produced-output)) | The part of `piece.yaml` at `produced.<output>`. Each value its inputs name, in each combination the piece names. Each variant's pixel size. The producer's version. |
 | Written code | `<out>.record.yaml` ([its record](outputs.md#the-record-beside-the-code)) | The declaration's file. Each value written, in each combination of the brand's axes. The code writer's version. |
-| An export | each version of `exports.yaml` ([the record of exports](outputs.md#the-record-of-exports)) | As a piece's findings, and the part of `piece.yaml` at `exports`. |
+| An export | each version of `exports.yaml` ([the record of exports](outputs.md#the-record-of-exports)) | As a piece's findings, and the part of `piece.yaml` at `exports`. Two files are read as [What an export leaves out](#what-an-export-leaves-out) says. |
 | A released library version | its entry in the list, as `hash` ([files](files.md#the-library-folder)); for a version the capability ships, its entry in the library's record too ([files](files.md#the-libraries-the-capability-ships)) | Every file of the version's folder, its `library.yaml` with the release it needs included. |
 
 A piece's *own files* are the files of its folder as git lists them, tracked or untracked but not ignored. They leave out `findings.yaml` and `exports.yaml`. Under `produced/`, only each output's `record.yaml` is one of them, since it holds the hash of each of its pictures. A library version's files are listed the same way.
 
+No fingerprint reads a file under two folders of a piece, whatever its name (DEC-016 point 3). `handed-out/` holds the files of a version handed out, and `current-copy/` a published piece's current copy.
+
+### What an export leaves out
+
+An export reads two files without some of their fields. Each field can change no exported file, or changes one only as a fact of that export (DEC-016 point 1).
+
+| File | Fields it is read without |
+|---|---|
+| `piece.yaml` | `state`, `pinned`, `audience`, `shown`, `explains`, `accept-losses`, and `copy-place`, the place of a published piece's current copy |
+| A produced output's `record.yaml` | `recorded` |
+
+- **What this leaves verifying.** Pinning a draft or setting its state changes no export's fingerprint. Nor does running a producer again with the same pixels.
+- **What still counts.** Every other field counts, the lock and the formats among them. A field added later counts until a change adds it to this list.
+- **What the input says.** It names each field of the list it applied, whether the file held that field or not. So a field set later stays left out.
+- **Only an export.** Every other kind of fingerprint reads these files whole (DEC-016 point 2). So a listed field can still change a piece's findings.
+
 ### How a fingerprint verifies
 
-The check works out the input set again from the files as they are now, under the form the fingerprint names. It compares each input's hash with the one kept, and names each input that changed, is no longer read, or is read now. A fingerprint does not verify where any of these differs. Nor does one whose `value` is not the hash of its own `inputs` (it was edited), or whose form, hash or format number the capability does not read.
+The check works out the input set again from the files as they are now, under the form the fingerprint names. It reads a file without the fields its kept input names, whatever the list holds today. An input that names none reads the whole file. So a fingerprint verifies as it was written (DEC-016 point 4). It compares each input's hash with the one kept, and names each input that changed, is no longer read, or is read now. A fingerprint does not verify where any of these differs. Nor does one whose `value` is not the hash of its own `inputs` (it was edited), or whose form, hash or format number the capability does not read.
 
 ### What makes an output stale
 
 - **A produced picture** is stale when its fingerprint does not verify, or when a combination the piece names maps to no variant in its record. Its inputs are values, not the engine's version, so a release of the capability makes no picture stale; the producer's version is compared (DEC-006 point 5).
 - **Written code** is stale when its fingerprint does not verify. Where it verifies with the writer's version the fingerprint names, the code is stale only by its writer's version, and asks for attention (`code-stale-writer`). Otherwise it fails (`code-stale`).
+- **An export** has changed since it was made when its fingerprint does not verify (DEC-016 point 1). One made before [What an export leaves out](#what-an-export-leaves-out) read `piece.yaml` whole, so a pin reads as a change since it. Each later export writes the new reading.
 - **Never compared:** the outside programs a producer called, the machine, the time and the capability's release. A record keeps them beside the fingerprint (DEC-006 point 5).
 
 ## In `pkit validate`

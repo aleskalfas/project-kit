@@ -972,6 +972,41 @@ def previews_of(root: Path) -> dict[str, str]:
     return found
 
 
+#: What a person may set each field an export's fingerprint leaves out to, unlike what
+#: `lay_out_drawing` writes. A field added to that list and not here fails the test below.
+LEFT_OUT_VALUES = {
+    "accept-losses": [{"plugin": "svg", "what": "accent", "reason": "Seen."}],
+    "audience": "Someone else.",
+    "copy-place": "docs/images",
+    "explains": True,
+    "pinned": True,
+    "shown": "On a page.",
+    "state": "published",
+}
+
+
+@pytest.mark.parametrize("field", fingerprint.PIECE_FIELDS_LEFT_OUT)
+def test_a_field_an_export_leaves_out_changes_no_scene(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, field: str
+) -> None:
+    """The list holds to what scenes read (DEC-016 point 1). This piece shows no fact of an
+    export, so its state, which only such a fact may show, changes nothing either."""
+    importable(monkeypatch, svg)
+    root = drawing_project(tmp_path)
+    write_picture(root, framing)
+
+    def scenes() -> list[tuple[str, dict[str, Any]]]:
+        return [(language, made.scene.to_dict()) for language, made in project_of(root).scenes()]
+
+    before, drawn = scenes(), previews_of(root)
+    path = root / PIECE_FOLDER / "piece.yaml"
+    data = reading.read_yaml(path)
+    assert data.get(field) != LEFT_OUT_VALUES[field]
+    path.write_text(yaml_text({**data, field: LEFT_OUT_VALUES[field]}), encoding="utf-8")
+    assert scenes() == before
+    assert previews_of(root) == drawn
+
+
 def changed_tests(folder: Path, version: str = "1.0.0") -> Path:
     """The `tests` library copied to `folder` at `version`, its card's head in another style."""
     shutil.copytree(TESTS, folder)

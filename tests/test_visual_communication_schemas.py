@@ -190,6 +190,23 @@ def _replaced(listed: dict[str, Any], entry: dict[str, Any]) -> dict[str, Any]:
     return copy
 
 
+def _with_input(entry: dict[str, Any]) -> dict[str, Any]:
+    """The reference record of exports, its first version's first input replaced."""
+    record = json.loads(json.dumps(instance("exports")))
+    record["versions"][0]["fingerprint"]["inputs"][0] = entry
+    return record
+
+
+def test_an_input_may_name_the_fields_it_read_a_file_without() -> None:
+    digest = "0" * 64
+    named = {"file": "piece.yaml", "without": ["pinned", "state"], "sha256": digest}
+    assert refused(instance("exports"), "exports") == []
+    assert refused(_with_input(named), "exports") == []
+    assert refused(_with_input({**named, "without": []}), "exports") != []
+    assert refused(_with_input({**named, "without": "state"}), "exports") != []
+    assert refused(_with_input({**named, "keys": ["exports"]}), "exports") != []
+
+
 @pytest.mark.parametrize("location", [".pkit/x", "", ".", "../out", "/abs", "a//b", "a/.git"])
 def test_the_configuration_refuses_a_location_the_rules_refuse(location: str) -> None:
     assert refused({**instance("config"), "location": location}, "config") != []
