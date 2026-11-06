@@ -10,6 +10,9 @@
       "description": "The project's declared name, rendered wherever the backbone names the project (COR-048 point 2, first entry). Declared here so it is never derived from a folder or remote name. Default: none — readers fall back to the git remote's repository name.",
       "$ref": "#/$defs/non-empty-string"
     },
+    "decisions": {
+      "$ref": "#/$defs/decisions"
+    },
     "docs": {
       "$ref": "#/$defs/docs"
     },
@@ -35,6 +38,18 @@
     }
   },
   "$defs": {
+    "decisions": {
+      "title": "How decisions reach the default branch (COR-066)",
+      "description": "What the project asks of a decision record or rule on its way to the default branch.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "refuse-proposals": {
+          "description": "Turns on the landing check's refusal: with `true`, a record or rule that would land proposed fails a landing on the default branch (COR-066 point 4). It counts as the default branch holds it, read at the base's tip, so a change that sets it counts once it has landed. Default `false`, with the key, its block or the file absent (COR-048 point 3).",
+          "type": "boolean"
+        }
+      }
+    },
     "docs": {
       "title": "Documentation roots, by audience (COR-049)",
       "description": "Where the project's documentation lives. Each root is a directory path relative to the repository root whose resolved location, after following links, lies inside the repository and outside the methodology's own tree (`.pkit/`); validation checks that and warns when the directory does not exist yet (COR-049 points 1 and 7). The two roots may be the same folder, or one nested in the other. Both default to `docs/`.",
