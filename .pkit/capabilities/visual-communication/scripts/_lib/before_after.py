@@ -221,12 +221,9 @@ def _why(before: Side, after: Side) -> str:
 
 def _stale(project: pl.Project, built: Path) -> dict[str, list[str]]:
     """Each produced picture the project's scenes read that is stale under its lock, with
-    what changed, and each that is missing, with why. A picture's inputs are read under the
-    lock of the piece's own file, so that file takes the side's first, in the location
-    `built`, which is the side's alone. Git ignores that location, so they are read
-    through the project's own `Held`, which lists its files as they lie."""
-    if project.env.records:
-        pl.write_lock(project.piece, project.lock)
+    what changed, and each that is missing, with why. Git ignores the location `built`, so a
+    picture's inputs are read through the project's own `Held`, which lists its files as
+    they lie."""
     stale = {
         output: [change.replace(f"{built}/", "") for change in changes]
         for output, changes in exports.stale_outputs(project, project.held).items()

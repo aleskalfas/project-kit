@@ -402,13 +402,10 @@ def test_a_lock_that_cannot_be_spliced_as_text_is_refused() -> None:
         pl.lock_text(text, {"foundations": "1.0.0"})
 
 
-def test_writing_the_lock_it_holds_writes_nothing(tmp_path: Path) -> None:
+def test_the_lock_it_holds_gives_no_new_bytes(tmp_path: Path) -> None:
     root = drawing_project(tmp_path)
-    path = root / PIECE_FOLDER / "piece.yaml"
-    before = path.stat().st_mtime_ns
-    assert pl.write_lock(piece_of(root), LOCK) is False
-    assert path.stat().st_mtime_ns == before
-    assert pl.write_lock(piece_of(root), {**LOCK, "tests": "1.0.0"}) is False
+    assert pl.locked(piece_of(root), LOCK) is None
+    assert pl.locked(piece_of(root), {**LOCK, "tests": "1.0.0"}) is None
 
 
 # --- the Env ------------------------------------------------------------------------------------

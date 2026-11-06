@@ -1623,6 +1623,45 @@ def test_the_gate_lies_outside_what_a_proposed_move_of_the_lock_shares(tmp_path:
     assert run(root, PIECE).returncode == 0
 
 
+def test_a_plan_added_to_a_change_waits_for_what_holds_the_change(tmp_path: Path) -> None:
+    root = exported_once(tmp_path)
+    edit(root, "tests: 1.0.0", "tests: 1.1.0")
+    piece = pl.read_piece(root, "visual", PIECE)
+    project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+    change = files.Change(root)
+    exports.add(exports.plan(project), change)
+    assert record_of(root)["current-copy"]["version"] == 1
+    change.commit()
+    assert record_of(root)["current-copy"]["version"] == 2
+
+
+def test_a_plan_fingerprints_what_a_run_writes_in_place_of_the_file(tmp_path: Path) -> None:
+    root = exported_once(tmp_path)
+    edit(root, "tests: 1.0.0", "tests: 1.1.0")
+    piece = pl.read_piece(root, "visual", PIECE)
+    project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+    path = root / PIECE_FOLDER / "piece.yaml"
+    moved = path.read_bytes()
+    from_the_file = exports.plan(project, now="now")
+    path.write_bytes(moved.replace(b"tests: 1.1.0", b"tests: 1.0.0"))
+    assert exports.plan(project, now="now", written={path: moved}).versions == (
+        from_the_file.versions
+    )
+
+
+def test_a_run_that_proposes_a_move_says_its_own_way_past_a_stale_picture(tmp_path: Path) -> None:
+    root = ready(tmp_path)
+    make_stale(root)
+    piece = pl.read_piece(root, "visual", PIECE)
+    project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+    with pytest.raises(pl.Refused) as caught:
+        exports.plan(project, way_past_stale=lambda stale: f"Name {sorted(stale)}")
+    said = str(caught.value)
+    assert said.startswith("a produced picture is stale: `square` (")
+    assert said.endswith(". Name ['square']")
+    assert "pkit visual produce" not in said
+
+
 # --- what a failed export of a published piece leaves -------------------------------------------
 
 
