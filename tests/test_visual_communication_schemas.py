@@ -31,6 +31,14 @@ def instance(kind: str) -> dict[str, Any]:
     return reading.read_yaml(SCHEMAS / f"{kind}.yaml")
 
 
+def exports_in(state: str) -> dict[str, Any]:
+    """The record of exports' instance, its one version made in `state`."""
+    record = instance("exports")
+    (version,) = record["versions"]
+    recorded = {**version["recorded"], "state": state}
+    return {**record, "versions": [{**version, "recorded": recorded}]}
+
+
 def refused(data: Any, kind: str) -> list[str]:
     return files.shape_problems(data, kind)
 
@@ -108,8 +116,17 @@ def test_content_takes_names_at_its_top_and_the_reserved_keys_alone() -> None:
 # --- what format 1 refuses ----------------------------------------------------------------------
 
 
-def test_a_piece_is_a_draft_in_format_1() -> None:
-    assert refused({**instance("piece"), "state": "final"}, "piece") != []
+@pytest.mark.parametrize("state", ["draft", "final", "published"])
+def test_format_1_takes_each_state_of_a_piece_and_the_record_of_exports_keeps_it(
+    state: str,
+) -> None:
+    assert refused({**instance("piece"), "state": state}, "piece") == []
+    assert refused(exports_in(state), "exports") == []
+
+
+def test_format_1_takes_no_other_state() -> None:
+    assert refused({**instance("piece"), "state": "retired"}, "piece") != []
+    assert refused(exports_in("retired"), "exports") != []
 
 
 def test_a_brand_names_its_dtcg_version_and_a_component_library_none() -> None:

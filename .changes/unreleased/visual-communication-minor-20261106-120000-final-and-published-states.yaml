@@ -1,0 +1,14 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A piece's `state` takes `final` and `published` beside `draft`, at format 1,
+  and `exports.yaml` keeps any of the three (#2746). No render moves the lock
+  of a final or a published piece, `pinned` set or not: it checks that lock as
+  a pinned draft's, and a refusal says the piece's state. `pkit visual add`
+  reads each state's lock and calls each piece by its state: it replaces a
+  copy not yet released under a final piece's lock with no piece named, and
+  under a published piece's only where the piece is named, after its
+  before-and-after. `pkit visual export` and `pkit visual produce` refuse a
+  final piece, with nothing written. `pinned` is read of a draft alone.

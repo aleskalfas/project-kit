@@ -45,6 +45,22 @@ def test_the_default_holding_work_is_shown_unrecorded_with_its_pieces(tmp_path: 
     ]
 
 
+def test_each_state_is_shown_and_a_pin_is_read_of_a_draft_alone(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    write_list(root, {})
+    lock = {"foundations": "1.0.0"}
+    write_piece(root, "draft", lock=lock)
+    write_piece(root, "final", lock=lock, state="final", pinned=True)
+    write_piece(root, "published", lock=lock, state="published", pinned=True)
+    shown = run(root)
+    assert shown.returncode == 0, shown.stderr
+    assert shown.stdout.splitlines()[2:] == [
+        "  draft: draft; lock foundations 1.0.0",
+        "  final: final; lock foundations 1.0.0",
+        "  published: published; lock foundations 1.0.0",
+    ]
+
+
 def test_the_recorded_location_is_shown_with_where_it_is_recorded(tmp_path: Path) -> None:
     root = project(tmp_path)
     write(root / CONFIG, f"{BINDING}location: docs/art\n")

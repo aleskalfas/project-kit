@@ -219,6 +219,61 @@ def test_a_pinned_pieces_lock_stays(tmp_path: Path) -> None:
     assert (root / PIECE_FOLDER / "piece.yaml").read_text(encoding="utf-8") == before
 
 
+@pytest.mark.parametrize(
+    "fields",
+    [
+        pytest.param({"state": "final"}, id="final"),
+        pytest.param({"state": "final", "pinned": True}, id="final-pinned"),
+        pytest.param({"state": "published"}, id="published"),
+        pytest.param({"state": "published", "pinned": False}, id="published-not-pinned"),
+    ],
+)
+def test_no_render_moves_a_final_or_a_published_lock_with_a_newer_version_held(
+    tmp_path: Path, fields: dict[str, Any]
+) -> None:
+    root = drawing_project(tmp_path, **fields)
+    newer_tests(root)
+    before = (root / PIECE_FOLDER / "piece.yaml").read_bytes()
+    shown = run(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert "lock:" not in shown.stdout
+    assert (root / PIECE_FOLDER / "piece.yaml").read_bytes() == before
+
+
+@pytest.mark.parametrize("state", ["final", "published"])
+def test_a_final_or_a_published_lock_that_cannot_be_drawn_refuses_and_says_the_state(
+    tmp_path: Path, state: str
+) -> None:
+    lock = {"foundations": "1.0.0", "test-brand": "2.0.0", "tests": "1.0.0"}
+    root = drawing_project(tmp_path, state=state, lock=lock)
+    before = (root / PIECE_FOLDER / "piece.yaml").read_bytes()
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stdout == ""
+    assert shown.stderr == (
+        f"error: visual/pieces/flow/piece.yaml: the piece is {state}, so no render moves its "
+        f"lock: the pinned lock names test-brand@2.0.0, which the project does not hold: "
+        f"restore it\n"
+    )
+    assert (root / PIECE_FOLDER / "piece.yaml").read_bytes() == before
+    assert not (root / CONFIG).exists()
+    assert not (root / FINDINGS).exists()
+
+
+@pytest.mark.parametrize("state", ["final", "published"])
+def test_a_final_or_a_published_piece_with_no_lock_is_refused_and_told_of_no_pin(
+    tmp_path: Path, state: str
+) -> None:
+    root = drawing_project(tmp_path, state=state, lock=None)
+    shown = run(root, PIECE)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        f"error: visual/pieces/flow/piece.yaml: the piece is {state}, so no render moves its "
+        f"lock: set it back to a draft for its first render\n"
+    )
+    assert not (root / FINDINGS).exists()
+
+
 # --- findings, losses and refusals --------------------------------------------------------------
 
 

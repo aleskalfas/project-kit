@@ -16,7 +16,8 @@ and draw its previews (DEC-003 point 8, DEC-005 points 5, 9, 13 and 14).
   into `piece.yaml`, every other byte kept. Versions under which an item clashes, or a tie
   loses an end, where neither happens under the lock, do not fit: it judges each whole
   combination it reaches by placing the piece under it (`pipeline.Fit`). A pinned draft's
-  lock is checked, never moved.
+  lock is checked, never moved, and so is a final or a published piece's, `pinned` set or
+  not.
 - **States** each version it held back, with the item and the key or the tie and the
   end, each library it moved below the version the lock named, and a search that stopped
   at its bound and kept the lock, each a fact at the lock (DEC-010 point 9, DEC-011 point
@@ -45,7 +46,8 @@ Usage:
 Exit codes:
   0  rendered; findings, if any, are printed and kept in the findings record
   1  refused: the piece, its lock, its brand or its fonts cannot be drawn, the search for
-     its lock stopped at its bound, or the location cannot be used; nothing is written.
+     its lock stopped at its bound, or the location cannot be used; nothing is written. A
+     refusal of a final or a published piece's lock says its state.
      Or a write failed: it names the file, and every file is as it was before the run, or
      each it could not put back is named
 """
@@ -61,7 +63,7 @@ from typing import Any
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import checks, files, fingerprint, libraries, location, records, tokens
+from _lib import checks, copies, files, fingerprint, libraries, location, records, tokens
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.findings import FACT, Finding
@@ -108,12 +110,7 @@ def _render(root: Path, name: str, given: str | None) -> int:
     where = location.for_writing(root, given)
     piece = pl.read_piece(root, where.path, name)
     held = libraries.Held(root, where.path)
-    try:
-        moved = libraries.move_lock(
-            held, pl.needed(piece), piece.lock, pinned=piece.pinned, judge=pl.fit(piece, held)
-        )
-    except libraries.LockRefused as exc:
-        raise pl.Refused(f"{piece.file(pl.PIECE_FILE)}: {exc}") from exc
+    moved = _moved(piece, held)
     lock = moved.lock
     try:
         project = pl.Project(piece, lock, held)
@@ -169,6 +166,29 @@ def _render(root: Path, name: str, given: str | None) -> int:
     _print(checks.rooted(finding, piece) for finding in found if finding.code != "loss")
     print(f"findings: {len(found)} kept in {piece.file(pl.FINDINGS_FILE)}")
     return 0
+
+
+def _moved(piece: pl.Piece, held: libraries.Held) -> libraries.Moved:
+    """The lock the render leaves (DEC-003 point 8). No render moves a final or a published
+    piece's, `pinned` set or not: `move_lock` checks it as a pinned draft's, and a refusal
+    says the piece's state. Such a piece with no lock has no pin to take off, so that
+    refusal says what to do instead. Raises Refused."""
+    stays = copies.final(piece.data) or piece.state == copies.PUBLISHED
+    shown = piece.file(pl.PIECE_FILE)
+    if stays:
+        shown += f": the piece is {piece.state}, so no render moves its lock"
+        if not piece.lock:
+            raise pl.Refused(f"{shown}: set it back to a draft for its first render")
+    try:
+        return libraries.move_lock(
+            held,
+            pl.needed(piece),
+            piece.lock,
+            pinned=stays or piece.pinned,
+            judge=pl.fit(piece, held),
+        )
+    except libraries.LockRefused as exc:
+        raise pl.Refused(f"{shown}: {exc}") from exc
 
 
 #: The fact the render states of a version it held back, by the rule it would break.
