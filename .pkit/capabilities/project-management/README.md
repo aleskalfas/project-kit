@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
         - .pkit/capabilities/project-management/package.yaml
         - .pkit/capabilities/project-management/rule-sets/pm.md
-      record: [COR-008, COR-017, ADR-076, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, COR-064, COR-070, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
+      record: [COR-008, COR-017, ADR-076, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, COR-064, COR-070, ADR-004, ADR-016, ADR-019, "ADR-025#5", ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
       artefact:
         - .pkit/decisions/README.md#checking-a-changes-numbering
 ---
@@ -1879,7 +1879,7 @@ The project-management capability ships a **capability-contributed permission gr
   effect: deny
 ```
 
-The **first** deny blocks the `project-manager` agent from invoking the mutating `gh` subcommands directly — `gh issue create|edit|comment|close|reopen` and `gh pr create|edit|merge|close|reopen`. The agent reaches the issue tracker exclusively through the capability's validated scripts (`create-issue.py`, `close-issue.py`, `merge-pr.py`, etc.), which enforce the methodology's preconditions and gates (validation, the checkbox close-gate, the approval gate). Note this is a **speed-bump, not a security boundary** — per ADR-004 a tool-call denylist is porous (a code runner such as `python3 -c '…'` or `gh api -X PATCH … state=closed` evades it); the genuine gate enforcement lives inside the scripts, so the deny only removes the reflexive direct-typed bypass.
+The **first** deny blocks the `project-manager` agent from invoking the mutating `gh` subcommands directly — `gh issue create|edit|comment|close|reopen` and `gh pr create|edit|merge|close|reopen`. The agent reaches the issue tracker exclusively through the capability's validated scripts (`create-issue.py`, `close-issue.py`, `merge-pr.py`, etc.), which enforce the methodology's preconditions and gates (validation, the checkbox close-gate, the approval gate). Note this is a **speed-bump, not a security boundary** — per ADR-004 a tool-call denylist is porous (a code runner such as `python3 -c '…'`, which ADR-025 point 5 leaves unread, or `gh api -X PATCH … state=closed` evades it); the genuine gate enforcement lives inside the scripts, so the deny only removes the reflexive direct-typed bypass.
 
 The **second** deny (`issue-tracker-read-raw`) is a **read-redirect**: it blocks the three raw read views the clean-output verbs replace — `gh issue view`, `gh pr view`, `gh pr diff` — and routes the agent to `pkit project-management show-issue` / `show-pr` (and their `--field <name>` for a single value, [described above](#read-only-diagnostics--show-issue--show-pr)). Those verbs emit clean output an agent can capture as a *bare* command instead of piping a full `gh` view through `grep`/`tail`. The recognizer is deliberately narrow — **only** those three views; `gh pr checks`, `gh run`, `gh api`, `gh issue list`, and `gh pr list` stay available, as do `git` and `pkit`. Like the mutation deny it is a speed-bump (a deny is auto-rejected by the harness with no operator prompt, so the agent simply adapts to the clean verb).
 
