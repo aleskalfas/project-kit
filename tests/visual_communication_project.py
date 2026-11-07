@@ -35,6 +35,9 @@ TEST_EDITION = FIXTURES / "libraries" / "test-edition" / "1.0.0"
 TEST_NOTATION = FIXTURES / "libraries" / "test-notation" / "1.0.0"
 #: A component library with roles of its own, one without a default (DEC-008).
 TEST_PARTS = FIXTURES / "libraries" / "test-parts" / "1.0.0"
+#: A small picture file of each encoding the capability reads, and of each it refuses
+#: (DEC-025 point 5), each named for what it is.
+TEST_PICTURES = FIXTURES / "pictures"
 
 #: The capability's project configuration, relative to the project root.
 CONFIG = ".pkit/capabilities/visual-communication/project/config.yaml"

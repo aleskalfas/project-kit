@@ -5,7 +5,7 @@ with the library's previous release, every refusal before any write. Run in this
 
 - **A project's own library,** in a project the tests build: the release it needs and the
   hash written, the version listed released, every other byte of the list kept; each
-  refusal, a component no piece places among them.
+  refusal, a component no piece places and a picture file nothing names among them.
 - **A library the capability ships,** with `--shipped`, on a repository and a history the
   tests build where the capability is authored, the methodology's source: each refusal of
   DEC-013 point 1, in the order of its Implications; a release that writes exactly the
@@ -47,6 +47,7 @@ from tests.test_visual_communication_shipped_libraries import (
 from tests.visual_communication_project import (
     FOUNDATIONS,
     REPO,
+    TEST_PICTURES,
     bound,
     copy_library,
     project,
@@ -293,6 +294,40 @@ def test_a_component_no_piece_places_that_cannot_be_read_is_refused(tmp_path: Pa
         "the formula `=:width +` ends too early",
     ]
     assert files_under(root / "visual") == before
+
+
+def test_each_picture_file_the_version_holds_is_read_and_one_refused_refuses_the_release(
+    tmp_path: Path,
+) -> None:
+    """Each file of its `pictures/` under a bare name, whether or not anything names it, as
+    the engine reads it (DEC-014 point 1, DEC-025 point 9). A file of another name is none."""
+    root = own_project(tmp_path)
+    folder = root / "visual" / "libraries" / "parts" / "1.0.0" / "pictures"
+    folder.mkdir()
+    for name, source in (
+        ("mark.png", "palette.png"),
+        ("photo.jpg", "progressive.jpg"),
+        ("deep.png", "deep.png"),
+        ("Turned.jpg", "turned.jpg"),
+    ):
+        shutil.copyfile(TEST_PICTURES / source, folder / name)
+    write(folder / "notes.txt", "Not a picture.\n")
+    before = files_under(root / "visual")
+
+    done = own(root, "parts")
+
+    assert done.returncode == 1
+    assert done.stderr.splitlines() == [
+        "error: parts@1.0.0 is not released: 1 finding that fails where it is read in full, "
+        "each to mend in the version first:",
+        "  visual/libraries/parts/1.0.0/pictures/deep.png [picture-encoding] (fails): "
+        "`deep.png` is a PNG of 16 bits for each sample, which the capability does not read "
+        "— save it at 8 bits for each sample, not interlaced",
+    ]
+    assert files_under(root / "visual") == before
+
+    (folder / "deep.png").unlink()
+    assert own(root, "parts").returncode == 0
 
 
 @pytest.mark.parametrize(

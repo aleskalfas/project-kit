@@ -71,8 +71,9 @@ format may add:
 roles' defaults, then resolves aliases. Every shared role but a picture role must resolve
 in every combination, to its declared type; a loop or a dangling alias fails; a value axis
 that changes anything but a colour or a picture fails. A picture role's value names a file
-the version holds in `pictures/`, by its exact name, or that is a finding. Open roles name
-roles the brand may give values, or groups of them by whole segments.
+of the version's `pictures/`, found by its exact name as version control lists the folder,
+and read as any picture file is (`pictures.Folder`), or that is a finding in the version.
+Open roles name roles the brand may give values, or groups of them by whole segments.
 
 **A brand and a library's own roles** (DEC-008 points 1 and 4 to 6):
 
@@ -120,17 +121,17 @@ its major is the one the entry names. In each combination:
 
 A brand that cannot be resolved raises TokenError, carrying its findings. One that can is
 a Brand, whose `findings` hold what is wrong but leaves it usable: an open role it does
-not have, a value for a role its base does not open, a font file or a picture file
-nothing holds, a declared pair below its contrast, a token under a library's name that
-gives none of its roles a value, a role of a library it names that it leaves with no
-value. Its `facts` hold what its version alone states: each shared picture role it gives
-no value (DEC-025 point 9). A library's own
-`roles.yaml` is no brand's: its findings are the scope's (`Scope.findings`), each naming
-the library's version. Every finding of a brand names the brand's version as where it
-lies, so its level is read where it lies (DEC-002 point 7); a fault of the lock, a base it
-names at another major or not at all, names none, and always fails. A brand's findings
-hold its base's too, each naming the base's version; a pair or a font family is judged at
-the brand only where the brand's values change what the base gives.
+not have, a value for a role its base does not open, a font file nothing holds, a picture
+file nothing holds or the capability does not read, a declared pair below its contrast, a
+token under a library's name that gives none of its roles a value, a role of a library it
+names that it leaves with no value. Its `facts` hold what its version alone states: each
+shared picture role it gives no value (DEC-025 point 9). A library's own `roles.yaml` is
+no brand's: its findings are the scope's (`Scope.findings`), each naming the library's
+version. Every finding of a brand names the brand's version as where it lies, so its level
+is read where it lies (DEC-002 point 7); a fault of the lock, a base it names at another
+major or not at all, names none, and always fails. A brand's findings hold its base's too,
+each naming the base's version; a pair or a font family is judged at the brand only where
+the brand's values change what the base gives.
 
 Knows nothing of the working folder, pieces, the list or the configuration.
 """
@@ -144,7 +145,7 @@ from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from _lib import keys
+from _lib import keys, pictures
 from _lib.env import MissingFont, UnvaluedRole
 from _lib.files import FileError, read_bound
 from _lib.findings import ATTENTION, FACT, FAILS, Finding
@@ -169,14 +170,10 @@ PICTURE = "picture"
 ROLE_TYPES = (*TYPES, PICTURE)
 
 #: The folder of a brand's version that holds the files its picture roles name.
-PICTURES = "pictures"
+PICTURES = pictures.FOLDER
 
 #: The keys a picture role's group may hold (DEC-025 point 4): no `$type` and no child.
 _PICTURE_KEYS = ("$description", "$extensions", "$deprecated")
-
-#: A picture file's bare name (DEC-025 point 2): lower-case letters, digits and hyphens,
-#: from a letter, then its extension.
-_PICTURE_NAME = re.compile(r"^[a-z][a-z0-9-]*\.(png|jpg|jpeg)$")
 
 #: The members of a typography value, each with its type.
 TYPOGRAPHY = {
@@ -1761,11 +1758,11 @@ class _BrandReader:
             self._fail("picture-shape", f"{shape}{held}", file, path)
             return
         name = given["file"]
-        if not isinstance(name, str) or _PICTURE_NAME.match(name) is None:
+        if not pictures.is_bare_name(name):
             self._fail(
-                "picture-name",
-                f"`{path}` names `{name}`, which is no picture file's bare name: lower-case "
-                f"letters, digits and hyphens, from a letter, then `.png`, `.jpg` or `.jpeg`",
+                pictures.NAME,
+                f"`{path}` names `{name}`, which is no picture file's bare name: "
+                f"{pictures.BARE_NAME}",
                 file,
                 path,
             )
@@ -2238,27 +2235,21 @@ class _BrandReader:
             )
 
     def _check_pictures(self) -> None:
-        """Each file the brand's own picture values name is one its version holds in
-        `pictures/`, found by its exact name, and no symbolic link (DEC-025 point 9). A
-        base's values are its base's to judge."""
-        folder = self.folder / PICTURES
-        held = (
-            {entry.name for entry in folder.iterdir() if entry.is_file() and not entry.is_symlink()}
-            if folder.is_dir()
-            else set()
-        )
+        """Each file the brand's own picture values name, judged as any picture file is
+        (DEC-025 points 2, 5 and 9): found by its exact name as version control lists the
+        version's `pictures/`, no link, its bytes committed and of an encoding read. Each
+        finding lies in the version. A base's values are its base's to judge."""
+        folder = pictures.Folder(self.folder, self.shown, "the brand's version", self.label)
         for file, tokens in sorted(self.flat.items()):
             for path, token in sorted(tokens.items()):
-                if token.type == PICTURE and token.value not in held:
-                    self._keep(
-                        "picture-missing",
-                        f"the picture role `{path}` names `{token.value}`, which the brand's "
-                        f"version does not hold in `{PICTURES}/`",
-                        file,
-                        path,
-                        fix=f"add `{PICTURES}/{token.value}` to the brand's version, or name a "
-                        f"file it holds there",
+                if token.type == PICTURE:
+                    judged = folder.judge(
+                        token.value,
+                        named=f"the picture role `{path}`",
+                        file=f"{self.shown}{file}",
+                        where=path,
                     )
+                    self.kept.extend(judged.findings)
 
     def _check_open(self, raw: Any, base: Brand | None) -> tuple[tuple[str, ...], frozenset[str]]:
         """The open roles as `open` lists them, and the roles they open: those each entry

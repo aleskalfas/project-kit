@@ -24,6 +24,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
         - .pkit/capabilities/visual-communication/scripts/_lib/current_copy.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/pictures.py
         - .pkit/capabilities/visual-communication/scripts/_lib/notations.py
         - .pkit/capabilities/visual-communication/scripts/_lib/values.py
         - .pkit/capabilities/visual-communication/scripts/_lib/env.py
@@ -84,7 +85,9 @@ pkit:
         - visual-communication:DEC-019#8
         - visual-communication:DEC-021#5
         - visual-communication:DEC-021#7
+        - visual-communication:DEC-025#2
         - visual-communication:DEC-025#4
+        - visual-communication:DEC-025#5
         - visual-communication:DEC-025#9
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-components-file
@@ -115,6 +118,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-location
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#notations
+        - .pkit/capabilities/visual-communication/files.md#picture-files
         - .pkit/capabilities/visual-communication/files.md#picture-roles
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/outputs.md#accepting-a-loss
@@ -194,7 +198,7 @@ Without a piece named, each run judges, in order: the configuration, the locatio
 
 **A version checked alone.** The newest version the project holds of each major of each library is checked alone, once (DEC-005 point 7, DEC-008 point 1). It is resolved with the newest version the project holds of each major it names, and of each major those name. A brand is read over its base, and the foundations' declarations are read. A component library's own roles are judged against the libraries it builds on. So is each of its patterns against the default component of each list it declares fields for, a drawing of a top's layout included. Its findings are `arrangement-clash`, `end-clash` and `tie-default` (DEC-010 point 9, DEC-011 point 8). Its components are read as a piece's are, from the versions it is resolved with, with no piece and no brand behind them, so each role stands for the type it declares. What a version shows alone lies in that version. A version that names majors no versions fit, or one of which the project holds no version, cannot be checked alone: that is its finding (`alone-majors`, `alone-missing`). An older version of a major is checked only under the locks that name it.
 
-**A version a release reads.** `pkit visual release` reads the version it releases in full on the installed capability, beside what the check of it alone judges (DEC-014 point 1). It reads each file of the capability's format in the version against its schema, and every component, a component no piece places included. It reads a brand's tokens over its base, and opens each font the version holds. It computes no scene. Each finding takes the label it takes in the check, and the level it takes in a version not yet released. It points at the version's file. A finding that fails refuses the release (DEC-003 point 6).
+**A version a release reads.** `pkit visual release` reads the version it releases in full on the installed capability, beside what the check of it alone judges (DEC-014 point 1). It reads each file of the capability's format in the version against its schema, and every component, a component no piece places included. It reads a brand's tokens over its base, and opens each font the version holds. It reads each picture file of the version's `pictures/`, as the engine reads it, named or not ([picture files](files.md#picture-files)). It computes no scene. Each finding takes the label it takes in the check, and the level it takes in a version not yet released. It points at the version's file. A finding that fails refuses the release (DEC-003 point 6).
 
 **Under a lock.** A piece's lock combines versions, so each version it names is judged at that lock too (DEC-008 point 9). A fault the version shows alone as well lies in the version, and is reported once. A fault only the lock's combination of versions shows lies at the lock, `<piece>/piece.yaml#lock`. It names no version, so its level stands, and its message names the version and the place it was seen in. A fault of the lock itself, such as a base the lock names at another major, names no version either.
 
@@ -215,7 +219,7 @@ In the tables, `<piece>/` is the piece's folder, `<location>/pieces/<piece>/`, a
 | Label | What it means | Level | Where it points | What to do |
 |---|---|---|---|---|
 | `location` | The configuration records a location that is refused or missing, or a `location:` line with no value. | fails | the configuration, `.pkit/capabilities/visual-communication/project/config.yaml` | Restore the folder, or change the `location:` line; write the folder on an empty one, or remove it ([files](files.md#the-location)). |
-| `files-unlisted` | git cannot list the location's files. | fails | `.` | The message gives git's error. |
+| `files-unlisted` | git cannot list the location's files, or those of a version's `pictures/` folder. | fails | `.`, or `<version>/pictures/` | The message gives git's error. |
 | `file-unreadable` | The configuration, or a file of the capability's format, cannot be read ([how files are read](files.md#how-the-files-are-read)). | fails | the file | Mend the file. |
 | `binding` | The file names no schema, or another schema than its name and place call for. A file at another format number is the core's data validation's to report. | fails | the file | Write the binding the message names ([the binding](files.md#the-binding)). |
 | `schema-refused` | A file of a library version breaks its schema at the key path the message names. Only a release, which reads the version in full, reports it ([What each run judges](#what-each-run-judges)). In the location, `pkit validate`'s data validation reports the same fault. | fails | the file | Mend the file. |
@@ -330,7 +334,7 @@ A finding marked *stops the brand* leaves the brand unread: no piece that locks 
 | `alias-private` | An alias leads to a token that the brand's base, or a base below it, keeps private. A brand aliases only the roles its base exports. Stops the brand. | fails |
 | `value-axis-changes-size` | A mode of a value axis changes something other than a colour or a picture. Stops the brand. | fails |
 | `picture-shape`, `picture-name` | A picture role's value is no empty group that names its file as `{"file": "<name>"}` in the capability's extension key. Or the name is no picture file's bare name ([Picture roles](files.md#picture-roles)). Stops the brand. | fails |
-| `picture-missing` | A picture role's value names a file the brand's version does not hold in `pictures/`, or one that is a symbolic link ([Picture roles](files.md#picture-roles)). | fails |
+| `picture-missing`, `picture-link`, `picture-stored`, `picture-unreadable`, `picture-encoding`, `picture-extension` | A picture role's value names a file git does not list in the version's `pictures/`, or one the capability does not read ([Picture files](#picture-files)). | fails |
 | `picture-role-unvalued` | The brand gives a shared picture role, such as `picture.logo`, no value. Its version states it once, checked alone, and no piece does (DEC-025 point 9). | states a fact |
 | `open-shape`, `open-unknown` | `open` in the brand's `library.yaml` is not a list, or names no role the brand exports, nor a group of them, or names roles of a library the brand does not name. | fails |
 | `open-wider` | An entry of the brand's `open` names roles its base does not open to it. It opens only those its base opens. | fails |
@@ -341,6 +345,21 @@ A finding marked *stops the brand* leaves the brand unread: no piece that locks 
 | `font-missing` | A font family the brand names has no file, or names a file the version folder or the location's `fonts/` does not hold. | fails |
 | `pair-contrast` | A declared pair is below the contrast its level needs, in some combination of the brand's axes (DEC-004 points 8 and 11). A library's pair is measured only where the brand's values reach it ([`roles.yaml`](files.md#rolesyaml)). | fails |
 | `pair-translucent` | The colour under a declared pair is translucent in some combination, so its contrast depends on what lies under it. | asks for attention |
+
+### Picture files
+
+The check judges a picture file that a brand's picture role names ([Picture roles](files.md#picture-roles)). A release reads each one a version holds ([What each run judges](#what-each-run-judges)). How a name finds its file, and each encoding read or refused, are in [picture files](files.md#picture-files).
+
+Each finding lies in the version that holds the picture, so it asks for attention where the project does not correct that version ([Severities](#severities)). A finding on a name points at the file and the path that give the name. One on the file itself points at the file, `<version>/pictures/<name>`.
+
+| Label | What it means | Level | Where it points | What to do |
+|---|---|---|---|---|
+| `picture-missing` | The name finds no file among those git lists in `pictures/`. The message names a file whose name differs only in case, and a file git ignores. | fails, or asks for attention where the project does not correct the version ([why](#severities)) | the file and the path that give the name | Add the file under that name, or name one the folder holds. |
+| `picture-link` | The name finds a symbolic link. | fails, or asks for attention as above | the link | Put the picture file itself in the link's place. |
+| `picture-stored` | git hands the file to a large-file store, or the file holds a store's pointer. Its bytes are not committed, and the engine reads no store. | fails, or asks for attention as above | the file | Commit the picture's own bytes, outside the store. |
+| `picture-unreadable` | The file cannot be read: it is cut short, damaged, or out of its format's shape. The message says where. | fails, or asks for attention as above | the file | Save it again as a PNG or a JPEG of 8 bits. |
+| `picture-encoding` | The file is of an encoding the capability refuses. The message names each such encoding the file is of. | fails, or asks for attention as above | the file | The fix of each encoding refused ([picture files](files.md#picture-files)). |
+| `picture-extension` | The file's first bytes say it is a PNG and its extension a JPEG, or the other way, or they say neither. | fails, or asks for attention as above | the file | Rename it by what it is, and name it so. Or save it as its extension says. |
 
 ### Notations
 

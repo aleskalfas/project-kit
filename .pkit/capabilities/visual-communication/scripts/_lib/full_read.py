@@ -18,7 +18,9 @@ those build on (`libraries.newest_of_majors`).
   size against the size axes of the foundations it is read with. A brand over its base,
   its tokens and its fonts opened as the engine opens them, with the facts its version
   states (`tokens.Brand.facts`). A notation against the
-  foundations' colour families. It computes no scene.
+  foundations' colour families. Each picture file the version holds in `pictures/`, read
+  as the engine reads it (`pictures.Folder.read`, DEC-025 point 9), whether or not anything
+  names it. It computes no scene.
 
 What it reads is kept, beside what it finds (`FullRead`): the comparison reads the model of
 each component, the scope and the brand from it. Each finding lies in the version. A version
@@ -28,12 +30,12 @@ the installed capability cannot read, or that cannot be read with its bases, is 
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
-from _lib import files, layout, libraries, notations, reading, tokens
+from _lib import files, layout, libraries, notations, pictures, reading, tokens
 from _lib import pipeline as pl
 from _lib.findings import FAILS, Finding
 
@@ -176,6 +178,7 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
     elif library.kind == "notation":
         notation = notations.read_notation(library.folder, scope.families, root=held.root)
         found.extend(notation.findings)
+    found.extend(_picture_findings(held, library, label))
     return FullRead(
         name,
         version,
@@ -186,5 +189,30 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
         data=data,
         unread=tuple(unread),
         brand=brand,
-        findings=tuple(finding for finding in found if finding.library == label),
+        findings=tuple(_once(finding for finding in found if finding.library == label)),
     )
+
+
+def _picture_findings(
+    held: libraries.Held, library: libraries.Library, label: str
+) -> list[Finding]:
+    """What reading each picture file the version holds finds: each file directly in its
+    `pictures/` folder that git lists, under a bare name, as the engine reads it."""
+    folder = library.folder / pictures.FOLDER
+    shown = f"{library.folder.relative_to(held.root).as_posix()}/"
+    reader = pictures.Folder(library.folder, shown, label, label)
+    names = [
+        path.name
+        for path in held.files(library.name, library.version)
+        if path.parent == folder and pictures.is_bare_name(path.name)
+    ]
+    return [finding for name in names for finding in reader.read(name).findings]
+
+
+def _once(found: Iterable[Finding]) -> list[Finding]:
+    """Each finding once: a picture file a brand's role names is judged by the brand too."""
+    out: list[Finding] = []
+    for finding in found:
+        if finding not in out:
+            out.append(finding)
+    return out
