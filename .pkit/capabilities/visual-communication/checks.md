@@ -121,6 +121,7 @@ pkit:
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#validate
         - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
+        - .pkit/lifecycle/README.md#how-a-registered-command-is-run
 ---
 
 # What the check reports

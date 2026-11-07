@@ -40,6 +40,9 @@ pkit:
         - .pkit/lifecycle/manifest.md#the-methodologys-literals
         - .pkit/lifecycle/manifest.md#where-a-project-filler-file-lives-the-address-to-path-mapping
         - .pkit/lifecycle/manifest.md#how-a-data-point-resolves
+        - .pkit/lifecycle/README.md#the-methodologys-literals
+        - .pkit/lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping
+        - .pkit/lifecycle/README.md#how-a-data-point-resolves
         - .pkit/adapters/claude-code/README.md#deploy-skillssh
         - .pkit/cli/README.md#capabilities--two-ways-in
         - .pkit/cli/README.md#config-set-key-value---yes

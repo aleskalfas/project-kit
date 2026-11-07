@@ -69,6 +69,20 @@ pkit:
         - .pkit/lifecycle/manifest.md#the-methodologys-literals
         - .pkit/lifecycle/manifest.md#package-metadata-packageyaml
         - .pkit/lifecycle/migrations.md#directory-layout
+        - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
+        - .pkit/lifecycle/manifest.md#per-component-manifest-one-per-installed-component
+        - .pkit/lifecycle/manifest.md#an-adapters-manifest
+        - .pkit/lifecycle/manifest.md#worked-example
+        - .pkit/lifecycle/component-registry.md#install-pre-flight-checks
+        - .pkit/lifecycle/component-registry.md#register-pre-flight-checks-incubated-cor-031
+        - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
+        - .pkit/lifecycle/migrations.md#what-ships-a-migration
+        - .pkit/lifecycle/migrations.md#tier-independence
+        - .pkit/lifecycle/upgrade-flow.md#seed-paths
+        - .pkit/lifecycle/upgrade-flow.md#a-new-collision
+        - .pkit/lifecycle/upgrade-flow.md#a-clash-of-area-names
+        - .pkit/lifecycle/upgrade-flow.md#what-the-settings-merge-widens
+        - .pkit/lifecycle/upgrade-flow.md#two-recorded-states-and-an-interrupted-upgrade
 ---
 
 # Lifecycle
