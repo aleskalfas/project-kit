@@ -74,7 +74,9 @@ DEC-012).
   center end`), `justify-content` (`start center end space-between`) and `sizes` (`own`,
   each item its preferred size along the line, `equal`, the line shared equally, or
   `shares`, the line shared in proportion to the shares its list's weight gives its
-  items, equally where they are all the same). `colour` gives
+  items, equally where they are all the same). An item that `stretch` makes larger
+  across than it asks for passes the rest on to the last part it draws, where that part
+  places a component and gives no size across (`passed_on`). `colour` gives
   the items' default family. A part over a list of ties takes neither `row` nor
   `column`: each tie is drawn in the part's whole frame, by default the component's, and
   given its ends (`find_ends`). A tie whose component takes no ends is left out.
@@ -613,19 +615,20 @@ def _by_size(value: Any) -> bool:
     return isinstance(by, str) and by.startswith(MARKED)
 
 
-def _says_yes_or_no(when: Any) -> bool:
-    """Whether `when` is a switch by a size each of whose branches says yes or no."""
-    return _by_size(when) and all(
-        isinstance(branch, bool) for key, branch in when.items() if key != SWITCH
-    )
-
-
-def _says_yes(when: Mapping[str, Any], modes: Mapping[str, str], axes: Mapping[str, Any]) -> bool:
-    """Whether a `when` by a size that says yes or no says yes where its axis takes the mode
-    `modes` gives it: the branch of that mode, else of the axis's default."""
-    axis = str(when[SWITCH])[len(MARKED) :]
-    mode = modes[axis]
-    return when.get(mode, when.get(axes[axis].default)) is True
+def _may_draw(when: Any, modes: Mapping[str, str], axes: Mapping[str, AxisLike]) -> bool:
+    """Whether a part whose `when` is `when` may be drawn where each size axis takes the mode
+    `modes` gives it, as `Instance._when` draws it: with no `when`, always; by a field or an
+    option's words, on some content, so it may; by a size, by the branch of that mode, else
+    of the axis's default, `true` or a `when` of those forms (DEC-021 points 3 and 5). A
+    `false`, and a `when` of no form, never draws it."""
+    if when is None:
+        return True
+    if _by_size(when):
+        axis = str(when[SWITCH])[len(MARKED) :]
+        when = when.get(modes[axis], when.get(axes[axis].default))
+        if isinstance(when, bool):
+            return when
+    return isinstance(when, str) or (isinstance(when, Mapping) and len(when) == 1)
 
 
 def source_of_choice(chosen: Any) -> str:
@@ -1163,32 +1166,34 @@ class Component:
         )
 
     def _read_size_repeats(self) -> None:
-        """Two parts or more that repeat over one list, whose `when`s by a size each say yes
-        or no in every branch: at each combination of the modes of the axes they read,
-        exactly one of them says yes, so each item is drawn once at every size (DEC-021
-        points 4 and 7). A `when` that reads no size axis is reported already."""
+        """Two parts or more that repeat over one list, a `when` by a size among theirs: at
+        each combination of the modes of the axes those read, exactly one of them may be
+        drawn, so each item is drawn once at every size (DEC-021 points 4, 5 and 7). Every
+        part over the list counts, whatever its `when` (`_may_draw`). The finding lies at the
+        first `when` by a size. One that reads no size axis is reported already."""
         over: dict[str, list[Part]] = {}
         for part in self.parts.values():
-            listed, when = part.spec.get("repeat"), part.spec.get("when")
-            if part.kind == "repeat" and isinstance(listed, str) and _says_yes_or_no(when):
+            listed = part.spec.get("repeat")
+            if part.kind == "repeat" and isinstance(listed, str):
                 over.setdefault(listed, []).append(part)
         known = self._ctx.sizes.axes
         for listed, parts in over.items():
-            read = sorted({str(part.spec["when"][SWITCH])[len(MARKED) :] for part in parts})
-            if len(parts) < 2 or any(axis not in known for axis in read):
+            sized = [part for part in parts if _by_size(part.spec.get("when"))]
+            read = sorted({str(part.spec["when"][SWITCH])[len(MARKED) :] for part in sized})
+            if len(parts) < 2 or not sized or any(axis not in known for axis in read):
                 continue
             for modes in itertools.product(*(known[axis].modes for axis in read)):
                 at = dict(zip(read, modes, strict=True))
-                said = [part.name for part in parts if _says_yes(part.spec["when"], at, known)]
-                if len(said) == 1:
+                drawn = [part for part in parts if _may_draw(part.spec.get("when"), at, known)]
+                if len(drawn) == 1:
                     continue
                 shown = " and ".join(f"`{mode}` of `{axis}`" for axis, mode in at.items())
                 self._issue(
                     SIZE_REPEAT,
-                    f"parts.{parts[0].name}.when",
+                    f"parts.{sized[0].name}.when",
                     f"the parts {', '.join(f'`{p.name}`' for p in parts)} repeat over "
-                    f"`{listed}`, and at {shown} {len(said)} of their `when`s say yes: "
-                    "exactly one says yes at each mode, so each item is drawn once",
+                    f"`{listed}`, and at {shown} {len(drawn)} of them may be drawn: exactly "
+                    "one may be drawn at each mode, so each item is drawn once",
                 )
                 break
 
@@ -2775,6 +2780,8 @@ class Instance:
         kind = cell[0]
         if kind == "size":
             return f"{self.trace} :{cell[1]}"
+        if kind == "stretch":
+            return f"{self.trace} stretch of :{cell[1]}"
         if kind in ("preferred", "value"):
             return f"{self.trace} {kind} {cell[1]}"
         if kind == "part":
@@ -2813,6 +2820,8 @@ class Instance:
         kind, name = cell[0], cell[1]
         if kind == "size":
             return self._size(name)
+        if kind == "stretch":
+            return self._stretch(name)
         if kind == "preferred":
             if name not in self.component.preferred:
                 use = self.component.use
@@ -2881,10 +2890,11 @@ class Instance:
     def _size(self, size: str) -> float:
         """The size this instance gets: from its parent's part or list, or, at the top,
         the size it asks for. A page of a top whose layouts are its pages' forms gets the
-        top's size."""
+        top's size. A component its parent's last part places gets, beside its part's
+        size, the stretch its parent passes on (`passed_on`)."""
         if self.parent is None:
             return self.get("preferred", size)
-        if self.parent.component.forms and self.part_name == self.parent.component.pages_field:
+        if self._is_forms_page:
             return self.parent.get("size", size)
         if self.tie is not None:
             # A tie is drawn in its part's whole frame (DEC-011 point 1).
@@ -2893,7 +2903,49 @@ class Instance:
             part = self.parent.nodes[self.part_name].part
             axis = "main" if size == part.main else "cross"
             return self.parent.get(axis, self.part_name).sizes[self.position]
-        return self.parent.get("part", self.part_name, size)
+        placed = self.parent.get("part", self.part_name, size)
+        return placed + self.parent.passed_on(self.part_name, size)
+
+    @property
+    def _is_forms_page(self) -> bool:
+        """Whether this instance is a page of a top whose layouts are its pages' forms."""
+        parent = self.parent
+        return (
+            parent is not None
+            and bool(parent.component.forms)
+            and self.part_name == parent.component.pages_field
+        )
+
+    def _stretch(self, size: str) -> float:
+        """How much more of `size` a stretch gives this instance than it asks for. An item
+        that its list's `align-items: stretch` makes larger across its line than it asks
+        for is stretched by the difference. A component its parent's last part places
+        takes the stretch its parent passes on (`passed_on`). Nothing else is stretched:
+        a size a part's formula gives is no stretch, nor is a page's or a tie's frame."""
+        parent = self.parent
+        if parent is None or self.tie is not None or self._is_forms_page:
+            return 0.0
+        if not self.is_item:
+            return parent.passed_on(self.part_name, size)
+        part = parent.nodes[self.part_name].part
+        if size == part.main or parent.setting(self.part_name, "align-items") != "stretch":
+            return 0.0
+        if size not in self.component.preferred:
+            return 0.0  # it asks for no such size, so none is more than it asks
+        return max(self.get("size", size) - self.get("preferred", size), 0.0)
+
+    def passed_on(self, name: str, size: str) -> float:
+        """The stretch this instance passes on along `size` to its part `name`: the whole
+        of its own (`_stretch`) where that part is the last it draws, places a component
+        by `use` or `slot`, and gives no `size`; else none. The component that part places
+        then ends where this instance ends, as a panel that holds panels of its own ends
+        with the row's other panels. The part's own frame, which this instance's formulas
+        read, stays the size it asks for, so what this instance asks for is unchanged."""
+        node = self.nodes[name]
+        drawn = [each for each, other in self.nodes.items() if other.present]
+        if drawn[-1:] != [name] or node.child is None or size in node.part.spec:
+            return 0.0  # only a `use` or a `slot` part places a component, its `child`
+        return self.get("stretch", size)
 
     def _geometry(self, name: str, key: str) -> float:
         node = self.nodes[name]

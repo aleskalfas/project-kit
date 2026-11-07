@@ -16,7 +16,8 @@ those build on (`libraries.newest_of_majors`).
   file of each under `components/`, through the environment of a library checked alone,
   which no piece or brand stands behind (`pipeline.LibraryEnv`), a switch or a `when` by a
   size against the size axes of the foundations it is read with. A brand over its base,
-  its tokens and its fonts opened as the engine opens them. A notation against the
+  its tokens and its fonts opened as the engine opens them, with the facts its version
+  states (`tokens.Brand.facts`). A notation against the
   foundations' colour families. It computes no scene.
 
 What it reads is kept, beside what it finds (`FullRead`): the comparison reads the model of
@@ -169,7 +170,7 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
             brand = tokens.read_brand(
                 library.folder, scope, fonts=fonts, root=held.root, locked=folders
             )
-            found.extend(brand.findings)
+            found.extend((*brand.findings, *brand.facts))
         except tokens.TokenError as exc:
             found.extend(exc.findings)
     elif library.kind == "notation":

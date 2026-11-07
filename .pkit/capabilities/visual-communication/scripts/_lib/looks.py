@@ -19,10 +19,10 @@ point 5).
   read at the base, each as a file on disk is (`files.load_bound`), since both drawings
   take the same content.
 - **What each drawing takes** (`sides`). Today's engine, the piece's files as they lie and
-  the pictures they hold, and one filling of an export's facts, so what differs is the
-  locks'. No program runs. A lock checked and found not to hold, a before no lock can be
-  read for, or a drawing that fails gives a side that says why, and stops nothing: the
-  other side is still drawn.
+  the pictures they hold, and one filling of an export's facts, which the caller works out,
+  so what differs is the locks'. No program runs. A lock checked and found not to hold, a
+  before no lock can be read for, or a drawing that fails gives a side that says why, and
+  stops nothing: the other side is still drawn.
 - **What it says** (`report`). Each lock, what the search states, a release that differs
   from the one the copy's version recorded, each stale picture, and each page that differs.
   A run that keeps no drawing says only what it found.
@@ -37,7 +37,16 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from _lib import backbone, before_after, copies, current_copy, exports, fingerprint, libraries
+from _lib import (
+    backbone,
+    before_after,
+    copies,
+    current_copy,
+    exports,
+    fingerprint,
+    layout,
+    libraries,
+)
 from _lib import location as loc
 from _lib import pipeline as pl
 from _lib.before_after import Side
@@ -254,17 +263,18 @@ def _stated(moved: libraries.Moved) -> tuple[str, ...]:
     )
 
 
-def sides(look: Look) -> tuple[Side, Side]:
-    """The look's two drawings. Where its locks are one, it draws once. Where it has no
-    lock of its before, that side says why."""
-    after = _side(look, look.after)
+def sides(look: Look, facts: layout.Facts) -> tuple[Side, Side]:
+    """The look's two drawings, each with `facts` filling its export's facts, the one filling
+    the caller works out for both (DEC-016 point 5). Where its locks are one, it draws once.
+    Where it has no lock of its before, that side says why."""
+    after = _side(look, look.after, facts)
     lock = look.before.lock
     if lock is None:
         return Side(why=look.before.said), after
-    return (after if lock == look.after else _side(look, lock)), after
+    return (after if lock == look.after else _side(look, lock, facts)), after
 
 
-def _side(look: Look, lock: Mapping[str, str]) -> Side:
+def _side(look: Look, lock: Mapping[str, str], facts: layout.Facts) -> Side:
     """The piece's pages under `lock`, or why not. It checks the lock first, since a library
     version gone would otherwise leave only a hole in the drawing."""
     piece = look.piece
@@ -272,7 +282,7 @@ def _side(look: Look, lock: Mapping[str, str]) -> Side:
         libraries.move_lock(look.held, pl.needed(piece), lock, pinned=True)
     except libraries.LockRefused as exc:
         return Side(why=str(exc))
-    return before_after.drawing(piece.root, piece.location, piece.name, lock)
+    return before_after.drawing(piece.root, piece.location, piece.name, lock, facts=facts)
 
 
 def report(look: Look, before: Side, after: Side, *, kept: bool = True) -> Iterator[str]:

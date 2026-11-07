@@ -29,7 +29,7 @@ DECLARATION = {
     "name": "pdf",
     "kind": "renderer",
     "version": "1.0.0",
-    "seam": 3,
+    "seam": 4,
     "module": "pdf",
     "about": "A PDF file for each language and combination of modes, its pages in order.",
     "profile": "default",

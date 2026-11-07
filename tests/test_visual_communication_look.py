@@ -1,19 +1,25 @@
-"""`pkit visual look <piece>` and `pkit visual pages <piece>` (visual-communication DEC-015):
-the viewing step's tool, what it reports of text drawn to nothing, the images, frames and
-report it writes, and what it refuses. Run in this process, the SVG renderer standing in for
-the import a run makes when it draws.
+"""`pkit visual look <piece>` and `pkit visual pages <piece>` (visual-communication DEC-015,
+DEC-020 points 5, 7 and 8): the viewing step's tool, what it reports of text drawn to
+nothing, the images, frames and report it writes, and what it refuses. Then the HTML
+renderer's pages drawn through a browser: its folder, its page files, its report and its
+stop. Run in this process, the renderers standing in for the import a run makes when it
+draws.
 
-No test here holds a pixel as a contract (DEC-015 point 6). One compares two drawings of one
+No test needs a browser. Where a run reads the HTML renderer's pages, a stand-in speaks the
+browser's pipe (`visual_communication_browser`), or `viewing_browser.draw` is replaced. No
+test here holds a pixel as a contract (DEC-015 point 6). One compares two drawings of one
 run, or asks whether an image is blank, and so runs on any machine and any tool."""
 
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import struct
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -30,14 +36,22 @@ from tests.test_visual_communication_pipeline import (
     PIECE,
     PIECE_FOLDER,
     drawing_project,
+    exported_up_to,
+    filled,
     on_devices,
     parts_project,
+    stamped,
     two_steps,
     write_content,
     write_picture,
 )
 from tests.test_visual_communication_starter import PIECES, STARTER, TEST_NOTATION, UNRELEASED
 from tests.test_visual_communication_svg import COLOURS, FONT, SEMIBOLD, element, line, run, scene
+from tests.test_visual_communication_viewing_browser import FUNCTIONS, planted
+from tests.test_visual_communication_viewing_browser import page as held_page
+from tests.test_visual_communication_viewing_browser import span as held_span
+from tests.test_visual_communication_viewing_browser import text as held_text
+from tests.visual_communication_browser import called, logged, stand_in
 from tests.visual_communication_project import (
     FOUNDATIONS,
     TEST_BRAND,
@@ -48,15 +62,33 @@ from tests.visual_communication_project import (
     yaml_text,
 )
 
-look, pages, svg, seam, framing, viewing, viewing_tool = load(
+(
+    look,
+    pages,
+    svg,
+    html,
+    seam,
+    framing,
+    viewing,
+    viewing_tool,
+    viewing_browser,
+    names,
+    pl,
+    exports,
+) = load(
     "visual-communication",
     "look.py",
     "pages.py",
     "plugins.svg",
+    "plugins.html",
     "plugins.seam",
     "framing",
     "viewing",
     "viewing_tool",
+    "viewing_browser",
+    "names",
+    "pipeline",
+    "exports",
 )
 
 LOCK = ["foundations 1.0.0", "test-brand 1.0.0", "tests 1.0.0"]
@@ -66,9 +98,9 @@ BRAND_TOKENS = "visual/libraries/test-brand/1.0.0/tokens/base.tokens.json"
 
 @pytest.fixture(autouse=True)
 def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """The renderer stands in for the import a run makes when it draws, and the test
+    """The renderers stand in for the import a run makes when it draws, and the test
     producer is registered, for the length of the test."""
-    importable(monkeypatch, svg)
+    importable(monkeypatch, svg, html)
     producer.register(seam)
     yield
     seam.unregister(producer.NAME)
@@ -85,6 +117,14 @@ def folder_of(root: Path, piece: str = PIECE) -> Path:
 
 def report_of(root: Path, piece: str = PIECE) -> dict[str, Any]:
     return json.loads((folder_of(root, piece) / viewing.REPORT).read_text(encoding="utf-8"))
+
+
+def on_white(root: Path) -> None:
+    """The brand's background made clear, so a page draws no ground of its own."""
+    tokens = root / BRAND_TOKENS
+    held = json.loads(tokens.read_text(encoding="utf-8"))
+    held["background"]["$value"] = {"colorSpace": "srgb", "components": [1, 1, 1], "alpha": 0}
+    tokens.write_text(json.dumps(held), encoding="utf-8")
 
 
 def written(root: Path) -> dict[str, bytes]:
@@ -727,10 +767,7 @@ def test_the_report_says_which_page_lies_on_white(flow: Path) -> None:
     assert run_look(flow, PIECE).returncode == 0
     [image] = report_of(flow)["images"]
     assert image["on-white"] is False
-    tokens = flow / BRAND_TOKENS
-    held = json.loads(tokens.read_text(encoding="utf-8"))
-    held["background"]["$value"] = {"colorSpace": "srgb", "components": [1, 1, 1], "alpha": 0}
-    tokens.write_text(json.dumps(held), encoding="utf-8")
+    on_white(flow)
     shown = run_look(flow, PIECE)
     assert shown.returncode == 0, shown.stderr
     [image] = report_of(flow)["images"]
@@ -738,12 +775,15 @@ def test_the_report_says_which_page_lies_on_white(flow: Path) -> None:
     assert "on white: figure (en, default) draws no ground of its own" in shown.stdout.splitlines()
 
 
-def test_the_report_names_the_lock_and_the_tool(flow: Path) -> None:
-    assert run_look(flow, PIECE).returncode == 0
+def test_the_report_names_the_lock_the_renderer_and_the_tool(flow: Path) -> None:
+    shown = run_look(flow, PIECE)
+    assert shown.returncode == 0, shown.stderr
     report = report_of(flow)
     assert report["lock"] == {"foundations": "1.0.0", "test-brand": "1.0.0", "tests": "1.0.0"}
+    assert report["renderer"] == {"name": "svg", "version": svg.VERSION}
     assert report["tool"] == viewing_tool.TOOL
     assert report["tool"]["name"] == "resvg"
+    assert f"renderer: svg {svg.VERSION}" in shown.stdout.splitlines()
 
 
 def test_a_run_replaces_what_an_earlier_run_left_for_the_piece(flow: Path) -> None:
@@ -1099,6 +1139,1064 @@ def test_a_page_the_tool_cannot_draw_refuses_with_nothing_written(
     assert not folder_of(flow).exists()
 
 
+# --- the HTML renderer's pages, through a browser (DEC-020 points 5, 7 and 8) ------------------
+
+
+def write_config(root: Path, lines: str) -> None:
+    """The capability's configuration, holding `lines` after its binding."""
+    config = root / ".pkit" / "capabilities" / "visual-communication" / "project" / "config.yaml"
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text(
+        f"pkit_schema: visual-communication:config\nschema_version: 1\n{lines}", encoding="utf-8"
+    )
+
+
+def name_browser(root: Path, program: Path) -> Path:
+    """The configuration names `program` as the browser, and gives it."""
+    write_config(root, f"browser: {json.dumps(str(program))}\n")
+    return program
+
+
+def write_program(path: Path) -> Path:
+    """A program that leaves a file beside it when it runs."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f'#!/bin/sh\ntouch "{path.parent / "started"}"\n', encoding="utf-8")
+    path.chmod(0o755)
+    return path
+
+
+def no_browser_here(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """No browser where the step looks."""
+    monkeypatch.setattr(viewing_browser, "PLACES", {sys.platform: (str(tmp_path / "no-browser"),)})
+    monkeypatch.setenv("PATH", str(tmp_path / "no-path"))
+
+
+def html_folder(root: Path, piece: str = PIECE) -> Path:
+    return root / viewing.folder_of(piece, "html")
+
+
+def html_report(root: Path, piece: str = PIECE) -> dict[str, Any]:
+    return json.loads((html_folder(root, piece) / viewing.REPORT).read_text(encoding="utf-8"))
+
+
+def previewed(project: Any) -> Any:
+    """What fills the facts of an export in the scenes the step draws: what a preview fills."""
+    return exports.preview_filling(project.piece).facts
+
+
+def scene_of(root: Path, piece: str, language: str) -> dict[str, Any]:
+    project = viewing.opened(root, piece)
+    [(_, result)] = viewing.scenes(project, [language], facts=previewed(project))
+    return result.scene.to_dict()
+
+
+def page_file_of(root: Path, piece: str, language: str, key: str) -> bytes:
+    """The page file the HTML renderer writes of `piece`, apart from any run of the step."""
+    project = viewing.opened(root, piece)
+    results = viewing.scenes(project, [language], facts=previewed(project))
+    [(_, _, drawn)] = list(viewing.pl.drawn(project, results, "html", [key]))
+    return bytes(drawn.document)
+
+
+def as_read(root: Path, piece: str, language: str) -> dict[str, Any]:
+    """The page file of `piece` in `language` as a browser's reads find it, each span drawn in
+    a face of the file and leaving ink: what a stand-in answers."""
+    index = 0
+    held = []
+    for page in viewing.pages_of(scene_of(root, piece, language)):
+        wanted = viewing.browser_page(page)
+        texts = []
+        for each in wanted.texts:
+            lines = []
+            for words in each.lines:
+                lines.append([held_span(word, index + at, y=10.0) for at, word in enumerate(words)])
+                index += len(words)
+            texts.append(held_text(each.element, *lines))
+        held.append(held_page(wanted.id, wanted.width, wanted.height, *texts))
+    return {"pages": held}
+
+
+def browser_for(
+    root: Path, tmp_path: Path, piece: str, files: Mapping[str, str], **plan: Any
+) -> Path:
+    """A stand-in browser for the page files `files` names, each by its language, under
+    `plan`, named in the configuration."""
+    documents = {name: as_read(root, piece, language) for name, language in files.items()}
+    held = {
+        "functions": FUNCTIONS,
+        "documents": {viewing_browser.PLANTED_FILE: planted(), **documents},
+        **plan,
+    }
+    return name_browser(root, stand_in(tmp_path / "browser", held))
+
+
+class Browser:
+    """`viewing_browser.draw` in a browser's place: what each call was handed, the file's bytes
+    as it read them among it. It draws each page in each mode at the scale it is given, as
+    `read` says, or as it says of that mode where it is a function of one, or raises `stops`
+    at the call of that number, from 1."""
+
+    def __init__(
+        self,
+        read: Any = None,
+        stops: Mapping[int, Exception] | None = None,
+        version: str = "Chrome/157.0.1.2",
+    ) -> None:
+        self.read = read or viewing_browser.Read((), (), (), (), ())
+        self.stops = dict(stops or {})
+        self.version = version
+        self.calls: list[dict[str, Any]] = []
+
+    def __call__(
+        self,
+        file: Path,
+        wanted: Any,
+        scale: float,
+        program: Path,
+        folder: Path,
+        *,
+        signals: Mapping[str, Sequence[str]] | None = None,
+        modes: Sequence[Mapping[str, str]] = ({},),
+    ) -> Any:
+        self.calls.append(
+            {
+                "name": file.name,
+                "bytes": file.read_bytes(),
+                "pages": list(wanted),
+                "scale": scale,
+                "program": program,
+                "folder": folder,
+                "signals": dict(signals or {}),
+                "modes": [dict(mode) for mode in modes],
+            }
+        )
+        if len(self.calls) in self.stops:
+            raise self.stops[len(self.calls)]
+        images = tuple(
+            viewing_browser.Image(
+                each.id,
+                b"\x89PNG " + each.id.encode(),
+                round(each.width * scale),
+                round(each.height * scale),
+            )
+            for each in wanted
+        )
+        return viewing_browser.Drawing(
+            self.version,
+            tuple(
+                viewing_browser.Shown(
+                    dict(mode), images, self.read(mode) if callable(self.read) else self.read
+                )
+                for mode in modes
+            ),
+        )
+
+
+@pytest.fixture
+def browser(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Browser]:
+    """The browser `draw` is handed, in place of one."""
+    drawn = Browser()
+    monkeypatch.setattr(viewing.viewing_browser, "draw", drawn)
+    yield drawn
+
+
+def html_flow(tmp_path: Path, program: bool = True, **fields: Any) -> Path:
+    """`flow` in both colour schemes with its picture, and a program the configuration names
+    as the browser, which `Browser` stands in for; `fields` are the piece's own, such as its
+    `exports`."""
+    root = drawing_project(tmp_path, **fields)
+    write_picture(root, framing)
+    if program:
+        name_browser(root, write_program(tmp_path / "browser" / "chromium"))
+    return root
+
+
+def test_the_html_renderer_draws_one_image_for_each_page_language_and_key_with_its_frames(
+    tmp_path: Path,
+) -> None:
+    """Both keys lie in one file of each language, which one start draws in each mode."""
+    root = starter_project(tmp_path)
+    files = {f"tag.{language}.default.html": language for language in ("en", "de")}
+    program = browser_for(root, tmp_path, "tag", files)
+    shown = run_look(
+        root,
+        "tag",
+        "--renderer",
+        "html",
+        "--every-language",
+        "--key",
+        "default",
+        "--key",
+        "contrast.high",
+    )
+    assert shown.returncode == 0, shown.stderr
+    report = html_report(root, "tag")
+    images = [image["image"] for image in report["images"]]
+    assert images == [
+        f"tag.{language}.{key}.{number}.png"
+        for language in ("en", "de")
+        for key in ("default", "contrast.high")
+        for number in (1, 2)
+    ]
+    held = sorted(path.name for path in html_folder(root, "tag").iterdir())
+    frames = [image.replace(".png", ".frames.json") for image in images]
+    assert held == sorted([*images, *frames, *files, viewing.REPORT])
+    first = json.loads((html_folder(root, "tag") / frames[0]).read_text(encoding="utf-8"))
+    assert first["elements"][0]["id"] == first["page"]
+    assert first["lock"] == report["lock"]
+    starts = [each for each in logged(program) if "flags" in each]
+    assert len(starts) == len(files)
+    opened = [each["url"].rsplit("/", 1)[-1] for each in called(program, "Page.navigate")]
+    assert opened == [name for file in files for name in (viewing_browser.PLANTED_FILE, file)]
+
+
+def test_the_svg_renderer_is_named_as_it_is_by_default(flow: Path) -> None:
+    shown = run_look(flow, PIECE, "--renderer", "svg")
+    assert shown.returncode == 0, shown.stderr
+    assert report_of(flow)["renderer"]["name"] == "svg"
+    assert not html_folder(flow).exists()
+
+
+@pytest.mark.parametrize("renderer", ["pdf", "html5", ""])
+def test_a_renderer_of_another_name_is_refused_with_nothing_written(
+    flow: Path, renderer: str
+) -> None:
+    before = written(flow)
+    shown = run_look(flow, PIECE, "--renderer", renderer)
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        f"error: the viewing step reads no renderer `{renderer}`: it reads `svg` and `html`\n"
+    )
+    assert written(flow) == before
+
+
+@pytest.mark.parametrize(
+    ("formats", "renderer"),
+    [
+        ([], "svg"),
+        (["svg"], "svg"),
+        (["pdf"], "svg"),
+        (["svg", "pdf"], "svg"),
+        (["html"], "html"),
+        (["pdf", "html"], "html"),
+    ],
+)
+def test_a_piece_that_declares_html_is_read_through_it_and_any_other_through_svg(
+    tmp_path: Path, formats: list[str], renderer: str
+) -> None:
+    root = drawing_project(tmp_path, picture=False, exports=formats)
+    piece = viewing.pl.read_piece(root, "visual", PIECE)
+    assert viewing.renderer_of(piece) == renderer
+
+
+def test_a_piece_that_declares_html_is_drawn_through_it_with_no_renderer_named(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path, exports=["html"])
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert html_report(root)["renderer"]["name"] == "html"
+    assert not folder_of(root).exists()
+
+
+def test_a_piece_that_declares_html_still_reaches_the_svg_renderers_images_when_named(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path, exports=["html"])
+    shown = run_look(root, PIECE, "--renderer", "svg")
+    assert shown.returncode == 0, shown.stderr
+    assert report_of(root)["renderer"]["name"] == "svg"
+    assert sorted(path.name for path in folder_of(root).iterdir()) == [
+        "flow.en.default.frames.json",
+        "flow.en.default.png",
+        viewing.REPORT,
+    ]
+    assert not html_folder(root).exists()
+    assert browser.calls == []
+
+
+def test_with_no_renderer_named_a_piece_that_does_not_declare_html_draws_as_before(
+    flow: Path,
+) -> None:
+    assert run_look(flow, PIECE).returncode == 0
+    assert sorted(path.name for path in folder_of(flow).iterdir()) == [
+        "flow.en.default.frames.json",
+        "flow.en.default.png",
+        viewing.REPORT,
+    ]
+    assert sorted(path.name for path in (flow / viewing.FOLDER).iterdir()) == [PIECE]
+
+
+def test_its_folder_lies_beside_the_svg_renderers_under_a_name_no_piece_can_take() -> None:
+    assert viewing.folder_of(PIECE, "svg") == f"{viewing.FOLDER}/{PIECE}"
+    assert viewing.folder_of(PIECE, "html") == f"{viewing.FOLDER}/{PIECE}.html"
+    assert names.is_name(PIECE)
+    assert not names.is_name(f"{PIECE}.html")
+
+
+def test_a_run_replaces_only_its_own_folder_and_a_stop_deletes_no_svg_image(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    assert run_look(root, PIECE).returncode == 0
+    drawn_by_svg = {path.name: path.read_bytes() for path in folder_of(root).iterdir()}
+    assert (
+        run_look(root, PIECE, "--renderer", "html", "--key", "colour-scheme.dark").returncode == 0
+    )
+    (html_folder(root) / "left-by-a-person.txt").write_text("gone", encoding="utf-8")
+    assert run_look(root, PIECE, "--renderer", "html").returncode == 0
+    assert sorted(path.name for path in html_folder(root).iterdir()) == [
+        "flow.en.default.frames.json",
+        "flow.en.default.html",
+        "flow.en.default.png",
+        viewing.REPORT,
+    ]
+    browser.stops[len(browser.calls) + 1] = viewing_browser.Stopped("the browser stopped")
+    assert run_look(root, PIECE, "--renderer", "html").returncode == look.STOPPED
+    assert {path.name: path.read_bytes() for path in folder_of(root).iterdir()} == drawn_by_svg
+
+
+def test_the_browser_reads_the_page_file_as_the_renderer_wrote_it(
+    tmp_path: Path, browser: Browser
+) -> None:
+    """Both keys lie in one file, named by the first, which one call draws in each mode."""
+    root = html_flow(tmp_path)
+    shown = run_look(root, PIECE, "--renderer", "html", "--every-key")
+    assert shown.returncode == 0, shown.stderr
+    [call] = browser.calls
+    assert call["name"] == f"{PIECE}.en.default.html"
+    assert call["bytes"] == page_file_of(root, PIECE, "en", "default")
+    assert call["bytes"] == page_file_of(root, PIECE, "en", "colour-scheme.dark")
+    assert (html_folder(root) / call["name"]).read_bytes() == call["bytes"]
+    assert call["folder"] == root / viewing.LOCAL
+
+
+def test_a_piece_on_a_size_axis_is_read_through_a_browser_at_each_key_from_its_size_s_scene(
+    tmp_path: Path, browser: Browser
+) -> None:
+    dark = "colour-scheme.dark"
+    keys = ["default", dark, PHONE, f"{dark}+{PHONE}"]
+    root = on_devices(
+        tmp_path, modes={"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]}
+    )
+    name_browser(root, write_program(tmp_path / "browser" / "chromium"))
+    shown = run_look(root, PIECE, "--renderer", "html", "--every-key")
+    assert shown.returncode == 0, shown.stderr
+    files = {"default": ("default", dark), PHONE: (PHONE, f"{dark}+{PHONE}")}
+    assert [call["name"] for call in browser.calls] == [f"{PIECE}.en.{key}.html" for key in files]
+    widths = {key: call["pages"][0].width for key, call in zip(files, browser.calls, strict=True)}
+    assert widths["default"] > widths[PHONE]
+    for held, call in zip(files.values(), browser.calls, strict=True):
+        assert all(call["bytes"] == page_file_of(root, PIECE, "en", key) for key in held)
+        assert [mode["prefers-color-scheme"] for mode in call["modes"]] == ["light", "dark"]
+    assert [image["key"] for image in html_report(root)["images"]] == keys
+    assert run_look(root, PIECE, "--renderer", "html", "--key", PHONE).returncode == 0
+    assert browser.calls[-1]["pages"][0].width == widths[PHONE]
+    assert len(browser.calls[-1]["modes"]) == 1
+    assert [image["key"] for image in html_report(root)["images"]] == [PHONE]
+
+
+def test_the_pages_handed_to_the_browser_are_the_scenes_with_each_texts_spans(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    assert run_look(root, PIECE, "--renderer", "html").returncode == 0
+    [call] = browser.calls
+    [page] = call["pages"]
+    [held] = viewing.pages_of(scene_of(root, PIECE, "en"))
+    assert (page.id, page.width, page.height) == (held["id"], held["width"], held["height"])
+    head = next(each for each in page.texts if each.element == "figure/body/steps[plan]/head")
+    assert head.lines == (("Plan the work.",),)
+
+
+def test_a_run_leaves_the_page_file_beside_the_images_and_writes_nothing_else(
+    tmp_path: Path, browser: Browser
+) -> None:
+    """No number, no `exports.yaml`, no preview: nothing outside the renderer's folder."""
+    root = html_flow(tmp_path)
+    before = written(root)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == 0, shown.stderr
+    after = written(root)
+    made = sorted(name for name in after if name not in before)
+    assert all(name.startswith(f"{viewing.folder_of(PIECE, 'html')}/") for name in made)
+    assert {name: after[name] for name in before} == before
+    assert f"{viewing.folder_of(PIECE, 'html')}/flow.en.default.html" in made
+    assert [path.name for path in (root / viewing.LOCAL).iterdir()] == ["look"]
+    assert html_report(root)["page-files"] == [
+        {
+            "language": "en",
+            "key": "default",
+            "keys": ["default", "colour-scheme.dark"],
+            "file": "flow.en.default.html",
+        }
+    ]
+    assert (
+        f"page file: {viewing.folder_of(PIECE, 'html')}/flow.en.default.html, to open in your "
+        "own browser"
+    ) in shown.stdout.splitlines()
+
+
+def test_the_pages_of_one_file_share_the_largest_scale_any_of_them_asks(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = starter_project(tmp_path)
+    name_browser(root, write_program(tmp_path / "browser" / "chromium"))
+    assert run_look(root, "tag", "--renderer", "html").returncode == 0
+    [call] = browser.calls
+    every = viewing.pages_of(scene_of(root, "tag", "en"))
+    assert call["scale"] == viewing.device_scale(every)
+    assert all(call["scale"] >= viewing.scale(page) for page in every)
+    report = html_report(root, "tag")
+    edges = [max(each["pixels"].values()) for each in report["images"]]
+    assert all(edge >= viewing.LONG_EDGE for edge in edges)
+
+
+def test_a_device_scale_is_the_largest_a_page_asks_rounded_up() -> None:
+    small = {"width": 960, "height": 540}
+    tiny_text = {"width": 960, "height": 540, "children": [{"paragraphs": [[{"font-size": 4}]]}]}
+    assert viewing.scale(small) == viewing.LONG_EDGE / 960
+    assert viewing.device_scale([small]) == 1.634
+    assert viewing.device_scale([small, tiny_text]) == 2.5
+    assert viewing.device_scale([{"width": 784, "height": 100}]) == 2.0
+
+
+def test_the_browsers_profile_lies_in_the_local_folder_and_a_run_removes_it(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    program = browser_for(root, tmp_path, PIECE, {"flow.en.default.html": "en"})
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == 0, shown.stderr
+    [start] = [each for each in logged(program) if "flags" in each]
+    [profile] = [flag for flag in start["flags"] if flag.startswith("--user-data-dir=")]
+    assert Path(profile.split("=", 1)[1]).is_relative_to(root / viewing.LOCAL)
+    assert [path.name for path in (root / viewing.LOCAL).iterdir()] == ["look"]
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        pytest.param({"method": "Page.captureScreenshot", "kind": "die"}, id="dies"),
+        pytest.param({"method": "Page.captureScreenshot", "kind": "hang"}, id="hangs"),
+    ],
+)
+def test_a_browser_that_stops_part_way_leaves_the_page_file_a_report_and_no_image(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fault: dict[str, Any]
+) -> None:
+    monkeypatch.setattr(viewing_browser, "CALL_SECONDS", 1.0)
+    monkeypatch.setattr(viewing_browser, "CLOSE_SECONDS", 0.5)
+    root = drawing_project(tmp_path, picture=False)
+    plan = {"fault": {**fault, "document": "flow.en.default.html"}}
+    browser_for(root, tmp_path, PIECE, {"flow.en.default.html": "en"}, **plan)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == look.STOPPED, shown.stderr
+    assert sorted(path.name for path in html_folder(root).iterdir()) == [
+        "flow.en.default.html",
+        viewing.REPORT,
+    ]
+    report = html_report(root)
+    assert report["images"] == []
+    assert report["stopped"]["what"].startswith("the browser ")
+    assert [path.name for path in (root / viewing.LOCAL).iterdir()] == ["look"]
+
+
+def test_a_first_read_that_fails_stops_the_run(tmp_path: Path) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    program = browser_for(root, tmp_path, PIECE, {"flow.en.default.html": "en"})
+    plan = json.loads((program.parent / "plan.json").read_text(encoding="utf-8"))
+    for held in plan["documents"][viewing_browser.PLANTED_FILE]["pages"][0]["texts"]:
+        for spans in held["lines"]:
+            for each in spans:
+                each["ink"] = ["#ffffff", "#000000"]
+    (program.parent / "plan.json").write_text(json.dumps(plan), encoding="utf-8")
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == look.STOPPED
+    stop = html_report(root)["stopped"]
+    assert stop["what"].startswith("the first read did not name ")
+    assert stop["program"] == str(program)
+    assert called(program, "Page.captureScreenshot")
+    assert not list(html_folder(root).glob("*.png"))
+
+
+def test_a_browser_that_stops_at_a_later_file_leaves_no_partial_images(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = on_devices(
+        tmp_path, modes={"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]}
+    )
+    name_browser(root, write_program(tmp_path / "browser" / "chromium"))
+    browser.stops[2] = viewing_browser.Stopped("the browser stopped at `Page.captureScreenshot`")
+    shown = run_look(root, PIECE, "--renderer", "html", "--every-key")
+    assert shown.returncode == look.STOPPED
+    assert len(browser.calls) == 2
+    assert sorted(path.name for path in html_folder(root).iterdir()) == [
+        "flow.en.default.html",
+        f"flow.en.{PHONE}.html",
+        viewing.REPORT,
+    ]
+
+
+def test_where_no_browser_runs_the_report_says_what_stopped_it_under_which_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, browser: Browser
+) -> None:
+    root = html_flow(tmp_path, program=False)
+    no_browser_here(tmp_path, monkeypatch)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == look.STOPPED
+    assert browser.calls == []
+    report = html_report(root)
+    assert report["lock"] == {"foundations": "1.0.0", "test-brand": "1.0.0", "tests": "1.0.0"}
+    assert report["renderer"] == {"name": "html", "version": html.VERSION}
+    assert report["tool"] is None and report["images"] == []
+    stop = report["stopped"]
+    assert stop["what"] == "no browser of the Chromium family was found"
+    assert str(tmp_path / "no-browser") in stop["looked"]
+    assert stop["sandbox"] is False and stop["as-root"] is False
+    assert stop["go-on"] == viewing.ways_on(PIECE)
+    lines = shown.stderr.splitlines()
+    assert lines[0].startswith("stopped: no browser of the Chromium family was found; looked at:")
+    assert lines[1] == (
+        f"stopped: no image; the page files and report.json lie in "
+        f"{viewing.folder_of(PIECE, 'html')}/"
+    )
+    assert lines[2] == "lock: foundations 1.0.0, test-brand 1.0.0, tests 1.0.0"
+    assert lines[4:] == [
+        *(f"go on: {way}" for way in viewing.ways_on(PIECE)),
+        f"for an agent: {viewing.FOR_AN_AGENT}",
+    ]
+    assert shown.stdout == ""
+
+
+def test_a_stop_names_the_ways_on_in_their_order() -> None:
+    """A build pipeline's drawings, a way a project may take, of a pushed commit; the same
+    look, addressed to a person, outside any sandbox; then the SVG renderer's pages
+    (DEC-024 point 4)."""
+    pipeline, person, svg_pages = viewing.ways_on(PIECE)
+    assert pipeline.startswith("a build pipeline's drawings, where the project has its pipeline ")
+    assert "`visual-drawings-<commit>`" in pipeline
+    assert "They show a pushed commit, not the working tree" in pipeline
+    assert person.startswith(f"for a person: run `pkit visual look {PIECE} --renderer html` once ")
+    assert "outside any sandbox, such as in your own terminal" in person
+    assert "with your rights" in person
+    assert svg_pages.startswith(f"`pkit visual look {PIECE} --renderer svg` draws the same scenes")
+
+
+def test_the_page_a_stop_names_holds_the_section_on_a_pipeline_s_drawings() -> None:
+    page = Path(__file__).resolve().parents[1] / viewing.DRAWINGS_PAGE
+    assert f"### {viewing.DRAWINGS_SECTION}\n" in page.read_text(encoding="utf-8")
+    assert viewing.DRAWINGS.replace("<commit>", "") in page.read_text(encoding="utf-8")
+
+
+def test_a_stop_a_sandbox_made_says_so(tmp_path: Path, browser: Browser) -> None:
+    root = html_flow(tmp_path)
+    said = "Failed to bind() /var/folders/T/SingletonSocket: Operation not permitted (1)"
+    browser.stops[1] = viewing_browser.Stopped("the browser stopped", program="b", said=said)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == look.STOPPED
+    stop = html_report(root)["stopped"]
+    assert stop["sandbox"] is True and stop["as-root"] is False
+    lines = shown.stderr.splitlines()
+    assert lines[0] == f"stopped: the browser stopped; started: b; it said: {said}"
+    assert lines[1] == "stopped: a sandbox stopped the browser"
+    assert [line for line in lines if line.startswith("go on: ")] == [
+        f"go on: {way}" for way in viewing.ways_on(PIECE)
+    ]
+
+
+def test_a_stop_with_no_sandbox_in_its_words_names_what_the_browser_said(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    said = "Trace/BPT trap: 5"
+    browser.stops[1] = viewing_browser.Stopped("the browser stopped", program="b", said=said)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == look.STOPPED
+    stop = html_report(root)["stopped"]
+    assert stop["sandbox"] is False and stop["as-root"] is False and stop["said"] == said
+    lines = shown.stderr.splitlines()
+    assert lines[0] == f"stopped: the browser stopped; started: b; it said: {said}"
+    assert [line for line in lines if line.startswith("stopped: ")] == [
+        lines[0],
+        f"stopped: no image; the page files and report.json lie in "
+        f"{viewing.folder_of(PIECE, 'html')}/",
+    ]
+
+
+#: What Chrome says where it runs as root, which refuses to start with its own sandbox on.
+AS_ROOT = (
+    "[1107/101010.000000:ERROR:zygote_host_impl_linux.cc(128)] Running as root without "
+    "--no-sandbox is not supported. See https://crbug.com/638180."
+)
+
+
+def test_a_browser_run_as_root_gets_a_stop_of_its_own_with_the_same_ways_on(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    browser.stops[1] = viewing_browser.Stopped("the browser stopped", program="b", said=AS_ROOT)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == look.STOPPED
+    stop = html_report(root)["stopped"]
+    assert stop["as-root"] is True and stop["sandbox"] is False
+    assert stop["go-on"] == viewing.ways_on(PIECE)
+    lines = shown.stderr.splitlines()
+    assert lines[1] == (
+        "stopped: the browser runs as root, where it refuses to start with its own sandbox on, "
+        "and the step never turns that sandbox off"
+    )
+    assert "stopped: a sandbox stopped the browser" not in lines
+    assert [line for line in lines if line.startswith("go on: ")] == [
+        f"go on: {way}" for way in viewing.ways_on(PIECE)
+    ]
+
+
+#: What no stop names, outside the browser's own words: the harness's escape, the model's
+#: command that applies an exclusion, any exclusion, whether of the viewing command, of
+#: `pkit` or of `uv`, and any form of the command that runs through `uv` (DEC-024 point 4).
+NEVER_NAMED = (
+    r"exclu",
+    r"dangerous",
+    r"escape",
+    r"permissions",
+    r"unsandboxed",
+    r"\buv\b",
+    r"no-sandbox",
+)
+
+
+@pytest.mark.parametrize(
+    "said",
+    [
+        pytest.param("", id="no-browser"),
+        pytest.param("sandbox initialization failed: Operation not permitted", id="sandbox"),
+        pytest.param(AS_ROOT, id="as-root"),
+        pytest.param("Trace/BPT trap: 5", id="otherwise"),
+    ],
+)
+def test_no_stop_names_a_way_out_of_the_sandbox(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, browser: Browser, said: str
+) -> None:
+    """The browser's own words, and where the step looked, are left out of what is read."""
+    root = html_flow(tmp_path, program=bool(said))
+    if said:
+        browser.stops[1] = viewing_browser.Stopped("the browser stopped", program="b", said=said)
+    else:
+        no_browser_here(tmp_path, monkeypatch)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == look.STOPPED
+    stop = html_report(root)["stopped"]
+    held = {key: value for key, value in stop.items() if key not in ("said", "looked")}
+    printed = shown.stderr.replace(said, "") if said else shown.stderr
+    for place in stop["looked"]:
+        printed = printed.replace(place, "")
+    written = [printed, json.dumps(held)]
+    for words in NEVER_NAMED:
+        for each in written:
+            assert not re.search(words, each, re.IGNORECASE), (words, each)
+
+
+def test_a_stop_is_an_exit_of_its_own_and_a_refusal_leaves_the_folder_as_it_was(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    assert look.STOPPED not in (0, 1, 2)
+    assert f"  {look.STOPPED}  stopped:" in str(look.__doc__)
+    assert run_look(root, PIECE, "--renderer", "html").returncode == 0
+    before = written(root)
+    shown = run_look(root, PIECE, "--renderer", "html", "--page", "9")
+    assert shown.returncode == 1
+    assert written(root) == before
+
+
+def drawn_by_both(root: Path, *args: str) -> list[tuple[int, str]]:
+    """What a run of each renderer ends with: its exit and what it said."""
+    return [
+        (shown.returncode, shown.stderr)
+        for shown in (
+            run_look(root, PIECE, *args, "--renderer", renderer) for renderer in ("svg", "html")
+        )
+    ]
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        pytest.param(["--page", "2"], id="page"),
+        pytest.param(["--language", "fr"], id="language"),
+        pytest.param(["--key", "contrast.low"], id="key"),
+    ],
+)
+def test_what_refuses_an_svg_run_refuses_an_html_run_before_any_write(
+    tmp_path: Path, browser: Browser, args: list[str]
+) -> None:
+    root = html_flow(tmp_path)
+    before = written(root)
+    [by_svg, by_html] = drawn_by_both(root, *args)
+    assert by_svg[0] == by_html[0] == 1
+    assert by_svg[1] == by_html[1]
+    assert written(root) == before
+    assert browser.calls == []
+
+
+def test_a_page_with_no_size_refuses_an_html_run_naming_the_check(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = drawing_project(tmp_path)
+    name_browser(root, write_program(tmp_path / "browser" / "chromium"))
+    before = written(root)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == 1
+    assert shown.stderr == (
+        "error: the browser cannot draw page figure of `flow`: the page measures 960 by 0 px. "
+        "`pkit visual check flow` names what the piece still owes\n"
+    )
+    assert written(root) == before
+    assert not (root / viewing.LOCAL).exists()
+    assert browser.calls == []
+
+
+def test_a_page_past_the_most_pixels_refuses_an_html_run(
+    tmp_path: Path, browser: Browser, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = html_flow(tmp_path)
+    monkeypatch.setattr(viewing.viewing_tool, "MOST_PIXELS", 1000)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == 1
+    assert "the page takes more than 1000" in shown.stderr
+    assert browser.calls == []
+
+
+@pytest.mark.parametrize(
+    "case",
+    ["no lock", "a lock that does not hold", "a font with no file", "no visual work"],
+)
+def test_a_piece_that_cannot_be_drawn_refuses_either_renderer_alike(
+    tmp_path: Path, browser: Browser, case: str
+) -> None:
+    if case == "no lock":
+        root = drawing_project(tmp_path, lock=None)
+    elif case == "a lock that does not hold":
+        lock = {"foundations": "1.0.0", "test-brand": "2.0.0", "tests": "1.0.0"}
+        root = drawing_project(tmp_path, lock=lock)
+    elif case == "a font with no file":
+        root = html_flow(tmp_path, program=False)
+        (root / "visual/libraries/test-brand/1.0.0/fonts/SourceSansPro-Regular.otf").unlink()
+    else:
+        root = project(tmp_path)
+    name_browser(root, write_program(tmp_path / "browser" / "chromium"))
+    before = written(root)
+    [by_svg, by_html] = drawn_by_both(root)
+    assert by_svg[0] == by_html[0] == 1
+    assert by_svg[1] == by_html[1]
+    assert written(root) == before
+    assert browser.calls == []
+
+
+def test_a_project_names_its_browser_in_the_configuration(
+    tmp_path: Path, browser: Browser, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = html_flow(tmp_path, program=False)
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    for given, program in (
+        ("~/browsers/chromium", home / "browsers" / "chromium"),
+        ("tools/chromium", root / "tools" / "chromium"),
+        (str(tmp_path / "pinned" / "chrome"), tmp_path / "pinned" / "chrome"),
+    ):
+        write_program(program)
+        write_config(root, f"browser: {json.dumps(given)}\n")
+        shown = run_look(root, PIECE, "--renderer", "html")
+        assert shown.returncode == 0, shown.stderr
+        assert browser.calls[-1]["program"] == program
+        assert html_report(root)["tool"]["program"] == str(program)
+        assert not (program.parent / "started").exists()
+
+
+def test_a_browser_named_that_is_no_program_stops_the_run_naming_it(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path, program=False)
+    name_browser(root, tmp_path / "no-such-browser")
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == look.STOPPED
+    stop = html_report(root)["stopped"]
+    assert stop["what"] == "the browser named is no program that runs"
+    assert stop["looked"] == [str(tmp_path / "no-such-browser")]
+
+
+@pytest.mark.parametrize("value", ["", "3", "[a]", "null"])
+def test_a_configuration_whose_browser_names_no_program_refuses_the_run(
+    tmp_path: Path, browser: Browser, value: str
+) -> None:
+    root = html_flow(tmp_path, program=False)
+    write_config(root, f"browser: {value}\n")
+    before = written(root)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == 1
+    assert "which names no program: write the path of the browser there" in shown.stderr
+    assert written(root) == before
+
+
+def test_no_flag_and_no_environment_variable_names_a_browser() -> None:
+    """The choice lies in a file the project reviews (DEC-020 point 7)."""
+    shown = run_main(look, "--help")
+    assert "--browser" not in shown.stdout
+    for module in (viewing, viewing_browser, look):
+        source = Path(str(module.__file__)).read_text(encoding="utf-8")
+        assert "os.environ" not in source and "getenv" not in source
+
+
+def test_the_report_names_the_browser_and_says_an_image_stands_for_it_alone(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == 0, shown.stderr
+    report = html_report(root)
+    assert report["renderer"] == {"name": "html", "version": html.VERSION}
+    assert report["tool"] == {
+        "name": "Chrome",
+        "version": "157.0.1.2",
+        "program": str(tmp_path / "browser" / "chromium"),
+    }
+    assert report["stands-for"] == (
+        "each image shows how Chrome 157.0.1.2 drew the page, and stands for no other browser"
+    )
+    assert report["stopped"] is None
+    lines = shown.stdout.splitlines()
+    assert f"renderer: html {html.VERSION}" in lines
+    assert f"stands for: {report['stands-for']}" in lines
+
+
+def test_the_report_holds_each_read_of_the_browser_and_each_loss_of_the_renderer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = parts_project(tmp_path, warning=True)
+    name_browser(root, write_program(tmp_path / "browser" / "chromium"))
+    label = "figure/body/label"
+    read = viewing_browser.Read(
+        words=(viewing_browser.Differs("figure", label, (("Ready",),), ((("Rea",),),)),),
+        dropped=(viewing_browser.Dropped("figure", label, "Ready", viewing_browser.NO_INK),),
+        no_face=(viewing_browser.NoFace("figure", label, "Ready", "Held", "700"),),
+        machine_fonts=(viewing_browser.MachineFont("figure", label, "Ready", ("Times",)),),
+        refused=("https://example.invalid/a.png",),
+    )
+    monkeypatch.setattr(viewing.viewing_browser, "draw", Browser(read))
+    shown = run_look(root, "tags", "--renderer", "html")
+    assert shown.returncode == 0, shown.stderr
+    report = html_report(root, "tags")
+    place = {"language": "en", "key": "default", "page": "figure", "element": label}
+    assert report["words"] == [{**place, "scene": [["Ready"]], "document": [[["Rea"]]]}]
+    assert report["dropped"] == [{**place, "text": "Ready", "why": "no ink"}]
+    assert report["drawn-otherwise"] == [
+        {**place, "text": "Ready", "why": "no face", "family": "Held", "weight": "700"},
+        {**place, "text": "Ready", "why": "font of the machine", "fonts": ["Times"]},
+    ]
+    assert report["refused"] == [
+        {"language": "en", "key": "default", "url": "https://example.invalid/a.png"}
+    ]
+    [loss] = report["losses"]
+    assert (loss["plugin"], loss["what"], loss["did"]) == ("html", label, "left-out")
+    lines = shown.stdout.splitlines()
+    assert any(each.startswith("words: figure (en, default): the text `") for each in lines)
+    assert (
+        "dropped: figure (en, default): a span of the text `figure/body/label` left no ink: 'Ready'"
+        in lines
+    )
+    assert any(each.endswith("a font of the machine: 'Ready'") for each in lines)
+    assert any("has no face of Held at weight 700" in each for each in lines)
+    assert "refused: en, default: a request for https://example.invalid/a.png" in lines
+    assert any(each.startswith("loss: figure (en, default): ") for each in lines)
+
+
+# --- the modes a page file holds (DEC-023 point 6) -----------------------------------------------
+
+DARK_KEY = "colour-scheme.dark"
+
+#: The signals of each key of `flow`, as the HTML renderer's declaration pairs them.
+LIGHT_SIGNALS = {"prefers-color-scheme": "light", "prefers-contrast": "no-preference"}
+DARK_SIGNALS = {**LIGHT_SIGNALS, "prefers-color-scheme": "dark"}
+
+
+def emulated_after_the_file(program: Path) -> list[dict[str, str]]:
+    """The signals each emulation set once the stand-in opened the page file."""
+    messages = logged(program)
+    methods = [each.get("method") for each in messages]
+    after = messages[len(methods) - 1 - methods[::-1].index("Page.navigate") :]
+    return [
+        {each["name"]: each["value"] for each in message["params"]["features"]}
+        for message in after
+        if message.get("method") == "Emulation.setEmulatedMedia"
+    ]
+
+
+def test_every_key_of_a_file_is_drawn_from_one_start_with_its_signals_set_and_no_reload(
+    tmp_path: Path,
+) -> None:
+    root = drawing_project(tmp_path, picture=False)
+    program = browser_for(root, tmp_path, PIECE, {"flow.en.default.html": "en"})
+    shown = run_look(root, PIECE, "--renderer", "html", "--every-key")
+    assert shown.returncode == 0, shown.stderr
+    assert len([each for each in logged(program) if "flags" in each]) == 1
+    opened = [each["url"].rsplit("/", 1)[-1] for each in called(program, "Page.navigate")]
+    assert opened == [viewing_browser.PLANTED_FILE, "flow.en.default.html"]
+    assert emulated_after_the_file(program) == [LIGHT_SIGNALS, DARK_SIGNALS]
+    assert [image["key"] for image in html_report(root)["images"]] == ["default", DARK_KEY]
+
+
+def test_a_key_asked_alone_is_drawn_out_of_the_file_that_holds_its_group(
+    tmp_path: Path, browser: Browser
+) -> None:
+    """The file is the renderer's, named by the first key it serves and holding each."""
+    root = html_flow(tmp_path)
+    shown = run_look(root, PIECE, "--renderer", "html", "--key", DARK_KEY)
+    assert shown.returncode == 0, shown.stderr
+    [call] = browser.calls
+    assert call["name"] == f"{PIECE}.en.default.html"
+    assert call["bytes"] == page_file_of(root, PIECE, "en", DARK_KEY)
+    assert call["modes"] == [DARK_SIGNALS]
+    assert call["signals"] == {
+        "prefers-color-scheme": ("light", "dark"),
+        "prefers-contrast": ("no-preference", "more"),
+    }
+    report = html_report(root)
+    assert [image["key"] for image in report["images"]] == [DARK_KEY]
+    assert [entry["keys"] for entry in report["page-files"]] == [["default", DARK_KEY]]
+    assert sorted(path.name for path in html_folder(root).iterdir()) == [
+        f"{PIECE}.en.{DARK_KEY}.frames.json",
+        f"{PIECE}.en.{DARK_KEY}.png",
+        f"{PIECE}.en.default.html",
+        viewing.REPORT,
+    ]
+
+
+def test_a_text_with_no_ink_in_one_key_alone_is_reported_in_that_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = html_flow(tmp_path)
+    label = "figure/body/steps[plan]/head"
+    dim = viewing_browser.Read(
+        (),
+        (viewing_browser.Dropped("figure", label, "Plan the work.", viewing_browser.NO_INK),),
+        (),
+        (),
+        (),
+    )
+    clean = viewing_browser.Read((), (), (), (), ())
+    monkeypatch.setattr(
+        viewing.viewing_browser,
+        "draw",
+        Browser(lambda mode: dim if mode["prefers-color-scheme"] == "dark" else clean),
+    )
+    shown = run_look(root, PIECE, "--renderer", "html", "--every-key")
+    assert shown.returncode == 0, shown.stderr
+    assert [(each["key"], each["element"]) for each in html_report(root)["dropped"]] == [
+        (DARK_KEY, label)
+    ]
+
+
+def a_dark_picture_of_its_own(root: Path) -> None:
+    """`flow` whose picture takes another file in dark, as a producer can give it."""
+    folder = root / PIECE_FOLDER / "produced" / OUTPUT
+    (folder / f"{DARK_KEY}.png").write_bytes(producer.png(100, 100, (0, 0, 255, 255)))
+
+
+def test_a_loss_in_one_key_of_a_file_is_reported_in_that_key_and_accepted_by_plugin_and_what(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    a_dark_picture_of_its_own(root)
+    shown = run_look(root, PIECE, "--renderer", "html", "--every-key")
+    assert shown.returncode == 0, shown.stderr
+    [loss] = html_report(root)["losses"]
+    assert (loss["key"], loss["plugin"], loss["did"], loss["accepted"]) == (
+        DARK_KEY,
+        "html",
+        "approximated",
+        False,
+    )
+    assert f"`{DARK_KEY}` takes another" in loss["why"]
+    assert any(
+        each.startswith(f"loss: {loss['page']} (en, {DARK_KEY}): ")
+        for each in shown.stdout.splitlines()
+    )
+    piece = root / PIECE_FOLDER / "piece.yaml"
+    accepted = f"accept-losses:\n  - plugin: html\n    what: {loss['what']}\n    reason: Known.\n"
+    piece.write_text(piece.read_text(encoding="utf-8") + accepted, encoding="utf-8")
+    assert run_look(root, PIECE, "--renderer", "html", "--every-key").returncode == 0
+    assert [each["accepted"] for each in html_report(root)["losses"]] == [True]
+
+
+def test_an_image_of_a_page_with_no_ground_is_said_to_lie_on_the_browsers_own_ground(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    on_white(root)
+    shown = run_look(root, PIECE, "--renderer", "html", "--key", DARK_KEY)
+    assert shown.returncode == 0, shown.stderr
+    [image] = html_report(root)["images"]
+    assert image[viewing.ON_BROWSER_GROUND] is True
+    assert viewing.ON_WHITE not in image
+    assert (
+        f"on the browser's ground: {image['page']} (en, {DARK_KEY}) draws no ground of its own, "
+        f"so it lies on Chrome's own ground in `{DARK_KEY}`, not on white"
+    ) in shown.stdout.splitlines()
+
+
+def test_an_image_of_a_page_with_a_ground_says_nothing_of_the_browsers(
+    tmp_path: Path, browser: Browser
+) -> None:
+    root = html_flow(tmp_path)
+    shown = run_look(root, PIECE, "--renderer", "html")
+    assert shown.returncode == 0, shown.stderr
+    [image] = html_report(root)["images"]
+    assert image[viewing.ON_BROWSER_GROUND] is False
+    assert "on the browser's ground" not in shown.stdout
+
+
+# --- what fills an export's facts (DEC-016 point 5) ---------------------------------------------
+
+
+def test_a_look_fills_this_clones_next_number_as_a_preview_does(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = stamped(tmp_path, "number")
+    exported_up_to(root, 41)
+    taken = filled(monkeypatch, pl)
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert [facts.version for facts in taken] == ["v42"]
+    assert "stand-in" not in shown.stdout
+
+
+def test_a_final_pieces_look_takes_the_stand_ins_and_says_so_after_the_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = stamped(tmp_path, "date", state="final")
+    on_white(root)
+    taken = filled(monkeypatch, pl)
+    shown = run_look(root, PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert taken == [pl.read_piece_file(root, "visual", PIECE).stand_ins]
+    *_, reported, said, report = shown.stdout.splitlines()
+    assert reported.startswith("on white: ")
+    assert said == (
+        "look: a final piece has no next export, so a stand-in shows: `date` at `figure/body/date`"
+    )
+    assert report.startswith("report: ")
+
+
+def test_the_pages_listed_are_computed_as_a_preview_fills_them(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = stamped(tmp_path, "number")
+    exported_up_to(root, 41)
+    taken = filled(monkeypatch, pl)
+    assert run_pages(root, PIECE).returncode == 0
+    assert [facts.version for facts in taken] == ["v42"]
+
+
 # --- `pkit visual pages` ------------------------------------------------------------------------
 
 
@@ -1106,8 +2204,11 @@ def run_pages(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return run_main(pages, *args, cwd=root)
 
 
-def test_it_lists_the_languages_the_keys_the_pages_and_the_tool(tmp_path: Path) -> None:
+def test_it_lists_the_languages_the_keys_the_pages_and_each_renderers_tool(
+    tmp_path: Path,
+) -> None:
     root = starter_project(tmp_path)
+    program = name_browser(root, write_program(tmp_path / "browser" / "chromium"))
     shown = run_pages(root, "tag")
     assert shown.returncode == 0, shown.stderr
     lines = shown.stdout.splitlines()
@@ -1119,20 +2220,62 @@ def test_it_lists_the_languages_the_keys_the_pages_and_the_tool(tmp_path: Path) 
     assert lines[2] == "pages in en:"
     assert lines[3].startswith("  1: deck/slides[")
     tool_line = viewing_tool.TOOL
-    assert lines[-1] == (
-        f"tool: resvg {tool_line['version']}, through resvg-py {tool_line['wheel']}"
-    )
+    assert lines[-3:] == [
+        "renderer: svg by default",
+        f"tool of svg: resvg {tool_line['version']}, through resvg-py {tool_line['wheel']}",
+        f"tool of html: a browser, named in the configuration: {program}",
+    ]
 
 
 def test_it_lists_a_document_for_a_machine(tmp_path: Path) -> None:
     root = starter_project(tmp_path)
+    program = name_browser(root, write_program(tmp_path / "browser" / "chromium"))
     shown = run_pages(root, "--json", "tag")
     assert shown.returncode == 0, shown.stderr
     listed = json.loads(shown.stdout)
     assert listed["drawn-by-default"] == {"language": "en", "key": "default"}
     assert sorted(listed["pages"]) == ["de", "en"]
     assert len(listed["pages"]["en"]) == 2
-    assert listed["tool"] == viewing_tool.TOOL
+    assert listed["renderer"] == "svg"
+    assert listed["tools"] == {
+        "svg": viewing_tool.TOOL,
+        "html": {"program": str(program), "named": True, "looked": []},
+    }
+
+
+def test_it_starts_no_browser(tmp_path: Path) -> None:
+    """It finds the browser as a run would, and so names no version."""
+    root = starter_project(tmp_path)
+    program = name_browser(root, write_program(tmp_path / "browser" / "chromium"))
+    assert run_pages(root, "tag").returncode == 0
+    assert not (program.parent / "started").exists()
+
+
+def test_it_says_where_it_looked_where_no_browser_is_found(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = starter_project(tmp_path)
+    no_browser_here(tmp_path, monkeypatch)
+    shown = run_pages(root, "--json", "tag")
+    assert shown.returncode == 0, shown.stderr
+    found = json.loads(shown.stdout)["tools"]["html"]
+    assert found["program"] is None and found["named"] is False
+    assert str(tmp_path / "no-browser") in found["looked"]
+    plain = run_pages(root, "tag").stdout.splitlines()[-1]
+    assert plain.startswith(
+        "tool of html: none, so a run stops: no browser of the Chromium family was found; "
+        "looked at: "
+    )
+
+
+@pytest.mark.parametrize(("formats", "renderer"), [(["html"], "html"), (["svg"], "svg")])
+def test_it_reads_through_the_html_renderer_by_default_a_piece_that_declares_it(
+    tmp_path: Path, formats: list[str], renderer: str
+) -> None:
+    root = drawing_project(tmp_path, picture=False, exports=formats)
+    shown = run_pages(root, "--json", PIECE)
+    assert shown.returncode == 0, shown.stderr
+    assert json.loads(shown.stdout)["renderer"] == renderer
 
 
 def test_it_lists_each_key_of_a_piece_on_a_size_axis(tmp_path: Path) -> None:
@@ -1156,3 +2299,11 @@ def test_a_piece_with_no_lock_lists_nothing_naming_render(tmp_path: Path) -> Non
     shown = run_pages(root, PIECE)
     assert shown.returncode == 1
     assert "`pkit visual render flow`" in shown.stderr
+
+
+def test_a_configuration_that_names_no_browser_is_refused(tmp_path: Path) -> None:
+    root = starter_project(tmp_path)
+    write_config(root, "browser: 3\n")
+    shown = run_pages(root, "tag")
+    assert shown.returncode == 1
+    assert "records `browser: 3`, which names no program" in shown.stderr

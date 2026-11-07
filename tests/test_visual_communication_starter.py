@@ -10,8 +10,9 @@ a strong run keeps the body's size and line height. The README names what the co
 declare. A network's ties reach, by key path, the items its groups draw (DEC-011 point 3);
 no part passes a field of runs on (DEC-012 point 8); a pattern placed inside another draws
 within it with no overflow; a panel's span gives its share of the row (DEC-010 point 4);
-a code block's lines stand as written; and a row of cards keeps its heads at one height,
-whichever bar each has, each clear of a top bar.
+the panels of a row end on one edge where one holds panels of its own; a code block's
+lines stand as written; and a row of cards keeps its heads at one height, whichever bar
+each has, each clear of a top bar.
 
 The reference renders are the pieces under `tests/fixtures/visual-communication/starter/`,
 one for each component, drawn in English and in German. Run in this process
@@ -244,7 +245,7 @@ def scenes(projects: Mapping[str, Any]) -> dict[tuple[str, str], Mapping[str, An
     """The scene of each reference piece in each language, by piece and language."""
     computed = {}
     for name, drawn in projects.items():
-        for language, result in drawn.scenes():
+        for language, result in drawn.scenes(facts=drawn.piece.stand_ins):
             assert result.findings == [], (name, language, result.findings)
             computed[(name, language)] = result.scene.to_dict()
     return computed
@@ -272,13 +273,17 @@ def test_each_component_has_its_reference_piece_pinned_with_the_test_brand() -> 
 
 
 def test_every_reference_piece_passes_the_check_under_the_test_brand(location: Path) -> None:
+    """The test brand's version states, once, that it gives `picture.logo` no value, and no
+    piece states it (DEC-025 point 9)."""
     report = checks.check(location)
     found = [
-        (level, finding.code, finding.file, finding.message)
+        (level, finding.code, finding.file, finding.where)
         for finding, level in report.judged
         if finding.code != "component-experimental"
     ]
-    assert found == []
+    assert found == [
+        ("fact", "picture-role-unvalued", "visual/libraries/test-brand/1.0.0/", "picture.logo")
+    ]
     assert not report.failed()
     assert report.summary == [
         f"{len(COMPONENTS)} piece(s) in `visual`: the scenes of 0 read from their findings "
@@ -606,6 +611,8 @@ PATTERNS = set(re.findall(r"^### `([a-z-]+)`: ", README.read_text(encoding="utf-
 SPAN = COMPONENTS["panels"]["lists"]["panels"]["arrangement"]["span"]
 #: How far a drawn length may stray from what it should be, for rounding.
 EPSILON = 1e-6
+#: How far a place on the page, summed from frames each rounded to 1/100 px, may stray.
+ROUNDING = 0.02
 
 
 def by_id(scene: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
@@ -745,6 +752,42 @@ def test_a_panels_span_gives_it_its_share_of_the_row(
 
 
 @pytest.mark.parametrize("language", LANGUAGES)
+def test_the_panels_of_a_row_end_on_one_edge_when_one_holds_panels_of_its_own(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
+) -> None:
+    """Each panel is as tall as the tallest, and one that holds panels of its own passes
+    that height down to the part it draws last (`components.md`, *What an element asks
+    for, and what it gets*). So in a row where a panel holds panels, the lowest box each
+    panel draws ends at the row's height. In one such row, the panels within ask for less
+    than the row, and their last part takes the rest, its height the engine's."""
+    stretched = 0
+    for (piece, lang), scene in scenes.items():
+        if lang != language:
+            continue
+        for page in [each for each in elements(scene) if each.get("page")]:
+            for element, frame in frames(page):
+                if element.get("component") != "starter/panels":
+                    continue
+                [row] = [each for each in element["children"] if each["id"].endswith("/panels")]
+                holding = [
+                    each for each in row["children"] if each.get("component") == "starter/panels"
+                ]
+                if not holding:
+                    continue
+                left, top = frame[0] + row["x"], frame[1] + row["y"]
+                for panel in row["children"]:
+                    bottoms = [
+                        box[3] for each, box in frames(panel, left, top) if each["type"] == "box"
+                    ]
+                    edge = top + row["height"]
+                    assert max(bottoms) == pytest.approx(edge, abs=ROUNDING), (piece, panel["id"])
+                for panel in holding:
+                    last = panel["children"][-1]
+                    stretched += "component" in last and last["sources"]["height"] == "engine"
+    assert stretched > 0
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
 def test_a_code_blocks_lines_stand_as_written(
     scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
 ) -> None:
@@ -795,7 +838,7 @@ def thick_bars(location: Path, tmp_path_factory: pytest.TempPathFactory) -> list
     piece = pl.read_piece(root, "visual", "card")
     drawn = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
     computed = []
-    for _, result in drawn.scenes():
+    for _, result in drawn.scenes(facts=drawn.piece.stand_ins):
         assert result.findings == []
         computed.append(result.scene.to_dict())
     return computed

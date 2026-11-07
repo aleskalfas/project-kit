@@ -1434,8 +1434,8 @@ def render(lint: ChangeLint) -> str:
     lines = [f"Prose lint — base {base['ref']} at {base['commit'][:12]}, head {state}"]
     if base.get("outdated"):
         lines.append(
-            "  the base moved on after this branch left it; merge or rebase onto it "
-            "for results that hold"
+            "  the base moved on after this branch left it; results hold only against "
+            "an up-to-date base"
         )
     lines.extend(f"  {finding.render()}" for finding in lint.findings)
     lines.append(

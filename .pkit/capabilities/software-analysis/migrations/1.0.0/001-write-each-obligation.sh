@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# software-analysis 0.3.0 — resource: write-each-obligation.
+# software-analysis 1.0.0 — resource: write-each-obligation.
 #
-# From 0.3.0 each requirement, of each of the three kinds and withdrawn or not,
+# From 1.0.0 each requirement, of each of the three kinds and withdrawn or not,
 # carries `obligation`, a fingerprint of its statement, its measure and where it
 # holds, and `pkit analysis validate` fails a requirement without it, whatever
 # any rule's status (software-analysis DEC-006 point 6). A project's
-# requirements written before 0.3.0 hold none. This migration writes it on each,
+# requirements written before 1.0.0 hold none. This migration writes it on each,
 # so no requirement fails validation for lacking it (COR-010; DEC-006,
 # Implications).
 #

@@ -89,7 +89,7 @@ Each record of the capability sets the severity of each finding its checks raise
 ### 8. Python, run as the methodology's own code, and no network to draw
 
 - **One runtime.** The capability's code is Python, run as the methodology's own code is. It needs the runtime of no other language.
-- **Outside programs on the path that needs them.** A program of another tool, such as one that writes a PDF, is called only by the command that needs it. The methodology installs none, so that command checks for it and names what is missing. Validation needs none.
+- **Outside programs on the path that needs them.** A program of another tool, such as one that writes a PDF, is called only by the command that needs it. The methodology installs none, so that command checks for it and names what is missing. Validation needs none. Such a program keeps its own sandbox on, where it has one, and leaves a session's sandbox only as [visual-communication:DEC-024-outside-programs-sandbox] allows (refinement per DEC-024).
 - **No network to draw.** Drawing a piece to a file needs no network. A plugin that reaches a service, such as a renderer for a whiteboard service, declares that service. It runs only where the project has turned it on in the configuration. Its sign-in and the hosts it reaches come through the methodology's shared sign-in, decided apart ([project-kit#2418](https://github.com/aleskalfas/project-kit/issues/2418)).
 
 ### 9. The commands sit in one group, and each says whether it writes

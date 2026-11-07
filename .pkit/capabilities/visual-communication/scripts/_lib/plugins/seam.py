@@ -27,8 +27,10 @@ from typing import Any
 #: 2 since a scene's text holds paragraphs of runs, each with its own role, paint and fonts,
 #: and each line its own baseline and spans (visual-communication DEC-012). 3 since a line
 #: may hold arrowheads, and a tie's connector the points of its route and the elements its
-#: ends meet (visual-communication DEC-011).
-SEAM_VERSION = 3
+#: ends meet (visual-communication DEC-011). 4 since a renderer of a format that holds modes
+#: is handed every key of one file in one call, and its loss in one of them names that key
+#: (visual-communication DEC-023 point 2).
+SEAM_VERSION = 4
 
 RENDERER = "renderer"
 PRODUCER = "producer"
@@ -51,19 +53,23 @@ class Loss:
     - `what`: what was lost, by trace id or token path.
     - `did`: what the plugin did instead, one of `OUTCOMES`.
     - `why`: why, in plain words.
+    - `key`: the key of the one combination it holds in, where a renderer's file holds
+      several (DEC-023 point 8); None for every other loss, which no field adds.
     """
 
     plugin: str
     what: str
     did: str
     why: str
+    key: str | None = None
 
     def __post_init__(self) -> None:
         if self.did not in OUTCOMES:
             raise ValueError(f"unknown outcome {self.did!r}")
 
     def as_dict(self) -> dict[str, str]:
-        return {"plugin": self.plugin, "what": self.what, "did": self.did, "why": self.why}
+        held = {"plugin": self.plugin, "what": self.what, "did": self.did, "why": self.why}
+        return held if self.key is None else {**held, "key": self.key}
 
 
 class PluginError(Exception):

@@ -1,7 +1,7 @@
 """The check: what the project's visual work breaks, within the project's validation
 (visual-communication DEC-002 points 3, 4, 6 and 7, DEC-003 point 9, DEC-004 points 8, 9
 and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9, DEC-010
-points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7).
+points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7, DEC-019 point 8).
 
 **File-level findings, every run:**
 
@@ -18,6 +18,9 @@ points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7).
   final or a published piece's lock; and, read with the content, a key that both an item's
   component and its list declare, which fails where an item carries it and is stated as a
   fact where none does (DEC-010 points 2 and 9);
+- a published piece's lock behind a newer released version the installed capability reads,
+  a fact read from the lock and the list alone, outside the lock's findings, so it stops
+  nothing and refuses no export (`behind_findings`, DEC-003 point 9, DEC-019 point 8);
 - each library version checked alone, once: the newest version the project holds of
   each major of each library, resolved with the newest version the project holds of each
   major it names. A brand is read over its base, a component library's own roles are
@@ -82,7 +85,9 @@ reads and before a lock finding stops the piece, so each of these stands beside 
 - a published piece fails where it declares no format, where it has no current copy of its
   own, where a file of that copy is missing or holds another hash, or where something the
   version that wrote the copy read has changed (`published_findings`). So it is held to that
-  version, and not to the last. A copy made over a stale output asks for attention;
+  version, and not to the last. A copy made over a stale output asks for attention. A copy
+  made with a number or a date let through fails, at the component the text did not fit,
+  so it asks for attention in a released library, naming its owner (DEC-016 point 6);
 - a draft with a file of its own current copy standing asks for attention, whatever the file
   holds (`standing_findings`);
 - a final piece raises none of these, since no export can mend its copy (`_final`).
@@ -164,6 +169,7 @@ from _lib.libraries import (
     MajorsConflict,
     Version,
     kind_within,
+    newer_than,
     newest_of_majors,
     readable,
 )
@@ -195,6 +201,14 @@ BLACK = {"colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1}
 #: stops no drawing (`viewing.opened`).
 LOCK_NOT_RELEASED = "lock-not-released"
 
+#: The fact that a published piece's lock is behind a newer released version the installed
+#: capability reads (DEC-003 point 9, DEC-019 point 8). It lies outside `lock_findings`, so it
+#: stops no other finding of the piece and refuses no export.
+LOCK_BEHIND = "lock-behind"
+
+#: What the fact that a lock is behind says of fit, which it does not judge.
+OUTDATED = "`pkit visual outdated` says whether a move takes it, and why not"
+
 #: The findings on what a piece's state owes of its current copy (DEC-017 point 6).
 PUBLISHED_NO_FORMAT = "published-no-format"
 COPY_NONE = "current-copy-none"
@@ -203,6 +217,7 @@ COPY_FILE_CHANGED = "current-copy-file-changed"
 COPY_STALE = "current-copy-stale"
 COPY_UNREADABLE = "current-copy-unreadable"
 COPY_OVER_STALE = "current-copy-over-stale"
+COPY_LET_THROUGH = "current-copy-let-through"
 COPY_STANDING = "current-copy-standing"
 
 #: The findings on what a final piece owes of the version handed out (DEC-017 point 6), and on
@@ -458,6 +473,7 @@ class _Run:
         lock = lock_findings(self.held, piece)
         self.found.extend(lock)
         self._copy(piece)
+        self.found.extend(behind_findings(self.held, piece))
         if lock:
             self.counts["unchecked"] += 1
             return
@@ -629,13 +645,15 @@ class _Run:
                 env = pl.LibraryEnv(chosen, scope)
                 found = [*scope.findings_of(name), *default_clashes(self.held, library, env)]
             elif library.kind == "brand" and FOUNDATIONS in folders:
-                found = tokens.read_brand(
+                brand = tokens.read_brand(
                     library.folder,
                     tokens.read_scope(folders, root=self.root),
                     fonts=self.root / self.location / pl.FONTS,
                     root=self.root,
                     locked=folders,
-                ).findings
+                )
+                # What the version alone states, which no piece's lock reads (DEC-025 point 9).
+                found = [*brand.findings, *brand.facts]
             else:
                 found = []
         except tokens.TokenError as exc:
@@ -1113,19 +1131,48 @@ def _shipped_under(name: str, version: Version) -> copies.Source | None:
         return None
 
 
+def behind_findings(held: Held, piece: pl.Piece) -> list[Finding]:
+    """The facts that a published piece's lock is behind a newer released version the
+    installed capability reads, of any major (`libraries.newer_than`, DEC-003 point 9,
+    DEC-019 point 8). Each library behind takes one for the newest such version of the lock's
+    major, which names the command that proposes the move, and one for the newest of a later
+    major, which a person takes on purpose, by naming it. Each names `pkit visual outdated`
+    for whether a move takes it. It is read from the lock and the list of libraries alone and
+    judges no fit, so it stays while a version stands that no default move takes. It fails
+    nothing, and no other state raises it: a final piece never comes here."""
+    if not current_copy.keeps(piece) or piece.final:
+        return []
+    file = piece.file(pl.PIECE_FILE)
+    upgrade = f"pkit visual upgrade {piece.name}"
+    found = []
+    for newer in newer_than(held, piece.lock):
+        lead = f"the published piece `{piece.name}` locks {newer.name}@{newer.locked}, behind"
+        if newer.within is not None:
+            said = f"{lead} {newer.name}@{newer.within}, a released version of its major"
+            fix = f"run `{upgrade}`, which proposes the move; {OUTDATED}"
+            found.append(Finding(LOCK_BEHIND, FACT, said, file=file, where="lock", fix=fix))
+        if newer.later is not None:
+            said = f"{lead} {newer.name}@{newer.later}, a released version of a later major"
+            fix = (
+                f"a later major is taken on purpose, by naming it: "
+                f"`{upgrade} {newer.name}@{newer.later}`; {OUTDATED}"
+            )
+            found.append(Finding(LOCK_BEHIND, FACT, said, file=file, where="lock", fix=fix))
+    return found
+
+
 # --- what a state owes of a current copy --------------------------------------------------------
 
 
 def _no_format(piece: pl.Piece) -> Finding:
     """The finding on a published piece that declares no format (DEC-017 point 6)."""
-    formats = " or ".join(f"`{form}`" for form in exports.RENDERERS)
     return Finding(
         PUBLISHED_NO_FORMAT,
         FAILS,
         f"the published piece `{piece.name}` declares no format under `exports`",
         file=piece.file(pl.PIECE_FILE),
         where="exports",
-        fix=f"declare one there: {formats}",
+        fix=f"declare one there: {exports.formats_said()}",
     )
 
 
@@ -1139,7 +1186,10 @@ def published_findings(
     or None where it names none (`current_copy.own`), among the record's `versions` (DEC-006
     point 8, DEC-017 points 5 and 6): a copy that is whole, and that nothing it read has
     changed since. It reads the version that wrote the copy, not the last, so a piece set
-    back to published is held to it. A copy made over a stale output asks for attention."""
+    back to published is held to it. A copy made over a stale output asks for attention. A
+    copy made with a number or a date let through fails in the library version of the
+    component the text did not fit, so it asks for attention in a released one, naming its
+    owner, until a version that fits writes the copy (DEC-016 point 6)."""
     record = piece.file(pl.EXPORTS_FILE)
     if entry is None:
         said = f"the published piece `{piece.name}` has no current copy of its own"
@@ -1187,6 +1237,24 @@ def published_findings(
                 where=current_copy.FIELD,
                 fix=f"run {pl.produce_command(piece.name, output)}, then {fix}",
                 who=AUTHOR,
+            )
+        )
+    for each in current_copy.written_let_through(entry, versions):
+        said = (
+            f"the current copy of `{piece.name}`, which version {number} wrote, was made with "
+            f"{current_copy.let_through_said(each)} let through, which does not fit"
+        )
+        component = each["component"]
+        version = each.get("version", "")
+        found.append(
+            Finding(
+                COPY_LET_THROUGH,
+                FAILS,
+                said,
+                file=record,
+                where=current_copy.FIELD,
+                fix=f"give the text room in `{component}`, then {fix}",
+                library=f"{component.partition('/')[0]}@{version}" if version else "",
             )
         )
     return found
@@ -2263,10 +2331,10 @@ def rooted(finding: Finding, piece: pl.Piece) -> Finding:
 
 
 def computed(project: pl.Project) -> list[Finding]:
-    """The scene findings of a piece, its scenes computed now; a font that refuses the
-    render is one."""
+    """The scene findings of a piece, its scenes computed now with the stand-ins, so every
+    machine finds the same (DEC-016 point 5); a font that refuses the render is one."""
     try:
-        results = project.scenes()
+        results = project.scenes(facts=project.piece.stand_ins)
     except MissingFont as exc:
         return [
             Finding(

@@ -70,7 +70,7 @@ def drawn(
         language="en",
         lock=dict(VERSIONS),
         size_key=key,
-        seam_version=3,
+        seam_version=4,
         env=FakeEnv(components=dict(components or {})),
         facts=layout.stand_ins("draft"),
         sizes=layout.Sizes(axes, modes),
@@ -431,15 +431,40 @@ def test_a_when_by_a_size_names_the_default_and_switches_no_further(
     assert any(said in message for message in issues(result, code)), result.findings
 
 
+def over_items(across: Any = ON_DESKTOP, down: Any = ON_PHONE) -> dict[str, dict[str, Any]]:
+    """`flipping`, whose parts `across` and `down` take the `when`s given, none where one is
+    None. The top declares the field `head` and the option `tone`, which a `when` may read."""
+
+    def over(when: Any, **operator: Any) -> dict[str, Any]:
+        part = {"repeat": "items", "draw": "lab/item", **operator}
+        return part if when is None else {**part, "when": when}
+
+    components = flipping(across=over(across, row={}), down=over(down, column={}))
+    components["lab/top"]["fields"]["properties"]["head"] = {"type": "string"}
+    components["lab/top"]["options"] = {"tone": ["plain", "loud"]}
+    return components
+
+
 @pytest.mark.parametrize(
     ("down", "said"),
     [
-        pytest.param(ON_DESKTOP, "at `desktop` of `device` 2 of their `when`s say yes", id="twice"),
+        pytest.param(ON_DESKTOP, "at `desktop` of `device` 2 of them may be drawn", id="twice"),
         pytest.param(
             # `down` says no at every mode, and `across` says no on a phone.
             {"by": ":device", "desktop": False},
-            "at `phone` of `device` 0 of their `when`s say yes",
+            "at `phone` of `device` 0 of them may be drawn",
             id="never",
+        ),
+        pytest.param(
+            # A branch that names a field may draw its part, where the content fills it.
+            {"by": ":device", "desktop": "head", "phone": False},
+            "at `desktop` of `device` 2 of them may be drawn",
+            id="a-field-branch",
+        ),
+        pytest.param(
+            {"by": ":device", "desktop": {"tone": ["loud"]}, "phone": True},
+            "at `desktop` of `device` 2 of them may be drawn",
+            id="an-option-branch",
         ),
     ],
 )
@@ -447,23 +472,57 @@ def test_two_parts_over_one_list_draw_each_item_once_at_every_mode(
     down: dict[str, Any], said: str
 ) -> None:
     """Each part is judged at every mode of the axis, a mode neither names included."""
-    parts = {"down": {"repeat": "items", "draw": "lab/item", "when": down, "column": {}}}
-
-    result = drawn(ITEMS, components=flipping(**parts))
+    result = drawn(ITEMS, components=over_items(down=down))
 
     [message] = issues(result, "size-repeat")
     assert said in message
     assert "the parts `across`, `down` repeat over `items`" in message
 
 
-def test_two_parts_over_one_list_that_each_draw_by_a_field_are_not_judged() -> None:
-    """Only `when`s that say yes or no in every branch are judged: a branch that gives a
-    `when` of its own depends on the content."""
-    head = {"by": ":device", "desktop": "head", "phone": False}
-    components = flipping(down={"repeat": "items", "draw": "lab/item", "when": head, "column": {}})
-    components["lab/top"]["fields"]["properties"]["head"] = {"type": "string"}
+@pytest.mark.parametrize(
+    "across",
+    [
+        pytest.param(None, id="no-when"),
+        pytest.param("head", id="a-field"),
+        pytest.param({"tone": ["loud"]}, id="an-option"),
+    ],
+)
+def test_a_part_whose_when_reads_no_size_counts_as_drawn_at_every_mode(across: Any) -> None:
+    """`across` reads no size, so it is drawn, or may be, at every mode, and on a phone
+    `down` draws the list again. The finding lies at the first `when` by a size."""
+    result = drawn(ITEMS, components=over_items(across=across))
 
-    assert issues(drawn(ITEMS, components=components), "size-repeat") == []
+    [found] = [finding for finding in result.findings if finding.code == "size-repeat"]
+    assert "at `phone` of `device` 2 of them may be drawn" in found.message
+    assert "the parts `across`, `down` repeat over `items`" in found.message
+    assert found.where == "parts.down.when"
+
+
+@pytest.mark.parametrize(
+    ("across", "down"),
+    [
+        pytest.param(
+            ON_DESKTOP, {"by": ":device", "desktop": False, "phone": "head"}, id="a-field-branch"
+        ),
+        pytest.param(None, {"by": ":device", "desktop": False}, id="never-beside-always"),
+    ],
+)
+def test_parts_over_one_list_that_may_draw_it_once_at_every_mode_hold(
+    across: Any, down: Any
+) -> None:
+    """A branch that names a field may draw its part at that mode alone, so it holds where
+    the other part says no there. Beside a part with no `when`, one that never draws holds."""
+    result = drawn(ITEMS, components=over_items(across=across, down=down))
+
+    assert issues(result, "size-repeat") == []
+
+
+def test_parts_over_one_list_whose_whens_read_no_size_are_not_judged() -> None:
+    """The check judges a list that a `when` by a size draws: two parts over one list,
+    neither reading a size, draw it as they did."""
+    result = drawn(ITEMS, components=over_items(across="head", down=None))
+
+    assert issues(result, "size-repeat") == []
 
 
 def test_a_component_that_names_no_size_draws_as_it_did() -> None:

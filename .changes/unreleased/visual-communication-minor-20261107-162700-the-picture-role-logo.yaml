@@ -1,0 +1,18 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The foundations declare the shared picture role `picture.logo`, of a new
+  type `picture`, in a new group `picture` (#2826). No brand owes it a value.
+  A brand gives one as an empty group at the role's path, naming a file of its
+  version's `pictures/` as `{"file": "logo.png"}` in the capability's extension
+  key. A value axis may give a dark mode its own. A brand exports the role only
+  where it gives it a value, and written code holds none. Five new findings:
+  `role-picture` fails a picture role another library declares,
+  `picture-shape` and `picture-name` stop a brand whose value is not of its
+  form, `picture-missing` fails a file the version does not hold, and
+  `picture-role-unvalued` states, once in a brand's version, that it gives the
+  role no value. The release's comparison counts a new top group of the shared
+  roles as breaking the foundations. Every shipped piece and fixture draws as
+  before, byte for byte.

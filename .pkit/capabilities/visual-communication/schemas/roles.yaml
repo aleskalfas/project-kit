@@ -1,7 +1,9 @@
 # A library's declarations, `roles.yaml` (visual-communication DEC-004 points 2, 7, 8
 # and 10): its roles, each with its type, and a default that aliases an older role; in
 # the foundations also the shared axes, the colour families and the pairs of colour roles
-# that must contrast. A role carries no value: a brand gives it one.
+# that must contrast. A role carries no value: a brand gives it one. A role of the type
+# `picture`, which only the foundations declare, carries no default, and no brand owes it
+# a value (visual-communication DEC-025 point 4).
 #
 # The body below is the reference instance.
 
@@ -20,6 +22,8 @@ roles:
     default: '{text-primary}'
   space.1:
     type: dimension
+  picture.logo:
+    type: picture
 axes:
   colour-scheme:
     kind: value

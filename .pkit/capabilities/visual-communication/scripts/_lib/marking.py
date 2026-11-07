@@ -10,7 +10,8 @@ with the piece (visual-communication DEC-017 points 1, 2 and 8).
 - **It says what else changed** (`Planned.changed`), reading "changed" as an export's reading
   does (DEC-016 point 1), with the lock put back and the state as it stood, so neither of the
   run's own writes counts. A version made before that reading read a file whole, and the run
-  says which (`Planned.read_whole`).
+  says which (`Planned.read_whole`). It names each number or date the version let through,
+  and stops on none (`Planned.let_through`): nothing mends a file that went out.
 - **A lock that no longer holds refuses nothing.** The run says what the check will find of
   it (`Planned.lock_faults`), read as the check reads a final piece's, and goes on.
 - **One version, whole.** Every file of the version moves from the clone's local folder into
@@ -45,8 +46,9 @@ class Planned:
     """A mark checked and not yet written: the version's number and its lock; the name of each
     of its files; the bytes of `piece.yaml`, None where it stays as it is, and of the record of
     exports; each input that still does not verify; each file the version read whole, of those
-    an export now reads in part; what no longer holds of the lock, a line each; and the version
-    that wrote the piece's current copy, where another did."""
+    an export now reads in part; what no longer holds of the lock, a line each; the version
+    that wrote the piece's current copy, where another did; and each number or date the
+    version let through, in words."""
 
     piece: pl.Piece
     number: int
@@ -58,6 +60,7 @@ class Planned:
     read_whole: tuple[str, ...]
     lock_faults: tuple[str, ...]
     copy_writer: int | None
+    let_through: tuple[str, ...]
 
 
 def plan(piece: pl.Piece, held: Held, number: int) -> Planned:
@@ -88,6 +91,7 @@ def plan(piece: pl.Piece, held: Held, number: int) -> Planned:
         tuple(fingerprint.read_whole(version["fingerprint"])),
         tuple(_lock_faults(piece, held, lock)),
         _copy_writer(piece, record, number),
+        tuple(current_copy.let_through_said(each) for each in current_copy.let_through(version)),
     )
     _writable(planned)
     return planned
@@ -116,7 +120,8 @@ def write(planned: Planned, change: Change) -> None:
 
 def report(planned: Planned) -> list[str]:
     """What a mark says, a line each: each file kept, the lock put back, what else changed,
-    what no longer holds of the lock, the current copy, and the version recorded."""
+    each text let through, what no longer holds of the lock, the current copy, and the version
+    recorded."""
     piece, number = planned.piece, planned.number
     locked = ", ".join(f"{library} {planned.lock[library]}" for library in sorted(planned.lock))
     said = [f"handed out: {piece.file(f'{HANDED_OUT}/{name}')}" for name in planned.files]
@@ -126,6 +131,11 @@ def report(planned: Planned) -> list[str]:
         f"read whole: version {number} read `{file}` whole, made before an export left fields "
         f"out of it, so a pin or a change of state reads as a change"
         for file in planned.read_whole
+    )
+    said.extend(
+        f"let through: version {number} shows {text}, which does not fit, and no check judges "
+        f"it once the piece is final"
+        for text in planned.let_through
     )
     said.extend(planned.lock_faults)
     if planned.copy_writer is not None:

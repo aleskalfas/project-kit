@@ -912,6 +912,13 @@ FOUNDATIONS_CASES: dict[str, tuple[Change, Change | None, list[str], str | None]
         ["colour family `red`: is removed (DEC-003 point 6)"],
         None,
     ),
+    "a new picture role": (
+        lambda d: roles(d).update({"picture.mark": {"type": "picture"}}),
+        None,
+        [],
+        "shared role `picture.mark`: is new, a picture role, which no brand owes a value "
+        "(DEC-004 point 5)",
+    ),
 }
 
 
@@ -932,6 +939,27 @@ def test_each_change_of_the_foundations_is_named_whatever_reads_it(
     assert said(found.breaks) == breaks
     if addition is not None:
         assert addition in said(found.additions)
+
+
+def test_a_new_top_group_of_the_shared_roles_breaks_the_foundations_whatever_its_roles_carry(
+    tmp_path: Path,
+) -> None:
+    """The foundations as they ship, then a minor that adds the group `shadow`, its one role
+    with a default. No library takes the group's name, so it fails any library already named
+    so, and the minor is refused (DEC-025 point 10, DEC-004 point 5)."""
+    found = compared_foundations(
+        tmp_path,
+        lambda d: roles(d).update({"shadow.soft": {"type": "dimension", "default": "{space.1}"}}),
+    )
+
+    assert said(found.breaks) == [
+        "shared group `shadow`: is new, a name no library takes, so it fails a library already "
+        "named so (DEC-004 point 5)"
+    ]
+    assert "shared role `shadow.soft`: is new, with a default (DEC-004 point 5)" in said(
+        found.additions
+    )
+    assert (found.segment, found.allowed) == ("major", False)
 
 
 # --- a brand ------------------------------------------------------------------------------------
@@ -1004,6 +1032,49 @@ def test_a_brands_exported_token_removed_breaks_it_and_a_new_one_is_an_addition(
         [],
         ["exported token `size.poster`: is new (DEC-004 point 5)"],
     )
+
+
+def logo_location(tmp: Path, version: str, given: bool) -> Any:
+    """A location that holds the shipped foundations and the test brand at `version`, which
+    gives `picture.logo` a file its version holds where `given` (DEC-025 point 4)."""
+    held = brand_location(tmp, version, None, None)
+    if given:
+        folder = held.root / LOCATION / "libraries" / "test-brand" / version
+        path = folder / "tokens" / "base.tokens.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["picture"] = {
+            "logo": {"$extensions": {"pkit.visual-communication": {"file": "a.png"}}}
+        }
+        path.write_text(json.dumps(data), encoding="utf-8")
+        write(folder / "pictures" / "a.png", "")
+    return held
+
+
+def compared_logos(tmp: Path, earlier: bool, later: bool) -> Any:
+    """The test brand 1.0.0 compared with 1.1.0, each giving its logo a file or not."""
+    version = libraries.Version.parse
+    return comparison.compare(
+        full_read.read(
+            logo_location(tmp / "earlier", "1.0.0", earlier), "test-brand", version("1.0.0")
+        ),
+        full_read.read(
+            logo_location(tmp / "later", "1.1.0", later), "test-brand", version("1.1.0")
+        ),
+    )
+
+
+def test_a_logo_a_brand_comes_to_give_is_an_addition_and_one_it_ceases_to_give_breaks(
+    tmp_path: Path,
+) -> None:
+    """A brand exports a picture role only where it gives it a value (DEC-025 point 4)."""
+    added = compared_logos(tmp_path / "added", earlier=False, later=True)
+    ceased = compared_logos(tmp_path / "ceased", earlier=True, later=False)
+
+    assert (said(added.breaks), said(added.additions)) == (
+        [],
+        ["exported token `picture.logo`: is new (DEC-004 point 5)"],
+    )
+    assert said(ceased.breaks) == ["exported token `picture.logo`: is removed (DEC-004 point 5)"]
 
 
 def test_a_role_taken_off_a_bases_open_roles_breaks_it_and_a_newly_opened_one_does_not(

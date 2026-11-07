@@ -1,0 +1,14 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The `size-repeat` check counts every `repeat` part over a list that one of
+  them draws by a `when` by a size (#2828). A part with no `when` counts as
+  drawn at every mode. A `when` that names a field or an option's words, or a
+  size's branch that does, counts as one that may draw its part there. So a
+  list such parts may draw twice at some size, or never, now fails. The
+  finding lies at the first `when` by a size among the parts, and its message
+  says how many of them may be drawn at that mode. A list whose parts read no
+  size is not judged, as before, and every shipped component reports as it
+  did.

@@ -8,14 +8,14 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 8a771f5cbf7a58f89c6b2b4d659a96ee55c5793a2711df796cbe6ec8ee872558
+  value: 2f310355005faa030ed399f8800c1e924ec674ab5ad665a2401765911c9fbff2
   inputs:
     - file: content.cs.yaml
-      sha256: d55667a71e1183103f68487e59cff2bef6483301f72ab35a243d16f4af70a42b
+      sha256: 0cd566e497f05e27f843c8c8074a614ea39a14d9ebdd0250037a2f5baeac0f2d
     - file: content.en.yaml
-      sha256: 3025aad5cbeac3b6e5893dea4248eb0a0c6fa2b7da71ff4d8dfcb51c3b16e73a
+      sha256: 87faa70c8323c0c2b788ef2eae3144ae7e9276ca9487ce486bd2ea8a14046ca1
     - file: piece.yaml
-      sha256: 415809d811523e2aa1679dbc727f4a9e2ea76245c9fad502c2ad7c997a752b5c
+      sha256: 2856b5cc4e94a664f5ac71f18054e1c9048b07078757dd27fbf33ce5b1e15533
     - library: foundations
       version: 1.0.0
       path: components/deck.yaml

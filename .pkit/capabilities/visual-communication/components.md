@@ -17,6 +17,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/tokens.py
         - .pkit/capabilities/visual-communication/scripts/_lib/checks.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/exports.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/seam.py
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/deck.yaml
@@ -65,6 +66,7 @@ pkit:
         - visual-communication:DEC-012#3
         - visual-communication:DEC-012#4
         - visual-communication:DEC-016#5
+        - visual-communication:DEC-017#3
         - visual-communication:DEC-021#5
         - visual-communication:DEC-021#7
       artefact:
@@ -75,6 +77,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#rolesyaml
+        - .pkit/capabilities/visual-communication/files.md#picture-roles
         - .pkit/capabilities/visual-communication/files.md#reserved-words
         - .pkit/capabilities/visual-communication/files.md#content-files
         - .pkit/capabilities/visual-communication/files.md#what-a-release-compares
@@ -428,7 +431,7 @@ A formula is refused with a message that names it and says why, such as "the for
 - **It cannot be read:** it does not start with `=`, is empty, ends too early, or holds a sign or a term where none belongs. Or it breaks a rule of the grammar: a binary minus without its spaces, an engine name that does not exist, `min` or `max` with fewer than two arguments, `round` with other than one, or a path that ends in no measure.
 - **It reads what it may not:** a value, a part or an option the component lacks, an option that names an item of a list over which not exactly one part repeats, or below where a step may reach.
 - **Its dimensions disagree,** or it gives another dimension than its key needs.
-- **It reads a role** that has no value under the brand, a length in a unit other than `px`, or a role that is neither a length nor a number. A role has none where no library the piece locks declares it, or where it is a library's role that neither the brand nor its chain of defaults gives a value ([`roles.yaml`](files.md#rolesyaml)). A library's role with no value is found at the piece's lock, not in the component. Where the brand, or a base below it, names the library, the part takes no finding: that brand's `library-role-missing`, or its library's own finding where a default does not hold, reports it.
+- **It reads a role** that has no value under the brand, a length in a unit other than `px`, or a role that is neither a length nor a number. A role has none where no library the piece locks declares it, or where it is a library's role that neither the brand nor its chain of defaults gives a value ([`roles.yaml`](files.md#rolesyaml)). A part reads no value from a picture role, whether the brand gives it a file or not ([Picture roles](files.md#picture-roles)). A library's role with no value is found at the piece's lock, not in the component. Where the brand, or a base below it, names the library, the part takes no finding: that brand's `library-role-missing`, or its library's own finding where a default does not hold, reports it.
 
 It finds these when it computes the scene: a division by zero, `:index` or `:count` in a component that is no item, a path to an exposed part, a point, an item or an end that is missing, and a loop. A value that cannot be computed is zero. The check reports each problem as a finding (*checks*).
 
@@ -471,7 +474,7 @@ The part's *layout operator*, `row` or `column`, lays the items along a line, ac
 | `gap` | a formula that gives a length | zero | the space between two items along the line |
 | `sizes` | `own`, `equal`, `shares` | `own` | `own`: each item takes the size it asks for along the line. `equal`: the items share the part's size along the line, less the gaps, equally. `shares`: they share it in proportion to the shares their list's weight gives them, and equally where every share is the same ([Lists](#lists)). With `equal` or `shares`, the part must give that size. |
 | `justify-content` | `start`, `center`, `end`, `space-between` | `start` | Where the items lie along a line longer than they ask for. `space-between` widens each gap instead. |
-| `align-items` | `stretch`, `start`, `center`, `end` | `stretch` | `stretch`: each item is as large across as the line, that is the part's size across, else the largest size an item asks for. Otherwise each item takes the size it asks for across, at the start, the centre or the end of the line. |
+| `align-items` | `stretch`, `start`, `center`, `end` | `stretch` | `stretch`: each item is as large across as the line, that is the part's size across, else the largest size an item asks for. Where the stretch goes inside the item is in [What an element asks for, and what it gets](#what-an-element-asks-for-and-what-it-gets). Otherwise each item takes the size it asks for across, at the start, the centre or the end of the line. |
 
 - **The part's own size,** where it gives none, is what its items ask for: along the line, their sizes and the gaps; across, the largest.
 - **In the tests' figure,** where `@space.2` is 8 px, `tests/steps` lays three steps with `row: {gap: "=gap", sizes: equal, align-items: stretch}` in a row 608 px wide. Each step is 197.33 px wide, and as tall as the tallest.
@@ -500,7 +503,10 @@ preferred:
 - **At `tablet`,** which neither part names, both take their `desktop` branch, so the steps lie in a row.
 - **What it costs.** No option names an item of the list, as of any list two parts repeat over ([Options](#options)). An item's trace id names the part that draws it, so it differs by size ([Trace ids](#trace-ids)). A formula that reads the list's frame reads both parts, and the hidden one has zero size.
 - **An item a size hides** is missing at that size. A formula that reads it fails there, and so does a tie that ends at it ([Ties and connectors](#ties-and-connectors)). Content drawn at one size and not at another is stated as a fact (*checks*).
-- **What is refused** when the component is read: two such parts whose `when`s say yes or no, unless exactly one says yes at each mode.
+- **What is refused** when the component is read: parts over one list where not exactly one may be drawn at some mode. A list is judged where one of its parts has a `when` by a size, and then every part over it counts:
+  - **A part with no `when`** is drawn at every mode.
+  - **A `when` that names a field or an option's words** may draw its part at every mode, as the content or the option decides.
+  - **A `when` by a size** reads the mode's branch: `true` draws its part, and a field or an option's words may draw it.
 
 ### Ties and connectors
 
@@ -550,7 +556,11 @@ links:
 
 ### What an element asks for, and what it gets
 
-- **Each element asks** for its `preferred` size, and **gets** one (DEC-005 point 3). It gets a size from what places it. A top component gets what it asks for. A component placed by `use` or `slot` gets its part's size, else what it asks for. An item gets what the operator gives it. A formula reads the size it gets as `:width` and `:height`.
+- **Each element asks** for its `preferred` size, and **gets** one (DEC-005 point 3). It gets a size from what places it. A top component gets what it asks for. A component placed by `use` or `slot` gets its part's size, else what it asks for, unless [a stretch reaches it](#what-an-element-asks-for-and-what-it-gets). An item gets what the operator gives it. A formula reads the size it gets as `:width` and `:height`.
+- **A stretch reaches the part drawn last.** An item that `stretch` makes larger across than it asks for passes the rest on to the last part it draws. That part takes it where it places a component by `use` or `slot` and gives no size across. Its component gets as much more, and passes it on the same way. So a panel that holds panels of its own ends where the row's other panels end.
+  - **What the item asks for is unchanged.** Its formulas still read that part at the size the part asks for.
+  - **The size passed on names `engine` as its source** ([Sources](#sources)).
+  - **Only a stretch passes on.** A component that a part's formula gives more than it asks for keeps its parts as they ask.
 - **Each value has one owner:** a part's formula, its measured text, or its parent's layout.
 - **A component that gets less than it asks for** is reported.
 
@@ -575,16 +585,23 @@ A scene is computed, never committed. Under one release of the capability, the s
 A component may show the facts of its export ([Parts](#parts)). A scene takes them as inputs, beside the files.
 
 - **`language` and `state`** come from the piece's files. A scene shows them as the files hold them, such as `en` and `draft`.
-- **`version` and `date`** come from no file, so a scene takes a fixed *stand-in* for each. So the same files give the same answer on every machine, on any day.
+- **`version` and `date`** come from no file. A scene shows what the command that computes it fills them with.
 
-Each fact takes one form in every language. Each stand-in is wide enough that a usual real value fits:
+Each fact takes one form in every language. A *stand-in* is a fixed text for a fact that no file holds. Each stand-in is wide enough that a usual real value fits:
 
 | Fact | Its form | Its stand-in |
 |---|---|---|
 | `version` | `v<N>`, with `<N>` the version's number | `v88` |
 | `date` | `YYYY-MM-DD` | `2088-08-28` |
 
+Which text fills `version` and `date`:
+
+- **The check, and a render's findings,** take the stand-ins. So the same files give the same answer on every machine, on any day.
+- **What a person looks at** shows real text: a preview, a before-and-after and the viewing step. Each fills what this clone's next export would: its next number, and the date of the run. Another clone may show another number.
+- **An export** shows one number and one date in every file of its version, those its record of exports keeps: its number, and the date of the time it records. Its fingerprint reads neither, so a new number makes nothing stale.
+- **Where there is no next number,** what a person looks at takes the stand-ins, and the command says so, and why. A record of exports that cannot be read gives none, as one that conflicts on a merge. A final piece has none, since it takes no export.
 - **A stand-in that overflows** is a finding at the element that shows it, and it names the component. It fails where the project can correct that component, and asks for attention in a released library.
+- **A real text that overflows in a preview** is said in the render's output, and no record keeps it.
 - **A new stand-in** reaches a piece as a new engine does, at a render.
 
 ### What a scene holds
@@ -638,7 +655,7 @@ Every element carries its *trace*, an id that comes from the path of instances, 
 Each drawn property names its source in `sources`:
 
 - **`content:<field path>`:** a field of the content, such as `content:body.steps[plan].head`. The path names the keys the content file writes, joined by `.`, an item of a list as `[<id>]`, or as `#<place>` from 1 where it has no id. It names the list field, where a trace id names the `repeat` part. Under a `use` part that passes a field on under another name, at any depth, it keeps the name the content file writes. A value an item takes from its list's component field names that field, such as `content:body.kind.tone`. A run of a list of runs is named by its place among its field's runs, as an item with no id: `content:body.say#2`. The run's style comes from `<its source>.style` where it names one, and its family from `<its source>.concept`.
-- **`fact:<word>`:** a fact of the export a text shows, such as `fact:version`, a stand-in included.
+- **`fact:<word>`:** a fact of the export a text shows, such as `fact:version`, whether a stand-in or real text fills it ([The facts of an export](#the-facts-of-an-export)).
 - **`option:<name>`:** a value a switch on that option chose.
 - **`size:<axis>`:** a value a switch on that size axis chose, such as `size:device`.
 - **`default:<library>/<component>`:** the component's own value. A field that a `use` part does not pass on is the placing component's, which gives it nothing.

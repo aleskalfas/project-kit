@@ -29,14 +29,18 @@ Where it would propose the lock the piece holds, and the version that wrote the 
 under that lock, it says so and writes nothing. Otherwise the run is a lock move, a render with
 no preview, then an export run, under every rule of an export but the gate, as one change.
 `pkit visual before-after --ahead` looks ahead for it, and the drawing lies in the clone's
-local folder.
+local folder. Its findings take the stand-ins for a version's number and its date. Its export
+fills them with its own number and date, and its drawing shows what the export fills
+(`exports.plan`, DEC-016 point 5).
 
 It stops on an edit of the piece since the copy, naming each input that changed, unless
 `--edited <input>` names it: a file by its path in the piece's folder, a font as the refusal
 writes it. It stops on a produced picture stale under the moved lock, naming what changed,
-unless `--use-stale <output>` names it. It runs no program. Each refusal prints the line that
-names them all. A fingerprint it cannot read refuses, and names the record. With no copy
-standing, or none of its own, it goes on, writes the copy whole, and says no file stood.
+unless `--use-stale <output>` names it. It runs no program. It stops on a number or a date
+that overflows where its export fills it, unless `--use-overflowing <fact>` names the fact
+(DEC-016 point 6). Each refusal prints the line that names them all. A fingerprint it cannot
+read refuses, and names the record. With no copy standing, or none of its own, it goes on,
+writes the copy whole, and says no file stood.
 
 It names each finding that fails once the lock has moved, which holds the landing and stops
 nothing here. `--dry-run` stops where the run would, says what it would write and prints each
@@ -50,7 +54,8 @@ could not put back.
 
 Usage:
   pkit visual upgrade <piece> [<library>@<version>]... [--edited <input>]...
-                      [--use-stale <output>]... [--dry-run] [--location <path>]
+                      [--use-stale <output>]... [--use-overflowing <fact>]... [--dry-run]
+                      [--location <path>]
 
 Exit codes:
   0  proposed, nothing to move, or a dry run that would propose, whatever findings it names
@@ -108,6 +113,14 @@ def main() -> int:
         help="carry this produced picture as it is, though it is stale; may repeat",
     )
     parser.add_argument(
+        "--use-overflowing",
+        action="append",
+        default=[],
+        metavar="FACT",
+        help="carry this fact's text as it is, `version` or `date`, though it overflows; "
+        "may repeat",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="stop where the run would, and say what it would write, writing nothing",
@@ -136,9 +149,10 @@ def _upgrade(root: Path, args: argparse.Namespace) -> int:
         for line in proposals.settled(move):
             print(line)
         return 0
-    named = proposals.Named(args.versions, args.edited, args.use_stale)
+    named = proposals.Named(args.versions, args.edited, args.use_stale, args.use_overflowing)
     planned = proposals.plan(move, named)
-    before, after = looks.sides(move.look)
+    # The drawing shows what the run's export fills: its number and its date (DEC-016 point 5).
+    before, after = looks.sides(move.look, planned.export.facts)
     if args.dry_run:
         for line in (
             *looks.report(move.look, before, after, kept=False),
