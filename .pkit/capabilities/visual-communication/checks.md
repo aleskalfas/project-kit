@@ -238,7 +238,7 @@ These follow DEC-003 point 9, `library-name` DEC-004 point 7, `arrangement-clash
 | `lock-version`, `lock-not-held`, `lock-unreadable`, `lock-incomplete`, `lock-majors` | A lock entry is no version; or the lock names a version the project does not hold, or one the installed capability cannot read; or it leaves out a library the piece uses, or one a locked library builds on; or a locked library builds on another major of a library than the lock names. | fails, but on a final piece | `<piece>/piece.yaml#lock` | Run `pkit visual render <piece>`, which moves a draft's lock. For a pinned draft, change the lock by hand, or unpin it and render it. No render moves a published piece's lock, so set it back to a draft and render it ([the lock](files.md#the-lock)). |
 | `lock-not-released` | A final or a published piece's lock names a version not yet released (DEC-003 point 9). The message names the piece, the library and the version. A draft's lock may name one, pinned or not. | by the version and the piece's state, below | `<piece>/piece.yaml#lock` | As below. |
 
-**At a final piece's lock.** The piece's state forbids a move of its lock, and no state leads out of final. So a finding there fails only where something other than a move mends it (DEC-002 point 7). One only a move would mend states a fact, and its fix says a copy of the piece takes it up again.
+**At a final piece's lock.** The piece's state forbids a move of its lock, and no state leads out of final. So a finding there fails only where something other than a move mends it (DEC-002 point 7). One only a move would mend states a fact. Its fix names `pkit visual take-up`, which takes the piece up again as a new draft ([the lock](files.md#the-lock)).
 
 | Label | Level on a final piece | What mends it |
 |---|---|---|
@@ -453,7 +453,7 @@ The check holds a piece's [current copy](outputs.md#the-current-copy) to what it
 | Label | What it means | Where it points | What to do |
 |---|---|---|---|
 | `handed-out-none` | The piece's `state` is `final`, and its record of exports names no version handed out, or it has no record. | `<piece>/piece.yaml#state` | Run `pkit visual mark-final <piece> <version>`, which takes such a piece, or set the state back. |
-| `handed-out-state` | The record names a version handed out, and the piece's `state` is another. | `<piece>/piece.yaml#state` | Set it back to `final`. Copy the piece for new work. |
+| `handed-out-state` | The record names a version handed out, and the piece's `state` is another. | `<piece>/piece.yaml#state` | Set it back to `final`. For new work, run `pkit visual take-up <piece> <name>` ([the lock](files.md#the-lock)). |
 | `handed-out-lock` | The record names a version handed out, and the piece's lock is not the one that version was made under, read from its fingerprint. A hand or a merge may leave this. | `<piece>/piece.yaml#lock` | Write back the lock the fix names, which is no move of it. |
 | `handed-out-unreadable` | The record names a version handed out, and gives no lock or no file of it. It keeps no list of numbered versions, no such version or no file of it, or a fingerprint that gives no lock. The message says which. The files it names are still read. | `<piece>/exports.yaml#handed-out` | Restore what the record kept of that version from the repository's history. |
 | `handed-out-file-missing` | A file of the version handed out is missing from `handed-out/`. The message names the version. | the file | Restore it from the repository's history, as it was handed out. |

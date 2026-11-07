@@ -150,8 +150,8 @@ def _record(piece: pl.Piece) -> dict[str, Any]:
     if kept is not None:
         raise pl.Refused(
             f"{piece.file(pl.EXPORTS_FILE)} names version {kept} as handed out, and a piece holds "
-            f"one: copy the piece for new work. A mark made in error is undone by reverting its "
-            f"change"
+            f"one: for new work, run {copies.take_up_command(piece.name)}, which takes it up "
+            f"again as a new draft. A mark made in error is undone by reverting its change"
         )
     return exports.recorded(piece)
 

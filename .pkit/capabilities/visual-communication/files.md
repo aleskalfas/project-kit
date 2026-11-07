@@ -14,6 +14,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/export.py
         - .pkit/capabilities/visual-communication/scripts/mark-final.py
         - .pkit/capabilities/visual-communication/scripts/upgrade.py
+        - .pkit/capabilities/visual-communication/scripts/take-up.py
         - .pkit/capabilities/visual-communication/scripts/write-code.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
@@ -39,6 +40,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/current_copy.py
         - .pkit/capabilities/visual-communication/scripts/_lib/marking.py
         - .pkit/capabilities/visual-communication/scripts/_lib/proposals.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/taking_up.py
         - .pkit/capabilities/visual-communication/scripts/_lib/rendering.py
         - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
         - .pkit/capabilities/visual-communication/scripts/_lib/code.py
@@ -179,7 +181,7 @@ The commands list the location's files as git sees them: tracked files, and untr
 
 ## What the location holds
 
-The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration. Nor does any command change a library version, but two. `pkit visual release` writes into a version of the project's own library the release it needs ([`library.yaml`](#libraryyaml)). `pkit visual add` changes the copies of a library the capability ships (DEC-013 point 5). It copies a version the capability ships, whole, into a folder of its own. It writes over a version the library folder holds only to bring a copy not yet released up to what the capability ships under its number, or to restore a released copy to its hash. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through that command (DEC-003 point 5). The table names the schema each file binds to (see [The binding](#the-binding)).
+The location holds four folders: `libraries/`, the library folder; `pieces/`, one folder for each piece; `code/`, one file for each declaration of code; and `fonts/`, the fonts a brand names by their hash. What people write lies apart from what commands rewrite (DEC-002 point 5). No command writes a content file or a declaration, but for the copy `pkit visual take-up` makes of a final piece ([The lock](#the-lock)). Nor does any command change a library version, but two. `pkit visual release` writes into a version of the project's own library the release it needs ([`library.yaml`](#libraryyaml)). `pkit visual add` changes the copies of a library the capability ships (DEC-013 point 5). It copies a version the capability ships, whole, into a folder of its own. It writes over a version the library folder holds only to bring a copy not yet released up to what the capability ships under its number, or to restore a released copy to its hash. No install, sync or upgrade of the capability writes in the location, so a shipped library reaches it only through that command (DEC-003 point 5). The table names the schema each file binds to (see [The binding](#the-binding)).
 
 | File, in the location | Schema | Written by |
 |---|---|---|
@@ -197,6 +199,7 @@ The location holds four folders: `libraries/`, the library folder; `pieces/`, on
 | `pieces/<piece>/exports.yaml` | `exports` | `pkit visual export` and `pkit visual upgrade`; `pkit visual mark-final` adds the version handed out |
 | `pieces/<piece>/current-copy/<file>` | none: a copy of a file an export made | `pkit visual export`, of a published piece; `pkit visual upgrade` |
 | `pieces/<piece>/handed-out/<file>` | none: a file an export made | `pkit visual mark-final`, which moves it there from the clone's local folder |
+| `pieces/<piece>/`, a new piece's folder | each file's own | `pkit visual take-up`, which copies it from a final piece, but for that piece's past, and writes its `piece.yaml` |
 | `code/<name>.yaml` | `code` | a person |
 | `fonts/<file>` | none | a person, who commits the font |
 
@@ -319,11 +322,11 @@ A library moves no lower than the version the lock names while versions at or ab
 
 **The search's bounds.** It tries at most 10 000 versions. Past that bound it refuses, naming the libraries it was choosing among. Name the line of each in the lock, or take the versions no piece needs out of the library folder, and render again. It also judges at most 50 combinations. Past that bound it keeps the lock, with the newest version that fits of each library the lock does not name yet. It states that, naming the libraries it was choosing among. Move the lock by hand, or take the versions no piece needs out of the library folder.
 
-**A pinned draft,** `pinned: true`, keeps its lock: a render checks it and never changes it. The lock must name every library the piece uses, each a version the location holds and the installed capability reads, and they must fit together. A pinned piece with no lock is refused: unpin it for its first render. To move a pinned lock, change it by hand, or unpin the piece and render it.
+**A pinned draft,** `pinned: true`, keeps its lock: a render checks it and never changes it. The lock must name every library the piece uses, each a version the location holds and the installed capability reads, and they must fit together. A pinned piece with no lock is refused: unpin it for its first render. To move a pinned lock, change it by hand, or unpin the piece and render it. A copy of a final piece starts as a pinned draft, and may hold words later than the version handed out (DEC-003 point 8).
 
 **A final piece** was handed out, and its lock never moves. **A published piece** stays in use where others rely on it. Its lock moves only through a change a person reviews, with a before-and-after of each page it changes, or when marked final (DEC-003 point 8). A render moves neither lock, whatever newer versions the location holds, and reads no `pinned` of either piece. It checks such a lock as it checks a pinned draft's, and its refusal says the piece's state. A published piece with no lock is refused: set it back to a draft for its first render. A final piece with no lock is refused too: write back the lock of the version handed out, which is no move of it.
 
-**Final to every command.** A piece is final where its `state` says so, or where its record of exports names a version handed out. Where that record cannot be read, as on a conflicted merge, every command takes the piece as final.
+**Final to every command.** A piece is final where its `state` says so, or where its record of exports names a version handed out. Where that record cannot be read, as on a conflicted merge, every command takes the piece as final. So setting `state` back from `final` holds only where no version is handed out, as for a piece set final by hand. No state leads out of final, and `pkit visual take-up` copies a final piece for new work (DEC-017 point 5).
 
 **Marking a piece final.** `pkit visual mark-final <piece> <version>` names the version handed out (DEC-017 points 1 and 2). No change since that version stops it.
 
@@ -339,6 +342,16 @@ A library moves no lower than the version the lock names while versions at or ab
 - **It refuses** a file of the version that is missing from the clone's local folder, or whose hash differs from the record's, naming each. So a version is marked in the clone that made it.
 - **It refuses** a version whose fingerprint is missing or no longer matches its own inputs, a piece that has a version handed out, and anything else that lies at `handed-out/`.
 - **A mark made in error** is undone by reverting its change, and moving its files back to the clone's local folder by hand.
+
+**Taking a final piece up again.** `pkit visual take-up <piece> <name>` copies a final piece as a new piece, a draft with its lock pinned, under a name no piece holds (DEC-017 point 8). So it draws as the piece it copies until a person moves its lock.
+
+- **What it copies.** The piece's folder whole, as git sees it, but for what only its past holds: `exports.yaml`, `findings.yaml`, `handed-out/` and `current-copy/`.
+- **The new `piece.yaml`.** It sets `state: draft` and `pinned: true`, and writes the lock of the version handed out, read from its fingerprint. It drops `copy-place`, since a draft writes no current copy. Every other byte stays, such as who the piece is for.
+- **Later words.** Only the lock comes back (DEC-017 point 1). Where the sources changed since that version, the copy holds them as they stand. The run names each change, and the copy's lock may need a move before it draws.
+- **The final piece** stays as it was.
+- **It refuses** a piece with no version handed out. A piece set final by hand is one: mark it final first. It refuses a name taken or not a piece's name.
+- **It refuses** a version whose lock cannot be read, and a file it copies or writes that is reached through a link.
+- **It writes as one change.** A write that fails leaves no part of the new piece.
 
 **Moving a published piece's lock.** `pkit visual upgrade <piece>` proposes the move (DEC-019). A *proposal* is what one run leaves in the working tree. The run commits nothing, makes no branch and opens nothing on a work tracker. Landing it is the review's yes. Discarding it is its no, and leaves only the version's numbered files in the clone's local folder.
 
