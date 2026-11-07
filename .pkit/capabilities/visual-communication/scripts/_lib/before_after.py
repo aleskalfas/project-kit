@@ -94,7 +94,7 @@ def drawing(
         results = project.scenes(facts=facts)
         _refuse_no_page(results)
         found: dict[str, str] = {}
-        for language, key, drawn in pl.drawn(project, results, "svg"):
+        for language, (key,), drawn in pl.drawn(project, results, "svg"):
             found.update(pl.preview_files(name, language, key, drawn.pages))
         return Side(found, stale=_stale(project, built), facts=exports.shown_stand_ins(results))
 

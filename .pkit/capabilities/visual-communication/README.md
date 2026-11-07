@@ -286,8 +286,9 @@ Makes a numbered export of a piece in each format it declares.
 - **Makes the run's files,** each under the piece's next version number, in the clone's local folder ([Exports](outputs.md#exports)).
 - **Keeps a published piece's current copy,** replacing it whole in the piece's folder, or writing it at the place the piece names, and naming each file it leaves behind ([The current copy](outputs.md#the-current-copy)).
 - **Records the version** in `exports.yaml`, and the version that wrote a current copy ([The record of exports](outputs.md#the-record-of-exports)).
+- **Shows** the run's own number and date in every file, where a component shows them ([The facts of an export](components.md#the-facts-of-an-export)).
 - **Uses the lock** `piece.yaml` holds, and never moves it.
-- **Refuses** a final piece, which takes no export, and names [`pkit visual take-up`](#pkit-visual-take-up-piece-name), which copies it for new work. It refuses a published piece whose lock differs from the one its current copy was made under. It refuses for each other reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, and may repeat.
+- **Refuses** a final piece, which takes no export, and names [`pkit visual take-up`](#pkit-visual-take-up-piece-name), which copies it for new work. It refuses a published piece whose lock differs from the one its current copy was made under. It refuses for each other reason under [What refuses an export](outputs.md#what-refuses-an-export). `--use-stale <output>` takes a stale picture as it is, and `--use-overflowing <fact>` a version's number or its date that does not fit. Each may repeat.
 - **Exits** 0 when it exported and recorded the version; 1 when it refused, with nothing written, or a write failed ([Commands](#commands)).
 
 ### `pkit visual mark-final <piece> <version>`
@@ -295,7 +296,7 @@ Makes a numbered export of a piece in each format it declares.
 Marks a piece final, and names the version handed out, whatever changed since ([The lock](files.md#the-lock)).
 
 - **Puts back the lock** that version was made under, and names it. It puts back nothing else.
-- **Says what else changed,** each input that still does not verify, and stops on none of it.
+- **Says what else changed,** each input that still does not verify, and each number or date the version let through. It stops on none of it.
 - **Says what no longer holds of the lock,** and goes on.
 - **Moves every file of the version** from the clone's local folder into `handed-out/`, in the piece's folder. Commit them with the piece.
 - **Names the version** in `exports.yaml` ([The record of exports](outputs.md#the-record-of-exports)).
@@ -367,7 +368,7 @@ Proposes a move of a published piece's lock, as a diff in the working tree ([The
 - **Writes,** as one change, the lock, the findings record, a new version and the current copy. It draws no preview.
 - **Commits nothing,** and makes no branch. Land the diff as you land any change, or discard it.
 - **Says so and writes nothing** where nothing moves.
-- **Stops** on an edit since the copy and on a stale picture, and prints the line that goes on. `--edited <input>` names an input that changed, and `--use-stale <output>` a picture to use as it is. Each may repeat.
+- **Stops** on an edit since the copy, on a stale picture, and on a number or a date that does not fit, and prints the line that goes on. `--edited <input>` names an input that changed, `--use-stale <output>` a picture to use as it is, and `--use-overflowing <fact>` a fact whose text to use as it is. Each may repeat.
 - **Says** where no file of the copy stood, so the change shows only an after, and names each file it leaves behind ([The current copy](outputs.md#the-current-copy)).
 - **Names** each finding that fails under the moved lock, and stops on none of them.
 - **`--dry-run`** stops where the run would, says what it would write, and prints each page that differs. It keeps no drawing: a temporary folder in the clone's local folder holds it, and the run removes that folder.
@@ -389,10 +390,10 @@ Lists what each lock a person moves could still take, across majors ([The lock](
 
 Removes each library version that lies behind, with its entry in the list, once it has shown its list and asked ([A version that lies behind](files.md#a-version-that-lies-behind)).
 
-- **Prints its list first:** each version it would remove, with the newer one that serves in its place, and each version it spares, with why. Then each kept export made under a version it would remove, and each kept export whose lock it cannot read.
+- **Prints its list first:** what it would remove and what it spares, with why, and each kept export made under one it would remove ([A version that lies behind](files.md#a-version-that-lies-behind)). Then each kept export whose lock it cannot read.
 - **`--dry-run`** prints that list, and removes nothing.
 - **Asks** a terminal once whether to remove the versions listed. `--yes` gives that consent up front. With no terminal and no `--yes`, it refuses and removes nothing.
-- **Removes** each version's folder, and its entry in `libraries/libraries.yaml`, from the working tree alone. It stages nothing: land the removal as a change of its own. It prints each version it removed, and how to bring one back.
+- **Removes** the versions listed, and prints each version it removed, and how to bring one back. How it removes them, how to land the removal and how to undo it are under [A version that lies behind](files.md#a-version-that-lies-behind).
 - **Says so** where no version lies behind.
 - **Stops,** removing nothing and naming the file, on a lock it cannot read, a record of exports it cannot read, or a fingerprint it cannot read of the version that wrote a current copy ([The record of exports](outputs.md#the-record-of-exports)). It stops on a list it cannot read, or whose text cannot lose an entry ([The list, `libraries.yaml`](files.md#the-list-librariesyaml)).
 - **Exits** 0 when it removed what lies behind, found nothing to remove, ended a dry run, or was answered no; 1 when it stopped or refused, with nothing removed, or a removal failed ([Commands](#commands)); 2 on a usage error.

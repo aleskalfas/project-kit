@@ -23,6 +23,15 @@ clone and never committed. It then records the version in `exports.yaml`: the fi
 of every file its scenes were computed from, each file's hash, and when, in which state,
 by which release and renderers it was made.
 
+Where a component shows a version's number or its date, every file of the version shows
+the number and the date of the time its record keeps (DEC-016 point 5). The run measures
+that text where it fills it, from a font file, and stops on a text that overflows its width,
+or a component around it that gets less than it asks for, naming the fact, its text and the
+element, in any library, unless `--use-overflowing version` or `--use-overflowing date`
+names the fact (DEC-016 point 6). The record keeps each text let through. An overflow
+measured from a table or by an estimate stops nothing, and the run says it. Naming the
+language or the state is refused: the check measures them as they stand.
+
 It stops on a produced picture that is stale, naming what changed, unless `--use-stale`
 names it; the record keeps each picture used while stale, and the version of each picture
 the export used. `--use-stale` naming an output the piece does not declare is refused; one
@@ -52,7 +61,8 @@ write that fails removes the files the run wrote, and leaves the current copy, t
 and the configuration as they were.
 
 Usage:
-  pkit visual export <piece> [--use-stale <output>]... [--location <path>]
+  pkit visual export <piece> [--use-stale <output>]... [--use-overflowing <fact>]...
+                     [--location <path>]
 
 Exit codes:
   0  exported and recorded
@@ -87,11 +97,19 @@ def main() -> int:
         metavar="OUTPUT",
         help="export with this produced picture as it is, though it is stale; may repeat",
     )
+    parser.add_argument(
+        "--use-overflowing",
+        action="append",
+        default=[],
+        metavar="FACT",
+        help="export with this fact's text as it is, `version` or `date`, though it overflows; "
+        "may repeat",
+    )
     parser.add_argument("--location", help="the location to take and record, where none is")
     args = parser.parse_args()
     root = project_root()
     try:
-        return _export(root, args.piece, args.use_stale, args.location)
+        return _export(root, args.piece, args.use_stale, args.use_overflowing, args.location)
     except (
         pl.Refused,
         location.LocationRefused,
@@ -102,7 +120,9 @@ def main() -> int:
         return 1
 
 
-def _export(root: Path, name: str, use_stale: list[str], given: str | None) -> int:
+def _export(
+    root: Path, name: str, use_stale: list[str], use_overflowing: list[str], given: str | None
+) -> int:
     where = location.for_writing(root, given)
     piece = pl.read_piece(root, where.path, name)
     if piece.final:
@@ -112,7 +132,7 @@ def _export(root: Path, name: str, use_stale: list[str], given: str | None) -> i
         )
     _refuse_a_lock_that_differs(piece)
     project = rendering.exportable(piece, libraries.Held(root, where.path))
-    planned = exports.plan(project, use_stale=use_stale)
+    planned = exports.plan(project, use_stale=use_stale, use_overflowing=use_overflowing)
     change = files.Change(root)
     said = location.record(change, where)
     exports.write(planned, change)

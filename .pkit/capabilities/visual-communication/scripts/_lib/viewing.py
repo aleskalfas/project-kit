@@ -17,8 +17,11 @@ is read, and none is used up (DEC-016 point 5).
 - **The SVG renderer's pages.** `viewing_tool` draws each page, at `LONG_EDGE` pixels on its
   long edge, or more where the page's smallest text would land under `SMALLEST_TEXT`.
 - **The HTML renderer's pages.** `viewing_browser` draws each page file as the renderer wrote
-  it, in one browser start, its pages at one device scale, the largest any of them asks. The
-  browser is the one the configuration names (`browser_named`), or else the first found
+  it, in one browser start, its pages at one device scale, the largest any of them asks. A
+  file holds every key its group gives it, whichever keys the caller picks, and the start
+  draws each key picked out of it, with no reload: the step takes each key's signals from the
+  renderer's declaration (`signals_of`) and the browser's module sets them (DEC-023 point 6).
+  The browser is the one the configuration names (`browser_named`), or else the first found
   where Chrome and Chromium install themselves. Its profile lies in the clone's local folder,
   and the module removes it.
 - **Beside them,** in the renderer's own folder of `FOLDER` (`folder_of`): each image's
@@ -82,6 +85,12 @@ RENDERERS = (SVG, HTML)
 #: The configuration's key that names the browser the HTML renderer's pages are drawn
 #: through, in place of the first one found (DEC-020 point 7).
 BROWSER_KEY = "browser"
+
+#: What the report says of an image whose page draws no ground: through the SVG renderer it
+#: lies on white, and through the HTML renderer on the browser's own ground in the mode drawn
+#: (DEC-015 point 5, DEC-023 point 7).
+ON_WHITE = "on-white"
+ON_BROWSER_GROUND = "on-browser-ground"
 
 #: How many decimals a browser's device scale keeps, rounded up, so its flag names it whole.
 SCALE_PLACES = 3
@@ -312,7 +321,7 @@ def view(project: pl.Project, results: Results, wanted: Asked) -> Viewed:
     local.mkdir(parents=True, exist_ok=True)
     made = _Made(project, SVG)
     with tempfile.TemporaryDirectory(prefix="faces-", dir=local) as faces:
-        for language, key, drawn in pl.drawn(project, results, SVG, wanted.keys):
+        for language, (key,), drawn in pl.drawn(project, results, SVG, wanted.keys):
             scene, numbers = shown[language, project.size_key(key)]
             for number in numbers:
                 made.add(scene, language, key, number, drawn, Path(faces))
@@ -327,16 +336,18 @@ _Shown = Mapping[tuple[str, str], tuple[Mapping[str, Any], list[int]]]
 
 @dataclass(frozen=True)
 class _PageFile:
-    """A page file a run draws: its name, the renderer's bytes, its scene with the numbers of
-    the pages drawn of it, and the device scale they share."""
+    """A page file a run draws: its name, its language, the keys it holds, the first naming
+    it, the renderer's bytes, its scene with the numbers of the pages drawn of it, the device
+    scale they share, and each key drawn out of it with its signals, in the order of its keys."""
 
     name: str
     language: str
-    key: str
+    keys: tuple[str, ...]
     document: bytes
     scene: Mapping[str, Any]
     numbers: list[int]
     scale: float
+    modes: Mapping[str, Mapping[str, str]]
 
 
 def _through_a_browser(
@@ -346,17 +357,26 @@ def _through_a_browser(
     (DEC-020 points 5 and 8). Every refusal comes before a file is written. A stop gives the
     page files and a report that says what stopped it, and no image."""
     made = _Made(project, HTML)
+    declared = seam.declaration(HTML, seam.RENDERER)
+    combinations = dict(zip(project.keys, project.combinations, strict=True))
     planned = []
-    for language, key, drawn in pl.drawn(project, results, HTML, wanted.keys):
-        scene, numbers = shown[language, project.size_key(key)]
+    for language, held, drawn in pl.drawn(project, results, HTML, wanted.keys):
+        scene, numbers = shown[language, project.size_key(held[0])]
         every = pages_of(scene)
         scale = device_scale([every[number - 1] for number in numbers])
         for number in numbers:
             _refuse_a_size(project, every[number - 1], scale)
-        name = f"{project.piece.name}.{language}.{key}.html"
-        planned.append(_PageFile(name, language, key, drawn.document, scene, numbers, scale))
-        made.page_file(language, key, name, drawn.document)
-        made.lost(scene, language, key, numbers, drawn.losses)
+        name = f"{project.piece.name}.{language}.{held[0]}.html"
+        modes = {
+            key: signals_of(declared, HTML, combinations[key]) for key in held if key in wanted.keys
+        }
+        planned.append(
+            _PageFile(name, language, held, drawn.document, scene, numbers, scale, modes)
+        )
+        made.page_file(language, held, name, drawn.document)
+        for key in modes:
+            lost = [loss for loss in drawn.losses if loss.key in (None, key)]
+            made.lost(scene, language, key, numbers, lost)
     named = browser_named(project.root)
     local.mkdir(parents=True, exist_ok=True)
     try:
@@ -372,12 +392,41 @@ def _through_a_browser(
 
 def _drawn(planned: _PageFile, folder: Path, program: Path, local: Path) -> viewing_browser.Drawing:
     """One page file through the browser `program`, written in `folder` under its own name
-    with the renderer's bytes, so the browser reads it as the renderer wrote it. The browser's
-    profile lies in `local`, which the module removes. Raises Stopped."""
+    with the renderer's bytes, so the browser reads it as the renderer wrote it, each key
+    drawn in its signals. The browser's profile lies in `local`, which the module removes.
+    Raises Stopped."""
     file = folder / planned.name
     file.write_bytes(planned.document)
     pages = [browser_page(pages_of(planned.scene)[number - 1]) for number in planned.numbers]
-    return viewing_browser.draw(file, pages, planned.scale, program, local)
+    signals = signals_read(seam.declaration(HTML, seam.RENDERER), HTML)
+    modes = list(planned.modes.values())
+    return viewing_browser.draw(
+        file, pages, planned.scale, program, local, signals=signals, modes=modes
+    )
+
+
+def signals_read(declared: Mapping[str, Any], form: str) -> dict[str, tuple[str, ...]]:
+    """Each reader's signal a file of the format `form` reads, as the renderer's declaration
+    pairs its modes, with each value it pairs a mode with, the value of a reader with no
+    preference first (DEC-023 point 5)."""
+    pairs = declared.get("holds-modes", {}).get(form, {})
+    return {pair["signal"]: tuple(pair["pairs"].values()) for pair in pairs.values()}
+
+
+def signals_of(
+    declared: Mapping[str, Any], form: str, combination: Mapping[str, str]
+) -> dict[str, str]:
+    """The signals a reader of the combination `combination` gives a file of the format `form`:
+    every signal it reads (`signals_read`), each at the value its axis's mode there pairs with
+    in the renderer's declaration (DEC-023 point 6). A mode that pairs with none lies in a
+    file of its own, which no rule on that signal parts, so its signal takes the value of a
+    reader with no preference."""
+    pairs = declared.get("holds-modes", {}).get(form, {})
+    found = {}
+    for axis, pair in pairs.items():
+        values = pair["pairs"]
+        found[pair["signal"]] = values.get(combination.get(axis), next(iter(values.values())))
+    return found
 
 
 def browser_page(page: Mapping[str, Any]) -> viewing_browser.Page:
@@ -467,29 +516,37 @@ class _Made:
         )
         self.otherwise.extend({**at, **each} for each in drawn_otherwise(page))
 
-    def page_file(self, language: str, key: str, name: str, document: bytes) -> None:
-        """A page file the HTML renderer wrote, left beside the images as it was written."""
+    def page_file(self, language: str, keys: Sequence[str], name: str, document: bytes) -> None:
+        """A page file the HTML renderer wrote, left beside the images as it was written: the
+        keys it holds, the first naming it."""
         self.files[name] = document
-        self.page_files.append({"language": language, "key": key, "file": name})
+        self.page_files.append(
+            {"language": language, "key": keys[0], "keys": list(keys), "file": name}
+        )
 
     def through(self, planned: _PageFile, drawing: viewing_browser.Drawing, program: Path) -> None:
-        """The pages of one page file a browser drew: each image and its frames, and what the
-        report says of them (DEC-020 point 6)."""
+        """The pages of one page file a browser drew, in each key drawn out of it: each image and
+        its frames, and what the report says of them (DEC-020 point 6, DEC-023 point 6)."""
         name, _, version = drawing.browser.partition("/")
         self.tool = {"name": name, "version": version, "program": str(program)}
+        for key, shown in zip(planned.modes, drawing.shown, strict=True):
+            self._through_in(planned, key, shown)
+
+    def _through_in(self, planned: _PageFile, key: str, shown: viewing_browser.Shown) -> None:
+        """The pages of one page file a browser drew in the key `key`."""
         numbers = {pages_of(planned.scene)[number - 1]["id"]: number for number in planned.numbers}
-        for image in drawing.images:
+        for image in shown.images:
             self._image(
                 planned.scene,
                 planned.language,
-                planned.key,
+                key,
                 numbers[image.page],
                 image.image,
                 image.width,
                 image.height,
             )
-        where = {"language": planned.language, "key": planned.key}
-        read = drawing.read
+        where = {"language": planned.language, "key": key}
+        read = shown.read
         self.words.extend(
             {
                 **where,
@@ -562,6 +619,7 @@ class _Made:
                 "elements": frames(page, width, height),
             }
         )
+        ground = draws_ground(page, pl.colours_at(self.document, key))
         self.images.append(
             {
                 **at,
@@ -569,7 +627,7 @@ class _Made:
                 "image": f"{stem}.png",
                 "frames": f"{stem}.frames.json",
                 "pixels": {"width": width, "height": height},
-                "on-white": not draws_ground(page, pl.colours_at(self.document, key)),
+                ON_WHITE if self.renderer == SVG else ON_BROWSER_GROUND: not ground,
             }
         )
 
@@ -765,8 +823,9 @@ def frames(page: Mapping[str, Any], width: int, height: int) -> list[dict[str, A
 
 def draws_ground(page: Mapping[str, Any], colours: Mapping[str, Mapping[str, Any]]) -> bool:
     """Whether `page` draws a ground of its own: a box of an opaque colour over its whole
-    frame. Where it draws none, its image lies on white, which the piece never set (DEC-015
-    point 5)."""
+    frame. Where it draws none, its image lies on white through the SVG renderer, and on the
+    browser's own ground in the mode drawn through the HTML renderer, neither of which the
+    piece set (DEC-015 point 5, DEC-023 point 7)."""
     width, height = float(page["width"]), float(page["height"])
     for element, x, y in _placed(page):
         colour = colours.get(element.get("fill") or "")

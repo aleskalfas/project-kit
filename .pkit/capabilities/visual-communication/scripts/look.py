@@ -27,8 +27,10 @@ report says what the images cannot show as the renderer set it. See `_lib/viewin
   no network.
 - **The HTML renderer's pages** are drawn by a browser of the Chromium family: the one the
   capability's configuration names under `browser`, or else the first found where Chrome
-  and Chromium install themselves. No flag and no environment variable names one. Each page
-  file lies beside the images, for a person to open in their own browser.
+  and Chromium install themselves. No flag and no environment variable names one. A page
+  file holds the modes a reader's signal names, and each key picked is drawn out of the file
+  that holds it, its signals set through the browser. Each page file lies beside the images,
+  for a person to open in their own browser.
 
 Its shebang reads no network. Where the script has no environment yet, `uv run --script`
 asks the index once its cached answer is stale, and fails offline, though the cache holds
@@ -155,9 +157,15 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
         print(f"stands for: {report['stands-for']}")
     for each in report.get("page-files", []):
         print(f"page file: {folder}{each['file']}, to open in your own browser")
+    through_svg = report["renderer"]["name"] == viewing.SVG
     for image in report["images"]:
-        if image["on-white"]:
+        if through_svg and image["on-white"]:
             print(f"on white: {_at(image)} draws no ground of its own")
+        if not through_svg and image["on-browser-ground"]:
+            print(
+                f"on the browser's ground: {_at(image)} draws no ground of its own, so it lies "
+                f"on {tool['name']}'s own ground in `{image['key']}`, not on white"
+            )
     for each in report.get("words", []):
         print(
             f"words: {_at(each)}: the text `{each['element']}` holds {each['document']!r} in "

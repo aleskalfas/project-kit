@@ -598,6 +598,7 @@ Which text fills `version` and `date`:
 
 - **The check, and a render's findings,** take the stand-ins. So the same files give the same answer on every machine, on any day.
 - **What a person looks at** shows real text: a preview, a before-and-after and the viewing step. Each fills what this clone's next export would: its next number, and the date of the run. Another clone may show another number.
+- **An export** shows one number and one date in every file of its version, those its record of exports keeps: its number, and the date of the time it records. Its fingerprint reads neither, so a new number makes nothing stale.
 - **Where there is no next number,** what a person looks at takes the stand-ins, and the command says so, and why. A record of exports that cannot be read gives none, as one that conflicts on a merge. A final piece has none, since it takes no export.
 - **A stand-in that overflows** is a finding at the element that shows it, and it names the component. It fails where the project can correct that component, and asks for attention in a released library.
 - **A real text that overflows in a preview** is said in the render's output, and no record keeps it.

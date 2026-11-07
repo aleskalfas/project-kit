@@ -1,5 +1,6 @@
 """The viewing step's browser: a page file as images, and what the browser dropped
-(visual-communication DEC-020 points 6 to 9, DEC-015 point 2, DEC-024 points 1 and 4).
+(visual-communication DEC-020 points 6 to 9, DEC-023 point 6, DEC-015 point 2, DEC-024 points 1
+and 4).
 
 This module alone calls the browser. It reads the HTML renderer's page files. It stands on the
 standard library and on the marks the renderer's declaration holds, so every other format
@@ -12,6 +13,11 @@ pays nothing for it. What it asks of a page it asks in JavaScript, which the bro
   the one device scale the caller gives, set by the browser's own flag, since an emulated
   scale leaves HTML text on whole pixels. The window stays at the width of the widest page,
   so no page shrinks.
+- **Each mode in that one start.** The caller names the reader's signals the file reads, each
+  with the values it may take, and the signals of each mode to draw, each a set of CSS media
+  features such as `prefers-color-scheme: dark`. The module knows no axis. It opens the file
+  once, and for each mode sets every signal by the browser's emulation, so the machine's own
+  settings play no part, and draws its images and runs the four reads, with no reload.
 - **The four reads.** `Read` holds them. *The words:* each text's spans are matched to the
   document, element by element, in order and in number, since an HTML parser refuses
   nothing. *Ink:* each span is drawn alone, the other spans and the layers hidden from
@@ -26,7 +32,9 @@ pays nothing for it. What it asks of a page it asks in JavaScript, which the bro
 - **The first read.** Each start first reads a page of its own in the renderer's form,
   planted with one fault of each kind the four reads name, and with what they must leave
   unnamed. A read that names anything else stops the start, so a fault there shows as a stop,
-  never as a clean report.
+  never as a clean report. The page also holds a mode for each signal the file reads, and
+  the start stops where setting one does not repaint it, since the keys that signal parts
+  would read as one.
 - **Bounds.** The browser's start has `START_SECONDS`, each call `CALL_SECONDS`, and its close
   `CLOSE_SECONDS`. A browser that hangs counts as one that stopped, at its close too, and is
   ended: its own process group, which only its start made, and no other process.
@@ -206,6 +214,17 @@ ALONE = """(mark, index, alone, shown) => {
 #: The attribute that marks the span drawn alone, and the id of the style that does so.
 ALONE_MARK = "data-pkit-alone"
 
+#: The document as the file stands again, once the ink read is done: its style taken out.
+UNGROUND = """(alone) => {
+  const style = document.getElementById(alone);
+  if (style) style.remove();
+}"""
+
+#: A wait until the page has painted twice, after its signals were set.
+SETTLE = """() => new Promise((done) => {
+  requestAnimationFrame(() => requestAnimationFrame(() => done(null)));
+})"""
+
 
 class Stopped(Exception):
     """What stopped a drawing: `what`, where `find` looked, or the program started and what
@@ -317,12 +336,21 @@ class Read:
 
 
 @dataclass(frozen=True)
-class Drawing:
-    """A file drawn: the browser with its version, each page's image, and what it read."""
+class Shown:
+    """One mode of a file drawn: the signals set, each page's image, and what the four reads
+    named."""
 
-    browser: str
+    signals: Mapping[str, str]
     images: tuple[Image, ...]
     read: Read
+
+
+@dataclass(frozen=True)
+class Drawing:
+    """A file drawn: the browser with its version, and each mode asked for, in order."""
+
+    browser: str
+    shown: tuple[Shown, ...]
 
 
 def find(path: Path | None = None) -> Path:
@@ -348,17 +376,33 @@ def _runnable(path: Path) -> bool:
     return path.is_file() and os.access(path, os.X_OK)
 
 
-def draw(file: Path, pages: Sequence[Page], scale: float, browser: Path, folder: Path) -> Drawing:
-    """The page file `file` through `browser`, in one start: an image of each of `pages`, at
-    `scale` device pixels to a px, and what the four reads named. The browser's profile lies
+def draw(
+    file: Path,
+    pages: Sequence[Page],
+    scale: float,
+    browser: Path,
+    folder: Path,
+    *,
+    signals: Mapping[str, Sequence[str]] | None = None,
+    modes: Sequence[Mapping[str, str]] = ({},),
+) -> Drawing:
+    """The page file `file` through `browser`, in one start: for each of `modes`, in order, an
+    image of each of `pages`, at `scale` device pixels to a px, and what the four reads named.
+    `signals` names each signal the file reads, with the values it may take, the first a
+    reader's with no preference; each mode sets every one of them. The browser's profile lies
     under `folder`, which is made where it is missing, and which keeps nothing of this run.
-    Raises Stopped, and gives no image, where a browser did not draw it all."""
+    Raises Stopped, and gives no image, where a browser did not draw it all; ValueError where a
+    mode does not set every signal named, or sets another."""
+    read = dict(signals or {})
+    for mode in modes:
+        if set(mode) != set(read):
+            raise ValueError(f"a mode sets {sorted(mode)}, and the file reads {sorted(read)}")
     folder.mkdir(parents=True, exist_ok=True)
     place = Path(tempfile.mkdtemp(prefix="browser-", dir=folder))
     try:
         started = _Started(browser, place, max(page.width for page in pages), scale)
         try:
-            drawing = _drawn(started, place, file, pages)
+            drawing = _drawn(started, place, file, pages, read, modes)
         except BaseException:
             started.close()
             raise
@@ -369,18 +413,35 @@ def draw(file: Path, pages: Sequence[Page], scale: float, browser: Path, folder:
         _remove(place)
 
 
-def _drawn(started: _Started, place: Path, file: Path, pages: Sequence[Page]) -> Drawing:
-    """The first read, then the file: its images first, as it stands, then its reads. A browser
-    whose answers take another form, after an update say, stops the drawing too."""
+def _drawn(
+    started: _Started,
+    place: Path,
+    file: Path,
+    pages: Sequence[Page],
+    signals: Mapping[str, Sequence[str]],
+    modes: Sequence[Mapping[str, str]],
+) -> Drawing:
+    """The first read, then the file, opened once: in each mode its images first, as it stands,
+    then its reads, and the document made as the file stands again. A request refused as the
+    file loaded counts in each mode. A browser whose answers take another form, after an
+    update say, stops the drawing too."""
     try:
         version = started.call("Browser.getVersion", within=START_SECONDS)["product"]
         started.open_tab()
-        _first_read(started, place)
-        found = _opened(started, file, pages)
-        for page, held in zip(pages, found, strict=True):
-            _hold_to_its_size(started, page, held)
-        images = tuple(_image(started, held) for held in found)
-        return Drawing(version, images, _read(started, pages, found))
+        _first_read(started, place, signals)
+        started.open(file.resolve().as_uri())
+        loaded = list(started.refused)
+        shown = []
+        for mode in modes:
+            started.emulate(mode)
+            started.refused = list(loaded)
+            found = _found(started, pages)
+            for page, held in zip(pages, found, strict=True):
+                _hold_to_its_size(started, page, held)
+            images = tuple(_image(started, held) for held in found)
+            shown.append(Shown(dict(mode), images, _read(started, pages, found)))
+            started.ask(UNGROUND, ALONE_MARK)
+        return Drawing(version, tuple(shown))
     except UNREADABLE as exc:
         raise started.stop(f"the browser gave an answer that cannot be read: {exc!r}") from exc
 
@@ -397,6 +458,11 @@ def _hold_to_its_size(started: _Started, page: Page, held: Mapping[str, Any]) ->
 def _opened(started: _Started, file: Path, pages: Sequence[Page]) -> list[Mapping[str, Any]]:
     """What the document holds of each of `pages`, once it has loaded."""
     started.open(file.resolve().as_uri())
+    return _found(started, pages)
+
+
+def _found(started: _Started, pages: Sequence[Page]) -> list[Mapping[str, Any]]:
+    """What the open document holds of each of `pages`, as it stands."""
     held = {page["id"]: page for page in started.ask(READ, MARKS)}
     for page in pages:
         if page.id not in held:
@@ -594,6 +660,13 @@ class _Started:
         deadline = time.monotonic() + CALL_SECONDS
         while opened.get("loaderId") not in self._loaded:
             self._heard(self._next(deadline, "the page's load"))
+
+    def emulate(self, signals: Mapping[str, str]) -> None:
+        """Set each of `signals` by the browser's emulation of a reader's media features, every
+        other one at the browser's own, and wait until the page has painted."""
+        features = [{"name": name, "value": value} for name, value in sorted(signals.items())]
+        self.call("Emulation.setEmulatedMedia", features=features)
+        self.ask(SETTLE)
 
     def ask(self, function: str, *arguments: Any) -> Any:
         """What `function` of JavaScript gives, called in the page with `arguments`."""
@@ -871,23 +944,49 @@ PLANTED_FINDINGS = frozenset(
 )
 
 
-def _first_read(started: _Started, place: Path) -> None:
-    """Read the planted page. Raises Stopped where the reads do not name each fault, with the
-    font that drew each span of the machine's, or name what is clean. Where the character the
-    face lacks is not named, the stop says what a machine with no font for it does."""
+def _first_read(started: _Started, place: Path, signals: Mapping[str, Sequence[str]]) -> None:
+    """Read the planted page. Raises Stopped where setting a signal of `signals` does not
+    repaint it, and where the reads do not name each fault, with the font that drew each span
+    of the machine's, or name what is clean. Where the character the face lacks is not named,
+    the stop says what a machine with no font for it does."""
     file = place / PLANTED_FILE
     try:
-        file.write_text(_planted_html(PLANTED_FACE.read_bytes()), encoding="utf-8")
+        file.write_text(_planted_html(PLANTED_FACE.read_bytes(), signals), encoding="utf-8")
     except OSError as exc:
         raise started.stop(f"the first read has no page to read: {exc}") from exc
     pages = (PLANTED_PAGE,)
-    named = _named(_read(started, pages, _opened(started, file, pages)))
+    found = _opened(started, file, pages)
+    _repaints(started, found[0], signals)
+    named = _named(_read(started, pages, found))
     unnamed, wrong = PLANTED_FINDINGS - named, named - PLANTED_FINDINGS
     if unnamed or wrong:
         said = [f"did not name {_listed(unnamed)}" if unnamed else ""]
         said += [f"named {_listed(wrong)}, which the page does not plant" if wrong else ""]
         why = f". {NO_FONT_HOLDS}" if LACKED_FINDING in unnamed else ""
         raise started.stop(f"the first read {' and '.join(each for each in said if each)}{why}")
+
+
+def _repaints(
+    started: _Started, page: Mapping[str, Any], signals: Mapping[str, Sequence[str]]
+) -> None:
+    """Raise Stopped where setting a signal to a value after its first does not repaint the
+    planted page, every other signal at its first value. The page's own reads then run with
+    every signal at its first value."""
+    if not signals:
+        return
+    first = {signal: values[0] for signal, values in signals.items()}
+    clip = {side: page[side] for side in ("x", "y", "width", "height")}
+    started.emulate(first)
+    before = started.picture(clip)
+    for feature, values in sorted(signals.items()):
+        for value in values[1:]:
+            started.emulate({**first, feature: value})
+            if started.picture(clip) == before:
+                raise started.stop(
+                    f"the first read set `{feature}: {value}`, and the page did not repaint, so "
+                    f"the keys that signal parts would read as one"
+                )
+    started.emulate(first)
 
 
 def _named(read: Read) -> set[tuple[str, ...]]:
@@ -910,8 +1009,38 @@ def _listed(findings: Collection[tuple[str, ...]]) -> str:
     return "; ".join(" ".join(each) for each in sorted(findings))
 
 
-def _planted_html(face: bytes) -> str:
-    """The planted page, written as the renderer writes a page, each text in the tree's order."""
+#: Where the planted page's modes lie: a box for each signal, in a row below its texts.
+MODE_TOP = 440
+MODE_SIZE = 24
+
+#: The colour of a mode's box under the first value of its signal, and under each other.
+MODE_COLOURS = ("#ffffff", "#000000")
+
+
+def _planted_modes(signals: Mapping[str, Sequence[str]]) -> tuple[str, str]:
+    """The planted page's modes: their rules, and a box for each signal the file reads, painted
+    by a custom property each of its values after the first sets otherwise."""
+    rules, boxes = [], []
+    plain = []
+    for index, (feature, values) in enumerate(sorted(signals.items())):
+        name = f"--pkit-mode-{index}"
+        plain.append(f"{name}:{MODE_COLOURS[0]}")
+        rules.extend(
+            f"@media ({feature}:{value}){{:root{{{name}:{MODE_COLOURS[1]}}}}}"
+            for value in values[1:]
+        )
+        place = (
+            f"position:absolute;left:{_share(8 + index * MODE_SIZE * 2)};top:{_share(MODE_TOP)};"
+            f"width:{_share(MODE_SIZE)};height:{_share(MODE_SIZE)};background:var({name})"
+        )
+        boxes.append(f'<div style="{place}"></div>')
+    sheet = f":root{{{';'.join(plain)}}}{''.join(rules)}" if plain else ""
+    return sheet, "".join(boxes)
+
+
+def _planted_html(face: bytes, signals: Mapping[str, Sequence[str]] | None = None) -> str:
+    """The planted page, written as the renderer writes a page, each text in the tree's order,
+    with a mode for each of `signals`."""
     data = base64.b64encode(face).decode("ascii")
     faces = (
         f"@font-face{{font-family:{HELD};font-weight:400;"
@@ -931,10 +1060,11 @@ def _planted_html(face: bytes) -> str:
         if element == UNDER_A_BOX:
             written.append(_planted_layer(row * ROW))
         row += len(lines) - 1
+    modes, boxes = _planted_modes(signals or {})
     return (
         '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8"/>\n'
-        f"<title>planted</title>\n<style>{faces}{PLANTED_SHEET}</style>\n</head>\n<body>"
-        f'<div {MARKS["page"]}="{PLANTED_ID}" style="{size}">{"".join(written)}'
+        f"<title>planted</title>\n<style>{faces}{modes}{PLANTED_SHEET}</style>\n</head>\n<body>"
+        f'<div {MARKS["page"]}="{PLANTED_ID}" style="{size}">{"".join(written)}{boxes}'
         f'<img src="{NETWORK}" alt=""/><img src="{BESIDE}" alt=""/></div>'
         "</body>\n</html>\n"
     )
