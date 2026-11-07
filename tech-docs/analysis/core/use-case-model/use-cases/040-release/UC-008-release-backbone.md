@@ -35,6 +35,7 @@ pkit:
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
         - scripts/latest_tag.py
+        - scripts/release_pr.py
       record:
         - PRJ-002#D2
         - PRJ-002#D3
@@ -122,6 +123,8 @@ pkit:
 - **2d.** The release step would leave a [capability](../../../glossary.md#term-capability--capability) whose [range](../../../glossary.md#term-range--range) excludes the version of a capability it depends on. The system refuses before writing anything, listing each such range, and the use case ends ([PRJ-002 D4](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
 - **2e.** A [backbone](../../../glossary.md#term-backbone--backbone) [migration](../../../glossary.md#term-migration--migration)'s folder names a version above the current backbone's version, and the release step does not compute that version. The system warns that the folder `does not match the computed backbone release`, and goes on. The release pull request's body shows the warning ([UC-010](UC-010-migrate-backbone-change.md)).
 - **3a.** A release pull request is already open, on a `release/` branch. `release-pr.yml` opens no second one, and the use case ends.
+- **3b.** A run that failed after its push left the branch `release/v<version>` on the remote, and no release pull request is open from it. The CI pipeline creates the branch `release/v<version>-<run id>` instead, and the path goes on (`scripts/release_pr.py`). Step 9 takes that branch too, as a `release/` branch.
+- **6a.** The new changelog entry would take the pull request's body past the 65,536 characters GitHub keeps. The body then holds each move and warning whole, and links `CHANGELOG.md` on the pushed branch instead of the entry (`scripts/release_pr.py`).
 - **7a.** The [project](../../../glossary.md#term-project--project) gave `release-pr.yml` no token of its own, so the release pull request starts no checks. The maintainer starts them by hand, and the path goes on at step 7. Where nobody starts them, the release pull request shows no check, and step 10 reads that as green.
 - **9a.** The pull request is no release pull request. The system refuses it, saying that `pkit release merge` merges only release pull requests. Where the pull request's head branch is no `release/` branch, the refusal names `pkit pull-request land`, the backbone's own command for landing any other pull request. The use case ends.
 - **10a.** The release pull request has a conflict, or a check that is red or still running. The system refuses with the reason, and merges nothing. The path rejoins at step 8.
