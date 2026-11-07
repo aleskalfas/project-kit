@@ -772,14 +772,8 @@ A project's build pipeline may draw each piece's HTML pages on every change it c
 - **No standing reach.** The job runs the change's own scripts, which an agent may have written. So it holds no secret, and its token only reads.
 - **What they show.** The commit drawn, as that runner's browser drew it, not your working tree. An image stands for that browser alone.
 
-**Fetching them.** Take the commit, such as a pull request's head, and fetch its drawings into a folder of their own, named by that commit. On GitHub Actions, with `gh`:
-
-```
-gh pr view <number> --json headRefOid --jq .headRefOid
-gh run download --name visual-drawings-<commit> --dir .agent-workspace/visual-drawings/<commit>
-```
+**Fetching them.** Take the commit, such as a pull request's head, and fetch its drawings into a folder of their own, named by that commit.
 
 - **A folder of its own.** Never fetch them into `look/`, where a look replaces its renderer's folder ([What a run writes](#what-a-run-writes)). Read the fetched folder as a look's folder, `report.json` first.
-- **A token that reads.** Downloading a run's artefact takes a token that may read the repository's Actions, even on a public repository.
-- **The hosts it reaches.** On GitHub, `api.github.com`, and the store it hands the download to, a host under `blob.core.windows.net`. In a session's sandbox, each is the project's own allowance to add. The capability declares none.
+- **The hosts it reaches.** In a session's sandbox, each host the fetch needs is the project's own allowance to add. The capability declares none.
 - **A run the permission model confines,** such as a builder's, reaches no such host. Only the SVG renderer's pages remain in it.

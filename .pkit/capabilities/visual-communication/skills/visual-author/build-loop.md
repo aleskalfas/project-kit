@@ -83,7 +83,7 @@ Where a sandbox stopped it, the stop says so. Go on as [visual-communication:DEC
 - **Read the pipeline's drawings** of the commit you pushed, where you can reach them. Otherwise, or where you need the working tree drawn, ask a person, naming the ways on the stop names.
 - **In a run the permission model confines,** a builder's among them, no pipeline's drawings are in reach. Only the SVG renderer's pages remain there. Whoever started the run may read the pipeline's drawings once its commits are pushed.
 
-**How to find a pull request's drawings.** A pipeline that draws them keeps them as `visual-drawings-<commit>`, named by the full hash of the commit it drew ([A pipeline's drawings](../../outputs.md#a-pipelines-drawings)). Take the pull request's head commit, then fetch its drawings into a folder of their own, named by that commit. That section gives the commands on GitHub Actions.
+**How to find a pull request's drawings.** A pipeline that draws them keeps them as `visual-drawings-<commit>`, named by the full hash of the commit it drew ([A pipeline's drawings](../../outputs.md#a-pipelines-drawings)). Take the pull request's head commit, then fetch its drawings into a folder of their own, named by that commit.
 
 Never fetch them into `look/`: a look replaces its renderer's folder there. Read the fetched folder as a look's: `report.json` first, then each image with its frames. They show that commit as the pipeline's browser drew it. Where the download is refused, or its host is out of reach, say so and ask a person.
 
