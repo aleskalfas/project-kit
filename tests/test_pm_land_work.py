@@ -19,7 +19,7 @@ import shutil
 import subprocess
 import sys
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from types import MappingProxyType, ModuleType
 from typing import Any
@@ -28,8 +28,9 @@ import pytest
 
 from tests import pm_issue_branch_support as issue_branch_support
 from tests import pull_request_backbone
-from tests.adopter_repo import sign_nothing
-from tests.friction_documents import SOURCE, document, friction_config
+from tests.adopter_repo import MakeAdopterRepo, sign_nothing
+from tests.anchor_kind_capabilities import RESOLVER, RESOLVING, register_kinds
+from tests.friction_documents import CONFIG, SOURCE, document, friction_config
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
@@ -61,6 +62,34 @@ _RED = [
         "detailsUrl": "https://github.com/o/r/actions/runs/78/job/2",
     }
 ]
+
+
+def _check(name: str, outcome: str) -> dict[str, Any]:
+    """A check under `name`: an outcome in capitals of a run that ended, else a status."""
+    if outcome in ("IN_PROGRESS", "QUEUED"):
+        return {"__typename": "CheckRun", "name": name, "status": outcome}
+    return {"__typename": "CheckRun", "name": name, "status": "COMPLETED", "conclusion": outcome}
+
+
+#: The check a project names to start the review, and the suite's two parts.
+_FIRST = ("the remainder",)
+_SLICE_1, _SLICE_2 = "slice 1 of 2", "slice 2 of 2"
+
+
+def _parts(first: str, slice_1: str, slice_2: str = "QUEUED") -> list[dict[str, Any]]:
+    return [
+        _check(_FIRST[0], first),
+        _check(_SLICE_1, slice_1),
+        _check(_SLICE_2, slice_2),
+    ]
+
+
+#: Every part running; the first passed with the suite running; every part passed.
+_ALL_RUNNING = _parts("IN_PROGRESS", "IN_PROGRESS")
+_SUITE_RUNNING = _parts("SUCCESS", "IN_PROGRESS")
+_ALL_PASSED = _parts("SUCCESS", "SUCCESS", "SUCCESS")
+#: What the line for the checks that start the review names of the rest.
+_THE_REST = f"{_SLICE_1} (IN_PROGRESS), {_SLICE_2} (QUEUED)"
 
 _PR_BODY = (
     f"Closes #{ISSUE}\n\n"
@@ -362,6 +391,8 @@ class _Run:
     #: Each reviewer invocation: (reviewer, the head it was shown), in no order:
     #: the reviewers run at once (#1594).
     invoked: list[tuple[str, str]] = field(default_factory=list)
+    #: How many times the head's checks had been read as each reviewer started.
+    reads_at_review: list[int] = field(default_factory=list)
     #: What each reviewer answers: (verdict, body), or None for a failed run.
     answers: dict[str, tuple[str, str] | None] = field(default_factory=dict)
     after_merge: list[str] = field(default_factory=list)
@@ -412,8 +443,15 @@ class _Run:
     merged_for: list[tuple[str, str, Any]] = field(default_factory=list)
     #: The real `friction_answers.merged`, for a test that runs the change check.
     real_merged: Callable[..., Any] | None = None
+    #: The real `friction_answers.derive` and `checked`, for such a test too.
+    real_derive: Callable[..., Any] | None = None
+    real_checked: Callable[..., Any] | None = None
+    #: Whether each reviewer's brief told it to start nothing of the head (DEC-067 point 5).
+    confined: list[bool] = field(default_factory=list)
 
-    def merged(self, head: str, base: str, *, checked: Any = None) -> Any:
+    def merged(
+        self, head: str, base: str, *, checked: Any = None, from_checkout: bool = True
+    ) -> Any:
         """`friction_answers.merged`, answered from this world."""
         self.merged_for.append((head, base, checked))
         fa = self.land.friction_answers
@@ -473,7 +511,9 @@ class _Run:
             head, document=document, answers=tuple(self.written), settings=tuple(self.settings)
         )
 
-    def checked(self, head: str, base: str, *, source: Any = None) -> Any:
+    def checked(
+        self, head: str, base: str, *, source: Any = None, from_checkout: bool = True
+    ) -> Any:
         """`friction_answers.checked`, answered from this world's change check: the
         answers at `head`, the ones the run is told of unless `written_at` says
         otherwise."""
@@ -527,7 +567,12 @@ class _Run:
 
 
 def _stage_project(
-    work: Path, *, mode: str, remote: tuple[str, ...] = (), local: tuple[str, ...] = PANEL
+    work: Path,
+    *,
+    mode: str,
+    remote: tuple[str, ...] = (),
+    local: tuple[str, ...] = PANEL,
+    start_after: tuple[str, ...] = (),
 ) -> Path:
     capability = work / ".pkit" / "capabilities" / "project-management"
     project = capability / "project"
@@ -536,6 +581,7 @@ def _stage_project(
     shutil.copytree(CAPABILITY / "templates", capability / "templates")
     reviewers = "".join(f"      - name: {name}\n" for name in local)
     remotes = "".join(f"      - github_login: {login}\n" for login in remote)
+    first = "".join(f"      - {name}\n" for name in start_after)
     (project / "config.yaml").write_text(
         "schema_version: 1\n"
         "default_branch: main\n"
@@ -544,7 +590,8 @@ def _stage_project(
         f"  mode: {mode}\n"
         "  agents:\n"
         + (f"    remote_registered:\n{remotes}" if remote else "")
-        + (f"    local_registered:\n{reviewers}" if local else ""),
+        + (f"    local_registered:\n{reviewers}" if local else "")
+        + (f"    start_after_checks:\n{first}" if start_after else ""),
         encoding="utf-8",
     )
     (project / "bootstrap-stamp.yaml").write_text(
@@ -606,10 +653,11 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
         checks: list[list[dict[str, Any]]] | None = None,
         remote: tuple[str, ...] = (),
         local: tuple[str, ...] = PANEL,
+        start_after: tuple[str, ...] = (),
     ) -> _Run:
         shutil.copytree(clone.root, tmp_path / "clone", symlinks=True)
         work = tmp_path / "clone" / "work"
-        _stage_project(work, mode=mode, remote=remote, local=local)
+        _stage_project(work, mode=mode, remote=remote, local=local, start_after=start_after)
         monkeypatch.chdir(work)
         monkeypatch.setenv("PM_INVOKER_LOGIN", "octocat")
         monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
@@ -618,6 +666,8 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
         run = _Run(land=land, work=work, github=github, merge_base=clone.base)
         github.checks[github.head] = checks if checks is not None else [_GREEN]
         run.real_merged = land.friction_answers.merged
+        run.real_derive = land.friction_answers.derive
+        run.real_checked = land.friction_answers.checked
         monkeypatch.setattr(land.friction_answers, "merged", run.merged)
         monkeypatch.setattr(land.friction_answers, "derive", run.derive)
         monkeypatch.setattr(land.friction_answers, "checked", run.checked)
@@ -634,7 +684,14 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
         monkeypatch.setattr(settled, "_ask", ask)
 
         gh_module = sys.modules["_lib.gh"]
-        for module in (gh_module, land, land.done_work, land.review_pr, land.issue_branch):
+        for module in (
+            gh_module,
+            land,
+            land.done_work,
+            land.review_pr,
+            land.issue_branch,
+            land.head_programs,
+        ):
             monkeypatch.setattr(module, "gh_run", github.gh)
         now = [0.0]
 
@@ -655,6 +712,8 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
 
         def invoke(name, pr_number, config, timeout=None, effort=None, **kwargs):
             run.invoked.append((name, kwargs.get("sha", "")))
+            run.confined.append(kwargs.get("confined", False))
+            run.reads_at_review.append(github._reads.get(github.head, 0))
             answer = run.answers.get(name, ("APPROVED", "Looks right."))
             return answer if answer is not None else (None, "")
 
@@ -921,6 +980,429 @@ def test_a_head_that_moves_while_the_checks_are_awaited_stops(world, capsys) -> 
     )
 
 
+# ---- the review beside the checks -----------------------------------------------
+
+
+def _checks_again(run: _Run, readings: list[list[dict[str, Any]]]) -> None:
+    """The head's checks read as `readings` from here on, as after a run of them again."""
+    run.github.checks[run.github.head] = readings
+    run.github._reads.pop(run.github.head, None)
+
+
+def _ci_lines(out: str) -> list[str]:
+    return [line for line in _steps(out) if line.startswith("ci:")]
+
+
+def test_the_reviewers_start_once_the_named_checks_passed(world, capsys) -> None:
+    """The reviewers run beside the rest, and the run stops ready only once every check
+    has passed (DEC-063 point 8). The authorised run then merges on the same verdicts."""
+    run = world(checks=[_ALL_RUNNING, _SUITE_RUNNING, _ALL_PASSED], start_after=_FIRST)
+    head = _short(run.github.head)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY == 8
+    assert _steps(out) == [
+        f"head: {head} (PR #{PR}, {BRANCH})",
+        f"ci: the remainder passed on {head} — the review starts beside the rest: {_THE_REST}",
+        "review: 0 kept fresh, 2 re-run — all approved",
+        f"ci: passed on {head}",
+        f"{_STEP}: none",
+    ]
+    assert out.splitlines()[-1].startswith(f"ready: {head} — CI passed")
+    # Each reviewer started on the second reading, with the suite still running.
+    assert run.reads_at_review == [2, 2]
+    assert run.github.merges == []
+
+    run.invoked.clear()
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert run.invoked == []
+    assert len(run.github.merges) == 1
+
+
+def test_the_rest_are_waited_for_after_the_review(world, capsys) -> None:
+    run = world(checks=[_SUITE_RUNNING, _SUITE_RUNNING, _ALL_PASSED], start_after=_FIRST)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 8
+    assert run.reads_at_review == [1, 1]
+    assert run.sleeps == [20.0]
+    assert f"  ci: running on {_short(run.github.head)}: {_THE_REST}" in out.splitlines()
+
+
+def test_every_check_passed_at_the_first_reading_needs_no_second_wait(world, capsys) -> None:
+    run = world(checks=[_ALL_PASSED], start_after=_FIRST)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 8
+    assert _ci_lines(out) == [f"ci: passed on {_short(run.github.head)}"]
+
+
+@pytest.mark.parametrize(
+    ("start_after", "first"),
+    [
+        pytest.param((), "SUCCESS", id="a project that names none"),
+        pytest.param(_FIRST, "SKIPPED", id="a check that was skipped"),
+        pytest.param((*_FIRST, _SLICE_2), "SUCCESS", id="one of two still running"),
+    ],
+)
+def test_otherwise_the_review_waits_for_every_check(
+    world, capsys, start_after: tuple[str, ...], first: str
+) -> None:
+    run = world(checks=[_parts(first, "IN_PROGRESS"), _ALL_PASSED], start_after=start_after)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 8
+    assert run.reads_at_review == [2, 2]
+    assert _ci_lines(out) == [f"ci: passed on {_short(run.github.head)}"]
+
+
+_ONLY_DECIDED = [_check("decide the form", "SUCCESS")]
+
+
+def test_a_named_check_that_has_not_started_is_read_again(world, capsys) -> None:
+    """Every check reported can pass before the named one has started: that is no
+    pass of it, and a part that then fails starts no reviewer."""
+    run = world(checks=[_ONLY_DECIDED, _SUITE_RUNNING, _ALL_PASSED], start_after=_FIRST)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 8
+    assert run.reads_at_review == [2, 2]
+    assert f"  ci: the remainder not reported for {_short(run.github.head)} yet" in out.splitlines()
+
+
+def test_a_named_check_that_fails_once_it_has_started_starts_no_reviewer(world, capsys) -> None:
+    run = world(checks=[_ONLY_DECIDED, _parts("FAILURE", "IN_PROGRESS")], start_after=_FIRST)
+    rc, _out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    assert run.invoked == []
+
+
+def test_a_name_no_check_bears_is_warned_of_and_lands_after_every_check(world, capsys) -> None:
+    run = world(checks=[_ALL_PASSED], start_after=("lint",))
+    head = _short(run.github.head)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 8
+    assert run.sleeps == [20.0]
+    assert run.reads_at_review == [2, 2]
+    assert (
+        f"  warn: no check on {head} is named lint, which review.agents.start_after_checks "
+        "names, so the review waited for every check reported"
+    ) in out.splitlines()
+    assert _ci_lines(out) == [f"ci: passed on {head}", f"ci: passed on {head}"]
+
+
+def test_a_check_that_starts_after_the_review_began_is_still_waited_for(world, capsys) -> None:
+    """A name read as unreported twice may be a workflow that starts late: the run reads
+    the checks again after the review, and a failure there stops it before the merge."""
+    run = world(
+        checks=[_ONLY_DECIDED, _ONLY_DECIDED, _parts("FAILURE", "SUCCESS", "SUCCESS")],
+        start_after=_FIRST,
+    )
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    assert out.splitlines()[-1] == (
+        f"ci: failed on {_short(run.github.head)} — {_FIRST[0]} (FAILURE). Merge not started"
+    )
+    assert run.github.merges == []
+
+
+@pytest.mark.parametrize(
+    ("rollup", "failed"),
+    [
+        pytest.param(_parts("FAILURE", "IN_PROGRESS"), _FIRST[0], id="the named check"),
+        pytest.param(_parts("IN_PROGRESS", "FAILURE"), _SLICE_1, id="a slice, before it passed"),
+        pytest.param(_parts("SUCCESS", "FAILURE"), _SLICE_1, id="a slice, once it passed"),
+    ],
+)
+def test_a_check_that_has_failed_starts_no_reviewer(
+    world, capsys, rollup: list[dict[str, Any]], failed: str
+) -> None:
+    run = world(checks=[rollup], start_after=_FIRST)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    assert out.splitlines()[-1] == (
+        f"ci: failed on {_short(run.github.head)} — {failed} (FAILURE). "
+        "Review and merge not started"
+    )
+    assert run.invoked == []
+    assert run.github.comments == []
+    assert run.github.merges == []
+
+
+def test_a_suite_that_fails_beside_the_review_stops_before_the_merge(world, capsys) -> None:
+    run = world(checks=[_SUITE_RUNNING, _parts("SUCCESS", "FAILURE")], start_after=_FIRST)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    assert out.splitlines()[-1] == (
+        f"ci: failed on {_short(run.github.head)} — {_SLICE_1} (FAILURE). Merge not started"
+    )
+    assert len(run.github.comments) == 2
+    assert run.github.merges == []
+
+
+def test_a_check_run_again_on_the_same_head_keeps_every_verdict(world, capsys) -> None:
+    run = world(checks=[_SUITE_RUNNING, _parts("SUCCESS", "FAILURE")], start_after=_FIRST)
+    head = run.github.head
+    assert run.run(capsys=capsys)[0] == 1
+    run.invoked.clear()
+    _checks_again(run, [_SUITE_RUNNING, _ALL_PASSED])
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 8
+    assert run.invoked == []
+    assert "review: 2 kept fresh, 0 re-run — all approved" in _steps(out)
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_a_push_that_fixes_the_failure_runs_the_stale_verdicts_again(world, capsys) -> None:
+    run = world(checks=[_SUITE_RUNNING, _parts("SUCCESS", "FAILURE")], start_after=_FIRST)
+    assert run.run(capsys=capsys)[0] == 1
+    run.invoked.clear()
+    new = run.push_new_head("fix.txt")
+    run.github.checks[new] = [_SUITE_RUNNING, _ALL_PASSED]
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 8
+    assert sorted(run.invoked) == sorted((name, new) for name in PANEL)
+    assert "review: 0 kept fresh, 2 re-run — all approved" in _steps(out)
+
+
+def test_the_wait_for_the_rest_runs_as_long_again(world, capsys) -> None:
+    run = world(checks=[_ALL_RUNNING, _SUITE_RUNNING], start_after=_FIRST)
+    rc, out, _err = run.run("--wait-minutes", "1", capsys=capsys)
+    assert rc == run.land.EXIT_CI_PENDING == 5
+    assert run.reads_at_review == [2, 2]
+    assert sum(run.sleeps) == 20 + 60
+    assert out.splitlines()[-1].startswith(f"ci: still running on {_short(run.github.head)} after")
+
+
+def test_a_dry_run_says_the_review_would_start_and_runs_none(world, capsys) -> None:
+    run = world(checks=[_SUITE_RUNNING], start_after=_FIRST)
+    head = _short(run.github.head)
+    rc, out, err = run.run("--dry-run", capsys=capsys)
+    assert rc == 0, out + err
+    assert _steps(out)[1:3] == [
+        f"ci: (dry-run) the remainder passed on {head} — would start the review, then wait "
+        f"up to 30m for the rest: {_THE_REST}",
+        "review: (dry-run) would keep 0 fresh and run " + ", ".join(PANEL),
+    ]
+    assert out.splitlines()[-1] == (
+        f"merge: (dry-run) would hand PR #{PR} at {head} to done-work once the checks pass "
+        "and the review approves"
+    )
+    assert run.invoked == []
+    assert run.github.comments == []
+
+
+def test_a_run_with_no_wait_only_reads(world, capsys) -> None:
+    run = world(checks=[_SUITE_RUNNING], start_after=_FIRST)
+    rc, out, _err = run.run("--no-wait", capsys=capsys)
+    assert rc == 5
+    assert run.invoked == []
+    assert out.splitlines()[-1].startswith(
+        f"ci: still running on {_short(run.github.head)} (--no-wait)"
+    )
+
+
+def test_a_run_authorised_up_front_runs_no_reviewer_before_every_check(world, capsys) -> None:
+    run = world(checks=[_SUITE_RUNNING, _ALL_PASSED], start_after=_FIRST)
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert run.reads_at_review == [2, 2]
+    assert _ci_lines(out) == [f"ci: passed on {_short(run.github.head)}"]
+
+
+def test_a_suite_that_fails_under_an_authorised_run_left_it_no_verdict_to_merge_on(
+    world, capsys
+) -> None:
+    """Had the reviewers started beside the suite, this run's `[person]` verdict would
+    stand unshown, and its identical re-run would find it at its start and merge on it
+    (DEC-055 point 3). So it posts none, and the re-run holds at `ready:`."""
+    run = world(checks=[_SUITE_RUNNING, _parts("SUCCESS", "FAILURE")], start_after=_FIRST)
+    head = run.github.head
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    assert run.run("--yes", "--expect-head", head, capsys=capsys)[0] == 1
+    assert run.github.comments == []
+
+    _checks_again(run, [_ALL_PASSED])
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_READY == 8
+    assert "came after this run's --yes was given" in out.splitlines()[-1]
+    assert run.github.merges == []
+
+
+def test_a_finding_posted_beside_the_rest_is_shown_before_the_ready_line(world, capsys) -> None:
+    run = world(checks=[_SUITE_RUNNING, _ALL_PASSED], start_after=_FIRST)
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 8
+    lines = out.splitlines()
+    assert lines.index(_person_lines("code-reviewer")[0]) < len(lines) - 1
+    assert f"{_FINDINGS}: 1, above" in lines
+    assert run.github.merges == []
+
+
+@pytest.mark.parametrize(
+    ("rest", "code"),
+    [
+        pytest.param(_parts("SUCCESS", "FAILURE"), 1, id="a failed check"),
+        pytest.param(_SUITE_RUNNING, 5, id="a wait that ran out"),
+    ],
+)
+def test_a_stop_on_the_rest_shows_the_finding_the_run_posted(
+    world, capsys, rest: list[dict[str, Any]], code: int
+) -> None:
+    """A later `--yes` would find this verdict at its start and merge on it, so the run
+    that posted it shows it before it waits for the rest (DEC-055 point 3)."""
+    run = world(checks=[_SUITE_RUNNING, rest], start_after=_FIRST)
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    rc, out, _err = run.run("--wait-minutes", "1", capsys=capsys)
+    assert rc == code
+    lines = out.splitlines()
+    at = lines.index(_person_lines("code-reviewer")[0])
+    assert lines[at : at + 3] == [*_person_lines("code-reviewer"), f"{_FINDINGS}: 1, above"]
+    assert run.github.merges == []
+
+
+def test_a_finding_posted_during_the_wait_for_the_rest_is_shown_too(world, capsys) -> None:
+    """The findings shown before the wait are not the last word: what the run prints
+    before it stops ready is each latest verdict as it stands then (DEC-055 point 3)."""
+    run = world(checks=[_SUITE_RUNNING, _ALL_PASSED], start_after=_FIRST)
+    head = run.github.head
+    run.github.before(
+        _nth(lambda a: a[:2] == ["pr", "view"] and "statusCheckRollup" in a[-1], 2),
+        lambda: run.github.comments.append(_verdict(run, "reviewer", _PERSON, sha=head)),
+    )
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 8
+    lines = out.splitlines()
+    assert _person_lines("reviewer")[0] in lines
+    assert "1 finding to judge above" in lines[-1]
+
+
+def test_a_finding_posted_before_a_stop_on_the_rest_is_shown_by_the_next_run(world, capsys) -> None:
+    """The same command run again after a stop on the rest shows the finding once more,
+    and stops at `ready:` for the person."""
+    run = world(checks=[_SUITE_RUNNING, _parts("SUCCESS", "FAILURE")], start_after=_FIRST)
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    assert run.run(capsys=capsys)[0] == 1
+
+    run.invoked.clear()
+    _checks_again(run, [_ALL_PASSED])
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 8
+    assert run.invoked == []
+    assert _person_lines("code-reviewer")[0] in out.splitlines()
+    assert run.github.merges == []
+
+
+def test_a_head_that_moves_beside_the_review_stops_before_the_merge(world, capsys) -> None:
+    run = world(checks=[_SUITE_RUNNING, _SUITE_RUNNING], start_after=_FIRST)
+    pinned = run.github.head
+    run.github.before(
+        _nth(lambda a: a[:2] == ["pr", "view"] and "statusCheckRollup" in a[-1], 2),
+        lambda: setattr(run.github, "head", "d" * 40),
+    )
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 3
+    assert out.splitlines()[-1] == (
+        f"ci: stopped — PR #{PR}'s head moved from {_short(pinned)} to ddddddd while its "
+        f"checks were awaited. Nothing was merged; `land-work {ISSUE}` checks and reviews "
+        "the new head"
+    )
+    assert run.github.merges == []
+
+
+def test_a_pr_that_merged_beside_the_review_is_completed(world, capsys) -> None:
+    run = world(checks=[_SUITE_RUNNING, _SUITE_RUNNING], start_after=_FIRST)
+
+    def merged() -> None:
+        run.github.state = "MERGED"
+        run.github.merge_commit = "c" * 40
+
+    run.github.before(
+        _nth(lambda a: a[:2] == ["pr", "view"] and "statusCheckRollup" in a[-1], 2), merged
+    )
+    rc, out, err = run.run(capsys=capsys)
+    assert f"ci: PR #{PR} has merged meanwhile" in _steps(out), out + err
+    assert run.github.merges == []
+    assert rc in (run.land.EXIT_MERGED, run.land.EXIT_READY)
+
+
+def test_changes_requested_beside_the_suite_names_the_check_that_failed(world, capsys) -> None:
+    """Both reach one fix round, and a stop is one line the fix round is handed."""
+    run = world(checks=[_SUITE_RUNNING, _parts("SUCCESS", "FAILURE")], start_after=_FIRST)
+    run.answers["code-reviewer"] = ("CHANGES_REQUESTED", _BLOCKING)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    assert out.splitlines()[-1] == (
+        "review: changes requested by code-reviewer — the blocking findings are above, and a "
+        f"check failed on {_short(run.github.head)}: {_SLICE_1} (FAILURE); merge not started"
+    )
+
+
+@pytest.mark.parametrize(
+    "rollup",
+    [pytest.param(_SUITE_RUNNING, id="running"), pytest.param(_ALL_PASSED, id="passed")],
+)
+def test_changes_requested_beside_the_suite_adds_nothing_where_no_check_failed(
+    world, capsys, rollup: list[dict[str, Any]]
+) -> None:
+    run = world(checks=[_SUITE_RUNNING, rollup], start_after=_FIRST)
+    run.answers["code-reviewer"] = ("CHANGES_REQUESTED", _BLOCKING)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    assert out.splitlines()[-1] == (
+        "review: changes requested by code-reviewer — the blocking findings are above; "
+        "merge not started"
+    )
+
+
+def test_a_stop_on_changes_requested_stands_where_the_checks_cannot_be_read(world, capsys) -> None:
+    run = world(checks=[_SUITE_RUNNING, _SUITE_RUNNING], start_after=_FIRST)
+    run.answers["code-reviewer"] = ("CHANGES_REQUESTED", _BLOCKING)
+    run.github.fails.append(
+        _nth(lambda a: a[:2] == ["pr", "view"] and "statusCheckRollup" in a[-1], 2)
+    )
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    assert out.splitlines()[-1] == (
+        "review: changes requested by code-reviewer — the blocking findings are above; "
+        "merge not started"
+    )
+
+
+def test_the_merge_gate_still_reads_every_check(world, capsys) -> None:
+    """A check that fails after the run read every check as passed is `done-work`'s to
+    refuse, whatever started the reviewers."""
+    run = world(
+        checks=[_SUITE_RUNNING, _ALL_PASSED, _parts("SUCCESS", "SUCCESS", "FAILURE")],
+        start_after=_FIRST,
+    )
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    assert out.splitlines()[-1].startswith("merge: refused")
+    assert run.github.merges == []
+
+
+def test_a_queue_is_read_once_though_the_checks_are_waited_for_twice(world, capsys) -> None:
+    run = world(checks=[_SUITE_RUNNING, _ALL_PASSED], start_after=_FIRST)
+    run.github.merge_state = "BEHIND"
+    run.github.queue = True
+    after_the_second_wait: list[int] = []
+    run.github.before(
+        lambda a: a[:2] == ["pr", "view"] and a[-1].endswith(",author"),
+        lambda: after_the_second_wait.append(run.github.queue_reads),
+    )
+    run.run(capsys=capsys)
+    assert after_the_second_wait == [1]
+
+
+@pytest.mark.parametrize(
+    "value", ["the remainder", ["the remainder", 7], {"the remainder": True}, None]
+)
+def test_a_value_that_is_no_list_of_names_names_no_check(land, value: object) -> None:
+    config = {"review": {"agents": {"start_after_checks": value}}}
+    args = land._parser().parse_args([str(ISSUE)])
+    assert land._checks_that_start_review(args, config) == ()
+
+
 # ---- the review ---------------------------------------------------------------
 
 
@@ -997,7 +1479,7 @@ def test_a_head_that_moves_between_the_checks_and_the_review_stops(world, capsys
     assert run.invoked == []
     assert out.splitlines()[-1] == (
         f"review: stopped — PR #{PR}'s head is {_short(run.github.head)}, not "
-        f"{_short(pinned)}, the head whose checks passed. Nothing was merged; "
+        f"{_short(pinned)}, the head this run pinned. Nothing was merged; "
         f"`land-work {ISSUE}` checks and reviews the new head"
     )
 
@@ -1524,7 +2006,7 @@ def test_a_head_that_moves_during_the_reviews_posts_their_verdicts_and_stops(wor
     assert run.github.merges == []
     assert out.splitlines()[-1] == (
         f"review: stopped — PR #{PR}'s head is {_short(run.github.head)}, not "
-        f"{_short(pinned)}, the head whose checks passed. Nothing was merged; "
+        f"{_short(pinned)}, the head this run pinned. Nothing was merged; "
         f"`land-work {ISSUE}` checks and reviews the new head"
     )
 
@@ -3197,6 +3679,147 @@ def test_a_person_finding_for_another_head_holds_every_run_until_a_review(world,
     assert [merge[-1] for merge in run.github.merges] == [new]
 
 
+def _shown_above_the_stop(out: str, shown: list[str], line: str) -> None:
+    """`shown` and the step's `line` are printed just above the stop, the run's last line."""
+    lines = out.splitlines()
+    at = lines.index(shown[0])
+    assert lines[at:-1] == [*shown, line]
+
+
+@pytest.mark.parametrize("authorised", [False, True], ids=["ready-first", "authorised"])
+@pytest.mark.parametrize(
+    ("other", "code"),
+    [
+        pytest.param(("CHANGES_REQUESTED", _BLOCKING), 1, id="a reviewer's block"),
+        pytest.param(None, 6, id="a reviewer that failed"),
+    ],
+)
+def test_a_stop_inside_the_review_shows_the_finding_another_reviewer_posted(
+    world, capsys, other: tuple[str, str] | None, code: int, authorised: bool
+) -> None:
+    """A later `--yes` would find this verdict at its start and merge on it, so the run
+    that posted it shows it, whichever reviewer stopped the run (DEC-055 point 3)."""
+    run = world()
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    run.answers["reviewer"] = other
+    rc, out, _err = run.authorised(capsys=capsys) if authorised else run.run(capsys=capsys)
+    assert rc == code
+    _shown_above_the_stop(out, _person_lines("code-reviewer"), f"{_FINDINGS}: 1, above")
+    assert out.splitlines()[-1].startswith("review: ")
+    assert run.github.merges == []
+
+
+def test_a_block_beside_the_checks_shows_the_finding_and_names_the_check_that_failed(
+    world, capsys
+) -> None:
+    run = world(checks=[_SUITE_RUNNING, _parts("SUCCESS", "FAILURE")], start_after=_FIRST)
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    run.answers["reviewer"] = ("CHANGES_REQUESTED", _BLOCKING)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    _shown_above_the_stop(out, _person_lines("code-reviewer"), f"{_FINDINGS}: 1, above")
+    assert f"a check failed on {_short(run.github.head)}" in out.splitlines()[-1]
+
+
+def test_a_block_that_carries_a_finding_to_judge_shows_it_too(world, capsys) -> None:
+    run = world()
+    run.answers["reviewer"] = ("CHANGES_REQUESTED", f"{_BLOCKING}\n{_PERSON}")
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    _shown_above_the_stop(out, _person_lines("reviewer"), f"{_FINDINGS}: 1, above")
+
+
+def test_review_pr_raising_shows_the_finding_of_a_verdict_standing_for_the_head(
+    world, capsys, monkeypatch
+) -> None:
+    run = world()
+    run.github.comments.append(_verdict(run, "code-reviewer", _PERSON, sha=run.github.head))
+
+    def boom(argv: list[str], **kwargs: Any) -> Any:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(run.land.review_pr, "review", boom)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_REVIEW_INCOMPLETE
+    _shown_above_the_stop(out, _person_lines("code-reviewer"), f"{_FINDINGS}: 1, above")
+
+
+def test_a_stale_verdict_left_by_a_reviewer_that_failed_is_shown_marked_stale(
+    world, capsys
+) -> None:
+    """Its reviewer's new run posted nothing, so its latest verdict is the old one, and
+    the stop prints it as the findings' step would."""
+    run = world()
+    old = run.github.head
+    run.github.comments.append(_verdict(run, "code-reviewer", _PERSON, sha=old))
+    new = run.push_new_head("fix.txt")
+    run.github.checks[new] = [_GREEN]
+    run.answers["code-reviewer"] = None
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_REVIEW_INCOMPLETE
+    stale = f"(stale: reviewed {_short(old)}; changed since: fix.txt) "
+    _shown_above_the_stop(
+        out, _person_lines("code-reviewer", stale), f"{_FINDINGS}: 1, above (1 marked stale)"
+    )
+
+
+def test_a_head_that_moved_during_the_review_shows_the_finding_the_run_posted(
+    world, capsys
+) -> None:
+    """The stop stays the moved head's, and the verdict is judged for the head the PR
+    has now."""
+    run = world()
+    pinned = run.github.head
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+
+    def tips(argv: list[str]) -> bool:
+        return argv[:2] == ["pr", "view"] and argv[-1] == "headRefOid,baseRefOid"
+
+    run.github.before(_nth(tips, 2), lambda: run.push_new_head("during.txt"))
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_HEAD_MOVED
+    stale = f"(stale: reviewed {_short(pinned)}; changed since: during.txt) "
+    _shown_above_the_stop(
+        out, _person_lines("code-reviewer", stale), f"{_FINDINGS}: 1, above (1 marked stale)"
+    )
+    assert out.splitlines()[-1].startswith(f"review: stopped — PR #{PR}'s head is ")
+
+
+def test_verdicts_that_cannot_be_read_at_a_stop_warn_and_the_stop_stands(world, capsys) -> None:
+    run = world()
+    run.answers["reviewer"] = ("CHANGES_REQUESTED", _BLOCKING)
+    run.github.fails.append(_findings_read(run))
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    assert out.splitlines()[-2:] == [
+        f"  warn: {_FINDINGS}: PR #{PR}'s verdicts could not be read: HTTP 502: Bad Gateway. "
+        f"Nothing was merged; run `land-work {ISSUE}` again",
+        "review: changes requested by reviewer — the blocking findings are above; merge not "
+        "started",
+    ]
+
+
+def test_a_stop_inside_the_review_with_no_finding_to_judge_prints_no_line_for_them(
+    world, capsys
+) -> None:
+    run = world()
+    run.answers["reviewer"] = ("CHANGES_REQUESTED", _BLOCKING)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == 1
+    assert _FINDINGS not in out
+
+
+def test_a_stop_on_the_accepted_records_shows_the_finding_read_before_it(world, capsys) -> None:
+    run = world()
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    run.altered_problem = "`pkit decisions check-diff --json …`: it exited 2"
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE
+    lines = out.splitlines()
+    assert lines[-3:-1] == _person_lines("code-reviewer")
+    assert lines[-1].startswith(f"{_FINDINGS}: the accepted records this change alters")
+
+
 def test_verdicts_that_could_not_be_read_at_the_start_hold_the_run(world, capsys) -> None:
     """What the run found at its start is what it read then: a read that failed
     found nothing, so the finding is new to it — the hold fails toward a stop."""
@@ -3956,3 +4579,350 @@ def test_landing_the_second_of_two_changes_that_pass_alone_is_refused(
     ), last
     assert any(line.startswith("  docs/core.md: friction — ") for line in out.splitlines())
     assert (run.github.merges, run.after_merge) == ([], [])
+
+
+# ---- which heads may start programs (DEC-067) ---------------------------------
+
+
+#: The line `land-work` says of a head from elsewhere, and how its stop goes on.
+_STOPPED = "a person at a terminal can run `land-work 42` and name the head"
+_NO_ANSWER = "through `done-work` or `merge-pr` runs no change check and tells no answer"
+
+
+def _real_change_check(run: _Run, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The run reads the real change check at every step."""
+    fa = run.land.friction_answers
+    monkeypatch.setattr(fa, "merged", run.real_merged)
+    monkeypatch.setattr(fa, "derive", run.real_derive)
+    monkeypatch.setattr(fa, "checked", run.real_checked)
+
+
+def _base_with_a_kind(
+    run: _Run, make_adopter_repo: MakeAdopterRepo, tmp_path: Path, *, anchored: bool
+) -> Path:
+    """The clone's `main` holds the backbone, the friction settings and a registered
+    kind, with a document anchored through it where `anchored` says. Pushed, and the
+    resolver's path returned."""
+    work = run.work
+    installed = make_adopter_repo(root=tmp_path / "installed", chdir=False)
+    shutil.copytree(
+        installed.root / ".pkit",
+        work / ".pkit",
+        dirs_exist_ok=True,
+        ignore=shutil.ignore_patterns("__pycache__"),
+    )
+    _git(work, "switch", "-q", "main")
+    capability = register_kinds(work, "kinds", kinds={"source": "resolve"}, script_body=RESOLVING)
+    files = {CONFIG: friction_config(mode="enforcing"), **SOURCE, "sources/alpha.md": "alpha\n"}
+    if anchored:
+        files["docs/sourced.md"] = document("sourced", anchors={"source": ["alpha"]})
+    for path, text in files.items():
+        (work / path).parent.mkdir(parents=True, exist_ok=True)
+        (work / path).write_text(text, encoding="utf-8")
+    _git(work, "add", "-f", ".pkit", *files)
+    _git(work, "commit", "-q", "-m", "base")
+    _git(work, "push", "-q", "origin", "main")
+    return capability / RESOLVER
+
+
+def _replace_the_resolver(run: _Run, resolver: Path, ran: Path) -> str:
+    """The PR's head is a commit that replaces `resolver` with one that leaves `ran`
+    behind, with checks green. The clone stays on `main`, so a tree of the person's."""
+    work = run.work
+    _git(work, "switch", "-q", "-C", BRANCH, "main")
+    planted = resolver.read_text(encoding="utf-8") + f"open({str(ran)!r}, 'w').close()\n"
+    head = _commit_files(work, "a resolver of its own", {str(resolver.relative_to(work)): planted})
+    _git(work, "push", "-q", "-f", "origin", BRANCH)
+    _git(work, "switch", "-q", "main")
+    run.github.head = head
+    run.github.checks[head] = [_GREEN]
+    return head
+
+
+def _track_the_origin(run: _Run, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The backbone's reading of the base: the origin's main, a remote's, so it is fetched
+    and a commit landed there is what the merge is built with."""
+    settled = run.land.friction_answers.default_branch
+    monkeypatch.setattr(settled, "_read", {})
+
+    def ask(explicit: str | None, _run: Any) -> Any:
+        tip = _git(run.work, "rev-parse", "origin/main")
+        branch = settled.Branch("main", False, "origin/main", tip, None)
+        return settled.Reading(branch, settled.Base("origin/main", tip, None, None, "remote"))
+
+    monkeypatch.setattr(settled, "_ask", ask)
+
+
+@pytest.fixture
+def replaced(
+    world, make_adopter_repo, tmp_path_factory, monkeypatch, pkit_on_path
+) -> Callable[..., tuple[_Run, str, Path]]:
+    """A world whose PR head replaced the resolver its anchors need, read through a real
+    backbone: the run, the head and the file the head's program leaves behind."""
+
+    def build() -> tuple[_Run, str, Path]:
+        run = world()
+        _real_change_check(run, monkeypatch)
+        scratch = tmp_path_factory.mktemp("outside-the-repository")
+        resolver = _base_with_a_kind(run, make_adopter_repo, scratch, anchored=True)
+        _track_the_origin(run, monkeypatch)
+        ran = scratch / "the-head-s-resolver-ran"
+        return run, _replace_the_resolver(run, resolver, ran), ran
+
+    return build
+
+
+@pytest.mark.process(
+    "the landing route end to end: only a real change check refuses, and only a real "
+    "resolver started from a checkout shows the mark this test reads means a start"
+)
+def test_a_fork_s_head_that_replaced_a_resolver_starts_nothing_and_merges_nothing(
+    replaced, capsys
+) -> None:
+    """Off a terminal the run stops before any wait or review, with a code of its own,
+    and its line says why, that a second run changes nothing, how a person goes on and
+    what the other merge commands leave out (DEC-067 points 3 and 9)."""
+    run, head, ran = replaced()
+    run.github.cross_repository = True
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_PERSON == 9, out + err
+    assert not ran.exists()
+    assert (run.github.merges, run.invoked, run.github.comments) == ([], [], [])
+    assert f"head: {_short(head)} is from elsewhere — it lies in another repository" in out
+    last = out.splitlines()[-1]
+    assert f"PR #{PR}'s head {_short(head)} is from elsewhere" in last
+    assert "A second run changes nothing" in last
+    assert _STOPPED in last and _NO_ANSWER in last
+    assert "ci:" not in out
+
+
+@pytest.mark.process("the landing route end to end, through a real change check")
+def test_a_reading_that_does_not_place_the_head_is_never_a_pass(replaced, capsys) -> None:
+    """A host that did not say where the head lies gives no checkout (DEC-067 point 1)."""
+    run, _head, ran = replaced()
+    run.github.cross_repository = None
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_PERSON, out + err
+    assert not ran.exists()
+    assert "the host did not say it lies in the base's repository" in out
+
+
+@pytest.mark.process("the landing route end to end, through a real change check")
+def test_a_head_on_the_base_s_repository_keeps_its_checkout_and_runs_as_before(
+    replaced, capsys
+) -> None:
+    """A head that passes the test takes its checkout where an anchor needs one, and the
+    run says nothing of the test: a writer's head lands as it did (DEC-067 point 8)."""
+    run, head, ran = replaced()
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY, out + err
+    assert ran.exists()
+    assert "elsewhere" not in out + err
+    assert run.confined == [False] * len(PANEL)
+    assert out.splitlines()[0].startswith(f"head: {_short(head)} (PR #{PR}, {BRANCH})")
+
+
+@pytest.mark.process("the landing route end to end, through a real change check")
+def test_a_run_authorised_up_front_stops_even_at_a_terminal(replaced, capsys, monkeypatch) -> None:
+    """No flag gives the word, and neither does a dry run (DEC-067 point 4)."""
+    run, head, ran = replaced()
+    run.github.cross_repository = True
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+
+    def no_question(_prompt: str = "") -> str:
+        raise AssertionError("nobody may be asked here")
+
+    monkeypatch.setattr("builtins.input", no_question)
+    rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
+    assert rc == run.land.EXIT_PERSON, out + err
+    rc, out, err = run.run("--dry-run", capsys=capsys)
+    assert rc == run.land.EXIT_PERSON, out + err
+    assert not ran.exists() and run.github.comments == []
+
+
+@pytest.mark.process("the landing route end to end, through a real change check")
+def test_a_named_head_starts_its_programs_for_that_run_alone(replaced, capsys, monkeypatch) -> None:
+    """The short id typed at a terminal starts the head's programs for that run, after a
+    comment names the commit, the command and who named it. The next run asks again,
+    and a wrong word starts nothing (DEC-067 point 4)."""
+    run, head, ran = replaced()
+    run.github.cross_repository = True
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    prompts: list[str] = []
+    replies = iter(["no", _short(head), "n", _short(head), "n"])
+
+    def answer(prompt: str = "") -> str:
+        prompts.append(prompt)
+        if "Type" in prompt:
+            assert ran.exists() is False, "a program started before the person was asked"
+        return next(replies)
+
+    monkeypatch.setattr("builtins.input", answer)
+
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_PERSON, out + err
+    assert not ran.exists() and run.github.comments == []
+    assert head in out and f"gh pr diff {PR}" in out
+
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY, out + err
+    assert ran.exists()
+    (word,) = [c["body"] for c in run.github.comments if f"named head {head}" in c["body"]]
+    assert "octocat" in word and "`land-work`" in word
+    # The reviewers the run starts are covered by the word.
+    assert run.confined and not any(run.confined)
+
+    ran.unlink()
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY, out + err
+    assert len([p for p in prompts if "Type" in p]) == 3
+    assert ran.exists()
+    assert len([c for c in run.github.comments if f"named head {head}" in c["body"]]) == 2
+
+
+@pytest.mark.process("the landing route end to end, through a real change check")
+def test_a_word_with_no_comment_posted_starts_nothing(replaced, capsys, monkeypatch) -> None:
+    run, head, ran = replaced()
+    run.github.cross_repository = True
+    run.github.fails.append(lambda argv: argv[:2] == ["pr", "comment"])
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    monkeypatch.setattr("builtins.input", lambda _prompt="": _short(head))
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_PERSON, out + err
+    assert not ran.exists()
+    assert "could not be posted" in out
+
+
+@pytest.mark.process(
+    "the merge check's route end to end: only a real change check, reading a real merge "
+    "from git objects, shows the head's own check passing where its merge is refused"
+)
+def test_a_merge_needing_a_resolver_its_head_did_not_stops_the_same_way(
+    world, make_adopter_repo, tmp_path_factory, monkeypatch, pkit_on_path, capsys
+) -> None:
+    """The base adds an anchor of the kind whose script the head replaced: the head's
+    own check starts nothing and passes, and the merge is refused away from a checkout.
+    It must not take one (DEC-067 point 3). Reviewers start under the brief."""
+    run = world()
+    _real_change_check(run, monkeypatch)
+    scratch = tmp_path_factory.mktemp("outside-the-repository")
+    resolver = _base_with_a_kind(run, make_adopter_repo, scratch, anchored=False)
+    _track_the_origin(run, monkeypatch)
+    ran = scratch / "the-head-s-resolver-ran"
+    head = _replace_the_resolver(run, resolver, ran)
+    work = run.work
+    _commit_files(
+        work,
+        "a page anchored through the kind",
+        {"docs/sourced.md": document("sourced", anchors={"source": ["alpha"]})},
+    )
+    _git(work, "push", "-q", "origin", "main")
+    run.github.cross_repository = True
+
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_PERSON, out + err
+    assert not ran.exists()
+    assert run.confined and all(run.confined)
+    assert run.github.merges == []
+    last = out.splitlines()[-1]
+    assert last.startswith(f"merge check: stopped — PR #{PR}'s head {_short(head)}"), last
+    assert _STOPPED in last
+
+
+def test_two_open_prs_sharing_the_branch_s_name_stop_the_run(world, capsys, monkeypatch) -> None:
+    """One may be a fork's, so the run names both and starts nothing (DEC-067 point 1)."""
+    run = world()
+    fork = {"number": 77, "headRefName": BRANCH, "isCrossRepository": True}
+    real = run.land.done_work._lookup_prs
+
+    def both(branch: str, state: str, fields: str, config: dict) -> Any:
+        found = real(branch, state, fields, config)
+        return replace(found, prs=(*found.prs, fork))
+
+    monkeypatch.setattr(run.land.done_work, "_lookup_prs", both)
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE, out + err
+    assert f"#{PR} and #77 share the branch name {BRANCH}" in out.splitlines()[-1]
+    assert run.invoked == [] and run.github.merges == []
+
+
+def test_a_head_holding_a_build_s_commits_is_from_elsewhere(world, capsys, monkeypatch) -> None:
+    """A build's commits fail the test on the base's own repository (DEC-067 point 1), and
+    where no anchor needs a resolver the run goes on, its reviewers told to start nothing."""
+    run = world()
+    monkeypatch.setattr(
+        run.land.head_programs, "build_commits", lambda *a: frozenset({run.github.head})
+    )
+    monkeypatch.setattr(run.land.head_programs, "_held", lambda head, base, named, source: (head,))
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY, out + err
+    assert f"it holds commits of a sandboxed build ({_short(run.github.head)})" in out
+    assert run.confined == [True] * len(PANEL)
+
+
+def test_build_records_that_cannot_be_read_fail_the_test(world, capsys, monkeypatch) -> None:
+    run = world()
+    monkeypatch.setattr(run.land.head_programs, "build_commits", lambda *a: "gh exited 1")
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY, out + err
+    assert "#42's build records could not be read (gh exited 1)" in out
+    assert run.confined == [True] * len(PANEL)
+
+
+@pytest.mark.parametrize(
+    ("standing", "expected"),
+    [
+        pytest.param({}, True, id="passed"),
+        pytest.param({"elsewhere": "a fork's", "named": True}, False, id="named"),
+        pytest.param({"elsewhere": "a fork's"}, False, id="from-elsewhere"),
+    ],
+)
+def test_an_earlier_head_takes_a_checkout_only_where_the_head_passed(
+    land, monkeypatch, standing, expected
+) -> None:
+    """The test's answer holds for an earlier head an authorisation names, and a person's
+    word does not: it covers the commit named (DEC-067 points 1 and 4)."""
+    asked: list[bool] = []
+
+    def checked(head: str, base: str, *, source: Any = None, from_checkout: bool = True) -> Any:
+        asked.append(from_checkout)
+        return land.friction_answers.Derivation(head, problem="unread")
+
+    monkeypatch.setattr(land.friction_answers, "checked", checked)
+    monkeypatch.setattr(land.friction_answers, "left_out", lambda _document: ["left"])
+    head = land._Head(
+        ISSUE,
+        PR,
+        BRANCH,
+        "a" * 40,
+        base="main",
+        remote="origin",
+        base_branch="main",
+        authorised="b" * 40,
+        standing=land.head_programs.Standing("a" * 40, **standing),
+    )
+    assert "unread" in land._left_moved(head, {})
+    assert asked == [expected]
+
+
+def test_what_a_head_says_reaches_the_terminal_escaped(world, capsys) -> None:
+    """A problem the change check states can hold a control character, which could move
+    the cursor or erase the lines the person is reading (DEC-067 point 7)."""
+    run = world()
+    run.merge_problem = "docs/\x1b[2Ka.md\u202e is odd\r\nnext line"
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE, out + err
+    assert "\x1b" not in out + err and "\u202e" not in out + err
+    assert "\\x1b[2Ka.md\\u202e is odd" in out
+
+
+def test_a_grant_s_words_reach_the_terminal_escaped(world, capsys, monkeypatch) -> None:
+    """What the head wrote into the fixers' grant list is printed with the rest."""
+    run = world()
+    fixers = run.land.fixers
+    change = fixers.GrantChange("fix\x1b[1Aer", "page\x1b]0;x\x07", True, fixers.GRANTED)
+    monkeypatch.setattr(fixers, "change_between", lambda *a: (change,))
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY, out + err
+    assert "\x1b" not in out + err and "\x07" not in out + err
+    assert "\\x1b[1A" in out

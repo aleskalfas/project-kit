@@ -75,7 +75,7 @@ A change declares each [surface change](../glossary.md#term-surface-change--surf
 ```mermaid
 classDiagram
   accTitle: Changes, review and releases
-  accDescr: A pull request lands one change on its target branch. A check compares the change's head with its base, by default the default branch. A reviewer reports findings on a draft or a change. A settled break, a passage for a person and a finding that informs are findings of a reviewer. A change declares a surface change in a changeset, which declares a bump segment, and the changeset guard checks the change. The release step consumes the pending changesets and writes new versions. A release pull request, a pull request, carries its writes onto the default branch. A distribution sets a report target, and a report is filed on it. A report holds an environment block, and tracked fixes resolve it.
+  accDescr: A pull request lands one change on its target branch. A check compares the change's head with its base, by default the default branch. A reviewer reports findings on a draft or a change. A settled break, a passage for a person and a finding that informs are findings of the rule-set reviewer. A change declares a surface change in a changeset, which declares a bump segment, and the changeset guard checks the change. The release step consumes the pending changesets and writes new versions. A release pull request, a pull request, carries its writes onto the default branch. A distribution sets a report target, and a report is filed on it. A report holds an environment block, and tracked fixes resolve it.
   class Change["Change"]
   class PullRequest["Pull request"]
   PullRequest : title
@@ -130,13 +130,13 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How a change lands, and a release follows
-  accDescr: A change declares each surface change it makes in a changeset, which is pending from then on. Each push gives the change a new head, and a check compares that head with its base, the default branch unless a run names another. Reviewers report findings on the change, and leave each fix to its author. Merged through a pull request, the change lands on the default branch as one squash commit. The release step consumes every pending changeset there, and its writes land on the default branch through a release pull request. When it moves the backbone, it makes a release.
+  accDescr: A change declares each surface change it makes in a changeset, which is pending from then on. Each push gives the change a new head, and a check compares that head with its base, the default branch unless a run names another. Reviewers report findings on the change, and leave each fix to its author. Merged through a pull request into the default branch, the change lands, by default, as one squash commit. The release step consumes every pending changeset there, and its writes land on the default branch through a release pull request. When it moves the backbone, it makes a release.
   C([Change, on its branch]) -->|declares each surface change in| CS[Changeset: pending]
   C -->|each push gives it| H[New head]
   H -->|a check compares it with| B["Base, the default branch unless a run names another"]
   C -->|reviewers report on it| F[Findings]
   F -->|each fix left to the author| C
-  C -->|merged through a pull request, as one squash commit| D[Default branch]
+  C -->|merged through a pull request, by default as one squash commit| D[Default branch]
   CS -->|once on the default branch, consumed by| RS[Release step]
   RS -->|writes the new versions, through a release pull request| D
   RS -->|when it moves the backbone| RL([Release])
@@ -164,8 +164,8 @@ A change is a unit of work that lands on the branch it targets. It lands through
 
 **Always true:**
 
-- Merged through a pull request, it lands on the [default branch](../glossary.md#term-default-branch--default-branch) as one squash commit ([COR-009 point 1](../../../../.pkit/decisions/core/COR-009-pr-workflow.md#1-squash-merge-as-the-default-merge-style)).
-- It edits no [version](../glossary.md#term-version--version) number, and declares a surface change in a changeset instead (PRJ-002 D1).
+- Merged through a pull request into the [default branch](../glossary.md#term-default-branch--default-branch), it lands, by default, as one squash commit ([COR-009 point 1](../../../../.pkit/decisions/core/COR-009-pr-workflow.md#1-squash-merge-as-the-default-merge-style)).
+- Outside a [release pull request](../glossary.md#term-release-pull-request--release-pull-request), it edits no [version](../glossary.md#term-version--version) number, and declares a surface change in a changeset instead (PRJ-002 D1).
 
 ## Pull request
 
@@ -287,7 +287,7 @@ A report is an issue composed with the system and filed on the repository of the
 **Always true:**
 
 - Its distribution sets its report target, and no one filing it can name another (ADR-047 point 3).
-- Posting it is never silent: a person confirms the report target each time, or it stays a draft (PRJ-008).
+- Posting it is never silent: a person confirms the report target each time, or nothing is filed and the text stays a draft (PRJ-008).
 
 ## Report target
 
@@ -312,7 +312,7 @@ A report target is the one repository a distribution sets, in its own configurat
 **Always true:**
 
 - No one filing a report can name another repository, by a flag or otherwise (ADR-047 point 3).
-- Where no report target is set, a report stays a draft (PRJ-008).
+- Where no report target is set, no report is filed, and the text stays a draft (PRJ-008).
 
 ## Tracked fix
 
@@ -367,7 +367,7 @@ Defined in [TERM-reviewer](../glossary.md#term-reviewer--reviewer).
 
 **Why:** Work its author found sound can still hold contradictions, gaps or a quiet break with an earlier decision, which a second opinion catches ([COR-024](../../../../.pkit/decisions/core/COR-024-critic-and-architect-agents.md)).
 
-A reviewer is whoever, other than the author, reports on a draft or a [change](../glossary.md#term-change--change) within a remit, and leaves each fix to the author. The `rule-set-reviewer`, for one, judges a change against the rules that bind on what the change alters.
+A reviewer is whoever, other than the author, reports on a draft or a [change](../glossary.md#term-change--change) within a remit. It changes nothing of what it reviews, unless a record gives it that document to keep. The `rule-set-reviewer`, for one, judges a change against the rules that bind on what the change alters.
 
 **Attributes:**
 
@@ -383,7 +383,7 @@ A reviewer is whoever, other than the author, reports on a draft or a [change](.
 
 **Always true:**
 
-- It reports, and leaves each fix to the author (COR-024).
+- It reports, and changes nothing of what it reviews, unless a record gives it that document to keep (COR-024).
 - A reviewer the backbone ships only advises, unless a gate requires its verdict (COR-024, COR-057 point 5).
 
 ## Finding
@@ -396,8 +396,8 @@ A finding is a statement that a check or a reviewer reports on what it judged. I
 
 **Attributes:**
 
-- from a check: one severity, from a closed set every [validator](../glossary.md#term-validator--validator) shares ([COR-055 point 4](../../../../.pkit/decisions/core/COR-055-validation.md#4-severity-is-on-the-finding))
-- from a reviewer: one of three kinds, a [settled break](../glossary.md#term-settled-break--settled-break), a [passage for a person](../glossary.md#term-passage-for-a-person--passage-for-a-person), or a [finding that informs](../glossary.md#term-finding-that-informs--finding-that-informs) ([COR-057 point 3](../../../../.pkit/decisions/core/COR-057-rule-set-reviewer.md#3-its-findings-and-what-binds))
+- from a [validator](../glossary.md#term-validator--validator): one severity, from a closed set every validator shares ([COR-055 point 4](../../../../.pkit/decisions/core/COR-055-validation.md#4-severity-is-on-the-finding))
+- from the rule-set reviewer: one of three kinds, a [settled break](../glossary.md#term-settled-break--settled-break), a [passage for a person](../glossary.md#term-passage-for-a-person--passage-for-a-person), or a [finding that informs](../glossary.md#term-finding-that-informs--finding-that-informs) ([COR-057 point 3](../../../../.pkit/decisions/core/COR-057-rule-set-reviewer.md#3-its-findings-and-what-binds))
 
 **Relations:**
 
@@ -409,7 +409,7 @@ A finding is a statement that a check or a reviewer reports on what it judged. I
 **Always true:**
 
 - Exactly one severity fails validation, and every other only prints (COR-055 point 5).
-- Of a reviewer's findings, only a settled break withholds its approval (COR-057 point 3).
+- Of the rule-set reviewer's findings, only a settled break withholds its approval (COR-057 point 3).
 
 ## Settled break
 
@@ -489,7 +489,7 @@ A surface change is an alteration of the [system](../glossary.md#term-system--sy
 
 **Attributes:**
 
-- the [bump segment](../glossary.md#term-bump-segment--bump-segment) it moves its part's version by: patch for a fix, minor for new surface, major for a break ([PRJ-002 D2](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type))
+- the [bump segment](../glossary.md#term-bump-segment--bump-segment) it moves its part's version by: patch for a fix, minor for new [surface](../glossary.md#term-surface--surface), major for a break ([PRJ-002 D2](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type))
 
 **Relations:**
 
@@ -501,7 +501,7 @@ A surface change is an alteration of the [system](../glossary.md#term-system--sy
 **Always true:**
 
 - Which bump segment it moves its part by is a person's judgement, never read from the commit type (PRJ-002 D2).
-- An edit to a component's surface paths only suggests one, and a person judges it (PRJ-002 D2).
+- An edit to a component's paths only suggests one, and a person judges it (PRJ-002 D2).
 
 ## Changeset
 
@@ -526,14 +526,14 @@ A changeset is a file naming the [backbone](../glossary.md#term-backbone--backbo
 
 **Always true:**
 
-- Its bump segment is a person's judgement of the change's surface, never read from the commit type (PRJ-002 D2).
-- No branch edits a version number: a branch declares its change in a changeset (PRJ-002 D1).
+- Its bump segment is a person's judgement of the change's [surface](../glossary.md#term-surface--surface), never read from the commit type (PRJ-002 D2).
+- No feature branch edits a version number: a feature branch declares its change in a changeset (PRJ-002 D1).
 
 ## Bump segment
 
 Defined in [TERM-bump-segment](../glossary.md#term-bump-segment--bump-segment).
 
-**Why:** How far a [change](../glossary.md#term-change--change) moves a [version](../glossary.md#term-version--version) is a person's read of its surface ([PRJ-002](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md)). A study of 20 commits found that their type did not predict it (PRJ-002). Inferred from the commit type, it would produce wrong versions, so a [changeset](../glossary.md#term-changeset--changeset) makes the call explicit and reviewable (PRJ-002).
+**Why:** How far a [change](../glossary.md#term-change--change) moves a [version](../glossary.md#term-version--version) is a person's read of its [surface](../glossary.md#term-surface--surface) ([PRJ-002](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md)). A study of 20 commits found that their type did not predict it (PRJ-002). Inferred from the commit type, it would produce wrong versions, so a [changeset](../glossary.md#term-changeset--changeset) makes the call explicit and reviewable (PRJ-002).
 
 A bump segment is the measure of a change's surface that a changeset declares: `patch`, `minor`, `major` or `none`. A person judges it, and the commit type never sets it.
 
@@ -567,7 +567,7 @@ The changeset guard is a check that a change adds or edits a changeset naming th
 
 **Attributes:**
 
-- its escape hatch, which skips its surface check for a change that moves no surface (PRJ-002)
+- its escape hatch, which skips its check of those paths for a change that moves no [surface](../glossary.md#term-surface--surface) (PRJ-002)
 
 **Relations:**
 
@@ -578,14 +578,14 @@ The changeset guard is a check that a change adds or edits a changeset naming th
 
 **Always true:**
 
-- It reads only paths, so it may flag a change that moves no surface, and a person still judges each [bump segment](../glossary.md#term-bump-segment--bump-segment) ([PRJ-002 D2](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
-- No escape hatch waives its refusal of a floor that no change or [release](../glossary.md#term-release--release) of its component bears (PRJ-002).
+- Of the diff, it reads only paths, so it may flag a change that moves no surface. A person still judges each [bump segment](../glossary.md#term-bump-segment--bump-segment) ([PRJ-002 D2](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
+- No escape hatch waives its refusal of a floor that no change of its component, or new [version](../glossary.md#term-version--version) of it, bears (PRJ-002).
 
 ## Release step
 
 Defined in [TERM-release-step](../glossary.md#term-release-step--release-step).
 
-**Why:** If branches wrote [version](../glossary.md#term-version--version) numbers, one could move a version out from under another ([PRJ-002](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md)). A single step, whose writes land only on the [default branch](../glossary.md#term-default-branch--default-branch), computes each number forward from there and writes it once (PRJ-002).
+**Why:** If branches wrote [version](../glossary.md#term-version--version) numbers, one could move a version out from under another ([PRJ-002](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md)). The release step, whose writes land only on the [default branch](../glossary.md#term-default-branch--default-branch), computes each number forward from there and writes it once (PRJ-002).
 
 The release step is the procedure that consumes every pending [changeset](../glossary.md#term-changeset--changeset). It writes the new versions, raised floors, widened bounds and changelog entries, which land only on the default branch. `pkit release plan` previews it, and `pkit release apply` writes it on a `release/` branch.
 
@@ -693,7 +693,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
 - [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
 - [JRN-003 — Deliver a change](../use-case-model/journeys/JRN-003-deliver-change.md)
-- [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
+- [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 
 **Head:**
 
@@ -759,12 +759,13 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-040 — Have a drafted record or rule become binding only through my own review](../use-case-model/use-cases/030-change/UC-040-accept-through-review.md)
 - [UC-041 — Keep each core record true for any project that adopts it](../use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md)
 - [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
-- [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
+- [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-021 · Functional · A reviewer agent never changes the work it judges](../requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md)
 
 **Finding:**
 
 - [UC-004 — Know before I push that my change passes my project's checks](../use-case-model/use-cases/030-change/UC-004-check-before-push.md)
+- [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
 - [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/020-set-up/UC-006-gate-merges.md)
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md)
 - [UC-024 — See what a capability would connect to before I install it](../use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md)

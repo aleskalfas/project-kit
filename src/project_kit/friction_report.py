@@ -446,6 +446,7 @@ class ExplainedFinding:
             "message": self.finding.message,
             "bar": self.finding.bar,
             "share": self.finding.share,
+            "parts": self.finding.parts_json,
             "commits": [commit.as_json() for commit in self.commits],
             "clears": self.clears,
             "answers": [answer.as_json() for answer in self.answers],
@@ -686,6 +687,14 @@ def _explained(
             f"give the artefacts that share its id ids no two share; or, where {_label(anchor)} "
             f"means a document, name the document by its path in the block, then revalidate (a "
             f"changed anchor list needs a revalidation)"
+        )
+    elif kind is _Kind.WHOLE_AND_PARTS and anchor is not None:
+        clears = (
+            f"nothing is owed; remove the anchors on its parts from the block, which loses no "
+            f"flag and no ask but gives up a deferral or revisit of one part, the report when a "
+            f"part goes and the narrower explanation, or remove {_label(anchor)} where the "
+            f"artefact rests on those parts alone, which misses a change outside them; then "
+            f"revalidate (a changed anchor list needs a revalidation)"
         )
     elif kind is _Kind.UNREACHABLE:
         clears = "fetch the full history (`git fetch --unshallow`) and run again"

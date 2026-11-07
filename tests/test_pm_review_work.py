@@ -302,11 +302,13 @@ def _last_failure(err: str) -> str:
 def run_main(rw, monkeypatch):
     """Returns `run(issue, *, pr=None, body="filled", head=LISTED, derived=None,
     derives=None, sources=None, fork=False, move_rc=0, reviewer=None, engine=None,
-    config=None, move=None, dry_run=False, instance=None, github=None, extra=())` →
+    config=None, move=None, dry_run=False, instance=None, github=None, extra=(),
+    findings=(), comments=(), comment_rc=0)` →
     `(rc, gh_calls, moves)`. `pr` is the open PR on the branch (None: none yet), `body`
     its description, None for one gh cannot read, and `head` its head. The body
-    validator finds nothing in the description, and the author's
-    sentences are read from it as they stand. `derived` is what the change check at
+    validator finds `findings` in the description, by default nothing, and the author's
+    sentences are read from it as they stand. `comments` are the PR's comments, and
+    `comment_rc` what a `gh pr comment` exits. `derived` is what the change check at
     the PR's head gives,
     `derives` records each (head, base) it is run for, and `sources` where
     each was to fetch the head from; without `derived`, the change check gives no
@@ -338,6 +340,9 @@ def run_main(rw, monkeypatch):
         instance: int | None = None,
         github: FakeGitHub | None = None,
         extra: tuple[str, ...] = (),
+        findings: tuple[object, ...] = (),
+        comments: tuple[dict, ...] = (),
+        comment_rc: int = 0,
     ):
         gh_calls: list[list[str]] = []
         moves: list[str] = []
@@ -362,7 +367,9 @@ def run_main(rw, monkeypatch):
                         args=args, returncode=1, stdout="", stderr="HTTP 502: Bad Gateway"
                     )
                 stdout = json.dumps(
-                    {
+                    {"comments": list(comments)}
+                    if "comments" in args
+                    else {
                         "body": body,
                         "headRefOid": head,
                         "baseRefName": "main",
@@ -372,13 +379,17 @@ def run_main(rw, monkeypatch):
                 )
             elif args[:3] == ["gh", "pr", "create"]:
                 stdout = PR_URL
+            elif args[:3] == ["gh", "pr", "comment"] and comment_rc:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=comment_rc, stdout="", stderr="HTTP 502: Bad Gateway"
+                )
             return subprocess.CompletedProcess(args=args, returncode=0, stdout=stdout, stderr="")
 
         def move_issue(n, target, **_kw):
             moves.append(target)
             return move_rc
 
-        def checked(at: str, base: str, *, source: object = None):
+        def checked(at: str, base: str, *, source: object = None, from_checkout: bool = True):
             (derives if derives is not None else []).append((at, base))
             (sources if sources is not None else []).append(source)
             if derived is not None:
@@ -405,9 +416,10 @@ def run_main(rw, monkeypatch):
         monkeypatch.setattr(rw.axis_labels, "load_substrate_map", lambda _r: None)
         monkeypatch.setattr(rw, "_gh_get_issue", lambda _n, _c: issue)
         monkeypatch.setattr(rw.issue_branch, "_local_branches", lambda: (BRANCH,))
-        monkeypatch.setattr(rw.pr_validation, "validate_pr", lambda **k: [])
+        monkeypatch.setattr(rw.pr_validation, "validate_pr", lambda **k: list(findings))
         monkeypatch.setattr(rw, "gh_run", fake_gh_run)
         monkeypatch.setattr(rw.friction_answers, "checked", checked)
+        monkeypatch.setattr(rw.head_programs, "build_commits", lambda *a: frozenset())
         # The PR's base is fetched from `upstream`; the branch tracks no remote here.
         monkeypatch.setattr(rw.friction_answers, "base_remote", lambda _base: "upstream")
         if move is None:
@@ -930,7 +942,7 @@ def test_under_force_a_check_that_cannot_be_run_refuses_nothing(run_main, rw, ca
         extra=("--force",),
     )
     assert rc == 0
-    assert [c[2] for c in _pr_writes(gh_calls)] == ["ready"]
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["comment", "ready"]
     assert moves == ["review"]
     err = capsys.readouterr().err
     assert (
@@ -1025,7 +1037,7 @@ def test_force_takes_the_pr_to_review_past_the_refusal(run_main, rw, capsys) -> 
         extra=("--force",),
     )
     assert rc == 0
-    assert [c[2] for c in _pr_writes(gh_calls)] == ["ready"]
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["comment", "ready"]
     assert moves == ["review"]
     err = capsys.readouterr().err
     assert _refusals(err) == [_refusal("docs/guide.md")]
@@ -1041,18 +1053,368 @@ def test_the_refusal_joins_the_body_validator_s_findings(rw, monkeypatch, capsys
     monkeypatch.setattr(
         rw.friction_answers,
         "checked",
-        lambda head, base, *, source=None: _derived(rw, _document("docs/guide.md"), at=head),
+        lambda head, base, *, source=None, from_checkout=True: _derived(
+            rw, _document("docs/guide.md"), at=head
+        ),
     )
-    description = rw._Description(_described(), number=PR_NUMBER, head=LISTED, base="main")
-    sentences = rw._sentence_findings(description)
+    description = rw._Description(
+        _described(), number=PR_NUMBER, head=LISTED, base="main", placed=False
+    )
+    monkeypatch.setattr(rw.head_programs, "build_commits", lambda *a: frozenset())
+    sentences = rw._sentence_findings(description, rw._Move(42, CAP_ROOT, {}))
     assert sentences is not None
-    assert (
-        rw._ready_body_ok(
-            description.body, {}, CAP_ROOT, False, sentences=sentences, next_step=rw.FILL_FIRST
-        )
-        is False
-    )
+    findings = rw._ready_findings(description.body, {}, CAP_ROOT) + sentences
+    assert rw._body_ok(findings, False, next_step=rw.FILL_FIRST) is False
     err = capsys.readouterr().err
     assert "  - [hard-reject] body.doc-impact: no Doc impact" in err.splitlines()
     assert _refusals(err) == [_refusal("docs/guide.md")]
     assert err.splitlines()[-1] == f"  → {rw.FILL_FIRST}; --force overrides."
+
+
+# ---- the audit comment a --force leaves (DEC-046 point 2) -------------------------
+#
+# Where the PR exists, the comment lands before anything else the run writes, so the
+# record survives a failed flip or move (DEC-049 point 2). The PR a run opens has no
+# thread to comment on until then, so there it follows the opening.
+
+#: The headline, as the schema's audit template renders it for the test's invoker.
+HEADLINE = "Bypassed by me: `review-work --force` passed each refusal below"
+#: A finding of the body validator, as a line of the audit comment names it.
+NO_DOC_IMPACT = "- `[hard-reject] body.doc-impact: no Doc impact`"
+#: A change check that could not be run at the head, as that comment names it.
+STOP = f"- `[precondition] body.sentences: {UNDERIVED}`"
+
+
+def _no_doc_impact(rw):
+    return rw.pr_validation.Finding(
+        rw.pr_validation.SEVERITY_HARD_REJECT, "body.doc-impact", "no Doc impact"
+    )
+
+
+def _audits(gh_calls: list[list[str]]) -> list[str]:
+    """The body of each comment the run posted on the PR."""
+    return [c[c.index("--body") + 1] for c in gh_calls if c[:3] == ["gh", "pr", "comment"]]
+
+
+def _audited_line(refusal: str) -> str:
+    """How the audit comment names a refusal: its own line in a code span, its
+    backticks written as quotes."""
+    line = refusal.removeprefix("  - ").replace("`", "'")
+    return f"- `{line}`"
+
+
+def _named(location: str) -> str:
+    """How the audit comment names a document with no sentence."""
+    return _audited_line(_refusal(location))
+
+
+def _audited_refusals(audit: str) -> list[str]:
+    return [line for line in audit.splitlines() if line.startswith("- ")]
+
+
+@pytest.mark.parametrize("draft", [True, False], ids=["draft-pr", "ready-pr"])
+def test_force_posts_one_comment_before_anything_else_it_writes(
+    run_main, rw, capsys, draft
+) -> None:
+    """One comment for the run, however many refusals: it names who gave the override,
+    the head, and each refusal, and comes before the PR is made ready, reviewers are
+    requested and the issue moves."""
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=draft),
+        body=_described(),
+        derived=_derived(rw, _document("docs/guide.md", "docs/cli.md")),
+        reviewer="@alice",
+        extra=("--force",),
+    )
+    assert rc == 0 and moves == ["review"]
+    assert [c[2] for c in _pr_writes(gh_calls)] == (
+        ["comment", "ready", "edit"] if draft else ["comment", "edit"]
+    )
+    (audit,) = _audits(gh_calls)
+    lines = audit.splitlines()
+    assert lines[:2] == ["<!-- pkit-audit -->", f"{HEADLINE} at PR head {LISTED[:7]}."]
+    assert _audited_refusals(audit) == [_named("docs/guide.md"), _named("docs/cli.md")]
+    assert lines[-1].startswith("<!-- pkit-audit-key: review-work-force:")
+    assert "--force audit comment posted" in capsys.readouterr().out
+
+
+def test_force_on_a_pr_it_opens_comments_once_the_pr_exists(run_main, rw) -> None:
+    """Nothing can be commented on before the PR is opened, so the comment follows the
+    opening, ahead of the reviewers and the move. The head is not known here."""
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        findings=(_no_doc_impact(rw),),
+        reviewer="@alice",
+        extra=("--force",),
+    )
+    assert rc == 0 and moves == ["review"]
+    writes = _pr_writes(gh_calls)
+    assert [c[2] for c in writes] == ["create", "comment", "edit"]
+    assert writes[1][3] == str(PR_NUMBER)
+    (audit,) = _audits(gh_calls)
+    assert audit.splitlines()[1] == f"{HEADLINE}."
+    assert _audited_refusals(audit) == [NO_DOC_IMPACT]
+
+
+def test_the_comment_names_the_person_with_their_email(rw) -> None:
+    """Who gave the override, in the template's form."""
+    invoker = SimpleNamespace(github_login="alice", email="alice@example.com")
+    body = rw._force_audit_body(["`a refusal`"], LISTED, "the-key", CAP_ROOT, invoker)
+    assert body.splitlines()[1] == (
+        "Bypassed by alice <alice@example.com>: `review-work --force` passed each refusal "
+        f"below at PR head {LISTED[:7]}."
+    )
+
+
+@pytest.mark.parametrize("draft", [True, False], ids=["draft-pr", "ready-pr"])
+def test_the_comment_names_a_change_check_that_could_not_be_run(run_main, rw, draft) -> None:
+    """That stop is no finding and prints only a warning, yet --force passed it: exit 2
+    without the flag. It shares the run's one comment with any other refusal."""
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=draft),
+        body=_described(),
+        head=MOVED,
+        derived=rw.friction_answers.Derivation(MOVED, problem="no answers were stood in"),
+        findings=(_no_doc_impact(rw),),
+        extra=("--force",),
+    )
+    assert rc == 0 and moves == ["review"]
+    (audit,) = _audits(gh_calls)
+    assert _audited_refusals(audit) == ([NO_DOC_IMPACT, STOP] if draft else [STOP])
+
+
+@pytest.mark.parametrize("draft", [True, False], ids=["draft-pr", "ready-pr"])
+def test_a_check_that_cannot_be_run_hides_no_closing_reference_from_force(
+    run_main, rw, capsys, draft
+) -> None:
+    """A closing reference is read from the description alone, so a change check that
+    could not be run leaves it standing: --force passes both, the run prints the
+    refusal, and its one comment names both."""
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=draft),
+        body=_described(CLOSING),
+        head=MOVED,
+        derived=rw.friction_answers.Derivation(MOVED, problem="no answers were stood in"),
+        extra=("--force",),
+    )
+    assert rc == 0 and moves == ["review"]
+    err = capsys.readouterr().err
+    assert _refusals(err) == [CLOSING_REFUSAL]
+    assert err.splitlines()[-1] == "  → proceeding under --force."
+    (audit,) = _audits(gh_calls)
+    assert _audited_refusals(audit) == [STOP, _audited_line(CLOSING_REFUSAL)]
+
+
+def test_a_warning_is_no_refusal_and_the_comment_leaves_it_out(run_main, rw, capsys) -> None:
+    """--force passed the refusal, not the warning printed beside it."""
+    body = _described(f"{SENTENCES}\n\n- **docs/guide.md:** The guide names the new flag.\n")
+    _rc, gh_calls, _moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=True),
+        body=body,
+        derived=_derived(rw, _document("docs/guide.md")),
+        extra=("--force",),
+    )
+    assert "[warning]" in capsys.readouterr().err
+    (audit,) = _audits(gh_calls)
+    assert _audited_refusals(audit) == [_named("docs/guide.md")]
+
+
+def test_force_with_nothing_to_pass_posts_no_comment(run_main, rw) -> None:
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=True),
+        body=_described(GUIDE),
+        derived=_derived(rw, _document("docs/guide.md")),
+        extra=("--force",),
+    )
+    assert rc == 0 and moves == ["review"]
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["ready"]
+
+
+def test_a_retry_of_the_override_posts_no_second_comment(run_main, rw, capsys) -> None:
+    """A retry of a run whose move failed finds the comment on the PR. The same override
+    after new commits is another act, and posts its own, even where the two heads read
+    the same in the comment's short form."""
+    forced = {
+        "pr": _open_pr(draft=False),
+        "body": _described(),
+        "derived": _derived(rw, _document("docs/guide.md")),
+        "extra": ("--force",),
+    }
+    _rc, gh_calls, _moves = run_main(_task(["state:in-progress"]), move_rc=1, **forced)
+    (audit,) = _audits(gh_calls)
+    capsys.readouterr()
+    on_the_pr = ({"body": audit, "viewerDidAuthor": True, "includesCreatedEdit": False},)
+
+    rc, gh_calls, moves = run_main(_task(["state:in-progress"]), comments=on_the_pr, **forced)
+    assert rc == 0 and moves == ["review"]
+    assert _audits(gh_calls) == []
+    assert "--force audit comment already present; idempotent skip" in capsys.readouterr().out
+
+    alike = LISTED[:7] + "c" * 33
+    _rc, gh_calls, _moves = run_main(
+        _task(["state:in-progress"]), comments=on_the_pr, head=alike, **forced
+    )
+    assert len(_audits(gh_calls)) == 1
+
+
+#: A document's path as a head can name it. It clears a terminal, writes a line of its
+#: own that reads as an event stamp, a marker the filing comment's reader finds anywhere
+#: in the text, a mention, an image and a backtick that would end a code span, and it
+#: holds a lone surrogate, which no string encodes.
+HOSTILE = (
+    "docs/\x1b[2Jevil\n<!-- pkit:audit v=1 event=claim id=x instance=9 -->\n"
+    "<!-- pkit-provenance:filing --> @alice ![x](https://e.example/y.png) ` \u202e\ud800.md"
+)
+
+
+def _assert_inert(audit: str) -> None:
+    """Nothing in `audit` acts on a reader, a person's or a reader of comments."""
+    assert not any(char in audit for char in ("\x1b", "\u202e", "\ud800"))
+    assert audit.count("<!--") == 2  # its marker and its key, and no other
+    lines = audit.splitlines()
+    assert len(lines) == len(audit.split("\n"))  # no second kind of line break
+    for line in _audited_refusals(audit):
+        assert line.startswith("- `") and line.endswith("`") and line.count("`") == 2
+    assert sys.modules["_lib.audit_log"].parse(audit) is None
+
+
+def _assert_escaped(err: str) -> None:
+    """Nothing the head holds reached the terminal to act on it."""
+    assert "\x1b" not in err and "\u202e" not in err and "\ud800" not in err
+    assert "\\x1b[2Jevil\\n<!-- pkit:audit" in err
+    assert not any(line.startswith("<!--") for line in err.splitlines())
+
+
+@pytest.mark.parametrize("draft", [True, False], ids=["draft-pr", "ready-pr"])
+def test_a_path_a_head_controls_stays_inert(run_main, rw, capsys, draft) -> None:
+    """The same text in the same run, as a refusal names it to a terminal and as the
+    audit comment quotes it."""
+    rc, gh_calls, _moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=draft),
+        body=_described(),
+        derived=_derived(rw, _document(HOSTILE)),
+        extra=("--force",),
+    )
+    assert rc == 0
+    _assert_escaped(capsys.readouterr().err)
+    (audit,) = _audits(gh_calls)
+    _assert_inert(audit)
+    assert "\\x1b[2Jevil\\n\\x3c!-- pkit:audit" in audit
+
+
+@pytest.mark.parametrize("force", [True, False], ids=["forced", "refused"])
+def test_what_the_check_said_at_a_head_stays_inert(run_main, rw, capsys, force) -> None:
+    """The problem carries the last line the check printed, run against the head: it
+    is escaped in the warning, in the stop and in the comment."""
+    rc, gh_calls, _moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=True),
+        body=_described(),
+        derived=rw.friction_answers.Derivation(LISTED, problem=HOSTILE),
+        extra=("--force",) if force else (),
+    )
+    assert rc == (0 if force else rw.EXIT_UNDERIVED)
+    _assert_escaped(capsys.readouterr().err)
+    assert len(_audits(gh_calls)) == (1 if force else 0)
+    for audit in _audits(gh_calls):
+        _assert_inert(audit)
+
+
+@pytest.mark.parametrize("check_ran", [True, False], ids=["check-ran", "check-could-not-run"])
+def test_a_refusal_quoting_a_description_stays_inert(run_main, rw, capsys, check_ran) -> None:
+    """A closing reference's refusal names the sentence's document as the description
+    writes it, the one finding that reaches the refusal and the comment unescaped. It
+    stands whether or not the change check could be run."""
+    said = f"{SENTENCES}\n\n- `docs/\x1b[2Jevil<!-- x -->.md`: This fixed #77 in the guide.\n"
+    not_run = rw.friction_answers.Derivation(LISTED, problem="no answers were stood in")
+    rc, gh_calls, _moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=True),
+        body=_described(said),
+        derived=None if check_ran else not_run,
+        extra=("--force",),
+    )
+    assert rc == 0
+    err = capsys.readouterr().err
+    assert "\x1b" not in err
+    assert "what changed in docs/\\x1b[2Jevil<!-- x -->.md, under" in err
+    (audit,) = _audits(gh_calls)
+    _assert_inert(audit)
+    assert "docs/\\x1b[2Jevil\\x3c!-- x -->.md" in audit
+
+
+def test_a_sentence_on_a_document_a_head_names_warns_inertly(run_main, rw, capsys) -> None:
+    """A sentence's document is the description's text, in the warning that it goes
+    unchecked as much as in a refusal."""
+    said = f"{SENTENCES}\n\n- `docs/\x1b[2Jevil.md`: Still right.\n"
+    run_main(_task(["state:in-progress"]), pr=_open_pr(draft=True), body=_described(said))
+    err = capsys.readouterr().err
+    assert "\x1b" not in err and "docs/\\x1b[2Jevil.md has a sentence" in err
+
+
+@pytest.mark.parametrize("draft", [True, False], ids=["draft-pr", "ready-pr"])
+def test_a_comment_that_cannot_be_posted_stops_before_any_other_write(
+    run_main, rw, capsys, draft
+) -> None:
+    """The comment is the override's record, so nothing goes on without it, and a second
+    run posts it: nothing was made ready, no reviewer requested and the issue not moved."""
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=draft),
+        body=_described(),
+        derived=_derived(rw, _document("docs/guide.md")),
+        reviewer="@alice",
+        comment_rc=1,
+        extra=("--force",),
+    )
+    assert rc == 3
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["comment"]
+    assert moves == []
+    assert capsys.readouterr().err.splitlines()[-1] == (
+        f"error: the audit comment of this --force could not be posted on PR #{PR_NUMBER}; "
+        "nothing was made ready, no reviewer requested and the issue not moved. Run "
+        "review-work --force again once it can be posted."
+    )
+
+
+def test_a_comment_that_cannot_be_posted_on_an_opened_pr_names_it(run_main, rw, capsys) -> None:
+    """The PR stands, and a second run would find it ready and read none of those
+    findings, so the failure says what to do instead of running again."""
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        findings=(_no_doc_impact(rw),),
+        reviewer="@alice",
+        comment_rc=1,
+        extra=("--force",),
+    )
+    assert rc == 3
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["create", "comment"]
+    assert moves == []
+    assert capsys.readouterr().err.splitlines()[-1] == (
+        f"error: the audit comment of this --force could not be posted on PR #{PR_NUMBER} "
+        f"({PR_URL}), opened ready for review; no reviewer was requested and the issue not "
+        "moved. A second run would not read those findings again, since the PR is ready: undo "
+        f"it with `gh pr close {PR_NUMBER}` and run again, or say on the PR what --force passed."
+    )
+
+
+def test_a_project_that_projects_no_comments_gets_none(run_main, rw, capsys) -> None:
+    """`audit.projection: off` posts no audit comments (DEC-049 point 2), so the override
+    shows in the output only."""
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]),
+        pr=_open_pr(draft=True),
+        body=_described(),
+        derived=_derived(rw, _document("docs/guide.md")),
+        config={"audit": {"projection": "off"}},
+        extra=("--force",),
+    )
+    assert rc == 0 and moves == ["review"]
+    assert [c[2] for c in _pr_writes(gh_calls)] == ["ready"]
+    assert capsys.readouterr().err.splitlines()[-1] == "  → proceeding under --force."

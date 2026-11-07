@@ -2,7 +2,8 @@
 
 The script renders the document of the backbone's whole-repository friction
 check (COR-050 point 6), `pkit friction check --all --json`, as one Markdown
-body, and counts the findings that need an answer. It is a function of that
+body, counts the findings that need an answer and says whether a prune is due. It
+is a function of that
 document, so the tests call it over a document the real backbone wrote for a
 real history, or one shaped like it where the backbone cannot be made to report
 a kind. The history is laid on an install committed once per session
@@ -13,8 +14,11 @@ Held to: stale debt with what changed and since when; deferrals listed with
 their reason and never counted; revalidations answered apart listed and counted
 apart from what needs an answer (COR-062 point 7, #2206); the other findings;
 over-broad anchors listed apart and never counted (ADR-055 point 5), the second
-bar's on one artefact as one entry (ADR-080 point 3); both
-measures, never counted; the same findings giving the same body; what the
+bar's on one artefact as one entry (ADR-080 point 3); a whole anchor beside its parts
+listed as owing nothing and never counted (ADR-080 point 5); both
+measures, never counted; a prune due from its bar, told apart from what needs an
+answer and leaving the body as it is (ADR-068 point 4); the same findings giving
+the same body; what the
 findings carry staying
 inert text, a path that is no UTF-8 included; the body within its size, cut by
 whole entries, the findings that need an answer last; and nothing rendered from
@@ -38,7 +42,16 @@ from scripts import friction_report_body as report
 
 from project_kit import friction_repository as fr
 from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author
-from tests.friction_documents import T1, T2, Timeline, document, friction_config, guide
+from tests.friction_documents import (
+    MANUAL,
+    T1,
+    T2,
+    Timeline,
+    document,
+    friction_config,
+    guide,
+    manual,
+)
 from tests.shipped_rule_sets import without_shipped_rule_sets
 from tests.test_answer_files import GUIDE, answer_path, answers, bare_guide
 from tests.test_answer_files import entry as revalidation
@@ -142,6 +155,7 @@ def _document(**overrides: Any) -> dict[str, Any]:
         "artefacts": [],
         "findings": [],
         "measures": {"accepted_unanchored": [], "unanchored": [], "uncovered_surface": []},
+        "answers": {"folder": ".pkit/project/friction/answers", "files": 0, "prunable": []},
     }
     base.update(overrides)
     return base
@@ -296,6 +310,44 @@ def test_a_dormant_check_needs_no_answer() -> None:
     assert "The check is dormant" in made["body"]
 
 
+# --- a prune that is due (ADR-068 point 4) --------------------------------------------------
+
+
+def _prunable(count: int) -> dict[str, Any]:
+    """A document with nothing found, in which a prune would remove `count` answer files."""
+    names = [f"{n}.yaml" for n in range(count)]
+    return _document(answers={"folder": "answers", "files": count, "prunable": names})
+
+
+def test_a_prune_is_due_from_its_bar_and_is_no_finding() -> None:
+    below = report.publication(_prunable(report.PRUNE_DUE - 1))
+    at_the_bar = report.publication(_prunable(report.PRUNE_DUE))
+    assert below["prune_due"] is False and at_the_bar["prune_due"] is True
+    assert at_the_bar["needs_answer"] == 0
+    assert at_the_bar["body"] == below["body"]  # the tracking issue reads as it did
+
+
+def test_a_document_without_the_answers_reads_and_says_no_prune_is_due() -> None:
+    """The key came without a version change, so a version-1 document may lack it."""
+    assert report.publication(_without("answers"))["prune_due"] is False
+
+
+def test_the_bar_counts_what_the_real_check_says_a_prune_would_remove(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The document's key as the backbone writes it: a file a later answer replaced."""
+    timeline.start({GUIDE: bare_guide()}, friction_config())
+    timeline.commit("answer", {answer_path("a0"): answers(revalidation(at=T1))})
+    timeline.commit(
+        "answer again",
+        {answer_path("a1"): answers(revalidation(at=T2, because="it moved", read=("a0",)))},
+    )
+    document_ = _check(timeline.adopter.root)
+    assert report.prune_due(document_) is False
+    monkeypatch.setattr(report, "PRUNE_DUE", 1)
+    assert report.prune_due(document_) is True
+
+
 # --- answered apart: debt, reported only (COR-062 point 7) ----------------------------------
 
 
@@ -393,6 +445,26 @@ def test_an_over_broad_anchor_is_listed_apart_and_holds_nothing_open(
     assert later["findings"][-1]["kind"] == "over-broad"
     assert alone["needs_answer"] == 0
     assert alone["body"].startswith("**Nothing needs an answer.**\n")
+
+
+def test_a_whole_anchor_beside_its_parts_is_listed_as_owing_nothing_and_holds_nothing_open(
+    timeline: Timeline,
+) -> None:
+    """It makes nothing untrue, and a person may keep it, which nothing records (ADR-055
+    point 5; ADR-080 point 5). So it is listed with what owes nothing, counted for nothing,
+    in the check's own words, which read HEAD alone and so keep the body."""
+    anchors = {"artefact": [MANUAL, f"{MANUAL}#using"]}
+    timeline.start({MANUAL: manual(), "docs/guide.md": guide(anchors=anchors)})
+    root = timeline.adopter.root
+    earlier = report.publication(_check(root))
+    timeline.commit("change the engine", {"src/core/engine.py": "ENGINE = 2\n"})
+
+    assert report.publication(_check(root)) == earlier
+    assert earlier["needs_answer"] == 0
+    assert earlier["body"].startswith("**Nothing needs an answer.**\n")
+    section = _section(earlier["body"], "Reported, nothing owed")
+    assert f"- `docs/guide.md` · `whole-and-parts` · `artefact:{MANUAL}`\n" in section
+    assert f"artefact {MANUAL}#using — removing them loses no flag" in section
 
 
 def test_the_second_bar_s_anchors_on_one_artefact_are_one_entry() -> None:

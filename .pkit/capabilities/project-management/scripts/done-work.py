@@ -313,6 +313,7 @@ from _lib.ci_checks import RequiredChecks, evaluate_ci_gate, read_required_check
 # The one fetch / scan / post-once wiring every audit writer shares (#902).
 from _lib.comment import fetch_comments, post_audit_once
 from _lib.criteria import checkbox_headings, tick_hints
+from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -506,6 +507,7 @@ def _head_key(commits: list) -> str:
     return str(last.get("oid") or last.get("committedDate") or last.get("authoredDate") or "")
 
 
+@escaping
 def main(argv: list[str] | None = None) -> int:
     """Run done-work on `argv` (default: the command line); its exit code."""
     return run(argv).exit_code
@@ -3592,7 +3594,10 @@ def _merge_moves_to_done(workflow: dict, state: str, structural_type: str) -> bo
 
 # The fields each PR lookup asks for: an open PR's, to gate and merge it; a
 # merged one's, to complete what follows its merge (#1011).
-_OPEN_PR_FIELDS = "number,isDraft,headRefName,headRefOid,title,isCrossRepository,baseRefName"
+_OPEN_PR_FIELDS = (
+    "number,isDraft,headRefName,headRefOid,title,isCrossRepository,baseRefName,"
+    "headRepository,headRepositoryOwner"
+)
 _MERGED_PR_FIELDS = "number,headRefName,headRefOid,mergedAt,isCrossRepository,body"
 
 

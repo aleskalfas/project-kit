@@ -22,11 +22,20 @@
   the renderers' versions, each produced output the scenes used with the version used
   (the `value` of its record's fingerprint, by which the check knows it), and those used
   while stale (DEC-006 point 7).
+- **The current copy.** A published piece's run also makes a copy of each file of the
+  version, in its folder or at the place it names, and the record names the version that
+  wrote it (`current_copy`). The run names each file of the last copy it left behind. A
+  piece in any other state writes none, and the record keeps what it named. `plan` refuses
+  an entry the schema refuses, in every state, so no run writes it back. What stops an
+  export a person runs on a lock that differs from the copy's lies in `export.py`, outside
+  `plan` and `write`, since a run that proposes a move of the lock shares these.
 - **Refused before any write.** Everything that can refuse a run, a file reached through
-  a link included, is checked by `plan`, so a refused run writes nothing.
-- **Written as one change.** The files, then the record (`write`): where a write fails,
-  every file is put back as it was before the run, the files the run wrote removed, or
-  each it could not put back is named.
+  a link included, is checked by `plan`, so a refused run writes nothing. A piece that
+  shows a version's number or its date is one: an export does not fill them yet, so no
+  file ever holds a stand-in (DEC-016 point 5).
+- **Written as one change.** The files, the current copy, then the record (`write`): where
+  a write fails, every file is put back as it was before the run, the files the run wrote
+  removed, or each it could not put back is named.
 """
 
 from __future__ import annotations
@@ -38,13 +47,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from _lib import fingerprint, framing, records
+from _lib import current_copy, fingerprint, framing, layout, records
 from _lib import pipeline as pl
 from _lib.env import MissingFont
 from _lib.files import Change
-from _lib.libraries import installed_release
+from _lib.libraries import Held, installed_release
 from _lib.plugins import seam
-from _lib.reading import sha256
+from _lib.reading import is_sha256, sha256
 from _lib.root import LOCAL
 from _lib.scene import SceneResult
 
@@ -66,15 +75,13 @@ HEADER = (
 )
 
 
-#: The value of a fingerprint: a SHA-256 in lower-case hexadecimal.
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
-
-
 @dataclass(frozen=True)
 class Planned:
     """An export computed and not yet written: its number, each file's name and bytes, the
-    record's versions with the new one last, the produced outputs used while stale, and
-    those named to be used while stale that were not."""
+    record's versions with the new one last, the produced outputs used while stale, those
+    named to be used while stale that were not, the current copy it writes, if any, what
+    the record held of one before the run, and the piece's own among it, where it writes
+    one."""
 
     piece: pl.Piece
     number: int
@@ -82,10 +89,23 @@ class Planned:
     versions: list[dict[str, Any]]
     used_stale: list[str]
     not_stale: list[str]
+    copy: current_copy.Copy | None
+    kept_copy: Mapping[str, Any] | None
+    own_copy: Mapping[str, Any] | None
 
     @property
     def folder(self) -> Path:
         return self.piece.root / FOLDER / self.piece.name
+
+    @property
+    def named_copy(self) -> Mapping[str, Any] | None:
+        """What the record names of a current copy once this export is written."""
+        return self.kept_copy if self.copy is None else self.copy.entry
+
+    @property
+    def left_behind(self) -> list[str]:
+        """Each file of the last current copy this export leaves where it lies."""
+        return current_copy.left_behind(self.piece, self.own_copy, self.copy)
 
 
 def file_name(
@@ -99,17 +119,24 @@ def file_name(
     return f"{piece}.v{number}.{language}.{key}{numbered}.{form}"
 
 
-def recorded_versions(piece: pl.Piece) -> list[dict[str, Any]]:
-    """The versions the piece's `exports.yaml` records; none where it is absent. Raises
-    Refused when it cannot be read."""
+def recorded(piece: pl.Piece) -> dict[str, Any]:
+    """What the piece's `exports.yaml` holds; nothing where it is absent. Raises Refused
+    when it cannot be read."""
     path = piece.folder / pl.EXPORTS_FILE
     if not path.is_file():
-        return []
+        return {}
     try:
-        data = records.read(path, "exports")
+        return records.read(path, "exports")
     except records.RecordError as exc:
         raise pl.Refused(f"{exc}: mend it before the next export") from exc
-    versions = data.get("versions")
+
+
+def recorded_versions(piece: pl.Piece, record: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """The versions `record`, what the piece's `exports.yaml` holds (`recorded`), keeps;
+    none where it is absent. Raises Refused when it keeps no list of them."""
+    if not record:
+        return []
+    versions = record.get("versions")
     if not isinstance(versions, list) or not all(
         isinstance(entry, Mapping) and isinstance(entry.get("version"), int) for entry in versions
     ):
@@ -117,17 +144,18 @@ def recorded_versions(piece: pl.Piece) -> list[dict[str, Any]]:
     return [dict(entry) for entry in versions]
 
 
-def stale_outputs(project: pl.Project) -> dict[str, list[str]]:
+def stale_outputs(project: pl.Project, held: Held | None = None) -> dict[str, list[str]]:
     """Each produced picture the piece's scenes read whose record no longer verifies, with
     what changed (DEC-006 point 5): its fingerprint, worked out again from the current
     files under its form by the producer's framing, and every combination the piece names
-    that the record maps to no variant."""
+    that the record maps to no variant. `held`, where it is given, is what the framing
+    reads the library versions from (`framing.plan`)."""
     piece = project.piece
     stale: dict[str, list[str]] = {}
     for output in sorted(project.env.records):
         record = project.env.records[output]
         try:
-            sources = framing.plan(piece.root, piece.location, piece.name, output).sources
+            sources = framing.plan(piece.root, piece.location, piece.name, output, held).sources
         except framing.Refused as exc:
             stale[output] = [str(exc)]
             continue
@@ -168,6 +196,12 @@ def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None 
         results = project.scenes()
     except MissingFont as exc:
         raise pl.Refused(f"the scenes of `{piece.name}` cannot be drawn: {exc}") from exc
+    shown = shown_stand_ins(results)
+    if shown:
+        raise pl.Refused(
+            f"`{piece.name}` shows a fact no export fills yet, so a file would hold a stand-in: "
+            f"{'; '.join(shown)}. Draw the piece without it to export it"
+        )
     if project.env.missing:
         why = "; ".join(
             f"`{output}`: {reason} — run {pl.produce_command(piece.name, output)}"
@@ -184,7 +218,9 @@ def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None 
             f"a produced picture is stale: {why}. Run `pkit visual produce {piece.name} "
             f"<output>` for each, or name it with `--use-stale <output>` to export it as it is"
         )
-    versions = recorded_versions(piece)
+    record = recorded(piece)
+    versions = recorded_versions(piece, record)
+    kept_copy = current_copy.recorded(piece, record)
     number = next_number(piece, versions)
     files = _drawn(project, results, number)
     sources = pl.findings_key_sources(
@@ -212,9 +248,33 @@ def plan(project: pl.Project, *, use_stale: Sequence[str] = (), now: str | None 
         },
     }
     not_stale = sorted(set(use_stale) - set(stale))
-    planned = Planned(piece, number, files, [*versions, entry], used_stale, not_stale)
+    copy = current_copy.made(piece, number, files)
+    planned = Planned(
+        piece,
+        number,
+        files,
+        [*versions, entry],
+        used_stale,
+        not_stale,
+        copy,
+        kept_copy,
+        None if copy is None else current_copy.own(piece, record),
+    )
     writable(planned)
     return planned
+
+
+def shown_stand_ins(results: Sequence[tuple[str, SceneResult]]) -> list[str]:
+    """Each element the scenes show a stand-in at, with the fact it shows, in order."""
+    return sorted(
+        {
+            f"`{word}` at `{trace}`"
+            for _, result in results
+            for word, traces in result.facts.items()
+            if word in layout.STAND_INS
+            for trace in traces
+        }
+    )
 
 
 def next_number(piece: pl.Piece, versions: Sequence[Mapping[str, Any]]) -> int:
@@ -239,7 +299,7 @@ def used_versions(project: pl.Project) -> dict[str, str]:
     for output, record in sorted(project.env.records.items()):
         kept = record.get("fingerprint")
         value = kept.get("value") if isinstance(kept, Mapping) else None
-        if isinstance(value, str) and _SHA256.match(value):
+        if is_sha256(value):
             used[output] = value
     return used
 
@@ -275,28 +335,34 @@ def _drawn(
 
 def writable(planned: Planned) -> None:
     """Raise Refused where a planned export could not be written: a file it writes is
-    reached through a link."""
+    reached through a link, or its current copy could not lie where it goes."""
     piece = planned.piece
     for path in (
         *(planned.folder / name for name in planned.files),
         piece.folder / pl.EXPORTS_FILE,
     ):
         pl.writable(piece.root, path)
+    if planned.copy is not None:
+        current_copy.writable(piece, planned.copy, planned.own_copy)
 
 
 def write(planned: Planned, change: Change) -> None:
-    """Write a planned export's files, then its record, as the next steps of `change`, and
-    take it. Raises Refused, writing nothing, where it could not be written (`writable`),
-    which `plan` already checked; WriteFailed where a write fails, every file then
-    put back as it was before the run, or named."""
+    """Write a planned export's files, its current copy where it makes one, then its
+    record, as the next steps of `change`, and take it. Raises Refused, writing nothing,
+    where it could not be written (`writable`), which `plan` already checked; WriteFailed
+    where a write fails, every file then put back as it was before the run, or named."""
     piece = planned.piece
     writable(planned)
     for name, data in planned.files.items():
         change.write(planned.folder / name, data)
-    record = {
+    if planned.copy is not None:
+        current_copy.write(piece, planned.copy, change)
+    record: dict[str, Any] = {
         "pkit_schema": "visual-communication:exports",
         "schema_version": 1,
-        "versions": [records.quoted_time(entry) for entry in planned.versions],
     }
+    if planned.named_copy is not None:
+        record[current_copy.FIELD] = planned.named_copy
+    record["versions"] = [records.quoted_time(entry) for entry in planned.versions]
     change.write(piece.folder / pl.EXPORTS_FILE, records.text(record, HEADER).encode("utf-8"))
     change.commit()

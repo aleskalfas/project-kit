@@ -8,7 +8,8 @@ finding or takes a number, no helper or producer runs, and a produced picture is
 stands, stale or not.
 
 - **Under the lock.** It reads the piece's own file with its lock and computes the scenes
-  under it. A piece with no lock, or a lock that does not hold, is refused (`opened`).
+  under it. A piece with no lock, or a lock that does not hold, is refused (`opened`). A
+  version not yet released stops no drawing.
 - **What it draws.** The caller picks pages, languages and keys (`Asked`). By default it
   draws every page in the source language, in the first key in the order a picture's
   variant uses (`keys.variant_key`).
@@ -73,13 +74,18 @@ class Viewed:
 
 def opened(root: Path, name: str) -> pl.Project:
     """The piece `name` under the lock its `piece.yaml` holds. Raises Refused where it has
-    no lock, its lock does not hold, or its brand cannot be read."""
+    no lock, its lock does not hold, or its brand cannot be read. A version not yet released
+    under a final or a published piece's lock holds, and draws."""
     found = location.for_reading(root)
     if found is None:
         raise pl.Refused(f"the project holds no visual work, so no piece `{name}`")
     piece = pl.read_piece(root, found.path, name)
     held = libraries.Held(root, found.path)
-    faults = checks.lock_findings(held, piece)
+    faults = [
+        finding
+        for finding in checks.lock_findings(held, piece)
+        if finding.code != checks.LOCK_NOT_RELEASED
+    ]
     if faults:
         said = "; ".join(checks.said(finding) for finding in faults)
         raise pl.Refused(f"the lock of {piece.file(pl.PIECE_FILE)} cannot be drawn: {said}")
@@ -215,12 +221,15 @@ class _Made:
         page = pages_of(scene)[number - 1]
         at = {"language": language, "key": key, "page": page["id"]}
         try:
-            image = viewing_tool.draw(drawn.pages[number - 1].svg, long_edge(page), faces)
+            image = viewing_tool.draw(
+                drawn.pages[number - 1].svg, long_edge(page), faces, line_widths(page)
+            )
         except viewing_tool.ToolFailed as exc:
-            raise pl.Refused(
-                f"the tool cannot draw page {page['id']} of `{piece}`: {exc}. "
-                f"`pkit visual check {piece}` names what the piece still owes"
-            ) from exc
+            said = f"the tool cannot draw page {page['id']} of `{piece}`: {exc}"
+            # The check reads no picture of a final piece (DEC-017 point 4).
+            if not self.project.piece.final:
+                said += f". `pkit visual check {piece}` names what the piece still owes"
+            raise pl.Refused(said) from exc
         total = len(drawn.pages)
         stem = f"{piece}.{language}.{key}" + (f".{number}" if total > 1 else "")
         self.files[f"{stem}.png"] = image.image
@@ -314,6 +323,15 @@ def long_edge(page: Mapping[str, Any]) -> int:
     return math.ceil(edge * scale)
 
 
+def line_widths(page: Mapping[str, Any]) -> dict[str, list[float]]:
+    """The width the engine measured of each line of each text of `page`, by its trace id."""
+    return {
+        element["id"]: [float(line["width"]) for line in element["lines"]]
+        for element in _elements(page)
+        if element.get("lines")
+    }
+
+
 def _placed(page: Mapping[str, Any]) -> Iterator[tuple[Mapping[str, Any], float, float]]:
     """Each element of `page`, with where its frame's corner lies in the page: a scene
     holds a frame relative to its parent (`components.md`, What a scene holds)."""
@@ -363,8 +381,8 @@ def draws_ground(page: Mapping[str, Any], colours: Mapping[str, Mapping[str, Any
 
 def drawn_otherwise(page: Mapping[str, Any]) -> Iterator[dict[str, Any]]:
     """Each run of `page` the engine measured in more than one family, which the tool may
-    draw otherwise than a browser does (DEC-015 point 2): it may set the whole line in the
-    family that holds the character the first one lacks."""
+    draw otherwise than a browser does (DEC-015 point 2): it may set the whole run on a line
+    in the family that holds the character the first one lacks."""
     for element in _elements(page):
         for paragraph in element.get("paragraphs") or ():
             for run in paragraph:

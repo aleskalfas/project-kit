@@ -26,7 +26,8 @@
     },
     "writer": {
       "enum": [
-        "css"
+        "css",
+        "json"
       ]
     },
     "form": {
@@ -45,7 +46,7 @@
       "$ref": "defs.schema.json#/$defs/repository-path"
     },
     "prefix": {
-      "description": "A name that opens every name the code writes.",
+      "description": "A name that opens every name the code writes. The `json` writer takes none: the capability's code refuses it, naming why.",
       "$ref": "defs.schema.json#/$defs/name"
     },
     "accept-losses": {

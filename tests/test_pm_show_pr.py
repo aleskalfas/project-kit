@@ -930,6 +930,30 @@ def test_the_answers_view_starts_no_program_the_head_holds(
     assert ran.exists()
 
 
+def test_what_a_head_says_reaches_the_terminal_escaped_and_json_keeps_its_bytes(
+    sp, monkeypatch, capsys
+) -> None:
+    """Each line a head can write into is printed with its control characters escaped,
+    and its lines kept. Machine-readable output carries the text as it came, since no
+    terminal reads it as text (DEC-067 point 7)."""
+    told = 'What changed in docs/a.md: "\x1b[2Kerased\u202e"'
+    monkeypatch.setattr(sp, "_told_at_head", lambda *_a: [told, "next line"])
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "\x1b" not in out and "\u202e" not in out
+    assert "\\x1b[2Kerased\\u202e" in out and "next line" in out.splitlines()
+
+    view = {**PR_VIEW, "title": "fix: a \x1b[2Ktitle", "body": "one\r\ntwo \x1b[1A\r\n"}
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "body"], view)
+    out = capsys.readouterr().out
+    assert code == 0 and out == "one\r\ntwo \\x1b[1A\r\n\n"
+
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--json"], view)
+    out = capsys.readouterr().out
+    assert code == 0 and json.loads(out)["title"] == "fix: a \x1b[2Ktitle"
+
+
 def test_a_grant_list_that_cannot_be_read_tells_nothing(sp, monkeypatch, capsys) -> None:
     _answering(sp, monkeypatch, answers=ANSWERS, grants=sp.fixers.ChangeUnread("no such commit"))
     code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], PR_VIEW)

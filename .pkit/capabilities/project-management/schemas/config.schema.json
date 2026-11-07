@@ -219,6 +219,15 @@
               "enum": ["low", "medium", "high", "xhigh", "max"],
               "description": "Effort level every locally-registered reviewer reasons at (issue #1046): one uniform value, passed to the harness as `--effort`. Overridden by `PKIT_REVIEW_AGENT_EFFORT` and by `review-pr --effort`. Absent: the harness default applies."
             },
+            "start_after_checks": {
+              "type": "array",
+              "description": "The checks that start the review, such as every check but the project's test suite, by the names the host reports them under (#2638). `land-work` starts the reviewers once each has passed and no check has failed, waits for the rest once the review has ended, and merges only with every check passed. A run with `--yes` or `--no-wait` starts them only once every check has passed. A check that was skipped did not pass, and neither did a name no check bears. Absent or empty: the reviewers start once every check has passed.",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            },
             "remote_registered": {
               "type": "array",
               "maxItems": 1,

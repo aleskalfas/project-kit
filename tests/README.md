@@ -38,15 +38,18 @@ suite in one process. The two passes by hand:
 A plain `uv run pytest -q` still runs everything in one process, the `serial`
 tests included.
 
-**CI splits a full run across three machines** (ADR-078). The hook runs the
-aggregator whole, on one machine. CI runs it as three parts side by side, each
+**CI splits a full run across four machines** (ADR-078). The hook runs the
+aggregator whole, on one machine. CI runs it as four parts side by side, each
 a job of its own, which the aggregator defines:
 
 - **two slices,** `./scripts/check.sh --shard 1/2` and `--shard 2/2`. Each runs
   its share of the parallel pass, in parallel workers, and nothing else;
-- **the remainder,** `./scripts/check.sh --rest`: every other line of the
-  aggregator, with the tests marked `serial` in the test step's place. No other
-  worker shares its machine, as the mark asks.
+- **the quick checks,** `./scripts/check.sh --quick`: every line of the
+  aggregator but the test step and the console fences. They end within a few
+  minutes;
+- **the remainder,** `./scripts/check.sh --rest`: the console fences, with the
+  tests marked `serial` in the test step's place. No other worker shares its
+  machine, as the mark asks.
 
 **How the suite is cut.** A slice reads the tests left after the `serial` mark's
 filter, in the order pytest collects them. It cuts them into runs of

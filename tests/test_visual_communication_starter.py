@@ -10,7 +10,8 @@ a strong run keeps the body's size and line height. The README names what the co
 declare. A network's ties reach, by key path, the items its groups draw (DEC-011 point 3);
 no part passes a field of runs on (DEC-012 point 8); a pattern placed inside another draws
 within it with no overflow; a panel's span gives its share of the row (DEC-010 point 4);
-and a code block's lines stand as written.
+a code block's lines stand as written; and a row of cards keeps its heads at one height,
+whichever bar each has, each clear of a top bar.
 
 The reference renders are the pieces under `tests/fixtures/visual-communication/starter/`,
 one for each component, drawn in English and in German. Run in this process
@@ -19,6 +20,7 @@ one for each component, drawn in English and in German. Run in this process
 from __future__ import annotations
 
 import itertools
+import json
 import math
 import re
 import shutil
@@ -38,6 +40,7 @@ from tests.visual_communication_project import (
     bound,
     copy_library,
     project,
+    version_folder,
     write_list,
 )
 
@@ -761,3 +764,118 @@ def test_a_code_blocks_lines_stand_as_written(
             assert text["x"] + widest < element["width"], (piece, text["id"])
             checked += 1
     assert checked > 0
+
+
+#: The bar a brand gives the starter in the test below, thicker than the starter's inset.
+THICK_BAR = 24.0
+#: The parts of a card that hold what its content gives.
+HELD_BY_A_CARD = ("head", "tag", "text")
+
+
+@pytest.fixture(scope="module")
+def thick_bars(location: Path, tmp_path_factory: pytest.TempPathFactory) -> list[Mapping[str, Any]]:
+    """The card's reference piece, in each language, under a copy of the test brand that
+    names the starter and gives its bar a value of its own (DEC-008 point 4)."""
+    root = tmp_path_factory.mktemp("thick-bars") / "project"
+    shutil.copytree(location, root)
+    brand = version_folder(root, "test-brand", "1.0.0")
+    library = brand / "library.yaml"
+    library.write_text(
+        library.read_text(encoding="utf-8").replace(
+            "  - {name: foundations, major: 1}\n",
+            "  - {name: foundations, major: 1}\n  - {name: starter, major: 1}\n",
+        ),
+        encoding="utf-8",
+    )
+    base = brand / "tokens" / "base.tokens.json"
+    given = json.loads(base.read_text(encoding="utf-8"))
+    bar = {"$value": {"value": THICK_BAR, "unit": "px"}}
+    given["starter"] = {"$type": "dimension", "bar": bar}
+    base.write_text(json.dumps(given), encoding="utf-8")
+    piece = pl.read_piece(root, "visual", "card")
+    drawn = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+    computed = []
+    for _, result in drawn.scenes():
+        assert result.findings == []
+        computed.append(result.scene.to_dict())
+    return computed
+
+
+def space_2(drawn: Any) -> float:
+    """The gap the shared role `space.2` gives, in px, under what `drawn` draws with."""
+    return float(drawn.env.role("space.2")["value"])
+
+
+def rows_of_cards(
+    scene: Mapping[str, Any],
+) -> Iterator[list[tuple[str, dict[str, tuple[float, float, float, float]]]]]:
+    """Each row of cards a scene draws: for each card, its bar's word and the frame on its
+    page of each of its parts, by the part's name."""
+    for page in [each for each in elements(scene) if each.get("page")]:
+        placed = list(frames(page))
+        rows: dict[str, list[tuple[str, dict[str, tuple[float, float, float, float]]]]] = {}
+        for card, _ in placed:
+            if card.get("component") != "starter/card":
+                continue
+            prefix = f"{card['id']}/"
+            parts = {
+                str(element["id"]).removeprefix(prefix): frame
+                for element, frame in placed
+                if str(element["id"]).startswith(prefix)
+            }
+            row = rows.setdefault(ancestors(str(card["id"]))[-1], [])
+            row.append((card["options"]["bar"], parts))
+        yield from rows.values()
+
+
+def assert_heads_stand_at_one_height(scene: Mapping[str, Any]) -> None:
+    """That the heads of each row of `scene`'s cards share one height, and that one row
+    draws every word of the card's bar."""
+    words = []
+    for row in rows_of_cards(scene):
+        heads = [(bar, parts["head"][1]) for bar, parts in row if "head" in parts]
+        assert len({top for _, top in heads}) <= 1, heads
+        words.append({bar for bar, _ in heads})
+    assert set(COMPONENTS["card"]["options"]["bar"]) in words
+
+
+def gaps_below_top_bars(scene: Mapping[str, Any]) -> Iterator[float]:
+    """For each card of `scene` with a top bar, how far below the bar what it holds starts."""
+    for row in rows_of_cards(scene):
+        for bar, parts in row:
+            if bar == "top":
+                held = [frame[1] for name, frame in parts.items() if name in HELD_BY_A_CARD]
+                yield min(held) - parts["bar-top"][3]
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_a_row_of_cards_keeps_its_heads_at_one_height_whichever_bar_each_has(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
+) -> None:
+    assert_heads_stand_at_one_height(scenes[("card", language)])
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_what_a_card_holds_clears_its_top_bar(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]],
+    projects: Mapping[str, Any],
+    language: str,
+) -> None:
+    """A card with no head starts its tag or its text there, as the list's cards do."""
+    gaps = [
+        gap
+        for (_, lang), scene in scenes.items()
+        if lang == language
+        for gap in gaps_below_top_bars(scene)
+    ]
+    assert gaps and min(gaps) >= space_2(projects["card"]) - EPSILON
+
+
+def test_a_bar_thicker_than_the_inset_stays_clear_of_every_head_at_one_height(
+    thick_bars: list[Mapping[str, Any]], projects: Mapping[str, Any]
+) -> None:
+    """A brand may give the bar any value, and the heads still line up below it."""
+    for scene in thick_bars:
+        assert_heads_stand_at_one_height(scene)
+        gaps = list(gaps_below_top_bars(scene))
+        assert gaps and min(gaps) >= space_2(projects["card"]) - EPSILON
