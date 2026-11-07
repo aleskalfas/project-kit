@@ -82,10 +82,13 @@ Agent invocation:
   Each reviewer runs through the backbone's run command, `pkit agents run`,
   reached through `_lib.agent_runs` (ADR-066 point 10). The backbone starts
   the runner the project's adapter registers, and the runner starts the
-  harness; this script calls no harness. A project whose registered adapters
-  have no runner gets no reviews, and each reviewer's line says why. A project
-  with another harness answers through its own adapter's runner, not by
-  editing this script. Per DEC-028, this capability ships a default `pm-reviewer` agent
+  harness; this script calls no harness. Each reviewer starts in the project's
+  root, whichever folder of the project the command is run in (#2255): a
+  harness started in a folder below it takes none of the project's settings.
+  A project whose registered adapters have no runner gets no reviews, and
+  each reviewer's line says why. A project with another harness answers
+  through its own adapter's runner, not by editing this script. Per DEC-028,
+  this capability ships a default `pm-reviewer` agent
   at `.pkit/capabilities/project-management/agents/pm-reviewer.md` that emits
   the local-path verdict format and applies pm conventions; adopters may
   configure `local_registered: name: pm-reviewer` to use it, register their
@@ -126,6 +129,7 @@ from _lib import (
     friction_answers,
     head_programs,
     issue_branch,
+    pr_head,
     session_guard,
 )
 from _lib.agent_verdicts import PATH_LOCAL, gate_candidates, stamp_verdict
@@ -513,7 +517,8 @@ def review(
     print(f"review-pr: #{args.issue_number}")
     print(f"  PR:     #{pr_number}")
 
-    # Resolve repo-root for the agent invocation (walk up from capability_root).
+    # The project's root, three folders above the capability's: the reviewers
+    # start there, wherever in the project the command runs (#2255).
     repo_root = capability_root.parent.parent.parent
 
     # DEC-032 D4: resolve the PR's required-local set — baseline ∪ contributed
@@ -679,6 +684,7 @@ def review(
                 config,
                 agent_timeout,
                 effort=agent_effort,
+                folder=repo_root,
                 base=pr.get("baseRefName"),
                 head=branch,
                 sha=reviewed,
@@ -812,7 +818,7 @@ def _head_standing(
     that tells them to start nothing (`START_NOTHING`)."""
     number, base = pr.get("number"), str(pr.get("baseRefName") or "")
     placed = pr.get("isCrossRepository") if pr.get("headRefOid") == reviewed else None
-    source = friction_answers.pull_request_source(
+    source = pr_head.pull_request_source(
         str(pr.get("headRefName") or ""),
         int(number or 0),
         cross_repository=placed is not False,
@@ -853,6 +859,7 @@ def _invoke_agent(
     timeout: int = DEFAULT_AGENT_TIMEOUT,
     effort: str | None = None,
     *,
+    folder: Path,
     base: str | None = None,
     head: str = "HEAD",
     sha: str = "",
@@ -865,9 +872,10 @@ def _invoke_agent(
     or None on failure. Body is the agent's freeform commentary.
 
     The reviewer runs through the backbone's run command (`_lib.agent_runs`,
-    ADR-066 point 10), in the working folder, as it ran before: the backbone
-    starts the runner the project's adapter registers, and the runner starts
-    the harness. No harness is called here.
+    ADR-066 point 10), in `folder`: the backbone starts the runner the
+    project's adapter registers, and the runner starts the harness. No
+    harness is called here. `review-pr` passes the project's root, never the
+    folder it was run in, so the harness takes the project's settings (#2255).
 
     `timeout` is the per-agent wall-clock cap in seconds (issue #766); a
     reviewer that runs longer is ended, with the processes still descended
@@ -898,9 +906,7 @@ def _invoke_agent(
     """
     prompt = _review_brief(name, pr_number, base=base, head=head, sha=sha, confined=confined)
 
-    run = agent_runs.run_agent(
-        name, prompt, folder=Path.cwd(), limit_seconds=timeout, effort=effort
-    )
+    run = agent_runs.run_agent(name, prompt, folder=folder, limit_seconds=timeout, effort=effort)
     if run.ending == agent_runs.REFUSED:
         say(f"  [{name}] invocation refused: {run.reason}", file=sys.stderr)
         return None, ""

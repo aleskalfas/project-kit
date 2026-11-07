@@ -118,6 +118,13 @@ def test_one_variant_serves_each_distinct_set_of_the_values_read(tmp_path: Path)
     }
 
 
+def test_a_plan_reads_the_libraries_of_a_lock_it_is_given(tmp_path: Path) -> None:
+    root = producing_project(tmp_path)
+    assert framing.plan(root, "visual", PIECE, OUTPUT).inputs
+    with pytest.raises(framing.Refused, match=r"9\.9\.9"):
+        framing.plan(root, "visual", PIECE, OUTPUT, lock={"test-brand": "9.9.9"})
+
+
 def test_the_hand_over_holds_the_roles_read_alone_with_the_inputs_and_variants(
     tmp_path: Path,
 ) -> None:

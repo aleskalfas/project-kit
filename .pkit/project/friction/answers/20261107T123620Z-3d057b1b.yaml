@@ -1,0 +1,163 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+    revalidated:
+      at: 2026-11-07T12:36:20Z
+      outcome: unchanged
+      unchanged-because: The change moves the pull request's source, the remote lookups and the fetch of a head this clone lacks from friction_answers into _lib/pr_head, which review-work and head_programs now import, and that fetch now never prompts for credentials and brings no tags. UC-061 says nothing of how or from where a head is fetched, and what review-work derives at the head and refuses on the move to Review is unchanged, so it still holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+    revalidated:
+      at: 2026-11-07T12:36:25Z
+      outcome: unchanged
+      unchanged-because: The change moves the pull request's source, the remote lookups and the fetch of a missing commit into _lib/pr_head, which friction_answers, author_delta, land-work, review-work, review-pr and head_programs now use; the fetch never prompts and brings no tags, and land-work now fetches a fork's head by the ref its base keeps before comparing the local branch. UC-062 states none of how a commit is fetched, and its steps, refusals and exit codes are unchanged, so it still holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T234348Z-1f64d843.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261106T040039Z-a5583e69.yaml
+    revalidated:
+      at: 2026-11-07T12:36:27Z
+      outcome: unchanged
+      unchanged-because: The change gives land-work and review-work one fetch of a head this clone lacks, in _lib/pr_head, which never prompts and, for a fork's pull request, fetches by the ref its base keeps. JRN-012 walks the Task from take-up to landing and says nothing of how a head is fetched, and no step it names changes, so it still holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+    revalidated:
+      at: 2026-11-07T12:36:29Z
+      outcome: unchanged
+      unchanged-because: The change touches land-work only where it fetches a pull request's head this clone lacks and where it finds that head's remote, now through _lib/pr_head, the fetch never prompting and reaching a fork's head by the ref its base keeps. UC-090 is about seeing who works on what and states nothing of either, so it still holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+    revalidated:
+      at: 2026-11-07T12:36:30Z
+      outcome: unchanged
+      unchanged-because: The change touches review-work only in where it reads a pull request's source from, now _lib/pr_head, and in that the fetch of a head this clone lacks never prompts and brings no tags. UC-084 is about taking the next Task and says nothing of fetching a head, so it still holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+    revalidated:
+      at: 2026-11-07T12:36:42Z
+      outcome: unchanged
+      unchanged-because: The change touches land-work only in the fetch of a pull request's head this clone lacks, now one fetch in _lib/pr_head that never prompts, reaches a fork's head by the ref its base keeps, and is made before the local branch is compared with the head. UC-089 is about landing beside other runs, the queue, the base merged in and the fixers' lock, and states nothing of that fetch, so it still holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-013-build-and-land-next-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+    revalidated:
+      at: 2026-11-07T12:36:44Z
+      outcome: unchanged
+      unchanged-because: The change gives land-work and review-work one fetch of a head this clone lacks, in _lib/pr_head, which never prompts and, for a fork's pull request, fetches by the ref its base keeps. JRN-013 walks building and landing the next Task and says nothing of how a head is fetched, and no step it names changes, so it still holds.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T210254Z-faa0ccce.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T214057Z-5a0ecd5b.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220309Z-d2431027.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+    revalidated:
+      at: 2026-11-07T12:36:46Z
+      outcome: unchanged
+      unchanged-because: "The scripts change moves the pull request's source, the remote lookups and the fetch of a missing commit into a new _lib/pr_head. That fetch now never prompts and brings no tags, and land-work fetches a fork's head by the ref its base keeps before comparing the local branch. The README still holds: it names no helper's module, says a commit the checkout lacks is fetched from origin by its object name, and gives the fork's local-branch fetch, all still so, and describes no fetch of the head for the local-branch comparison."

@@ -2676,7 +2676,7 @@ def land(
         _the_change_wrote_no_answers(monkeypatch, lw.friction_answers)
         # A fork's head is fetched from the base's remote, which the backbone
         # resolves (#2637): `origin`, the remote the fake host stands for.
-        monkeypatch.setattr(lw.friction_answers, "base_remote", lambda base: "origin")
+        monkeypatch.setattr(lw.pr_head, "base_remote", lambda base: "origin")
         # Nor does it alter an accepted decision record (#2161).
         accepted = lw.accepted_records
         monkeypatch.setattr(accepted, "derive", lambda head, base: accepted.Derivation())

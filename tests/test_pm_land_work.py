@@ -171,6 +171,9 @@ class _FakeGitHub:
     bodies: list[str] = field(default_factory=list)
     #: The branch the PR merges into.
     base_branch: str = "main"
+    #: The checks the base branch requires, by name, which its rulesets state
+    #: (#1965); none by default.
+    required: list[str] = field(default_factory=list)
     #: The PR's author as GitHub returns it; None for one it returns as null.
     author: dict[str, Any] | None = field(default_factory=lambda: {"login": "author"})
     _reads: dict[str, int] = field(default_factory=dict)
@@ -236,6 +239,21 @@ class _FakeGitHub:
             return _done(argv, json.dumps(issue))
         if argv[:2] == ["api", "user"]:
             return _done(argv, "octocat\n")
+        if argv == ["api", f"repos/{{owner}}/{{repo}}/branches/{self.base_branch}"]:
+            # A ruleset protects the branch; its classic protection is off.
+            off = {"enabled": False, "required_status_checks": {"enforcement_level": "off"}}
+            return _done(argv, json.dumps({"protected": bool(self.required), "protection": off}))
+        if argv == [
+            "api",
+            "--paginate",
+            f"repos/{{owner}}/{{repo}}/rules/branches/{self.base_branch}",
+        ]:
+            checks = [{"context": name} for name in self.required]
+            rule = {
+                "type": "required_status_checks",
+                "parameters": {"required_status_checks": checks},
+            }
+            return _done(argv, json.dumps([rule] if checks else []))
         if issue_branch_support.is_open_prs_reading(argv):
             # The open PRs of several local branches matching the issue (#1608).
             open_on = {BRANCH: [PR]} if self.state == "OPEN" else {}
@@ -861,6 +879,65 @@ def test_a_local_branch_behind_the_pr_and_another_checkout_are_noted(world, caps
     )
 
 
+def _pushed_by_a_fork(run: _Run, name: str) -> str:
+    """A new head of the PR from a fork, which this clone lacks: committed in another
+    clone and kept on the base's remote only as the ref it keeps for the PR."""
+    fork = run.work.parent / "fork"
+    _git(run.work.parent, "clone", "-q", "--branch", BRANCH, "origin.git", str(fork))
+    _git(fork, "config", "user.email", "octocat@example.com")
+    _git(fork, "config", "user.name", "Octo Cat")
+    sign_nothing(fork)
+    (fork / name).write_text(name, encoding="utf-8")
+    _git(fork, "add", name)
+    _git(fork, "commit", "-q", "-m", f"add {name}")
+    _git(fork, "push", "-q", "origin", f"HEAD:refs/pull/{PR}/head")
+    return _git(fork, "rev-parse", "HEAD")
+
+
+def test_a_fork_s_head_this_clone_lacks_is_fetched_by_the_ref_its_base_keeps(
+    world, capsys, monkeypatch
+) -> None:
+    """Beside a local branch at another commit, a fork's head this clone lacks is
+    fetched by the ref the base repository keeps for the PR, on the base's remote, and
+    the local branch is compared with it."""
+    run = world()
+    monkeypatch.setattr(run.land.pr_head, "base_remote", lambda _base: "origin")
+    run.github.cross_repository = True
+    run.github.head = _pushed_by_a_fork(run, "from-the-fork.txt")
+    run.github.checks[run.github.head] = [_GREEN]
+    assert not run.land.pr_head.has_commit(run.github.head)
+    _rc, out, err = run.authorised(capsys=capsys)
+    assert _steps(out)[0] == (
+        f"head: {_short(run.github.head)} (PR #{PR}, {BRANCH}); local {BRANCH} is "
+        "1 commit behind it"
+    ), out + err
+
+
+@pytest.mark.parametrize(
+    ("cross_repository", "fetch"),
+    [(False, f"origin {BRANCH}"), (True, f"upstream refs/pull/{PR}/head")],
+    ids=["same-repository", "fork"],
+)
+def test_a_head_no_fetch_brings_names_the_fetch_to_make(
+    world, capsys, monkeypatch, cross_repository: bool, fetch: str
+) -> None:
+    """The fetch named is the one the run made: of the branch, on the remote it is
+    pushed to, or for a fork's PR of the ref the base repository keeps, on the base's
+    remote."""
+    run = world()
+    tip = run.github.head
+    monkeypatch.setattr(run.land.pr_head, "base_remote", lambda _base: "upstream")
+    run.github.cross_repository = cross_repository
+    run.github.head = "d" * 40
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE
+    assert out.splitlines()[-1] == (
+        f"head: cannot tell whether local {BRANCH} (at {_short(tip)}) holds commits "
+        f"PR #{PR}'s head ddddddd lacks: this clone does not have that head. Fetch it "
+        f"(`git fetch {fetch}`) and run `land-work {ISSUE}` again"
+    )
+
+
 def test_a_draft_pr_is_refused(world, capsys) -> None:
     run = world()
     run.github.draft = True
@@ -927,10 +1004,11 @@ def test_the_wait_running_out_on_no_run_is_its_own_exit(world, capsys) -> None:
         "([skip ci]), or a run from a fork awaits approval."
     )
     assert f"Run `land-work {ISSUE}` again to keep waiting" in last
-    assert (
+    assert last.endswith(
         f"review it with `review-pr {ISSUE}` and merge it, on the person's authorisation, "
-        f"with `done-work {ISSUE} --yes`"
-    ) in last
+        f"with `done-work {ISSUE} --yes`: `done-work` does not wait for a check nobody "
+        "reported, and passes a head with none wherever the base requires no check"
+    )
     assert run.invoked == []
 
 
@@ -2056,6 +2134,23 @@ def test_a_head_that_moves_between_the_gate_and_the_merge_request_merges_nothing
     )
 
 
+def test_a_head_pushed_as_the_gate_reads_its_checks_is_not_passed_unchecked(world, capsys) -> None:
+    """No check has reported on the new head yet. Where the base requires
+    checks, `done-work`'s gate takes that for pending, so no merge is asked
+    for (#1965)."""
+    run = world()
+    run.github.required = ["checks"]
+
+    def rollup_read(argv: list[str]) -> bool:
+        return argv[:2] == ["pr", "view"] and argv[-1] == "statusCheckRollup"
+
+    run.github.before(rollup_read, lambda: run.push_new_head("racing.txt"))
+    rc, _out, err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_HEAD_MOVED
+    assert (run.github.state, run.github.merges) == ("OPEN", [])
+    assert "failing/pending: checks (EXPECTED)" in err
+
+
 def test_a_head_the_host_reads_as_behind_stops_at_the_checks_with_the_merge_to_make(
     world, capsys
 ) -> None:
@@ -2169,7 +2264,7 @@ def test_a_fork_s_behind_stop_names_the_merge_from_the_base_s_remote(
     run = world()
     _git(run.work, "remote", "add", "fork", "../origin.git")
     _git(run.work, "config", f"branch.{BRANCH}.pushRemote", "fork")
-    monkeypatch.setattr(run.land.friction_answers, "base_remote", lambda _base: "upstream")
+    monkeypatch.setattr(run.land.pr_head, "base_remote", lambda _base: "upstream")
     run.github.merge_state = "BEHIND"
     run.github.cross_repository = True
     rc, out, _err = run.authorised(capsys=capsys)

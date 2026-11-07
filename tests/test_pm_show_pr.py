@@ -790,7 +790,7 @@ def _answering(sp, monkeypatch, *, answers=None, problem=None, grants=(), needs_
         return fa.Derivation(head, document=document, answers=tuple(answers or ()))
 
     monkeypatch.setattr(fa, "derive", derive)
-    monkeypatch.setattr(fa, "branch_remote", lambda branch: "origin")
+    monkeypatch.setattr(sp.pr_head, "branch_remote", lambda branch: "origin")
     monkeypatch.setattr(sp.fixers, "change_between", lambda *args: grants)
     return asked
 
@@ -810,7 +810,7 @@ def test_answers_field_prints_what_land_work_tells(sp, monkeypatch, capsys) -> N
         (
             HEAD,
             "integration",
-            sp.friction_answers.Source("origin", "refs/heads/feat/42-thing"),
+            sp.pr_head.Source("origin", "refs/heads/feat/42-thing"),
             False,
         )
     ]
@@ -972,11 +972,11 @@ def test_answers_field_needs_the_head_and_the_base(sp, monkeypatch, capsys) -> N
 
 def test_a_pr_from_a_fork_is_fetched_by_the_ref_its_base_keeps(sp, monkeypatch, capsys) -> None:
     asked = _answering(sp, monkeypatch, answers=[])
-    monkeypatch.setattr(sp.friction_answers, "base_remote", lambda base: "upstream")
+    monkeypatch.setattr(sp.pr_head, "base_remote", lambda base: "upstream")
     view = {**PR_VIEW, "isCrossRepository": True}
     code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "answers"], view)
     assert code == 0
-    assert asked[0][2] == sp.friction_answers.Source("upstream", "refs/pull/99/head")
+    assert asked[0][2] == sp.pr_head.Source("upstream", "refs/pull/99/head")
 
 
 def test_no_other_view_runs_the_change_check(sp, monkeypatch, capsys) -> None:
