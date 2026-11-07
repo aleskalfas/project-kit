@@ -11,15 +11,16 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
 - **Its lock** names the version of each library it uses. `needed` gives the libraries
   the piece names itself: its top's library, its brand, its notations and every library
   its content uses; `libraries.move_lock` adds what they build on, judging each whole
-  combination it reaches with `Fit`. `write_lock` writes a
-  lock into `piece.yaml` as text, every other byte kept.
+  combination it reaches with `Fit`. `locked` gives the bytes of `piece.yaml` with a
+  lock written in as text, every other byte kept.
 - **A project** (`Project`) is a piece under one lock: the scope of the locked versions,
   the foundations' declarations and the own roles of each component library the lock
   names (DEC-008 point 1), and the brand read against it, over its base at the version
   the lock names when it builds on one (DEC-004 point 6), the notations the piece names
   (DEC-004 point 10), the combinations the piece names, and the `Env` over them. It
-  computes one scene for each language and each key over the size axes; format 1 has no
-  size axis, so that key is always `default`.
+  computes one scene for each language and each key over the size axes the piece names
+  (DEC-005 point 6), each reading the brand's roles at its key (`ProjectEnv.at`), and draws
+  each combination from the scene of its key (`drawn`).
 - **A library version checked alone** is read through `LibraryEnv`, an `Env` that no
   piece or brand stands behind: components from a combination of library versions, and
   roles from their declarations alone (DEC-008 point 1, DEC-010 point 9).
@@ -46,7 +47,7 @@ from typing import Any
 from _lib import copies, keys, layout, notations, records, tokens, values
 from _lib.copies import DRAFT
 from _lib.env import MissingFont, PictureInfo, UnknownConcept, UnreadableComponent
-from _lib.files import FileError, read_bound, refuse_links, without_binding, write_whole
+from _lib.files import FileError, read_bound, refuse_links, without_binding
 from _lib.fingerprint import COPY_PLACE
 from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, Misfit, Version
 from _lib.location import files as listed_files
@@ -68,9 +69,6 @@ PRODUCED = "produced"
 RECORD = "record.yaml"
 FINDINGS_FILE = "findings.yaml"
 EXPORTS_FILE = "exports.yaml"
-
-#: The key over the size axes of every scene: format 1 has no size axis (DEC-004 point 2).
-SIZE_KEY = keys.DEFAULT_KEY
 
 
 #: The byte-order mark a file may open with, which a rewrite of the lock keeps.
@@ -353,16 +351,6 @@ def locked(piece: Piece, lock: Mapping[str, str]) -> bytes | None:
     return lock_text(path.read_bytes().decode("utf-8"), lock).encode("utf-8")
 
 
-def write_lock(piece: Piece, lock: Mapping[str, str]) -> bool:
-    """Write `lock` into the piece's `piece.yaml` (`locked`); False, writing nothing,
-    when it holds that lock already. Raises Refused, writing nothing."""
-    data = locked(piece, lock)
-    if data is None:
-        return False
-    write_whole(piece.folder / PIECE_FILE, data)
-    return True
-
-
 # --- a piece under one lock ---------------------------------------------------------------------
 
 
@@ -421,7 +409,13 @@ class Project:
             self.combinations = keys.combinations(piece.modes, self.brand.axes)
         except keys.BadKey as exc:
             raise Refused(f"{piece.file(PIECE_FILE)}: `modes`: {exc}") from exc
-        self.keys = [keys.key_of(combination, self.brand.axes) for combination in self.combinations]
+        axes = self.brand.axes
+        self.keys = [keys.key_of(combination, axes) for combination in self.combinations]
+        self._size_keys = {
+            key: size_key_of(combination, axes)
+            for key, combination in zip(self.keys, self.combinations, strict=True)
+        }
+        self.size_keys = sorted(set(self._size_keys.values()), key=keys.key_order)
         self.env = ProjectEnv(self)
 
     def label(self, library: str) -> str:
@@ -450,12 +444,23 @@ class Project:
         (DEC-005 point 7)."""
         return values.document(self.brand, self.combinations, self.lock)
 
-    def scenes(self, languages: Sequence[str] | None = None) -> list[tuple[str, SceneResult]]:
-        """One scene for each language, or each of `languages`, at the key over the size
-        axes, in the piece's order of languages. Each takes the piece's language and state,
-        and the stand-in for a version's number and its date (DEC-016 point 5). Raises
-        `env.MissingFont` (and so `text.MissingGlyph`) before anything is laid out."""
+    def size_key(self, key: str) -> str:
+        """The key over the size axes of the combination `key` the piece names: the key of
+        the scene that serves it. Raises KeyError for a key the piece does not name."""
+        return self._size_keys[key]
+
+    def scenes(
+        self, languages: Sequence[str] | None = None, keys: Sequence[str] | None = None
+    ) -> list[tuple[str, SceneResult]]:
+        """One scene for each language, or each of `languages`, and each key over the size
+        axes the piece names, or each that serves one of the combinations `keys`, in the
+        piece's order of languages, then in key order. Each scene's root names its key, and
+        it reads each role at that key (`ProjectEnv.at`). Each takes the piece's language
+        and state, and the stand-in for a version's number and its date (DEC-016 point 5).
+        Raises `env.MissingFont` (and so `text.MissingGlyph`) before anything is laid out."""
         facts = layout.stand_ins(self.piece.state)
+        served = None if keys is None else {self.size_key(key) for key in keys}
+        sizes = [size for size in self.size_keys if served is None or size in served]
         return [
             (
                 language,
@@ -465,15 +470,38 @@ class Project:
                     content=dict(self.piece.contents[language]),
                     language=language,
                     lock=self.lock,
-                    size_key=SIZE_KEY,
+                    size_key=size,
                     seam_version=seam.SEAM_VERSION,
-                    env=self.env,
+                    env=self.env.at(size),
                     facts=facts,
                 ),
             )
             for language in self.piece.languages
             if languages is None or language in languages
+            for size in sizes
         ]
+
+
+def size_key_of(combination: Mapping[str, str], axes: Mapping[str, tokens.Axis]) -> str:
+    """The key over the size axes of a combination: its modes on the axes of kind `size`,
+    each other axis taken at its default (DEC-004 points 2 and 3)."""
+    return keys.key_of(
+        {axis: mode for axis, mode in combination.items() if axes[axis].kind == "size"}, axes
+    )
+
+
+@dataclass
+class _Read:
+    """What a project's `Env` has read, shared by its view at each key over the size axes:
+    each component by its use, and why each whose file cannot be read as one cannot; why
+    each produced picture that is missing is; the records read; and the font files read
+    from the location's `fonts/`."""
+
+    components: dict[str, dict[str, Any] | None] = field(default_factory=dict)
+    unreadable: dict[str, str] = field(default_factory=dict)
+    missing: dict[str, str] = field(default_factory=dict)
+    records: dict[str, Mapping[str, Any]] = field(default_factory=dict)
+    fonts_read: set[Path] = field(default_factory=set)
 
 
 class ProjectEnv:
@@ -482,34 +510,56 @@ class ProjectEnv:
     foundations' declarations, concepts from the notations the piece names, produced
     pictures from their records, and the lock.
 
-    It keeps what the engine asked for that a check needs: why a produced picture is
-    missing (`missing`), the records read (`records`), and the font files read from the
-    location's `fonts/` (`fonts_read`)."""
+    It reads each role at one key over the size axes, `size_key`, which is `default` for
+    the project's own (`Project.env`). `at` gives the view that reads roles at another key,
+    and shares every other read with this one.
 
-    def __init__(self, project: Project) -> None:
+    It keeps what the engine asked for that a check needs, across every key: why a produced
+    picture is missing (`missing`), the records read (`records`), and the font files read
+    from the location's `fonts/` (`fonts_read`)."""
+
+    def __init__(
+        self, project: Project, size_key: str = keys.DEFAULT_KEY, read: _Read | None = None
+    ) -> None:
         self._project = project
-        self._components: dict[str, dict[str, Any] | None] = {}
-        self._unreadable: dict[str, str] = {}
-        self.missing: dict[str, str] = {}
-        self.records: dict[str, Mapping[str, Any]] = {}
-        self.fonts_read: set[Path] = set()
+        self.size_key = size_key
+        self._combination = keys.parse_key(size_key, project.brand.axes)
+        self._read = _Read() if read is None else read
+
+    def at(self, size_key: str) -> ProjectEnv:
+        """The view that reads each role at the key over the size axes `size_key`, sharing
+        every other read with this one, so a file is read once whatever the key."""
+        return ProjectEnv(self._project, size_key, self._read)
+
+    @property
+    def missing(self) -> dict[str, str]:
+        return self._read.missing
+
+    @property
+    def records(self) -> dict[str, Mapping[str, Any]]:
+        return self._read.records
+
+    @property
+    def fonts_read(self) -> set[Path]:
+        return self._read.fonts_read
 
     def component(self, use: str) -> dict:
-        if use not in self._components:
-            self._components[use] = self._read_component(use)
-        if use in self._unreadable:
-            raise UnreadableComponent(use, self._unreadable[use])
-        found = self._components[use]
+        read = self._read
+        if use not in read.components:
+            read.components[use] = self._read_component(use)
+        if use in read.unreadable:
+            raise UnreadableComponent(use, read.unreadable[use])
+        found = read.components[use]
         if found is None:
             raise KeyError(use)
         return found
 
     def _read_component(self, use: str) -> dict[str, Any] | None:
         """A component's data; None where there is none, and where its file is present and
-        cannot be read as one, why kept in `_unreadable`."""
+        cannot be read as one, why kept in `unreadable`."""
         data, why = read_component(self.component_path(use))
         if why is not None:
-            self._unreadable[use] = why
+            self._read.unreadable[use] = why
         return data
 
     def component_path(self, use: str) -> Path | None:
@@ -529,10 +579,11 @@ class ProjectEnv:
         return folder / COMPONENTS / f"{name}.yaml"
 
     def role(self, token_path: str) -> dict:
-        """The role's value under the brand. Raises tokens.RoleWithoutValue for a role of the
-        scope the brand leaves with none, and tokens.UnknownRole for a path no role holds;
-        both are KeyErrors, as the engine reads them."""
-        return self._project.brand.resolve(token_path, {})
+        """The role's value under the brand, at the view's key over the size axes, every
+        value axis at its default. Raises tokens.RoleWithoutValue for a role of the scope the
+        brand leaves with none, and tokens.UnknownRole for a path no role holds; both are
+        KeyErrors, as the engine reads them."""
+        return self._project.brand.resolve(token_path, self._combination)
 
     def font_file(self, family: str) -> Path:
         path = self._project.brand.font_file(family)
@@ -933,14 +984,21 @@ def drawn(
     renderer: str,
     keys: Sequence[str] | None = None,
 ) -> Iterator[tuple[str, str, Any]]:
-    """Each scene drawn by the renderer `renderer` in each combination the piece names, or
-    each of `keys`, in the order of the piece's languages and of the keys: the language, the
-    key, and what the renderer gives (`render`, the renderers' entry of the seam)."""
+    """Each combination the piece names, or each of `keys`, drawn by the renderer `renderer`
+    from the scene of `results` in its language that serves it, the one of its key over the
+    size axes, in the order of the piece's languages and of the keys: the language, the key,
+    and what the renderer gives (`render`, the renderers' entry of the seam). A combination
+    whose scene `results` does not hold is not drawn."""
     implementation = seam.implementation(renderer)
     document = project.values()
-    for language, result in results:
-        scene = result.scene.to_dict()
+    scenes = {
+        (language, result.scene.size_key): result.scene.to_dict() for language, result in results
+    }
+    for language in dict.fromkeys(language for language, _ in results):
         for key in project.keys if keys is None else keys:
+            scene = scenes.get((language, project.size_key(key)))
+            if scene is None:
+                continue
             yield (
                 language,
                 key,

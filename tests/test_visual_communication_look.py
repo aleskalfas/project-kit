@@ -26,10 +26,14 @@ from tests import visual_communication_producer as producer
 from tests.in_process import load, run_main
 from tests.test_visual_communication_pipeline import (
     OUTPUT,
+    PHONE,
     PIECE,
     PIECE_FOLDER,
     drawing_project,
+    on_devices,
     parts_project,
+    two_steps,
+    write_content,
     write_picture,
 )
 from tests.test_visual_communication_starter import PIECES, STARTER, TEST_NOTATION, UNRELEASED
@@ -596,6 +600,32 @@ def test_what_the_piece_does_not_have_is_refused_with_nothing_written(
     assert written(root) == before
 
 
+def test_a_piece_on_a_size_axis_has_an_image_for_each_key_drawn_from_its_size_s_scene(
+    tmp_path: Path,
+) -> None:
+    dark = "colour-scheme.dark"
+    keys = ["default", dark, PHONE, f"{dark}+{PHONE}"]
+    root = on_devices(
+        tmp_path, modes={"colour-scheme": ["light", "dark"], "device": ["desktop", "phone"]}
+    )
+    shown = run_look(root, PIECE, "--every-key")
+    assert shown.returncode == 0, shown.stderr
+    images = report_of(root)["images"]
+    assert [image["key"] for image in images] == keys
+    shapes = {
+        image["key"]: image["pixels"]["width"] / image["pixels"]["height"] for image in images
+    }
+    assert shapes["default"] == shapes[dark] > shapes[PHONE] == shapes[f"{dark}+{PHONE}"]
+
+    def frames(key: str) -> list[Any]:
+        data = (folder_of(root) / f"flow.en.{key}.frames.json").read_text(encoding="utf-8")
+        return json.loads(data)["elements"]
+
+    assert frames(PHONE) == frames(f"{dark}+{PHONE}") != frames("default")
+    assert run_look(root, PIECE, "--key", PHONE).returncode == 0
+    assert [image["key"] for image in report_of(root)["images"]] == [PHONE]
+
+
 def test_the_default_key_is_the_combination_of_defaults_wherever_the_piece_names_it(
     tmp_path: Path,
 ) -> None:
@@ -1103,6 +1133,15 @@ def test_it_lists_a_document_for_a_machine(tmp_path: Path) -> None:
     assert sorted(listed["pages"]) == ["de", "en"]
     assert len(listed["pages"]["en"]) == 2
     assert listed["tool"] == viewing_tool.TOOL
+
+
+def test_it_lists_each_key_of_a_piece_on_a_size_axis(tmp_path: Path) -> None:
+    root = on_devices(tmp_path, languages=["en", "cs"])
+    write_content(root, "cs", body=two_steps("Naplánovat."))
+    listed = json.loads(run_pages(root, "--json", PIECE).stdout)
+    assert listed["keys"] == ["default", PHONE]
+    assert listed["drawn-by-default"] == {"language": "en", "key": "default"}
+    assert listed["pages"] == {"en": ["figure"], "cs": ["figure"]}
 
 
 def test_it_only_reads(tmp_path: Path) -> None:
